@@ -12,7 +12,7 @@ import { LYRA_DEFAULT_loading } from '../../../internal/default-strings.generate
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type SpinnerLabelPlacement = 'none' | 'after';
+export type LyraSpinnerLabelPlacement = 'none' | 'after';
 
 /**
  * `<lr-spinner>` — an indeterminate busy indicator. It uses non-live `progressbar` semantics so
@@ -48,7 +48,7 @@ export class LyraSpinner extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: SpinnerLabelPlacement = 'none';
+  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraSpinnerLabelPlacement = 'none';
   /** Accessible name for the busy progress indicator, forwarded from a host `aria-label`. When unset, a
    *  visible `label-placement="after"` label names it, then the localized "Loading…" fallback. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;

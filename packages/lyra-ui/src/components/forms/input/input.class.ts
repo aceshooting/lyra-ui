@@ -30,14 +30,7 @@ import {
 } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_clear,
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_hidePassword,
-  LYRA_DEFAULT_inputLabel,
-  LYRA_DEFAULT_showPassword,
-  LYRA_DEFAULT_valueInvalid,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_hidePassword, LYRA_DEFAULT_inputLabel, LYRA_DEFAULT_showPassword, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraInputType =
@@ -231,16 +224,15 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
 export class LyraInput extends FormAssociated(LyraInputBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      clear: LYRA_DEFAULT_clear,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      hidePassword: LYRA_DEFAULT_hidePassword,
-      inputLabel: LYRA_DEFAULT_inputLabel,
-      showPassword: LYRA_DEFAULT_showPassword,
-      valueInvalid: LYRA_DEFAULT_valueInvalid,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    hidePassword: LYRA_DEFAULT_hidePassword,
+    inputLabel: LYRA_DEFAULT_inputLabel,
+    showPassword: LYRA_DEFAULT_showPassword,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   /** Public WA-compatible intrinsic validator catalog. */

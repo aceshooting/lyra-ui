@@ -160,11 +160,11 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *   the current colour in any of the eight supported formats, independent of `format`/`opacity`.
  * @method getHexString - `getHexString(hue, saturation, brightness, alpha?): string` — converts
  *   percent-scaled HSV(A) channels to a hex string; `alpha` defaults to 100.
- * @csspart base - Compatibility name for the field wrapper; use `color-picker`.
+ * @csspart base - Permanent compatibility name on the same field wrapper as `color-picker`.
  * @csspart color-picker - The field wrapper. It is the same node as `base` and `form-control`.
  * @csspart form-control - The field wrapper. It is the same node as `base` and `color-picker`.
- * @csspart form-control-label - The label. Also carries the `label` part token for back-compat.
- * @csspart label - Alias of `form-control-label`, kept for back-compat.
+ * @csspart form-control-label - The label. It also carries the `label` compatibility name.
+ * @csspart label - Permanent compatibility name on the same label as `form-control-label`.
  * @csspart trigger-container - The row wrapping the trigger.
  * @csspart trigger - The swatch button that opens the panel.
  * @csspart panel - The positioned popover surface.

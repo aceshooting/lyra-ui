@@ -1599,6 +1599,18 @@ describe('canonical rubric schema/value model', () => {
     { key: 'comment', type: 'comment' },
   ];
 
+  it('omits blank rubric keys without rewriting retained identity spelling', async () => {
+    const el = await fixture<LyraRubricForm>(html`<lr-rubric-form></lr-rubric-form>`);
+    el.keys = [
+      { key: '', type: 'comment' },
+      { key: '   ', type: 'comment' },
+      { key: ' padded ', type: 'comment' },
+    ];
+    await el.updateComplete;
+
+    expect(el.keys.map((key) => key.key)).to.deep.equal([' padded ']);
+  });
+
   it('normalizes every external write once before render, validity, readout, and FormData', async () => {
     const form = (await fixture(html`
       <form>

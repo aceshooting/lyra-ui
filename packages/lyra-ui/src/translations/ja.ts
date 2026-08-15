@@ -34,6 +34,7 @@ const strings: LyraLocaleStrings = {
   toolSelectLimit: '最初の {count} 件のツールのみを表示しています。',
   sequenceStripEmpty: '項目がありません',
   sequenceStripCategoryCount: '{label}：{count}',
+  sequenceStripUnnamedCategory: '名前のないカテゴリ',
   noColumns: '列が設定されていません',
   dataGridColumnMenu: '{label} のオプション',
   dataGridPinStart: '{label} を先頭に固定',

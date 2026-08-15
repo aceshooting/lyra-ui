@@ -26,7 +26,8 @@ Both score branches format visible numeric labels with the effective locale (inc
 digits); segmented item values and submitted rubric values remain stable raw numbers/strings.
 
 **Properties:** `keys: readonly RubricKey[] = []` (attribute: false), where the exported immutable
-discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. Shared fields are
+discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. Keys use nonblank
+first-wins identity and retained valid spelling is not rewritten. Shared fields are
 `key`, `label?`, `description?`, and `required?`; only scores expose `min?`/`max?`/`step?`, only
 categories expose readonly `RubricKeyOption[]` plus `multiple?`, and only comments expose
 `placeholder?`. Runtime schema normalization retains the first occurrence of each nonempty key and

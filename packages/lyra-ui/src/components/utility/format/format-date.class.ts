@@ -6,21 +6,21 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import {
   dateTimeFormatOptions,
   dateSourceConverter,
-  type FormatDateHour,
-  type FormatDateMonth,
-  type FormatDateNumeric,
-  type FormatDateStyle,
-  type FormatDateText,
-  type FormatDateTimeZoneName,
+  type LyraFormatDateHour,
+  type LyraFormatDateMonth,
+  type LyraFormatDateNumeric,
+  type LyraFormatDateStyle,
+  type LyraFormatDateText,
+  type LyraFormatDateTimeZoneName,
 } from './format-options.js';
 
 export type {
-  FormatDateHour,
-  FormatDateMonth,
-  FormatDateNumeric,
-  FormatDateStyle,
-  FormatDateText,
-  FormatDateTimeZoneName,
+  LyraFormatDateHour,
+  LyraFormatDateMonth,
+  LyraFormatDateNumeric,
+  LyraFormatDateStyle,
+  LyraFormatDateText,
+  LyraFormatDateTimeZoneName,
 } from './format-options.js';
 
 /**
@@ -38,22 +38,22 @@ export type {
 export class LyraFormatDate extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   @property({ converter: dateSourceConverter }) date: string | number | Date = new Date();
-  @property() weekday?: FormatDateText;
-  @property() era?: FormatDateText;
-  @property() year?: FormatDateNumeric;
-  @property() month?: FormatDateMonth;
-  @property() day?: FormatDateNumeric;
-  @property() hour?: FormatDateNumeric;
-  @property() minute?: FormatDateNumeric;
-  @property() second?: FormatDateNumeric;
+  @property() weekday?: LyraFormatDateText;
+  @property() era?: LyraFormatDateText;
+  @property() year?: LyraFormatDateNumeric;
+  @property() month?: LyraFormatDateMonth;
+  @property() day?: LyraFormatDateNumeric;
+  @property() hour?: LyraFormatDateNumeric;
+  @property() minute?: LyraFormatDateNumeric;
+  @property() second?: LyraFormatDateNumeric;
   @property({ attribute: 'time-zone-name' })
-  timeZoneName?: FormatDateTimeZoneName;
-  @property({ attribute: 'date-style' }) dateStyle?: FormatDateStyle;
-  @property({ attribute: 'time-style' }) timeStyle?: FormatDateStyle;
+  timeZoneName?: LyraFormatDateTimeZoneName;
+  @property({ attribute: 'date-style' }) dateStyle?: LyraFormatDateStyle;
+  @property({ attribute: 'time-style' }) timeStyle?: LyraFormatDateStyle;
   /** IANA time-zone name forwarded to `Intl.DateTimeFormat` (attribute `time-zone`). */
   @property({ attribute: 'time-zone' })
   timeZone?: Intl.DateTimeFormatOptions['timeZone'];
-  @property({ attribute: 'hour-format' }) hourFormat: FormatDateHour = 'auto';
+  @property({ attribute: 'hour-format' }) hourFormat: LyraFormatDateHour = 'auto';
 
   override render(): TemplateResult {
     const source = this.date ?? new Date();

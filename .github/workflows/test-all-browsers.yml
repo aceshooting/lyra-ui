@@ -44,7 +44,6 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
       # One browser per matrix job -- each gets its own isolated runner VM, unlike the previous
       # single-runner design where all 5 browsers' dev servers and browser processes competed for
       # the same ports and CPU/RAM, causing EADDRINUSE collisions and spurious 30-120s timeouts.

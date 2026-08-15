@@ -19,7 +19,8 @@ A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes wit
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
-cycle-safe, first-path-wins snapshot bounded to 10,000 nodes and 64 descendant levels),
+cycle-safe snapshot omitting empty/blank paths and retaining the first duplicate path, bounded to
+the first 10,000 inspected source positions across 64 descendant levels; reassign after changes),
 `selectedPath: string | null = null` (attribute `selected-path`), and `label: string = ''`.
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
 and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
@@ -29,9 +30,9 @@ including an explicit empty string; removing it restores `label` or the localize
 `revealPath(path)` expands every ancestor directory and scrolls the target row into view, resolving
 `true` once found. `expandAll()` and `collapseAll()` forward to the underlying `<lr-tree>`.
 
-**Events:** `lr-file-select` (frozen readonly `detail: { path, node }`, a row was activated),
-`lr-file-open` (frozen readonly `detail: { path, node }`, Enter/click on an already-selected file
-row), and `lr-load-children` (frozen readonly `detail: { path }`, a lazy unloaded directory
+**Events:** `lr-file-select` (frozen readonly `detail: { filePath, node }`, a row was activated),
+`lr-file-open` (frozen readonly `detail: { filePath, node }`, Enter/click on an already-selected file
+row), and `lr-load-children` (frozen readonly `detail: { filePath }`, a lazy unloaded directory
 expanded).
 
 **CSS parts:** `base` — the root wrapper.

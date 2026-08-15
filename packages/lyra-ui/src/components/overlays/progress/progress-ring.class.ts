@@ -2,6 +2,8 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { variants } from '../../../internal/variants.styles.js';
+import type { LyraProgressVariant } from './progress-bar.class.js';
 import {
   formatProgressPercent,
   joinAccessibleVisibleText,
@@ -18,7 +20,9 @@ import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generat
 
 
 /**
- * `<lr-progress-ring>` — a circular determinate or indeterminate progress indicator.
+ * `<lr-progress-ring>` — a circular determinate or indeterminate progress indicator. `variant`
+ * selects the indicator's semantic palette from the library's shared semantic grid (`neutral`
+ * through `danger`), defaulting to `brand`, matching sibling `<lr-progress-bar>`.
  *
  * @customElement lr-progress-ring
  * @slot - Optional center label whose visible accessible text names the progressbar unless an
@@ -33,7 +37,12 @@ import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generat
  * @cssprop [--lr-progress-ring-track-width=var(--lr-size-4px)] - Track stroke width.
  * @cssprop [--lr-progress-ring-track-color=var(--lr-color-brand-quiet)] - Track stroke color.
  * @cssprop [--lr-progress-ring-indicator-width=var(--lr-progress-ring-track-width)] - Indicator stroke width.
- * @cssprop [--lr-progress-ring-indicator-color=var(--lr-color-brand)] - Indicator stroke color.
+ * @cssprop [--lr-progress-ring-indicator-color=var(--lr-progress-ring-indicator-variant-color)] -
+ * Indicator stroke color, overriding the variant palette below.
+ * @cssprop [--lr-progress-ring-indicator-variant-color=var(--lr-color-fill-loud,var(--lr-color-brand))] -
+ * Palette slot: the active `variant`'s loud fill from the shared semantic grid. Feeds
+ * `--lr-progress-ring-indicator-color` above unless that (or the upstream `--indicator-color`
+ * alias) is itself set.
  * @cssprop [--lr-progress-ring-indicator-transition-duration=var(--lr-transition-base)] - Determinate indicator transition.
  * @cssprop [--lr-progress-duration=var(--lr-transition-ambient)] - Indeterminate rotation timing.
  * @cssprop [--size=var(--lr-progress-ring-size)] - Upstream-compatible outer diameter.
@@ -54,12 +63,15 @@ export class LyraProgressRing extends LyraElement {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, ringStyles];
+  static override styles = [LyraElement.styles, variants, ringStyles];
   // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number, reflect: true }) value = 0;
   // numeric-guard-exempt: normalized by progressSafeMax() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number }) max = 100;
   @property({ type: Boolean, reflect: true }) indeterminate = false;
+  /** Selects the indicator's semantic palette from the shared semantic grid, matching sibling
+   *  `<lr-progress-bar>`'s `variant`. */
+  @property({ reflect: true }) variant: LyraProgressVariant = 'brand';
   /** Mapped accessible-label property. */
   @property() label = '';
   /** Explicit accessible name, on the library-wide `accessibleLabel`/`accessible-label` convention

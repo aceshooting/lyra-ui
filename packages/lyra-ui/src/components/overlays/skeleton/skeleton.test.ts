@@ -1,6 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './skeleton.js';
-import type { LyraSkeleton } from './skeleton.js';
+import type { LyraSkeleton, LyraSkeletonEffect } from './skeleton.js';
 
 it('defaults to a decorative text shape like the mirrored upstream skeletons', async () => {
   const el = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;
@@ -80,7 +80,8 @@ it('accepts the effect attribute without reflecting property writes', async () =
   const el = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;
   const indicator = el.shadowRoot!.querySelector('[part~="indicator"]')!;
 
-  el.effect = 'pulse';
+  const pulse: LyraSkeletonEffect = 'pulse';
+  el.effect = pulse;
   await el.updateComplete;
   expect(el.hasAttribute('effect')).to.equal(false);
   expect(indicator.getAttribute('data-effect')).to.equal('pulse');

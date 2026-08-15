@@ -290,6 +290,83 @@ describe('parsing and rendering', () => {
     )) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelectorAll('[part~="output"]').length === 2);
     expect(rowRoot(el).textContent).to.include('first second');
+    const snapshot = el.notebook as {
+      readonly cells: readonly {
+        readonly outputs?: readonly {
+          readonly data?: Readonly<Record<string, unknown>>;
+        }[];
+      }[];
+    };
+    const snapshotPayload = snapshot.cells[0]!.outputs![1]!.data![
+      'application/x-custom+json'
+    ] as Readonly<Record<string, unknown>>;
+    inheritedPayload['own'] = false;
+    expect(snapshot).not.to.equal(notebook);
+    expect(snapshotPayload).to.deep.equal({ own: true });
+    expect(Object.getPrototypeOf(snapshotPayload)).to.equal(Object.prototype);
+    expect(Object.isFrozen(snapshot)).to.be.true;
+    expect(Object.isFrozen(snapshot.cells)).to.be.true;
+    expect(Object.isFrozen(snapshotPayload)).to.be.true;
+  });
+
+  it('rejects notebook accessors without invoking them', async () => {
+    let getterReads = 0;
+    const payload = Object.create({ ignored: true }) as Record<string, unknown>;
+    Object.defineProperty(payload, 'own', {
+      enumerable: true,
+      get() {
+        getterReads += 1;
+        return true;
+      },
+    });
+    const notebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code',
+        source: '',
+        outputs: [{
+          output_type: 'display_data',
+          data: { 'application/x-custom+json': payload },
+        }],
+      }],
+    };
+    const el = (await fixture(
+      html`<lr-notebook-viewer></lr-notebook-viewer>`,
+    )) as LyraNotebookViewer;
+    const errorPromise = oneEvent(el, 'lr-render-error');
+
+    el.notebook = notebook as never;
+    await errorPromise;
+
+    expect(getterReads).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+      'This file is not a valid Jupyter notebook.',
+    );
+  });
+
+  it('atomically rejects cycles outside the fields traversed by nbformat validation', async () => {
+    const metadata: { language_info?: unknown } = {};
+    metadata.language_info = metadata;
+    const el = (await fixture(
+      html`<lr-notebook-viewer></lr-notebook-viewer>`,
+    )) as LyraNotebookViewer;
+    let loadCount = 0;
+    el.addEventListener('lr-load', () => loadCount++);
+    const errorPromise = oneEvent(el, 'lr-render-error');
+
+    el.notebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [],
+      metadata,
+    } as never;
+    await errorPromise;
+
+    expect(loadCount).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+      'This file is not a valid Jupyter notebook.',
+    );
   });
 
   it('rejects sparse cell arrays supplied as public values or serialized with null holes', async () => {

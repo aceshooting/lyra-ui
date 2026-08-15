@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Attachment chips use unique nonempty attachmentId values; malformed and later duplicate rows are omitted first-wins. Every array-valued input, including nested source children and queue attachments, is a bounded clone-owned frozen snapshot; reassign a new collection after changes.',
+          'Attachment chips use unique nonempty attachmentId values; source roots and queued prompts use unique nonblank ids; selected source ids are unique and nonblank. Malformed and later duplicate rows are omitted first-wins before section gating or forwarding. Every array-valued input, including nested source children and queue attachments, is a bounded clone-owned frozen snapshot; reassign a new collection after changes.',
       },
     },
   },

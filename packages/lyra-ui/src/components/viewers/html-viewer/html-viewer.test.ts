@@ -216,7 +216,9 @@ describe('HTML registry', () => {
       anchor,
       highlights,
     }) as LyraHtmlViewer;
-    expect(rendered.anchor).to.equal(anchor);
+    expect(rendered.anchor).to.deep.equal(anchor);
+    expect(rendered.anchor).not.to.equal(anchor);
+    expect(Object.isFrozen(rendered.anchor)).to.be.true;
     expect(rendered.highlights).to.deep.equal(highlights);
     expect(definition.capabilities).to.deep.equal({
       anchors: ['text-quote', 'fragment'],

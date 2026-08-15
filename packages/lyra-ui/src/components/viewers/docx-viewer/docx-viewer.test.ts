@@ -508,7 +508,7 @@ describe('DOCX registry', () => {
       host,
     );
     const rendered = host.querySelector('lr-docx-viewer') as LyraDocxViewer;
-    expect(rendered.anchor).to.equal(anchor);
+    expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.highlights).to.deep.equal(highlights);
     expect(definition.capabilities).to.deep.equal({
       anchors: ['fragment', 'text-quote'],
@@ -1442,6 +1442,43 @@ describe('search', () => {
       expect(await el.search('x')).to.equal(1000);
       expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(200);
       expect(detail).to.deep.include({ matchCount: 1000, matchCountExact: false });
+    } finally { restore(); }
+  });
+
+  it('fails closed before a cross-node search match would exceed the 200-mark mutation ceiling', async () => {
+    const markup = `<p>${'<span>x</span>'.repeat(201)}</p>`;
+    const { el, restore } = await loadWithMarkup(markup);
+    try {
+      expect(await el.search('x'.repeat(201))).to.equal(1);
+      expect(el.shadowRoot!.querySelector('mark[part~=search-match]') === null).to.be.true;
+    } finally { restore(); }
+  });
+
+  it('does not split an over-budget single Text node to paint a small retained match', async () => {
+    const { el, restore } = await loadWithMarkup('<p></p>');
+    try {
+      el.shadowRoot!.querySelector('[part=content] p')!
+        .append(document.createTextNode('x'.repeat(1_000_001)));
+      (el as unknown as { textIndexCache: null }).textIndexCache = null;
+      expect(await el.search('x')).to.equal(1_000);
+      expect(el.shadowRoot!.querySelector('mark[part~=search-match]') === null).to.be.true;
+    } finally { restore(); }
+  });
+
+  it('clears search marks with local text merging instead of recursive parent normalization', async () => {
+    const { el, restore } = await loadWithMarkup('<p>The cat sat.</p>');
+    try {
+      expect(await el.search('cat')).to.equal(1);
+      const paragraph = el.shadowRoot!.querySelector('[part=content] p') as HTMLElement;
+      let normalizeCalls = 0;
+      Object.defineProperty(paragraph, 'normalize', {
+        configurable: true,
+        value: () => { normalizeCalls++; },
+      });
+      el.clearSearch();
+      expect(normalizeCalls).to.equal(0);
+      expect(paragraph.childNodes).to.have.length(1);
+      expect(paragraph.textContent).to.equal('The cat sat.');
     } finally { restore(); }
   });
 

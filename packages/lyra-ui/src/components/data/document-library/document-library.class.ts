@@ -532,9 +532,9 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   private onTableSelectionChange = (event: CustomEvent): void => {
     event.stopPropagation();
     const table = event.currentTarget as HTMLElement & {
-      selectedKeys: ReadonlySet<string | number>;
+      selectedRowKeys: ReadonlySet<string | number>;
     };
-    table.selectedKeys = new Set(this.selectedDocumentIds);
+    table.selectedRowKeys = new Set(this.selectedDocumentIds);
   };
 
   private openDocument(document: LibraryDocument): void {
@@ -779,7 +779,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           .columns=${this.buildColumns(visible)}
           .rows=${visible}
           .rowKey=${(document: LibraryDocument) => document.id}
-          .selectedKeys=${new Set(this.selectedDocumentIds)}
+          .selectedRowKeys=${new Set(this.selectedDocumentIds)}
           selection-mode="multiple"
           .sortKey=${this.sortKey}
           .sortDir=${this.sortDir}

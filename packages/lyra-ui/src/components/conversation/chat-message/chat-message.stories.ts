@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "A role-based message bubble shell for a chat/agent conversation surface. It renders no content of its own — the default slot carries plain text, a `<lr-markdown>`, or anything else a consumer wants — and only supplies chrome: alignment/coloring by `role`, an avatar/badges header, an optional collapse toggle, an attachments strip, and a status-aware footer.",
+          'A role-based message bubble shell for a chat/agent conversation surface. The role-owning article is directly named with the localized author identity unless a host aria-label override is present. The default slot carries the message body; the component supplies alignment, status, attachments, and action chrome.',
       },
     },
   },

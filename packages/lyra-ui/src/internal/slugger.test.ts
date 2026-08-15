@@ -51,6 +51,24 @@ describe('Slugger', () => {
     expect(slugger.slug('Overview')).to.equal('overview-2');
   });
 
+  it('keeps membership work linear across a long run of duplicate headings', () => {
+    const slugger = new Slugger();
+    let membershipChecks = 0;
+    class CountingSet extends Set<string> {
+      override has(value: string): boolean {
+        membershipChecks++;
+        return super.has(value);
+      }
+    }
+    (slugger as unknown as { used: Set<string> }).used = new CountingSet();
+    const headingCount = 2_000;
+    let last = '';
+    for (let index = 0; index < headingCount; index++) last = slugger.slug('Repeated heading');
+
+    expect(last).to.equal(`repeated-heading-${headingCount - 1}`);
+    expect(membershipChecks).to.be.lessThan(headingCount * 4);
+  });
+
   it('is scoped per instance -- a fresh Slugger does not remember a previous document', () => {
     const first = new Slugger();
     expect(first.slug('Intro')).to.equal('intro');

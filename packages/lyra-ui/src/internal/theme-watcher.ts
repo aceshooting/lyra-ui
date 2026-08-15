@@ -494,6 +494,12 @@ export class ThemeWatcher implements ReactiveController {
   private mutationCanAffectHost(subject: unknown): boolean {
     const realm = this.realm;
     if (!realm) return false;
+    if (
+      (realm.Document && subject instanceof realm.Document) ||
+      (realm.ShadowRoot && subject instanceof realm.ShadowRoot)
+    ) {
+      return this.roots.includes(subject as Document | ShadowRoot);
+    }
     const relevantSheets = new Set(this.roots.flatMap((root) => sheetsForRoot(root)));
 
     if (realm.CSSStyleDeclaration && subject instanceof realm.CSSStyleDeclaration) {
@@ -520,13 +526,6 @@ export class ThemeWatcher implements ReactiveController {
       }
       return false;
     }
-    if (
-      (realm.Document && subject instanceof realm.Document) ||
-      (realm.ShadowRoot && subject instanceof realm.ShadowRoot)
-    ) {
-      return this.roots.includes(subject as Document | ShadowRoot);
-    }
-
     // Unknown platform objects are rare and cannot be scoped safely. Preserve the conservative
     // behavior for those opaque cases; known inline declarations and sheets above are filtered.
     return true;

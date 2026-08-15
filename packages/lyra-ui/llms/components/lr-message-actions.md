@@ -56,6 +56,9 @@ thumbs-only `lr-message-feedback`. A colliding event from an
 arbitrary slotted child is contained at that slot boundary rather than being mistaken for a
 built-in action.
 
+Composite toolbar providers must expose nonblank action ids that are unique within that provider;
+invalid actions and later duplicates are omitted before roving focus ownership.
+
 **Slots:** default — additional controls (e.g. `lr-copy-button`, `lr-icon-button`,
 `lr-branch-picker`) appended after the built-ins; they participate in the toolbar's arrow-key
 navigation.

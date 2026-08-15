@@ -30,7 +30,6 @@ export const NarrowLongContent: Story = {
         series-label="Requests grouped by end-to-end completion time"
         bins="6"
         height="16rem"
-        legend
         .values=${[2, 4, 4, 5, 6, 6, 6, 7, 8, 9, 9, 10, 11, 12, 12, 13, 15]}
       ></lr-histogram>
     </div>

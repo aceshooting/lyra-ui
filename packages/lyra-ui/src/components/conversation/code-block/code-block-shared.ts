@@ -42,6 +42,7 @@ import type { ShikiTransformer } from './shiki-types.js';
 import type {
   LyraAnchor,
   LyraHighlight,
+  TextSelectRect,
 } from '../../viewers/document-viewer/anchors.js';
 import { resolveIsDarkTheme } from './shiki-dark-theme.js';
 
@@ -293,9 +294,9 @@ export function codeBlockLineKeyAction(
 
 /** An `lr-text-select` payload for a selection ending inside `[part="body"]`. */
 export interface CodeBlockSelection {
-  text: string;
-  anchor: LyraAnchor;
-  rects: DOMRect[];
+  readonly text: string;
+  readonly anchor: LyraAnchor;
+  readonly rects: readonly TextSelectRect[];
 }
 
 /** Anchors the current selection to the `line-range` it spans. `null` whenever there's nothing to

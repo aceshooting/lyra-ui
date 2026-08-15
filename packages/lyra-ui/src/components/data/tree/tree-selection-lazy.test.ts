@@ -28,6 +28,7 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
 
     expect(standalone!.selected).to.be.true;
     expect(event.detail.selection.map((item: LyraTreeItem) => item.nodeLabel)).to.eql(['Standalone']);
+    expect(event.detail.selection[0] === standalone).to.be.true;
     expect(el.selectedItems.map((item) => item.nodeLabel)).to.eql(['Standalone']);
     expect(Object.isFrozen(event.detail)).to.be.true;
     expect(Object.isFrozen(event.detail.selection)).to.be.true;

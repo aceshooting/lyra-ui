@@ -1183,6 +1183,9 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
       x: 3,
       y: 2,
     });
+    expect(Object.isFrozen(layoutDetail)).to.be.true;
+    expect(Object.isFrozen(layoutDetail!.layout)).to.be.true;
+    expect(Object.isFrozen(layoutDetail!.layout[0])).to.be.true;
     expect(Object.isFrozen(moveDetail)).to.be.true;
     expect(
       Object.isFrozen(
@@ -1197,6 +1200,71 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
     expect(Object.isFrozen(layoutDetail)).to.be.true;
     expect(Object.isFrozen(layoutDetail!.layout)).to.be.true;
     expect(Object.isFrozen(layoutDetail!.layout[0])).to.be.true;
+  });
+
+  it('announces successful move and resize only after the host applies each controlled layout request', async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid cells-draggable cells-resizable></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [
+      { cellId: 'a', x: 0, y: 0, w: 1, h: 1, label: 'Alpha' },
+    ];
+    await el.updateComplete;
+
+    const announcer = (
+      el as unknown as { announcer: { throttleMs: number } }
+    ).announcer;
+    announcer.throttleMs = 0;
+    const mirror = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="live-region"]'
+    )!;
+    let proposedLayout: readonly LyraDashboardCell[] | undefined;
+    el.addEventListener('lr-layout-change', (event) => {
+      proposedLayout = event.detail.layout;
+    });
+
+    const cell = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
+    cell.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    expect(el.layout[0]!.x).to.equal(0);
+    expect(mirror.textContent?.trim()).to.equal('');
+
+    el.layout = proposedLayout!;
+    await el.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    expect(mirror.textContent?.trim()).to.equal(
+      'Alpha moved to column 2, row 1.'
+    );
+
+    proposedLayout = undefined;
+    el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    expect(el.layout[0]!.w).to.equal(1);
+    expect(mirror.textContent?.trim()).to.equal(
+      'Alpha moved to column 2, row 1.'
+    );
+
+    el.layout = proposedLayout!;
+    await el.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    expect(mirror.textContent?.trim()).to.equal(
+      'Alpha resized to width 2, height 1.'
+    );
   });
 
   it("flips ArrowRight to decrease x under RTL, matching the roving-nav direction convention", async () => {
@@ -1432,6 +1500,7 @@ describe("collision policy", () => {
       accepted: false,
     });
     expect(Object.isFrozen(collisionDetail)).to.be.true;
+    expect(Object.isFrozen(collisionDetail!.collidedCellIds)).to.be.true;
     expect(
       Object.isFrozen(
         (collisionDetail as { collidedCellIds: readonly string[] }).collidedCellIds
@@ -2501,7 +2570,7 @@ describe("localized strings", () => {
     expect(announcer.pendingText).to.equal("Alpha bloqué");
   });
 
-  it("provides English defaults for move, resize, and collision announcements", async () => {
+  it('provides English defaults for move, resize, and collision announcements', async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid
         cells-draggable
@@ -2509,8 +2578,8 @@ describe("localized strings", () => {
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     el.layout = [
-      { cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
-      { cellId: "b", x: 2, y: 0, w: 1, h: 1, label: "Beta" },
+      { cellId: 'a', x: 0, y: 0, w: 1, h: 1, label: 'Alpha' },
+      { cellId: 'b', x: 2, y: 0, w: 1, h: 1, label: 'Beta' },
     ];
     await el.updateComplete;
     const cellA = el.shadowRoot!.querySelector(
@@ -2521,48 +2590,59 @@ describe("localized strings", () => {
         announcer: { pendingText?: string };
       }
     ).announcer;
+    let proposedLayout: readonly LyraDashboardCell[] | undefined;
+    el.addEventListener('lr-layout-change', (event) => {
+      proposedLayout = event.detail.layout;
+    });
 
     cellA.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowRight",
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
         ctrlKey: true,
         bubbles: true,
         cancelable: true,
       })
     );
-    expect(announcer.pendingText).to.equal("Alpha moved to column 2, row 1.");
+    expect(announcer.pendingText).to.equal(undefined);
+    el.layout = proposedLayout!;
+    await el.updateComplete;
+    expect(announcer.pendingText).to.equal('Alpha moved to column 2, row 1.');
 
+    proposedLayout = undefined;
     cellA.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowDown",
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
         ctrlKey: true,
         shiftKey: true,
         bubbles: true,
         cancelable: true,
       })
     );
+    expect(announcer.pendingText).to.equal('Alpha moved to column 2, row 1.');
+    el.layout = proposedLayout!;
+    await el.updateComplete;
     expect(announcer.pendingText).to.equal(
-      "Alpha resized to width 1, height 2."
+      'Alpha resized to width 1, height 2.'
     );
 
     el.layout = [
-      { cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
-      { cellId: "b", x: 1, y: 0, w: 1, h: 1, label: "Beta" },
+      { cellId: 'a', x: 0, y: 0, w: 1, h: 1, label: 'Alpha' },
+      { cellId: 'b', x: 1, y: 0, w: 1, h: 1, label: 'Beta' },
     ];
     await el.updateComplete;
     const updatedCellA = el.shadowRoot!.querySelector(
       '[data-cell-id="a"]'
     ) as HTMLElement;
     updatedCellA.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowRight",
+      new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
         ctrlKey: true,
         bubbles: true,
         cancelable: true,
       })
     );
     expect(announcer.pendingText).to.equal(
-      "Alpha cannot be placed there because it overlaps another cell."
+      'Alpha cannot be placed there because it overlaps another cell.'
     );
   });
 });
@@ -2675,7 +2755,7 @@ it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
   }
 });
 
-it("formats move and resize announcement coordinates with the effective locale", async () => {
+it('formats move and resize announcement coordinates with the effective locale', async () => {
   const el = (await fixture(
     html`<lr-dashboard-grid
       lang="ar-EG"
@@ -2683,7 +2763,7 @@ it("formats move and resize announcement coordinates with the effective locale",
       cells-resizable
     ></lr-dashboard-grid>`
   )) as LyraDashboardGrid;
-  el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" }];
+  el.layout = [{ cellId: 'a', x: 0, y: 0, w: 1, h: 1, label: 'Alpha' }];
   await el.updateComplete;
   const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
   const announcer = (
@@ -2691,28 +2771,37 @@ it("formats move and resize announcement coordinates with the effective locale",
       announcer: { pendingText?: string };
     }
   ).announcer;
-  const number = new Intl.NumberFormat("ar-EG");
+  const number = new Intl.NumberFormat('ar-EG');
+  let proposedLayout: readonly LyraDashboardCell[] | undefined;
+  el.addEventListener('lr-layout-change', (event) => {
+    proposedLayout = event.detail.layout;
+  });
 
   cell.dispatchEvent(
-    new KeyboardEvent("keydown", {
-      key: "ArrowRight",
+    new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
       ctrlKey: true,
       bubbles: true,
       cancelable: true,
     })
   );
+  el.layout = proposedLayout!;
+  await el.updateComplete;
   expect(announcer.pendingText).to.include(number.format(2));
   expect(announcer.pendingText).to.include(number.format(1));
 
+  proposedLayout = undefined;
   cell.dispatchEvent(
-    new KeyboardEvent("keydown", {
-      key: "ArrowDown",
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
       ctrlKey: true,
       shiftKey: true,
       bubbles: true,
       cancelable: true,
     })
   );
+  el.layout = proposedLayout!;
+  await el.updateComplete;
   expect(announcer.pendingText).to.include(number.format(2));
   expect(announcer.pendingText).to.include(number.format(1));
 });

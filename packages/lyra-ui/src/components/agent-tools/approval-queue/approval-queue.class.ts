@@ -63,8 +63,6 @@ export interface LyraApprovalQueueEventMap {
  * @since 6.2.0
  */
 export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['requests']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -78,6 +76,8 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     confirmDenied: LYRA_DEFAULT_confirmDenied,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['requests']);
 
   static override styles = [LyraElement.styles, styles];
 

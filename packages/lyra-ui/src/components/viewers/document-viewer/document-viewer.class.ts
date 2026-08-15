@@ -73,13 +73,6 @@ export interface LyraDocumentViewerEventMap {
  * @since 4.0.0
  */
 export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'highlights',
-    'registry',
-  ]);
-  protected static override readonly identityCollectionProperties =
-    Object.freeze(['registry']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -90,6 +83,13 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     loadingDocument: LYRA_DEFAULT_loadingDocument,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'highlights',
+    'registry',
+  ]);
+  protected static override readonly identityCollectionProperties =
+    Object.freeze(['registry']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -126,8 +126,8 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     this.requestUpdate('payload', old);
   }
 
-  /** Optional per-instance immutable/read-only registry override. Native maps are synchronously
-   * copied behind a frozen readonly facade while renderer-definition identity is retained; later
+  /** Optional per-instance immutable/read-only registry override. Native maps and definition
+   * records are synchronously cloned and frozen while callback identities are retained; later
    * source-map mutation is not observed. When unset, this instance owns a snapshot of the built-ins
    * that existed when it was constructed; later registrations cannot mutate it. A consumer matcher
    * or renderer that throws is contained as the localized error state, and a pending anchor

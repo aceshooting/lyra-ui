@@ -30,8 +30,13 @@ false` (reflected — disables every gesture grid-wide), `accessibleLabel: strin
 (`detail: { cellId, size, previous }`), `lr-collision`
 (`detail: { cellId, collidedCellIds, policy, accepted }`),
 `lr-layout-change` (`detail: { layout }`, the full proposed layout after an accepted change).
-Move, resize, and collision feedback is appended to the shared light-DOM polite announcement
-sink only while the grid and its composed ancestors remain exposed to the accessibility tree.
+The collection-bearing collision and layout-change details are detached and recursively frozen;
+listeners apply changes by creating and assigning a new layout.
+Rejected-collision feedback is appended immediately to the shared light-DOM polite announcement
+sink. Accepted move/resize success is appended only after a later controlled `layout` assignment
+contains the requested target geometry; ignoring a request never announces a change that did not
+happen. All feedback remains silent while the grid or a composed ancestor is excluded from the
+accessibility tree.
 **Slots:** `cell-{cellId}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
 

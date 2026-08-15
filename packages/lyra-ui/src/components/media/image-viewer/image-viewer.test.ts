@@ -1897,6 +1897,25 @@ it("uses first-wins unique highlight ids and a bounded roving projection", async
   ).to.equal(1);
 });
 
+it('omits malformed and blank region highlight identities before focus and activation', async () => {
+  const el = await fixture<LyraImageViewer>(html`
+    <lr-image-viewer
+      src=${PNG_SRC}
+      .highlights=${[
+        null,
+        { id: '   ', anchor: { kind: 'region', rect: { x: 1, y: 1, width: 10, height: 10 } } },
+        { id: 'valid', anchor: { kind: 'region', rect: { x: 2, y: 2, width: 10, height: 10 } } },
+      ] as unknown as LyraHighlight[]}
+    ></lr-image-viewer>
+  `);
+  await stubImageLoad(el);
+  await el.updateComplete;
+
+  const buttons = el.shadowRoot!.querySelectorAll('[part="highlight"]');
+  expect(buttons).to.have.lengthOf(1);
+  expect((buttons[0] as HTMLElement).dataset['highlightId']).to.equal('valid');
+});
+
 it("rejects malformed region anchors and visibly reveals a valid far-corner region", async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
     <div style="inline-size: 240px">

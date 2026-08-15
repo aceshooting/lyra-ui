@@ -132,7 +132,7 @@ export const PartAliases: Story = {
     docs: {
       description: {
         story:
-          "Web Awesome’s `date-picker` part and the deprecated Lyra `base` compatibility name are tokens on the same visible shell. Either consumer selector therefore reaches identical padding, background, border, and radius chrome.",
+          'Web Awesome’s `date-picker` part and Lyra’s permanent `base` compatibility name are tokens on the same visible shell. Both names remain supported, and either consumer selector therefore reaches identical padding, background, border, and radius chrome.',
       },
     },
   },

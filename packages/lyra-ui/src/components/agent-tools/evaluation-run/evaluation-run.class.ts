@@ -35,13 +35,13 @@ import { LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusQueue
 
 /** How evaluation content is rendered -- `'markdown'` (the default) through `<lr-markdown>`, or
  *  `'code'` through `<lr-code-block>`. */
-export type EvaluationContentFormat = 'markdown' | 'code';
+export type EvalContentFormat = 'markdown' | 'code';
 
 /** One self-contained input/output payload in an evaluation example. */
-export interface EvaluationContent {
+export interface EvalContent {
   text: string;
   /** `'markdown'` is used when unset. */
-  format?: EvaluationContentFormat;
+  format?: EvalContentFormat;
   /** A shiki-recognized language id, consulted only when `format` is `'code'`. */
   language?: string;
 }
@@ -56,13 +56,13 @@ export interface EvaluationContent {
  * `<lr-tool-timeline>` (`entries`) with no adapters -- this component owns no grounding-scoring or
  * tool-call rendering logic of its own.
  */
-export interface EvaluationExampleResult {
+export interface EvalExampleResult {
   id: string;
   /** Falls back to a localized "Example {index}" (1-based, in array order) when unset. */
   label?: string;
   status: AgentStatusPresentation;
-  input: EvaluationContent;
-  output: EvaluationContent;
+  input: EvalContent;
+  output: EvalContent;
   /** This example's grounding/citation-support assessment, when the run computed one. Omitted
    *  entirely means no grounding section renders for this example. */
   grounding?: GroundingAssessment;
@@ -75,7 +75,7 @@ export interface EvaluationExampleResult {
 }
 
 /** `detail` for `lr-example-toggle`. */
-export interface EvaluationExampleToggleDetail {
+export interface EvalExampleToggleDetail {
   exampleId: string;
   expanded: boolean;
 }
@@ -83,7 +83,7 @@ export interface EvaluationExampleToggleDetail {
 /** `detail` for `lr-example-citation-select` -- the nested per-example `<lr-grounding-summary>`'s
  *  own `lr-citation-select` detail (`{ citation }`), correlated with the example it came from so a
  *  host doesn't need to walk the DOM to find out which example's evidence was activated. */
-export interface EvaluationCitationSelectDetail {
+export interface EvalCitationSelectDetail {
   exampleId: string;
   citation: Citation;
 }
@@ -91,30 +91,30 @@ export interface EvaluationCitationSelectDetail {
 /** `detail` for `lr-example-tool-approval-decide` -- the nested per-example `<lr-tool-timeline>`'s
  *  own `lr-tool-approval-decide` detail (`ToolTimelineApprovalDetail`), correlated with the
  *  example it came from. */
-export interface EvaluationToolApprovalDetail extends ToolTimelineApprovalDetail {
+export interface EvalToolApprovalDetail extends ToolTimelineApprovalDetail {
   exampleId: string;
 }
 
-export interface EvaluationToolActivateDetail extends ToolTimelineActivateDetail {
+export interface EvalToolActivateDetail extends ToolTimelineActivateDetail {
   exampleId: string;
 }
 
-export interface EvaluationToolRenderErrorDetail extends ToolTimelineRenderErrorDetail {
+export interface EvalToolRenderErrorDetail extends ToolTimelineRenderErrorDetail {
   exampleId: string;
 }
 
-export interface EvaluationClaimSelectDetail {
+export interface EvalClaimSelectDetail {
   exampleId: string;
   claim: GroundedClaim;
 }
 
-export interface LyraEvaluationRunEventMap {
-  'lr-example-toggle': CustomEvent<EvaluationExampleToggleDetail>;
-  'lr-example-citation-select': CustomEvent<LyraEventDetailSnapshot<EvaluationCitationSelectDetail>>;
-  'lr-example-claim-select': CustomEvent<LyraEventDetailSnapshot<EvaluationClaimSelectDetail>>;
-  'lr-example-tool-approval-decide': CustomEvent<EvaluationToolApprovalDetail>;
-  'lr-example-tool-activate': CustomEvent<EvaluationToolActivateDetail>;
-  'lr-example-tool-render-error': CustomEvent<EvaluationToolRenderErrorDetail>;
+export interface LyraEvalRunEventMap {
+  'lr-example-toggle': CustomEvent<EvalExampleToggleDetail>;
+  'lr-example-citation-select': CustomEvent<LyraEventDetailSnapshot<EvalCitationSelectDetail>>;
+  'lr-example-claim-select': CustomEvent<LyraEventDetailSnapshot<EvalClaimSelectDetail>>;
+  'lr-example-tool-approval-decide': CustomEvent<EvalToolApprovalDetail>;
+  'lr-example-tool-activate': CustomEvent<EvalToolActivateDetail>;
+  'lr-example-tool-render-error': CustomEvent<EvalToolRenderErrorDetail>;
 }
 
 /** Badge tone per `AgentStatusKind` -- mirrors `<lr-span-waterfall>`'s own status-to-tone
@@ -136,7 +136,7 @@ const RUNNING_ERROR_KINDS = ['running', 'error'] as const;
 type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
 
 /**
- * `<lr-evaluation-run>` — an evaluation batch's live progress: an overall `<lr-progress-bar>`
+ * `<lr-eval-run>` — an evaluation batch's live progress: an overall `<lr-progress-bar>`
  * counting terminal (done/error/cancelled) examples against the batch total, plus one
  * `<lr-details>` disclosure per example showing its input/output (`<lr-markdown>` or
  * `<lr-code-block>`, per each payload's `format`), a `<lr-grounding-summary>` when the
@@ -155,7 +155,7 @@ type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
- * @customElement lr-evaluation-run
+ * @customElement lr-eval-run
  * @event lr-example-toggle - An example's disclosure was expanded or collapsed. `detail: { exampleId,
  *   expanded }`.
  * @event lr-example-citation-select - An evidence citation in a nested `<lr-grounding-summary>`
@@ -198,11 +198,9 @@ type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
  * @csspart empty - The empty-state message shown when `examples` is empty.
  * @csspart live-region - The internal status-announcement live region.
  * @status stable
- * @since 4.1.0
+ * @since unreleased
  */
-export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['examples']);
-
+export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -236,6 +234,8 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['examples']);
+
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-example-citation-select',
@@ -246,7 +246,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
    *  to update it (e.g. as each example finishes, or as the whole batch streams in). Empty/blank ids
    *  are omitted and duplicates normalize first-wins before expansion, counts, announcements,
    *  rendering, and events. */
-  @property({ attribute: false }) examples: readonly EvaluationExampleResult[] = [];
+  @property({ attribute: false }) examples: readonly EvalExampleResult[] = [];
 
   /** The batch's expected total example count. `null` (the default) derives it from
    *  `examples.length` instead -- the common case once every result has already arrived; set this
@@ -272,7 +272,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
    *  update to decide what to announce. */
   private previousStatusById = new Map<string, AgentStatusKind>();
 
-  private get normalizedExamples(): EvaluationExampleResult[] {
+  private get normalizedExamples(): EvalExampleResult[] {
     return firstByIdentity(Array.isArray(this.examples) ? this.examples : [], (example) => example.id);
   }
 
@@ -303,7 +303,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     return counts;
   }
 
-  private exampleLabel(example: EvaluationExampleResult, index: number): string {
+  private exampleLabel(example: EvalExampleResult, index: number): string {
     return example.label || this.localize('evaluationRunExampleLabel', undefined, {
       index: getNumberFormat(this.effectiveLocale).format(index + 1),
     });
@@ -425,14 +425,14 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     event.stopPropagation();
   }
 
-  private renderContent(content: EvaluationContent, part: 'input' | 'output'): TemplateResult {
+  private renderContent(content: EvalContent, part: 'input' | 'output'): TemplateResult {
     if (content.format === 'code') {
       return html`<lr-code-block part=${part} code=${content.text} language=${content.language ?? ''}></lr-code-block>`;
     }
     return html`<lr-markdown part=${part} content=${content.text}></lr-markdown>`;
   }
 
-  private renderGrounding(example: EvaluationExampleResult, grounding: GroundingAssessment): TemplateResult {
+  private renderGrounding(example: EvalExampleResult, grounding: GroundingAssessment): TemplateResult {
     return html`
       <section part="grounding-section">
         <h4 part="section-heading">${this.localize('evaluationRunGroundingHeading')}</h4>
@@ -451,7 +451,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   }
 
   private renderToolTrace(
-    example: EvaluationExampleResult,
+    example: EvalExampleResult,
     toolTrace: readonly ToolTimelineEntry[],
   ): TemplateResult {
     return html`
@@ -470,7 +470,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     `;
   }
 
-  private renderExample(example: EvaluationExampleResult, index: number): TemplateResult {
+  private renderExample(example: EvalExampleResult, index: number): TemplateResult {
     const kind = agentStatusKind(example.status);
     const message = agentStatusMessage(example.status);
     const expanded = this.expandedIds.has(example.id);
@@ -566,6 +566,6 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-evaluation-run': LyraEvaluationRun;
+    'lr-eval-run': LyraEvalRun;
   }
 }

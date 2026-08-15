@@ -76,9 +76,9 @@ export interface LyraDocumentCompareEventMap {
  */
 export interface DocumentCompareVersion extends DocumentRef {
   /** Literal text content for this version -- diffed directly by `view="diff"` (no fetch involved), unlike `<lr-document-preview>`'s own text-format dispatch which fetches `uri`. */
-  text?: string;
+  readonly text?: string;
   /** Region highlights rendered over this version's own `<lr-document-preview>` pane (image format only -- see that component's own scope). An id shared between `oldVersion.highlights` and `newVersion.highlights` is what "synchronized anchors" resolves against. */
-  highlights?: LyraHighlight[];
+  readonly highlights?: readonly LyraHighlight[];
 }
 
 function versionSourceIdentity(version: DocumentCompareVersion | undefined): string {
@@ -213,7 +213,9 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   @property() language = '';
 
   /** Forwarded to the internal `<lr-diff-view>`'s own `languages` property while `view="diff"`. */
-  @property({ attribute: false }) languages?: Record<string, ShikiLanguageInput>;
+  @property({ attribute: false }) languages?: Readonly<
+    Record<string, ShikiLanguageInput>
+  >;
 
   /** Whether scrolling one `view="side-by-side"` pane proportionally scrolls the other. See the
    *  class doc's "Synchronized anchors" section. */

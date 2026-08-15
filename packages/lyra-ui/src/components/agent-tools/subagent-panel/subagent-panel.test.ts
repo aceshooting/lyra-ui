@@ -132,6 +132,18 @@ it('applies per-instance localized strings', async () => {
   expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('aria-label')).to.equal('Localized agent hierarchy');
 });
 
+it('defaults label to undefined and keeps an explicit empty override verbatim', async () => {
+  const unset = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  expect(unset.label).to.be.undefined;
+  expect(unset.shadowRoot!.querySelector('[part="list"]')!.getAttribute('aria-label')).to.equal('Subagents');
+
+  const empty = (await fixture(
+    html`<lr-subagent-panel .runs=${runs} label=""></lr-subagent-panel>`,
+  )) as LyraSubagentPanel;
+  expect(empty.label).to.equal('');
+  expect(empty.shadowRoot!.querySelector('[part="list"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 it('iteratively bounds a deeply nested hierarchy without overflowing the stack', async () => {
   const deep: SubagentRun[] = Array.from({ length: 10_000 }, (_, index) => ({
     id: `run-${index}`,

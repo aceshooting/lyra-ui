@@ -309,10 +309,13 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
     this.removeButtonEl?.blur();
   }
 
-  /** Forwards host activation to the remove button, mirroring `<lr-button>`'s `click()` override.
-   *  A no-op while `withRemove` is unset: there is no internal control to forward to. */
+  /** Forwards host activation to the remove button while removable. A plain tag retains the
+   *  native host `HTMLElement.click()` behavior. */
   override click(): void {
-    if (!this.withRemove) return;
+    if (!this.withRemove) {
+      super.click();
+      return;
+    }
     this.removeButtonEl?.click();
   }
 

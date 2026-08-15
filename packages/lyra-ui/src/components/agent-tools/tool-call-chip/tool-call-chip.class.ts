@@ -19,25 +19,7 @@ import { durationMessageValue } from '../../../internal/duration.js';
 import { styles } from './tool-call-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_accessibleLabelSeparator,
-  LYRA_DEFAULT_collapse,
-  LYRA_DEFAULT_details,
-  LYRA_DEFAULT_durationMilliseconds,
-  LYRA_DEFAULT_durationSeconds,
-  LYRA_DEFAULT_map,
-  LYRA_DEFAULT_navigation,
-  LYRA_DEFAULT_open,
-  LYRA_DEFAULT_progress,
-  LYRA_DEFAULT_search,
-  LYRA_DEFAULT_select,
-  LYRA_DEFAULT_statusDenied,
-  LYRA_DEFAULT_statusError,
-  LYRA_DEFAULT_statusPending,
-  LYRA_DEFAULT_statusRunning,
-  LYRA_DEFAULT_statusSuccess,
-  LYRA_DEFAULT_toolCall,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Same status vocabulary as `<lr-tool-result-dialog>`, so a call's chip
@@ -227,27 +209,26 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
 export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
-      collapse: LYRA_DEFAULT_collapse,
-      details: LYRA_DEFAULT_details,
-      durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
-      durationSeconds: LYRA_DEFAULT_durationSeconds,
-      map: LYRA_DEFAULT_map,
-      navigation: LYRA_DEFAULT_navigation,
-      open: LYRA_DEFAULT_open,
-      progress: LYRA_DEFAULT_progress,
-      search: LYRA_DEFAULT_search,
-      select: LYRA_DEFAULT_select,
-      statusDenied: LYRA_DEFAULT_statusDenied,
-      statusError: LYRA_DEFAULT_statusError,
-      statusPending: LYRA_DEFAULT_statusPending,
-      statusRunning: LYRA_DEFAULT_statusRunning,
-      statusSuccess: LYRA_DEFAULT_statusSuccess,
-      toolCall: LYRA_DEFAULT_toolCall,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    statusDenied: LYRA_DEFAULT_statusDenied,
+    statusError: LYRA_DEFAULT_statusError,
+    statusPending: LYRA_DEFAULT_statusPending,
+    statusRunning: LYRA_DEFAULT_statusRunning,
+    statusSuccess: LYRA_DEFAULT_statusSuccess,
+    toolCall: LYRA_DEFAULT_toolCall,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

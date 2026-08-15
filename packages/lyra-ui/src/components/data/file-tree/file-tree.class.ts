@@ -40,30 +40,69 @@ interface FileTreeDraft {
   normalized?: FileTreeNode;
 }
 
+function boundedArrayShape(value: unknown): {
+  readonly isArray: boolean;
+  readonly length: number;
+} {
+  try {
+    if (!Array.isArray(value)) return { isArray: false, length: 0 };
+    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
+    const length = descriptor && 'value' in descriptor ? descriptor.value : 0;
+    return {
+      isArray: true,
+      length:
+        typeof length === 'number' && Number.isSafeInteger(length) && length >= 0
+          ? Math.min(length, MAX_FILE_TREE_NODES)
+          : 0,
+    };
+  } catch {
+    return { isArray: false, length: 0 };
+  }
+}
+
 function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
-  let roots: readonly unknown[];
-  try { roots = Array.isArray(value) ? value : []; } catch { roots = []; }
+  const rootShape = boundedArrayShape(value);
+  const roots = rootShape.isArray ? (value as readonly unknown[]) : [];
   const drafts: FileTreeDraft[] = [];
   const rootDrafts: FileTreeDraft[] = [];
   const seenObjects = new WeakSet<object>();
   const seenPaths = new Set<string>();
-  const stack: Array<{ input: readonly unknown[]; output: FileTreeDraft[]; depth: number; index: number }> = [
-    { input: roots, output: rootDrafts, depth: 0, index: 0 },
+  const stack: Array<{
+    input: readonly unknown[];
+    output: FileTreeDraft[];
+    depth: number;
+    index: number;
+    length: number;
+  }> = [
+    { input: roots, output: rootDrafts, depth: 0, index: 0, length: rootShape.length },
   ];
-  while (stack.length > 0 && drafts.length < MAX_FILE_TREE_NODES) {
+  let inspected = 0;
+  while (
+    stack.length > 0 &&
+    drafts.length < MAX_FILE_TREE_NODES &&
+    inspected < MAX_FILE_TREE_NODES
+  ) {
     const frame = stack[stack.length - 1]!;
-    if (frame.index >= frame.input.length) {
+    if (frame.index >= frame.length) {
       stack.pop();
       continue;
     }
-    let candidate: unknown;
-    try { candidate = frame.input[frame.index++]; } catch { continue; }
+    const sourceIndex = frame.index++;
+    inspected += 1;
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(frame.input, String(sourceIndex));
+    } catch {
+      continue;
+    }
+    if (!descriptor || !('value' in descriptor)) continue;
+    const candidate = descriptor.value;
     if (typeof candidate !== 'object' || candidate === null || seenObjects.has(candidate)) continue;
     seenObjects.add(candidate);
     try {
       const record = candidate as Record<string, unknown>;
       const path = record['path'];
-      if (typeof path !== 'string' || path.length === 0 || seenPaths.has(path)) continue;
+      if (typeof path !== 'string' || path.trim().length === 0 || seenPaths.has(path)) continue;
       seenPaths.add(path);
       const name = record['name'];
       const kind = record['kind'];
@@ -85,12 +124,19 @@ function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
         ...(deletions === undefined ? {} : { deletions: finiteCount(typeof deletions === 'number' ? deletions : 0) }),
         ...(hasChildren === undefined ? {} : { hasChildren: Boolean(hasChildren) }),
       };
-      const childrenProvided = Array.isArray(rawChildren);
+      const childShape = boundedArrayShape(rawChildren);
+      const childrenProvided = childShape.isArray;
       const draft: FileTreeDraft = { fields, children: [], childrenProvided };
       frame.output.push(draft);
       drafts.push(draft);
       if (childrenProvided && frame.depth < MAX_FILE_TREE_DEPTH) {
-        stack.push({ input: rawChildren, output: draft.children, depth: frame.depth + 1, index: 0 });
+        stack.push({
+          input: rawChildren as readonly unknown[],
+          output: draft.children,
+          depth: frame.depth + 1,
+          index: 0,
+          length: childShape.length,
+        });
       }
     } catch {
       // Retain later valid siblings when a hostile record getter fails.
@@ -153,9 +199,9 @@ function isLazyUnloaded(node: FileTreeNode): boolean {
 }
 
 export interface LyraFileTreeEventMap {
-  'lr-file-select': CustomEvent<Readonly<{ path: string; node: FileTreeNode }>>;
-  'lr-file-open': CustomEvent<Readonly<{ path: string; node: FileTreeNode }>>;
-  'lr-load-children': CustomEvent<Readonly<{ path: string }>>;
+  'lr-file-select': CustomEvent<Readonly<{ filePath: string; node: FileTreeNode }>>;
+  'lr-file-open': CustomEvent<Readonly<{ filePath: string; node: FileTreeNode }>>;
+  'lr-load-children': CustomEvent<Readonly<{ filePath: string }>>;
 }
 
 /**
@@ -163,10 +209,10 @@ export interface LyraFileTreeEventMap {
  * nodes with git-status/diff-count badges, lazy directory loading, and select/open events.
  *
  * @customElement lr-file-tree
- * @event lr-file-select - `detail: { path, node }` — a row was activated.
- * @event lr-file-open - `detail: { path, node }` — Enter/click on an already-selected file row
+ * @event lr-file-select - `detail: { filePath, node }` — a row was activated.
+ * @event lr-file-open - `detail: { filePath, node }` — Enter/click on an already-selected file row
  *   (keyboard-open parity: a second activation of the same file opens it).
- * @event lr-load-children - `detail: { path }` — a lazy (hasChildren, unloaded) directory expanded.
+ * @event lr-load-children - `detail: { filePath }` — a lazy (hasChildren, unloaded) directory expanded.
  * @csspart base - The root wrapper.
  * @status stable
  * @since 4.0.0
@@ -202,8 +248,9 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   private _nodes: readonly FileTreeNode[] = [];
-  /** Clone-owned, cycle-safe readonly node snapshot. Duplicate paths use the first valid node;
-   *  projection is bounded to 10,000 nodes and 64 descendant levels. */
+  /** Clone-owned, cycle-safe readonly node snapshot. Empty/blank paths are omitted and duplicate
+   * paths use the first valid node; projection inspects at most 10,000 source positions across 64
+   * descendant levels. Reassign after changes. */
   @property({ attribute: false })
   get nodes(): readonly FileTreeNode[] { return this._nodes; }
   set nodes(value: readonly FileTreeNode[]) {
@@ -281,24 +328,24 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
 
   private onNodeSelect = (e: Event): void => {
     e.stopPropagation();
-    const { id } = (e as CustomEvent<{ id: string }>).detail;
-    const node = this.nodesByPath.get(id);
+    const { nodeId } = (e as CustomEvent<{ nodeId: string }>).detail;
+    const node = this.nodesByPath.get(nodeId);
     if (!node) return;
-    const wasSelected = this.selectedPath === id;
-    this.selectedPath = id;
-    this.emit('lr-file-select', Object.freeze({ path: id, node }));
+    const wasSelected = this.selectedPath === nodeId;
+    this.selectedPath = nodeId;
+    this.emit('lr-file-select', Object.freeze({ filePath: nodeId, node }));
     if (!isDirectory(node) && wasSelected) {
-      this.emit('lr-file-open', Object.freeze({ path: id, node }));
+      this.emit('lr-file-open', Object.freeze({ filePath: nodeId, node }));
     }
   };
 
   private onNodeToggle = (e: Event): void => {
     e.stopPropagation();
-    const { id, expanded } = (e as CustomEvent<{ id: string; expanded: boolean }>).detail;
+    const { nodeId, expanded } = (e as CustomEvent<{ nodeId: string; expanded: boolean }>).detail;
     if (!expanded) return;
-    const node = this.nodesByPath.get(id);
+    const node = this.nodesByPath.get(nodeId);
     if (node && isLazyUnloaded(node)) {
-      this.emit('lr-load-children', Object.freeze({ path: id }));
+      this.emit('lr-load-children', Object.freeze({ filePath: nodeId }));
     }
   };
 

@@ -222,10 +222,14 @@ it('fails an oversized keyframe record closed instead of retaining an unbounded 
 it('fails hostile registration getters and keyframe spreads closed to the caller fallback', () => {
   const el = document.createElement('div');
   const fallback = animation(0.45, { duration: 75 });
+  let topLevelReads = 0;
+  let keyframeReads = 0;
+  let optionReads = 0;
   const hostileTopLevel = Object.create(null) as LyraElementAnimation;
   Object.defineProperty(hostileTopLevel, 'keyframes', {
     enumerable: true,
     get(): never {
+      topLevelReads += 1;
       throw new Error('hostile keyframes getter');
     },
   });
@@ -233,6 +237,7 @@ it('fails hostile registration getters and keyframe spreads closed to the caller
   Object.defineProperty(hostileKeyframe, 'opacity', {
     enumerable: true,
     get(): never {
+      keyframeReads += 1;
       throw new Error('hostile keyframe member');
     },
   });
@@ -240,6 +245,7 @@ it('fails hostile registration getters and keyframe spreads closed to the caller
   Object.defineProperty(hostileOptions, 'duration', {
     enumerable: true,
     get(): never {
+      optionReads += 1;
       throw new Error('hostile options member');
     },
   });
@@ -260,6 +266,28 @@ it('fails hostile registration getters and keyframe spreads closed to the caller
     } finally {
       cleanup?.();
     }
+  }
+  expect([topLevelReads, keyframeReads, optionReads]).to.deep.equal([0, 0, 0]);
+});
+
+it('does not let inherited animation option keys consume the own-record cap', () => {
+  const inherited = Object.create(null) as Record<string, number>;
+  for (let index = 0; index < 65; index += 1) inherited[`inherited${index}`] = index;
+  const options = Object.create(inherited) as KeyframeAnimationOptions;
+  options.duration = 123;
+  const cleanup = setDefaultAnimation('test.inherited-options', {
+    keyframes: [{ opacity: 0 }, { opacity: 1 }],
+    options,
+  });
+  try {
+    const resolved = getAnimation(
+      document.createElement('div'),
+      'test.inherited-options',
+      { respectReducedMotion: false },
+    );
+    expect(resolved.options.duration).to.equal(123);
+  } finally {
+    cleanup();
   }
 });
 

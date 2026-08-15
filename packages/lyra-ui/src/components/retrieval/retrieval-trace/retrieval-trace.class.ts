@@ -115,11 +115,11 @@ export type LyraRetrievalTraceChunkActionDetail =
   | {
       stageId: string;
       action: 'open';
-      id: string;
+      chunkId: string;
       sourceId: string;
       anchor?: NonNullable<LyraChunk['anchor']>;
     }
-  | { stageId: string; action: 'expand'; id: string; expanded: boolean };
+  | { stageId: string; action: 'expand'; chunkId: string; expanded: boolean };
 
 /**
  * `<lr-retrieval-trace>` — a retrieval pipeline's stage timeline (query rewriting, embedding,
@@ -157,8 +157,6 @@ export type LyraRetrievalTraceChunkActionDetail =
  * @since 4.1.0
  */
 export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['stages']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -180,6 +178,8 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['stages']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -284,7 +284,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
             .chunks=${chunks}
             @lr-chunk-open=${(
               event: CustomEvent<{
-                id: string;
+                chunkId: string;
                 sourceId: string;
                 anchor?: NonNullable<LyraChunk['anchor']>;
               }>
@@ -297,7 +297,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
               });
             }}
             @lr-expand=${(
-              event: CustomEvent<{ id: string; expanded: boolean }>
+              event: CustomEvent<{ chunkId: string; expanded: boolean }>
             ) => {
               event.stopPropagation();
               this.emit('lr-stage-chunk-action', {

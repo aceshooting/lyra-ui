@@ -1,3 +1,32 @@
+## Breaking changes in 9.0.0
+
+Breaking changes in this release (v9): `<lr-chart>` and `<lr-box-plot>` drop the deprecated
+`accessible-label`/`accessible-description` attributes and `accessibleLabel`/`accessibleDescription`
+properties — use the mirrored `label`/`description` instead (identical semantics, just renamed).
+`<lr-box-plot>` drops the deprecated `boxes` property — use `datasets`. `<lr-lite-chart>` drops three
+deprecated aliases: `pad-left`/`padLeft` (use `value-axis-gutter`/`valueAxisGutter`), `hide-axis`/
+`hideAxis` (use `without-value-axis`/`withoutValueAxis`), and `selectedIndex` (use the grammatically
+plural `selectedIndices`, which was already the canonical property). `<lr-chart>` drops its redundant
+positive-polarity `legend` property/attribute, which duplicated `withoutLegend`/`without-legend` — the
+legend now shows by default and is hidden only with `without-legend`; remove any `legend` attribute
+from markup (it is now a no-op host attribute) and any `el.legend = true` from code (`<lr-box-plot>`
+and `<lr-lite-chart>` are unaffected — their own `legend` property is each component's only visibility
+toggle, not a duplicate). The deprecated type aliases `ChartPoint`, `Series` (superseded by
+`LyraChartPoint`/`LyraChartSeries`), `BoxPlotPoint`, `BoxPlotSeries` (superseded by
+`LyraBoxPlotSummary`/`LyraBoxPlotSeries`), and `LiteSeries` (superseded by `LyraLiteChartSeries`) are
+removed — update TypeScript imports to the canonical `Lyra*`-prefixed names. The internal
+`lockChartType` helper is no longer exported from the public `chart.ts` entry point; it is now used
+solely by `<lr-histogram>` to keep its `type` fixed to `'bar'` — every other `lr-*-chart` subclass
+keeps its `type` writable, matching its mirrored WA counterpart. `chart-loader.ts`'s v8 compatibility
+facade is removed; `./components/charts/chart/chart-core-loader.js` and
+`./components/charts/chart/chart-feature-loader.js` are now the real public entry points.
+
+Non-breaking: `<lr-histogram>`'s `appendData()` is no longer marked deprecated; prefer the
+histogram-specific `appendSamples(values, maxSamples?)` for new code. `<lr-lite-chart>`'s legend is
+documented as a static color key with no interactive dataset-visibility toggle, matching its scope as
+the lightweight chart variant; its own `accessibleLabel`/`accessible-label` property is unaffected by
+the `lr-chart`/`lr-box-plot` removal above.
+
 ## `lr-chart` (core)
 
 Chart.js wrapper used directly and by the eight typed Chart.js tags plus `lr-histogram`;
@@ -994,6 +1023,8 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-charts-chart-chart-loader-contracts`** — Supporting data types and helpers for this component family.
   `loadChartAndZoom(/* public names: importChart, importZoom, needsZoom, mod, zoomPlugin */): unknown`
+  `loadChartAndDataLabels(/* public names: loadChart, importDataLabels */): unknown`
+  `loadChartAndRegisterZoom(/* public names: loadChart, importZoom */): unknown`
   `loadChartJsWithDataLabels(/* public names: importDataLabels, mod, plugin */): unknown`
   `loadChartJsWithDataLabelsResult(/* public names: importDataLabels */): unknown`
   `loadChartJsWithZoom(/* public names: importZoom */): unknown`

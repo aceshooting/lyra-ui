@@ -556,11 +556,11 @@ describe('tree-item declarative child model', () => {
 
     const toggled = oneEvent(el, 'lr-node-toggle');
     el.expand();
-    expect((await toggled).detail).to.eql({ id: el.nodeId, expanded: true });
+    expect((await toggled).detail).to.eql({ nodeId: el.nodeId, expanded: true });
 
     const selected = oneEvent(el, 'lr-node-select');
     el.select();
-    expect((await selected).detail).to.eql({ id: el.nodeId });
+    expect((await selected).detail).to.eql({ nodeId: el.nodeId });
   });
 
   it('reflects declarative disabled/selected state into ARIA and keeps a disabled item inert', async () => {
@@ -784,6 +784,32 @@ it('clamps owner depth to a finite integer >= 0, keeping aria-level positive', a
   configureOwnedItem(el, { depth: 2.7 });
   await el.updateComplete;
   expect(el.getAttribute('aria-level')).to.equal('3');
+});
+
+it('applies all five mirrored indentation custom properties on the item that renders them', async () => {
+  const el = (await fixture(html`
+    <lr-tree-item
+      label="Nested item"
+      style="
+        --indent-size: 24px;
+        --indent-guide-color: rgb(1, 2, 3);
+        --indent-guide-offset: 4px;
+        --indent-guide-style: dashed;
+        --indent-guide-width: 3px;
+      "
+    ></lr-tree-item>
+  `)) as LyraTreeItem;
+  configureOwnedItem(el, { depth: 2 });
+  await el.updateComplete;
+
+  const indentation = el.shadowRoot!.querySelector<HTMLElement>('[part="indentation"]')!;
+  const computed = getComputedStyle(indentation);
+  expect(computed.inlineSize).to.equal('48px');
+  expect(computed.borderInlineEndColor).to.equal('rgb(1, 2, 3)');
+  expect(computed.insetBlockStart).to.equal('4px');
+  expect(computed.insetBlockEnd).to.equal('4px');
+  expect(computed.borderInlineEndStyle).to.equal('dashed');
+  expect(computed.borderInlineEndWidth).to.equal('3px');
 });
 
 it('clamps owner set size to a positive integer while preserving the ARIA -1 sentinel', async () => {

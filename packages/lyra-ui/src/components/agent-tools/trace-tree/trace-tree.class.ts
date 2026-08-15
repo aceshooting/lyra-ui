@@ -150,8 +150,6 @@ export interface LyraTraceTreeEventMap {
  * @since 4.0.0
  */
 export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['spans']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -190,6 +188,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['spans']);
+
   static override styles = [LyraElement.styles, styles];
 
   /**
@@ -203,9 +203,10 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   /** Controlled selection — the matching row carries `aria-current`/`data-active` and scrolls into view. */
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
-  /** Accessible name for the `role="tree"` element. Falls back to the localized default; a host
-   *  `aria-label` names the host itself and is not cloned onto the independently interactive tree. */
-  @property() label = '';
+  /** Optional accessible-name override for the `role="tree"` element. Omission localizes the
+   *  default; any supplied string, including `''`, is rendered verbatim. A host `aria-label`
+   *  names the host itself and is not cloned onto the independently interactive tree. */
+  @property() label?: string;
   /** Adds tokens-in/tokens-out columns. */
   @property({ type: Boolean, attribute: 'show-tokens', reflect: true }) showTokens = false;
   /** Adds a cost column, rendering `costText` verbatim. */
@@ -679,7 +680,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       <div
         part="base"
         role="tree"
-        aria-label=${this.label || this.localize('traceTree')}
+        aria-label=${this.label == null ? this.localize('traceTree') : this.label}
         @keydown=${this.onKeyDown}
       >
         ${rows.length === 0

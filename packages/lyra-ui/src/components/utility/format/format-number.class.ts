@@ -6,12 +6,12 @@ import { styles } from './format.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   numberFormatOptions,
-  type FormatCurrencyDisplay,
-  type FormatNumberNotation,
-  type FormatNumberType,
+  type LyraFormatCurrencyDisplay,
+  type LyraFormatNumberNotation,
+  type LyraFormatNumberType,
 } from './format-options.js';
 
-export type { FormatCurrencyDisplay, FormatNumberNotation, FormatNumberType } from './format-options.js';
+export type { LyraFormatCurrencyDisplay, LyraFormatNumberNotation, LyraFormatNumberType } from './format-options.js';
 
 /**
  * `<lr-format-number>` — locale-aware `Intl.NumberFormat` output.
@@ -24,14 +24,14 @@ export type { FormatCurrencyDisplay, FormatNumberNotation, FormatNumberType } fr
 export class LyraFormatNumber extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   @property({ type: Number }) value = 0;
-  @property() type: FormatNumberType = 'decimal';
+  @property() type: LyraFormatNumberType = 'decimal';
   @property() currency = 'USD';
-  @property({ attribute: 'currency-display' }) currencyDisplay: FormatCurrencyDisplay = 'symbol';
+  @property({ attribute: 'currency-display' }) currencyDisplay: LyraFormatCurrencyDisplay = 'symbol';
   /** Web Awesome grouping alias. */
   @property({ type: Boolean, attribute: 'without-grouping' }) withoutGrouping = false;
   /** Shoelace grouping alias; equivalent to `withoutGrouping`. */
   @property({ type: Boolean, attribute: 'no-grouping' }) noGrouping = false;
-  @property() notation: FormatNumberNotation = 'standard';
+  @property() notation: LyraFormatNumberNotation = 'standard';
   @property({ attribute: 'minimum-integer-digits', type: Number }) minimumIntegerDigits?: number;
   @property({ attribute: 'minimum-fraction-digits', type: Number }) minimumFractionDigits?: number;
   @property({ attribute: 'maximum-fraction-digits', type: Number }) maximumFractionDigits?: number;

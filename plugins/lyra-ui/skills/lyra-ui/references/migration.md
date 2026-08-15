@@ -67,9 +67,9 @@ set with a warning. Expand or classify them before applying, then rerun to verif
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 36 | 42 | 9 | 0 | 0 | 78 | 9 |
-| Shoelace | 19 | 29 | 10 | 0 | 0 | 48 | 10 |
-| **Total** | **55** | **71** | **19** | **0** | **0** | **126** | **19** |
+| Web Awesome | 35 | 39 | 13 | 0 | 0 | 74 | 13 |
+| Shoelace | 19 | 28 | 11 | 0 | 0 | 47 | 11 |
+| **Total** | **54** | **67** | **24** | **0** | **0** | **121** | **24** |
 
 ## Web Awesome (87)
 
@@ -77,7 +77,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 
 | From | Lyra target or candidate | Classification | Disposition |
 |---|---|---|---|
-| `<wa-accordion>` | `<lr-accordion>` | `rewritten` | Automatic: tag/import plus events: wa-after-collapse → lr-after-collapse; events: wa-after-expand → lr-after-expand; events: wa-collapse → lr-collapse; events: wa-expand → lr-expand. |
+| `<wa-accordion>` | `<lr-accordion>` | `warning-required` | Manual: Lyra snapshots each expand/collapse event detail into a frozen readonly value at dispatch time rather than exposing a live mutable item reference; migrated handlers that mutate the event detail in place must be reviewed. |
 | `<wa-accordion-item>` | `<lr-accordion-item>` | `exact` | Automatic: tag and supported side-effect registration import. Native disclosure and coordinated accordion panels. |
 | `<wa-animated-image>` | `<lr-animated-image>` | `rewritten` | Automatic: tag/import plus events: wa-error → lr-error; events: wa-load → lr-load. |
 | `<wa-animation>` | `<lr-animation>` | `rewritten` | Automatic: tag/import plus events: wa-cancel → lr-cancel; events: wa-finish → lr-finish; events: wa-start → lr-start. |
@@ -97,7 +97,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-checkbox>` | `<lr-checkbox>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-checkbox-group>` | `<lr-checkbox-group>` | `exact` | Automatic: tag and supported side-effect registration import. Form-associated group of checkboxes with array values and group validation. |
 | `<wa-color-picker>` | `<lr-color-picker>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
-| `<wa-combobox>` | `<lr-combobox>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-create → lr-create; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. |
+| `<wa-combobox>` | `<lr-combobox>` | `warning-required` | Manual: Lyra snapshots each input/change event's value into a frozen readonly value at dispatch time; migrated handlers that mutate the event detail in place must be reviewed. |
 | `<wa-comparison>` | `<lr-image-comparer>` | `exact` | Automatic: tag and supported side-effect registration import. Before/after slotted surfaces with a keyboard-accessible range divider. |
 | `<wa-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: wa-copy → lr-copy; events: wa-error → lr-error. |
 | `<wa-data-grid>` | `<lr-data-grid>` | `warning-required` | Manual: Lyra snapshots collection inputs and event details synchronously into frozen readonly values, and removes the redundant wa-data-request alias in favor of the typed request event. Migrated code that mutates arrays or event details in place, assigns derived collections, or listens for the removed alias must be reviewed. |
@@ -140,7 +140,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-random-content>` | `<lr-random-content>` | `warning-required` | Manual: Lyra returns frozen readonly selection snapshots instead of mutable arrays. The migrator also reports the exercised behavior differences: host and multi-item layout, bounded unique selection, forwarded-slot candidates, and autoplay semantics. |
 | `<wa-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: wa-hover → lr-hover; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
 | `<wa-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. Locale-aware formatting primitives. |
-| `<wa-resize-observer>` | `<lr-resize-observer>` | `rewritten` | Automatic: tag/import plus events: wa-resize → lr-resize. |
+| `<wa-resize-observer>` | `<lr-resize-observer>` | `warning-required` | Manual: Lyra freezes the entries array into an immutable snapshot at dispatch time; migrated code that mutates the array in place must create its own copy. |
 | `<wa-scatter-chart>` | `<lr-scatter-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with tag-specific defaults and the full writable `LyraChartType` vocabulary — same optional peer deps as `<lr-chart>`. |
 | `<wa-scroller>` | `<lr-scroller>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive overflow surface with optional navigation controls. |
 | `<wa-select>` | `<lr-select>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. |
@@ -156,7 +156,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-tag>` | `<lr-tag>` | `rewritten` | Automatic: tag/import plus events: wa-remove → lr-remove. |
 | `<wa-textarea>` | `<lr-textarea>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-time-input>` | `<lr-time-input>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. |
-| `<wa-toast>` | `<lr-toast>` | `exact` | Automatic: tag and supported side-effect registration import. Stacking notifications. |
+| `<wa-toast>` | `<lr-toast>` | `warning-required` | Manual: Lyra's create() overloads reference the Lyra*-prefixed LyraToastOptions/LyraToastCreateOptions type names (renamed from the unprefixed spellings in 9.0.0) instead of the upstream's own ToastCreateOptions text; the method's actual parameter count, order, and runtime shape are unchanged, only the printed TypeScript type names differ. |
 | `<wa-toast-item>` | `<lr-toast-item>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. |
 | `<wa-tooltip>` | `<lr-tooltip>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. Equivalent surface representation: for defaults null ≡ ; no source rewrite. |
 | `<wa-tree>` | `<lr-tree>` | `warning-required` | Manual: Lyra freezes each selection snapshot and exposes it as readonly so listeners cannot mutate component-owned selection state. Migrated handlers that modify the event array in place must create their own copy. |
@@ -214,11 +214,11 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-range>` | `<lr-slider>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid; insert tooltip=top. Equivalent surface representation: form defaults  ≡ null; name defaults  ≡ null; no source rewrite. |
 | `<sl-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: sl-change → lr-change; events: sl-hover → lr-hover. Equivalent surface representation: getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
 | `<sl-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. Locale-aware formatting primitives. |
-| `<sl-resize-observer>` | `<lr-resize-observer>` | `rewritten` | Automatic: tag/import plus events: sl-resize → lr-resize. |
+| `<sl-resize-observer>` | `<lr-resize-observer>` | `warning-required` | Manual: Lyra freezes the entries array into an immutable snapshot at dispatch time; migrated code that mutates the array in place must create its own copy. |
 | `<sl-select>` | `<lr-select>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-clear → lr-clear; events: sl-focus → lr-focus; events: sl-hide → lr-hide; events: sl-input → lr-input; events: sl-invalid → lr-invalid; events: sl-show → lr-show. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; getTag is analyzer-inferred for property-only getTag; no source rewrite. |
 | `<sl-skeleton>` | `<lr-skeleton>` | `exact` | Automatic: tag and supported side-effect registration import. Loading placeholder (pulse/sheen). |
 | `<sl-spinner>` | `<lr-spinner>` | `exact` | Automatic: tag and supported side-effect registration import. Built-in status copy is localized through Lyra's runtime. |
-| `<sl-split-panel>` | `<lr-split-panel>` | `warning-required` | Manual: The published Shoelace manifest exports SNAP_NONE without documenting its callable signature; Lyra exports the same helper with an explicit typed parameter, so the tag rewrite remains available but consumers that call the helper require review. |
+| `<sl-split-panel>` | `<lr-split-panel>` | `warning-required` | Manual: The published Shoelace manifest exports SNAP_NONE without documenting its callable signature; Lyra exports the same helper with an explicit typed parameter, so the tag rewrite remains available but consumers that call the helper require review. Lyra also renamed its own SnapFunction export to LyraSplitPanelSnapFunction (a Lyra-original type, not part of the Shoelace public surface) as part of the 9.0.0 Lyra*-prefix harmonization. |
 | `<sl-switch>` | `<lr-switch>` | `rewritten` | Automatic: tag/import plus events: sl-blur → lr-blur; events: sl-change → lr-change; events: sl-focus → lr-focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
 | `<sl-tab>` | `<lr-tab>` | `rewritten` | Automatic: tag/import plus events: sl-close → lr-close. |
 | `<sl-tab-group>` | `<lr-tab-group>` | `rewritten` | Automatic: tag/import plus events: sl-tab-hide → lr-tab-hide; events: sl-tab-show → lr-tab-show. |

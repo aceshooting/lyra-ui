@@ -18,4 +18,22 @@ describe('firstByIdentity', () => {
       { id: 'path with spaces', label: 'internal whitespace' },
     ]);
   });
+
+  it('ignores malformed rows and identity accessors that throw while retaining a valid tail', () => {
+    const hostile = Object.defineProperty({}, 'id', {
+      get(): never {
+        throw new Error('hostile identity');
+      },
+    });
+    const valid = { id: 'valid' };
+    const values: unknown[] = [null, hostile, valid];
+
+    expect(firstByIdentity(values, (value) => (value as { id: string }).id)).to.deep.equal([valid]);
+  });
+
+  it('rejects non-string runtime key types', () => {
+    const values: Array<{ key: unknown }> = [{ key: null }, { key: false }, { key: {} }, { key: 0 }];
+
+    expect(firstByIdentity(values, (value) => value.key)).to.deep.equal([]);
+  });
 });

@@ -174,7 +174,9 @@ export interface LyraFileInputEventMap {
  * @slot hint - Custom form-control hint content.
  * @slot error - Custom validation error content. Use `with-error` when this slot is populated in
  * server-rendered declarative shadow DOM before light-DOM slot assignment is observable.
- * @event lr-files - `detail: { files, rejected }`, fired on drop and manual selection.
+ * @event lr-files - Frozen `detail: { files, rejected }` with detached readonly sequences and
+ * rejected-file records, fired on drop and manual selection. Immutable `File` items retain
+ * identity.
  * @event {Event} input - Native event fired before `change` when user interaction changes `files`;
  * bubbling, composed, and non-cancelable.
  * @event {Event} change - Native event fired after `input` when user interaction changes `files`;

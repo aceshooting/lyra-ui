@@ -34,13 +34,13 @@ const overscanConverter = {
 };
 
 /** `lr-visible-range-changed` detail -- the current visible (non-overscanned) item index range. */
-export interface VirtualListRange {
+export interface LyraVirtualListRange {
   start: number;
   end: number;
 }
 
 /** A visible group label anchored to the first row in its group. */
-export interface VirtualListGroup {
+export interface LyraVirtualListGroup {
   key: string | number;
   label?: string;
   startIndex: number;
@@ -48,22 +48,22 @@ export interface VirtualListGroup {
 
 /** The ARIA role pairing each rendered row participates in -- see `itemRole`'s own doc for what
  *  each value maps to. */
-export type VirtualListItemRole = 'listitem' | 'row';
+export type LyraVirtualListItemRole = 'listitem' | 'row';
 
 /** A fixed positive pixel height, or live per-row measurement. */
-export type VirtualListRowHeight = number | 'auto';
+export type LyraVirtualListRowHeight = number | 'auto';
 
-function normalizeRowHeight(value: unknown): VirtualListRowHeight {
+function normalizeRowHeight(value: unknown): LyraVirtualListRowHeight {
   if (value === 'auto') return 'auto';
   const numeric = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : 'auto';
 }
 
 const rowHeightConverter = {
-  fromAttribute(value: string | null): VirtualListRowHeight {
+  fromAttribute(value: string | null): LyraVirtualListRowHeight {
     return value === null ? 'auto' : normalizeRowHeight(value);
   },
-  toAttribute(value: VirtualListRowHeight): string {
+  toAttribute(value: LyraVirtualListRowHeight): string {
     return String(normalizeRowHeight(value));
   },
 };
@@ -71,7 +71,7 @@ const rowHeightConverter = {
 type VirtualListKey = string | number;
 
 /** A random-access collection that does not have to materialize one JavaScript value per row. */
-export interface VirtualListIndexedSource<T = unknown> {
+export interface LyraVirtualListIndexedSource<T = unknown> {
   /** Number of addressable rows. Fractional, negative, and non-finite values normalize safely. */
   readonly count: number;
   /** Returns the value at `index`. The component calls this only for rows it needs to render. */
@@ -80,7 +80,7 @@ export interface VirtualListIndexedSource<T = unknown> {
   keyAt?(index: number): string | number;
   /**
    * Resolves a stable key back to its row index without a count-sized scan. Use this alongside
-   * `keyAt` whenever `active-id` should target an indexed collection. Indexed sources deliberately
+   * `keyAt` whenever `active-item-id` should target an indexed collection. Indexed sources deliberately
    * do not fall back to a count-sized scan when this is absent. Invalid and out-of-range results
    * are treated as a missing key.
    */
@@ -88,13 +88,13 @@ export interface VirtualListIndexedSource<T = unknown> {
 }
 
 /** Either an ordinary readonly array or a count/index-backed random-access collection. */
-export type VirtualListSource<T = unknown> =
+export type LyraVirtualListSource<T = unknown> =
   | readonly T[]
-  | VirtualListIndexedSource<T>;
+  | LyraVirtualListIndexedSource<T>;
 
 function isIndexedSource(
-  source: VirtualListSource,
-): source is VirtualListIndexedSource {
+  source: LyraVirtualListSource,
+): source is LyraVirtualListIndexedSource {
   return !Array.isArray(source);
 }
 
@@ -109,15 +109,15 @@ function domKeyToken(key: VirtualListKey): string {
 }
 
 /** `lr-virtual-scroll` detail -- the scroll position and height after a coalesced tick. */
-export interface VirtualListScroll {
+export interface LyraVirtualListScroll {
   scrollTop: number;
   viewportHeight: number;
 }
 
 export interface LyraVirtualListEventMap {
-  'lr-visible-range-changed': CustomEvent<VirtualListRange>;
+  'lr-visible-range-changed': CustomEvent<LyraVirtualListRange>;
   'lr-load-more': CustomEvent<null>;
-  'lr-virtual-scroll': CustomEvent<VirtualListScroll>;
+  'lr-virtual-scroll': CustomEvent<LyraVirtualListScroll>;
 }
 /**
  * `<lr-virtual-list>` — a generic windowed/virtualized list host. Renders
@@ -176,7 +176,7 @@ export interface LyraVirtualListEventMap {
  * `aria-activedescendant` keyboard-interaction contract ARIA requires
  * alongside a real `listbox`. A consumer that wants full single-select
  * listbox semantics on top of this should compose that behavior itself (see
- * `<lr-select>`'s pattern), the same way this component's `active-id`
+ * `<lr-select>`'s pattern), the same way this component's `active-item-id`
  * only *scrolls* the matching row into view and marks it `aria-current` —
  * it never claims to be a selection widget. `aria-setsize`/`aria-posinset`
  * are computed from the row's real index in the full effective source (not its
@@ -207,7 +207,7 @@ export interface LyraVirtualListEventMap {
  * - It is **never measured as a row or real marker.** It contributes nothing to offsets, so the
  *   presentational copy is not counted twice.
  * - Its measured height becomes a `scroll-padding-block-start` on the scroll container, so both
- *   `active-id`/`scrollToIndex` and native keyboard scrolling stop *below* the band instead of
+ *   `active-item-id`/`scrollToIndex` and native keyboard scrolling stop *below* the band instead of
  *   parking the target row behind it. Scrolled above the first group the band shows nothing but
  *   stays mounted, so that height is known before the first jump rather than after it.
  * A host that renders its own group headers as ordinary rows supplies `groups` purely as position
@@ -219,7 +219,7 @@ export interface LyraVirtualListEventMap {
  * (a pinned group header, a scrollbar minimap, a "jump to here" affordance) needs those numbers and
  * would otherwise have to duplicate the offsets array.
  *
- * **Programmatic scrolling.** `scrollToIndex()` is the public counterpart to `active-id`'s automatic
+ * **Programmatic scrolling.** `scrollToIndex()` is the public counterpart to `active-item-id`'s automatic
  * scroll-into-view -- used by `<lr-chat-viewport>`'s virtual mode and any other host that needs to
  * scroll to a specific row without also changing which row is "active."
  *
@@ -243,10 +243,10 @@ export interface LyraVirtualListEventMap {
  *   fetch should surface its own retry affordance rather than relying on
  *   this firing again unprompted.
  * @event lr-visible-range-changed - `detail: { start, end }` (see
- *   `VirtualListRange`) — the current visible (non-overscanned) item index
+ *   `LyraVirtualListRange`) — the current visible (non-overscanned) item index
  *   range, fired only when it actually changes.
  * @event lr-virtual-scroll - `detail: { scrollTop, viewportHeight }` (see
- *   `VirtualListScroll`) — the scroll container moved. Emitted from the same
+ *   `LyraVirtualListScroll`) — the scroll container moved. Emitted from the same
  *   `requestAnimationFrame` tick that already coalesces native `scroll`
  *   events, so a fling that fires dozens of native events produces at most one
  *   of these per frame, and none at all when the position did not actually
@@ -297,6 +297,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     'items',
     'source',
   ]);
+  /** Count/index providers are opaque imperative sources; array-valued sources still snapshot. */
+  protected static override readonly identityCollectionObjectProperties =
+    Object.freeze(['source']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -313,7 +316,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * `items`; an indexed source lets synthetic or remote models expose a large row count without
    * allocating an `Array(0…count)` merely to feed the virtualizer.
    */
-  @property({ attribute: false }) source?: VirtualListSource;
+  @property({ attribute: false }) source?: LyraVirtualListSource;
 
   /** Renders one row's content — typically returns a `lit-html` `TemplateResult`. */
   @property({ attribute: false }) renderItem: (
@@ -326,7 +329,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  never reorders/inserts/removes — provide this whenever it can, or
    *  scroll position and any per-row DOM state can attach to the wrong row
    *  across a mutation (same caveat as `<lr-table>`'s `rowKey`). Duplicate keys remain distinct
-   *  by occurrence for rendering and measurement; `activeId` targets the first occurrence. */
+   *  by occurrence for rendering and measurement; `activeItemId` targets the first occurrence. */
   @property({ attribute: false }) keyFunction?: (
     item: unknown,
     index: number
@@ -339,7 +342,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * ordinary row (and would otherwise get two stacked headers) but still needs
    * this component to know where each group starts, e.g. to drive
    * `renderStickyGroup`. Omitting `label` entirely still falls back to `key`. */
-  @property({ attribute: false }) groups?: readonly VirtualListGroup[];
+  @property({ attribute: false }) groups?: readonly LyraVirtualListGroup[];
 
   /** Renders the pinned copy of whichever `groups` entry the viewport is
    *  currently inside, into a `[part="sticky-group"]` overlay layer that stays
@@ -352,20 +355,20 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  called with the *first* group and the result rendered hidden, purely to
    *  keep the band's height measurable for the scroll inset. */
   @property({ attribute: false }) renderStickyGroup?: (
-    group: VirtualListGroup
+    group: LyraVirtualListGroup
   ) => unknown;
 
   /** `'auto'` (default) measures each row's real height via `ResizeObserver`;
    *  a positive number fixes every row to that many pixels. Numeric markup attributes are parsed
    *  into numbers; invalid markup safely canonicalizes to `'auto'`. */
   @property({ attribute: 'row-height', converter: rowHeightConverter })
-  rowHeight: VirtualListRowHeight = 'auto';
+  rowHeight: LyraVirtualListRowHeight = 'auto';
 
   /** `'listitem'` (default) preserves today's `role="list"`/`role="listitem"` mapping with
    *  `aria-setsize`/`aria-posinset`. `'row'` maps to `role="rowgroup"`/`role="row"` with
    *  `aria-rowindex` instead -- for a consumer composing a virtualized `role="table"` (see
    *  `<lr-dataset-viewer>`). */
-  @property({ attribute: 'item-role' }) itemRole: VirtualListItemRole =
+  @property({ attribute: 'item-role' }) itemRole: LyraVirtualListItemRole =
     'listitem';
 
   /** Added to a row's 1-based index to compute `aria-rowindex` in `item-role="row"` mode (e.g. `1`
@@ -382,7 +385,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   /** When set and it matches a row's typed `keyFunction` result, that row is
    * smoothly scrolled into view whenever this changes. Attribute values are
    * strings; assign the property for a numeric key. */
-  @property({ attribute: 'active-id' }) activeId: VirtualListKey | '' = '';
+  @property({ attribute: 'active-item-id' }) activeItemId: VirtualListKey | '' = '';
 
   @property({ type: Boolean, reflect: true }) loading = false;
 
@@ -455,7 +458,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * their count plus sparse measurements and never allocate this array at source cardinality. */
   private offsets: number[] = [0];
   /** Occurrence-safe internal identities. Public duplicate keys remain visible as distinct rows,
-   * while the first occurrence alone owns `activeId`. */
+   * while the first occurrence alone owns `activeItemId`. */
   private rowIdentities: string[] = [];
   /** Parsed `rowHeight`: a positive pixel number, or `null` for `'auto'` (measured) mode. */
   private fixedRowHeight: number | null = null;
@@ -495,9 +498,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     index: number;
     align: 'start' | 'end' | 'auto';
     behavior: 'auto' | 'smooth';
-    source: VirtualListSource;
+    source: LyraVirtualListSource;
     keyFunction?: (item: unknown, index: number) => string | number;
-    activeId?: VirtualListKey;
+    activeItemId?: VirtualListKey;
     lastMeasurementGeneration: number;
   };
   private measurementGeneration = 0;
@@ -537,40 +540,40 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private rowObserveRafOwner?: Window;
   private rowObserveRafDocument?: Document;
 
-  /** Reference-keyed memo for `activeId`'s resolved index. `render()` re-runs on every scroll
+  /** Reference-keyed memo for `activeItemId`'s resolved index. `render()` re-runs on every scroll
    *  frame (`scrollTop` drives reactive state), and resolving an array source means scanning it
    *  with `keyOf` -- O(items) *per frame* without this memo. Indexed sources never scan their
    *  declared count: they use `indexOfKey`, or decline the match when it is absent/overridden by a
-   *  consumer `keyFunction`. The inputs are source identity, `activeId`, count, and `keyFunction`.
+   *  consumer `keyFunction`. The inputs are source identity, `activeItemId`, count, and `keyFunction`.
    *  Mutable array length is keyed too: that catches an in-place
  *  insert/remove followed by a manual `requestUpdate()`. An in-place *reorder* of the same length
  *  is not detected -- the same identity caveat `keyFunction` already documents. */
-  private activeIndexFor?: VirtualListSource;
+  private activeIndexFor?: LyraVirtualListSource;
   private activeIndexForLength = -1;
   private activeIndexForId: VirtualListKey | '' = '';
   private activeIndexForKeyFn?: (item: unknown, index: number) => string | number;
   private activeIndexCache = -1;
 
-  /** `activeId`'s index in the effective source, or -1. Memoized -- see `activeIndexFor`. */
+  /** `activeItemId`'s index in the effective source, or -1. Memoized -- see `activeIndexFor`. */
   private get activeIndex(): number {
-    if (this.activeId === '') return -1;
+    if (this.activeItemId === '') return -1;
     const source = this.effectiveSource;
     const count = this.itemCount;
     if (
       this.activeIndexFor === source &&
       this.activeIndexForLength === count &&
-      Object.is(this.activeIndexForId, this.activeId) &&
+      Object.is(this.activeIndexForId, this.activeItemId) &&
       this.activeIndexForKeyFn === this.keyFunction
     )
       return this.activeIndexCache;
     this.activeIndexFor = source;
     this.activeIndexForLength = count;
-    this.activeIndexForId = this.activeId;
+    this.activeIndexForId = this.activeItemId;
     this.activeIndexForKeyFn = this.keyFunction;
     this.activeIndexCache = -1;
     if (isIndexedSource(source)) {
       if (!this.keyFunction && source.indexOfKey) {
-        const candidate = source.indexOfKey(this.activeId);
+        const candidate = source.indexOfKey(this.activeItemId);
         if (Number.isInteger(candidate) && candidate >= 0 && candidate < count) {
           this.activeIndexCache = candidate;
         }
@@ -579,7 +582,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     for (let index = 0; index < count; index++) {
       const item = this.itemAt(index);
-      if (Object.is(this.keyOf(item, index), this.activeId)) {
+      if (Object.is(this.keyOf(item, index), this.activeItemId)) {
         this.activeIndexCache = index;
         break;
       }
@@ -588,8 +591,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
   private pendingScrollTop: number | null = null;
   /** Normalized once per `groups`/source assignment, then shared by marker and sticky paths. */
-  private normalizedGroups: VirtualListGroup[] = [];
-  private readonly normalizedGroupByIndex = new Map<number, VirtualListGroup>();
+  private normalizedGroups: LyraVirtualListGroup[] = [];
+  private readonly normalizedGroupByIndex = new Map<number, LyraVirtualListGroup>();
   /** Live block sizes for real group markers. Position-only anchors (`label: ''`) never enter it. */
   private readonly measuredGroupHeights = new Map<number, number>();
   /** Cumulative marker heights in normalized-group order, used by sparse indexed sources. */
@@ -716,7 +719,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       changed.has('keyFunction') ||
       changed.has('rowHeight') ||
       changed.has('groups') ||
-      changed.has('activeId')
+      changed.has('activeItemId')
     ) this.pendingScrollCorrection = undefined;
     if (
       changed.has('items') ||
@@ -758,19 +761,19 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.syncRowObservers();
     this.syncGroupObservers();
     this.syncStickyOverlay();
-    if (changed.has('activeId') && !this.isFirstUpdate)
+    if (changed.has('activeItemId') && !this.isFirstUpdate)
       this.scrollActiveIntoView();
     this.emitRangeChangeIfNeeded();
     this.maybeFireLoadMore();
     this.maybeCorrectPendingScroll();
   }
 
-  private parseRowHeight(value: VirtualListRowHeight): number | null {
+  private parseRowHeight(value: LyraVirtualListRowHeight): number | null {
     const normalized = normalizeRowHeight(value);
     return normalized === 'auto' ? null : normalized;
   }
 
-  private get effectiveSource(): VirtualListSource {
+  private get effectiveSource(): LyraVirtualListSource {
     return this.source ?? this.items;
   }
 
@@ -1373,14 +1376,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (index < 0) return;
     const behavior = prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth';
     if (!this.performScrollTo(index, 'auto', behavior)) return;
-    this.beginPendingScrollCorrection(index, 'auto', behavior, this.activeId);
+    this.beginPendingScrollCorrection(index, 'auto', behavior, this.activeItemId);
   }
 
   /**
    * Scrolls row `index` into view. `align` (default `'auto'`) chooses `'start'` (row's top edge
    * flush with the viewport top), `'end'` (row's bottom edge flush with the viewport bottom), or
    * `'auto'` (the same minimal-distance scroll `scrollActiveIntoView()` already uses for
-   * `active-id` -- no scroll at all when the row is already fully visible). `behavior` (default
+   * `active-item-id` -- no scroll at all when the row is already fully visible). `behavior` (default
    * `'smooth'`) is forced to `'auto'` under `prefers-reduced-motion: reduce` regardless of what's
    * passed. `index` is clamped to `0…count-1`; a call against an empty source is a no-op.
    *
@@ -1422,7 +1425,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     index: number,
     align: 'start' | 'end' | 'auto',
     behavior: 'auto' | 'smooth',
-    activeId?: VirtualListKey | ''
+    activeItemId?: VirtualListKey | ''
   ): void {
     if (this.fixedRowHeight != null && !this.hasUnmeasuredGroupThrough(index)) {
       this.pendingScrollCorrection = undefined;
@@ -1435,7 +1438,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       behavior,
       source: this.effectiveSource,
       keyFunction: this.keyFunction,
-      activeId: activeId === '' ? undefined : activeId,
+      activeItemId: activeItemId === '' ? undefined : activeItemId,
       lastMeasurementGeneration: this.measurementGeneration,
     };
   }
@@ -1470,12 +1473,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (
       pending.source !== this.effectiveSource ||
       pending.keyFunction !== this.keyFunction ||
-      (pending.activeId !== undefined && !Object.is(pending.activeId, this.activeId))
+      (pending.activeItemId !== undefined &&
+        !Object.is(pending.activeItemId, this.activeItemId))
     ) {
       this.pendingScrollCorrection = undefined;
       return;
     }
-    const index = pending.activeId !== undefined
+    const index = pending.activeItemId !== undefined
       ? this.activeIndex
       : isIndexedSource(this.effectiveSource)
         ? pending.index
@@ -1618,9 +1622,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * Scrolled *above* the first group there is nothing to pin, but the band is still rendered
    * (`active: false`, visually hidden) rather than dropped: its measured height is what the scroll
    * inset is sized from, and a band that only exists once it has first been shown would let the
-   * very first `active-id`/`scrollToIndex` jump park its target underneath it. */
+   * very first `active-item-id`/`scrollToIndex` jump park its target underneath it. */
   private currentStickyGroup(): {
-    group: VirtualListGroup;
+    group: LyraVirtualListGroup;
     shift: number;
     active: boolean;
   } | null {

@@ -37,8 +37,10 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
   by group yourself.
 - `hotkey: string = 'mod+k'` — exact global activation chord parsed as `+`-separated parts; `mod`
-  resolves to Cmd on Mac and Ctrl elsewhere. Repeats, composition keys, and extra modifiers do not
-  match. If several connected palettes use the same chord, the last connected palette owns it;
+  resolves to Cmd on Mac and Ctrl elsewhere. Detection prefers Client Hints, then falls back to
+  the legacy platform string and reduced user-agent string rather than trusting
+  `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. If
+  several connected palettes use the same chord, the last connected palette owns it;
   activation is idempotently open rather than a toggle.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
 

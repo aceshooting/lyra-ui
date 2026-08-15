@@ -100,10 +100,10 @@ before the input renders.
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
 neither. Plus owner-realm native `input`/`change` (retaining each free-text `InputEvent` payload)
-and native `FocusEvent` `focus`/`blur` (retaining `relatedTarget`), with `lr-focus`/`lr-blur`
-compatibility aliases. The trigger/input, listbox popup, and sibling preview control form one focus
-boundary, so moving within them does not close or touch the picker and only leaving the component
-emits the outer pair. One bubbling/composed `lr-invalid` alias fires when native validity fails.
+and native `FocusEvent` `focus`/`blur` (retaining `relatedTarget`). The trigger/input, listbox popup,
+and sibling preview control form one focus boundary, so
+moving within them does not close or touch the picker and only leaving the component emits the
+outer pair. One bubbling/composed `lr-invalid` alias fires when native validity fails.
 
 **Slots:** `label` (custom visible label content), `hint`, `error`.
 

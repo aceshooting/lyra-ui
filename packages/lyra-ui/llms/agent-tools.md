@@ -1,3 +1,37 @@
+## Breaking changes, fixes, and renames in 9.0.0
+
+`<lr-trace-tree>` and `<lr-subagent-panel>`: `label` no longer defaults to `''`; it is
+`string | undefined` and omitted means "use the localized default" — an explicit `label=""` now
+renders empty instead of silently falling back.
+
+`<lr-commit-card>`: `filesCollapsed`/`files-collapsed` renamed to `filesExpanded`/`files-expanded`,
+with the default inverted (`filesExpanded = false`) so the rendered starting state is unchanged;
+update `el.filesCollapsed = true` to `el.filesExpanded = false` (and vice versa).
+
+`<lr-agent-trace>`: `hideBars`/`hide-bars` renamed to `showBars`/`show-bars` (default `true`),
+matching the positive-polarity `showTokens`/`showCost` on the same element; update
+`el.hideBars = true` to `el.showBars = false` (and vice versa).
+
+`<lr-evaluation-run>` is renamed to `<lr-eval-run>` (class `LyraEvaluationRun` → `LyraEvalRun`).
+Every `Evaluation*`-prefixed exported type is renamed to `Eval*` (`EvaluationContentFormat` →
+`EvalContentFormat`, `EvaluationContent` → `EvalContent`, `EvaluationExampleResult` →
+`EvalExampleResult`, `EvaluationExampleToggleDetail` → `EvalExampleToggleDetail`,
+`EvaluationCitationSelectDetail` → `EvalCitationSelectDetail`, `EvaluationToolApprovalDetail` →
+`EvalToolApprovalDetail`, `EvaluationToolActivateDetail` → `EvalToolActivateDetail`,
+`EvaluationToolRenderErrorDetail` → `EvalToolRenderErrorDetail`, `EvaluationClaimSelectDetail` →
+`EvalClaimSelectDetail`, `LyraEvaluationRunEventMap` → `LyraEvalRunEventMap`), matching sibling
+`lr-eval-dataset`/`lr-eval-result`. The localized string keys and their English text are unchanged —
+only the tag/class/type names moved.
+
+`<lr-schema-viewer>` is renamed to `<lr-json-schema-viewer>` (class `LyraSchemaViewer` →
+`LyraJsonSchemaViewer`, event map `LyraSchemaViewerEventMap` → `LyraJsonSchemaViewerEventMap`),
+freeing the generic name for a future non-JSON schema viewer. `JsonSchemaNode`/`SchemaValidationIssue`
+and the `--lr-schema-viewer-*` CSS custom properties are unchanged.
+
+Security fix (non-breaking): `<lr-mcp-app>`'s `postMessage` call to its sandboxed frame now always
+uses the correctly computed target origin instead of an inverted check that previously fell through
+to the wildcard `'*'` origin unconditionally.
+
 ## `lr-tool-call-chip`
 
 A compact inline pill representing one tool/function call an agent made mid-conversation, e.g.
@@ -118,8 +152,8 @@ shell around it.
   `ReadonlyMap<string, ToolRendererDefinition>` to dispatch against instead of the module-level
   default registry (see `registry.ts` below). Assignment synchronously copies at most 10,000
   entries behind a frozen readonly facade. Later mutation of the source map is not observed;
-  create and reassign a new map to update dispatch. Renderer-definition identity is retained so
-  lazy-load caching remains stable.
+  create and reassign a new map to update dispatch. Definition records are cloned and frozen while
+  callback identities are retained; lazy-load caching remains stable per assigned snapshot.
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name; the primary dispatch key
 - `result: unknown` (property only, no attribute) — the tool call's result payload, handed to the
   matched renderer's `render()` (and to `matches()` for shape-based dispatch, and to the
@@ -458,7 +492,7 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   ordinary, first-seen category and is not merged into or reordered with that uncategorized bucket.
   `icon` is a literal glyph (e.g. an emoji) rendered next to `name` — an opaque string, not a registry
   lookup, the same convention `<lr-tool-call-chip>`'s `icon` uses. `disabled` individually gates a
-  tool regardless of `useDefaults`/`selected` (e.g. a tool requiring admin approval);
+  tool regardless of `useDefaults`/`selectedToolIds` (e.g. a tool requiring admin approval);
   `description` and `disabledReason` are supporting descriptions associated with the checkbox
   through its stable `aria-describedby` owner; only `name` contributes to the checkbox's accessible
   name. `disabledReason` is ignored when `disabled` is falsy.
@@ -466,7 +500,7 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   whether `tool` matches an already-trimmed, already-lowercased `query`. Assign `filter` to replace the
   built-in case-insensitive name/description substring match entirely (mirrors `<lr-combobox>`'s
   `OptionFilter` convention).
-- `ToolSelectionChangeDetail { selected: string[]; useDefaults: boolean }` — the `lr-change` detail
+- `ToolSelectionChangeDetail { selectedToolIds: string[]; useDefaults: boolean }` — the `lr-change` detail
   shape.
 - `ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | string` — the `lr-close` detail;
   `'escape'`/`'backdrop'` come from the dialog's own built-in dismiss triggers, any other string is
@@ -479,7 +513,7 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   across all categories. `id` is the public identity: empty/blank ids are omitted and when provider
   data repeats one, the first occurrence wins consistently for grouping, filtering, counts,
   selection, and emitted ids.
-- `selected: string[] = []` (attribute: false) — the currently-enabled tool ids. Empty/blank ids
+- `selectedToolIds: string[] = []` (attribute: false) — the currently-enabled tool ids. Empty/blank ids
   are omitted and repeated ids are treated as one selection.
 - `useDefaults: boolean = false` (attribute `use-defaults`, reflected) — whether the conversation is
   using the default tool set (`true`) or a custom selection (`false`).
@@ -504,7 +538,7 @@ void` performs the reasoned API dismissal;
 
 **Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
 `useDefaults` state) is cancelable and fires before either property changes. Calling
-`preventDefault()` retains the current `selected`/`useDefaults` values and restores the built-in
+`preventDefault()` retains the current `selectedToolIds`/`useDefaults` values and restores the built-in
 checkbox or switch. A host can prevent a proposal while it validates or persists it, then assign
 the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
@@ -538,10 +572,10 @@ dependencies of this package imported directly, not optional peers.
     { id: 'python', name: 'Python', category: 'Code', description: 'Run sandboxed Python' },
     { id: 'admin', name: 'Admin console', disabled: true, disabledReason: 'Requires admin approval' },
   ]}
-  .selected=${enabledToolIds}
+  .selectedToolIds=${enabledToolIds}
   ?use-defaults=${usingDefaults}
   ?open=${dialogOpen}
-  @lr-change=${(e) => updateTools(e.detail.selected, e.detail.useDefaults)}
+  @lr-change=${(e) => updateTools(e.detail.selectedToolIds, e.detail.useDefaults)}
   @lr-close=${() => (dialogOpen = false)}
 >
   <button slot="footer" @click=${(e) => e.target.closest('lr-tool-select-dialog').close('done')}>
@@ -1002,23 +1036,33 @@ definition is a schema-shape error, never misreported as a value-serialization f
 - `ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean'` — the four leaf property
   types this renderer understands
 - `ToolParamFormPrimitive = string | number | boolean` — values accepted by the supported `const`
-- `ToolParamFormProperty { type: ToolParamFormPropertyType; enum?: string[]; description?: string;
-title?: string; default?: unknown; const?: ToolParamFormPrimitive; autocomplete?: string;
-spellcheck?: boolean; autocapitalize?: string; autoCorrect?: string; inputMode?: string;
-enterKeyHint?: string }` — one `schema.properties`
+- `ToolParamFormProperty { readonly type: ToolParamFormPropertyType; readonly enum?: readonly
+string[]; readonly description?: string; readonly title?: string; readonly default?: unknown;
+readonly const?: ToolParamFormPrimitive; readonly autocomplete?: string; readonly spellcheck?:
+boolean; readonly autocapitalize?: string; readonly autoCorrect?: string; readonly inputMode?:
+string; readonly enterKeyHint?: string }` — one `schema.properties`
   entry. `enum` is only meaningful when `type` is `'string'` (rendered as a `<lr-select>`); `const`
   enforces one exact primitive value; `title` is the display label; `description` is helper text;
   `default` pre-fills a field whenever `value` doesn't already have that key. For a free-form
   string field, `autocomplete`, `spellcheck`, `autocapitalize`, `autoCorrect`, `inputMode`, and
   `enterKeyHint` forward the corresponding native editing hints to the rendered text input;
   `spellcheck` defaults to `true`, and the other hints are omitted unless supplied.
-- `FlatToolParamSchema { type: 'object'; properties: Record<string, ToolParamFormProperty>; required?:
-string[] }` — the (intentionally flat) schema shape this component can render.
+- `FlatToolParamSchema { readonly type: 'object'; readonly properties:
+Readonly<Record<string, ToolParamFormProperty>>; readonly required?: readonly string[] }` — the
+  (intentionally flat) schema shape this component can render.
+- `ToolParamFormValue = Readonly<Record<string, unknown>>` — the clone-owned argument model.
 
 **Properties:**
 
-- `schema: FlatToolParamSchema = { type: 'object', properties: {} }` (attribute: false)
-- `value: Record<string, unknown> = {}` (attribute: false) — exactly what the consumer last set it to.
+- `schema: FlatToolParamSchema = { type: 'object', properties: {} }` (attribute: false) — a
+  detached, deeply frozen assignment snapshot, capped at 100 fields and required keys and 500 enum
+  choices per field. Exceeding a cap keeps the bounded prefix but fails validation closed. Create
+  and reassign a new schema after changes; mutating the caller's prior object has no effect.
+- `value: ToolParamFormValue = {}` (attribute: false) — a detached, deeply frozen assignment
+  snapshot, capped at 10,000 entries per array/plain record, 50,000 total nodes, and 16 nested
+  levels. Unsafe or oversized assignments fail serialization closed. Create and reassign a new
+  value after changes; mutating the caller's prior object has no effect. It represents exactly
+  what the consumer last assigned.
   A field with no entry in `value` but a schema `default` _displays_ (and is _emitted_, via
   `lr-input`) as that default, but the `value` property itself is left alone until the user actually
   edits that field. JSON Schema ordinarily treats `default` as an annotation; this renderer
@@ -1034,7 +1078,8 @@ string[] }` — the (intentionally flat) schema shape this component can render.
 
 **Getters:**
 
-- `effectiveValue: Record<string, unknown>` — `value` with every property missing from it filled in
+- `effectiveValue: ToolParamFormValue` — a detached, deeply frozen `value` snapshot with every
+  property missing from it filled in
   from `schema`'s own `default`; this is what actually renders and what `lr-input`'s detail carries.
   A key the user has explicitly cleared (a real own property set to `undefined`) stays cleared rather
   than snapping back to its default — only a key genuinely absent from `value` falls back.
@@ -1048,9 +1093,9 @@ string[] }` — the (intentionally flat) schema shape this component can render.
 **Methods:**
 
 - `getForm(): HTMLFormElement | null` — returns the browser-resolved owning form.
-- `checkValidity(): boolean` — synchronously re-snapshots even an in-place-mutated value/schema,
-  updates `ElementInternals`, and returns validity without revealing inline errors.
-- `reportValidity(): boolean` — performs the same resynchronization, reveals all current field/root
+- `checkValidity(): boolean` — synchronously updates `ElementInternals` from the current assigned
+  snapshots and returns validity without revealing inline errors.
+- `reportValidity(): boolean` — performs the same synchronization, reveals all current field/root
   errors, focuses the first invalid generated field when one exists, and delegates to native
   `ElementInternals.reportValidity()`. If `required` contains an unmet key absent from
   `properties`, there is no generated control to focus, so a localized, programmatically focusable
@@ -1070,9 +1115,10 @@ string[] }` — the (intentionally flat) schema shape this component can render.
   behaves like a single control under both a `<label>`-driven and a programmatic click; a no-op
   while `disabled`.
 
-**Events:** `lr-input` (`detail: { value: Record<string, unknown> }` — the full current value
-object, every property with defaults resolved, not just the field that changed), `lr-validity-change`
-(frozen `detail: { valid: boolean; errors: Readonly<Record<string, string>> }` — deduplicated on
+**Events:** `lr-input` (deeply frozen `detail: { value: ToolParamFormValue }` — the full detached
+current value snapshot, every property with defaults resolved, not just the field that changed),
+`lr-validity-change` (deeply frozen
+`detail: { valid: boolean; errors: Readonly<Record<string, string>> }` — deduplicated on
 effective native validity, including consumer custom errors and own/fieldset validation barring;
 fired once up front at connect time and after every effective change; serialization-only failures
 publish their root message as `errors.base` and `formError`), and no-detail `focus`/`blur` events for
@@ -1631,7 +1677,7 @@ reaching `Intl.NumberFormat`. A row's accessible name includes its optional `det
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
 the same bounded runtime projection: provider records are normalized with deterministic first-wins
 identity, then at most 500 mount. The controlled `activeSpanId` and its resolvable ancestor path
-reserve positions before ordinary input-order spans. Non-object records, empty ids, non-finite
+reserve positions before ordinary input-order spans. Non-object records, empty/blank ids, non-finite
 starts/ends, and later duplicate ids are omitted; negative starts clamp to zero, ends clamp to at
 least their start, unknown kinds become `other`, and unknown statuses become `pending`. A localized
 `[part="limit"]` note exposes truncation.
@@ -1746,8 +1792,10 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 'conflicted' | 'ignored'` (shared with `lr-file-tree`); the diffstat is summed from `additions`/
 `deletions` across `files`. Counts are normalized to finite non-negative integers before per-file
 display, total arithmetic, localization, and accessible summaries. `path` is the file identity;
-empty/blank paths and later duplicates are omitted before both diffstat arithmetic and row events. `filesCollapsed:
-boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
+empty/blank paths and later duplicates are omitted before both diffstat arithmetic and row events. `filesExpanded:
+boolean = false` (attribute `files-expanded`, reflected — renamed from `filesCollapsed` in 9.0.0,
+default inverted so the rendered starting state is unchanged: `el.filesCollapsed = true` becomes
+`el.filesExpanded = false`), and `copyable: boolean = true` (reflected).
 `compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
 row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
 so pair it with `frame="plain"` to drop the chrome entirely. `frame: LyraFrame = 'card'` (reflected)
@@ -1759,7 +1807,7 @@ alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
-**Events:** `lr-file-select` (`detail: { path: string }`), `lr-toggle` (`detail: { collapsed: boolean
+**Events:** `lr-file-select` (`detail: { filePath: string }`), `lr-toggle` (`detail: { collapsed: boolean
 }`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
 resolves successfully). A failed or unavailable write emits the compatibility `lr-error` event
 (no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:
@@ -1794,8 +1842,9 @@ TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed
 `run-id`) identifies the source run, and `runState: TestRunState = 'idle'` (attribute `run-state`,
 reflected) exposes its lifecycle. `autoExpandFailures: boolean = true`
 (attribute `auto-expand-failures`). A duration renders only when it is finite and non-negative;
-invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Suite ids, then test
-ids within each suite, use deterministic first-wins identity. Foreign runtime statuses normalize
+invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Empty/blank suite and
+test ids are omitted; retained suite ids, then test ids within each suite, use deterministic
+first-wins identity. Foreign runtime statuses normalize
 once to the localized neutral `skipped` state, so every accepted row contributes to one coherent
 summary count and renders a label/glyph.
 
@@ -2199,7 +2248,10 @@ hierarchical trace tree from one shared `spans` array.
   `lr-span-visibility-change`
 - `label: string = ''` — forwarded to the composed `lr-trace-tree`
 - `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
-  `show-cost`), `hideBars: boolean = false` (attribute `hide-bars`) — all forwarded verbatim
+  `show-cost`), `showBars: boolean = true` (attribute `show-bars`, renamed from `hideBars` in
+  9.0.0 to match the positive polarity of its two siblings above — default inverted so the
+  rendered starting state is unchanged: `el.hideBars = true` becomes `el.showBars = false`) — all
+  forwarded verbatim
 
 **Events:** `lr-span-select` (`detail: { spanId: string }`), `lr-span-toggle` (`detail: { spanId: string;
 expanded: boolean }`), and `lr-span-visibility-change` (`detail: { hiddenKinds:
@@ -2264,6 +2316,8 @@ embedded `lr-copy-button`), `lr-export` (`detail: { format: string }`, from the 
 `lr-export-button`), `lr-export-complete` (`detail: { format: string }`, after a non-cancelled export
 finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { ok: false;
 text: string; reason: string; error: unknown }`, the detailed clipboard failure),
+`lr-toolbar-actions-change` (no detail, surfaced unchanged when the embedded copy button's logical
+toolbar action changes availability or backing trigger),
 `lr-export-error` (`detail: { format: ExportFormat; error: unknown }`, the embedded export could not
 complete), and the cancelable `lr-show` / `lr-hide` lifecycle events from the embedded export-format
 menu. These composed child events surface unchanged; the inspector does not emit duplicate copies.
@@ -2308,10 +2362,12 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
 **Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
 `lr-example-add-request` (`detail: undefined`), `lr-example-remove-request` (`detail: { exampleId:
 string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {
-format: string }`), and the deliberate nested-table pass-through `lr-sort` (`detail: { key:
-string }`). `focus`/`blur` —
+format: string }`), and the deliberate nested-table pass-through `lr-sort` (`detail: { phase:
+'commit'; sortKey: string; sortDir: 'asc' | 'desc' }`). `focus`/`blur` —
 re-dispatched (no detail) when the internal search field (only rendered while `searchable`) gains or
 loses focus, since native focus neither bubbles nor crosses the shadow boundary.
+All three built-in columns are sortable; activating one of their headers produces that commit for
+the host to apply to its controlled `examples` array.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `tag-filter`, `grid`,
 `add-button`, `remove-button`, `import`, `export`.
@@ -2345,7 +2401,7 @@ model?: string; promptVersion?: string; output: string; scores?: RubricValue; re
   run's fields with no conversion. Empty/blank ids and later duplicate run ids are omitted before selection, diff,
   grid, and review-event lookup
 - `columns: TableColumn<EvalRunResult>[] = []` (attribute: false) — plain pass-through to
-  `lr-table.columns`, not re-derived here; empty/blank and later duplicate column keys are omitted
+  `lr-table.columns`, not re-derived here; malformed, empty/blank, and later duplicate column keys are omitted
 - `rubricKeys: RubricKey[] = []` (attribute: false) — plain pass-through to `lr-rubric-form.keys`;
   empty/blank and later duplicate rubric keys are omitted
 - `selectedRunId: string | null = null` (attribute `selected-run-id`) — the run open for review and the diff's
@@ -2365,16 +2421,16 @@ RubricValue }`), `lr-review-skip` (`detail: { runId: string }`).
 **CSS parts:** `base`, `empty`, `grid`, `diff`, `diff-view`,
 `diff-labels`, `diff-label-old`, `diff-label-new`, `review`.
 
-## `lr-evaluation-run`
+## `lr-eval-run`
 
 Evaluation-batch progress view with overall progress and one disclosure per example. Inputs and
 outputs may render as Markdown or code, with optional grounding and tool-trace sections.
 
 **Properties:**
 
-- `examples: readonly EvaluationExampleResult[] = []` (attribute: false) — `EvaluationExampleResult { id:
-string; label?: string; status: AgentStatusPresentation; input: EvaluationContent; output:
-EvaluationContent; grounding?: GroundingAssessment; citations?: readonly Citation[]; toolTrace?:
+- `examples: readonly EvalExampleResult[] = []` (attribute: false) — `EvalExampleResult { id:
+string; label?: string; status: AgentStatusPresentation; input: EvalContent; output:
+EvalContent; grounding?: GroundingAssessment; citations?: readonly Citation[]; toolTrace?:
 readonly ToolTimelineEntry[] }`
   (exported here). `AgentStatusPresentation` extends the shared **`AgentStatus` from
   `@aceshooting/lyra-ui/ai`** with optional caller presentation `{ label?, variant?, terminal?,
@@ -2382,8 +2438,8 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   renders as status detail, and `terminal` controls completion counting (falling back to the built-in
   `done`/`error`/`cancelled` map). This preserves the shared run-lifecycle vocabulary rather than
   inventing a parallel pass/fail enum; rubric scoring is `lr-eval-result`'s job, not this one's.
-  `EvaluationContent { text: string; format?: EvaluationContentFormat; language?: string }` keeps
-  each payload's rendering metadata together. `EvaluationContentFormat = 'markdown' | 'code'` —
+  `EvalContent { text: string; format?: EvalContentFormat; language?: string }` keeps
+  each payload's rendering metadata together. `EvalContentFormat = 'markdown' | 'code'` —
   `'markdown'` (the default when unset) renders via `lr-markdown`; `'code'` uses `lr-code-block`
   and consults that payload's `language` for shiki.
   `grounding`/`citations` (both from `@aceshooting/lyra-ui/ai`) compose directly into
@@ -2400,11 +2456,11 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
 - `label: string = ''` — header label and accessible-name source; falls back to a localized
   "Evaluation run"
 
-**Events:** `lr-example-toggle` (`detail: EvaluationExampleToggleDetail` = `{ exampleId: string; expanded:
-boolean }`), `lr-example-citation-select` (`detail: EvaluationCitationSelectDetail` = `{ exampleId:
+**Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
+boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
 with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide`
-(`detail: EvaluationToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
+(`detail: EvalToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
 `{ invocationId: string; approved: boolean; args?: unknown; sourceKey?: string; exampleId: string
 }`). The approval
 event is cancelable: calling `preventDefault()` propagates the veto to the nested
@@ -2717,6 +2773,8 @@ arrays; persistence and execution remain host-owned.
 cancelable `lr-change` before updating the current arrays, while the host remains responsible for
 persistence.
 `versions: readonly PromptStudioVersion[] = []` is a property-only host-controlled input;
+empty/blank message and version ids are omitted and later duplicates use deterministic first-wins
+identity before rendering, editing, focus, selection, and events;
 `selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
 `heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
 label when unset;
@@ -2776,7 +2834,7 @@ import "@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.
 - `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
 - `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.
 
-## `lr-schema-viewer`
+## `lr-json-schema-viewer`
 
 Recursive JSON Schema inspector with property/branch selection, required and constraint display,
 validation issues, `$ref` visibility, composition branches, cycle protection, and a depth ceiling.
@@ -2792,7 +2850,7 @@ readonly required/enum/examples and oneOf/anyOf/allOf collections, and const/def
 keywords. `SchemaValidationIssue = { path: string; message: string; severity?: 'error' | 'warning'
 | 'info' }`.
 
-**Events:** `lr-schema-select` (`{ path, schema }`, with an RFC 6901-style JSON Pointer).
+**Events:** `lr-schema-select` (`{ schemaPath, schema }`, with an RFC 6901-style JSON Pointer).
 
 **CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
 `description`, `constraints`, `issue`, `limit`, `issue-limit`, `empty`. `issue-limit` is the
@@ -2821,7 +2879,7 @@ path once before recursive rendering instead of rescanning the full input for ev
 at the repeated node rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import "@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js";
+import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
 ```
 
 **Additional API surface:**
@@ -3004,20 +3062,20 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 - **`components-agent-tools-evaluation-run-evaluation-run-contracts`** — Supporting data types and helpers for this component family.
-  `EvaluationCitationSelectDetail {
+  `EvalCitationSelectDetail {
   exampleId: unknown;
   citation: unknown;
 }`
-  `EvaluationClaimSelectDetail {
+  `EvalClaimSelectDetail {
   exampleId: unknown;
   claim: unknown;
 }`
-  `EvaluationContent {
+  `EvalContent {
   text: unknown;
   format: unknown;
   language: unknown;
 }`
-  `EvaluationExampleResult {
+  `EvalExampleResult {
   id: unknown;
   label: unknown;
   status: unknown;
@@ -3027,23 +3085,23 @@ These named interfaces and helper signatures are available to typed integrations
   citations: unknown;
   toolTrace: unknown;
 }`
-  `EvaluationExampleToggleDetail {
+  `EvalExampleToggleDetail {
   exampleId: unknown;
   expanded: unknown;
 }`
-  `EvaluationToolActivateDetail {
+  `EvalToolActivateDetail {
   exampleId: unknown;
   invocationId: unknown;
   sourceKey: unknown;
 }`
-  `EvaluationToolApprovalDetail {
+  `EvalToolApprovalDetail {
   exampleId: unknown;
   args: unknown;
   sourceKey: unknown;
   invocationId: unknown;
   approved: unknown;
 }`
-  `EvaluationToolRenderErrorDetail {
+  `EvalToolRenderErrorDetail {
   exampleId: unknown;
   toolName: unknown;
   error: unknown;
@@ -3252,7 +3310,7 @@ These named interfaces and helper signatures are available to typed integrations
   disabledReason: unknown;
 }`
   `ToolSelectionChangeDetail {
-  selected: unknown;
+  selectedToolIds: unknown;
   useDefaults: unknown;
 }`
 

@@ -7,7 +7,9 @@ import { disconnectObserver, slottedElementTargets } from '../../../internal/slo
 export type ResizeObserverBox = 'content-box' | 'border-box' | 'device-pixel-content-box';
 
 export interface LyraResizeObserverEventMap {
-  'lr-resize': CustomEvent<{ entries: ResizeObserverEntry[] }>;
+  'lr-resize': CustomEvent<
+    Readonly<{ entries: readonly ResizeObserverEntry[] }>
+  >;
 }
 
 /**
@@ -17,13 +19,21 @@ export interface LyraResizeObserverEventMap {
  *
  * @customElement lr-resize-observer
  * @slot - Elements to observe.
- * @event lr-resize - Observed elements changed size.
+ * @event lr-resize - Observed elements changed size; the detached bounded entry sequence and
+ * containing detail are frozen while native entry identities are retained.
  * @csspart base - The non-layout wrapper around the observed slot.
  * @status stable
  * @since 4.0.0
  */
 export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> {
   static override styles = [LyraElement.styles, styles];
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-resize',
+  ]);
+
+  protected static override readonly identityEventDetailCollectionItems =
+    Object.freeze({ 'lr-resize': Object.freeze(['entries']) });
 
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ reflect: true }) box: ResizeObserverBox = 'content-box';

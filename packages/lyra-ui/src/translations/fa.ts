@@ -35,6 +35,7 @@ const strings: LyraLocaleStrings = {
   toolSelectLimit: 'فقط {count} ابزار نخست نمایش داده می‌شود.',
   sequenceStripEmpty: 'موردی وجود ندارد',
   sequenceStripCategoryCount: '{label}: {count}',
+  sequenceStripUnnamedCategory: 'دسته بدون نام',
   noColumns: 'هیچ ستونی پیکربندی نشده است',
   dataGridColumnMenu: 'گزینه‌های {label}',
   dataGridPinStart: 'سنجاق کردن {label} به ابتدا',

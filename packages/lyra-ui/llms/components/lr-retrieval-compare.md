@@ -27,6 +27,10 @@ owner, while an explicitly empty host label stays empty on the region).
 `RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
 trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
 
+Set ids and each set's nested chunk ids are canonicalized independently. Malformed/blank rows and
+later duplicates are omitted first-wins before empty state, overlap/count calculations, ranking,
+controlled selection, rendering, or events.
+
 **Events:** `lr-chunk-select` (`{ setId, chunk }`).
 
 **CSS parts:** `base`, `overlap`, `sets`, `set`, `set-heading`, `chunks`, `chunk`,

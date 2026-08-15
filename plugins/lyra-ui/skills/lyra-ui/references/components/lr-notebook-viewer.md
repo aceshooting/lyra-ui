@@ -62,7 +62,8 @@ matches.
 
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
-`lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`. `lr-render-error` —
+`lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`, including
+canonical source reset and effective-locale re-evaluation. `lr-render-error` —
 `detail: { error }`, fetching, parsing, or validating the notebook failed. `lr-anchor-result` —
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.

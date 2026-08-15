@@ -240,8 +240,9 @@
   (e.g. `lr-combobox`'s multi-select array) attach `ElementInternals` directly instead, but must
   still call `setValidity()` themselves — see `combobox.ts`'s `updateValidity()` for the pattern.
 - **JSDoc header** on the component class (`@customElement lr-x`, `@slot`, `@csspart` tags — see
-  any existing component, e.g. `components/empty/empty.ts`) feeds the generated manifest and the
-  consumer-facing docs. The block must sit **directly above** `export class Lyra*` — if a
+  any existing component, e.g. `src/components/overlays/empty/empty.class.ts`) feeds the generated
+  manifest and the consumer-facing docs. The block must sit **directly above** `export class
+  Lyra*` — if a
   `*EventMap` interface or a `FormAssociated`-style `*Base` class intervenes, `cem`'s analyzer
   silently misattributes or drops the whole block, emptying that component's manifest entry
   (`cssParts`, `events`, description all go missing) with no build error. This has already hit 42

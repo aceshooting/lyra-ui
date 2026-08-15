@@ -104,7 +104,7 @@ export interface LyraConditionBuilderEventMap {
    *  triggered by the button or a public `addCondition()` call. */
   'lr-add-condition': CustomEvent<LyraEventDetailSnapshot<{ readonly condition: ConditionBuilderCondition }>>;
   /** Fired after a condition row is removed. */
-  'lr-remove-condition': CustomEvent<{ readonly id: string }>;
+  'lr-remove-condition': CustomEvent<{ readonly conditionId: string }>;
 }
 
 const MAX_FIELDS = 200;
@@ -174,7 +174,7 @@ function normalizeOptions(value: unknown): readonly ConditionBuilderFieldOption[
   for (const candidate of value.slice(0, MAX_OPTIONS)) {
     if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
     const optionValue = boundedString(ownValue(candidate, 'value'));
-    if (!optionValue || seen.has(optionValue)) continue;
+    if (optionValue.trim().length === 0 || seen.has(optionValue)) continue;
     seen.add(optionValue);
     const label = boundedString(ownValue(candidate, 'label'));
     result.push(Object.freeze({ value: optionValue, ...(label ? { label } : {}) }));
@@ -198,7 +198,7 @@ function normalizeFields(value: unknown): readonly ConditionBuilderField[] {
     if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
     const name = boundedString(ownValue(candidate, 'name'));
     const type = ownValue(candidate, 'type');
-    if (!name || names.has(name) || !FIELD_TYPES.has(type as ConditionBuilderFieldType)) continue;
+    if (name.trim().length === 0 || names.has(name) || !FIELD_TYPES.has(type as ConditionBuilderFieldType)) continue;
     names.add(name);
     const label = boundedString(ownValue(candidate, 'label'));
     const placeholder = boundedString(ownValue(candidate, 'placeholder'));
@@ -236,7 +236,7 @@ function normalizeConditionBuilderValue(value: unknown, fields: readonly Conditi
     for (const candidate of source.slice(0, MAX_CONDITIONS)) {
       if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
       const id = boundedString(ownValue(candidate, 'id'));
-      if (!id || ids.has(id)) continue;
+      if (id.trim().length === 0 || ids.has(id)) continue;
       ids.add(id);
       const field = boundedString(ownValue(candidate, 'field'));
       const rawOperator = ownValue(candidate, 'operator');
@@ -274,8 +274,8 @@ function normalizeConditionBuilderValue(value: unknown, fields: readonly Conditi
  * field declared as `number` normalizes to `undefined`, whether it arrives through the controlled
  * model, later field metadata, or an overflowing user-input string, so JSON never turns it into
  * an unrelated `null` condition.
- * Inputs are clone-owned, bounded readonly snapshots; duplicate field names and condition ids use
- * their first valid record, closed vocabulary values normalize to a safe fallback, and all event
+ * Inputs are clone-owned, bounded readonly snapshots; blank field names, option values, and
+ * condition ids are omitted, duplicates use their first valid record, closed vocabulary values normalize to a safe fallback, and all event
  * details are frozen.
  *
  * **9.0 migration:** this original component was renamed from `<lr-query-builder>` /
@@ -298,7 +298,7 @@ function normalizeConditionBuilderValue(value: unknown, fields: readonly Conditi
  * @customElement lr-condition-builder
  * @event lr-input - `detail: { value }` — the full current value, after any user-driven change.
  * @event lr-add-condition - Frozen `detail: { condition }` — a row seeded with the first field was appended.
- * @event lr-remove-condition - `detail: { id }` — a row was removed.
+ * @event lr-remove-condition - `detail: { conditionId }` — a row was removed.
  * @csspart base - The outer wrapper.
  * @csspart combinator - The AND/OR combinator `lr-select`, rendered only when there are 2+ conditions.
  * @csspart conditions - The wrapper around the condition rows.
@@ -508,7 +508,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     if (row && active && row.contains(active)) this.pendingFocusAdd = true;
     const conditions = this._value.conditions.filter((c) => c.id !== id);
     this.commit({ ...this._value, conditions });
-    this.emit('lr-remove-condition', Object.freeze({ id }));
+    this.emit('lr-remove-condition', Object.freeze({ conditionId: id }));
   }
 
   private setCombinator(combinator: ConditionBuilderCombinator): void {

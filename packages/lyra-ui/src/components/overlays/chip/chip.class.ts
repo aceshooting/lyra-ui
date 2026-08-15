@@ -21,11 +21,7 @@ import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_remove,
-  LYRA_DEFAULT_removeWithContext,
-  LYRA_DEFAULT_select,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The library's one semantic-tone vocabulary. */
@@ -235,13 +231,12 @@ function isSourceLabelAvailable(node: Node): boolean {
 export class LyraChip extends LyraElement<LyraChipEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      remove: LYRA_DEFAULT_remove,
-      removeWithContext: LYRA_DEFAULT_removeWithContext,
-      select: LYRA_DEFAULT_select,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    remove: LYRA_DEFAULT_remove,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    select: LYRA_DEFAULT_select,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, variants, styles];

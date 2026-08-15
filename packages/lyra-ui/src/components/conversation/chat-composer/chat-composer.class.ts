@@ -94,8 +94,6 @@ export interface LyraChatComposerEventMap {
   'lr-submit': CustomEvent<{ value: string }>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
 
@@ -155,8 +153,6 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @event lr-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
  * @event blur - One realm-correct native `FocusEvent` relayed from the textarea, preserving `relatedTarget`.
  * @event focus - One realm-correct native `FocusEvent` relayed from the textarea, preserving `relatedTarget`.
- * @event lr-blur - Prefixed notification paired with native `blur`.
- * @event lr-focus - Prefixed notification paired with native `focus`.
  * @event lr-invalid - The composer failed a validity check. Cancelable — preventing this alias
  *   also prevents the native `invalid` event that produced it.
  * @csspart base - The bordered root container. Drops its card chrome (border, background, padding,
@@ -720,7 +716,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     // control is barred from validation regardless.
     if (!this.effectiveDisabled) this.touched = true;
     relayNativeEvent(this, event);
-    this.emit('lr-blur', null);
   };
 
   private onTextareaFocus = (event: FocusEvent): void => {
@@ -729,7 +724,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus', null);
   };
 
   private renderActionButton(): TemplateResult {

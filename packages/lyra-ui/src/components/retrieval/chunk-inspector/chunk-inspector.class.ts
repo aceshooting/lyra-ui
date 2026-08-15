@@ -1,8 +1,10 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import {
   finiteCount,
   finiteNumber,
@@ -48,7 +50,7 @@ type LyraChunkAnchor =
       page?: number;
       rect: { x: number; y: number; width: number; height: number };
     }
-  | { kind: 'node-path'; path: (string | number)[] };
+  | { kind: 'node-path'; path: readonly (string | number)[] };
 
 export interface LyraChunk {
   id: string;
@@ -66,11 +68,11 @@ export interface LyraChunk {
 
 export interface LyraChunkInspectorEventMap {
   'lr-chunk-open': CustomEvent<LyraEventDetailSnapshot<{
-    id: string;
+    chunkId: string;
     sourceId: string;
     anchor?: LyraChunkAnchor;
   }>>;
-  'lr-expand': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-expand': CustomEvent<{ chunkId: string; expanded: boolean }>;
 }
 
 type Tier = 'high' | 'medium' | 'low';
@@ -81,7 +83,8 @@ export type ChunkInspectorSort = 'score' | 'none';
 /**
  * `<lr-chunk-inspector>` — a ranked retrieved-chunks list: relevance score bars with tier tones,
  * expandable chunk text, and the deep-link event that lands a chunk in `lr-document-viewer`.
- * Never fetches, ranks, or dedupes; never opens documents itself.
+ * Never fetches or ranks and never opens documents itself. Blank chunk identities and later
+ * duplicates are omitted first-wins before sorting, rendering, state, or events.
  *
  * Every row-level part is reachable through `::part()` in both rendering paths: above
  * `virtualize-at` a row lives in the internal `<lr-virtual-list>`'s shadow root, and its parts are
@@ -97,14 +100,14 @@ export type ChunkInspectorSort = 'score' | 'none';
  *
  * @customElement lr-chunk-inspector
  * @event lr-chunk-open - A chunk's title/open button was activated -- the event a host routes
- * into `lr-document-viewer` (set `src` from `sourceId`, set `anchor`). `detail: { id, sourceId,
- * anchor? }`.
- * @event lr-expand - A chunk's text toggle was activated. `detail: { id, expanded }`.
+ * into `lr-document-viewer` (set `src` from `sourceId`, set `anchor`). `detail: { chunkId,
+ * sourceId, anchor? }`.
+ * @event lr-expand - A chunk's text toggle was activated. `detail: { chunkId, expanded }`.
  * @csspart base - The result wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart chunk - One chunk row. Carries `role="listitem"` only in the non-virtualized path;
  * while virtualized the surrounding `<lr-virtual-list>` row supplies that role instead.
- * @csspart chunk-current - Additional part on the `chunk` row matching `activeId`.
+ * @csspart chunk-current - Additional part on the `chunk` row matching `activeChunkId`.
  * @csspart score - The visible percent-score text.
  * @csspart score-current - Additional part on the current row's `score` line.
  * @csspart score-bar - The `aria-hidden` score bar track.
@@ -123,7 +126,7 @@ export type ChunkInspectorSort = 'score' | 'none';
  * @csspart toggle - The "Show more"/"Show less" button. Omitted when `compact`.
  * @csspart empty - The empty-state message, shown when `chunks` is empty.
  * @cssprop [--lr-chunk-inspector-current-bg=var(--lr-color-brand-quiet)] - Background of the chunk
- *   matching `activeId`. **Contrast-sensitive:** paired with
+ *   matching `activeChunkId`. **Contrast-sensitive:** paired with
  *   `--lr-chunk-inspector-current-color`, which has to keep a 4.5:1 ratio against it.
  * @cssprop [--lr-chunk-inspector-current-color=var(--lr-color-text)] - Text color of the current
  *   chunk's `[part="score"]` line. **Contrast-sensitive:** the quiet token it replaces only reaches
@@ -133,8 +136,6 @@ export type ChunkInspectorSort = 'score' | 'none';
  * @since 4.0.0
  */
 export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['chunks']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -152,6 +153,8 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['chunks']);
+
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-chunk-open',
@@ -167,7 +170,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   /** Ordering applied before rendering the supplied chunks. */
   @property() sort: ChunkInspectorSort = 'score';
   /** Marks the chunk currently open in the viewer. */
-  @property({ attribute: 'active-id' }) activeId = '';
+  @property({ attribute: 'active-chunk-id' }) activeChunkId = '';
   /** Row count at which rendering switches to the internal virtual list. */
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 50;
   /** Compact rows render title + score bar + open button only. */
@@ -189,7 +192,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   // Memoizes the sorted view for as long as neither input actually changed. `<lr-virtual-list>`
   // keys its own O(n) offset/identity rebuild and its memoized activeIndex on the *reference*
   // identity of the `items` array it is handed, so returning a freshly-allocated sort on every
-  // render made every unrelated update (a new `activeId`, `compact`) rebuild the whole list.
+  // render made every unrelated update (a new `activeChunkId`, `compact`) rebuild the whole list.
   private sortedChunksCache?: {
     source: readonly LyraChunk[];
     sort: ChunkInspectorSort;
@@ -200,12 +203,13 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     const cached = this.sortedChunksCache;
     if (cached && cached.source === this.chunks && cached.sort === this.sort)
       return cached.result;
+    const canonical = firstByRetrievalIdentity(this.chunks, (chunk) => chunk.id);
     const result =
       this.sort === 'score'
-        ? [...this.chunks].sort(
+        ? canonical.sort(
             (a, b) => this.safeScore(b.score) - this.safeScore(a.score)
           )
-        : this.chunks;
+        : canonical;
     this.sortedChunksCache = { source: this.chunks, sort: this.sort, result };
     return result;
   }
@@ -244,13 +248,13 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     );
   }
 
-  private toggleExpand(id: string): void {
+  private toggleExpand(chunkId: string): void {
     const next = new Set(this.expandedIds);
-    const expanded = !next.has(id);
-    if (expanded) next.add(id);
-    else next.delete(id);
+    const expanded = !next.has(chunkId);
+    if (expanded) next.add(chunkId);
+    else next.delete(chunkId);
     this.expandedIds = next;
-    this.emit('lr-expand', { id, expanded });
+    this.emit('lr-expand', { chunkId, expanded });
   }
 
   // Row state is mirrored into a second part-name token (`chunk-current`, `score-fill-<tone>`,
@@ -285,7 +289,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
             page: formattedPage,
           });
     const expanded = this.expandedIds.has(chunk.id);
-    const current = this.activeId === chunk.id;
+    const current = this.activeChunkId === chunk.id;
     return html`
       <div
         part=${current ? 'chunk chunk-current' : 'chunk'}
@@ -315,7 +319,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
           }).format([titleWithPage, this.tierLabel(tier)])}
           @click=${() =>
             this.emit('lr-chunk-open', {
-              id: chunk.id,
+              chunkId: chunk.id,
               sourceId: chunk.sourceId,
               ...(chunk.anchor ? { anchor: chunk.anchor } : {}),
             })}
@@ -389,10 +393,10 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
         ${sorted.length > this.effectiveVirtualizeAt
           ? html`<lr-virtual-list
               exportparts="chunk:chunk, chunk-current:chunk-current, score:score, score-current:score-current, score-bar:score-bar, score-fill:score-fill, score-fill-success:score-fill-success, score-fill-warning:score-fill-warning, score-fill-danger:score-fill-danger, open-button:open-button, title:title, text:text, text-clamped:text-clamped, toggle:toggle"
-              .items=${sorted}
+              .items=${guard([sorted], () => sorted)}
               .renderItem=${this.virtualRenderItem()}
               .keyFunction=${this.chunkKey}
-              .activeId=${this.activeId || ''}
+              .activeItemId=${this.activeChunkId || ''}
             ></lr-virtual-list>`
           : html`<div role="list">
               ${sorted.map((c) => this.renderChunk(c))}

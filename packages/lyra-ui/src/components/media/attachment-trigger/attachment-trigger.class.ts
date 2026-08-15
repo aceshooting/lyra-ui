@@ -216,10 +216,6 @@ export interface LyraAttachmentTriggerEventMap {
  * @since 4.0.0
  */
 export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'capabilities',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -243,6 +239,10 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'capabilities',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([

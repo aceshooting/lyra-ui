@@ -218,7 +218,7 @@ export const InitialsFontSize: Story = {
     docs: {
       description: {
         story:
-          'The initials fallback scales with `size` through `--lr-avatar-font-size` (`s`/`small` → `--lr-font-size-xs`, `m`/`medium` → `--lr-font-size-sm`, `l`/`large` → `--lr-font-size-m`). Set the property directly to override any tier — useful for single-character initials, which can carry a larger glyph than a two-character pair in the same circle.',
+          'The initials fallback scales with `size` through `--lr-avatar-font-size`: `2xs` → `--lr-font-size-xs`, `xs` → `--lr-font-size-sm`, `s`/`small` → `--lr-font-size-md-sm`, `m`/`medium` → `--lr-font-size-m`, `l`/`large` → `--lr-font-size-lg`, and `xl` → `--lr-font-size-xl`. Set the property directly to override any tier — useful for single-character initials, which can carry a larger glyph than a two-character pair in the same circle.',
       },
     },
   },

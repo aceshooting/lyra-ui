@@ -506,6 +506,16 @@ describe('lr-trace-tree', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Arbre de trace');
   });
 
+  it('defaults label to undefined and keeps an explicit empty override verbatim', async () => {
+    const unset = (await fixture(html`<lr-trace-tree></lr-trace-tree>`)) as LyraTraceTree;
+    expect(unset.label).to.be.undefined;
+    expect(unset.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Trace tree');
+
+    const empty = (await fixture(html`<lr-trace-tree label=""></lr-trace-tree>`)) as LyraTraceTree;
+    expect(empty.label).to.equal('');
+    expect(empty.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+  });
+
   it('builds status-change announcements from the traceTreeSpanStatus template, so a locale controls name/status order', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;

@@ -56,8 +56,8 @@ redactedFields?: string[]; needsApproval?: boolean; approved?: boolean }`
 - `retrievalChunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk` from
   `@aceshooting/lyra-ui/ai`**: `{ id, text, score, source: DocumentRef, metadata? }`, forwarded to
   `lr-retrieval-results`
-- `selectedRetrievalIds: string[] = []` (attribute: false) — controlled selection forwarded to
-  `lr-retrieval-results.selectedIds`
+- `selectedRetrievalChunkIds: string[] = []` (attribute: false) — controlled selection forwarded to
+  `lr-retrieval-results.selectedChunkIds`
 - `retrievalLoading: boolean = false` (attribute `retrieval-loading`), `retrievalHasMore: boolean =
 false` (attribute `retrieval-has-more`), `retrievalErrorText: string = ''` (attribute
   `retrieval-error-text`, caller-supplied text) — all forwarded to `lr-retrieval-results`
@@ -94,7 +94,7 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
   (`detail: null`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
-- `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ ids: string[]; chunks:
+- `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks:
 RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
 - `lr-citation-select` (`detail: CitationSelectEventDetail` = `{ citation: Citation }`, from
   `@aceshooting/lyra-ui/ai`) — forwarded from the built-in grounding summary.

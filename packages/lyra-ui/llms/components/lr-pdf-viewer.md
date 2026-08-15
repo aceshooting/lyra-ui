@@ -44,14 +44,15 @@ nonnegative dimensions.
 **Events:**
 
 - `lr-render-error` — `detail: { error }` — fetching, parsing, or rendering (page canvas or text
-  layer) failed.
+  layer) failed. Both synchronous and rejected text-layer failures are contained and reported
+  without an unhandled promise rejection.
 - `lr-load` — `detail: { pageCount }` — the document reached `ready`. `page` is reset to `1` first.
 - `lr-page-change` — `detail: { page, pageCount }` — fired for scroll-driven page crossings as well
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
 - `lr-zoom-change` — `detail: { zoom }`.
 - `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
-  `searchPrevious()`/`clearSearch()`. A `src` change resets search state _silently_ (no event), since
-  match page/offset coordinates only mean anything for the document they were found in.
+  `searchPrevious()`/`clearSearch()` and effective-locale re-evaluation. A `src` change invalidates document-relative matches and emits
+  the canonical reset `{ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 }`.
 - `lr-highlight-activate` — `detail: { highlightId }` — a painted highlight was clicked or activated via
   Enter/Space. On a pointer hit-test, the last entry of `highlights` covering the point wins.
 - `lr-text-select` — `detail: { text, anchor, rects }` — a selection ended inside a page's text

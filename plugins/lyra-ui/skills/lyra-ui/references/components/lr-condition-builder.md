@@ -24,10 +24,11 @@ granular import path, class/type imports, selectors, and framework bindings toge
 
 **Properties:** clone-owned readonly `fields`, clone-owned readonly `value`, and `disabled`.
 Structured inputs are bounded (200 fields and conditions, 500 options per field, 256 characters
-per string), malformed records are skipped, duplicate field names/condition ids use the first
-valid record, and closed field/operator/combinator values normalize to their documented fallback.
+per string), malformed records and blank field names/option values/condition ids are skipped,
+duplicates use the first valid record, and closed field/operator/combinator values normalize to
+their documented fallback.
 Returned arrays and records are frozen snapshots, so mutate-and-reuse does not bypass Lit's
-assignment boundary.
+assignment boundary. Create and reassign a new `fields` array or `value` record after changes.
 
 For a field declared as `type: 'number'`, non-finite controlled values normalize to `undefined`.
 The same applies when field metadata arrives after `value`, and when a numeric input string
@@ -36,7 +37,8 @@ the model, and serializing the query cannot silently turn infinity into JSON `nu
 
 **Methods:** `addCondition()` appends a condition using the first available field and emits a frozen
 `lr-add-condition`; it is a no-op while disabled or when there are no fields.
-`removeCondition(id)` removes the matching condition and emits `lr-remove-condition`; it is a
+`removeCondition(id)` removes the matching condition and emits `lr-remove-condition`
+(`detail: { conditionId }`); it is a
 no-op while disabled or when the id is absent.
 
 **Events:** `lr-input`, `lr-add-condition`, `lr-remove-condition`; all details and nested model

@@ -5,9 +5,6 @@ import { defineElement } from '../../../internal/prefix.js';
 
 export type { LyraToastOptions } from './toast.class.js';
 
-/** @deprecated Use the canonical `LyraToastOptions`. */
-export type ToastOptions = LyraToastOptions;
-
 export interface ToastHandle {
   /** Resolves to the created toast item. */
   item: Promise<LyraToastItem>;

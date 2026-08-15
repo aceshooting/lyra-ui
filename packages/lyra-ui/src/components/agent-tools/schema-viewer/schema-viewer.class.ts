@@ -37,8 +37,8 @@ export interface SchemaValidationIssue {
   message: string;
   severity?: 'error' | 'warning' | 'info';
 }
-export interface LyraSchemaViewerEventMap {
-  'lr-schema-select': CustomEvent<LyraEventDetailSnapshot<{ path: string; schema: JsonSchemaNode }>>;
+export interface LyraJsonSchemaViewerEventMap {
+  'lr-schema-select': CustomEvent<LyraEventDetailSnapshot<{ schemaPath: string; schema: JsonSchemaNode }>>;
 }
 
 interface SchemaRenderBudget {
@@ -90,7 +90,7 @@ function isReadonlyArray<Value>(
 }
 
 /**
- * `<lr-schema-viewer>` — a recursive, selectable JSON Schema inspector with required-state,
+ * `<lr-json-schema-viewer>` — a recursive, selectable JSON Schema inspector with required-state,
  * constraints, composition branches, `$ref` display, validation issues, cycle protection, and a
  * configurable depth ceiling. It does not resolve remote references or validate values.
  *
@@ -98,8 +98,8 @@ function isReadonlyArray<Value>(
  * Create and reassign a new record or array after changes; mutating the assigned value does not
  * update the view.
  *
- * @customElement lr-schema-viewer
- * @event lr-schema-select - A schema node was activated. `detail: { path, schema }`.
+ * @customElement lr-json-schema-viewer
+ * @event lr-schema-select - A schema node was activated. `detail: { schemaPath, schema }`.
  * @csspart base - The named schema region.
  * @csspart tree - The recursive schema tree.
  * @csspart node - One schema node.
@@ -124,11 +124,9 @@ function isReadonlyArray<Value>(
  * @cssprop [--lr-schema-viewer-info-border=var(--lr-color-brand)] - Info issue border.
  * @cssprop [--lr-schema-viewer-info-bg=var(--lr-color-brand-quiet)] - Info issue background.
  * @status stable
- * @since 7.0.0
+ * @since unreleased
  */
-export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['schema', 'issues']);
-
+export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -142,6 +140,8 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
     schemaViewerType: LYRA_DEFAULT_schemaViewerType,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['schema', 'issues']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -311,7 +311,7 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
           type="button"
           data-path=${path}
           aria-pressed=${selected ? 'true' : 'false'}
-          @click=${() => this.emit('lr-schema-select', { path, schema })}
+          @click=${() => this.emit('lr-schema-select', { schemaPath: path, schema })}
         >
           <strong part="name">${name}</strong>
           ${type
@@ -391,6 +391,6 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-schema-viewer': LyraSchemaViewer;
+    'lr-json-schema-viewer': LyraJsonSchemaViewer;
   }
 }

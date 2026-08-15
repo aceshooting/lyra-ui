@@ -26,18 +26,18 @@ const [
 ]);
 
 for (const required of [
-  "globalTypes: {",
-  "theme: {",
-  "initialGlobals: {",
-  "theme: 'dark'",
-  "title: 'Theme'",
+  'globalTypes: {',
+  'theme: {',
+  'initialGlobals: {',
+  `theme: 'dark'`,
+  `title: 'Theme'`,
   'dynamicTitle: true',
-  "{ value: 'light', title: 'Light' }",
-  "{ value: 'dark', title: 'Dark' }",
-  "import '../packages/lyra-ui/src/theme.css';",
-  "import '../packages/lyra-ui/src/all.js';",
-  "import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';",
-  "import { normalizeStoryThemeName } from './theme-contract.js';",
+  `{ value: 'light', title: 'Light' }`,
+  `{ value: 'dark', title: 'Dark' }`,
+  `import '../packages/lyra-ui/src/theme.css';`,
+  `import '../packages/lyra-ui/src/all.js';`,
+  `import { setLyraTheme } from '../packages/lyra-ui/src/theme/theme.js';`,
+  `import { normalizeStoryThemeName } from './theme-contract.js';`,
   'setLyraTheme({ mode: theme, accent: null });',
   'bootstrapLyraPresentationFromUrl();',
   'decorators: [withLyraTheme]',
@@ -56,10 +56,10 @@ for (const unsupported of ['high-contrast', 'density: {', 'lyraDensity', '--lr-d
     throw new Error(`Storybook preview advertises unsupported presentation state: ${unsupported}`);
   }
 }
-if (preview.includes("import '../packages/lyra-ui/src/lyra.js';")) {
+if (preview.includes(`import '../packages/lyra-ui/src/lyra.js';`)) {
   throw new Error('Storybook must import all.js because the package root is registration-free');
 }
-if (preview.includes("from './story-theme.js'")) {
+if (preview.includes(`from './story-theme.js'`)) {
   throw new Error('Storybook manager colors must not enter the component-preview bundle');
 }
 if (/toolbar[^\n]*(?:high-contrast|compact)/i.test(introduction)) {
@@ -78,15 +78,15 @@ if (/ships a `high-contrast` theme|high-contrast-theme rendering/i.test(accessib
 if (storyThemeSource.includes('LYRA_THEME_TOKENS')) {
   throw new Error('Storybook preview colors must come from the complete production theme.css, not a copied palette');
 }
-if (storyThemeSource.includes('storyColor') || docsContainerSource.includes("from './story-theme.js'")) {
+if (storyThemeSource.includes('storyColor') || docsContainerSource.includes(`from './story-theme.js'`)) {
   throw new Error('Manager-only Storybook colors must not be imported by preview/docs code');
 }
-if (storyThemeSource.includes("'--lr-theme-") && !storyThemeSource.includes('getComputedStyle')) {
+if (storyThemeSource.includes(`'--lr-theme-`) && !storyThemeSource.includes('getComputedStyle')) {
   throw new Error('Storybook must resolve --lr-theme-* values from the live theme, not restate them');
 }
 
 for (const required of [
-  "addons.register('lyra-theme-sync'",
+  `addons.register('lyra-theme-sync'`,
   'api.setOptions({ theme:',
 ]) {
   if (!manager.includes(required)) {
@@ -98,7 +98,7 @@ if (!main.includes('createGroupedStoryIndexer')) {
   throw new Error('Storybook must group story index entries by source family');
 }
 
-for (const selector of [":root[data-lr-theme='light']", ":root[data-lr-theme='dark']"]) {
+for (const selector of [`:root[data-lr-theme='light']`, `:root[data-lr-theme='dark']`]) {
   if (!landing.includes(selector)) {
     throw new Error(`Storybook landing page is missing ${selector}`);
   }
@@ -159,16 +159,16 @@ assert.equal(groupedInput.title, 'Forms/Checkbox');
 assert.equal(groupedInput.metaId, 'checkbox');
 
 const transformedStory = transformStoryTitle(
-  "const meta = {\n  title: 'Checkbox',\n  component: 'lr-checkbox',\n};",
+  `const meta = {\n  title: 'Checkbox',\n  component: 'lr-checkbox',\n};`,
   '/repo/src/components/forms/checkbox/checkbox.stories.ts',
 );
 assert.match(transformedStory, /title: 'Forms\/Checkbox',\n  id: 'checkbox',/);
 assert.equal(
   transformStoryTitle(
-    "const meta = {\n  title: 'Charts/LiteChart',\n};",
+    `const meta = {\n  title: 'Charts/LiteChart',\n};`,
     '/repo/src/components/charts/chart/lite-chart.stories.ts',
   ),
-  "const meta = {\n  title: 'Charts/LiteChart',\n};",
+  `const meta = {\n  title: 'Charts/LiteChart',\n};`,
 );
 
 function storyFiles(directory) {

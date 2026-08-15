@@ -4,7 +4,7 @@ import "./node-palette.js";
 import type {
   LyraNodePalette,
   LyraNodePaletteEventMap,
-  PaletteItem,
+  LyraPaletteItem,
 } from "./node-palette.js";
 import { FLOW_PALETTE_MIME_TYPE } from "../../data/flow-canvas/flow-canvas.js";
 import { styles } from "./node-palette.styles.js";
@@ -22,7 +22,7 @@ function sinkTexts(): string[] {
   );
 }
 
-const items: PaletteItem[] = [
+const items: LyraPaletteItem[] = [
   {
     type: "http-request",
     label: "HTTP Request",
@@ -174,7 +174,7 @@ it("Enter on an item emits lr-palette-place and lr-select with the same type/ite
   )) as LyraNodePalette;
   await el.updateComplete;
   let placeDetail: { type: string } | undefined;
-  let selectDetail: { item: PaletteItem } | undefined;
+  let selectDetail: { item: LyraPaletteItem } | undefined;
   el.addEventListener(
     "lr-palette-place",
     (e) => (placeDetail = (e as CustomEvent).detail)
@@ -320,7 +320,7 @@ it("ArrowDown from the search field is a no-op when an active filter matches not
 });
 
 it("assigns same-object duplicate entries distinct roving positions", async () => {
-  const duplicate: PaletteItem = { type: "duplicate", label: "Duplicate" };
+  const duplicate: LyraPaletteItem = { type: 'duplicate', label: 'Duplicate' };
   const el = (await fixture(
     html`<lr-node-palette .items=${[duplicate, duplicate]}></lr-node-palette>`
   )) as LyraNodePalette;
@@ -347,9 +347,9 @@ it("assigns same-object duplicate entries distinct roving positions", async () =
 });
 
 it("keeps roving state and real focus on a surviving item across reorder, then transfers it on shrink", async () => {
-  const first: PaletteItem = { type: "first", label: "First" };
-  const second: PaletteItem = { type: "second", label: "Second" };
-  const third: PaletteItem = { type: "third", label: "Third" };
+  const first: LyraPaletteItem = { type: 'first', label: 'First' };
+  const second: LyraPaletteItem = { type: 'second', label: 'Second' };
+  const third: LyraPaletteItem = { type: 'third', label: 'Third' };
   const el = (await fixture(
     html`<lr-node-palette .items=${[first, second, third]}></lr-node-palette>`
   )) as LyraNodePalette;
@@ -820,7 +820,7 @@ describe("reorderable", () => {
   });
 
   it("groups an uncategorized item under a null category", async () => {
-    const loose: PaletteItem[] = [
+    const loose: LyraPaletteItem[] = [
       { type: "a", label: "Alpha" },
       { type: "b", label: "Beta" },
     ];

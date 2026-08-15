@@ -52,8 +52,8 @@ export type LyraEventDetailSnapshot<Value> = Value extends (
   ...args: never[]
 ) => unknown
   ? Value
-  : Value extends ArrayBufferView
-  ? readonly number[]
+  : Value extends Element | Blob | AbortSignal | Error
+  ? Value
   : Value extends DOMRectReadOnly
   ? Readonly<{
       x: number;
@@ -114,7 +114,7 @@ const PUBLIC_COLLECTION_ENTRY_LIMIT = 10_000;
 /** Maximum number of plain-record properties retained across one snapshot. */
 const PUBLIC_COLLECTION_NODE_LIMIT = 50_000;
 /** Maximum nesting depth traversed while detaching plain records and nested arrays. */
-const PUBLIC_COLLECTION_DEPTH_LIMIT = 16;
+const PUBLIC_COLLECTION_DEPTH_LIMIT = 256;
 const OMIT_COLLECTION_VALUE = Symbol('omit-public-collection-value');
 
 interface CollectionSnapshotBudget {
@@ -126,15 +126,17 @@ interface CollectionSnapshotBudget {
 
 interface SnapshotRealm {
   readonly Array: ArrayConstructor;
+  readonly Date: DateConstructor;
   readonly Map: MapConstructor;
   readonly Object: ObjectConstructor;
   readonly Set: SetConstructor;
 }
 
-function snapshotRealm(view?: Window | null): SnapshotRealm {
-  const candidate = view as unknown as Partial<SnapshotRealm> | undefined;
+function snapshotRealm(view?: Window | SnapshotRealm | null): SnapshotRealm {
+  const candidate = view as Partial<SnapshotRealm> | undefined;
   return {
     Array: candidate?.Array ?? Array,
+    Date: candidate?.Date ?? Date,
     Map: candidate?.Map ?? Map,
     Object: candidate?.Object ?? Object,
     Set: candidate?.Set ?? Set,
@@ -144,7 +146,18 @@ function snapshotRealm(view?: Window | null): SnapshotRealm {
 function isRealmNeutralPlainRecord(value: object): boolean {
   try {
     const prototype = Object.getPrototypeOf(value);
-    return prototype === null || Object.getPrototypeOf(prototype) === null;
+    if (prototype === null) return true;
+    const constructor = Object.getOwnPropertyDescriptor(
+      prototype,
+      'constructor'
+    );
+    return Boolean(
+      constructor &&
+        'value' in constructor &&
+        typeof constructor.value === 'function' &&
+        constructor.value.name === 'Object' &&
+        Object.getPrototypeOf(prototype) === null
+    );
   } catch {
     return false;
   }
@@ -178,6 +191,63 @@ function isImmutableBlob(value: object): boolean {
   }
 }
 
+const MUTATING_DATE_METHODS = new Set<PropertyKey>([
+  'setDate',
+  'setFullYear',
+  'setHours',
+  'setMilliseconds',
+  'setMinutes',
+  'setMonth',
+  'setSeconds',
+  'setTime',
+  'setUTCDate',
+  'setUTCFullYear',
+  'setUTCHours',
+  'setUTCMilliseconds',
+  'setUTCMinutes',
+  'setUTCMonth',
+  'setUTCSeconds',
+  'setYear',
+]);
+
+function nativeDateTime(value: object): number | typeof OMIT_COLLECTION_VALUE {
+  try {
+    return Date.prototype.getTime.call(value);
+  } catch {
+    return OMIT_COLLECTION_VALUE;
+  }
+}
+
+/** A Date has mutable internal slots that `Object.freeze()` cannot protect. Keep its familiar
+ * read API and realm-specific `instanceof` behavior behind a proxy whose target is unreachable,
+ * while rejecting both normal mutators and borrowed `Date.prototype` mutators. */
+function snapshotReadonlyDate(
+  source: object,
+  time: number,
+  budget: CollectionSnapshotBudget
+): Date {
+  const target = new budget.realm.Date(time);
+  const boundMethods = new Map<PropertyKey, Function>();
+  const rejectMutation = () => {
+    throw new TypeError('Cannot mutate a readonly Date snapshot');
+  };
+  const snapshot = new Proxy(target, {
+    get(date, key) {
+      if (MUTATING_DATE_METHODS.has(key)) return rejectMutation;
+      if (key === 'constructor') return budget.realm.Date;
+      const value = Reflect.get(date, key, date) as unknown;
+      if (typeof value !== 'function') return value;
+      const cached = boundMethods.get(key);
+      if (cached) return cached;
+      const bound = value.bind(date);
+      boundMethods.set(key, bound);
+      return bound;
+    },
+  });
+  rememberSnapshot(budget, source, snapshot);
+  return Object.freeze(snapshot);
+}
+
 function rememberSnapshot(
   budget: CollectionSnapshotBudget,
   source: object,
@@ -206,6 +276,52 @@ function emptyRealmArray(realm: SnapshotRealm): readonly unknown[] {
   return Object.freeze(new realm.Array());
 }
 
+function* ownEnumerableStringKeys(value: object): IterableIterator<string> {
+  for (const key in value) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor?.enumerable) yield key;
+  }
+}
+
+function snapshotDataRecord(
+  value: object,
+  keys: Iterable<string>,
+  prototype: object | null,
+  budget: CollectionSnapshotBudget,
+  depth: number,
+  preserveRecordKeys?: ReadonlySet<PropertyKey>,
+  preserveCollectionItemKeys?: ReadonlySet<PropertyKey>
+): unknown | typeof OMIT_COLLECTION_VALUE {
+  const output = budget.realm.Object.create(prototype) as Record<
+    PropertyKey,
+    unknown
+  >;
+  rememberSnapshot(budget, value, output);
+  try {
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor?.enumerable || !('value' in descriptor)) continue;
+      if (budget.remaining <= 0) return OMIT_COLLECTION_VALUE;
+      budget.remaining -= 1;
+      const entry = preserveRecordKeys?.has(key)
+        ? descriptor.value
+        : preserveCollectionItemKeys?.has(key)
+        ? snapshotIdentityCollection(descriptor.value, budget.realm, budget)
+        : snapshotCollectionValue(descriptor.value, budget, depth + 1);
+      if (entry === OMIT_COLLECTION_VALUE) return OMIT_COLLECTION_VALUE;
+      Object.defineProperty(output, key, {
+        value: entry,
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      });
+    }
+  } catch {
+    return OMIT_COLLECTION_VALUE;
+  }
+  return Object.freeze(output);
+}
+
 /**
  * Detaches the data-bearing portion of a public collection without invoking accessors or an
  * arbitrary iterable. Platform objects and functions remain identity values; arrays and plain
@@ -215,7 +331,9 @@ function snapshotCollectionValue(
   value: unknown,
   budget: CollectionSnapshotBudget,
   depth: number,
-  preserveRecordKeys?: ReadonlySet<PropertyKey>
+  preserveRecordKeys?: ReadonlySet<PropertyKey>,
+  preserveCollectionItemKeys?: ReadonlySet<PropertyKey>,
+  allowArrayPrefixTruncation = false
 ): unknown | typeof OMIT_COLLECTION_VALUE {
   if (
     value === null ||
@@ -233,20 +351,32 @@ function snapshotCollectionValue(
     try {
       lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
     } catch {
-      return emptyRealmArray(budget.realm);
+      return allowArrayPrefixTruncation
+        ? emptyRealmArray(budget.realm)
+        : OMIT_COLLECTION_VALUE;
     }
-    const length =
-      lengthDescriptor &&
-      'value' in lengthDescriptor &&
-      typeof lengthDescriptor.value === 'number' &&
-      Number.isSafeInteger(lengthDescriptor.value) &&
-      lengthDescriptor.value >= 0
-        ? Math.min(lengthDescriptor.value, PUBLIC_COLLECTION_ENTRY_LIMIT)
-        : 0;
+    if (
+      !lengthDescriptor ||
+      !('value' in lengthDescriptor) ||
+      typeof lengthDescriptor.value !== 'number' ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    )
+      return allowArrayPrefixTruncation
+        ? emptyRealmArray(budget.realm)
+        : OMIT_COLLECTION_VALUE;
+    const sourceLength = lengthDescriptor.value;
+    if (
+      !allowArrayPrefixTruncation &&
+      sourceLength > PUBLIC_COLLECTION_ENTRY_LIMIT
+    )
+      return OMIT_COLLECTION_VALUE;
+    const length = Math.min(sourceLength, PUBLIC_COLLECTION_ENTRY_LIMIT);
     const output = new budget.realm.Array(length) as unknown[];
     rememberSnapshot(budget, value, output);
     for (let index = 0; index < length; index += 1) {
       if (budget.remaining <= 0) {
+        if (!allowArrayPrefixTruncation) return OMIT_COLLECTION_VALUE;
         output.length = index;
         break;
       }
@@ -254,14 +384,28 @@ function snapshotCollectionValue(
       try {
         descriptor = Object.getOwnPropertyDescriptor(value, String(index));
       } catch {
-        continue;
+        if (!allowArrayPrefixTruncation) return OMIT_COLLECTION_VALUE;
+        output.length = index;
+        break;
       }
-      if (!descriptor || !('value' in descriptor)) continue;
+      if (!descriptor) continue;
+      if (!('value' in descriptor)) {
+        if (!allowArrayPrefixTruncation) return OMIT_COLLECTION_VALUE;
+        output.length = index;
+        break;
+      }
       const entry = snapshotTransaction(budget, () => {
         budget.remaining -= 1;
         return snapshotCollectionValue(descriptor.value, budget, depth + 1);
       });
-      if (entry === OMIT_COLLECTION_VALUE) continue;
+      // A present row that cannot be snapshotted ends the bounded prefix. Keeping a hole here
+      // would make a dense `readonly Row[]` claim false, while inserting a sentinel would put a
+      // value outside the declared element type. Genuine source holes above retain their index.
+      if (entry === OMIT_COLLECTION_VALUE) {
+        if (!allowArrayPrefixTruncation) return OMIT_COLLECTION_VALUE;
+        output.length = index;
+        break;
+      }
       Object.defineProperty(output, index, {
         value: entry,
         enumerable: true,
@@ -281,52 +425,44 @@ function snapshotCollectionValue(
     } catch {
       return OMIT_COLLECTION_VALUE;
     }
-    const output = budget.realm.Object.create(
-      prototype === null ? null : budget.realm.Object.prototype
-    ) as Record<PropertyKey, unknown>;
-    rememberSnapshot(budget, value, output);
-    try {
-      // `for...in` lets ordinary huge records stop at the admission budget instead of eagerly
-      // allocating every descriptor. Inherited keys never consume the budget.
-      for (const key in value) {
-        const descriptor = Object.getOwnPropertyDescriptor(value, key);
-        if (!descriptor?.enumerable || !('value' in descriptor)) continue;
-        if (budget.remaining <= 0) return OMIT_COLLECTION_VALUE;
-        budget.remaining -= 1;
-        const entry = preserveRecordKeys?.has(key)
-          ? descriptor.value
-          : snapshotCollectionValue(descriptor.value, budget, depth + 1);
-        if (entry === OMIT_COLLECTION_VALUE) return OMIT_COLLECTION_VALUE;
-        Object.defineProperty(output, key, {
-          value: entry,
-          enumerable: true,
-          configurable: false,
-          writable: false,
-        });
-      }
-    } catch {
-      return OMIT_COLLECTION_VALUE;
-    }
-    return Object.freeze(output);
+    return snapshotDataRecord(
+      value,
+      ownEnumerableStringKeys(value),
+      prototype === null ? null : budget.realm.Object.prototype,
+      budget,
+      depth,
+      preserveRecordKeys,
+      preserveCollectionItemKeys
+    );
   }
+
+  const dateTime = nativeDateTime(value);
+  if (dateTime !== OMIT_COLLECTION_VALUE)
+    return snapshotReadonlyDate(value, dateTime, budget);
 
   const entries = nativeMapEntries(value);
   if (entries) return snapshotDetachedMap(value, entries, budget, depth);
   const values = nativeSetValues(value);
   if (values) return snapshotDetachedSet(value, values, budget, depth);
-  if (isNativeArrayBufferView(value))
-    return snapshotArrayBufferView(value, budget);
+  // Mutable binary views have no truthful recursively-frozen same-shape representation. No
+  // enrolled public property uses one; a hostile/untyped assignment fails closed here. Event
+  // contracts that expose bytes must define their own detached representation.
+  if (isNativeArrayBufferView(value)) return OMIT_COLLECTION_VALUE;
   const rect = snapshotDOMRect(value, budget);
   if (rect !== OMIT_COLLECTION_VALUE) return rect;
   if (isImmutableBlob(value)) return value;
+
+  // JavaScript exposes a custom-prototype record's own names only through eager reflection, while
+  // `for...in` also traverses its prototype. Neither can satisfy this generic boundary's bounded,
+  // prototype-independent work contract. Components that deliberately accept such records use a
+  // schema-aware owned accessor with domain-specific limits instead.
   return OMIT_COLLECTION_VALUE;
 }
 
-/** Internal snapshot seam for bespoke `noAccessor` public setters. */
-export function snapshotPublicCollection<Value>(
-  value: Value,
+function snapshotPublicCollection(
+  value: unknown,
   view?: Window | null
-): Value {
+): unknown {
   if (
     value === null ||
     (typeof value !== 'object' && typeof value !== 'function')
@@ -340,27 +476,27 @@ export function snapshotPublicCollection<Value>(
     realm,
   };
   const snapshot = snapshotTransaction(budget, () =>
-    snapshotCollectionValue(value, budget, 0)
+    snapshotCollectionValue(value, budget, 0, undefined, undefined, true)
   );
-  if (snapshot !== OMIT_COLLECTION_VALUE) return snapshot as Value;
+  if (snapshot !== OMIT_COLLECTION_VALUE) return snapshot;
   if (isArrayValue(value) || isNativeArrayBufferView(value as object))
-    return emptyRealmArray(realm) as Value;
+    return emptyRealmArray(realm);
   if (typeof value === 'object') {
     if (nativeMapEntries(value))
-      return readonlyMapFacade(new realm.Map(), realm) as Value;
+      return readonlyMapFacade(new realm.Map(), realm);
     if (nativeSetValues(value))
-      return readonlySetFacade(new realm.Set(), realm) as Value;
+      return readonlySetFacade(new realm.Set(), realm);
     if (isRealmNeutralPlainRecord(value)) {
       const prototype = Object.getPrototypeOf(value);
       return Object.freeze(
         realm.Object.create(
           prototype === null ? null : realm.Object.prototype
         ) as object
-      ) as Value;
+      );
     }
   }
   // Unclassifiable roots (including revoked/proxy-wrapped collections) never cross by identity.
-  return emptyRealmArray(realm) as Value;
+  return emptyRealmArray(realm);
 }
 
 function nativeMapEntries(
@@ -381,31 +517,6 @@ function nativeSetValues(value: object): IterableIterator<unknown> | undefined {
   } catch {
     return undefined;
   }
-}
-
-function snapshotArrayBufferView(
-  value: ArrayBufferView,
-  budget: CollectionSnapshotBudget
-): readonly number[] | typeof OMIT_COLLECTION_VALUE {
-  let buffer: ArrayBufferLike;
-  let byteLength: number;
-  let byteOffset: number;
-  try {
-    buffer = value.buffer;
-    byteLength = value.byteLength;
-    byteOffset = value.byteOffset;
-  } catch {
-    return OMIT_COLLECTION_VALUE;
-  }
-  const length = Math.min(byteLength, PUBLIC_COLLECTION_ENTRY_LIMIT);
-  const output = new budget.realm.Array(length) as number[];
-  try {
-    const bytes = new Uint8Array(buffer, byteOffset, length);
-    for (let index = 0; index < length; index += 1) output[index] = bytes[index]!;
-  } catch {
-    return OMIT_COLLECTION_VALUE;
-  }
-  return Object.freeze(output);
 }
 
 function snapshotDOMRect(
@@ -600,8 +711,19 @@ function snapshotDetachedSet(
   return facade;
 }
 
-function snapshotIdentityCollection(value: unknown, view?: Window | null): unknown {
+function snapshotIdentityCollection(
+  value: unknown,
+  view?: Window | SnapshotRealm | null,
+  budget?: CollectionSnapshotBudget
+): unknown {
   const realm = snapshotRealm(view);
+  if (
+    budget &&
+    value !== null &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    budget.seen.has(value)
+  )
+    return budget.seen.get(value);
   if (isArrayValue(value)) {
     let lengthDescriptor: PropertyDescriptor | undefined;
     try {
@@ -618,6 +740,7 @@ function snapshotIdentityCollection(value: unknown, view?: Window | null): unkno
         ? Math.min(lengthDescriptor.value, PUBLIC_COLLECTION_ENTRY_LIMIT)
         : 0;
     const output = new realm.Array(length) as unknown[];
+    if (budget) rememberSnapshot(budget, value, output);
     for (let index = 0; index < length; index += 1) {
       let descriptor: PropertyDescriptor | undefined;
       try {
@@ -637,16 +760,25 @@ function snapshotIdentityCollection(value: unknown, view?: Window | null): unkno
   }
   if (value === null || typeof value !== 'object') return value;
   const mapEntries = nativeMapEntries(value);
-  if (mapEntries) return snapshotIdentityMap(mapEntries, realm);
+  if (mapEntries) {
+    const output = snapshotIdentityMap(mapEntries, realm);
+    if (budget) rememberSnapshot(budget, value, output);
+    return output;
+  }
   const setValues = nativeSetValues(value);
-  if (setValues) return snapshotIdentitySet(setValues, realm);
-  return value;
+  if (setValues) {
+    const output = snapshotIdentitySet(setValues, realm);
+    if (budget) rememberSnapshot(budget, value, output);
+    return output;
+  }
+  return emptyRealmArray(realm);
 }
 
 function snapshotEventDetail(
   value: unknown,
   view: Window | null | undefined,
-  preserveRootKeys: ReadonlySet<PropertyKey>
+  preserveRootKeys: ReadonlySet<PropertyKey>,
+  preserveCollectionItemKeys: ReadonlySet<PropertyKey>
 ): unknown {
   if (value === undefined || value === null) return value;
   const budget: CollectionSnapshotBudget = {
@@ -656,7 +788,13 @@ function snapshotEventDetail(
     realm: snapshotRealm(view),
   };
   const snapshot = snapshotTransaction(budget, () =>
-    snapshotCollectionValue(value, budget, 0, preserveRootKeys)
+    snapshotCollectionValue(
+      value,
+      budget,
+      0,
+      preserveRootKeys,
+      preserveCollectionItemKeys
+    )
   );
   return snapshot === OMIT_COLLECTION_VALUE ? null : snapshot;
 }
@@ -695,6 +833,7 @@ function trustedLyraConstructorChain(
 interface CollectionPropertyPolicy {
   readonly owns: boolean;
   readonly preservesItemIdentity: boolean;
+  readonly preservesObjectIdentity: boolean;
 }
 
 const collectionPolicyByPrototype = new WeakMap<
@@ -716,6 +855,7 @@ function collectionPropertyPolicy(
   if (cached) return cached;
   let owns = false;
   let preservesItemIdentity = false;
+  let preservesObjectIdentity = false;
   for (const constructor of trustedLyraConstructorChain(instance)) {
     // Both fields are `protected static` -- hidden from external consumers of the class, but this
     // bookkeeping helper is part of LyraElement's own internal machinery, just expressed as a
@@ -724,6 +864,7 @@ function collectionPropertyPolicy(
     const declared = constructor as unknown as {
       ownedCollectionProperties: readonly PropertyKey[];
       identityCollectionProperties: readonly PropertyKey[];
+      identityCollectionObjectProperties: readonly PropertyKey[];
     };
     if (
       Object.prototype.hasOwnProperty.call(
@@ -741,8 +882,20 @@ function collectionPropertyPolicy(
       declared.identityCollectionProperties.includes(name)
     )
       preservesItemIdentity = true;
+    if (
+      Object.prototype.hasOwnProperty.call(
+        constructor,
+        'identityCollectionObjectProperties'
+      ) &&
+      declared.identityCollectionObjectProperties.includes(name)
+    )
+      preservesObjectIdentity = true;
   }
-  const policy = Object.freeze({ owns, preservesItemIdentity });
+  const policy = Object.freeze({
+    owns,
+    preservesItemIdentity,
+    preservesObjectIdentity,
+  });
   policies.set(name, policy);
   return policy;
 }
@@ -774,12 +927,21 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   protected static readonly identityCollectionProperties: readonly PropertyKey[] =
     Object.freeze([]);
 
+  /** Exact opaque-object exceptions; unlike item-identity lists, no sequence claim is made. */
+  protected static readonly identityCollectionObjectProperties: readonly PropertyKey[] =
+    Object.freeze([]);
+
   /** Events whose collection-bearing detail is detached and recursively frozen before dispatch. */
   protected static readonly immutableEventDetails: readonly string[] =
     Object.freeze([]);
 
   /** Explicit root detail fields whose object identity is part of an enrolled event contract. */
   protected static readonly identityEventDetailProperties: Readonly<
+    Record<string, readonly PropertyKey[]>
+  > = Object.freeze({});
+
+  /** Root event arrays whose sequence is owned while each generic/platform item retains identity. */
+  protected static readonly identityEventDetailCollectionItems: Readonly<
     Record<string, readonly PropertyKey[]>
   > = Object.freeze({});
 
@@ -803,7 +965,12 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
           .ownerDocument?.defaultView;
         originalSet.call(
           this,
-          policy.preservesItemIdentity
+          policy.preservesObjectIdentity &&
+            value !== null &&
+            typeof value === 'object' &&
+            !isArrayValue(value)
+            ? value
+            : policy.preservesItemIdentity
             ? snapshotIdentityCollection(value, ownerView)
             : snapshotPublicCollection(value, ownerView)
         );
@@ -1280,6 +1447,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     CustomEventCtor ??= globalThis.CustomEvent;
     let snapshotsDetail = false;
     const identityDetailKeys = new Set<PropertyKey>();
+    const identityCollectionItemKeys = new Set<PropertyKey>();
     for (const constructor of trustedLyraConstructorChain(this)) {
       if (
         Object.prototype.hasOwnProperty.call(
@@ -1297,6 +1465,15 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       )
         for (const key of constructor.identityEventDetailProperties[name] ?? [])
           identityDetailKeys.add(key);
+      if (
+        Object.prototype.hasOwnProperty.call(
+          constructor,
+          'identityEventDetailCollectionItems'
+        )
+      )
+        for (const key of
+          constructor.identityEventDetailCollectionItems[name] ?? [])
+          identityCollectionItemKeys.add(key);
     }
     const event = new CustomEventCtor(name, {
       detail:
@@ -1306,7 +1483,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
           ? snapshotEventDetail(
               detail,
               ownerDocument?.defaultView,
-              identityDetailKeys
+              identityDetailKeys,
+              identityCollectionItemKeys
             )
           : detail,
       bubbles: true,

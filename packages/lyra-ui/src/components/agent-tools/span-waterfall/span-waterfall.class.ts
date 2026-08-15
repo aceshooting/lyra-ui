@@ -125,8 +125,6 @@ export interface LyraSpanWaterfallEventMap {
  * @since 4.0.0
  */
 export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['spans']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -158,6 +156,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     statusSuccess: LYRA_DEFAULT_statusSuccess,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['spans']);
 
   static override styles = [LyraElement.styles, styles];
 

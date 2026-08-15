@@ -38,6 +38,7 @@ import {
 import type {
   LyraAnchor,
   LyraHighlight,
+  TextSelectRect,
 } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -54,9 +55,9 @@ export interface LyraCodeBlockEventMap {
   'lr-toggle': CustomEvent<{ collapsed: boolean }>;
   'lr-line-activate': CustomEvent<{ line: number }>;
   'lr-text-select': CustomEvent<{
-    text: string;
-    anchor: LyraAnchor;
-    rects: DOMRect[];
+    readonly text: string;
+    readonly anchor: LyraAnchor;
+    readonly rects: readonly TextSelectRect[];
   }>;
 }
 /**
@@ -247,7 +248,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   /** Host-supplied highlights to paint over the code. Only `line-range` anchors are meaningful
    *  here — every other `LyraAnchor` kind is ignored. */
-  @property({ attribute: false }) highlights: LyraHighlight[] = [];
+  @property({ attribute: false }) highlights: readonly LyraHighlight[] = [];
 
   /** The `highlights` entry, if any, currently treated as active (`data-active` on its lines). */
   @property({ attribute: 'active-highlight-id' }) activeHighlightId:
@@ -255,7 +256,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     | null = null;
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
-  readonly anchorKinds: LyraAnchor['kind'][] = ['line-range'];
+  readonly anchorKinds: readonly LyraAnchor['kind'][] = ['line-range'];
 
   @state() private focusedLine = 1;
   private restoreFocusedLineAfterUpdate = false;
@@ -274,10 +275,10 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
    *  annotation, use `import type { ShikiLanguageInput } from
    *  '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
    *  this granular type-only import emits no registration side effect. */
-  @property({ attribute: false }) languages?: Record<
+  @property({ attribute: false }) languages?: Readonly<Record<
     string,
     ShikiLanguageInput
-  >;
+  >>;
 
   // `null` covers every reason the plain-text fallback is showing: shiki
   // isn't installed, `language` is unset, or `language` isn't shiki-

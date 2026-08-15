@@ -76,8 +76,6 @@ function uniqueQueueItems(source: readonly PromptQueueItem[] | undefined): Promp
  * @since 7.0.0
  */
 export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -94,6 +92,8 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     remove: LYRA_DEFAULT_remove,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([

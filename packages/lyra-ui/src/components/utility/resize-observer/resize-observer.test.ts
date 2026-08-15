@@ -141,7 +141,13 @@ describe('<lr-resize-observer>', () => {
     const target = el.querySelector('div')!;
     el.remove();
     let events = 0;
-    el.addEventListener('lr-resize', () => { events += 1; });
+    let latestDetail:
+      | Readonly<{ entries: readonly ResizeObserverEntry[] }>
+      | undefined;
+    el.addEventListener('lr-resize', (event) => {
+      events += 1;
+      latestDetail = event.detail;
+    });
 
     try {
       frameDocument.body.append(frameDocument.adoptNode(el));
@@ -164,8 +170,12 @@ describe('<lr-resize-observer>', () => {
       const reconnectedObserver = records.at(-1)!;
       adoptedObserver.callback([], {} as ResizeObserver);
       expect(events, 'the first lifecycle remains stale after reconnect').to.equal(0);
-      reconnectedObserver.callback([], {} as ResizeObserver);
+      const resizeEntry = { target } as ResizeObserverEntry;
+      reconnectedObserver.callback([resizeEntry], {} as ResizeObserver);
       expect(events, 'the current lifecycle still forwards entries').to.equal(1);
+      expect(latestDetail!.entries[0] === resizeEntry).to.equal(true);
+      expect(Object.isFrozen(latestDetail)).to.equal(true);
+      expect(Object.isFrozen(latestDetail!.entries)).to.equal(true);
     } finally {
       el.remove();
       frameWindow.ResizeObserver = originalObserver;

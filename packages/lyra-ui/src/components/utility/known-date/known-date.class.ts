@@ -36,15 +36,7 @@ import {
 } from '../../forms/form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_dateInputInvalid,
-  LYRA_DEFAULT_dateInputMaxMessage,
-  LYRA_DEFAULT_dateInputMinMessage,
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_knownDateDay,
-  LYRA_DEFAULT_knownDateMonth,
-  LYRA_DEFAULT_knownDateYear,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_knownDateDay, LYRA_DEFAULT_knownDateMonth, LYRA_DEFAULT_knownDateYear } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraKnownDateField = 'day' | 'month' | 'year';
@@ -273,17 +265,16 @@ function addCompatibilityDetail<T extends Event>(
 export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      dateInputInvalid: LYRA_DEFAULT_dateInputInvalid,
-      dateInputMaxMessage: LYRA_DEFAULT_dateInputMaxMessage,
-      dateInputMinMessage: LYRA_DEFAULT_dateInputMinMessage,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      knownDateDay: LYRA_DEFAULT_knownDateDay,
-      knownDateMonth: LYRA_DEFAULT_knownDateMonth,
-      knownDateYear: LYRA_DEFAULT_knownDateYear,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    dateInputInvalid: LYRA_DEFAULT_dateInputInvalid,
+    dateInputMaxMessage: LYRA_DEFAULT_dateInputMaxMessage,
+    dateInputMinMessage: LYRA_DEFAULT_dateInputMinMessage,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    knownDateDay: LYRA_DEFAULT_knownDateDay,
+    knownDateMonth: LYRA_DEFAULT_knownDateMonth,
+    knownDateYear: LYRA_DEFAULT_knownDateYear,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   /** Public WA-compatible intrinsic validator catalog. */

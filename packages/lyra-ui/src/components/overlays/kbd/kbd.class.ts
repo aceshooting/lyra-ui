@@ -1,11 +1,12 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { detectPlatform } from '../../../internal/platform.js';
 import { hasRealContent, hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './kbd.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_kbdAltWord, LYRA_DEFAULT_kbdArrowDownWord, LYRA_DEFAULT_kbdArrowLeftWord, LYRA_DEFAULT_kbdArrowRightWord, LYRA_DEFAULT_kbdArrowUpWord, LYRA_DEFAULT_kbdBackspaceWord, LYRA_DEFAULT_kbdCommandWord, LYRA_DEFAULT_kbdControlVisual, LYRA_DEFAULT_kbdControlWord, LYRA_DEFAULT_kbdDeleteVisual, LYRA_DEFAULT_kbdDeleteWord, LYRA_DEFAULT_kbdEndWord, LYRA_DEFAULT_kbdEnterWord, LYRA_DEFAULT_kbdEscapeVisual, LYRA_DEFAULT_kbdEscapeWord, LYRA_DEFAULT_kbdHomeWord, LYRA_DEFAULT_kbdMinusWord, LYRA_DEFAULT_kbdOptionWord, LYRA_DEFAULT_kbdPageDownVisual, LYRA_DEFAULT_kbdPageDownWord, LYRA_DEFAULT_kbdPageUpVisual, LYRA_DEFAULT_kbdPageUpWord, LYRA_DEFAULT_kbdPlusWord, LYRA_DEFAULT_kbdShiftWord, LYRA_DEFAULT_kbdSpaceWord, LYRA_DEFAULT_kbdTabWord, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_kbdAltWord, LYRA_DEFAULT_kbdArrowDownWord, LYRA_DEFAULT_kbdArrowLeftWord, LYRA_DEFAULT_kbdArrowRightWord, LYRA_DEFAULT_kbdArrowUpWord, LYRA_DEFAULT_kbdBackspaceWord, LYRA_DEFAULT_kbdCommandWord, LYRA_DEFAULT_kbdControlVisual, LYRA_DEFAULT_kbdControlWord, LYRA_DEFAULT_kbdDeleteVisual, LYRA_DEFAULT_kbdDeleteWord, LYRA_DEFAULT_kbdEndWord, LYRA_DEFAULT_kbdEnterWord, LYRA_DEFAULT_kbdEscapeVisual, LYRA_DEFAULT_kbdEscapeWord, LYRA_DEFAULT_kbdHomeWord, LYRA_DEFAULT_kbdMinusWord, LYRA_DEFAULT_kbdOptionWord, LYRA_DEFAULT_kbdPageDownVisual, LYRA_DEFAULT_kbdPageDownWord, LYRA_DEFAULT_kbdPageUpVisual, LYRA_DEFAULT_kbdPageUpWord, LYRA_DEFAULT_kbdPlusWord, LYRA_DEFAULT_kbdShiftWord, LYRA_DEFAULT_kbdSpaceWord, LYRA_DEFAULT_kbdTabWord } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -136,26 +137,6 @@ export function parseShortcut(keys: string, isMac: boolean, localize?: KbdLocali
     .map((t) => shortcutTokenLabel(t, isMac, localize));
 }
 
-/**
- * Detects macOS to decide whether `mod`/`alt` render their Mac glyphs (⌘/⌥)
- * or their generic-platform text (Ctrl/Alt). Prefers the modern
- * `navigator.userAgentData` (Client Hints) API when the browser exposes it,
- * falling back through `navigator.platform` and finally a `navigator.userAgent`
- * substring check — all three are deprecated/non-standard to varying
- * degrees (`userAgentData` is Chromium-only so far; `platform` is
- * long-deprecated; `userAgent` sniffing is a last resort) but remain, in
- * combination, the practical cross-browser way to answer "is this macOS"
- * today with no dependency.
- */
-function detectPlatform(): EffectiveKbdPlatform {
-  if (typeof navigator === 'undefined') return 'linux';
-  const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
-  const platform = uaData?.platform || navigator.platform || navigator.userAgent || '';
-  if (/mac|iphone|ipad|ipod/i.test(platform)) return 'mac';
-  if (/win/i.test(platform)) return 'windows';
-  return 'linux';
-}
-
 // Computed once at module scope, not per-instance/per-render — a page's
 // platform never changes mid-session, so there is nothing to gain (and a
 // little cost, however small) from re-detecting it on every <lr-kbd>
@@ -211,8 +192,6 @@ export class LyraKbd extends LyraElement {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     kbdAltWord: LYRA_DEFAULT_kbdAltWord,
     kbdArrowDownWord: LYRA_DEFAULT_kbdArrowDownWord,
     kbdArrowLeftWord: LYRA_DEFAULT_kbdArrowLeftWord,
@@ -239,12 +218,6 @@ export class LyraKbd extends LyraElement {
     kbdShiftWord: LYRA_DEFAULT_kbdShiftWord,
     kbdSpaceWord: LYRA_DEFAULT_kbdSpaceWord,
     kbdTabWord: LYRA_DEFAULT_kbdTabWord,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    progress: LYRA_DEFAULT_progress,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

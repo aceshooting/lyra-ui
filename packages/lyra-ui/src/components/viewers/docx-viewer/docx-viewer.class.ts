@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
   isAbortError,
@@ -25,10 +26,12 @@ import {
   createTextQuoteIndex,
   emptyTextQuoteMatches,
   rangeFromTextQuoteMatch,
+  rangesFromTextQuoteMatches,
   scopeFromElement,
   TEXT_QUOTE_LIMITS,
   TEXT_SELECTION_RECT_LIMIT,
   type TextQuoteIndex,
+  type TextQuoteMatch,
   type TextQuoteMatches,
   type TextQuoteScope,
 } from '../../../internal/text-quote.js';
@@ -90,6 +93,7 @@ const MAX_DOCX_PAINTED_HIGHLIGHTS = 100;
 interface DocxPaintWorkBudget {
   traversalNodes: number;
   codeUnits: number;
+  marks: number;
 }
 
 function nextDocxPaintNode(node: Node, root: Node): Node | null {
@@ -112,10 +116,13 @@ function wrapRangeInSearchMarks(
   const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
   if (range.startContainer === range.endContainer && range.startContainer.nodeType === textNodeType) {
     const textNode = range.startContainer as Text;
-    const selectedLength = Math.max(0, range.endOffset - range.startOffset);
-    if (budget.traversalNodes <= 0 || selectedLength > budget.codeUnits) return [];
+    if (budget.traversalNodes <= 0 || budget.codeUnits <= 0 || budget.marks <= 0) return [];
     budget.traversalNodes--;
-    budget.codeUnits -= selectedLength;
+    if (textNode.data.length > budget.codeUnits) {
+      budget.codeUnits = 0;
+      return [];
+    }
+    budget.codeUnits -= textNode.data.length;
     let target = textNode;
     if (range.endOffset < target.data.length) target.splitText(range.endOffset);
     if (range.startOffset > 0) target = target.splitText(range.startOffset);
@@ -124,6 +131,7 @@ function wrapRangeInSearchMarks(
     mark.setAttribute('part', part);
     target.parentNode?.insertBefore(mark, target);
     mark.appendChild(target);
+    budget.marks--;
     return [mark];
   }
   const ancestor = range.commonAncestorContainer;
@@ -133,16 +141,23 @@ function wrapRangeInSearchMarks(
     budget.traversalNodes--;
     if (node.nodeType === textNodeType) {
       const textNode = node as Text;
-      if (textNode.data.length > budget.codeUnits) break;
+      if (textNode.data.length > budget.codeUnits) {
+        budget.codeUnits = 0;
+        break;
+      }
       budget.codeUnits -= textNode.data.length;
       try {
-        if (textNode.data.length > 0 && range.intersectsNode(textNode)) covered.push(textNode);
+        if (textNode.data.length > 0 && range.intersectsNode(textNode)) {
+          covered.push(textNode);
+          if (covered.length > budget.marks) return [];
+        }
       } catch {
         return [];
       }
     }
     node = nextDocxPaintNode(node, ancestor);
   }
+  if (node) return [];
   const marks: HTMLElement[] = [];
   for (const textNode of covered) {
     const start = textNode === range.startContainer ? range.startOffset : 0;
@@ -156,6 +171,7 @@ function wrapRangeInSearchMarks(
     target.parentNode?.insertBefore(mark, target);
     mark.appendChild(target);
     marks.push(mark);
+    budget.marks--;
   }
   return marks;
 }
@@ -165,9 +181,27 @@ function wrapRangeInSearchMarks(
 function unwrapSearchMark(mark: HTMLElement): void {
   const parent = mark.parentNode;
   if (!parent) return;
+  const before = mark.previousSibling;
+  const firstMoved = mark.firstChild;
   while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+  const after = mark.nextSibling;
   parent.removeChild(mark);
-  parent.normalize();
+  let cursor = before?.nodeType === 3 ? before : firstMoved ?? after;
+  let localSteps = 0;
+  while (cursor && cursor.parentNode === parent && localSteps++ < 4) {
+    if (cursor.nodeType !== 3) break;
+    const text = cursor as Text;
+    if (text.data === '') {
+      const next = text.nextSibling;
+      text.remove();
+      cursor = next;
+      continue;
+    }
+    const next = text.nextSibling;
+    if (next?.nodeType !== 3) break;
+    text.appendData((next as Text).data);
+    next.remove();
+  }
 }
 
 export interface LyraDocxViewerEventMap extends LyraAnchorTargetEventMap {
@@ -212,7 +246,7 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @event lr-viewer-diagnostic - Structured non-fatal converter diagnostics. `detail.diagnostic`
  *   has code `docx-conversion-message`, severity, source, and the original peer value as `cause`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
- *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
+ *   changes, including source-reset and effective-locale re-evaluation. `detail: { query,
  *   matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code units,
  *   scans at most 4,000,000 code units, and retains at most 1,000 matches; a false
  *   `matchCountExact` makes `matchCount` a lower bound after any ceiling is reached.
@@ -313,6 +347,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   /** Bounded normalized corpus plus reusable occurrence cache for the current loaded document. */
   private textIndexCache: { scope: TextQuoteScope; index: TextQuoteIndex; locale: string } | null = null;
+  private textIndexMappingDirty = false;
+  private textIndexLocale?: string;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -346,6 +382,10 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const locale = this.effectiveLocale;
+    const localeChanged = this.textIndexLocale !== undefined && this.textIndexLocale !== locale;
+    this.textIndexLocale = locale;
+    if (localeChanged) this.textIndexCache = null;
     this.announcements.transition(
       'load',
       this.fetchState.kind,
@@ -362,9 +402,18 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       // Any fetchState transition means contentRoot() is either gone or a brand-new element (see
       // above), so a previously cached text index (see getTextIndex()) can no longer describe it.
       this.textIndexCache = null;
+      this.textIndexMappingDirty = false;
     }
-    if (changed.has('fetchState') || changed.has('highlights') || changed.has('activeHighlightId')) {
+    if (
+      changed.has('fetchState')
+      || changed.has('highlights')
+      || changed.has('activeHighlightId')
+      || (localeChanged && this.highlights.length > 0)
+    ) {
       this.repaintHighlights();
+    }
+    if (localeChanged && this.searchQuery.trim()) {
+      this.scheduleAfterUpdate(() => { void this.search(this.searchQuery); });
     }
   }
 
@@ -470,7 +519,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   /** Parses the already-sanitized markup once (`DOMParser`), stamps a `Slugger`-computed `id` on
    *  every `h1`-`h6`, and caches the resulting document-ordered outline into `headingTree`. A fresh
    *  `Slugger` per call, matching `<lr-markdown>`'s own per-parse instance, so re-loading a new
-   *  document never carries duplicate-slug state from a previous one. */
+   *  document never carries duplicate-slug state from a previous one. Traversal admits at most the
+   *  shared 20,000-node ceiling, and the slugger's monotonic suffix cursor keeps aggregate duplicate
+   *  membership work linear across that bounded pass. */
   private stampHeadings(sanitizedHtml: string): string {
     const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
     if (!DOMParserCtor) throw new Error('DOMParser is unavailable without a browsing context.');
@@ -556,7 +607,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   private applyTextQuoteAnchor(root: Element, anchor: Extract<LyraAnchor, { kind: 'text-quote' }>): boolean {
-    const { scope, index } = this.refreshTextIndexMapping(root);
+    const { scope, index } = this.currentTextIndex(root);
     const match = index.resolve(anchor);
     const range = match ? rangeFromTextQuoteMatch(scope, match) : null;
     if (!range) return false;
@@ -570,7 +621,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   protected computeSelectionAnchor(range: Range): LyraAnchor | null {
     const root = this.contentRoot();
     if (!root) return null;
-    return buildQuoteAnchor(range, this.refreshTextIndexMapping(root).scope);
+    return buildQuoteAnchor(range, this.currentTextIndex(root).scope);
   }
 
   // -- highlight painting ------------------------------------------------------------------------
@@ -596,16 +647,22 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       handle.setActive(null);
       return;
     }
-    const { scope, index } = this.refreshTextIndexMapping(root);
+    const { scope, index } = this.currentTextIndex(root);
     const workBudget = index.createWorkBudget();
     const rangesByTone = new Map<LyraHighlightTone, Range[]>(HIGHLIGHT_TONES.map((tone) => [tone, []]));
     let activeRange: Range | null = null;
     const candidates = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId);
+    const resolved: Array<{ highlight: LyraHighlight; match: TextQuoteMatch }> = [];
     for (const highlight of candidates) {
-      if (this.resolvedHighlightRanges.length >= MAX_DOCX_PAINTED_HIGHLIGHTS) break;
+      if (resolved.length >= MAX_DOCX_PAINTED_HIGHLIGHTS) break;
       if (highlight.anchor.kind !== 'text-quote') continue;
       const match = index.resolve(highlight.anchor, workBudget);
-      const range = match ? rangeFromTextQuoteMatch(scope, match) : null;
+      if (match) resolved.push({ highlight, match });
+    }
+    const resolvedRanges = rangesFromTextQuoteMatches(scope, resolved.map(({ match }) => match));
+    for (let position = 0; position < resolved.length; position++) {
+      const { highlight } = resolved[position]!;
+      const range = resolvedRanges[position] ?? null;
       if (!range) continue;
       rangesByTone.get(highlight.tone ?? 'accent')!.push(range);
       this.resolvedHighlightRanges.push({ highlight, range });
@@ -636,6 +693,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
           && !mark.hasAttribute('part')
         ) mark.setAttribute('part', 'highlight');
       }
+      this.textIndexMappingDirty = true;
     }
   }
 
@@ -750,20 +808,24 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         index: createTextQuoteIndex(scope, locale, { maxMatches: MAX_DOCX_SEARCH_MATCHES }),
         locale,
       };
+      this.textIndexMappingDirty = false;
     }
     return this.textIndexCache;
   }
 
   /** Rebuilds only the node-bearing scope after fallback `<mark>` writes, preserving occurrence
    * offsets and the folded corpus when the normalized text is unchanged. */
-  private refreshTextIndexMapping(root: Element): { scope: TextQuoteScope; index: TextQuoteIndex; locale: string } {
+  private currentTextIndex(root: Element): { scope: TextQuoteScope; index: TextQuoteIndex; locale: string } {
     const cached = this.getTextIndex(root);
+    if (!this.textIndexMappingDirty) return cached;
     const scope = scopeFromElement(root);
     if (cached.index.rebindScope(scope)) {
       cached.scope = scope;
+      this.textIndexMappingDirty = false;
       return cached;
     }
     this.textIndexCache = null;
+    this.textIndexMappingDirty = false;
     return this.getTextIndex(root);
   }
 
@@ -781,18 +843,18 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     // memo. A search is itself a fresh locale-sensitive operation.
     invalidateLyraLocaleCache(this);
     this.searchQuery = query;
-    const root = this.contentRoot();
-    if (!root) {
+    if (!boundedViewerSearchQuery(query, this.effectiveLocale).accepted) {
       this.searchMatches = emptyTextQuoteMatches();
-      this.searchMatchCountExact = true;
+      this.searchMatchCountExact = false;
       this.searchActiveIndex = -1;
       this.clearSearchPaint();
       this.emitSearchChange();
       return 0;
     }
-    if (query.length > TEXT_QUOTE_LIMITS.maxQueryCodeUnits) {
+    const root = this.contentRoot();
+    if (!root) {
       this.searchMatches = emptyTextQuoteMatches();
-      this.searchMatchCountExact = false;
+      this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.clearSearchPaint();
       this.emitSearchChange();
@@ -866,6 +928,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   private clearSearchPaint(): void {
+    if (this.paintedSearchMarks.length > 0) this.textIndexMappingDirty = true;
     for (const mark of this.paintedSearchMarks) unwrapSearchMark(mark);
     this.paintedSearchMarks = [];
   }
@@ -882,7 +945,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     this.clearSearchPaint();
     const root = this.contentRoot();
     if (!root || this.searchMatches.length === 0) return;
-    const { scope } = this.refreshTextIndexMapping(root);
+    const { scope } = this.currentTextIndex(root);
     const marks: HTMLElement[] = [];
     const count = Math.min(this.searchMatches.length, MAX_DOCX_PAINTED_SEARCH_MATCHES);
     const half = MAX_DOCX_PAINTED_SEARCH_MATCHES >> 1;
@@ -891,20 +954,27 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     const budget: DocxPaintWorkBudget = {
       traversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes,
       codeUnits: TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
+      marks: MAX_DOCX_PAINTED_SEARCH_MATCHES,
     };
-    const ranges: Array<{ index: number; range: Range }> = [];
+    const window: Array<{ index: number; match: TextQuoteMatch }> = [];
     for (let i = start + count - 1; i >= start; i--) {
       const match = this.searchMatches.at(i);
       if (!match) continue;
-      const range = rangeFromTextQuoteMatch(scope, match);
+      window.push({ index: i, match });
+    }
+    const resolvedRanges = rangesFromTextQuoteMatches(scope, window.map(({ match }) => match));
+    const ranges: Array<{ index: number; range: Range }> = [];
+    for (let position = 0; position < window.length; position++) {
+      const range = resolvedRanges[position];
       if (!range) continue;
-      ranges.push({ index: i, range });
+      ranges.push({ index: window[position]!.index, range });
     }
     for (const { index, range } of ranges) {
       const part = index === this.searchActiveIndex ? 'search-match search-match-active' : 'search-match';
       marks.push(...wrapRangeInSearchMarks(range, part, budget));
     }
     this.paintedSearchMarks = marks;
+    if (marks.length > 0) this.textIndexMappingDirty = true;
   }
 
   private renderBody(): TemplateResult {

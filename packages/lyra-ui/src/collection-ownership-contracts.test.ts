@@ -65,11 +65,11 @@ import './components/layout/virtual-list/virtual-list.js';
 
 import type { LyraMessageFeedback } from './components/conversation/message-feedback/message-feedback.js';
 import type { LyraVoicePicker } from './components/conversation/voice-picker/voice-picker.js';
-import type { LyraSchemaViewer } from './components/agent-tools/schema-viewer/schema-viewer.js';
+import type { LyraJsonSchemaViewer } from './components/agent-tools/schema-viewer/schema-viewer.js';
 import type { LyraToolParamForm } from './components/agent-tools/tool-param-form/tool-param-form.js';
 import type {
   LyraVirtualList,
-  VirtualListIndexedSource,
+  LyraVirtualListIndexedSource,
 } from './components/layout/virtual-list/virtual-list.js';
 
 const COLLECTION_LIMIT = 10_000;
@@ -107,12 +107,12 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-eval-result', property: 'runs' },
   { tag: 'lr-eval-result', property: 'columns' },
   { tag: 'lr-eval-result', property: 'rubricKeys' },
-  { tag: 'lr-evaluation-run', property: 'examples' },
+  { tag: 'lr-eval-run', property: 'examples' },
   { tag: 'lr-policy-summary', property: 'decisions' },
   { tag: 'lr-prompt-studio', property: 'messages' },
   { tag: 'lr-prompt-studio', property: 'variables' },
   { tag: 'lr-prompt-studio', property: 'versions' },
-  { tag: 'lr-schema-viewer', property: 'issues' },
+  { tag: 'lr-json-schema-viewer', property: 'issues' },
   { tag: 'lr-span-waterfall', property: 'spans' },
   { tag: 'lr-stack-trace', property: 'internalPatterns' },
   { tag: 'lr-subagent-panel', property: 'runs' },
@@ -120,7 +120,7 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-test-results', property: 'suites' },
   { tag: 'lr-test-results', property: 'statusFilter' },
   { tag: 'lr-tool-select-dialog', property: 'tools' },
-  { tag: 'lr-tool-select-dialog', property: 'selected' },
+  { tag: 'lr-tool-select-dialog', property: 'selectedToolIds' },
   { tag: 'lr-tool-timeline', property: 'entries' },
   { tag: 'lr-lite-chart', property: 'labels' },
   { tag: 'lr-lite-chart', property: 'datasets' },
@@ -168,7 +168,7 @@ export const APP_OWNED_RECORD_PROPERTY_CASES: readonly CollectionPropertyCase[] 
   { tag: 'lr-agent-run', property: 'statusLabels' },
   { tag: 'lr-agent-run', property: 'statusVariants' },
   { tag: 'lr-mcp-app', property: 'resource' },
-  { tag: 'lr-schema-viewer', property: 'schema' },
+  { tag: 'lr-json-schema-viewer', property: 'schema' },
   { tag: 'lr-message-feedback', property: 'detail' },
   { tag: 'lr-selection-toolbar', property: 'anchor' },
   { tag: 'lr-heatmap', property: 'data' },
@@ -284,12 +284,12 @@ describe('original component collection ownership contracts', () => {
       const element = createDynamicElement(tag);
       const source = {
         label: 'first',
-        nested: { values: Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => index) },
+        nested: { values: [1, 2] },
       };
 
       element[property] = source;
       source.label = 'changed';
-      source.nested.values.push(COLLECTION_LIMIT + 6);
+      source.nested.values.push(3);
 
       const snapshot = element[property] as {
         readonly label: string;
@@ -297,10 +297,22 @@ describe('original component collection ownership contracts', () => {
       };
       expect(snapshot).not.to.equal(source);
       expect(snapshot.label).to.equal('first');
-      expect(snapshot.nested.values.length).to.equal(COLLECTION_LIMIT);
+      expect(snapshot.nested.values).to.deep.equal([1, 2]);
       expect(Object.isFrozen(snapshot)).to.equal(true);
       expect(Object.isFrozen(snapshot.nested)).to.equal(true);
       expect(Object.isFrozen(snapshot.nested.values)).to.equal(true);
+
+      element[property] = {
+        label: 'oversized',
+        nested: {
+          values: Array.from(
+            { length: COLLECTION_LIMIT + 5 },
+            (_, index) => index
+          ),
+        },
+      };
+      expect(element[property]).to.deep.equal({});
+      expect(Object.isFrozen(element[property])).to.equal(true);
     });
   }
 
@@ -345,7 +357,7 @@ describe('original component collection ownership contracts', () => {
     });
   }
 
-  for (const property of ['selectedKeys', 'expandedKeys'] as const) {
+  for (const property of ['selectedRowKeys', 'expandedRowKeys'] as const) {
     it(`lr-table.${property} returns a bounded frozen readonly-set facade`, () => {
       const element = createDynamicElement('lr-table');
       const source = new Set<string>(['first']);
@@ -502,7 +514,7 @@ describe('original component collection ownership contracts', () => {
 
   it('passes a virtual-list indexed source through by identity', () => {
     const element = createDynamicElement('lr-virtual-list') as unknown as LyraVirtualList;
-    const source: VirtualListIndexedSource<{ readonly id: string }> = {
+    const source: LyraVirtualListIndexedSource<{ readonly id: string }> = {
       count: 1,
       itemAt: () => ({ id: 'first' }),
     };
@@ -540,19 +552,19 @@ describe('original component collection ownership contracts', () => {
       },
     };
     const element = (await fixture(
-      html`<lr-schema-viewer .schema=${schema}></lr-schema-viewer>`,
-    )) as LyraSchemaViewer;
+      html`<lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`,
+    )) as LyraJsonSchemaViewer;
     schema.required.push('later');
     schema.properties.query.type.push('number');
 
     const pending = oneEvent(element, 'lr-schema-select');
     (element.shadowRoot!.querySelector('[data-path="/properties/query"]') as HTMLButtonElement).click();
     const event = (await pending) as CustomEvent<{
-      readonly path: string;
+      readonly schemaPath: string;
       readonly schema: { readonly type: readonly string[] };
     }>;
 
-    expect(event.detail.path).to.equal('/properties/query');
+    expect(event.detail.schemaPath).to.equal('/properties/query');
     expect(event.detail.schema.type).to.deep.equal(['string', 'null']);
     expect(event.detail.schema).not.to.equal(element.schema!.properties!.query);
     expect(Object.isFrozen(event.detail)).to.equal(true);

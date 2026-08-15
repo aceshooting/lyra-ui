@@ -1,6 +1,12 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { activeElementIn } from '../../../internal/active-element.js';
+import {
+  type ComposedFocusRepairSnapshot,
+  captureComposedFocusRepair,
+  applyComposedFocusRepair,
+} from '../../../internal/focus-navigation.js';
 import {
   AnchoredValidityController,
   VALIDITY_ANCHOR,
@@ -35,12 +41,7 @@ import {
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_removeWithContext,
-  LYRA_DEFAULT_tokenInputEditWithContext,
-  LYRA_DEFAULT_tokenInputRequired,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraTokenInputEventMap {
@@ -116,6 +117,9 @@ const stringArrayConverter = {
  * emitting user events, so a later delimiter/Enter/blur commit consumes the edited text.
  * `focus()` and `click()` are synchronous no-ops under own or fieldset-cascaded disablement,
  * including the same task that begins the disabled transition before Lit updates the draft input.
+ * If a focused token surface disappears through its own remove action or a controlled
+ * `value`/`defaultValue` shrink, focus moves to the nearest surviving equivalent surface, or to
+ * the draft input when no token remains. A newer external focus destination always wins.
  * @customElement lr-token-input
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
@@ -208,14 +212,13 @@ const stringArrayConverter = {
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      removeWithContext: LYRA_DEFAULT_removeWithContext,
-      tokenInputEditWithContext: LYRA_DEFAULT_tokenInputEditWithContext,
-      tokenInputRequired: LYRA_DEFAULT_tokenInputRequired,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    tokenInputEditWithContext: LYRA_DEFAULT_tokenInputEditWithContext,
+    tokenInputRequired: LYRA_DEFAULT_tokenInputRequired,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static formAssociated = true;
@@ -299,6 +302,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   @state() private rovingIndex = 0;
   private focusEditorPending = false;
   private focusTokenPending = -1;
+  private tokenFocusRepairPending?: {
+    index: number;
+    surface: 'label' | 'remove';
+    repair: ComposedFocusRepairSnapshot;
+  };
   /** One native blur can be followed by a teardown blur when its commit removes the focused editor. */
   private editorBlurRelayed = false;
   // `[part]:empty` never matches -- the part always contains a literal
@@ -343,6 +351,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     const old = this._value;
     if (!this.settingDefaultValue) this._valueDirty = true;
     const normalized = normalizeStringArray(next);
+    this.captureTokenFocusRepair(normalized);
     if (this.editingIndex >= 0 && normalized !== old) {
       this.editingIndex = -1;
       this.editDraft = '';
@@ -438,6 +447,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.syncValidity();
   }
   override disconnectedCallback(): void {
+    this.tokenFocusRepairPending = undefined;
     this.discardTransientState(true);
     super.disconnectedCallback();
   }
@@ -719,11 +729,40 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   /** Retire every focus/edit surface when own or fieldset disablement becomes effective. */
   private retireDisabledInteraction(): void {
+    this.tokenFocusRepairPending = undefined;
     this.discardTransientState(true);
     const active = this.shadowRoot?.activeElement;
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }
+  }
+
+  /** Capture focus before a controlled shrink removes its shadow descendant. The shared repair
+   * guard prevents this deferred move from overriding a newer explicit focus destination. */
+  private captureTokenFocusRepair(next: readonly string[]): void {
+    this.tokenFocusRepairPending = undefined;
+    const tokens = [
+      ...(this.renderRoot?.querySelectorAll<HTMLElement>('[part~="token"]') ??
+        []),
+    ];
+    // A controlled listener can synchronously echo the already-updated value before Lit removes
+    // the old token DOM. Compare with that rendered list, not with the previous property value, so
+    // the second setter cannot erase the still-required repair.
+    if (next.length >= tokens.length) return;
+    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const token = active?.closest<HTMLElement>('[part~="token"]');
+    if (!active || !token) return;
+    const index = tokens.indexOf(token);
+    if (index < 0) return;
+    const repair = captureComposedFocusRepair(this, active);
+    if (!repair) return;
+    const targetIndex = Math.min(index, Math.max(0, next.length - 1));
+    this.rovingIndex = targetIndex;
+    this.tokenFocusRepairPending = {
+      index: targetIndex,
+      surface: active.matches('[part~="remove"]') ? 'remove' : 'label',
+      repair,
+    };
   }
 
   private removeToken(index: number): void {
@@ -1025,6 +1064,24 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       // inside this capped block-axis scrollport. Make the keyboard destination explicit while
       // keeping both axes at their nearest positions so the page itself does not jump.
       label?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+    const pending = this.tokenFocusRepairPending;
+    this.tokenFocusRepairPending = undefined;
+    if (pending) {
+      const tokens = [
+        ...this.renderRoot.querySelectorAll<HTMLElement>('[part~="token"]'),
+      ];
+      const token = tokens[pending.index];
+      const target =
+        (pending.surface === 'remove'
+          ? token?.querySelector<HTMLElement>('[part~="remove"]')
+          : token?.querySelector<HTMLElement>('[part~="token-label"]')) ??
+        token?.querySelector<HTMLElement>('[part~="remove"]') ??
+        this.inputEl ??
+        null;
+      if (applyComposedFocusRepair(pending.repair, target)) {
+        target?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
     }
   }
   private renderRemoveButton(token: string, index: number): TemplateResult {

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import { toast, type ToastSize, type ToastPlacement } from '../../../lyra.js';
-import type { LyraToast, ToastOverflowDetail } from './toast.class.js';
+import { toast, type LyraToastSize, type LyraToastPlacement } from '../../../lyra.js';
+import type { LyraToast, LyraToastOverflowDetail } from './toast.class.js';
 
 const meta: Meta = {
   title: 'Toast',
@@ -54,7 +54,7 @@ export const Triggers: Story = {
   },
 };
 
-const sizes: ToastSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+const sizes: LyraToastSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
 
 export const Sizes: Story = {
   render: () => html`
@@ -115,7 +115,7 @@ export const WithIconAndAction: Story = {
   `,
 };
 
-const placements: ToastPlacement[] = [
+const placements: LyraToastPlacement[] = [
   'top-start',
   'top-center',
   'top-end',
@@ -174,7 +174,7 @@ export const BoundedBurst: Story = {
         locale="ar"
         placement="top-end"
         .strings=${{ toastOverflow: 'الإشعارات التي لم تُعرض: {count}.' }}
-        @lr-toast-overflow=${(event: CustomEvent<ToastOverflowDetail>) => {
+        @lr-toast-overflow=${(event: CustomEvent<LyraToastOverflowDetail>) => {
           const wrapper = (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-bounded-toast-story]')!;
           wrapper.querySelector('output')!.textContent = `Overflow event count: ${event.detail.count}`;
         }}

@@ -190,7 +190,10 @@ it("emits lr-change with the new value alongside native-style change/input", asy
     "change",
     "lr-change",
   ]);
-  for (const s of seen) expect(s.detail).to.deep.equal({ value: "b" });
+  for (const s of seen) {
+    expect(s.detail).to.deep.equal({ value: 'b' });
+    expect(Object.isFrozen(s.detail)).to.equal(true);
+  }
 });
 
 it("emits one native input/change pair, in order, when a row changes the selection", async () => {
@@ -3271,6 +3274,23 @@ describe("native input surface", () => {
     expect(input.spellcheck).to.be.false;
     expect(input.getAttribute("autocapitalize")).to.equal("off");
     expect(input.getAttribute("autocorrect")).to.equal("off");
+  });
+
+  it('restores the declared false spellcheck default when the attribute is removed', async () => {
+    const el = (await fixture(
+      html`<lr-combobox spellcheck="true"></lr-combobox>`
+    )) as LyraCombobox;
+    const input = el.shadowRoot!.querySelector(
+      '[part="combobox-input"]'
+    ) as HTMLInputElement;
+    expect(el.spellcheck).to.equal(true);
+    expect(input.spellcheck).to.equal(true);
+
+    el.removeAttribute('spellcheck');
+    await el.updateComplete;
+
+    expect(el.spellcheck).to.equal(false);
+    expect(input.spellcheck).to.equal(false);
   });
 
   it("supports clearable while retaining with-clear as a compatibility alias", async () => {

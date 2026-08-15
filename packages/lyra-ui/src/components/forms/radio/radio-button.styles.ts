@@ -47,6 +47,13 @@ export const buttonChromeStyles = css`
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  /* A slot is itself an element child, so :empty can never identify an unassigned wrapper. The
+     shared renderer tracks assigned content and reflects real emptiness through hidden. */
+  [part~="start"][hidden],
+  [part="label"][hidden],
+  [part~="end"][hidden] {
+    display: none;
+  }
   [part~="button"][data-run="start"] {
     border-start-end-radius: 0;
     border-end-end-radius: 0;

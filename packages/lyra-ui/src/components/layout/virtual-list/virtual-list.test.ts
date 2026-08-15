@@ -10,7 +10,7 @@ import "./virtual-list.js";
 import {
   MAX_OVERSCAN_ROWS,
   type LyraVirtualList,
-  type VirtualListIndexedSource,
+  type LyraVirtualListIndexedSource,
 } from "./virtual-list.js";
 import { styles } from "./virtual-list.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
@@ -128,7 +128,7 @@ it("accepts a readonly array through source while preserving items as the unset 
 it("keeps a 100,000-row indexed source sparse across ordinary state updates", async () => {
   let itemReads = 0;
   let keyReads = 0;
-  const source: VirtualListIndexedSource<number> = {
+  const source: LyraVirtualListIndexedSource<number> = {
     count: 100_000,
     itemAt(index) {
       itemReads++;
@@ -173,10 +173,10 @@ it("keeps a 100,000-row indexed source sparse across ordinary state updates", as
   expect(internals.rowIdentities).to.have.lengthOf(0);
 });
 
-it("uses an indexed source's reverse-key lookup for active-id without scanning the collection", async () => {
+it('uses an indexed source\'s reverse-key lookup for active-item-id without scanning the collection', async () => {
   let reads = 0;
   let reverseLookups = 0;
-  const source: VirtualListIndexedSource<number> = {
+  const source: LyraVirtualListIndexedSource<number> = {
     count: 100_000,
     itemAt(index) {
       reads++;
@@ -194,7 +194,7 @@ it("uses an indexed source's reverse-key lookup for active-id without scanning t
     <lr-virtual-list
       row-height="40"
       .source=${source}
-      .activeId=${99_999}
+      .activeItemId=${99_999}
       .renderItem=${(item: unknown) => String(item)}
     ></lr-virtual-list>
   `);
@@ -204,10 +204,10 @@ it("uses an indexed source's reverse-key lookup for active-id without scanning t
   expect(reads).to.be.lessThan(30);
 });
 
-it("does not scan an indexed source's declared count when active-id has no reverse lookup", async () => {
+it('does not scan an indexed source\'s declared count when active-item-id has no reverse lookup', async () => {
   let reads = 0;
   let keyReads = 0;
-  const source: VirtualListIndexedSource<number> = {
+  const source: LyraVirtualListIndexedSource<number> = {
     count: 1_000_000_000,
     itemAt(index) {
       reads++;
@@ -222,7 +222,7 @@ it("does not scan an indexed source's declared count when active-id has no rever
     <lr-virtual-list
       row-height="40"
       .source=${source}
-      .activeId=${999_999_999}
+      .activeItemId=${999_999_999}
       .renderItem=${(item: unknown) => String(item)}
     ></lr-virtual-list>
   `);
@@ -599,12 +599,12 @@ it("keeps an explicit consumer nowrap row horizontally scrollable", async () => 
   expect(base.scrollLeft).to.equal(24);
 });
 
-it('marks the row matching active-id with aria-current="true", not aria-selected', async () => {
+it('marks the row matching active-item-id with aria-current="true", not aria-selected', async () => {
   const el = (await fixture(
     html`<lr-virtual-list
       style="--lr-virtual-list-height:200px"
       row-height="40"
-      active-id="b"
+      active-item-id="b"
       .items=${["a", "b", "c"]}
       .renderItem=${renderText}
       .keyFunction=${stringKey}
@@ -624,13 +624,13 @@ it('marks the row matching active-id with aria-current="true", not aria-selected
   );
 });
 
-it("does not scroll on initial mount even when active-id targets a row far outside the viewport", async () => {
+it('does not scroll on initial mount even when active-item-id targets a row far outside the viewport', async () => {
   const items = Array.from({ length: 50 }, (_, i) => i);
   const el = (await fixture(
     html`<lr-virtual-list
       style="--lr-virtual-list-height:200px"
       row-height="40"
-      .activeId=${40}
+      .activeItemId=${40}
       .items=${items}
       .renderItem=${renderText}
       .keyFunction=${numberKey}
@@ -642,7 +642,7 @@ it("does not scroll on initial mount even when active-id targets a row far outsi
   expect(base.scrollTop).to.equal(0);
 });
 
-it("scrolls the matching row into view once active-id changes after mount", async () => {
+it('scrolls the matching row into view once active-item-id changes after mount', async () => {
   const originalMatchMedia = window.matchMedia;
   // Forces the reduced-motion branch so the scroll lands synchronously
   // instead of needing to wait out a real smooth-scroll animation.
@@ -669,7 +669,7 @@ it("scrolls the matching row into view once active-id changes after mount", asyn
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.scrollTop).to.equal(0);
 
-    el.activeId = 40; // row 40's top edge is 40*40=1600px, well past the 200px viewport
+    el.activeItemId = 40; // row 40's top edge is 40*40=1600px, well past the 200px viewport
     await el.updateComplete;
     await nextFrame();
 
@@ -884,7 +884,7 @@ it("in row-height='auto' mode, issues one corrective re-scroll once the target r
   expect(base.scrollTop).to.be.greaterThan(estimateBasedTop);
 });
 
-it("keeps an active-id target visible while tall preceding rows replace their estimates", async () => {
+it('keeps an active-item-id target visible while tall preceding rows replace their estimates', async () => {
   const originalMatchMedia = window.matchMedia;
   window.matchMedia = ((query: string) => ({
     matches: query === "(prefers-reduced-motion: reduce)",
@@ -908,7 +908,7 @@ it("keeps an active-id target visible while tall preceding rows replace their es
       ></lr-virtual-list>
     `);
     await nextFrame();
-    el.activeId = 25;
+    el.activeItemId = 25;
     await el.updateComplete;
 
     await waitUntil(
@@ -1671,7 +1671,7 @@ it("keeps numeric and string keys distinct in internal measurements and DOM iden
       .items=${items}
       .renderItem=${renderText}
       .keyFunction=${(item: unknown) => item as string | number}
-      .activeId=${1}
+      .activeItemId=${1}
     ></lr-virtual-list>`
   )) as LyraVirtualList;
   await el.updateComplete;
@@ -1696,7 +1696,7 @@ it("keeps duplicate public keys as distinct occurrence-owned rows and activates 
       .items=${["first", "duplicate", "other"]}
       .renderItem=${renderText}
       .keyFunction=${() => "same"}
-      active-id="same"
+      active-item-id="same"
     ></lr-virtual-list>`
   )) as LyraVirtualList;
   await el.updateComplete;
@@ -2856,7 +2856,7 @@ describe("sticky group overlay", () => {
       window.matchMedia = originalMatchMedia;
     });
 
-    it("lands an active-id row below the sticky band instead of behind it", async () => {
+    it('lands an active-item-id row below the sticky band instead of behind it', async () => {
       const el = await mount(true);
       const base = el.scrollContainer!;
       expect(getComputedStyle(base).scrollPaddingBlockStart).to.equal(
@@ -2866,7 +2866,7 @@ describe("sticky group overlay", () => {
       // Start below the target so the scroll-into-view runs *upward*: that is the direction that
       // aligns the row's top edge, and therefore the one the band can hide it behind.
       await scrollTo(el, 900);
-      el.activeId = 20; // Group B's first row, offset 800
+      el.activeItemId = 20; // Group B's first row, offset 800
       await el.updateComplete;
       await nextFrame();
       await el.updateComplete;
@@ -2917,7 +2917,7 @@ describe("sticky group overlay", () => {
       expect(base.scrollTop).to.equal(20 * ROW);
 
       await scrollTo(el, 900);
-      el.activeId = 20;
+      el.activeItemId = 20;
       await el.updateComplete;
       await nextFrame();
       expect(
@@ -3082,8 +3082,8 @@ it("clamps a non-finite scrollToIndex instead of silently discarding the scroll 
   expect(Number.isFinite(base.scrollTop)).to.be.true;
 });
 
-it("does not rescan the whole items array for active-id on every scroll frame", async () => {
-  // `activeId` resolves to an index by scanning `items` with `keyOf`. `render()` re-runs on every
+it('does not rescan the whole items array for active-item-id on every scroll frame', async () => {
+  // `activeItemId` resolves to an index by scanning `items` with `keyOf`. `render()` re-runs on every
   // scroll frame (`listScrollTop` is reactive state), so an unmemoized scan is O(items) per frame
   // -- on a 50k-row list that is 50k `keyFunction` calls per frame, in 10 consumer components.
   let keyCalls = 0;
@@ -3099,7 +3099,7 @@ it("does not rescan the whole items array for active-id on every scroll frame", 
       style="--lr-virtual-list-height:200px"
       row-height="40"
       overscan="0"
-      active-id="4900"
+      active-item-id="4900"
       .items=${items}
       .keyFunction=${countingKey}
       .renderItem=${renderText}
@@ -3111,7 +3111,7 @@ it("does not rescan the whole items array for active-id on every scroll frame", 
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   keyCalls = 0;
 
-  // Ten scroll frames. Neither `items` nor `activeId` changes, so the resolved index cannot have
+  // Ten scroll frames. Neither `items` nor `activeItemId` changes, so the resolved index cannot have
   // changed either -- the scan must not repeat.
   for (let frame = 0; frame < 10; frame++) {
     base.scrollTop = 100 + frame * 40;

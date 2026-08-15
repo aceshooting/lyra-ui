@@ -714,6 +714,20 @@ describe("views", () => {
     await expect(el).to.be.accessible();
   });
 
+  it('renders a plain-string view icon, not restricted to a TemplateResult (LyraWidgetView.icon: unknown)', async () => {
+    const el = (await fixture(html`
+      <lr-widget
+        label="Usage"
+        .views=${[
+          { viewId: 'chart', label: 'Chart', icon: '📊' },
+        ]}
+      ></lr-widget>
+    `)) as LyraWidget;
+    const icon = el.shadowRoot!.querySelector('[part="view-icon"]') as HTMLElement;
+    expect(icon.textContent).to.equal('📊');
+    expect(icon.getAttribute('aria-hidden')).to.equal('true');
+  });
+
   it("applies a first-occurrence policy to duplicate view IDs", async () => {
     const el = (await fixture(html`
       <lr-widget

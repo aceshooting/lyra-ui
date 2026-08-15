@@ -40,7 +40,7 @@ export const FilesExpanded: Story = {
       author="Ada Lovelace"
       .timestamp=${Date.now()}
       .files=${files}
-      .filesCollapsed=${false}
+      .filesExpanded=${true}
     ></lr-commit-card>
   `,
 };

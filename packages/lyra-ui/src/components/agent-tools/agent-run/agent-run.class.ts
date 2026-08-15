@@ -226,13 +226,6 @@ export interface LyraAgentRunEventMap {
  * @since 4.1.0
  */
 export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'run',
-    'statusLabels',
-    'statusVariants',
-    'metrics',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -263,6 +256,13 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     statusRunning: LYRA_DEFAULT_statusRunning,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'run',
+    'statusLabels',
+    'statusVariants',
+    'metrics',
+  ]);
 
   static override styles = [LyraElement.styles, srOnly, styles];
 

@@ -1482,7 +1482,7 @@ describe("blur/focus bubbling", () => {
     expect(ev.composed).to.be.true;
   });
 
-  it("delivers exactly one realm-native focus/blur plus one prefixed peer with relatedTarget", async () => {
+  it('delivers exactly one realm-native focus/blur pair, and never lr-focus/lr-blur', async () => {
     const wrapper = await fixture(html`
       <div><lr-chat-composer></lr-chat-composer><button>Outside</button></div>
     `);
@@ -1505,8 +1505,9 @@ describe("blur/focus bubbling", () => {
     expect(focusEvents[0]).to.be.instanceOf(realm.FocusEvent);
     expect(blurEvents[0]).to.be.instanceOf(realm.FocusEvent);
     expect(blurEvents[0]!.relatedTarget === outside).to.be.true;
-    expect(prefixedFocus).to.equal(1);
-    expect(prefixedBlur).to.equal(1);
+    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+    expect(prefixedFocus).to.equal(0);
+    expect(prefixedBlur).to.equal(0);
   });
 });
 

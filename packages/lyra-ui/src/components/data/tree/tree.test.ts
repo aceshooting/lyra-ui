@@ -45,7 +45,7 @@ it('forwards host click to row selection exactly once and keeps disabled hosts i
   await el.updateComplete;
   const [enabled, disabled] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
   const ids: string[] = [];
-  el.addEventListener('lr-node-select', (event) => ids.push(event.detail.id));
+  el.addEventListener('lr-node-select', (event) => ids.push(event.detail.nodeId));
 
   enabled!.click();
   disabled!.click();
@@ -71,28 +71,21 @@ it('does not choose a hidden child of a collapsed disabled branch as the roving 
   expect(visible.tabIndex).to.equal(0);
 });
 
-it('fails closed on duplicate data ids instead of giving multiple rows one interactive identity', async () => {
+it('omits blank and later duplicate data ids before rendering', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = [
+    { id: ' ', label: 'Blank row' },
     { id: 'duplicate', label: 'Canonical row' },
     { id: 'duplicate', label: 'Conflicting row' },
   ];
   await el.updateComplete;
-  const [canonical, conflicting] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
-
-  expect([canonical, conflicting].filter((node) => node.tabIndex === 0).length).to.equal(1);
-  expect(canonical.getAttribute('aria-disabled')).to.equal('false');
-  expect(conflicting.getAttribute('aria-disabled')).to.equal('true');
-
-  let selectEvents = 0;
-  el.addEventListener('lr-node-select', () => selectEvents++);
-  conflicting.select();
-  await el.updateComplete;
-  expect(selectEvents).to.equal(0);
-  expect(el.selectedItems.length).to.equal(0);
+  const rendered = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  expect(rendered.length).to.equal(1);
+  expect(rendered[0]!.item.label).to.equal('Canonical row');
+  expect(rendered[0]!.tabIndex).to.equal(0);
 });
 
-it('applies duplicate-id ownership across nested paths and releases it after a valid refresh', async () => {
+it('omits later duplicate ids across nested paths and releases identity after refresh', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = [
     {
@@ -106,24 +99,16 @@ it('applies duplicate-id ownership across nested paths and releases it after a v
     { id: 'shared', label: 'Conflicting top-level row' },
   ];
   await el.updateComplete;
-  const [root, topLevelConflict] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  const [root] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
   root.expand();
   await el.updateComplete;
   const nested = [...root.shadowRoot!.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
 
-  expect(nested.length).to.equal(2);
-  expect(nested.map((node) => node.item.label)).to.deep.equal([
-    'Canonical nested row',
-    'Conflicting nested row',
-  ]);
-  expect(nested.map((node) => node.getAttribute('aria-disabled'))).to.deep.equal(['false', 'true']);
-  expect(topLevelConflict.getAttribute('aria-disabled')).to.equal('true');
+  expect(nested.length).to.equal(1);
+  expect(nested[0]!.item.label).to.equal('Canonical nested row');
 
   let selectEvents = 0;
   el.addEventListener('lr-node-select', () => selectEvents++);
-  nested[1].select();
-  topLevelConflict.select();
-  expect(selectEvents).to.equal(0);
   nested[0].select();
   await el.updateComplete;
   expect(selectEvents).to.equal(1);
@@ -147,9 +132,7 @@ it('stops rendering a cyclic item graph instead of recursing indefinitely', asyn
 
   root.expand();
   await root.updateComplete;
-  const repeated = root.shadowRoot!.querySelector('lr-tree-item') as LyraTreeItem;
-  expect(repeated).to.exist;
-  expect(repeated.hasChildren).to.be.false;
+  expect(root.shadowRoot!.querySelector('lr-tree-item') === null).to.be.true;
 });
 
 it('lazily projects and bounds a valid extremely deep hierarchy', async () => {
@@ -323,7 +306,7 @@ it('emits lr-node-toggle when a parent node is expanded', async () => {
   const toggle = root.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   setTimeout(() => toggle.click());
   const ev = await oneEvent(el, 'lr-node-toggle');
-  expect(ev.detail).to.deep.equal({ id: '1', expanded: true });
+  expect(ev.detail).to.deep.equal({ nodeId: '1', expanded: true });
 });
 
 it('emits lr-node-select when a node label is activated', async () => {
@@ -336,7 +319,7 @@ it('emits lr-node-select when a node label is activated', async () => {
   const label = leaf.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
   setTimeout(() => label.click());
   const ev = await oneEvent(el, 'lr-node-select');
-  expect(ev.detail).to.deep.equal({ id: '2' });
+  expect(ev.detail).to.deep.equal({ nodeId: '2' });
 });
 
 it('moves real DOM focus to a node when its row (not just the label text) is clicked', async () => {
@@ -603,6 +586,7 @@ it('expandAll() routes a lazy node through the same lazy-load path expand() uses
   const request = await requested;
 
   expect((request.detail.item) === (lazy)).to.equal(true);
+  expect(Object.isFrozen(request.detail)).to.equal(true);
   expect(lazy.loading, 'expandAll() must trigger beginLazyLoad() exactly like a click-driven expand() does').to.be
     .true;
   expect(lazy.expanded, 'a lazy node must not report expanded until its children actually arrive').to.be.false;

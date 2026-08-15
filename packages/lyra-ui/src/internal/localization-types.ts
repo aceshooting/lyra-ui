@@ -60,6 +60,7 @@ export type LyraMessageKey =
   | 'toolSelectLimit'
   | 'sequenceStripEmpty'
   | 'sequenceStripCategoryCount'
+  | 'sequenceStripUnnamedCategory'
   | 'noColumns'
   | 'dataGridColumnMenu'
   | 'dataGridPinStart'

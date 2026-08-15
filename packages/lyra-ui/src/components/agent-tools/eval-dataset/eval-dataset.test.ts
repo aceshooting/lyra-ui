@@ -203,7 +203,7 @@ it('contains auxiliary native/child events while deliberately passing through ta
   table.dispatchEvent(new CustomEvent('lr-selection-change', {
     bubbles: true,
     composed: true,
-    detail: { keys: ['ex-1'] },
+    detail: { rowKeys: ['ex-1'] },
   }));
   table.dispatchEvent(new CustomEvent('lr-page-change', {
     bubbles: true,
@@ -214,10 +214,31 @@ it('contains auxiliary native/child events while deliberately passing through ta
   table.dispatchEvent(new CustomEvent('lr-sort', {
     bubbles: true,
     composed: true,
-    detail: { key: 'input' },
+    detail: { phase: 'commit', sortKey: 'input', sortDir: 'asc' },
   }));
-  expect((await sorted).detail).to.deep.equal({ key: 'input' });
+  expect((await sorted).detail).to.deep.equal({ phase: 'commit', sortKey: 'input', sortDir: 'asc' });
   expect(leaked).to.deep.equal([]);
+});
+
+it('makes every built-in column sortable and bubbles a real header sort commit', async () => {
+  const el = await fixture<LyraEvalDataset>(html`
+    <lr-eval-dataset .examples=${examples()}></lr-eval-dataset>
+  `);
+  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+    shadowRoot: ShadowRoot;
+  };
+  await table.updateComplete;
+  const sortableHeaders = table.shadowRoot.querySelectorAll<HTMLElement>('th[data-sortable]');
+  expect(sortableHeaders.length).to.equal(3);
+
+  const sorted = oneEvent(el, 'lr-sort');
+  sortableHeaders[0]!.click();
+  expect((await sorted).detail).to.deep.equal({
+    phase: 'commit',
+    sortKey: 'input',
+    sortDir: 'asc',
+  });
 });
 
 it('automatically pages catalogs larger than the component rendering ceiling', async () => {

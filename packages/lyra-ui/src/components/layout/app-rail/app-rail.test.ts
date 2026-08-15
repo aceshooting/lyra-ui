@@ -3,8 +3,8 @@ import "./app-rail.js";
 import {
   computeAppRailMode,
   type LyraAppRail,
-  type AppRailModeChangeDetail,
-  type AppRailToggleDetail,
+  type LyraAppRailModeChangeDetail,
+  type LyraAppRailToggleDetail,
 } from "./app-rail.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
@@ -34,7 +34,7 @@ it("restores breakpoint, persistence, width, and automatic mode defaults after a
   )) as LyraAppRail;
   const el = (await fixture(html`
     <lr-app-rail
-      mode="mobile"
+      force-mode="icon-only"
       icon-only-breakpoint="1200px"
       mobile-breakpoint="800px"
       persist="width"
@@ -43,7 +43,7 @@ it("restores breakpoint, persistence, width, and automatic mode defaults after a
     ></lr-app-rail>
   `)) as LyraAppRail;
   for (const name of [
-    "mode",
+    'force-mode',
     "icon-only-breakpoint",
     "mobile-breakpoint",
     "persist",
@@ -57,6 +57,7 @@ it("restores breakpoint, persistence, width, and automatic mode defaults after a
   expect(el.persist).to.equal("open width");
   expect(el.minRailWidthPx).to.equal(190);
   expect(el.maxRailWidthPx).to.equal(440);
+  expect(el.forceMode).to.be.undefined;
   expect(el.mode).to.equal(automatic.mode);
 });
 
@@ -70,12 +71,11 @@ it("honors inherited sizing and overlay hooks while direct-host values remain au
       --lr-app-rail-overlay-color: rgb(1, 2, 3);
     "
     >
-      <lr-app-rail id="full" mode="full"></lr-app-rail>
-      <lr-app-rail id="icon" mode="icon-only"></lr-app-rail>
-      <lr-app-rail id="mobile" mode="mobile" open></lr-app-rail>
+      <lr-app-rail id="full"></lr-app-rail>
+      <lr-app-rail id="icon" force-mode="icon-only"></lr-app-rail>
+      <lr-app-rail id="mobile" open></lr-app-rail>
       <lr-app-rail
         id="direct"
-        mode="mobile"
         open
         style="--lr-app-rail-mobile-width: 211px; --lr-app-rail-overlay-color: rgb(7, 8, 9);"
       ></lr-app-rail>
@@ -85,6 +85,8 @@ it("honors inherited sizing and overlay hooks while direct-host values remain au
   const icon = wrapper.querySelector("#icon") as LyraAppRail;
   const mobile = wrapper.querySelector("#mobile") as LyraAppRail;
   const direct = wrapper.querySelector("#direct") as LyraAppRail;
+  fireMobileChange(mobile, true);
+  fireMobileChange(direct, true);
   await Promise.all([
     full.updateComplete,
     icon.updateComplete,
@@ -129,10 +131,12 @@ it("inherits independent toggle and resizer hover/pressed paint from an ancestor
       --lr-app-rail-toggle-active-color: rgb(10, 11, 12);
     "
     >
-      <lr-app-rail mode="mobile"></lr-app-rail>
+      <lr-app-rail></lr-app-rail>
     </div>
   `);
   const mobile = mobileWrapper.querySelector("lr-app-rail") as LyraAppRail;
+  fireMobileChange(mobile, true);
+  await mobile.updateComplete;
   const toggle =
     mobile.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
   toggle.scrollIntoView();
@@ -176,7 +180,6 @@ it("inherits independent toggle and resizer hover/pressed paint from an ancestor
     "
     >
       <lr-app-rail
-        mode="full"
         resizable
         style="inline-size: var(--lr-app-rail-width); block-size: var(--lr-size-10rem);"
       ></lr-app-rail>
@@ -311,7 +314,7 @@ it("honors every supplied label literally before consulting localization", async
 
 it("hides app-rail-item labels visually in icon-only mode while retaining their accessible names", async () => {
   const el = (await fixture(html`
-    <lr-app-rail mode="icon-only">
+    <lr-app-rail force-mode="icon-only">
       <lr-app-rail-item href="/inbox" aria-label="Inbox">
         <span slot="icon" aria-hidden="true">📥</span>Inbox with a long
         localized label
@@ -330,7 +333,7 @@ it("hides app-rail-item labels visually in icon-only mode while retaining their 
     item.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
   ).to.equal("Inbox");
 
-  el.mode = "full";
+  el.forceMode = 'full';
   await el.updateComplete;
   await item.updateComplete;
   expect(item.hasAttribute("icon-only")).to.be.false;
@@ -340,7 +343,7 @@ it("hides app-rail-item labels visually in icon-only mode while retaining their 
 it("releases parent-owned icon-only state when an item leaves the rail", async () => {
   const wrapper = (await fixture(html`
     <div>
-      <lr-app-rail mode="icon-only">
+      <lr-app-rail force-mode="icon-only">
         <lr-app-rail-item>Inbox</lr-app-rail-item>
       </lr-app-rail>
       <div id="outside"></div>
@@ -359,7 +362,7 @@ it("releases parent-owned icon-only state when an item leaves the rail", async (
 
 it("manages destination-realm app-rail items structurally after adoption", async () => {
   const rail = (await fixture(
-    html`<lr-app-rail mode="icon-only"></lr-app-rail>`
+    html`<lr-app-rail force-mode="icon-only"></lr-app-rail>`
   )) as LyraAppRail;
   rail.remove();
   const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
@@ -436,13 +439,12 @@ it("switches to icon-only and emits lr-mode-change when the icon-only query star
   const ev = await promise;
 
   expect(el.mode).to.equal("icon-only");
-  expect((ev.detail as AppRailModeChangeDetail).mode).to.equal("icon-only");
+  expect((ev.detail as LyraAppRailModeChangeDetail).mode).to.equal('icon-only');
   await el.updateComplete;
-  // `mode`'s custom accessor is registered via `static properties` with
-  // `noAccessor: true` rather than `@property()` -- confirms Lit's generic
-  // reflect-on-update step still fires off the manual `requestUpdate('mode',
-  // old)` call in setEffectiveMode, not just for the attribute a consumer
-  // set before upgrade.
+  // `mode` has no Lit-managed accessor at all (see its getter doc), so its attribute
+  // reflection is entirely manual -- an explicit, change-gated `setAttribute('mode', ...)` call
+  // inside `updated()`. This confirms that manual reflection actually fires for a live
+  // breakpoint-driven transition, not just for an attribute a consumer set before upgrade.
   expect(el.getAttribute("mode")).to.equal("icon-only");
 });
 
@@ -465,7 +467,7 @@ it("does not emit lr-mode-change for a redundant reassignment to the current mod
   let count = 0;
   el.addEventListener("lr-mode-change", () => count++);
 
-  el.mode = "full";
+  el.forceMode = 'full';
   await el.updateComplete;
 
   expect(count).to.equal(0);
@@ -633,7 +635,7 @@ it("forcing mode stops it from responding to further matchMedia changes", async 
   const el = (await fixture(
     html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
-  el.mode = "full";
+  el.forceMode = 'full';
   await el.updateComplete;
 
   fireMobileChange(el, true);
@@ -650,28 +652,99 @@ it('assigning "auto" releases a forced mode and re-syncs to the live breakpoint 
   await el.updateComplete;
   expect(el.mode).to.equal("mobile");
 
-  el.mode = "full"; // force full despite the live mobile match
+  el.forceMode = 'full'; // force full despite the live mobile match
   await el.updateComplete;
   expect(el.mode).to.equal("full");
 
-  el.mode = "auto";
+  el.forceMode = 'auto';
   await el.updateComplete;
   expect(el.mode).to.equal("mobile"); // resumes tracking, immediately re-reads the still-matching query
 });
 
-it("ignores an invalid mode assignment", async () => {
+it('makes "currently auto-tracking" observable via forceMode, distinct from a pinned value', async () => {
+  const el = (await fixture(
+    html`<lr-app-rail></lr-app-rail>`
+  )) as LyraAppRail;
+  // Unset (never assigned) is auto-tracking.
+  expect(el.forceMode).to.be.undefined;
+
+  el.forceMode = 'icon-only';
+  expect(el.forceMode).to.equal('icon-only');
+
+  // Explicitly releasing the pin reads back as the literal "auto" sentinel, not just undefined --
+  // this is the specific observable this accessor split was built for.
+  el.forceMode = 'auto';
+  expect(el.forceMode).to.equal('auto');
+});
+
+it('ignores an invalid forceMode assignment', async () => {
   const el = (await fixture(
     html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
-  (el as unknown as { mode: string }).mode = "bogus";
+  (el as unknown as { forceMode: string }).forceMode = 'bogus';
   await el.updateComplete;
   expect(el.mode).to.equal("full");
+  // The invalid assignment must not corrupt forceMode's own readback either -- it stays
+  // undefined (still auto-tracking), not the literal rejected string. Assigning a valid pin
+  // afterward must still work normally, proving the rejected write left no residue behind.
+  expect(el.forceMode).to.be.undefined;
+  el.forceMode = 'icon-only';
+  await el.updateComplete;
+  expect(el.forceMode).to.equal('icon-only');
+  expect(el.mode).to.equal('icon-only');
+});
+
+it('leaves a previously-pinned forceMode value unchanged after a later invalid assignment', async () => {
+  const el = (await fixture(
+    html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
+  )) as LyraAppRail;
+  el.forceMode = 'icon-only';
+  await el.updateComplete;
+  expect(el.forceMode).to.equal('icon-only');
+
+  (el as unknown as { forceMode: string }).forceMode = 'bogus';
+  await el.updateComplete;
+
+  expect(el.forceMode, 'an invalid write must not overwrite the prior pinned value').to.equal(
+    'icon-only'
+  );
+  expect(el.mode).to.equal('icon-only');
+});
+
+it('does not rewrite the reflected mode attribute on an update where mode did not change', async () => {
+  const el = (await fixture(
+    html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
+  )) as LyraAppRail;
+  await el.updateComplete;
+  expect(el.getAttribute('mode')).to.equal('full');
+
+  const mutations: MutationRecord[] = [];
+  const observer = new MutationObserver((records) => mutations.push(...records));
+  observer.observe(el, { attributes: true, attributeFilter: ['mode'] });
+  try {
+    // Two updates that never touch `mode` -- a same-value `mode` attribute rewrite here would
+    // also fire once per pointermove tick during an active resize drag, which the component
+    // does not need to do.
+    el.hideToggle = true;
+    await el.updateComplete;
+    el.hideToggle = false;
+    await el.updateComplete;
+  } finally {
+    observer.disconnect();
+  }
+
+  expect(
+    mutations.length,
+    'mode must not be rewritten when its resolved value did not change'
+  ).to.equal(0);
 });
 
 it("force-closes an open overlay and emits lr-toggle when mode leaves mobile, ignoring preventDefault", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`
+    html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   el.open = true;
   await el.updateComplete;
   // Unlike a user-initiated close, leaving 'mobile' while open is a forced consistency fix-up
@@ -681,11 +754,11 @@ it("force-closes an open overlay and emits lr-toggle when mode leaves mobile, ig
   el.addEventListener("lr-toggle", (e) => e.preventDefault());
 
   const promise = oneEvent(el, "lr-toggle");
-  el.mode = "full";
+  el.forceMode = 'full';
   const ev = await promise;
 
   expect(el.open).to.be.false;
-  expect((ev.detail as AppRailToggleDetail).open).to.be.false;
+  expect((ev.detail as LyraAppRailToggleDetail).open).to.be.false;
   expect(ev.cancelable, "a forced mode-change close cannot be vetoed").to.be
     .false;
 });
@@ -746,8 +819,10 @@ it("keeps the promoted navigation root focused when no nav item can receive focu
 
 it("the toggle button opens and closes the overlay, updating aria-expanded/aria-label", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`
+    html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector(
     '[part="toggle"]'
   ) as HTMLButtonElement;
@@ -770,8 +845,10 @@ it("keeps the close toggle above the open mobile panel", async () => {
   // stylesheet's source text -- a regression that broke the actual stacking (e.g. the panel
   // ending up above the toggle) would go undetected by a source-text-only check.
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile" open><a href="/a">A</a></lr-app-rail>`
+    html`<lr-app-rail open><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -786,8 +863,10 @@ it("keeps the close toggle above the open mobile panel", async () => {
 
 it("toggling emits lr-toggle with the new open state", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`
+    html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector(
     '[part="toggle"]'
   ) as HTMLButtonElement;
@@ -796,13 +875,15 @@ it("toggling emits lr-toggle with the new open state", async () => {
   toggle.click();
   const ev = await promise;
 
-  expect((ev.detail as AppRailToggleDetail).open).to.be.true;
+  expect((ev.detail as LyraAppRailToggleDetail).open).to.be.true;
 });
 
 it("fires lr-toggle as cancelable and keeps the overlay open when a host calls preventDefault()", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`
+    html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector(
     '[part="toggle"]'
   ) as HTMLButtonElement;
@@ -818,13 +899,15 @@ it("fires lr-toggle as cancelable and keeps the overlay open when a host calls p
 
 it("keeps a re-entrant mode change from a cancelable lr-toggle listener closed", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`
+    html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector(
     '[part="toggle"]'
   ) as HTMLButtonElement;
   el.addEventListener("lr-toggle", () => {
-    el.mode = "full";
+    el.forceMode = 'full';
   });
 
   toggle.click();
@@ -836,8 +919,10 @@ it("keeps a re-entrant mode change from a cancelable lr-toggle listener closed",
 
 it("setting open directly does not emit lr-toggle (mirrors lr-dialog open/close split)", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><a href="/a">A</a></lr-app-rail>`
+    html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   let fired = false;
   el.addEventListener("lr-toggle", () => (fired = true));
 
@@ -850,9 +935,18 @@ it("setting open directly does not emit lr-toggle (mirrors lr-dialog open/close 
 // -- RTL mobile panel offset ------------------------------------------------
 
 it('flips the mobile panel\'s offscreen transform under dir="rtl", mirroring the LTR closed-state transform', async () => {
+  // Reaching mobile mode now goes through fireMobileChange() (a post-connect breakpoint-match
+  // mutation, since `mode` can no longer be forced via markup -- see forceMode's own doc) rather
+  // than an initial `mode="mobile"` attribute, so the panel's part flips from "base" to "panel"
+  // -- and its offscreen `transform` rule starts applying -- as a live style change on an
+  // already-connected element. That makes the adjacent `transition: transform` rule engage,
+  // same hazard the dir="rtl" rationale below already describes; zeroing the token keeps the
+  // computed transform read below settled instead of mid-transition.
   const ltrEl = (await fixture(
-    html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail style="--lr-transition-base: 0ms;"><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(ltrEl, true);
+  await ltrEl.updateComplete;
   await ltrEl.updateComplete;
   const ltrPanel = ltrEl.shadowRoot!.querySelector(
     '[part="panel"]'
@@ -866,8 +960,10 @@ it('flips the mobile panel\'s offscreen transform under dir="rtl", mirroring the
   // an immediate getComputedStyle() read a mid-transition value rather than
   // the final one.
   const rtlEl = (await fixture(
-    html`<lr-app-rail mode="mobile" dir="rtl"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail dir="rtl" style="--lr-transition-base: 0ms;"><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(rtlEl, true);
+  await rtlEl.updateComplete;
   await rtlEl.updateComplete;
   const rtlPanel = rtlEl.shadowRoot!.querySelector(
     '[part="panel"]'
@@ -892,8 +988,10 @@ it('flips the mobile panel\'s offscreen transform under dir="rtl", mirroring the
 
 it("closes on backdrop click", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile" open><a href="/a">A</a></lr-app-rail>`
+    html`<lr-app-rail open><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   await el.updateComplete;
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   await el.updateComplete;
@@ -902,8 +1000,10 @@ it("closes on backdrop click", async () => {
 
 it("closes on Escape while open, ignores Escape while closed", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile" open><a href="/a">A</a></lr-app-rail>`
+    html`<lr-app-rail open><a href="/a">A</a></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   await el.updateComplete;
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
   await el.updateComplete;
@@ -918,8 +1018,10 @@ it("closes on Escape while open, ignores Escape while closed", async () => {
 
 it("closes when a nav item is clicked while open, but not while closed", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><button>Item</button></lr-app-rail>`
+    html`<lr-app-rail><button>Item</button></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const item = el.querySelector("button") as HTMLButtonElement;
 
   item.click();
@@ -935,12 +1037,14 @@ it("closes when a nav item is clicked while open, but not while closed", async (
 
 it("does not close on a click inside the header or footer slot while open", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile" open>
+    html`<lr-app-rail open>
       <span slot="header"><button>header-btn</button></span>
       <button>nav-btn</button>
       <span slot="footer"><button>footer-btn</button></span>
     </lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   await el.updateComplete;
   (el.querySelector('[slot="header"] button') as HTMLButtonElement).click();
   await el.updateComplete;
@@ -951,10 +1055,12 @@ it("does not close on a click inside the header or footer slot while open", asyn
 
 it("moves focus to the first focusable nav item when the overlay opens", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"
+    html`<lr-app-rail
       ><button>first</button><button>second</button></lr-app-rail
     >`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const first = el.querySelector("button") as HTMLButtonElement;
 
   el.open = true;
@@ -965,8 +1071,10 @@ it("moves focus to the first focusable nav item when the overlay opens", async (
 
 it("focuses the panel itself as a fallback when there is nothing focusable", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><p>no controls</p></lr-app-rail>`
+    html`<lr-app-rail><p>no controls</p></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   el.open = true;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -983,12 +1091,14 @@ it("focuses the panel itself as a fallback when there is nothing focusable", asy
 
 it("traps Tab focus across header, nav, and footer slots, wrapping last->first and first->last", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile" open>
+    html`<lr-app-rail open>
       <span slot="header"><button>header-btn</button></span>
       <button>nav-btn</button>
       <span slot="footer"><button>footer-btn</button></span>
     </lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   await el.updateComplete;
   const first = el.querySelector('[slot="header"] button') as HTMLButtonElement;
   const last = el.querySelector('[slot="footer"] button') as HTMLButtonElement;
@@ -1016,8 +1126,10 @@ it("traps Tab focus across header, nav, and footer slots, wrapping last->first a
 
 it("returns focus to the toggle button after closing", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector(
     '[part="toggle"]'
   ) as HTMLButtonElement;
@@ -1036,8 +1148,10 @@ it("returns focus to the toggle button after closing", async () => {
 
 it("returns focus to whatever triggered it (via Escape) even when opened by setting `open` directly rather than clicking the built-in toggle", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const outsideTrigger = document.createElement("button");
   document.body.appendChild(outsideTrigger);
   outsideTrigger.focus();
@@ -1056,8 +1170,10 @@ it("returns focus to whatever triggered it (via Escape) even when opened by sett
 
 it("locks document scroll while the overlay is open and releases it on close", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   el.open = true;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal("hidden");
@@ -1069,8 +1185,10 @@ it("locks document scroll while the overlay is open and releases it on close", a
 
 it("releases the scroll lock on disconnect while the overlay is open", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile" open><button>a</button></lr-app-rail>`
+    html`<lr-app-rail open><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal("hidden");
 
@@ -1080,8 +1198,20 @@ it("releases the scroll lock on disconnect while the overlay is open", async () 
 });
 
 it("restores the scroll lock and keydown trap when reparented while the overlay is still open", async () => {
+  // A real matchMedia mobile match (rather than fireMobileChange's fabricated callback) so the
+  // mobile breakpoint keeps matching when the reparent below makes connectedCallback's
+  // setupMediaQueries() re-derive mobileMatches from a freshly created MediaQueryList --
+  // fireMobileChange's own {matches: true} would not survive that re-derivation, since it never
+  // touched the (stubbed) matchMedia return value itself.
+  window.matchMedia = ((query: string) =>
+    ({
+      matches: true,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    } as unknown as MediaQueryList)) as typeof window.matchMedia;
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile" open><button>a</button></lr-app-rail>`
+    html`<lr-app-rail open><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal("hidden");
@@ -1112,7 +1242,7 @@ it('uses part="base" while inline and part="panel" while mobile -- never both', 
       .getAttribute("part")
   ).to.equal("base");
 
-  el.mode = "mobile";
+  fireMobileChange(el, true);
   await el.updateComplete;
   expect(
     el
@@ -1123,8 +1253,10 @@ it('uses part="base" while inline and part="panel" while mobile -- never both', 
 
 it("marks the panel inert while mobile and closed, interactive once open", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const nav = el.shadowRoot!.querySelector(
     '[part="base"], [part="panel"]'
   ) as HTMLElement;
@@ -1150,8 +1282,10 @@ it("is never inert outside mobile mode", async () => {
 
 it("only sets dialog role/aria-modal while the mobile overlay is actually open", async () => {
   const el = (await fixture(
-    html`<lr-app-rail mode="mobile"><button>a</button></lr-app-rail>`
+    html`<lr-app-rail><button>a</button></lr-app-rail>`
   )) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   const nav = el.shadowRoot!.querySelector(
     '[part="base"], [part="panel"]'
   ) as HTMLElement;
@@ -1221,12 +1355,14 @@ it("is accessible in full mode with header/nav/footer content", async () => {
 
 it("is accessible with the mobile overlay open", async () => {
   const el = (await fixture(html`
-    <lr-app-rail mode="mobile" open>
+    <lr-app-rail open>
       <span slot="header">Brand</span>
       <a href="/inbox" aria-label="Inbox">Inbox</a>
       <span slot="footer">Account</span>
     </lr-app-rail>
   `)) as LyraAppRail;
+  fireMobileChange(el, true);
+  await el.updateComplete;
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
@@ -1236,8 +1372,10 @@ it("is accessible with the mobile overlay open", async () => {
 describe("toggle button i18n", () => {
   it('uses the openNavigation message key (not a hardcoded "Open" + " navigation" concatenation) when closed', async () => {
     const el = (await fixture(
-      html`<lr-app-rail mode="mobile"></lr-app-rail>`
+      html`<lr-app-rail></lr-app-rail>`
     )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]')!;
     expect(toggle.getAttribute("aria-label")).to.equal("Open navigation");
@@ -1246,10 +1384,11 @@ describe("toggle button i18n", () => {
   it("honors a strings override for openNavigation", async () => {
     const el = (await fixture(
       html`<lr-app-rail
-        mode="mobile"
         .strings=${{ openNavigation: "Ouvrir la navigation" }}
       ></lr-app-rail>`
     )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]')!;
     expect(toggle.getAttribute("aria-label")).to.equal("Ouvrir la navigation");
@@ -1279,7 +1418,7 @@ describe("preferredMode", () => {
     const el = (await fixture(
       html`<lr-app-rail preferred-mode="icon-only"></lr-app-rail>`
     )) as LyraAppRail;
-    el.mode = "full";
+    el.forceMode = 'full';
     await el.updateComplete;
     expect(el.mode).to.equal("full");
   });
@@ -1299,7 +1438,6 @@ describe("resizable", () => {
   it("renders a resizer with role=\"separator\" and correct aria bounds only in 'full' mode", async () => {
     const el = (await fixture(
       html`<lr-app-rail
-        mode="full"
         resizable
         rail-width-px="240"
         min-rail-width-px="190"
@@ -1335,7 +1473,7 @@ describe("resizable", () => {
 
   it("does not render a resizer in icon-only or mobile mode even when resizable", async () => {
     const el = (await fixture(
-      html`<lr-app-rail resizable mode="icon-only"></lr-app-rail>`
+      html`<lr-app-rail resizable force-mode="icon-only"></lr-app-rail>`
     )) as LyraAppRail;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="resizer"]') == null).to.be.true;
@@ -1624,7 +1762,7 @@ describe("resizable", () => {
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.style.getPropertyValue("inline-size")).to.equal("300px");
-    el.mode = "icon-only";
+    el.forceMode = 'icon-only';
     await el.updateComplete;
     expect(base.style.getPropertyValue("inline-size")).to.equal("");
   });
@@ -1701,7 +1839,7 @@ describe("resizable", () => {
     try {
       frameDocument.adoptNode(el);
       frameDocument.body.append(el);
-      el.mode = "full";
+      el.forceMode = 'full';
       await el.updateComplete;
       const resizer = el.shadowRoot!.querySelector(
         '[part="resizer"]'
@@ -1808,7 +1946,7 @@ describe("resizable", () => {
       })
     );
 
-    el.mode = "icon-only";
+    el.forceMode = 'icon-only';
     window.dispatchEvent(
       new PointerEvent("pointermove", { pointerId: 42, clientX: 100 })
     );
@@ -1834,6 +1972,17 @@ describe("resizable", () => {
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
     await el.updateComplete;
+    expect(el.dragging).to.be.false;
+  });
+
+  it('has no public dragging setter -- assignment throws, the getter stays authoritative', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail resizable></lr-app-rail>`
+    )) as LyraAppRail;
+    expect(el.dragging).to.be.false;
+    expect(() => {
+      (el as unknown as { dragging: boolean }).dragging = true;
+    }).to.throw(TypeError);
     expect(el.dragging).to.be.false;
   });
 
@@ -1906,8 +2055,10 @@ describe("resizable", () => {
 describe("hideToggle", () => {
   it("hides [part=toggle] when set, in mobile mode", async () => {
     const el = (await fixture(
-      html`<lr-app-rail hide-toggle mode="mobile"></lr-app-rail>`
+      html`<lr-app-rail hide-toggle></lr-app-rail>`
     )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector(
       '[part="toggle"]'
@@ -1917,8 +2068,10 @@ describe("hideToggle", () => {
 
   it("defaults to false, unchanged output", async () => {
     const el = (await fixture(
-      html`<lr-app-rail mode="mobile"></lr-app-rail>`
+      html`<lr-app-rail></lr-app-rail>`
     )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
     await el.updateComplete;
     expect(el.hideToggle).to.be.false;
     const toggle = el.shadowRoot!.querySelector(
@@ -1964,10 +2117,12 @@ describe("aria-label forwarding", () => {
 
   it("the host-level aria-label override also applies to the dialog role while the mobile overlay is open", async () => {
     const el = (await fixture(
-      html`<lr-app-rail mode="mobile" open aria-label="Custom nav name"
+      html`<lr-app-rail open aria-label="Custom nav name"
         ><a href="/a">A</a></lr-app-rail
       >`
     )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
     expect(panel.getAttribute("role")).to.equal("dialog");
@@ -2125,8 +2280,10 @@ describe("layout: resizer anchor, overflow, and mobile containing block", () => 
 
   it("settles the open mobile panel at transform:none so fixed descendants are not trapped", async () => {
     const el = (await fixture(
-      html`<lr-app-rail mode="mobile" open><a href="/a">A</a></lr-app-rail>`
+      html`<lr-app-rail open><a href="/a">A</a></lr-app-rail>`
     )) as LyraAppRail;
+    fireMobileChange(el, true);
+    await el.updateComplete;
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
     // A non-none transform (even translateX(0) -> matrix(1,0,0,1,0,0)) establishes a containing
@@ -2139,7 +2296,6 @@ describe("layout: resizer anchor, overflow, and mobile containing block", () => 
       <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
         <lr-app-rail
           label="التنقل الرئيسي"
-          mode="mobile"
           open
           style="--lr-app-rail-mobile-width: 320px;"
         >
@@ -2155,6 +2311,7 @@ describe("layout: resizer anchor, overflow, and mobile containing block", () => 
       </div>
     `);
     const el = wrapper.querySelector("lr-app-rail") as LyraAppRail;
+    fireMobileChange(el, true);
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
     const header =

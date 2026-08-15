@@ -22,7 +22,9 @@ not intended to reproduce pixel-exact Word page layout. There is no unsanitized 
 hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth converted successfully.
 
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is
-stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Adopts
+stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Duplicate
+headings receive monotonic `-1`, `-2`, … suffixes; used suffixes are never re-probed for the same
+base, so one bounded heading pass performs linear aggregate dedupe work. Adopts
 `DocumentAnchorTarget`: `fragment` anchors resolve against that outline, `text-quote` anchors via
 the shared quote-scoping helpers; `highlights` re-resolve by quote after every render. Native
 keyboard actions are exposed only for highlights whose quote resolves in the currently loaded
@@ -52,7 +54,8 @@ and paints a 200-range search window.
 fails terminally. Non-fatal Mammoth conversion messages emit `lr-viewer-diagnostic` instead;
 `detail.diagnostic` is readonly `{ code: 'docx-conversion-message', severity: 'warning', fatal:
 false, source: 'mammoth', cause }`. `lr-search-change` (`detail: { query, matchCount,
-matchCountExact, activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+matchCountExact, activeIndex }`) — from search/navigation/clear, canonical source reset, and
+effective-locale re-evaluation.
 `lr-highlight-activate` (`detail: { highlightId }`) — a painted `text-quote` highlight was clicked or its
 resolved keyboard action was activated.
 `lr-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered

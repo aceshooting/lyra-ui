@@ -33,6 +33,12 @@ export const CollapsedDepth: Story = {
   render: () => html`<lr-xml-viewer name="feed.rss" .xml=${FEED} collapsed-depth="2"></lr-xml-viewer>`,
 };
 
+export const RightToLeftCollapsed: Story = {
+  render: () => html`<div dir="rtl">
+    <lr-xml-viewer name="feed.rss" .xml=${FEED} collapsed-depth="1"></lr-xml-viewer>
+  </div>`,
+};
+
 export const Narrow320: Story = {
   render: () => html`<div style="max-inline-size:320px"><lr-xml-viewer name="feed.rss" .xml=${FEED}></lr-xml-viewer></div>`,
 };

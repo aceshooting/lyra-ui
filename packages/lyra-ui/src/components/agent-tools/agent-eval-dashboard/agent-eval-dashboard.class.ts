@@ -1,6 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import { styles } from './agent-eval-dashboard.styles.js';
@@ -23,9 +23,9 @@ import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollec
 
 
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
-export interface AgentEvaluationMetric { id: string; label: string; value: number; format?: EvaluationMetricFormat; }
-export interface AgentEvaluationDashboardRun { id: string; label: string; status: AgentStatusValue; metrics?: Record<string, number>; }
-export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change': CustomEvent<{ metricId: string }>; 'lr-run-activate': CustomEvent<AgentRunActivateDetail<AgentEvaluationDashboardRun>>; }
+export interface AgentEvaluationMetric { readonly id: string; readonly label: string; readonly value: number; readonly format?: EvaluationMetricFormat; }
+export interface AgentEvaluationDashboardRun { readonly id: string; readonly label: string; readonly status: AgentStatusValue; readonly metrics?: Readonly<Record<string, number>>; }
+export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change': CustomEvent<{ metricId: string }>; 'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<AgentEvaluationDashboardRun>>>; }
 const STATUS_VARIANT: Record<string, BadgeVariant> = { idle: 'neutral', queued: 'neutral', running: 'brand', collecting: 'brand', 'waiting-input': 'warning', 'waiting-approval': 'warning', done: 'success', error: 'danger', cancelled: 'neutral' };
 /**
  * `<lr-agent-eval-dashboard>` — a controlled evaluation overview with metric cards, a trend chart,
@@ -57,8 +57,6 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = { idle: 'neutral', queued: 
  * @since 6.2.0
  */
 export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['metrics', 'runs']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -86,6 +84,8 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     statusRunning: LYRA_DEFAULT_statusRunning,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['metrics', 'runs']);
 
   static override styles = [LyraElement.styles, styles];
   /** Metric cards and selector choices. Empty ids are omitted; duplicates normalize first-wins. */

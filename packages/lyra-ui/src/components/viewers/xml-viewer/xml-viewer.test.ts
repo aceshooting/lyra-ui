@@ -494,7 +494,7 @@ describe('search', () => {
     expect(el.shadowRoot!.querySelector('[data-active-match]')).to.exist;
   });
 
-  it('clamps and announces the active search match when a reloaded document has fewer matches', async () => {
+  it('emits a canonical empty search reset when the document is replaced', async () => {
     const el = await fixture<LyraXmlViewer>(html`
       <lr-xml-viewer .xml=${'<root><item/><item/><item/></root>'}></lr-xml-viewer>
     `);
@@ -511,8 +511,8 @@ describe('search', () => {
       activeIndex: number;
     }>;
     await el.updateComplete;
-    expect(event.detail).to.deep.equal({ query: 'item', matchCount: 1, matchCountExact: true, activeIndex: 0 });
-    expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(1);
+    expect(event.detail).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
+    expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(0);
   });
 
   it('searchNext/searchPrevious no-op when there are no matches', async () => {
@@ -709,6 +709,38 @@ describe('toggle geometry', () => {
     // 1.25rem size (the same shape lr-code-block's toggle already uses).
     expect(box.width).to.equal(20);
     expect(box.height).to.equal(20);
+  });
+
+  it('mirrors a collapsed chevron for inherited RTL while keeping the expanded chevron downward', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir="ltr">
+        <lr-xml-viewer
+          style="--lr-transition-fast: 0ms"
+          collapsed-depth="0"
+          .xml=${SIMPLE_XML}
+        ></lr-xml-viewer>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-xml-viewer') as LyraXmlViewer;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    const chevron = toggle.querySelector('.chevron') as HTMLElement;
+    const matrix = (): DOMMatrix => {
+      const transform = getComputedStyle(chevron).transform;
+      return transform === 'none' ? new DOMMatrix() : new DOMMatrix(transform);
+    };
+
+    expect(toggle.getAttribute('aria-expanded')).to.equal('false');
+    expect(matrix().a).to.be.closeTo(1, 0.001);
+    wrapper.dir = 'rtl';
+    await waitUntil(() => matrix().a < -0.99);
+    expect(matrix().a).to.be.closeTo(-1, 0.001);
+
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+    expect(matrix().a).to.be.closeTo(0, 0.001);
+    expect(matrix().b).to.be.closeTo(1, 0.001);
   });
 });
 

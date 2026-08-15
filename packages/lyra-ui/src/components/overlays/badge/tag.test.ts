@@ -196,9 +196,18 @@ describe('withRemove', () => {
     expect(removes).to.equal(0);
   });
 
-  it('leaves a host click() a no-op when there is no remove button to forward to', async () => {
+  it('uses native host click() behavior when there is no remove button to forward to', async () => {
     const el = (await fixture(html`<lr-tag>Plain</lr-tag>`)) as LyraTag;
-    expect(() => el.click()).to.not.throw();
+    const clicks: MouseEvent[] = [];
+    el.addEventListener('click', (event) => clicks.push(event));
+
+    el.click();
+
+    expect(clicks).to.have.length(1);
+    expect(clicks[0]).to.be.instanceOf(MouseEvent);
+    expect(clicks[0]!.target === el).to.be.true;
+    expect(clicks[0]!.bubbles).to.be.true;
+    expect(clicks[0]!.composed).to.be.true;
     expect(el.isConnected).to.be.true;
   });
 

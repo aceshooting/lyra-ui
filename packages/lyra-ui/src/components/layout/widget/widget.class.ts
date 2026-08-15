@@ -36,8 +36,12 @@ export interface LyraWidgetView {
    *  set `ariaLabel` too in that case so the button keeps a real accessible name; see `ariaLabel`'s
    *  own doc for what happens if both are left unset. */
   label?: string;
-  /** Decorative visual whose rendered subtree is inert and hidden from assistive technology. */
-  icon?: TemplateResult;
+  /** Optional decorative leading visual rendered before the label. This is intentionally general
+   *  content, not a square-icon-only field: SVG icons, flag glyphs, badges, and other
+   *  natural-aspect-ratio Lit content are supported, matching `LyraSegmentedItem`/`LyraStepItem`'s
+   *  own `icon` field. It is rendered in inert, aria-hidden chrome, so it cannot provide an
+   *  independent action or accessible name. */
+  icon?: unknown;
   /** Accessible name for the toggle button, used only when `label` is omitted -- ignored otherwise,
    *  since the visible label text already supplies the accessible name. If both `label` and
    *  `ariaLabel` are omitted, the button falls back to its own `viewId` as a last-resort accessible name:
@@ -139,10 +143,6 @@ export interface LyraWidgetEventMap {
  * @since 4.0.0
  */
 export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'views',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -155,6 +155,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     widgetViewGroup: LYRA_DEFAULT_widgetViewGroup,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'views',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
 

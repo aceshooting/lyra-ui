@@ -43,6 +43,9 @@ LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: readon
 `sources: readonly LyraSourceEntry[] = []`, `selectedSourceIds: readonly string[] = []`, and `queue:
 readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+Source roots and queued prompts require unique nonblank `id` values; malformed rows and later
+duplicates are omitted first-wins before section gating and child forwarding. Controlled selected
+source ids use the same unique nonblank projection.
 
 Every array-valued property above is a clone-owned, bounded, frozen readonly snapshot, including
 nested source children and queued attachments. Mutating a previously assigned collection has no
@@ -64,11 +67,11 @@ HTMLTextAreaElement | null`, `selectionStart: number | null`, `selectionEnd: num
 are no-ops before the textarea has rendered.
 
 **Events:** native `input`, `change`, `focus`, and `blur` are each relayed once from the primary
-textarea, paired with `lr-input`, `lr-change`, `lr-focus`, and `lr-blur`; `lr-submit` (`{ value }`),
+textarea, paired with `lr-input` and `lr-change`; `lr-submit` (`{ value }`),
 `lr-stop` (`null`), `lr-mention-select` (`{ suggestionId, index, label, trigger }`),
 `lr-attachments-add` (`{ capability, files }`), `lr-attachment-remove` (`{ attachmentId }`),
 `lr-model-change`/`lr-voice-change`
-(`{ value, inCatalog }`), `lr-sources-change` (`{ selectedIds }`), `lr-queue-change`
+(`{ value, inCatalog }`), `lr-sources-change` (`{ selectedSourceIds }`), `lr-queue-change`
 (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,
 `lr-audio-request`, `lr-attachment-retry` (`{ attachmentId }`), and cancelable
 `lr-attachment-preview-request` (`{ attachmentId, name, mimeType, src }`). Child events are stopped

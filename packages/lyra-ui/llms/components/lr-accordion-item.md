@@ -53,7 +53,9 @@ authority: migrate `multiple` to `mode="multiple"`, and `multiple="false"` to th
 `mode="single"` or `mode="single-collapsible"` behavior.
 
 **Details properties:** `open: boolean = false` (reflected), `disabled: boolean = false`
-(reflected), `summary: string = ''`, `name: string = ''` (reflected — disclosures with the same
+(reflected — blocks activation and sets `aria-disabled="true"`; its native summary uses
+`tabindex="-1"` while disabled so sequential navigation matches a disabled accordion-item
+trigger), `summary: string = ''`, `name: string = ''` (reflected — disclosures with the same
 non-empty name in one document or shadow root are mutually exclusive),
 `appearance: 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'` (reflected),
 `iconPlacement: 'start' | 'end' = 'end'` (attribute `icon-placement`, reflected and logical), and

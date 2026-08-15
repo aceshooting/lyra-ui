@@ -120,7 +120,8 @@ or direct public value remains authoritative; `--lr-attachment-chip-compact-thum
 `1.75rem`), `--lr-attachment-chip-compact-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
 size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-duration` (default
-`0.8s`) controls the indeterminate rotation and stops under reduced motion; plus shared tokens `--lr-space-xs`, `--lr-space-s`,
+`var(--lr-transition-ambient)`) controls the indeterminate rotation's duration and easing and stops
+under reduced motion; plus shared tokens `--lr-space-xs`, `--lr-space-s`,
 `--lr-radius`, `--lr-color-text`, `--lr-color-danger`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-transition-base`, `--lr-focus-ring-width`,
 `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
@@ -174,8 +175,8 @@ previous entry, reassigning `file` several times before the next paint leaks not
 
 - `file` always wins over `name`/`bytes`/`mimeType` when both are set — assigning those props while
   `file` is also set has no visible effect on the rendered chip.
-- A `0` `bytes` value and an unset `bytes` value are indistinguishable (there's no separate flag for
-  "genuinely empty file"); the `size` part is hidden entirely rather than showing a literal `"0 B"`.
+- A `0` `bytes` value is a known empty file and renders `"0 B"`; only omission means unknown and
+  hides the `size` part. Negative and non-finite writes normalize to omission.
 - `progress` only renders as a numeric bar when `status="uploading"` **and** `progress` is finite
   and `> 0`; otherwise it's either nothing (non-`uploading` status) or the indeterminate spinner
   (`uploading` with no known progress).

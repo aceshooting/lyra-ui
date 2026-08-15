@@ -45,9 +45,9 @@ units while retaining 10,000 matches; `searchNext()`/`searchPrevious()` advance/
 `clearSearch()` clears the query and matches. All three resolve only after the newly active match's
 row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
 `prefers-reduced-motion`) — before 9.0.0 they moved `data-active-match` without ever scrolling, so
-on a document taller than the viewport the reader never saw the match they had stepped to. When the XML document reloads while a query remains
-active, matches are recomputed, the active index is clamped to the new result set, and a fresh
-`lr-search-change` announces that state.
+on a document taller than the viewport the reader never saw the match they had stepped to. Replacing
+the XML source clears document-relative matches and emits the canonical empty `lr-search-change`;
+changing the effective locale re-evaluates and emits the retained query.
 
 **Highlights:** host-supplied `highlights` are first-class here, not carried and ignored. Every entry
 whose anchor is a `node-path` this document resolves tints its element row — `[part='node']` gains
@@ -80,9 +80,10 @@ highlight's tone, `data-active-highlight`), `tag` (`data-match`), `attribute` (`
 pointing at one attribute value of a multi-attribute element stays identifiable in the rendered
 tree, rather than resolving indistinguishably from the bare element path),
 `attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
-`toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
-elements), `highlight-action` (the focusable button a resolved `highlights` entry adds to its element
-row), `toggle-placeholder` (the empty toggle-column spacer on leaf rows), `error`, `spinner`.
+`toggle` (an element's expand/collapse button on nodes with renderable children; its collapsed
+chevron mirrors under effective RTL direction), `highlight-action` (the focusable button a resolved
+`highlights` entry adds to its element row), `toggle-placeholder` (the empty toggle-column spacer on
+leaf rows), `error`, `spinner`.
 The spinner always includes visible localized loading text alongside its decorative ring; the text
 remains understandable without CSS or animation and the ring stops under reduced motion.
 
@@ -121,7 +122,8 @@ outlines the `[part='attribute']` an attribute-addressing `node-path` anchor res
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,
 so lowering it never squashes the chevron below its own box — the visible glyph keeps its size while
 the hit target follows the token, and it can never fall under the accessible minimum from this
-component's own rules.
+component's own rules. A collapsed chevron mirrors when effective direction is RTL (including an
+inherited `dir` change); an expanded chevron points down in either direction.
 
 ```ts
 const viewer = document.querySelector("lr-xml-viewer");

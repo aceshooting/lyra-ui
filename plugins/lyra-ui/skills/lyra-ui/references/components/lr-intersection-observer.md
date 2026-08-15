@@ -25,7 +25,9 @@ space-separated values), `root: Element | string | null = null` (an element or m
 boolean = false` (reflected; unobserves a target after its first intersection).
 
 **Events:** mapped `lr-intersect` once per entry with `{ entry }`, plus the existing batch alias
-`lr-intersection` with `{ entries: IntersectionObserverEntry[] }`.
+`lr-intersection` with a frozen
+`Readonly<{ entries: readonly IntersectionObserverEntry[] }>` detail. The batch sequence is
+detached and bounded while each native observer entry retains identity.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 

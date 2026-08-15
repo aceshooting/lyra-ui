@@ -50,22 +50,7 @@ import {
 } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_anchorJumped,
-  LYRA_DEFAULT_anchorJumpedToPage,
-  LYRA_DEFAULT_anchorNotFound,
-  LYRA_DEFAULT_cellHighlightWithLabel,
-  LYRA_DEFAULT_csvViewerLabel,
-  LYRA_DEFAULT_csvViewerUnavailable,
-  LYRA_DEFAULT_documentPreviewEmpty,
-  LYRA_DEFAULT_documentPreviewFailedToLoad,
-  LYRA_DEFAULT_documentPreviewResourceTooLarge,
-  LYRA_DEFAULT_documentPreviewTypeDocument,
-  LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-  LYRA_DEFAULT_highlightWithLabel,
-  LYRA_DEFAULT_loadingDocument,
-  LYRA_DEFAULT_noData,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 type CsvState =
@@ -108,7 +93,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with
  * the header row included whenever `has-header-row` is set (matching how a spreadsheet app itself
  * labels `A1`) -- `scrollToAnchor()` scrolls the addressed row into view via the virtualized list's
- * `active-id`, then scrolls the first addressed column horizontally into view. A `sheet`-qualified
+ * `active-item-id`, then scrolls the first addressed column horizontally into view. A `sheet`-qualified
  * anchor never resolves here -- this viewer has no sheets. `highlights` paint as a
  * `part="cell-highlight"` structural cell wrapping a native `part="cell-highlight-action"` button
  * on membership, recomputed per row inside `renderRow()` so a row scrolled out and back in
@@ -128,7 +113,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
- *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
+ *   changes, including source-reset and effective-locale re-evaluation. `detail: { query,
  *   matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code units,
  *   scans at most 4,000,000 cell code units, and retains at most 1,000 matches;
  *   `matchCountExact=false` identifies a ceiling-truncated lower bound.
@@ -156,25 +141,23 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
 export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      anchorJumped: LYRA_DEFAULT_anchorJumped,
-      anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
-      anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-      cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
-      csvViewerLabel: LYRA_DEFAULT_csvViewerLabel,
-      csvViewerUnavailable: LYRA_DEFAULT_csvViewerUnavailable,
-      documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
-      documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
-      documentPreviewResourceTooLarge:
-        LYRA_DEFAULT_documentPreviewResourceTooLarge,
-      documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
-      documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-      highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
-      loadingDocument: LYRA_DEFAULT_loadingDocument,
-      noData: LYRA_DEFAULT_noData,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
+    csvViewerLabel: LYRA_DEFAULT_csvViewerLabel,
+    csvViewerUnavailable: LYRA_DEFAULT_csvViewerUnavailable,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    noData: LYRA_DEFAULT_noData,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [
@@ -204,13 +187,14 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
 
   @state() private fetchState: CsvState = { kind: 'idle' };
   /** The virtualized body row currently scrolled into view via `scrollToAnchor()` or search
-   *  navigation -- bound to `<lr-virtual-list>`'s own `active-id`. */
+   *  navigation -- bound to `<lr-virtual-list>`'s own `active-item-id`. */
   @state() private activeRowKey: number | '' = '';
   @state() private searchMatches: { row: number; col: number }[] = [];
   private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
   private lastSearchLocale = '';
+  private pendingSearchResetEvent = false;
   private loadTask = new LatestTask();
   private loadLibrary: () => Promise<PapaParseApi | null> = loadPapaParseCached;
   private lastLoadSrc = '';
@@ -266,8 +250,10 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
-      // A new document invalidates every previous row/column coordinate -- reset silently (no
-      // event), mirroring <lr-pdf-viewer>'s identical src-change reset.
+      this.pendingSearchResetEvent ||= this.searchQuery !== ''
+        || this.searchMatches.length > 0
+        || !this.searchMatchCountExact
+        || this.searchActiveIndex !== -1;
       this.searchQuery = '';
       this.searchMatches = [];
       this.searchMatchCountExact = true;
@@ -289,6 +275,10 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       this.scheduleAfterUpdate(() => {
         void this.load();
       });
+    if (changed.has('src') && this.pendingSearchResetEvent) {
+      this.pendingSearchResetEvent = false;
+      this.emitSearchChange();
+    }
     const locale = this.effectiveLocale;
     if (locale !== this.lastSearchLocale) {
       const shouldRecompute = !!this.searchQuery;
@@ -650,7 +640,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
                 index + 1 + headerOffset(this.hasHeaderRow)
               )}
             .keyFunction=${(_item: unknown, index: number) => index}
-            .activeId=${this.activeRowKey}
+            .activeItemId=${this.activeRowKey}
             item-role="row"
             row-index-offset=${this.hasHeaderRow ? '1' : '0'}
             @lr-load-more=${this.stopInternalEvent}

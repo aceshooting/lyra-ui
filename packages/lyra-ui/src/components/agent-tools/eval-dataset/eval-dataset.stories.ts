@@ -54,6 +54,7 @@ export const Default: Story = {
         @lr-example-remove-request=${logEvent('lr-example-remove-request')}
         @lr-import-request=${logEvent('lr-import-request')}
         @lr-export-request=${logEvent('lr-export-request')}
+        @lr-sort=${logEvent('lr-sort')}
       ></lr-eval-dataset>
     </div>
   `,

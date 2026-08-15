@@ -207,7 +207,7 @@ function namesFromTemplates(source) {
   // A fully dynamic Lit binding such as `part=${pickerPart}` still has a finite set of
   // statically-resolvable names when its value comes from a local string expression (or a
   // string-literal union annotation). Resolve the binding's identifier rather than requiring
-  // every helper to call its variable exactly `part` -- <lr-evaluation-run> and
+  // every helper to call its variable exactly `part` -- <lr-eval-run> and
   // <lr-graph-query-builder> both use descriptive names for two related parts in one helper.
   // Literals directly inside the binding cover the common inline conditional form first.
   for (const expression of litPartBindings(source)) {

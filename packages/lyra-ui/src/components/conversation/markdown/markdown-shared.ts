@@ -17,10 +17,12 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import {
   createTextQuoteIndex,
   rangeFromTextQuoteMatch,
+  rangesFromTextQuoteMatches,
   scopeFromElement,
   TEXT_QUOTE_LIMITS,
   TEXT_SELECTION_RECT_LIMIT,
   type TextQuoteIndex,
+  type TextQuoteMatch,
 } from '../../../internal/text-quote.js';
 import { prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
 import { supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
@@ -419,7 +421,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
               output: 'mathml',
               throwOnError: false,
             });
-            return `<span part="math' data-display='${token.display ? 'block' : 'inline'}">${mathml}</span>`;
+            return `<span part='math' data-display='${token.display ? 'block' : 'inline'}'>${mathml}</span>`;
           } catch {
             // throwOnError: false already handles a malformed-TeX render internally (KaTeX's own
             // inline error form); this catch only guards against an unexpected non-KaTeX failure,
@@ -448,11 +450,11 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         const label = this.parser.parseInline(token.tokens, this.parser.textRenderer) as string;
         const slug = slugger.slug(label);
         headingTreeOut.push({ id: slug, label, level: depth });
-        const idAttr = headingAnchorsOption && slug ? ` id="${escapeHtml(slug)}"` : '';
-        return `<h${depth} part="heading'${idAttr}>${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
+        const idAttr = headingAnchorsOption && slug ? ` id='${escapeHtml(slug)}'` : '';
+        return `<h${depth} part='heading'${idAttr}>${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
       },
       paragraph(token) {
-        return `<p part='paragraph">${this.parser.parseInline(token.tokens)}</p>\n`;
+        return `<p part='paragraph'>${this.parser.parseInline(token.tokens)}</p>\n`;
       },
       list(token) {
         const ordered = token.ordered;
@@ -460,8 +462,8 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         let body = '';
         for (const item of token.items) body += this.listitem(item);
         const tag = ordered ? 'ol' : 'ul';
-        const startAttr = ordered && start !== 1 ? ` start="${start}"` : '';
-        return `<${tag} part="list"${startAttr}>\n${body}</${tag}>\n`;
+        const startAttr = ordered && start !== 1 ? ` start='${start}'` : '';
+        return `<${tag} part='list'${startAttr}>\n${body}</${tag}>\n`;
       },
       code(token) {
         const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
@@ -480,12 +482,12 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
             }
           }
         }
-        const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
-        return `<pre part="code-block' tabindex='0"><code${cls}>${text}</code></pre>\n`;
+        const cls = lang ? ` class='language-${escapeHtml(lang)}'` : '';
+        return `<pre part='code-block' tabindex='0'><code${cls}>${text}</code></pre>\n`;
       },
       codespan(token) {
         // Mirrors marked's own default codespan() renderer's escaping exactly (it does not
-        // pre-escape token.text itself) -- only the added part="inline-code' differs.
+        // pre-escape token.text itself) -- only the added part='inline-code' differs.
         return `<code part='inline-code'>${escapeHtml(token.text)}</code>`;
       },
       blockquote(token) {
@@ -493,15 +495,15 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
       },
       table(token) {
         // Built directly here (rather than delegating to the inherited
-        // tablecell()) so a scope='col" can be added -- marked's own
+        // tablecell()) so a scope='col' can be added -- marked's own
         // default tablecell() never emits it, and without it a screen
         // reader can't reliably associate a data cell with its column
         // header beyond the simplest table.
         let headerRow = '';
         for (const cell of token.header) {
           const text = this.parser.parseInline(cell.tokens);
-          const alignAttr = cell.align ? ` align="${cell.align}"` : '';
-          headerRow += `<th scope="col"${alignAttr}>${text}</th>`;
+          const alignAttr = cell.align ? ` align='${cell.align}'` : '';
+          headerRow += `<th scope='col'${alignAttr}>${text}</th>`;
         }
         let bodyRows = '';
         for (const row of token.rows) {
@@ -513,27 +515,27 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
           text: headerRow,
         })}</thead>\n`;
         const tbody = bodyRows ? `<tbody>${bodyRows}</tbody>\n` : '';
-        return `<table part="table'>\n${thead}${tbody}</table>\n`;
+        return `<table part='table'>\n${thead}${tbody}</table>\n`;
       },
       link(token) {
         const text = this.parser.parseInline(token.tokens);
         const href = cleanHref(token.href);
         if (href === null) return text;
-        const titleAttr = token.title ? ` title='${escapeHtml(token.title)}"` : '';
-        const targetAttr = linkTarget ? ` target="${escapeHtml(linkTarget)}' rel='noopener noreferrer"` : '';
-        return `<a part="link' href='${escapeHtml(href)}"${titleAttr}${targetAttr}>${text}</a>`;
+        const titleAttr = token.title ? ` title='${escapeHtml(token.title)}'` : '';
+        const targetAttr = linkTarget ? ` target='${escapeHtml(linkTarget)}' rel='noopener noreferrer'` : '';
+        return `<a part='link' href='${escapeHtml(href)}'${titleAttr}${targetAttr}>${text}</a>`;
       },
       image(token) {
         // Mirrors marked's own default image() renderer (alt text
         // re-rendered through the plain textRenderer so nested emphasis/
         // strong/etc. inside the alt collapses to plain text, href run
         // through the same cleanHref() the link() override above uses)
-        // with a part="img' added.
+        // with a part='img' added.
         const altText = this.parser.parseInline(token.tokens, this.parser.textRenderer);
         const href = cleanHref(token.href);
         if (href === null) return escapeHtml(altText);
-        const titleAttr = token.title ? ` title='${escapeHtml(token.title)}"` : '';
-        return `<img part="img' src='${escapeHtml(href)}' alt='${escapeHtml(altText)}"${titleAttr}>`;
+        const titleAttr = token.title ? ` title='${escapeHtml(token.title)}'` : '';
+        return `<img part='img' src='${escapeHtml(href)}' alt='${escapeHtml(altText)}'${titleAttr}>`;
       },
       html(token) {
         return escapeHtmlOption ? escapeHtml(token.text) : token.text;
@@ -1043,11 +1045,20 @@ export function repaintMarkdownHighlights(options: {
   const rangesByTone = new Map<LyraHighlightTone, Range[]>(HIGHLIGHT_TONES.map((tone) => [tone, []]));
   let activeRange: Range | null = null;
   const workBudget = options.index.createWorkBudget();
+  const matches: Array<{ highlight: LyraHighlight; match: TextQuoteMatch }> = [];
   for (const highlight of prioritizedHighlightCandidates(options.highlights, options.activeHighlightId)) {
-    if (resolved.length >= MARKDOWN_PAINTED_HIGHLIGHT_LIMIT) break;
+    if (matches.length >= MARKDOWN_PAINTED_HIGHLIGHT_LIMIT) break;
     if (highlight.anchor.kind !== 'text-quote') continue;
     const match = options.index.resolve(highlight.anchor, workBudget);
-    const range = match ? rangeFromTextQuoteMatch(options.index.scope, match) : null;
+    if (match) matches.push({ highlight, match });
+  }
+  const ranges = rangesFromTextQuoteMatches(
+    options.index.scope,
+    matches.map(({ match }) => match),
+  );
+  for (let position = 0; position < matches.length; position++) {
+    const { highlight } = matches[position]!;
+    const range = ranges[position] ?? null;
     if (!range) continue;
     rangesByTone.get(highlight.tone ?? 'accent')!.push(range);
     resolved.push({ id: highlight.id, range });

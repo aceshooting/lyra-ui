@@ -88,7 +88,9 @@ export interface LyraWidgetRendererEventMap {
  * hydration. Primitive mapped props remain property-only by contract: the server emits the stable
  * element/child shell, then hydration assigns props without converting them into attributes. Lit's
  * keyed reconciliation reuses the mapped element so focus, scroll position, and internal state
- * survive a streamed document update.
+ * survive a streamed document update. Each unchanged resolved mapped node also reuses its template
+ * and ref callback, avoiding redundant property assignments and listener detach/attach cycles on
+ * unrelated renderer updates.
  *
  * The version-two `document` is the sole tree source. An allowlisted prop value shaped as
  * `{ $bind: '/json/pointer', fallback?: primitive }` reads from the explicit `bindingState`
@@ -155,6 +157,10 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   private readonly initialProps = new WeakMap<
     HTMLElement,
     Map<string, unknown>
+  >();
+  private readonly mappedTemplates = new WeakMap<
+    ResolvedElement,
+    TemplateResult
   >();
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -330,10 +336,13 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   }
 
   /** Declarative dynamic tag path: serializable on the server, stable under hydration and keyed
-   * by the same identity as client-only property/listener attachment. */
+   * by the same identity as client-only property/listener attachment. Memoizing by the resolved
+   * node object also keeps the ref callback stable until that node is actually re-resolved. */
   private renderMapped(node: ResolvedElement): TemplateResult {
+    const cached = this.mappedTemplates.get(node);
+    if (cached) return cached;
     const mappedTag = unsafeStatic(node.tag!);
-    return staticHtml`<${mappedTag}
+    const rendered = staticHtml`<${mappedTag}
       data-widget-node-key=${node.nodeKey}
       data-widget-node-path=${node.nodePath}
       slot=${node.slot ?? nothing}
@@ -343,6 +352,8 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       (child) => this.renderIdentity(child),
       (child) => this.renderChildValue(child)
     )}</${mappedTag}>`;
+    this.mappedTemplates.set(node, rendered);
+    return rendered;
   }
 
   private renderIdentity(node: ResolvedNode): string {

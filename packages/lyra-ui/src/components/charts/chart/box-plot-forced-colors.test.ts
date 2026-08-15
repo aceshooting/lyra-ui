@@ -35,7 +35,7 @@ describe('box-plot forced-colors encodings', () => {
     try {
       const el = await fixture<LyraBoxPlot>(html`<lr-box-plot legend></lr-box-plot>`);
       el.labels = ['Q1', 'Q2'];
-      el.boxes = boxes(8);
+      el.datasets = boxes(8);
       await el.updateComplete;
       // The DOM legend only renders once the async box-plot peer resolves and the loading skeleton
       // is replaced; `updateComplete` alone still leaves the skeleton up.
@@ -62,7 +62,7 @@ describe('box-plot forced-colors encodings', () => {
   it('leaves plain solid series colors and no legend encoding when forced colors are inactive', async () => {
     const el = await fixture<LyraBoxPlot>(html`<lr-box-plot legend></lr-box-plot>`);
     el.labels = ['Q1', 'Q2'];
-    el.boxes = boxes(3);
+    el.datasets = boxes(3);
     await el.updateComplete;
     await waitUntil(() => el.shadowRoot!.querySelector('[part="legend"]') != null, 'legend never rendered', {
       timeout: 5000,

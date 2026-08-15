@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LiteSeries, LyraLiteChartTableCellFormatter } from '../../../lyra.js';
+import type { LyraLiteChartSeries, LyraLiteChartTableCellFormatter } from '../../../lyra.js';
 
 const meta: Meta = {
   title: 'Charts/LiteChart',
@@ -21,7 +21,7 @@ type Story = StoryObj;
 /** Zero-dependency alternative to `lr-chart` — plain SVG/DOM, no `chart.js` peer dep. */
 export const Default: Story = {
   render: () => {
-    const series: LiteSeries[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
+    const series: LyraLiteChartSeries[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
       <lr-lite-chart
         type="bar"
@@ -39,7 +39,7 @@ export const Default: Story = {
 export const NarrowLongContent: Story = {
   name: 'Narrow (320px) with long content',
   render: () => {
-    const series: LiteSeries[] = [
+    const series: LyraLiteChartSeries[] = [
       { label: 'Revenue from subscriptions and professional services', data: [12, 19, 14, 22] },
     ];
     return html`
@@ -60,7 +60,7 @@ export const NarrowLongContent: Story = {
 
 export const GroupedBars: Story = {
   render: () => {
-    const series: LiteSeries[] = [
+    const series: LyraLiteChartSeries[] = [
       { label: 'This year', data: [12, 19, 14, 22] },
       { label: 'Last year', data: [9, 15, 11, 18] },
     ];
@@ -80,7 +80,7 @@ export const GroupedBars: Story = {
 /** `stacked` sums each category's bars into one segmented bar instead of grouping them side by side. */
 export const StackedBars: Story = {
   render: () => {
-    const series: LiteSeries[] = [
+    const series: LyraLiteChartSeries[] = [
       { label: 'Docs', data: [4, 6, 3, 8] },
       { label: 'Bugs', data: [3, 2, 5, 4] },
       { label: 'Features', data: [5, 7, 6, 3] },
@@ -105,7 +105,7 @@ export const StackedBars: Story = {
 export const AccessibleTableFormattingAndTotals: Story = {
   name: 'Accessible table formatting and totals',
   render: () => {
-    const series: LiteSeries[] = [
+    const series: LyraLiteChartSeries[] = [
       { label: 'Product', data: [1204.37, 1890.5, 1420.1] },
       { label: 'Services', data: [804.1, 920.25, 1010.75] },
     ];
@@ -163,7 +163,7 @@ export const CustomDataTable: Story = {
 
 export const Line: Story = {
   render: () => {
-    const series: LiteSeries[] = [
+    const series: LyraLiteChartSeries[] = [
       { label: 'CPU', data: [20, 35, 42, 30, 55] },
       { label: 'Memory', data: [40, 38, 45, 60, 58] },
     ];
@@ -183,7 +183,7 @@ export const Line: Story = {
 /** Clicking (or Enter/Space on a focused) bar/point fires `lr-point-click`, same detail shape as `lr-chart`'s. */
 export const ClickToFilter: Story = {
   render: () => {
-    const series: LiteSeries[] = [{ label: 'Runs', data: [12, 19, 14, 22] }];
+    const series: LyraLiteChartSeries[] = [{ label: 'Runs', data: [12, 19, 14, 22] }];
     return html`
       <lr-lite-chart
         type="bar"
@@ -220,7 +220,7 @@ export const SelectedLinePoint: Story = {
 /** `tickFormat` customizes y-axis tick labels (e.g. currency) instead of the built-in nice-number formatter. */
 export const CurrencyTickFormat: Story = {
   render: () => {
-    const series: LiteSeries[] = [{ label: 'Revenue', data: [1204.37, 1890.5, 1420.1, 2260.75] }];
+    const series: LyraLiteChartSeries[] = [{ label: 'Revenue', data: [1204.37, 1890.5, 1420.1, 2260.75] }];
     return html`
       <lr-lite-chart
         type="bar"
@@ -241,7 +241,7 @@ export const CurrencyTickFormat: Story = {
 export const ScrollLayout: Story = {
   render: () => {
     const labels = Array.from({ length: 40 }, (_, i) => `Day ${i + 1}`);
-    const series: LiteSeries[] = [{ label: 'Signups', data: labels.map((_, i) => 10 + ((i * 7) % 40)) }];
+    const series: LyraLiteChartSeries[] = [{ label: 'Signups', data: labels.map((_, i) => 10 + ((i * 7) % 40)) }];
     return html`
       <lr-lite-chart
         type="bar"
@@ -288,7 +288,7 @@ export const SharedBarXAlignment: Story = {
 export const LabelDecimation: Story = {
   render: () => {
     const labels = Array.from({ length: 24 }, (_, i) => `Week ${i + 1}`);
-    const series: LiteSeries[] = [{ label: 'Throughput', data: labels.map((_, i) => 20 + ((i * 11) % 30)) }];
+    const series: LyraLiteChartSeries[] = [{ label: 'Throughput', data: labels.map((_, i) => 20 + ((i * 11) % 30)) }];
     return html`
       <lr-lite-chart
         type="bar"

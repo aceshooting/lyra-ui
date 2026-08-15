@@ -5,7 +5,9 @@ import { styles } from './intersection-observer.styles.js';
 import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
 
 export interface LyraIntersectionObserverEventMap {
-  'lr-intersection': CustomEvent<{ entries: IntersectionObserverEntry[] }>;
+  'lr-intersection': CustomEvent<
+    Readonly<{ entries: readonly IntersectionObserverEntry[] }>
+  >;
   'lr-intersect': CustomEvent<{ entry: IntersectionObserverEntry }>;
 }
 
@@ -37,13 +39,21 @@ function isElementNode(value: unknown): value is Element {
  * @slot - Elements to observe.
  * @event lr-intersect - Emitted once per native entry with `detail: { entry }`.
  * @event lr-intersection - Compatibility batch event emitted once per callback with
- * `detail: { entries }`.
+ * frozen `detail: { entries: readonly IntersectionObserverEntry[] }`; the detached bounded
+ * sequence retains native entry identities.
  * @csspart base - The non-layout wrapper around the observed slot.
  * @status stable
  * @since 4.0.0
  */
 export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserverEventMap> {
   static override styles = [LyraElement.styles, styles];
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-intersection',
+  ]);
+
+  protected static override readonly identityEventDetailCollectionItems =
+    Object.freeze({ 'lr-intersection': Object.freeze(['entries']) });
 
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ attribute: 'root-margin' }) rootMargin = '0px';

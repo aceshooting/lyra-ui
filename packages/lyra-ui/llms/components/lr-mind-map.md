@@ -30,8 +30,8 @@ LyraTopic[] }`; a single root sits at the center, multiple roots hang off an imp
   ring); expansion state afterward is component-managed per topic id and survives `topics`
   reassignment
 
-**Events:** `lr-topic-select` (`detail: { id }`, a _leaf_ topic was activated),
-`lr-topic-toggle` (`detail: { id, expanded }`, a parent topic was activated, or auto-expanded by
+**Events:** `lr-topic-select` (`detail: { topicId }`, a _leaf_ topic was activated),
+`lr-topic-toggle` (`detail: { topicId, expanded }`, a parent topic was activated, or auto-expanded by
 keyboard descent).
 
 **Slots:** none.
@@ -75,5 +75,7 @@ clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 - Node-position transitions use `--lr-transition-base`, which already collapses to near-zero under
   `prefers-reduced-motion: reduce` globally, so expansion snaps rather than tweening for a
   reduced-motion user with no extra branching in this component.
+- Topic ids must be nonblank and unique across the complete hierarchy. Later depth-first duplicates
+  and their subtrees are omitted before layout, navigation, expansion state, rendering, or events.
 
 ---

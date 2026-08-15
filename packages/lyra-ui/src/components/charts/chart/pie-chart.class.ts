@@ -7,7 +7,7 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEF
 
 /**
  * `<lr-pie-chart>` — `<lr-chart>` with a `"pie"` default and the mirrored writable type. Single-series:
- * one `Series` with `data: number[]` and `color: string[]` as the slice palette.
+ * one `LyraChartSeries` with `data: number[]` and `color: string[]` as the slice palette.
  *
  * @customElement lr-pie-chart
  * @status stable

@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 export type { LyraFrame } from '../../../internal/variants.js';
@@ -28,6 +29,8 @@ export interface LyraMediaCardOpenDetail {
 export interface LyraMediaCardEventMap {
   'lr-media-open': CustomEvent<LyraMediaCardOpenDetail>;
   'lr-before-media-download': CustomEvent<LyraMediaCardOpenDetail>;
+  blur: FocusEvent;
+  focus: FocusEvent;
 }
 
 function detectKind(mimeType: string): LyraMediaCardKind {
@@ -114,6 +117,10 @@ function detectKind(mimeType: string): LyraMediaCardKind {
  *   `detail: { src, filename }`; noncancelable notification.
  * @event lr-before-media-download - A safe file anchor is about to perform its native default.
  *   `detail: { src, filename }`; cancelable, and prevention suppresses the native download/open.
+ * @event {FocusEvent} blur - Relayed once from the primary action as a bubbling, composed native
+ *   event.
+ * @event {FocusEvent} focus - Relayed once from the primary action as a bubbling, composed native
+ *   event.
  * @csspart base - The root interactive/container element. A `<button>` for
  * `kind="image"`, a plain wrapper `<div>` for `kind="video"`, and either an
  * `<a>` (when `src` passes the href safety check) or a plain `<span>`
@@ -173,8 +180,10 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
 
   /** Accessible-name input. A declarative `aria-label` names the host; a property-only assignment
    *  names the internal action when no host label is present. Nested actions otherwise keep a
-   *  localized purpose name derived from `filename`, `alt`, or the resolved media kind. */
-  @property({ attribute: 'aria-label' }) accessibleLabel = '';
+   *  localized purpose name derived from `filename`, `alt`, or the resolved media kind. An
+   *  explicit empty string is equivalent to the unset `null` default -- both fall through to the
+   *  generated purpose-specific name. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** A CSS length (e.g. `"16rem"`); once set, overrides the
    *  `--lr-media-card-max-height` custom property for this instance only —
@@ -245,6 +254,14 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     this.emit('lr-media-open', this.eventDetail());
   };
 
+  private onActionFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+  };
+
+  private onActionBlur = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
+  };
+
   // The file-chip's `<a>` provides a real default action (download/open the
   // resource) so a bare drop-in works with no host wiring, but `lr-before-media-download`
   // fires first and is cancelable -- a host that preventDefault()s it is
@@ -288,7 +305,15 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
 
   private renderImage(src: string): TemplateResult {
     return html`
-      <button part="base" type="button" style=${this.baseStyle} aria-label=${this.actionLabel} @click=${this.onActivate}>
+      <button
+        part="base"
+        type="button"
+        style=${this.baseStyle}
+        aria-label=${this.actionLabel}
+        @click=${this.onActivate}
+        @focus=${this.onActionFocus}
+        @blur=${this.onActionBlur}
+      >
         <img part="media" src=${src} alt=${this.imgAlt} />
       </button>
     `;
@@ -298,7 +323,14 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     return html`
       <div part="base" style=${this.baseStyle}>
         <video part="media" controls src=${src} aria-label=${this.videoLabel}></video>
-        <button part="open-button" type="button" aria-label=${this.actionLabel} @click=${this.onActivate}>
+        <button
+          part="open-button"
+          type="button"
+          aria-label=${this.actionLabel}
+          @click=${this.onActivate}
+          @focus=${this.onActionFocus}
+          @blur=${this.onActionBlur}
+        >
           ${expandIcon()}
         </button>
       </div>
@@ -321,6 +353,8 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
           download=${this.filename || ''}
           aria-label=${this.actionLabel}
           @click=${this.onLinkClick}
+          @focus=${this.onActionFocus}
+          @blur=${this.onActionBlur}
         >
           ${content}
         </a>

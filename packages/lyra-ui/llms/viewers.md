@@ -242,8 +242,9 @@ value, without suppressing the visible `name` heading.
   anchors/highlights, and download; the scalar `name`, `mimeType`, `src`, `anchor`, `highlights`,
   and `alt` properties resume their legacy behavior when `payload` is reset to `undefined`.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry
-  override. A native map assignment is copied behind a frozen readonly facade while renderer-
-  definition identity is retained; later source-map mutation is not observed. When unset, the
+  override. A native map assignment is copied behind a frozen readonly facade; definition records
+  are cloned and frozen while callback identities are retained. Later source-map or definition
+  mutation is not observed. When unset, the
   instance owns an immutable snapshot of the built-ins registered when it was constructed. A later
   module import/registration cannot mutate an existing viewer. A throwing consumer matcher or
   renderer is contained as the localized error state rather than escaping the update.
@@ -387,7 +388,9 @@ not intended to reproduce pixel-exact Word page layout. There is no unsanitized 
 hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth converted successfully.
 
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is
-stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Adopts
+stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Duplicate
+headings receive monotonic `-1`, `-2`, … suffixes; used suffixes are never re-probed for the same
+base, so one bounded heading pass performs linear aggregate dedupe work. Adopts
 `DocumentAnchorTarget`: `fragment` anchors resolve against that outline, `text-quote` anchors via
 the shared quote-scoping helpers; `highlights` re-resolve by quote after every render. Native
 keyboard actions are exposed only for highlights whose quote resolves in the currently loaded
@@ -417,7 +420,8 @@ and paints a 200-range search window.
 fails terminally. Non-fatal Mammoth conversion messages emit `lr-viewer-diagnostic` instead;
 `detail.diagnostic` is readonly `{ code: 'docx-conversion-message', severity: 'warning', fatal:
 false, source: 'mammoth', cause }`. `lr-search-change` (`detail: { query, matchCount,
-matchCountExact, activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+matchCountExact, activeIndex }`) — from search/navigation/clear, canonical source reset, and
+effective-locale re-evaluation.
 `lr-highlight-activate` (`detail: { highlightId }`) — a painted `text-quote` highlight was clicked or its
 resolved keyboard action was activated.
 `lr-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered
@@ -470,9 +474,9 @@ Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML me
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
 remain available without DOMPurify. Attachments are listed as filename and size only (the parsed
 `mimeType` never reaches the DOM) and their content is never rendered by this component. Each
-attachment row is a real `<button>` that emits `lr-attachment-open` with the decoded bytes; opening,
-downloading, or object-URL'ing them is the host's job (e.g.
-`URL.createObjectURL(new Blob([content], { type: mimeType }))` → `<lr-document-viewer>` → revoke on
+attachment row is a real `<button>` that emits `lr-attachment-open` with an immutable Blob snapshot
+of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
+`URL.createObjectURL(content)` → `<lr-document-viewer>` → revoke on
 `lr-close`).
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
@@ -494,8 +498,9 @@ localized label. `highlights`, `activeHighlightId`, `anchor`, and
 **Events:**
 
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
-- `lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
-  `Uint8Array` of the decoded attachment — an attachment button was activated.
+- `lr-attachment-open` — recursively frozen `detail: { attachment: { filename, mimeType,
+  content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This
+  replaces the mutable `Uint8Array` event field.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-message search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
@@ -582,9 +587,11 @@ bounds, supported compression methods, entry names, and the 10,000-entry/100 MB 
 ceilings, then returns the immutable metadata used directly by the listing. The list composes
 `<lr-virtual-list>` for large archives.
 
-**Properties:** `src: string = ''` and `name: string = ''` — a host-level `aria-label` takes
-precedence over `name` by attribute presence, including an explicitly empty value, when naming the
-`role="region"` listing. The viewer also exposes the shared text-viewer
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`) — a host-level `aria-label` takes precedence over `name` by attribute presence,
+including an explicitly empty value, when naming the `role="region"` listing. `maxHeight` caps the
+scrollable archive body; invalid CSS `max-height` values, declaration breaks, and `url()` are
+ignored. The viewer also exposes the shared text-viewer
 contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide
@@ -598,8 +605,9 @@ reassignment mid-flight, or whose row cannot be located after the wait, reports 
 rather than a phantom success.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
-`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search, navigation, and
-clear; `lr-text-select` (`detail: { text, anchor, rects }`) for a selection contained within one
+`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
+navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-text-select`
+(`detail: { text, anchor, rects }`) for a selection contained within one
 entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution.
 `lr-highlight-activate` is not part of this viewer's event contract: archive entry-path highlights
 are passive and cannot be activated.
@@ -613,7 +621,9 @@ directory row's name element carries both `entry-name` and
 `lr-archive-viewer::part(entry)` (and every other row part above) reaches them from a consuming
 stylesheet.
 
-**Themeable custom properties:** `--lr-archive-viewer-highlight-accent-background`,
+**Themeable custom properties:** `--lr-archive-viewer-max-height` (default `none`) caps the
+scrollable `[part="body"]` and is also settable through `maxHeight`/`max-height`.
+`--lr-archive-viewer-highlight-accent-background`,
 `--lr-archive-viewer-highlight-success-background`,
 `--lr-archive-viewer-highlight-warning-background`,
 `--lr-archive-viewer-highlight-danger-background`, and
@@ -673,8 +683,9 @@ clears the query, matches, and painted search annotation.
 
 **Events:** `lr-render-error` with `detail.error` when fetching, opening, or rendering fails;
 `lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
-`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from `search()`/`searchNext()`/
-`searchPrevious()`/`clearSearch()`; `lr-anchor-result` (`detail: { found }`) after an anchor is
+`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
+navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-anchor-result`
+(`detail: { found }`) after an anchor is
 applied; `lr-highlight-activate` (`detail: { highlightId }`) when a painted CFI highlight is clicked; and
 `lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
 Selection text is capped at 4,096 code units and selection rectangles at 1,000.
@@ -733,7 +744,9 @@ and `anchorKinds`
 DOM text.
 
 **Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation using the
-renderer's zero-based index. `renderPageThumbnailToContainer(page, container, options?)` renders a
+renderer's zero-based index. A current renderer rejection is contained, enters the localized error
+state, emits `lr-render-error`, and does not escape as an unhandled promise rejection.
+`renderPageThumbnailToContainer(page, container, options?)` renders a
 one-based, width-bounded DOM/SVG slide preview and resolves to a caller-owned disposable handle (or
 `false` when unavailable/invalid); it generation-checks asynchronous preview resources after they
 settle.
@@ -751,15 +764,16 @@ results. `scrollToAnchor()` remains available for renderer output that exposes D
   `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of
   every load so a rail can discard same-count replacement thumbnails without inferring identity
   from `src`.
-- `lr-render-error` with `detail.error` only when fetching/opening fails or a post-load peer event is
-  explicitly classified fatal.
+- `lr-render-error` with `detail.error` when fetching/opening fails, public slide navigation rejects,
+  or a post-load peer event is explicitly classified fatal.
 - `lr-viewer-diagnostic` — `detail.diagnostic` is a readonly structured slide/node/search
   diagnostic with stable `code`, `severity`, `fatal`, `source`, `cause`, and correlated `page` or
   `nodeId` when valid. Recoverable events keep the mounted deck usable and do not also emit
   `lr-render-error`; fatal events enter the localized error state, destroy the adapter, and emit the
   terminal event once.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
-  whenever rendered-presentation search state changes.
+  whenever rendered-presentation search state changes, including canonical source reset and
+  effective-locale re-evaluation.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
@@ -775,6 +789,7 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 `next-icon`, and `container`. While loading, the decorative skeleton is paired with an ordinary
 visually-hidden localized label; later loading and error transitions use the shared document-level
 polite and assertive sinks, respectively, without adding live semantics inside the viewer shadow.
+The previous/next chevrons mirror under effective RTL direction, including inherited `dir` changes.
 
 **Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
 size of `[part="container"]` before it scrolls internally; also settable via the `max-height`
@@ -940,7 +955,7 @@ item-role="row">` for the body) using the optional `papaparse` peer. The documen
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
 header row always occupying row 1 (this component always parses with a header row, so the first row
 is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed row into view via
-the virtualized list's `active-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
+the virtualized list's `active-item-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
 focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact. A jump
 whose document is replaced by a concurrent `src` reassignment mid-flight reports `found: false`
 rather than a phantom success, and a header-row target scrolls with the same
@@ -971,7 +986,7 @@ budget is a resource-limit error instead.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+search/navigation/clear, canonical source reset, and effective-locale re-evaluation. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base` (a persistent `role="region"` named by the host `aria-label` or `name`, in
@@ -1084,14 +1099,15 @@ nonnegative dimensions.
 **Events:**
 
 - `lr-render-error` — `detail: { error }` — fetching, parsing, or rendering (page canvas or text
-  layer) failed.
+  layer) failed. Both synchronous and rejected text-layer failures are contained and reported
+  without an unhandled promise rejection.
 - `lr-load` — `detail: { pageCount }` — the document reached `ready`. `page` is reset to `1` first.
 - `lr-page-change` — `detail: { page, pageCount }` — fired for scroll-driven page crossings as well
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
 - `lr-zoom-change` — `detail: { zoom }`.
 - `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
-  `searchPrevious()`/`clearSearch()`. A `src` change resets search state _silently_ (no event), since
-  match page/offset coordinates only mean anything for the document they were found in.
+  `searchPrevious()`/`clearSearch()` and effective-locale re-evaluation. A `src` change invalidates document-relative matches and emits
+  the canonical reset `{ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 }`.
 - `lr-highlight-activate` — `detail: { highlightId }` — a painted highlight was clicked or activated via
   Enter/Space. On a pointer hit-test, the last entry of `highlights` covering the point wins.
 - `lr-text-select` — `detail: { text, anchor, rects }` — a selection ended inside a page's text
@@ -1195,7 +1211,7 @@ matches, and painted marks.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+search/navigation/clear, canonical source reset, and effective-locale re-evaluation. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base`, `body` (the scrollable wrapper around the fetched-state content, capped by
@@ -1234,7 +1250,7 @@ Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and v
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
 header row included whenever `has-header-row` is set; `scrollToAnchor()` scrolls the addressed
-row/column into view via the virtualized list's `active-id`. `highlights` paint as a focusable
+row/column into view via the virtualized list's `active-item-id`. `highlights` paint as a focusable
 `part="cell-highlight"`. A jump whose document is replaced by a concurrent `src` reassignment
 mid-flight reports `found: false` rather than a phantom success.
 
@@ -1260,7 +1276,7 @@ resource-limit error instead.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+search/navigation/clear, canonical source reset, and effective-locale re-evaluation. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base`, `body` (the capped scroll surface), `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
@@ -1541,7 +1557,8 @@ matches.
 
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
-`lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`. `lr-render-error` —
+`lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`, including
+canonical source reset and effective-locale re-evaluation. `lr-render-error` —
 `detail: { error }`, fetching, parsing, or validating the notebook failed. `lr-anchor-result` —
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.
@@ -1624,9 +1641,9 @@ units while retaining 10,000 matches; `searchNext()`/`searchPrevious()` advance/
 `clearSearch()` clears the query and matches. All three resolve only after the newly active match's
 row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
 `prefers-reduced-motion`) — before 9.0.0 they moved `data-active-match` without ever scrolling, so
-on a document taller than the viewport the reader never saw the match they had stepped to. When the XML document reloads while a query remains
-active, matches are recomputed, the active index is clamped to the new result set, and a fresh
-`lr-search-change` announces that state.
+on a document taller than the viewport the reader never saw the match they had stepped to. Replacing
+the XML source clears document-relative matches and emits the canonical empty `lr-search-change`;
+changing the effective locale re-evaluates and emits the retained query.
 
 **Highlights:** host-supplied `highlights` are first-class here, not carried and ignored. Every entry
 whose anchor is a `node-path` this document resolves tints its element row — `[part='node']` gains
@@ -1659,9 +1676,10 @@ highlight's tone, `data-active-highlight`), `tag` (`data-match`), `attribute` (`
 pointing at one attribute value of a multi-attribute element stays identifiable in the rendered
 tree, rather than resolving indistinguishably from the bare element path),
 `attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
-`toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
-elements), `highlight-action` (the focusable button a resolved `highlights` entry adds to its element
-row), `toggle-placeholder` (the empty toggle-column spacer on leaf rows), `error`, `spinner`.
+`toggle` (an element's expand/collapse button on nodes with renderable children; its collapsed
+chevron mirrors under effective RTL direction), `highlight-action` (the focusable button a resolved
+`highlights` entry adds to its element row), `toggle-placeholder` (the empty toggle-column spacer on
+leaf rows), `error`, `spinner`.
 The spinner always includes visible localized loading text alongside its decorative ring; the text
 remains understandable without CSS or animation and the ring stops under reduced motion.
 
@@ -1700,7 +1718,8 @@ outlines the `[part='attribute']` an attribute-addressing `node-path` anchor res
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,
 so lowering it never squashes the chevron below its own box — the visible glyph keeps its size while
 the hit target follows the token, and it can never fall under the accessible minimum from this
-component's own rules.
+component's own rules. A collapsed chevron mirrors when effective direction is RTL (including an
+inherited `dir` change); an expanded chevron points down in either direction.
 
 ```ts
 const viewer = document.querySelector("lr-xml-viewer");
@@ -1967,6 +1986,16 @@ These named interfaces and helper signatures are available to typed integrations
   anchor: unknown;
   rects: unknown;
 }`
+  `TextSelectRect {
+  x: unknown;
+  y: unknown;
+  width: unknown;
+  height: unknown;
+  top: unknown;
+  right: unknown;
+  bottom: unknown;
+  left: unknown;
+}`
 
 - **`components-viewers-document-viewer-registry-contracts`** — Supporting data types and helpers for this component family.
   `adaptDocumentRenderer(/* public names: candidate, file, supplied */): unknown`
@@ -2119,6 +2148,12 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 - **`components-viewers-email-viewer-email-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `LyraEmailAttachmentOpenDetail {
+  attachment: unknown;
+  filename: unknown;
+  mimeType: unknown;
+  content: unknown;
+}`
   `ParsedEmailAttachment {
   filename: unknown;
   mimeType: unknown;

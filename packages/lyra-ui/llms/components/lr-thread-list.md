@@ -52,8 +52,9 @@ false` (reflected) — shows the built-in search field. `filter?: (thread, query
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
 arbitrary grouping callbacks below, or render a flat list. `groupBy?: (thread: LyraChatThread) => string`
-(attribute: false) derives each group id in `grouping="custom"`; omitting it leaves the custom mode
-flat. `getGroupLabel?: (context: ThreadGroupContext) => string` (attribute: false) supplies the
+(attribute: false) derives each group id in `grouping="custom"`; rows whose callback throws or
+returns a malformed or blank ID are omitted from that grouped view, and omitting the callback leaves
+custom mode flat. `getGroupLabel?: (context: ThreadGroupContext) => string` (attribute: false) supplies the
 plain-text accessible/visible label; `renderGroupAdornment?: (context) => TemplateResult` supplies
 separate rich content beside the toggle without nesting it inside the button. `groupOrder?: string[] | ((a: string, b:
 string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an

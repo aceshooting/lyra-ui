@@ -38,6 +38,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   toolSelectLimit: 'Only the first {count} tools are shown.',
   sequenceStripEmpty: 'No items',
   sequenceStripCategoryCount: '{label}: {count}',
+  sequenceStripUnnamedCategory: 'Unnamed category',
   noColumns: 'No columns configured',
   dataGridColumnMenu: 'Options for {label}',
   dataGridPinStart: 'Pin {label} to start',

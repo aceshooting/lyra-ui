@@ -243,11 +243,10 @@ export interface LyraButtonEventMap {
 export class LyraButton extends LyraElement<LyraButtonEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   /** Public WA-compatible intrinsic validator catalog. */

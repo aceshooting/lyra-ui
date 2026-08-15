@@ -7,8 +7,6 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecated part** `base` since `8.2.3`; use part `::part(qr-code)`; removal not before `10.0.0` — The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window.
-- **Deprecated property** `background` / `background` since `8.2.3`; use host-css-property `style="background: …"`; removal not before `10.0.0` — The standard host background property themes both backing paint and canvas while background remains an attribute compatibility alias.
-- **Deprecated property** `fill` / `fill` since `8.2.3`; use host-css-property `style="color: …"`; removal not before `10.0.0` — The standard host color property themes foreground modules while fill remains an attribute compatibility alias.
 - **Optional peers** `qrcode` — see `llms/peers.md`
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -21,8 +19,8 @@ Renders `value` as a QR code using the optional `qrcode` peer dependency. **Prop
 `label`, `size` (clamped to `1`–`2048` CSS px), `radius` (clamped to `0`–`0.5`), and
 `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`, default `H`). Standard host `color` and
 `background-color` control paint; optional `--lr-qr-code-fill` and
-`--lr-qr-code-background` aliases override those host styles, while the legacy `fill` and
-`background` properties remain highest-precedence compatibility overrides. `image` accepts
+`--lr-qr-code-background` aliases override those host styles, while the permanent upstream parity
+properties `fill` and `background` remain the highest-precedence paint inputs. `image` accepts
 a safe media URL for a centered overlay, `imageBackground` (`image-background`) paints its coverage
 box, `imageCoverage` (`image-coverage`, default `0.5`) controls that box as a fraction of the canvas
 side, and `imagePadding` (`image-padding`, default `0`) pads the image within it. Image geometry is

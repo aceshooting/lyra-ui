@@ -2105,11 +2105,11 @@ test('source EventMaps provide concrete event schemas for CEM and inventory proj
   );
   assert.equal(
     contracts.get('lr-accordion')?.['lr-collapse'],
-    'CustomEvent<LyraAccordionEventDetail>'
+    'CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>'
   );
   assert.equal(
     contracts.get('lr-menu')?.['lr-select'],
-    'CustomEvent<MenuItemSelectDetail>'
+    'CustomEvent<LyraEventDetailSnapshot<MenuItemSelectDetail>>'
   );
   for (const [tagName, contract] of contracts) {
     for (const [event, type] of Object.entries(contract)) {
@@ -2338,6 +2338,38 @@ test('the reviewed QR base-part replacement closes the live generic-prose ambigu
       upstreamReplacement: null,
       targetDeprecated: true,
       targetReplacement: 'qr-code',
+    },
+    {
+      section: 'attributes',
+      member: 'background',
+      upstreamDeprecated: true,
+      upstreamReplacement: 'background',
+      targetDeprecated: false,
+      targetReplacement: null,
+    },
+    {
+      section: 'attributes',
+      member: 'fill',
+      upstreamDeprecated: true,
+      upstreamReplacement: 'color',
+      targetDeprecated: false,
+      targetReplacement: null,
+    },
+    {
+      section: 'properties',
+      member: 'background',
+      upstreamDeprecated: true,
+      upstreamReplacement: 'background',
+      targetDeprecated: false,
+      targetReplacement: null,
+    },
+    {
+      section: 'properties',
+      member: 'fill',
+      upstreamDeprecated: true,
+      upstreamReplacement: 'color',
+      targetDeprecated: false,
+      targetReplacement: null,
     },
   ]);
 
@@ -5323,7 +5355,7 @@ test('reviewed type equivalences stay exact per upstream tag and public member',
       'attribute',
       'size',
       "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'",
-      'ToastSize',
+      'LyraToastSize',
     ],
   ]) {
     assert.ok(
@@ -5378,7 +5410,7 @@ test('raw-token preserving aliases keep the six affected mappings release-safe',
         ['variant', 'TagVariant'],
       ]),
     ],
-    ['wa-toast-item', new Map([['size', 'ToastSize']])],
+    ['wa-toast-item', new Map([['size', 'LyraToastSize']])],
   ]);
 
   for (const [upstreamTag, memberTypes] of expectedTargetTypes) {
@@ -5529,18 +5561,26 @@ test('carousel event-detail widenings require explicit migration review', () => 
   }
 });
 
-test('C-567 accordion exported event-detail alias converges without a stale manual warning', () => {
+test('C-567 accordion readonly event-detail snapshot is reviewed warning-required drift', () => {
   const normalizations = reviewedMappingNormalizations('wa-accordion');
-  assert.deepEqual(normalizations.structuralTypeAliases, [
-    {
-      name: 'LyraAccordionEventDetail',
-      target: '{ item: LyraAccordionItem }',
-    },
-  ]);
-  assert.equal(
-    reviewedMigrationDecision('wa-accordion'),
-    null,
-    'source convergence removes the warning-required decision instead of freezing its history'
+  assert.deepEqual(
+    normalizations.structuralTypeAliases,
+    [],
+    'the readonly LyraEventDetailSnapshot wrapper is real drift, not an alias the comparison can see through'
+  );
+
+  const decision = reviewedMigrationDecision('wa-accordion');
+  assert.equal(decision?.classification, 'warning-required');
+  assert.deepEqual(
+    decision?.expectedDrift,
+    ['wa-after-collapse', 'wa-after-expand', 'wa-collapse', 'wa-expand']
+      .map((member) => ({
+        code: 'event-type-mismatch',
+        section: 'events',
+        member,
+        expected: '{ item: LyraAccordionItem }',
+        actual: 'CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>',
+      }))
   );
 
   const inventory = readJson(
@@ -5562,9 +5602,13 @@ test('C-567 accordion exported event-detail alias converges without a stale manu
       upstreamPrefix: 'wa-',
       rewrites: storedMapping.rewrites,
       normalizations,
-    }),
-    [],
-    'all four event aliases and the remaining reviewed public surface are structurally exact after deterministic prefix rewrites'
+    })
+      .filter(({ section }) => section === 'events')
+      .map(({ code, section, member }) => ({ code, section, member })),
+    ['wa-after-collapse', 'wa-after-expand', 'wa-collapse', 'wa-expand'].map(
+      (member) => ({ code: 'event-type-mismatch', section: 'events', member })
+    ),
+    'the live comparison reproduces exactly the reviewed expected drift, not more and not less'
   );
 
   const parity = migrationParityMetadata({
@@ -5578,13 +5622,13 @@ test('C-567 accordion exported event-detail alias converges without a stale manu
       rootIncluded: true,
       optionalPeers: [],
     },
-    classification: 'rewritten',
+    classification: 'warning-required',
     comparisonPerformed: true,
   });
   assert.deepEqual(
     parity.behaviorReviewFlags,
-    [],
-    'legacy-details and item-widening flags disappear with the removed behavior'
+    ['warning-required-mapping'],
+    'the readonly-snapshot behavior keeps the warning-required flag instead of silently clearing it'
   );
 });
 

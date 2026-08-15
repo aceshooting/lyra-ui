@@ -24,7 +24,7 @@ import { hasRealContent } from '../../../internal/a11y.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -71,9 +71,16 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  * accessible-name precedence by presence, including an explicitly empty value.
  * A standalone radio is bounded by its allocation: an unbroken default label wraps within the
  * available inline size in both LTR and RTL while the circular indicator remains fixed.
+ * In `appearance="button"`, the same `start`/`prefix` and `end`/`suffix` adornment aliases as
+ * `<lr-radio-button>` render around the label. Empty leading, label, and trailing wrappers stay
+ * hidden so only present content contributes the button's flex gaps.
  *
  * @customElement lr-radio
  * @slot - Label content, including forwarded or element-only visuals.
+ * @slot start - Leading content in `appearance="button"`, typically an icon.
+ * @slot prefix - Shoelace-compatible alias for `start` in `appearance="button"`.
+ * @slot end - Trailing content in `appearance="button"`.
+ * @slot suffix - Shoelace-compatible alias for `end` in `appearance="button"`.
  * @event input - A standalone radio was selected; native-style and composed.
  * @event lr-input - Standalone prefixed compatibility alias for `input`.
  *   `detail: { checked, value }`.
@@ -112,7 +119,11 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  * @csspart checked-icon - WA/Shoelace name for the same selected indicator.
  * @csspart button - Shoelace button-chrome alias in `appearance="button"` mode.
  * @csspart button--checked - Shoelace selected-button state alias.
- * @csspart label - The default slot wrapper.
+ * @csspart start - The `appearance="button"` leading-content wrapper; hidden while empty.
+ * @csspart prefix - Shoelace-compatible alias on the same leading-content wrapper.
+ * @csspart label - The default slot wrapper; hidden while it has no real content.
+ * @csspart end - The `appearance="button"` trailing-content wrapper; hidden while empty.
+ * @csspart suffix - Shoelace-compatible alias on the same trailing-content wrapper.
  * @cssprop [--lr-radio-label-indent=calc(var(--lr-radio-circle-size) + var(--lr-space-s))] -
  * The inline distance from the control's start edge to the start of the label text, i.e. the
  * circle's own floor plus the gap next to it — so it tracks `size` along with the circle. Published
@@ -144,6 +155,8 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  * @cssprop [--lr-radio-radius=var(--lr-radius-pill)] - Corner radius of the control's own chrome.
  * A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at
  * the shared control radius and swaps it for a pill when `pill` is set.
+ * @cssprop [--lr-radio-button-gap=var(--lr-space-xs)] - Gap between the present start/prefix,
+ * label, and end/suffix wrappers in `appearance="button"`.
  * @status stable
  * @since 4.0.0
  */
@@ -152,7 +165,6 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     radioRequired: LYRA_DEFAULT_radioRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -209,6 +221,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   pill = false;
 
   @state() private hasLabel = false;
+  @state() private hasStart = false;
+  @state() private hasEnd = false;
   private labelObserver?: MutationObserver;
   /** Whether the user has acted on this radio yet, which is what gates the `user-valid`/
    *  `user-invalid` custom states: a selection or a blur. A pristine required radio is genuinely
@@ -392,17 +406,21 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       ? new MutationObserverCtor(() => {
           this.bindLabelObserverTargets();
           this.recomputeHasLabel();
+          this.recomputeButtonAdornments();
         })
       : undefined;
     this.addEventListener('slotchange', this.onLabelSlotChange);
+    this.addEventListener('slotchange', this.onAdornmentSlotChange);
     this.bindLabelObserverTargets();
     this.recomputeHasLabel();
+    this.recomputeButtonAdornments();
     this.updateValidity();
     this.group();
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
+    this.removeEventListener('slotchange', this.onAdornmentSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
     super.disconnectedCallback();
@@ -685,6 +703,19 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     });
   }
 
+  private adornmentForwardingSlots(): HTMLSlotElement[] {
+    const names = ['start', 'prefix', 'end', 'suffix'];
+    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
+      let top: Node = slot;
+      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
+      return (
+        top === slot &&
+        top.parentNode === this &&
+        names.includes(slot.getAttribute('slot') ?? '')
+      );
+    });
+  }
+
   private observeLabelNode(node: Node): void {
     if (!this.labelObserver) return;
     if (node.nodeType === 3) {
@@ -709,6 +740,10 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       if (slot.assignedNodes().length === 0) continue;
       for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
     }
+    for (const slot of this.adornmentForwardingSlots()) {
+      if (slot.assignedNodes().length === 0) continue;
+      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
+    }
   }
 
   private recomputeHasLabel(): void {
@@ -727,6 +762,30 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.hasLabel = hasRealContent(nodes);
   }
 
+  private assignedAdornmentNodes(names: readonly string[]): Node[] {
+    const slots = names
+      .map((name) => this.renderRoot.querySelector<HTMLSlotElement>(`slot[name="${name}"]`))
+      .filter((slot): slot is HTMLSlotElement => Boolean(slot));
+    if (slots.length > 0) {
+      return slots.flatMap((slot) => slot.assignedNodes({ flatten: true }));
+    }
+    const children = (this as unknown as { children?: HTMLCollection }).children;
+    return (children ? Array.from(children) : [])
+      .filter((element) => names.includes(element.getAttribute('slot') ?? ''))
+      .flatMap((element) => {
+        if (element.localName !== 'slot') return [element];
+        const forwardingSlot = element as HTMLSlotElement;
+        return forwardingSlot.assignedNodes().length > 0
+          ? forwardingSlot.assignedNodes({ flatten: true })
+          : Array.from(forwardingSlot.childNodes);
+      });
+  }
+
+  private recomputeButtonAdornments(): void {
+    this.hasStart = hasRealContent(this.assignedAdornmentNodes(['start', 'prefix']));
+    this.hasEnd = hasRealContent(this.assignedAdornmentNodes(['end', 'suffix']));
+  }
+
   private handleLabelSlotChange(event: Event): void {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
@@ -740,6 +799,27 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
 
   private onLabelSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
   private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
+  private onAdornmentSlotChange = (): void => {
+    this.bindLabelObserverTargets();
+    this.recomputeButtonAdornments();
+  };
+
+  /** @internal Shared button-slot projection for `<lr-radio>` and `<lr-radio-button>`. */
+  protected renderButtonContent(): TemplateResult {
+    return html`
+      <span part="start prefix" ?hidden=${!this.hasStart}>
+        <slot name="start" @slotchange=${this.onAdornmentSlotChange}></slot>
+        <slot name="prefix" @slotchange=${this.onAdornmentSlotChange}></slot>
+      </span>
+      <span part="label" ?hidden=${!this.hasLabel}
+        ><slot @slotchange=${this.onSlotChange}></slot
+      ></span>
+      <span part="end suffix" ?hidden=${!this.hasEnd}>
+        <slot name="end" @slotchange=${this.onAdornmentSlotChange}></slot>
+        <slot name="suffix" @slotchange=${this.onAdornmentSlotChange}></slot>
+      </span>
+    `;
+  }
 
   override render(): TemplateResult {
     if (this.appearance === 'button') {
@@ -758,7 +838,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
           aria-required=${this.effectiveRequired ? 'true' : 'false'}
           aria-label=${this.getAttribute('aria-label') ?? nothing}
           @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
-          <span part="label" ?hidden=${!this.hasLabel}><slot @slotchange=${this.onSlotChange}></slot></span>
+          ${this.renderButtonContent()}
         </span>
       `;
     }

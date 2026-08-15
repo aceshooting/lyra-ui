@@ -1,13 +1,13 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './rag-eval-dashboard.js';
-import type { LyraRagEvalDashboard, RagEvaluationMetric, RagEvaluationRun } from './rag-eval-dashboard.js';
+import type { LyraRagEvalDashboard, LyraRagEvaluationMetric, LyraRagEvaluationRun } from './rag-eval-dashboard.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
 
-const metrics: RagEvaluationMetric[] = [
+const metrics: LyraRagEvaluationMetric[] = [
   { id: 'mrr', label: 'MRR', category: 'retrieval', format: 'number' },
   { id: 'groundedness', label: 'Groundedness', category: 'generation', format: 'percent' },
 ];
-const runs: RagEvaluationRun[] = [
+const runs: LyraRagEvaluationRun[] = [
   { id: 'run-1', label: 'Baseline', slice: 'all', metrics: { mrr: 0.62, groundedness: 0.8 } },
   { id: 'run-2', label: 'Reranker', slice: 'all', metrics: { mrr: 0.74, groundedness: 0.91 } },
   { id: 'run-3', label: 'Legal', slice: 'legal', metrics: { mrr: 0.7, groundedness: 0.88 } },
@@ -119,4 +119,47 @@ it('omits the trend chart when show-chart is disabled', async () => {
 
   expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(true);
   expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.equal(true);
+});
+
+it('omits blank and later duplicate metric and run ids before fallback, filters, rendering, and actions', async () => {
+  const firstMetric: LyraRagEvaluationMetric = {
+    id: 'metric-1',
+    label: 'First metric',
+    category: 'retrieval',
+  };
+  const firstRun: LyraRagEvaluationRun = {
+    id: 'run-1',
+    label: 'First run',
+    slice: 'first-slice',
+    metrics: { 'metric-1': 0.5 },
+  };
+  const el = (await fixture(html`
+    <lr-rag-eval-dashboard
+      .metrics=${[
+        { ...firstMetric, id: '' },
+        firstMetric,
+        { ...firstMetric, label: 'Later metric' },
+      ]}
+      .runs=${[
+        { ...firstRun, id: ' ' },
+        firstRun,
+        { ...firstRun, label: 'Later run', slice: 'later-slice' },
+      ]}
+    ></lr-rag-eval-dashboard>
+  `)) as LyraRagEvalDashboard;
+
+  expect(el.shadowRoot!.querySelectorAll('[part~="metric"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1);
+  expect(
+    (el.shadowRoot!.querySelector('lr-stat') as LyraStat).label
+  ).to.equal(firstMetric.label);
+  expect(el.shadowRoot!.querySelector('[data-slice="later-slice"]') === null).to.be.true;
+
+  const metricSelected = oneEvent(el, 'lr-metric-change');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="metric"]')!.click();
+  expect((await metricSelected).detail).to.deep.equal({ metricId: firstMetric.id });
+
+  const runSelected = oneEvent(el, 'lr-run-select');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="run"]')!.click();
+  expect((await runSelected).detail).to.deep.equal({ run: firstRun });
 });

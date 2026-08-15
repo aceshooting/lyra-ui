@@ -6,9 +6,7 @@
 - **Class** `LyraBoxPlot`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated property** `accessibleDescription` / `accessible-description` since `8.2.3`; use property `description="…"`; removal not before `10.0.0` — description follows the mirrored chart vocabulary while accessibleDescription remains a compatibility alias.
-- **Deprecated property** `accessibleLabel` / `accessible-label` since `8.2.3`; use property `label="…"`; removal not before `10.0.0` — label follows the mirrored chart vocabulary while accessibleLabel remains a compatibility alias.
-- **Deprecated property** `boxes` since `8.2.3`; use property `.datasets = […]`; removal not before `10.0.0` — datasets follows the chart-family vocabulary while boxes remains a compatibility alias over the same immutable data.
+- **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 11 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

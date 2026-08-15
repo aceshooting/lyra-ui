@@ -433,9 +433,9 @@ describe("lr-code-block-core", () => {
   });
 
   it("falls back to plain text when the highlighter throws while tokenizing", async () => {
-    // Hold the exact `languages` object so we can reach the shared highlighter that
-    // loadShikiHighlighterCore() caches by object identity -- the same instance the
-    // component's tokenize() calls -- and make its codeToHtml throw.
+    // Reach the shared highlighter through the component-owned snapshot that
+    // loadShikiHighlighterCore() caches by object identity, then make its
+    // codeToHtml throw.
     const languages = { json: jsonGrammar };
     const el = (await fixture(
       html`<lr-code-block-core
@@ -449,7 +449,13 @@ describe("lr-code-block-core", () => {
       undefined,
       { timeout: 8000 }
     );
-    const hl = await loadShikiHighlighterCore(languages);
+    expect(el.languages).not.to.equal(languages);
+    expect(Object.isFrozen(el.languages)).to.be.true;
+    expect(el.languages.json).not.to.equal(jsonGrammar);
+    expect(Object.isFrozen(el.languages.json)).to.be.true;
+    const hl = await loadShikiHighlighterCore(
+      el.languages as Record<string, ShikiLanguageInput>
+    );
     hl!.codeToHtml = () => {
       throw new Error("malformed grammar");
     };

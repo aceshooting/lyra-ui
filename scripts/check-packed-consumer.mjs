@@ -582,7 +582,7 @@ console.log('Lit-free gemstone data import passed.');
   tag,
 } from '@aceshooting/lyra-ui';
 import { LyraEmpty as GranularLyraEmpty } from '@aceshooting/lyra-ui/components/overlays/empty/empty.class.js';
-import { loadChartAndZoom } from '@aceshooting/lyra-ui/components/charts/chart/chart-loader.js';
+import { loadChartAndZoom } from '@aceshooting/lyra-ui/components/charts/chart/chart-feature-loader.js';
 import { loadMaplibre } from '@aceshooting/lyra-ui/components/media/map/map-loader.js';
 import { loadMarkdownAndSanitizer } from '@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js';
 import { loadShikiHighlighter } from '@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js';

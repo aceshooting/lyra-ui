@@ -2,7 +2,7 @@ import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/t
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './toast-item.js';
 import './toast.js';
-import type { LyraToastItem } from './toast-item.js';
+import type { LyraToastItem, LyraToastSize, LyraToastVariant } from './toast-item.js';
 import { styles } from './toast-item.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -1767,4 +1767,24 @@ it('makes lr-show/lr-hide cancelable and the after-events not', async () => {
   expect(byType.get('lr-show')).to.equal(true);
   expect(byType.get('lr-hide')).to.equal(true);
   expect(byType.get('lr-after-hide')).to.equal(false);
+});
+
+it('accepts every LyraToastVariant literal via the JS property and reflects it as an attribute', async () => {
+  const el = (await fixture(html`<lr-toast-item duration="0">typed</lr-toast-item>`)) as LyraToastItem;
+  const variants: readonly LyraToastVariant[] = ['neutral', 'brand', 'success', 'warning', 'danger'];
+  for (const variant of variants) {
+    el.variant = variant;
+    await el.updateComplete;
+    expect(el.getAttribute('variant')).to.equal(variant);
+  }
+});
+
+it('accepts every LyraToastSize literal via the JS property and reflects it as an attribute', async () => {
+  const el = (await fixture(html`<lr-toast-item duration="0">typed</lr-toast-item>`)) as LyraToastItem;
+  const sizes: readonly LyraToastSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'];
+  for (const size of sizes) {
+    el.size = size;
+    await el.updateComplete;
+    expect(el.getAttribute('size')).to.equal(size);
+  }
 });

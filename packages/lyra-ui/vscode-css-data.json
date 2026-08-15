@@ -663,35 +663,35 @@
       "name": "--indent-guide-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree>`** (default: `var(--lr-color-border)`) — Indentation guide color."
+        "value": "**`<lr-tree>`, `<lr-tree-item>`** (default: `var(--lr-color-border)`) — Indentation guide color."
       }
     },
     {
       "name": "--indent-guide-offset",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree>`** (default: `0`) — Block-axis inset for indentation guides."
+        "value": "**`<lr-tree>`** (default: `0`) — Block-axis inset for indentation guides.\n\n**`<lr-tree-item>`** (default: `0`) — Block-axis inset at both ends of the indentation guide."
       }
     },
     {
       "name": "--indent-guide-style",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree>`** (default: `solid`) — Indentation guide border style."
+        "value": "**`<lr-tree>`, `<lr-tree-item>`** (default: `solid`) — Indentation guide border style."
       }
     },
     {
       "name": "--indent-guide-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree>`** (default: `0`) — Indentation guide width."
+        "value": "**`<lr-tree>`, `<lr-tree-item>`** (default: `0`) — Indentation guide width."
       }
     },
     {
       "name": "--indent-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-data-grid>`** (default: `var(--lr-size-1-25rem)`) — Tree-level indentation.\n\n**`<lr-tree>`** (default: `var(--lr-space-l)`) — Indentation step for nested items."
+        "value": "**`<lr-data-grid>`** (default: `var(--lr-size-1-25rem)`) — Tree-level indentation.\n\n**`<lr-tree>`** (default: `var(--lr-space-l)`) — Indentation step for nested items.\n\n**`<lr-tree-item>`** (default: `var(--lr-space-l)`) — Indentation step applied once per nesting depth."
       }
     },
     {
@@ -1185,6 +1185,13 @@
       }
     },
     {
+      "name": "--lr-archive-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-archive-viewer>`** (default: `none`) — Maximum block size of the scrollable body. Also settable via the `max-height` property."
+      }
+    },
+    {
       "name": "--lr-artifact-panel-view-active-bg",
       "description": {
         "kind": "markdown",
@@ -1244,7 +1251,7 @@
       "name": "--lr-attachment-chip-spinner-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-attachment-chip>`** (default: `0.8s`) — Duration of one indeterminate upload-spinner rotation. The ambient loop stops under reduced motion."
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-transition-ambient)`) — Duration and easing of one indeterminate upload-spinner rotation. The ambient loop stops under reduced motion."
       }
     },
     {
@@ -1363,7 +1370,7 @@
       "name": "--lr-avatar-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` steps its private default alongside the diameter, so the initials track the circle instead of staying at one fixed size across every tier."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-font-size-m)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` steps its private default alongside the diameter, so the initials track the circle instead of staying at one fixed size across every tier."
       }
     },
     {
@@ -1391,7 +1398,7 @@
       "name": "--lr-avatar-group-badge-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar-group>`** (default: `var(--lr-font-size-sm)`) — Font size of the \"+N\" badge label. `size` steps its private default across the same six-step ladder as `<lr-avatar>`'s own `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight."
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-font-size-m)`) — Font size of the \"+N\" badge label. `size` steps its private default across the same six-step ladder as `<lr-avatar>`'s own `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight."
       }
     },
     {
@@ -2588,7 +2595,7 @@
       "name": "--lr-chunk-inspector-current-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chunk-inspector>`** (default: `var(--lr-color-brand-quiet)`) — Background of the chunk matching `activeId`. **Contrast-sensitive:** paired with `--lr-chunk-inspector-current-color`, which has to keep a 4.5:1 ratio against it."
+        "value": "**`<lr-chunk-inspector>`** (default: `var(--lr-color-brand-quiet)`) — Background of the chunk matching `activeChunkId`. **Contrast-sensitive:** paired with `--lr-chunk-inspector-current-color`, which has to keep a 4.5:1 ratio against it."
       }
     },
     {
@@ -7453,7 +7460,7 @@
       "name": "--lr-progress-ring-indicator-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-progress-ring>`** (default: `var(--lr-color-brand)`) — Indicator stroke color."
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-progress-ring-indicator-variant-color)`) — Indicator stroke color, overriding the variant palette below."
       }
     },
     {
@@ -7461,6 +7468,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-progress-ring>`** (default: `var(--lr-transition-base)`) — Determinate indicator transition."
+      }
+    },
+    {
+      "name": "--lr-progress-ring-indicator-variant-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-ring>`** (default: `var(--lr-color-fill-loud,var(--lr-color-brand))`) — Palette slot: the active `variant`'s loud fill from the shared semantic grid. Feeds `--lr-progress-ring-indicator-color` above unless that (or the upstream `--indicator-color` alias) is itself set."
       }
     },
     {
@@ -7684,7 +7698,7 @@
       "name": "--lr-radio-button-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio-button>`** (default: `var(--lr-space-xs)`) — Gap between the start/prefix wrapper, label, and end/suffix wrapper in both `<lr-radio-button>` and `<lr-radio appearance=\"button\">`."
+        "value": "**`<lr-radio>`** (default: `var(--lr-space-xs)`) — Gap between the present start/prefix, label, and end/suffix wrappers in `appearance=\"button\"`.\n\n**`<lr-radio-button>`** (default: `var(--lr-space-xs)`) — Gap between the start/prefix wrapper, label, and end/suffix wrapper in both `<lr-radio-button>` and `<lr-radio appearance=\"button\">`."
       }
     },
     {
@@ -8468,56 +8482,56 @@
       "name": "--lr-schema-viewer-error-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-danger-quiet)`) — Error issue background."
+        "value": "**`<lr-json-schema-viewer>`** (default: `var(--lr-color-danger-quiet)`) — Error issue background."
       }
     },
     {
       "name": "--lr-schema-viewer-error-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-danger)`) — Error issue border."
+        "value": "**`<lr-json-schema-viewer>`** (default: `var(--lr-color-danger)`) — Error issue border."
       }
     },
     {
       "name": "--lr-schema-viewer-info-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Info issue background."
+        "value": "**`<lr-json-schema-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Info issue background."
       }
     },
     {
       "name": "--lr-schema-viewer-info-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-brand)`) — Info issue border."
+        "value": "**`<lr-json-schema-viewer>`** (default: `var(--lr-color-brand)`) — Info issue border."
       }
     },
     {
       "name": "--lr-schema-viewer-max-indent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-size-12rem)`) — Maximum visual indentation; complete JSON Pointer paths and selection semantics remain unchanged at deeper levels."
+        "value": "**`<lr-json-schema-viewer>`** (default: `var(--lr-size-12rem)`) — Maximum visual indentation; complete JSON Pointer paths and selection semantics remain unchanged at deeper levels."
       }
     },
     {
       "name": "--lr-schema-viewer-selected-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-brand)`) — Selected node branch."
+        "value": "**`<lr-json-schema-viewer>`** (default: `var(--lr-color-brand)`) — Selected node branch."
       }
     },
     {
       "name": "--lr-schema-viewer-warning-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-warning-quiet)`) — Warning issue background."
+        "value": "**`<lr-json-schema-viewer>`** (default: `var(--lr-color-warning-quiet)`) — Warning issue background."
       }
     },
     {
       "name": "--lr-schema-viewer-warning-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-warning)`) — Warning issue border."
+        "value": "**`<lr-json-schema-viewer>`** (default: `var(--lr-color-warning)`) — Warning issue border."
       }
     },
     {

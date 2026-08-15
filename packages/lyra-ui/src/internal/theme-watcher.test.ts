@@ -312,6 +312,46 @@ describe('ThemeWatcher', () => {
     }
   });
 
+  it('does not scan watched roots for an unrelated shadow-root stylesheet replacement', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const watchedRoot = host.attachShadow({ mode: 'open' });
+    const unrelatedHost = document.body.appendChild(document.createElement('div'));
+    const unrelatedRoot = unrelatedHost.attachShadow({ mode: 'open' });
+    const watchedSheets = watchedRoot.adoptedStyleSheets;
+    const unrelatedSheets = unrelatedRoot.adoptedStyleSheets;
+    const originalQuerySelectorAll = watchedRoot.querySelectorAll.bind(watchedRoot);
+    let watchedRootScans = 0;
+    Object.defineProperty(watchedRoot, 'querySelectorAll', {
+      configurable: true,
+      value(selectors: string) {
+        if (selectors === 'style, link') watchedRootScans += 1;
+        return originalQuerySelectorAll(selectors);
+      },
+    });
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      const baselineScans = watchedRootScans;
+      unrelatedRoot.adoptedStyleSheets = [new CSSStyleSheet()];
+      await aTimeout(0);
+      expect(calls).to.equal(0);
+      expect(watchedRootScans).to.equal(baselineScans);
+
+      watchedRoot.adoptedStyleSheets = [new CSSStyleSheet()];
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+      expect(watchedRootScans).to.be.greaterThan(baselineScans);
+    } finally {
+      disconnect();
+      watchedRoot.adoptedStyleSheets = watchedSheets;
+      unrelatedRoot.adoptedStyleSheets = unrelatedSheets;
+      unrelatedHost.remove();
+      delete (watchedRoot as unknown as Record<string, unknown>)
+        .querySelectorAll;
+    }
+  });
+
   it('reacts when a constructed rule declaration changes without replacing its sheet', async () => {
     const { host, connect, disconnect } = await makeHost();
     let calls = 0;

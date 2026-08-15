@@ -177,7 +177,7 @@ it('resizes a resizable column through its native pointer handle and emits live 
   // exercised through the dispatched move/up events below.
   handle.setPointerCapture = () => {};
   handle.releasePointerCapture = () => {};
-  let detail: { key: string; width: number } | undefined;
+  let detail: { columnKey: string; width: number } | undefined;
   el.addEventListener('lr-column-resize', (event) => (detail = (event as CustomEvent).detail));
 
   handle.dispatchEvent(
@@ -191,7 +191,7 @@ it('resizes a resizable column through its native pointer handle and emits live 
   await el.updateComplete;
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 140 }));
 
-  expect(detail?.key).to.equal('name');
+  expect(detail?.columnKey).to.equal('name');
   expect(detail?.width).to.be.greaterThan(80);
   expect((el.shadowRoot!.querySelector('col') as HTMLElement).style.inlineSize).to.equal(`${detail!.width}px`);
 });
@@ -498,7 +498,7 @@ it('honors preventDefault() on the drag-end lr-column-resize commit by reverting
   handle.setPointerCapture = () => {};
   handle.releasePointerCapture = () => {};
   el.addEventListener('lr-column-resize', (event) => {
-    const custom = event as CustomEvent<{ key: string; width: number }>;
+    const custom = event as CustomEvent<{ columnKey: string; width: number }>;
     if (custom.cancelable) custom.preventDefault();
   });
 
@@ -695,7 +695,7 @@ it("reverts to the first drag's committed width (not the declared one) when a se
 
   // Second drag's drag-end commit is vetoed.
   el.addEventListener('lr-column-resize', (event) => {
-    const custom = event as CustomEvent<{ key: string; width: number }>;
+    const custom = event as CustomEvent<{ columnKey: string; width: number }>;
     if (custom.cancelable) custom.preventDefault();
   });
   handle.dispatchEvent(
@@ -1161,7 +1161,7 @@ it('opens an editable cell on double-click and emits a typed edit intent', async
   input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
   const event = await eventPromise;
 
-  expect(event.detail.key).to.equal('name');
+  expect(event.detail.columnKey).to.equal('name');
   expect(event.detail.value).to.equal('Renamed');
   expect(event.detail.row).to.deep.equal(rows[0]);
   await el.updateComplete;
@@ -1667,8 +1667,8 @@ it('supports opt-in multiple row selection without changing the default presenta
   const eventPromise = oneEvent(el, 'lr-selection-change');
   row.click();
   const event = await eventPromise;
-  expect(event.detail.keys).to.deep.equal(['a']);
-  expect(el.selectedKeys.has('a')).to.be.true;
+  expect(event.detail.rowKeys).to.deep.equal(['a']);
+  expect(el.selectedRowKeys.has('a')).to.be.true;
   expect(row.getAttribute('aria-selected')).to.equal('true');
 });
 
@@ -1678,16 +1678,16 @@ it('omits blank controlled keys while retaining valid off-page selection identit
   el.rows = rows;
   el.rowKey = (row) => row.id;
   el.selectionMode = 'multiple';
-  el.selectedKeys = new Set(['   ', 'a']);
-  el.expandedKeys = new Set(['', '   ', 'off-page']);
+  el.selectedRowKeys = new Set(['   ', null, false, {}, 'a'] as unknown as Array<string | number>);
+  el.expandedRowKeys = new Set(['', '   ', undefined, true, [], 'off-page'] as unknown as Array<string | number>);
   await el.updateComplete;
 
-  expect([...el.selectedKeys]).to.deep.equal(['a']);
-  expect([...el.expandedKeys]).to.deep.equal(['off-page']);
+  expect([...el.selectedRowKeys]).to.deep.equal(['a']);
+  expect([...el.expandedRowKeys]).to.deep.equal(['off-page']);
   const pending = oneEvent(el, 'lr-selection-change');
   el.shadowRoot!.querySelectorAll<HTMLElement>('[part=row]')[1]!.click();
-  expect((await pending).detail.keys).to.deep.equal(['a', 'b']);
-  expect([...el.selectedKeys]).to.deep.equal(['a', 'b']);
+  expect((await pending).detail.rowKeys).to.deep.equal(['a', 'b']);
+  expect([...el.selectedRowKeys]).to.deep.equal(['a', 'b']);
 });
 
 it('supports single row selection and emits the selected key', async () => {
@@ -1702,8 +1702,8 @@ it('supports single row selection and emits the selected key', async () => {
   const eventPromise = oneEvent(el, 'lr-selection-change');
   row.click();
   const event = await eventPromise;
-  expect(event.detail.keys).to.deep.equal(['a']);
-  expect([...el.selectedKeys]).to.deep.equal(['a']);
+  expect(event.detail.rowKeys).to.deep.equal(['a']);
+  expect([...el.selectedRowKeys]).to.deep.equal(['a']);
 });
 
 it('enforces single cardinality when a populated multiple selection switches modes live', async () => {
@@ -1712,23 +1712,23 @@ it('enforces single cardinality when a populated multiple selection switches mod
   el.rows = rows;
   el.rowKey = (row) => row.id;
   el.selectionMode = 'multiple';
-  el.selectedKeys = new Set(['a', 'b']);
+  el.selectedRowKeys = new Set(['a', 'b']);
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="row"][aria-selected="true"]').length).to.equal(2);
 
   el.selectionMode = 'single';
   await el.updateComplete;
 
-  expect([...el.selectedKeys]).to.deep.equal(['a']);
+  expect([...el.selectedRowKeys]).to.deep.equal(['a']);
   expect(el.shadowRoot!.querySelectorAll('[part="row"][aria-selected="true"]').length).to.equal(1);
   expect(el.shadowRoot!.querySelector('[part="row"][aria-selected="true"]')!.getAttribute('data-row-key')).to.equal(
     'string:a'
   );
 
   el.selectionMode = 'multiple';
-  el.selectedKeys = new Set(['b']);
+  el.selectedRowKeys = new Set(['b']);
   await el.updateComplete;
-  expect([...el.selectedKeys]).to.deep.equal(['b']);
+  expect([...el.selectedRowKeys]).to.deep.equal(['b']);
   expect(el.shadowRoot!.querySelectorAll('[part="row"][aria-selected="true"]').length).to.equal(1);
 });
 
@@ -2253,13 +2253,13 @@ it('does not emit lr-row-click and does not swallow the click when a button insi
   expect(rowClicked).to.be.false;
 });
 
-it('sets aria-selected="true" only on the row matching selectedKeys', async () => {
+it('sets aria-selected="true" only on the row matching selectedRowKeys', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   el.rowKey = (r) => r.id;
   el.selectionMode = 'single';
-  el.selectedKeys = new Set(['b']);
+  el.selectedRowKeys = new Set(['b']);
   await el.updateComplete;
   const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
   expect(firstRow.getAttribute('aria-selected')).to.equal('false');
@@ -2386,12 +2386,12 @@ it('gives only the roving-tabindex row (default: the first row) a tabindex of 0,
   expect(secondRow.getAttribute('tabindex')).to.equal('-1');
 });
 
-it('uses selectedKeys as the default roving-tabindex row when no row has been focused yet', async () => {
+it('uses selectedRowKeys as the default roving-tabindex row when no row has been focused yet', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   el.rowKey = (r) => r.id;
-  el.selectedKeys = new Set(['b']);
+  el.selectedRowKeys = new Set(['b']);
   await el.updateComplete;
   const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
   expect(firstRow.getAttribute('tabindex')).to.equal('-1');
@@ -3123,10 +3123,10 @@ describe('column width', () => {
 });
 
 describe('expandable rows', () => {
-  it('exposes expandedKeys defaulting to an empty Set', async () => {
+  it('exposes expandedRowKeys defaulting to an empty Set', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
-    expect(el.expandedKeys).to.be.instanceOf(Set);
-    expect(el.expandedKeys.size).to.equal(0);
+    expect(el.expandedRowKeys).to.be.instanceOf(Set);
+    expect(el.expandedRowKeys.size).to.equal(0);
   });
 
   const expandableColumns: TableColumn<Row>[] = [
@@ -3181,7 +3181,7 @@ describe('expandable rows', () => {
     expect(toggleCells[1].querySelector('button') != null).to.equal(true); // row 'b' (Beta)
   });
 
-  it('emits lr-row-expand-toggle with { row, key } when the chevron button is clicked, and does not also emit lr-row-click', async () => {
+  it('emits lr-row-expand-toggle with { row, rowKey } when the chevron button is clicked, and does not also emit lr-row-click', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = expandableColumns;
     el.rows = rows;
@@ -3196,7 +3196,7 @@ describe('expandable rows', () => {
     setTimeout(() => firstToggleButton.click());
     const ev = await oneEvent(el, 'lr-row-expand-toggle');
     expect(ev.detail.row).to.deep.equal(rows[0]);
-    expect(ev.detail.key).to.equal('a');
+    expect(ev.detail.rowKey).to.equal('a');
     expect(rowClicked).to.be.false;
   });
 
@@ -3218,13 +3218,13 @@ describe('expandable rows', () => {
     expect(toggleFired).to.be.false;
   });
 
-  it('renders the expanded panel row with the correct colspan when a row key is in expandedKeys', async () => {
+  it('renders the expanded panel row with the correct colspan when a row key is in expandedRowKeys', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = expandableColumns;
     el.rows = rows;
     el.rowKey = (r) => r.id;
     el.expandedContent = (r) => html`<p class="panel">${r.name} details</p>`;
-    el.expandedKeys = new Set(['a']);
+    el.expandedRowKeys = new Set(['a']);
     await el.updateComplete;
 
     const expandedRow = el.shadowRoot!.querySelector('[part="expanded-row"]');
@@ -3233,33 +3233,33 @@ describe('expandable rows', () => {
     expect(expandedCell.getAttribute('colspan')).to.equal('3'); // 2 columns + 1 toggle column
     expect(expandedCell.querySelector('.panel')!.textContent).to.equal('Alpha details');
 
-    // Only one row is in expandedKeys — only one expanded-row renders.
+    // Only one row is in expandedRowKeys — only one expanded-row renders.
     expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(1);
   });
 
-  it('removes the expanded panel row when its key is removed from expandedKeys', async () => {
+  it('removes the expanded panel row when its key is removed from expandedRowKeys', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = expandableColumns;
     el.rows = rows;
     el.rowKey = (r) => r.id;
     el.expandedContent = (r) => html`<p>${r.name} details</p>`;
-    el.expandedKeys = new Set(['a']);
+    el.expandedRowKeys = new Set(['a']);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="expanded-row"]')).to.exist;
 
-    el.expandedKeys = new Set();
+    el.expandedRowKeys = new Set();
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="expanded-row"]')) == null).to.be.true;
   });
 
-  it('does not render an expanded panel row for a row that fails canExpand, even if its key is in expandedKeys', async () => {
+  it('does not render an expanded panel row for a row that fails canExpand, even if its key is in expandedRowKeys', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = expandableColumns;
     el.rows = rows;
     el.rowKey = (r) => r.id;
     el.expandedContent = (r) => html`<p>${r.name} details</p>`;
     el.canExpand = (r) => r.id !== 'a';
-    el.expandedKeys = new Set(['a', 'b']);
+    el.expandedRowKeys = new Set(['a', 'b']);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(1); // only 'b'
   });
@@ -3294,7 +3294,7 @@ describe('expandable rows', () => {
     el.rows = rows;
     el.rowKey = (r) => r.id;
     el.expandedContent = (r) => html`<p>${r.name} details</p>`;
-    el.expandedKeys = new Set(['a']);
+    el.expandedRowKeys = new Set(['a']);
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
@@ -3419,10 +3419,10 @@ describe('localization', () => {
     const toggle = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLButtonElement;
     expect(toggle.getAttribute('aria-label')).to.equal('Développer');
 
-    // `expandedKeys` is a controlled prop -- the toggle button only emits
+    // `expandedRowKeys` is a controlled prop -- the toggle button only emits
     // lr-row-expand-toggle, it doesn't mutate state itself (see the
     // `emits lr-row-expand-toggle` test above).
-    el.expandedKeys = new Set(['a']);
+    el.expandedRowKeys = new Set(['a']);
     await el.updateComplete;
     expect(toggle.getAttribute('aria-label')).to.equal('Réduire');
   });
@@ -3936,7 +3936,7 @@ describe('rowTotal / grandTotal', () => {
     el.rowKey = (r) => r.id;
     el.rowTotal = (r) => r.score;
     el.expandedContent = (r) => html`<p>${r.name} details</p>`;
-    el.expandedKeys = new Set(['a']);
+    el.expandedRowKeys = new Set(['a']);
     await el.updateComplete;
     const expandedCell = el.shadowRoot!.querySelector('[part="expanded-cell"]') as HTMLElement;
     // 2 data columns + 1 leading expand-toggle column + 1 trailing row-total column
@@ -4366,7 +4366,7 @@ describe('--lr-table-row-selected-bg', () => {
     el.columns = columns;
     el.rows = rows;
     el.rowKey = (r) => r.id;
-    el.selectedKeys = new Set(['a']);
+    el.selectedRowKeys = new Set(['a']);
     await el.updateComplete;
     return el;
   };
@@ -5020,7 +5020,7 @@ describe("editTrigger: 'always'", () => {
     const eventPromise = oneEvent(el, 'lr-cell-edit');
     input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
     const event = await eventPromise;
-    expect(event.detail.key).to.equal('score');
+    expect(event.detail.columnKey).to.equal('score');
     expect(event.detail.value).to.equal(42);
     expect(event.detail.row).to.deep.equal(rows[0]);
     await el.updateComplete;
@@ -5576,7 +5576,7 @@ describe('lr-table client-side sorting', () => {
     expect(ev.detail.row.id).to.equal('cy');
     await el.updateComplete;
     // 'cy' is index 2 in `rows`, so the index-based fallback key must be 2, not its sorted slot 0.
-    expect([...el.selectedKeys]).to.deep.equal([2]);
+    expect([...el.selectedRowKeys]).to.deep.equal([2]);
     expect(firstRow.getAttribute('aria-selected')).to.equal('true');
   });
 
@@ -6161,6 +6161,19 @@ it('activates the focused row from Enter and Space', async () => {
 });
 
 describe('v9 bounded and transactional contracts', () => {
+  it('inspects only the first 10,000 column positions even when sparse entries are invalid', async () => {
+    const sparse = new Array<TableColumn<Row>>(10_001);
+    sparse[9_999] = columns[0]!;
+    sparse[10_000] = columns[1]!;
+    const el = await fixture<LyraTable<Row>>(html`<lr-table></lr-table>`);
+
+    el.columns = sparse;
+
+    expect(el.columns).to.deep.equal([columns[0]]);
+    expect(el.columns[0] === columns[0]).to.equal(true);
+    expect(Object.isFrozen(el.columns)).to.equal(true);
+  });
+
   it('clone-owns readonly collection inputs and returns detached selection snapshots', async () => {
     const inputColumns = [...columns];
     const inputRows = [...rows];
@@ -6171,8 +6184,8 @@ describe('v9 bounded and transactional contracts', () => {
     el.rows = inputRows;
     el.rowKey = (row) => row.id;
     el.selectionMode = 'multiple';
-    el.selectedKeys = inputSelected;
-    el.expandedKeys = inputExpanded;
+    el.selectedRowKeys = inputSelected;
+    el.expandedRowKeys = inputExpanded;
 
     inputColumns.length = 0;
     inputRows.length = 0;
@@ -6183,13 +6196,13 @@ describe('v9 bounded and transactional contracts', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
     expect(Object.isFrozen(el.columns)).to.equal(true);
     expect(Object.isFrozen(el.rows)).to.equal(true);
-    expect([...el.selectedKeys]).to.deep.equal(['a']);
-    expect([...el.expandedKeys]).to.deep.equal(['a']);
+    expect([...el.selectedRowKeys]).to.deep.equal(['a']);
+    expect([...el.expandedRowKeys]).to.deep.equal(['a']);
 
-    (el.selectedKeys as Set<string | number>).clear();
-    (el.expandedKeys as Set<string | number>).clear();
-    expect([...el.selectedKeys]).to.deep.equal(['a']);
-    expect([...el.expandedKeys]).to.deep.equal(['a']);
+    (el.selectedRowKeys as Set<string | number>).clear();
+    (el.expandedRowKeys as Set<string | number>).clear();
+    expect([...el.selectedRowKeys]).to.deep.equal(['a']);
+    expect([...el.expandedRowKeys]).to.deep.equal(['a']);
   });
 
   it('contains native filter input/change events and emits only the table filter contract', async () => {
@@ -6275,7 +6288,7 @@ describe('v9 bounded and transactional contracts', () => {
     expect(commits).to.equal(0);
   });
 
-  it('uses one selectedKeys store in single mode and publishes a frozen snapshot', async () => {
+  it('uses one selectedRowKeys store in single mode and publishes a frozen snapshot', async () => {
     const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
@@ -6283,16 +6296,16 @@ describe('v9 bounded and transactional contracts', () => {
     el.selectionMode = 'single';
     await el.updateComplete;
 
-    let detail: { keys: readonly (string | number)[] } | undefined;
+    let detail: { rowKeys: readonly (string | number)[] } | undefined;
     el.addEventListener('lr-selection-change', (event) => {
       detail = event.detail;
     });
     (el.shadowRoot!.querySelector('[part="row"]') as HTMLElement).click();
 
-    expect([...el.selectedKeys]).to.deep.equal(['a']);
+    expect([...el.selectedRowKeys]).to.deep.equal(['a']);
     expect('selectedKey' in el).to.equal(false);
-    expect(detail?.keys).to.deep.equal(['a']);
-    expect(Object.isFrozen(detail?.keys)).to.equal(true);
+    expect(detail?.rowKeys).to.deep.equal(['a']);
+    expect(Object.isFrozen(detail?.rowKeys)).to.equal(true);
     expect(Object.isFrozen(detail)).to.equal(true);
   });
 

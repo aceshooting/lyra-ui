@@ -1,6 +1,7 @@
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
@@ -149,6 +150,8 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Blank source ids and later duplicates are ignored before summary counts, rendering, or actions.
+ * The first source for an id wins.
  *
  * @customElement lr-knowledge-base
  * @event lr-source-create - The toolbar "Add source" affordance was activated. No detail.
@@ -179,8 +182,6 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * @since 4.1.0
  */
 export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['sources']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -220,6 +221,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['sources']);
+
   static override styles = [LyraElement.styles, styles];
 
   /** The sources to list, in display order. */
@@ -234,6 +237,13 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   /** Hides the toolbar's "Add source" affordance, e.g. for a read-only or permission-gated view. */
   @property({ type: Boolean, attribute: 'hide-create', reflect: true }) hideCreate = false;
+
+  private get normalizedSources(): KnowledgeSource[] {
+    return firstByRetrievalIdentity(
+      Array.isArray(this.sources) ? this.sources : [],
+      (source) => source.id
+    );
+  }
 
   private syncStatusLabel(status: KnowledgeSourceSyncStatus): string {
     switch (status) {
@@ -397,11 +407,11 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     ];
   }
 
-  private renderSummary(): TemplateResult {
-    const total = this.sources.length;
-    const synced = this.sources.filter((s) => s.syncStatus === 'synced').length;
-    const syncing = this.sources.filter((s) => s.syncStatus === 'syncing').length;
-    const attention = this.sources.filter(
+  private renderSummary(sources: readonly KnowledgeSource[]): TemplateResult {
+    const total = sources.length;
+    const synced = sources.filter((s) => s.syncStatus === 'synced').length;
+    const syncing = sources.filter((s) => s.syncStatus === 'syncing').length;
+    const attention = sources.filter(
       (s) => s.syncStatus === 'error' || s.indexingHealth === 'failed' || s.indexingHealth === 'degraded',
     ).length;
     const numberFormat = getNumberFormat(this.effectiveLocale);
@@ -433,6 +443,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   }
 
   override render(): TemplateResult {
+    const sources = this.normalizedSources;
     const heading = this.label || this.localize('knowledgeBaseHeading');
     return html`
       <div part="base">
@@ -449,11 +460,13 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
               </lr-button>`
             : nothing}
         </div>
-        ${!this.hideSummary && this.sources.length > 0 ? this.renderSummary() : nothing}
+        ${!this.hideSummary && sources.length > 0
+          ? this.renderSummary(sources)
+          : nothing}
         <lr-table
           part="table"
           .columns=${this.tableColumns()}
-          .rows=${this.sources}
+          .rows=${sources}
           .rowKey=${(row: KnowledgeSource) => row.id}
           .accessibleLabel=${heading}
           empty-heading=${this.localize('knowledgeBaseEmptyHeading')}

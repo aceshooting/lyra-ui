@@ -4,6 +4,7 @@ import type {
   LyraClipboardWriteFailure,
   LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 
 /** A stable identity used by selection and expansion state. */
 export type DataGridKey = string | number;
@@ -152,7 +153,11 @@ export interface DataGridState extends DataGridColumnState {
   readonly sort?: DataGridSortingState;
   readonly filters?: readonly DataGridStateFilter[];
   readonly search?: string;
+  readonly selectedRowKeys?: readonly DataGridKey[];
+  readonly expandedRowKeys?: readonly DataGridKey[];
+  /** Mirrored compatibility alias for `selectedRowKeys`. */
   readonly selectedKeys?: readonly DataGridKey[];
+  /** Mirrored compatibility alias for `expandedRowKeys`. */
   readonly expandedKeys?: readonly DataGridKey[];
   readonly page?: number;
   readonly pageSize?: number;
@@ -183,6 +188,8 @@ export interface DataGridScrollOptions {
 }
 
 export interface DataGridCellDetail<Row = Record<string, unknown>> {
+  readonly rowKey: DataGridKey;
+  readonly columnId: string;
   readonly column: DataGridColumn<Row>;
   readonly value: unknown;
   readonly row: Row;
@@ -227,6 +234,8 @@ export interface DataGridPageDetail {
 }
 
 export interface DataGridRowDetail<Row = Record<string, unknown>> {
+  readonly rowKey: DataGridKey;
+  /** Mirrored compatibility alias for `rowKey`. */
   readonly key: DataGridKey;
   readonly row: Row;
 }
@@ -240,6 +249,8 @@ export interface DataGridGroupDetail<Row = Record<string, unknown>> {
 }
 
 export interface DataGridSelectionDetail<Row = Record<string, unknown>> {
+  readonly selectedRowKeys: readonly DataGridKey[];
+  /** Mirrored compatibility alias for `selectedRowKeys`. */
   readonly selectedKeys: readonly DataGridKey[];
   readonly selectedRows: readonly Row[];
 }
@@ -247,23 +258,23 @@ export interface DataGridSelectionDetail<Row = Record<string, unknown>> {
 export interface LyraDataGridEventMap<Row = Record<string, unknown>> {
   focus: FocusEvent;
   blur: FocusEvent;
-  request: CustomEvent<DataGridRequest>;
+  request: CustomEvent<LyraEventDetailSnapshot<DataGridRequest>>;
   'lr-cell-click': CustomEvent<DataGridCellDetail<Row>>;
   'lr-cell-contextmenu': CustomEvent<DataGridCellContextMenuDetail<Row>>;
-  'lr-column-move': CustomEvent<DataGridColumnMoveDetail>;
+  'lr-column-move': CustomEvent<LyraEventDetailSnapshot<DataGridColumnMoveDetail>>;
   'lr-column-pin': CustomEvent<DataGridColumnPinDetail>;
   'lr-column-resize': CustomEvent<DataGridColumnResizeDetail>;
   'lr-column-visibility-change': CustomEvent<DataGridColumnVisibilityDetail>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
-  'lr-data-error': CustomEvent<DataGridDataErrorDetail>;
+  'lr-data-error': CustomEvent<LyraEventDetailSnapshot<DataGridDataErrorDetail>>;
   'lr-filter-change': CustomEvent<Readonly<{ filters: readonly DataGridFilter[] }>>;
-  'lr-group-collapse': CustomEvent<DataGridGroupDetail<Row>>;
-  'lr-group-expand': CustomEvent<DataGridGroupDetail<Row>>;
+  'lr-group-collapse': CustomEvent<Readonly<DataGridGroupDetail<Row>>>;
+  'lr-group-expand': CustomEvent<Readonly<DataGridGroupDetail<Row>>>;
   'lr-page-change': CustomEvent<DataGridPageDetail>;
   'lr-row-collapse': CustomEvent<DataGridRowDetail<Row>>;
   'lr-row-expand': CustomEvent<DataGridRowDetail<Row>>;
-  'lr-row-select': CustomEvent<DataGridSelectionDetail<Row>>;
+  'lr-row-select': CustomEvent<Readonly<DataGridSelectionDetail<Row>>>;
   'lr-sort-change': CustomEvent<Readonly<{ sort: DataGridSortingState }>>;
   'lr-error': CustomEvent<null>;
 }

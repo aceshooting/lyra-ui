@@ -1,7 +1,10 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventDetailSnapshot,
+} from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
@@ -121,6 +124,16 @@ const VALIDITY_FLAG_KEYS: ReadonlySet<string> = new Set<
   'typeMismatch',
   'valueMissing',
 ]);
+
+/** Let Lit's `useDefault` restore this component's false default on attribute removal. The shared
+ * native converter intentionally treats a missing attribute as true for true-default controls. */
+const comboboxSpellcheckConverter = {
+  ...spellcheckConverter,
+  fromAttribute: (value: string | null, type?: unknown): boolean | undefined =>
+    value === null
+      ? undefined
+      : spellcheckConverter.fromAttribute?.(value, type),
+};
 
 function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
   return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value);
@@ -277,9 +290,15 @@ export interface LyraComboboxEventMap {
   'lr-clear': CustomEvent<null>;
   'lr-create': CustomEvent<{ inputValue: string }>;
   'lr-filter': CustomEvent<ComboboxFilterDetail>;
-  'lr-change': CustomEvent<{ value: string | string[] }>;
-  input: InputEvent | CustomEvent<{ value: string | string[] }>;
-  change: CustomEvent<{ value: string | string[] }>;
+  'lr-change': CustomEvent<
+    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+  >;
+  input: InputEvent | CustomEvent<
+    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+  >;
+  change: CustomEvent<
+    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+  >;
   blur: FocusEvent;
   focus: FocusEvent;
   'lr-blur': CustomEvent<null>;
@@ -320,13 +339,13 @@ export interface LyraComboboxEventMap {
  *   expand icon — so consumer content never sits outboard of the dropdown chevron.
  * @slot clear-icon - Replaces the clear button's built-in icon.
  * @slot expand-icon - Replaces the dropdown indicator's built-in icon.
- * @event {CustomEvent<{ value: string | string[] }>} change - The selection changed through user
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} change - The selection changed through user
  * interaction. A bubbling, composed, non-cancelable event carrying `detail: { value }` (the new
  * committed selection: a string in single mode, a string[] in `multiple` mode).
- * @event {InputEvent | CustomEvent<{ value: string | string[] }>} input - The user typed in the
+ * @event {InputEvent | CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} input - The user typed in the
  * filter or changed the selection. Text edits expose the original InputEvent (no `value` detail);
  * selection changes emit a bubbling, composed, non-cancelable event carrying `detail: { value }`.
- * @event {CustomEvent<{ value: string | string[] }>} lr-change - Prefixed compatibility alias fired
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} lr-change - Prefixed compatibility alias fired
  * after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s `lr-change`.
  * `detail: { value }`. Not fired for typing or a programmatic `value` assignment.
  * @event lr-show - The listbox is about to open, however `open` became true. Cancelable —
@@ -565,7 +584,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property() autocomplete = 'off';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
-  @property({ converter: spellcheckConverter }) override spellcheck = false;
+  /** Native spellchecking forwarded to the filter input. Attribute removal restores this
+   * component's declared `false` default instead of the converter's native-HTML `true` fallback. */
+  @property({ converter: comboboxSpellcheckConverter, useDefault: true })
+  override spellcheck = false;
   @property() override autocapitalize = '';
   private autocorrectValue = true;
   /** Optional no-match copy override. Omission localizes `noMatches`; a supplied string, including

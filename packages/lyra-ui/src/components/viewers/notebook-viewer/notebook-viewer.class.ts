@@ -61,6 +61,154 @@ interface NotebookDoc {
   }>;
 }
 
+const OMIT_NOTEBOOK_SNAPSHOT = Symbol('omit-notebook-snapshot');
+
+function invalidNotebookSnapshot(): NotebookDoc {
+  return Object.freeze({}) as NotebookDoc;
+}
+
+interface NotebookSnapshotTask {
+  readonly source: object;
+  readonly target: unknown[] | Record<string, unknown>;
+  readonly keys: readonly string[];
+  readonly array: boolean;
+}
+
+/** Custom-prototype JSON records are valid notebook payloads, but class/platform instances are
+ * not. Admit an ordinary/null-prototype record or one data-only prototype layer; the prototype's
+ * keys are never enumerated or copied. */
+function isNotebookDataRecord(value: object): boolean {
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === null) return true;
+    const parent = Object.getPrototypeOf(prototype);
+    const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+    if (parent === null) {
+      return !constructor || (
+        'value' in constructor &&
+        typeof constructor.value === 'function' &&
+        constructor.value.name === 'Object'
+      );
+    }
+    if (constructor) return false;
+    const parentConstructor = Object.getOwnPropertyDescriptor(parent, 'constructor');
+    return Boolean(
+      Object.getPrototypeOf(parent) === null &&
+      parentConstructor &&
+      'value' in parentConstructor &&
+      typeof parentConstructor.value === 'function' &&
+      parentConstructor.value.name === 'Object'
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Notebook assignments need their own schema-domain budget: unlike the generic public collection
+ * boundary, nbformat explicitly permits custom-prototype JSON records and validates up to 100,000
+ * JSON nodes. Reflection stays local to this opt-in boundary; values are read only from own data
+ * descriptors, traversal is iterative, repeated object references fail atomically, and every
+ * admitted container is frozen before the setter publishes it. */
+function snapshotNotebookDocument(value: unknown): NotebookDoc | typeof OMIT_NOTEBOOK_SNAPSHOT {
+  if (value === null || typeof value !== 'object' || Array.isArray(value))
+    return OMIT_NOTEBOOK_SNAPSHOT;
+
+  let remaining = MAX_JSON_NODES;
+  const seen = new WeakSet<object>();
+  const created: Array<unknown[] | Record<string, unknown>> = [];
+  const pending: NotebookSnapshotTask[] = [];
+
+  const createContainer = (
+    source: object
+  ): unknown[] | Record<string, unknown> | typeof OMIT_NOTEBOOK_SNAPSHOT => {
+    let array = false;
+    try {
+      array = Array.isArray(source);
+    } catch {
+      return OMIT_NOTEBOOK_SNAPSHOT;
+    }
+    let keys: string[];
+    let target: unknown[] | Record<string, unknown>;
+    if (array) {
+      let lengthDescriptor: PropertyDescriptor | undefined;
+      try {
+        lengthDescriptor = Object.getOwnPropertyDescriptor(source, 'length');
+      } catch {
+        return OMIT_NOTEBOOK_SNAPSHOT;
+      }
+      if (
+        !lengthDescriptor ||
+        !('value' in lengthDescriptor) ||
+        typeof lengthDescriptor.value !== 'number' ||
+        !Number.isSafeInteger(lengthDescriptor.value) ||
+        lengthDescriptor.value < 0 ||
+        lengthDescriptor.value > remaining
+      )
+        return OMIT_NOTEBOOK_SNAPSHOT;
+      keys = Array.from({ length: lengthDescriptor.value }, (_, index) => String(index));
+      target = new Array(lengthDescriptor.value) as unknown[];
+    } else {
+      if (!isNotebookDataRecord(source)) return OMIT_NOTEBOOK_SNAPSHOT;
+      try {
+        // Own-key reflection is intentionally confined to this notebook-specific boundary. The
+        // generic LyraElement snapshot rejects custom prototypes because no incremental own-key
+        // reflection API exists; nbformat's 100k domain budget governs the resulting projection.
+        keys = Object.keys(source);
+      } catch {
+        return OMIT_NOTEBOOK_SNAPSHOT;
+      }
+      if (keys.length > remaining) return OMIT_NOTEBOOK_SNAPSHOT;
+      target = {};
+    }
+    seen.add(source);
+    created.push(target);
+    pending.push({ source, target, keys, array });
+    return target;
+  };
+
+  remaining -= 1;
+  const root = createContainer(value);
+  if (root === OMIT_NOTEBOOK_SNAPSHOT) return root;
+
+  while (pending.length) {
+    const task = pending.pop()!;
+    for (const key of task.keys) {
+      let descriptor: PropertyDescriptor | undefined;
+      try {
+        descriptor = Object.getOwnPropertyDescriptor(task.source, key);
+      } catch {
+        return OMIT_NOTEBOOK_SNAPSHOT;
+      }
+      if (!descriptor) {
+        if (task.array) continue;
+        return OMIT_NOTEBOOK_SNAPSHOT;
+      }
+      if (!descriptor.enumerable || !('value' in descriptor))
+        return OMIT_NOTEBOOK_SNAPSHOT;
+      if (remaining <= 0) return OMIT_NOTEBOOK_SNAPSHOT;
+      remaining -= 1;
+      const entry = descriptor.value as unknown;
+      let snapshot = entry;
+      if (entry !== null && (typeof entry === 'object' || typeof entry === 'function')) {
+        if (typeof entry === 'function' || seen.has(entry))
+          return OMIT_NOTEBOOK_SNAPSHOT;
+        snapshot = createContainer(entry);
+        if (snapshot === OMIT_NOTEBOOK_SNAPSHOT) return snapshot;
+      }
+      Object.defineProperty(task.target, key, {
+        value: snapshot,
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      });
+    }
+  }
+
+  for (let index = created.length - 1; index >= 0; index -= 1)
+    Object.freeze(created[index]!);
+  return root as unknown as NotebookDoc;
+}
+
 function joinSource(source: string | readonly string[] | undefined): string {
   return typeof source === 'string' ? source : (source?.join('') ?? '');
 }
@@ -245,7 +393,7 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * @event lr-load - Fired once a notebook has been parsed and validated. `detail: { cellCount,
  *   language }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
- *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
+ *   changes, including source-reset and effective-locale re-evaluation. `detail: { query,
  *   matchCount, matchCountExact, activeIndex }`. Notebook validation caps the corpus at 2,000
  *   cells and search retains at most one match per cell. Search accepts at most 4,096 query code
  *   units and scans at most 4,000,000 source/output code units; a false `matchCountExact` makes the
@@ -277,10 +425,6 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerBase) {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'notebook',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -311,6 +455,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'notebook',
+  ]);
+
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, viewerLoadingStyles];
 
   /** URL to fetch and parse as a notebook. Ignored while `notebook` is present. */
@@ -325,10 +473,18 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
   set notebook(value: NotebookDoc | string | undefined) {
     const old = this._notebook;
-    if (Object.is(old, value)) return;
-    this._notebook = value;
+    const next = typeof value === 'string' || value === undefined
+      ? value
+      : (() => {
+        const snapshot = snapshotNotebookDocument(value);
+        return snapshot === OMIT_NOTEBOOK_SNAPSHOT
+          ? invalidNotebookSnapshot()
+          : snapshot;
+      })();
+    if (Object.is(old, next)) return;
+    this._notebook = next;
     this.requestUpdate('notebook', old);
-    if (value === undefined) {
+    if (next === undefined) {
       this.beginSourceTransition(this.src ? 'loading' : 'idle');
       if (this.isConnected) this.scheduleSourceLoad();
     } else {
@@ -373,6 +529,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   };
 
   private generation = 0;
+  private lastSearchLocale = '';
   private sanitizerGeneration = 0;
   private sanitizerFailureReported = false;
   private sourceLoadScheduled = false;
@@ -394,6 +551,16 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       this.loadState.kind === 'error' ? this.loadState.message : this.localize('loadingDocument'),
     );
     if (changed.has('src') && this._notebook === undefined) this.scheduleSourceLoad();
+    const locale = this.effectiveLocale;
+    if (locale !== this.lastSearchLocale) {
+      const shouldRecompute = this.searchQuery !== '';
+      this.lastSearchLocale = locale;
+      if (shouldRecompute) {
+        this.scheduleAfterUpdate(() => {
+          void this.search(this.searchQuery);
+        }, 'search');
+      }
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -451,6 +618,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   private resetParsedState(): void {
+    const shouldEmitSearchReset = this.searchQuery !== ''
+      || this.searchMatches.length > 0
+      || !this.searchMatchCountExact
+      || this.activeSearchIndex !== -1;
     this.sanitizerGeneration++;
     this.sanitizedOutputCache.clear();
     this.sanitizationTasks.clear();
@@ -458,6 +629,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.expandedOutputs = new Set();
     this.clearSearchState();
     this.activeCellIndex = null;
+    if (shouldEmitSearchReset) this.emitSearchChange();
   }
 
   private beginSourceTransition(kind: 'idle' | 'loading'): void {
@@ -561,6 +733,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
     const q = boundedQuery.needle;
     this.searchQuery = query;
+    this.lastSearchLocale = this.effectiveLocale;
     this.searchMatchCountExact = boundedQuery.accepted;
     if (this.loadState.kind !== 'loaded' || !q || !boundedQuery.accepted) {
       this.searchMatches = [];
@@ -873,7 +1046,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
             .items=${this.loadState.doc.cells}
             .renderItem=${this.renderCell}
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}
-            .activeId=${this.activeCellIndex ?? ''}
+            .activeItemId=${this.activeCellIndex ?? ''}
             @lr-visible-range-changed=${this.stopVirtualListEvent}
             @lr-virtual-scroll=${this.stopVirtualListEvent}
           ></lr-virtual-list>`

@@ -346,12 +346,36 @@ it("requires unique nonempty commandId values and deterministically keeps the fi
 
   el.openPalette();
   await el.updateComplete;
-  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="command"]')];
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part=command]')];
   expect(rows.map((row) => row.textContent?.trim())).to.deep.equal(["First", "Other"]);
 
   const selected = oneEvent(el, "lr-select");
   rows[0]!.click();
   expect((await selected).detail.command.commandId).to.equal("same");
+});
+
+it('omits a command whose identity accessor throws while retaining valid neighbors', async () => {
+  const hostile = { label: 'Hostile' } as { label: string; commandId: string };
+  Object.defineProperty(hostile, 'commandId', {
+    enumerable: true,
+    get: () => {
+      throw new Error('hostile command identity');
+    },
+  });
+  const el = (await fixture(
+    html`<lr-command-palette></lr-command-palette>`
+  )) as LyraCommandPalette;
+
+  el.commands = [
+    { commandId: 'before', label: 'Before' },
+    hostile,
+    { commandId: 'after', label: 'After' },
+  ];
+  el.openPalette();
+  await el.updateComplete;
+
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="command"]')];
+  expect(rows.map((row) => row.textContent?.trim())).to.deep.equal(['Before', 'After']);
 });
 
 it("case-folds command search with the effective locale", async () => {
@@ -638,6 +662,120 @@ it("does not match the default mod+k shortcut when an extra Shift modifier is he
   window.dispatchEvent(new KeyboardEvent("keydown", plainInit));
   await el.updateComplete;
   expect(el.open).to.be.true;
+});
+
+it('resolves mod+k from Client Hints when navigator.platform is reduced', async () => {
+  const platformDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    'platform'
+  );
+  const userAgentDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    'userAgent'
+  );
+  const userAgentDataDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    'userAgentData'
+  );
+  Object.defineProperty(navigator, 'userAgentData', {
+    configurable: true,
+    value: { platform: 'macOS' },
+  });
+  Object.defineProperty(navigator, 'platform', {
+    configurable: true,
+    value: '',
+  });
+  Object.defineProperty(navigator, 'userAgent', {
+    configurable: true,
+    value: 'Reduced User Agent',
+  });
+
+  let el: LyraCommandPalette | undefined;
+  try {
+    el = (await fixture(
+      html`<lr-command-palette></lr-command-palette>`
+    )) as LyraCommandPalette;
+    await el.updateComplete;
+    const chord = new KeyboardEvent('keydown', {
+      key: 'k',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(chord);
+    await el.updateComplete;
+
+    expect(chord.defaultPrevented).to.be.true;
+    expect(el.open).to.be.true;
+  } finally {
+    el?.remove();
+    if (platformDescriptor)
+      Object.defineProperty(navigator, 'platform', platformDescriptor);
+    else Reflect.deleteProperty(navigator, 'platform');
+    if (userAgentDescriptor)
+      Object.defineProperty(navigator, 'userAgent', userAgentDescriptor);
+    else Reflect.deleteProperty(navigator, 'userAgent');
+    if (userAgentDataDescriptor)
+      Object.defineProperty(navigator, 'userAgentData', userAgentDataDescriptor);
+    else Reflect.deleteProperty(navigator, 'userAgentData');
+  }
+});
+
+it('falls back to the user agent for mod+k when newer platform hints are empty', async () => {
+  const platformDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    'platform'
+  );
+  const userAgentDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    'userAgent'
+  );
+  const userAgentDataDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    'userAgentData'
+  );
+  Object.defineProperty(navigator, 'userAgentData', {
+    configurable: true,
+    value: { platform: '' },
+  });
+  Object.defineProperty(navigator, 'platform', {
+    configurable: true,
+    value: '',
+  });
+  Object.defineProperty(navigator, 'userAgent', {
+    configurable: true,
+    value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+  });
+
+  let el: LyraCommandPalette | undefined;
+  try {
+    el = (await fixture(
+      html`<lr-command-palette></lr-command-palette>`
+    )) as LyraCommandPalette;
+    await el.updateComplete;
+    const chord = new KeyboardEvent('keydown', {
+      key: 'k',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(chord);
+    await el.updateComplete;
+
+    expect(chord.defaultPrevented).to.be.true;
+    expect(el.open).to.be.true;
+  } finally {
+    el?.remove();
+    if (platformDescriptor)
+      Object.defineProperty(navigator, 'platform', platformDescriptor);
+    else Reflect.deleteProperty(navigator, 'platform');
+    if (userAgentDescriptor)
+      Object.defineProperty(navigator, 'userAgent', userAgentDescriptor);
+    else Reflect.deleteProperty(navigator, 'userAgent');
+    if (userAgentDataDescriptor)
+      Object.defineProperty(navigator, 'userAgentData', userAgentDataDescriptor);
+    else Reflect.deleteProperty(navigator, 'userAgentData');
+  }
 });
 
 it("ignores repeated hotkeys and gives one last-connected palette ownership", async () => {

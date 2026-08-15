@@ -26,8 +26,9 @@ uses the ordinary re-activate-to-clear toggle.
 **Properties:** `rating: MessageFeedbackValue = null` (`'up' | 'down' | null`, reflected),
 `detail?: MessageFeedbackDetailConfiguration` (attribute: false) — one configuration with optional
 `reasons?: readonly { id, label }[]` and `commentable?: boolean`; omit it for thumbs-only feedback.
-The record and nested reasons are a bounded clone-owned frozen snapshot; create and reassign a new
-detail record after changes.
+The record and nested reasons are a bounded clone-owned frozen snapshot; malformed, empty, blank,
+and later duplicate reason ids are omitted first-wins before selection and submission. Create and
+reassign a new detail record after changes.
 `detailFor: 'none' | 'up' | 'down' | 'both' = 'down'` (attribute `detail-for`) selects which rating
 owns that one detail panel. `disabled: boolean = false` (reflected) makes a recorded rating read-only, and
 `pending: boolean = false` (reflected) — set automatically when a submit listener prevents the

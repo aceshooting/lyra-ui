@@ -291,7 +291,7 @@ describe('lr-eval-result', () => {
     el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-selection-change', {
       bubbles: true,
       composed: true,
-      detail: { keys: ['run-a'] },
+      detail: { rowKeys: ['run-a'] },
     }));
     el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-page-change', {
       bubbles: true,
@@ -321,9 +321,12 @@ it('normalizes duplicate run, column, and rubric identities first-wins before co
         { id: 'same', label: 'Later run', output: 'later' },
       ]}
       .columns=${[
+        { key: null, label: 'Malformed null column', cell: (run: EvalRunResult) => run.label },
+        { key: false, label: 'Malformed boolean column', cell: (run: EvalRunResult) => run.label },
         { key: 'same', label: 'First column', cell: (run: EvalRunResult) => run.label },
         { key: 'same', label: 'Later column', cell: (run: EvalRunResult) => run.output },
-      ]}
+        { key: 0, label: 'Malformed numeric column', cell: (run: EvalRunResult) => run.model },
+      ] as unknown as TableColumn<EvalRunResult>[]}
       .rubricKeys=${[
         { key: 'same', type: 'comment', label: 'First rubric' },
         { key: 'same', type: 'comment', label: 'Later rubric' },

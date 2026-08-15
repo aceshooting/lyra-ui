@@ -26,7 +26,8 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   for a quiet brand-tinted background; `'filled-outlined'` keeps the border and adds that same tinted
   background; `'accent'` drops the border for a single colored accent stripe on the leading edge;
   `'plain'` has no border or background at all.
-- `orientation: 'horizontal' | 'vertical' = 'vertical'` (reflected) — vertical renders media,
+- `orientation: LyraOrientation = 'vertical'` (reflected; the shared
+  `'horizontal' | 'vertical'` layout axis) — vertical renders media,
   header/actions, body, and footer/footer-actions as sections. Horizontal arranges media/image,
   body, and `actions` in logical order and stacks them when the card's own container drops below
   30rem.

@@ -30,8 +30,10 @@ level).
 
 - `messageRole: ChatMessageRole = 'assistant'` (`'user' | 'assistant' | 'system'`, attribute
   `message-role`, reflected) — identifies the author without colliding with the platform `role`
-  attribute. The internal article receives the localized author name and styling exposes the same
-  state through `data-role`; a bare `role="assistant"` is never an authoring API.
+  attribute. The role-owning internal article receives the localized author name directly through
+  `aria-label`; a host `aria-label` overrides it by attribute presence (including an explicitly
+  empty override). Styling exposes the same state through `data-role`; a bare `role="assistant"`
+  is never an authoring API.
 - `status: ChatMessageStatus = 'sent'` (`'sending' | 'sent' | 'failed' | 'streaming'`, reflected) —
   drives the footer's status dot/text, `status="failed"`'s danger treatment on the bubble, and the
   built-in retry button

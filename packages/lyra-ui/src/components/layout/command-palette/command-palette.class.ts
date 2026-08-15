@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { detectPlatform } from '../../../internal/platform.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   activateOverlay,
@@ -10,12 +11,7 @@ import { styles } from './command-palette.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_commandPaletteEmpty,
-  LYRA_DEFAULT_commandPaletteLabel,
-  LYRA_DEFAULT_commandPalettePlaceholder,
-  LYRA_DEFAULT_commandPaletteResults,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Fallbacks only. The rendered heights come from `--lr-command-palette-row-height` /
@@ -78,7 +74,7 @@ export interface LyraCommand {
   shortcut?: string;
   keywords?: readonly string[];
   disabled?: boolean;
-  /** Optional leading TemplateResult glyph, rendered before `label` (`PaletteItem.icon`/
+  /** Optional leading TemplateResult glyph, rendered before `label` (`LyraPaletteItem.icon`/
    *  `LyraSegmentedItem.icon` precedent -- not restricted to a square icon-only shape). */
   icon?: unknown;
   onSelect?: () => void;
@@ -135,6 +131,17 @@ export interface LyraCommandPaletteEventMap {
  * @since 4.0.0
  */
 export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    commandPaletteEmpty: LYRA_DEFAULT_commandPaletteEmpty,
+    commandPaletteLabel: LYRA_DEFAULT_commandPaletteLabel,
+    commandPalettePlaceholder: LYRA_DEFAULT_commandPalettePlaceholder,
+    commandPaletteResults: LYRA_DEFAULT_commandPaletteResults,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'commands',
   ]);
@@ -143,18 +150,6 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     Object.freeze(['commands']);
   protected static override readonly identityEventDetailProperties =
     Object.freeze({ 'lr-select': Object.freeze(['command']) });
-
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      commandPaletteEmpty: LYRA_DEFAULT_commandPaletteEmpty,
-      commandPaletteLabel: LYRA_DEFAULT_commandPaletteLabel,
-      commandPalettePlaceholder: LYRA_DEFAULT_commandPalettePlaceholder,
-      commandPaletteResults: LYRA_DEFAULT_commandPaletteResults,
-    };
-  // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -180,7 +175,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
    *  identity is retained. `commandId` must be unique and nonempty; malformed rows and later
    *  duplicates from untyped boundaries are omitted deterministically. */
   @property({ attribute: false }) commands: readonly LyraCommand[] = [];
-  /** Exact global activation chord. `mod` resolves to Command on macOS and Control elsewhere. */
+  /** Exact global activation chord. `mod` resolves to Command on macOS and Control elsewhere,
+   * using Client Hints with legacy platform and reduced user-agent fallbacks. */
   @property() hotkey = 'mod+k';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private queryText = '';
@@ -212,6 +208,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private filteredRows: LyraCommand[] = [];
   private normalizedForCommands?: readonly LyraCommand[];
   private normalizedRows: LyraCommand[] = [];
+  private normalizedCommandIds = new Map<LyraCommand, string>();
   private resultModelFor?: readonly LyraCommand[];
   private resultModelRowPitch?: number;
   private resultModelGroupPitch?: number;
@@ -226,8 +223,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       this.normalizedForCommands = this.commands;
       const seen = new Set<string>();
       this.normalizedRows = [];
+      this.normalizedCommandIds = new Map();
       for (const command of this.commands ?? []) {
-        const commandId = command?.commandId;
+        let commandId: unknown;
+        try {
+          commandId = command?.commandId;
+        } catch {
+          continue;
+        }
         if (
           typeof commandId !== 'string' ||
           commandId.trim() === '' ||
@@ -236,6 +239,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
           continue;
         seen.add(commandId);
         this.normalizedRows.push(command);
+        this.normalizedCommandIds.set(command, commandId);
       }
     }
     return this.normalizedRows;
@@ -277,7 +281,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     }
     const rows = this.filtered;
     let nextIndex = this.activeCommandId
-      ? rows.findIndex((command) => command.commandId === this.activeCommandId)
+      ? rows.findIndex(
+          (command) => this.normalizedCommandIds.get(command) === this.activeCommandId
+        )
       : -1;
     if (nextIndex < 0 || rows[nextIndex]?.disabled) {
       const start = Math.min(
@@ -289,7 +295,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     }
     this.activeIndex = nextIndex;
     this.activeCommandId =
-      nextIndex >= 0 ? rows[nextIndex]?.commandId : undefined;
+      nextIndex >= 0 ? this.normalizedCommandIds.get(rows[nextIndex]!) : undefined;
   }
 
   // Runs after render so the manager can resolve the rendered [part="dialog"] panel -- mirrors
@@ -539,9 +545,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     )
       return false;
     const isMac =
-      (
-        this.runtimeWindow ?? this.ownerDocument.defaultView
-      )?.navigator.platform.includes('Mac') ?? false;
+      detectPlatform(
+        (this.runtimeWindow ?? this.ownerDocument.defaultView)?.navigator
+      ) === 'mac';
     const expectedCtrl =
       modifiers.has('ctrl') || (modifiers.has('mod') && !isMac);
     const expectedMeta =
@@ -612,7 +618,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   private setActiveIndex(rows: LyraCommand[], index: number): void {
     this.activeIndex = index;
-    this.activeCommandId = index >= 0 ? rows[index]?.commandId : undefined;
+    this.activeCommandId =
+      index >= 0 ? this.normalizedCommandIds.get(rows[index]!) : undefined;
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {

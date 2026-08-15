@@ -97,7 +97,7 @@ export const Default: Story = {
       <button @click=${openDialog}>Select tools</button>
       <lr-tool-select-dialog
         .tools=${TOOLS}
-        .selected=${['web_search', 'fetch_url', 'run_python']}
+        .selectedToolIds=${['web_search', 'fetch_url', 'run_python']}
       ></lr-tool-select-dialog>
     </div>
   `,
@@ -108,7 +108,7 @@ export const OpenInitially: Story = {
     <lr-tool-select-dialog
       .open=${context.viewMode !== 'docs'}
       .tools=${TOOLS}
-      .selected=${['web_search', 'fetch_url', 'run_python', 'read_file']}
+      .selectedToolIds=${['web_search', 'fetch_url', 'run_python', 'read_file']}
     ></lr-tool-select-dialog>
   `,
 };
@@ -120,7 +120,7 @@ export const UsingDefaults: Story = {
       .open=${context.viewMode !== 'docs'}
       use-defaults
       .tools=${TOOLS}
-      .selected=${['web_search', 'fetch_url', 'run_python', 'read_file', 'write_file']}
+      .selectedToolIds=${['web_search', 'fetch_url', 'run_python', 'read_file', 'write_file']}
     ></lr-tool-select-dialog>
   `,
 };
@@ -133,20 +133,20 @@ export const NoCategories: Story = {
         { id: 'a', name: 'Tool A', description: 'An uncategorized tool.' },
         { id: 'b', name: 'Tool B', description: 'Another uncategorized tool.' },
       ]}
-      .selected=${['a']}
+      .selectedToolIds=${['a']}
     ></lr-tool-select-dialog>
   `,
 };
 
 export const Empty: Story = {
-  render: (_args, context) => html`<lr-tool-select-dialog .open=${context.viewMode !== 'docs'} .tools=${[]} .selected=${[]}></lr-tool-select-dialog>`,
+  render: (_args, context) => html`<lr-tool-select-dialog .open=${context.viewMode !== 'docs'} .tools=${[]} .selectedToolIds=${[]}></lr-tool-select-dialog>`,
 };
 
 export const WithFooterActions: Story = {
   render: () => html`
     <div>
       <button @click=${openDialog}>Select tools</button>
-      <lr-tool-select-dialog .tools=${TOOLS} .selected=${['web_search', 'run_python']}>
+      <lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${['web_search', 'run_python']}>
         <div slot="footer">
           <button
             @click=${(e: Event) =>
@@ -166,11 +166,11 @@ export const Events: Story = {
       <button @click=${openDialog}>Select tools</button>
       <lr-tool-select-dialog
         .tools=${TOOLS}
-        .selected=${['web_search']}
-        @lr-change=${(e: CustomEvent<{ selected: string[]; useDefaults: boolean }>) => {
+        .selectedToolIds=${['web_search']}
+        @lr-change=${(e: CustomEvent<{ selectedToolIds: string[]; useDefaults: boolean }>) => {
           const out = document.getElementById('tool-select-dialog-log');
           if (out) {
-            out.textContent = `lr-change: selected=[${e.detail.selected.join(', ')}] useDefaults=${e.detail.useDefaults}`;
+            out.textContent = `lr-change: selectedToolIds=[${e.detail.selectedToolIds.join(', ')}] useDefaults=${e.detail.useDefaults}`;
           }
         }}
         @lr-close=${(e: CustomEvent<string>) => {
@@ -191,13 +191,13 @@ export const CancelableChange: Story = {
       <lr-tool-select-dialog
         .open=${context.viewMode !== 'docs'}
         .tools=${TOOLS}
-        .selected=${['web_search']}
+        .selectedToolIds=${['web_search']}
         @lr-change=${(event: CustomEvent<ToolSelectionChangeDetail>) => {
           event.preventDefault();
           const dialog = event.currentTarget as LyraToolSelectDialog;
           const status = dialog.parentElement?.querySelector('[data-veto-status]');
           if (status) {
-            status.textContent = `Rejected selected=[${event.detail.selected.join(', ')}] useDefaults=${event.detail.useDefaults}`;
+            status.textContent = `Rejected selectedToolIds=[${event.detail.selectedToolIds.join(', ')}] useDefaults=${event.detail.useDefaults}`;
           }
         }}
       ></lr-tool-select-dialog>
@@ -225,7 +225,7 @@ export const Narrow320: Story = {
         },
         ...TOOLS,
       ]}
-      .selected=${['long-tool', 'web_search']}
+      .selectedToolIds=${['long-tool', 'web_search']}
     >
       <button slot="footer">${NARROW_UNBROKEN}</button>
     </lr-tool-select-dialog>
@@ -250,7 +250,7 @@ export const LargeCatalogContinuation: Story = {
         name: `Catalog tool ${index + 1}`,
         category: index < 210 ? 'Workspace' : 'External',
       }))}
-      .selected=${['catalog-tool-224']}
+      .selectedToolIds=${['catalog-tool-224']}
     ></lr-tool-select-dialog>
   `,
 };

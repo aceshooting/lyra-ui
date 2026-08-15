@@ -1,6 +1,6 @@
 import { elementUpdated, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './split-panel.js';
-import { SNAP_NONE, type LyraSplitPanel, type SplitPanelSnapFunction } from './split-panel.js';
+import { SNAP_NONE, type LyraSplitPanel, type LyraSplitPanelSnapFunction } from './split-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function divider(element: LyraSplitPanel): HTMLElement {
@@ -538,7 +538,7 @@ it('snaps pointer dragging to fixed, repeated, and functional snap points', asyn
   pointer(window, 'pointerup', 7, 294);
 
   let functionOptions: { pos: number; size: number; snapThreshold: number } | undefined;
-  const snap: SplitPanelSnapFunction = (options) => {
+  const snap: LyraSplitPanelSnapFunction = (options) => {
     functionOptions = options;
     return options.pos < 220 ? 180 : options.pos;
   };

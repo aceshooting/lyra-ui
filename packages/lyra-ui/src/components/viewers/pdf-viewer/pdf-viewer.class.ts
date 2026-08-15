@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { invalidateLyraLocaleCache } from '../../../internal/localization-runtime.js';
 import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import {
   isAbortError,
@@ -27,19 +28,22 @@ import {
   buildQuoteAnchor,
   createTextQuoteIndex,
   rangeFromTextQuoteMatch,
+  rangesFromTextQuoteMatches,
   TEXT_QUOTE_LIMITS,
   type TextQuoteIndex,
+  type TextQuoteMatch,
   type TextQuoteScope,
   type TextQuoteWorkBudget,
 } from '../../../internal/text-quote.js';
 import type { LyraHighlightLayer, HighlightLayerItem, LyraHighlightLayerEventMap } from '../highlight-layer/highlight-layer.class.js';
-import type { LyraAnchor } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
 import type {
   LyraPageViewerSnapshot,
   LyraPageViewerStateChangeDetail,
 } from '../page-rail/page-rail.class.js';
-import type { VirtualListIndexedSource } from '../../layout/virtual-list/virtual-list.class.js';
+import type { LyraVirtualListIndexedSource } from '../../layout/virtual-list/virtual-list.class.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import {
   loadPdfJs,
@@ -68,11 +72,211 @@ const MAX_THUMBNAIL_WIDTH = 2048;
 const MAX_PAGE_COUNT = 100_000;
 const MAX_SEARCH_MATCHES = 10_000;
 const MAX_PAINTED_SEARCH_MATCHES = 200;
+const MAX_PAINTED_SEARCH_MARKS = 200;
 const MAX_PAINTED_HIGHLIGHTS = 100;
+const MAX_HIGHLIGHT_RESOLUTION_ATTEMPTS = 1_000;
 const MAX_HIGHLIGHT_RECTS = 1_000;
 const MAX_SEARCH_PAGES = 1_000;
 const MAX_OUTLINE_ITEMS = 10_000;
 const MAX_OUTLINE_DEPTH = 100;
+const MAX_PDF_TEXT_CHUNKS = TEXT_QUOTE_LIMITS.maxNodes;
+
+interface PdfHighlightPaintBudget {
+  readonly work: TextQuoteWorkBudget;
+  remainingResolutionAttempts: number;
+  remainingItems: number;
+  remainingRects: number;
+}
+
+interface PdfPageTextResult {
+  readonly text: string;
+  readonly truncated: boolean;
+}
+
+interface PdfPageTextCacheEntry {
+  promise: Promise<PdfPageTextResult>;
+  cancelled: boolean;
+  reader?: ReadableStreamDefaultReader<unknown>;
+}
+
+interface PdfTextAccumulator {
+  readonly chunks: string[];
+  length: number;
+  inspectedItems: number;
+  truncated: boolean;
+}
+
+interface PdfTextLayerBudget {
+  remainingItems: number;
+  remainingCodeUnits: number;
+}
+
+function isReadablePdfTextStream(value: unknown): value is ReadableStream<unknown> {
+  return (typeof value === 'object' || typeof value === 'function')
+    && value !== null
+    && 'getReader' in value
+    && typeof value.getReader === 'function';
+}
+
+/** Appends one peer chunk without enumerating or retaining anything beyond the page ceilings. */
+function appendPdfTextItems(items: unknown, accumulator: PdfTextAccumulator): void {
+  if (!Array.isArray(items)) return;
+  for (let index = 0; index < items.length; index++) {
+    if (accumulator.inspectedItems >= TEXT_QUOTE_LIMITS.maxNodes) {
+      accumulator.truncated = true;
+      return;
+    }
+    accumulator.inspectedItems++;
+    const item = items[index];
+    const value = item && typeof item === 'object' && 'str' in item && typeof item.str === 'string'
+      ? item.str
+      : '';
+    const separator = item && typeof item === 'object' && 'hasEOL' in item && item.hasEOL === true
+      ? '\n'
+      : ' ';
+    const remaining = TEXT_QUOTE_LIMITS.maxNodeCodeUnits - accumulator.length;
+    if (remaining <= 0) {
+      accumulator.truncated = true;
+      return;
+    }
+    const retained = value.slice(0, remaining);
+    accumulator.chunks.push(retained);
+    accumulator.length += retained.length;
+    if (retained.length !== value.length) {
+      accumulator.truncated = true;
+      return;
+    }
+    if (accumulator.length >= TEXT_QUOTE_LIMITS.maxNodeCodeUnits) {
+      accumulator.truncated = true;
+      return;
+    }
+    accumulator.chunks.push(separator);
+    accumulator.length++;
+  }
+}
+
+function boundedPdfTextLayerChunk(
+  value: unknown,
+  budget: PdfTextLayerBudget,
+): { readonly value: unknown; readonly exhausted: boolean } {
+  if (!value || typeof value !== 'object' || !('items' in value) || !Array.isArray(value.items)) {
+    return { value, exhausted: false };
+  }
+  const source = value as {
+    readonly items: unknown[];
+    readonly styles?: unknown;
+    readonly lang?: unknown;
+  };
+  const items: unknown[] = [];
+  const fontNames = new Set<string>();
+  let inspected = 0;
+  while (
+    inspected < source.items.length
+    && budget.remainingItems > 0
+    && budget.remainingCodeUnits > 0
+  ) {
+    const item = source.items[inspected++]!;
+    if (!item || typeof item !== 'object') {
+      items.push(item);
+      budget.remainingItems--;
+      continue;
+    }
+    const text = 'str' in item && typeof item.str === 'string' ? item.str : undefined;
+    if (text !== undefined && text.length > budget.remainingCodeUnits) {
+      const retained = text.slice(0, budget.remainingCodeUnits);
+      if (retained) {
+        const record = item as Record<string, unknown>;
+        items.push({
+          str: retained,
+          dir: record['dir'],
+          width: record['width'],
+          height: record['height'],
+          transform: record['transform'],
+          fontName: record['fontName'],
+          hasEOL: record['hasEOL'],
+        });
+        if (typeof record['fontName'] === 'string') fontNames.add(record['fontName']);
+        budget.remainingItems--;
+      }
+      budget.remainingCodeUnits = 0;
+      break;
+    }
+    items.push(item);
+    budget.remainingItems--;
+    if (text !== undefined) budget.remainingCodeUnits -= text.length;
+    if ('fontName' in item && typeof item.fontName === 'string') fontNames.add(item.fontName);
+  }
+  const styles: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
+  if (source.styles && typeof source.styles === 'object') {
+    const sourceStyles = source.styles as Record<string, unknown>;
+    for (const fontName of fontNames) styles[fontName] = sourceStyles[fontName];
+  }
+  return {
+    value: { items, styles, lang: source.lang },
+    exhausted: inspected < source.items.length
+      || budget.remainingItems <= 0
+      || budget.remainingCodeUnits <= 0,
+  };
+}
+
+function singleChunkPdfTextStream(value?: unknown): ReadableStream<unknown> {
+  return new ReadableStream<unknown>({
+    start(controller) {
+      if (value !== undefined) controller.enqueue(value);
+      controller.close();
+    },
+  });
+}
+
+/** Wraps PDF.js's peer stream so its TextLayer never receives more DOM-producing input than Lyra
+ * can subsequently index. A direct legacy `{ items }` stand-in is synchronously clipped first;
+ * every other non-stream/opaque value becomes an empty stream and therefore fails closed. */
+function boundedPdfTextLayerSource(source: unknown): unknown {
+  const budget: PdfTextLayerBudget = {
+    remainingItems: TEXT_QUOTE_LIMITS.maxNodes,
+    remainingCodeUnits: TEXT_QUOTE_LIMITS.maxNodeCodeUnits,
+  };
+  if (typeof ReadableStream === 'undefined') return undefined;
+  if (!isReadablePdfTextStream(source)) {
+    const bounded = boundedPdfTextLayerChunk(source, budget);
+    const hasBoundedItems = bounded.value
+      && typeof bounded.value === 'object'
+      && 'items' in bounded.value
+      && Array.isArray(bounded.value.items);
+    return singleChunkPdfTextStream(hasBoundedItems ? bounded.value : undefined);
+  }
+  const reader = source.getReader();
+  let chunks = 0;
+  let closed = false;
+  return new ReadableStream<unknown>({
+    async pull(controller): Promise<void> {
+      if (closed) return;
+      try {
+        const result = await reader.read();
+        if (result.done) {
+          closed = true;
+          controller.close();
+          return;
+        }
+        chunks++;
+        const bounded = boundedPdfTextLayerChunk(result.value, budget);
+        controller.enqueue(bounded.value);
+        if (bounded.exhausted || chunks >= MAX_PDF_TEXT_CHUNKS) {
+          closed = true;
+          void reader.cancel().catch(() => undefined);
+          controller.close();
+        }
+      } catch (error) {
+        closed = true;
+        controller.error(error);
+      }
+    },
+    cancel(reason): Promise<void> {
+      closed = true;
+      return reader.cancel(reason).then(() => undefined, () => undefined);
+    },
+  });
+}
 
 /** Clamps a candidate zoom multiplier to `[MIN_ZOOM, MAX_ZOOM]`, defaulting non-finite/`NaN` input
  *  to `1` (100%) rather than letting it reach the PDF.js viewport scale unsanitized. */
@@ -100,6 +304,7 @@ function containsAcrossShadowBoundaries(ancestor: Node, node: Node): boolean {
 interface PdfPaintWorkBudget {
   traversalNodes: number;
   codeUnits: number;
+  marks: number;
 }
 
 function nextPdfPaintNode(node: Node, root: Node): Node | null {
@@ -119,14 +324,20 @@ function wrapPdfSearchRange(
   budget: PdfPaintWorkBudget,
 ): HTMLElement[] {
   const doc = range.startContainer.ownerDocument;
-  if (!doc) return [];
+  if (!doc || budget.marks <= 0) return [];
   const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
   if (range.startContainer === range.endContainer && range.startContainer.nodeType === textNodeType) {
     const textNode = range.startContainer as Text;
-    const selectedLength = Math.max(0, range.endOffset - range.startOffset);
-    if (budget.traversalNodes <= 0 || selectedLength > budget.codeUnits) return [];
+    // `splitText()` copies the retained head/tail, so charge the complete source node rather than
+    // only the selected slice; a tiny match inside a hostile multi-megabyte node is still large work.
+    if (budget.traversalNodes <= 0 || budget.codeUnits <= 0) return [];
+    const inspectedLength = textNode.data.length;
+    if (inspectedLength > budget.codeUnits) {
+      budget.codeUnits = 0;
+      return [];
+    }
     budget.traversalNodes--;
-    budget.codeUnits -= selectedLength;
+    budget.codeUnits -= inspectedLength;
     let target = textNode;
     if (range.endOffset < target.data.length) target.splitText(range.endOffset);
     if (range.startOffset > 0) target = target.splitText(range.startOffset);
@@ -135,6 +346,7 @@ function wrapPdfSearchRange(
     mark.setAttribute('part', part);
     target.parentNode?.insertBefore(mark, target);
     mark.appendChild(target);
+    budget.marks--;
     return [mark];
   }
   const ancestor = range.commonAncestorContainer;
@@ -144,16 +356,25 @@ function wrapPdfSearchRange(
     budget.traversalNodes--;
     if (node.nodeType === textNodeType) {
       const textNode = node as Text;
-      if (textNode.data.length > budget.codeUnits) break;
+      if (textNode.data.length > budget.codeUnits) {
+        budget.codeUnits = 0;
+        break;
+      }
       budget.codeUnits -= textNode.data.length;
       try {
-        if (textNode.data.length > 0 && range.intersectsNode(textNode)) covered.push(textNode);
+        if (textNode.data.length > 0 && range.intersectsNode(textNode)) {
+          // Fail closed before mutating the DOM when one logical match alone would exceed the
+          // remaining aggregate mark budget. Returning a prefix would visually misquote it.
+          if (covered.length >= budget.marks) return [];
+          covered.push(textNode);
+        }
       } catch {
         return [];
       }
     }
     node = nextPdfPaintNode(node, ancestor);
   }
+  if (node) return [];
   const marks: HTMLElement[] = [];
   for (const textNode of covered) {
     const start = textNode === range.startContainer ? range.startOffset : 0;
@@ -168,7 +389,38 @@ function wrapPdfSearchRange(
     mark.appendChild(target);
     marks.push(mark);
   }
+  budget.marks -= marks.length;
   return marks;
+}
+
+/** Rejoins only the Text nodes split by `wrapPdfSearchRange`; unlike `parent.normalize()`, this
+ * never recursively walks an entire text layer once per mark. */
+function unwrapPdfSearchMark(mark: Element): void {
+  const parent = mark.parentNode;
+  if (!parent) return;
+  const textNodeType = mark.ownerDocument.defaultView?.Node.TEXT_NODE ?? 3;
+  const before = mark.previousSibling;
+  const after = mark.nextSibling;
+  const first = mark.firstChild;
+  while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+  parent.removeChild(mark);
+
+  if (before?.nodeType === textNodeType && first?.nodeType === textNodeType) {
+    (before as Text).appendData((first as Text).data);
+    first.parentNode?.removeChild(first);
+    if (after?.nodeType === textNodeType) {
+      (before as Text).appendData((after as Text).data);
+      after.parentNode?.removeChild(after);
+    }
+    return;
+  }
+  if (first?.nodeType === textNodeType && after?.nodeType === textNodeType) {
+    (first as Text).appendData((after as Text).data);
+    after.parentNode?.removeChild(after);
+  } else if (!first && before?.nodeType === textNodeType && after?.nodeType === textNodeType) {
+    (before as Text).appendData((after as Text).data);
+    after.parentNode?.removeChild(after);
+  }
 }
 
 type PdfLoadState =
@@ -227,7 +479,9 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * genuine activation click).
  *
  * @customElement lr-pdf-viewer
- * @event lr-render-error - Fired when fetching, parsing, or rendering fails.
+ * @event lr-render-error - Fired when fetching, parsing, or rendering fails, including synchronous
+ *   or rejected text-layer rendering. Text-layer failures are contained without an unhandled
+ *   promise rejection.
  * @event lr-page-change - Fired when the current page changes.
  * @event lr-zoom-change - Fired when the zoom multiplier changes.
  * @event lr-load - Fired once the document reaches `ready`. `detail: { pageCount }`.
@@ -237,7 +491,7 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @event lr-anchor-result - Fired after an `anchor` (or `scrollToAnchor()` call) is applied.
  *   `detail: { found }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
- *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
+ *   changes, including source-reset and effective-locale re-evaluation. `detail: { query,
  *   matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code units,
  *   scans at most 1,000 pages/1,000,000 corpus code units/4,000,000 search code units, and retains
  *   at most 10,000 matches; a false `matchCountExact` makes `matchCount` a lower bound (including
@@ -336,7 +590,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   });
   /** True while `page` was last set by the user scrolling the page list rather than by
    *  `nextPage()`/`previousPage()`/an explicit `page` assignment. `renderBody()` withholds
-   *  `activeId` in that case so `<lr-virtual-list>` doesn't `scrollActiveIntoView()` back to a
+   *  `activeItemId` in that case so `<lr-virtual-list>` doesn't `scrollActiveIntoView()` back to a
    *  page boundary on every scroll-driven page crossing, fighting the user's own scroll. */
   @state() private scrollDrivenPage = false;
   private loadLibrary: () => Promise<PdfJsApi | null> = loadPdfJs;
@@ -344,31 +598,35 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private readonly pageCanvases = new Map<number, HTMLCanvasElement>();
   private readonly pageRenderTasks = new Map<number, { cancel(): void }>();
   private readonly pageRenderVersions = new Map<number, number>();
+  private pageRenderGeneration = 0;
   private readonly pageCanvasRefs = new Map<number, (canvas: Element | undefined) => void>();
   private readonly textLayerContainers = new Map<number, HTMLElement>();
   private readonly textLayerContainerRefs = new Map<number, (element: Element | undefined) => void>();
   private readonly textLayers = new Map<number, { cancel(): void }>();
   private readonly textLayerReadyPromises = new Map<number, Promise<void>>();
-  private readonly pageTextCache = new Map<number, Promise<string>>();
+  private readonly pageTextCache = new Map<number, PdfPageTextCacheEntry>();
   private readonly pageTextTruncated = new Set<number>();
   private readonly pageSearchIndexes = new Map<number, PdfPageTextIndex>();
   private readonly mountedPageTextIndexes = new Map<number, PdfPageTextIndex>();
   private pdfTextScopeBuilds = 0;
   private readonly thumbnailRenderTasks = new Map<HTMLCanvasElement, { cancel(): void }>();
   private readonly thumbnailRenderVersions = new Map<HTMLCanvasElement, number>();
+  private thumbnailRenderGeneration = 0;
   private readonly pageHighlightItems = new Map<number, HighlightLayerItem[]>();
   private readonly pageHighlightLayerElements = new Map<number, LyraHighlightLayer>();
   private readonly highlightLayerRefs = new Map<number, (element: Element | undefined) => void>();
   private textSelectionCleanup?: () => void;
   private readonly pendingPageMountWaitCancels = new Set<() => void>();
   private pdfPageSourceCount = -1;
-  private pdfPageSource: VirtualListIndexedSource<number> = this.createPageSource(0);
+  private pdfPageSource: LyraVirtualListIndexedSource<number> = this.createPageSource(0);
 
   @state() private searchMatches: PdfSearchMatch[] = [];
   private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
   private searchGeneration = 0;
+  private textIndexLocale?: string;
+  private pendingSearchResetEvent = false;
   private anchorOperationGeneration = 0;
   private readonly announcements = new ViewerAnnouncementController(this);
 
@@ -391,21 +649,24 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
     if (changed.has('src')) {
       // Search match page/offset coordinates are only meaningful for the document they were found
-      // in -- silently reset (no event) rather than emit, mirroring how pageHighlightItems/
-      // pageTextCache reset without notifying either (see updated() below); the painted marks
-      // themselves are torn down for free along with the old page DOM as lr-virtual-list
-      // re-renders with the new document. Reset here (not updated()) so re-assigning these @state()
-      // fields folds into this same update cycle instead of scheduling a follow-up one.
-      this.searchGeneration++;
-      this.searchQuery = '';
-      this.searchMatches = [];
-      this.searchMatchCountExact = true;
-      this.searchActiveIndex = -1;
+      // in. Reset here (rather than after rendering) so the state belongs to this update; the
+      // canonical empty search event is emitted from updated() when there was public state to clear.
+      this.pendingSearchResetEvent ||= this.hasSearchState();
+      // Painted marks are torn down with the old page DOM. Reassigning these @state() fields here
+      // folds the reset into this update instead of scheduling a follow-up render.
+      this.resetSearchState();
     }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const locale = this.effectiveLocale;
+    const localeChanged = this.textIndexLocale !== undefined && this.textIndexLocale !== locale;
+    this.textIndexLocale = locale;
+    if (localeChanged) {
+      this.pageSearchIndexes.clear();
+      this.mountedPageTextIndexes.clear();
+    }
     this.announcements.transition(
       'load',
       this.loadState.kind,
@@ -414,28 +675,34 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (changed.has('src')) {
       this.scheduleAfterUpdate(() => {
         void this.load();
-      });
+      }, 'pdf-load');
       this.pageHighlightItems.clear();
       // getPageText() caches by page number alone -- without clearing it here, a page-1 lookup
       // from the previous document would still resolve to a cache hit, silently returning stale
       // text (and misdirecting any in-flight text-quote anchor scan) once the new document loads.
-      this.pageTextCache.clear();
-      this.pageTextTruncated.clear();
+      this.clearPageTextCache();
       this.pageSearchIndexes.clear();
       this.mountedPageTextIndexes.clear();
+      if (this.pendingSearchResetEvent) {
+        this.pendingSearchResetEvent = false;
+        this.emitSearchChange();
+      }
     }
     if (changed.has('page') && this.loadState.kind === 'ready') {
       this.emit('lr-page-change', { page: this.page, pageCount: this.loadState.pageCount });
       this.publishPageViewerSnapshot('ready', this.loadState.pageCount);
     }
     if (changed.has('zoom') && changed.get('zoom') !== undefined) this.emit('lr-zoom-change', { zoom: this.zoom });
-    if (changed.has('highlights') || changed.has('activeHighlightId')) {
-      for (const pageNumber of this.pageCanvases.keys()) void this.resolvePageHighlights(pageNumber);
+    if (changed.has('highlights') || changed.has('activeHighlightId') || localeChanged) {
+      this.resolveMountedPageHighlights();
     }
     if (changed.has('activeHighlightId')) {
       for (const layer of this.pageHighlightLayerElements.values()) {
         layer.activeHighlightId = this.activeHighlightId;
       }
+    }
+    if (localeChanged && this.searchQuery.trim()) {
+      this.scheduleAfterUpdate(() => { void this.search(this.searchQuery); }, 'pdf-search');
     }
   }
 
@@ -451,13 +718,14 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (this.hasUpdated) {
       const base = this.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null;
       if (base && !this.textSelectionCleanup) this.bindTextSelection(base);
-      if (this.src) this.scheduleAfterUpdate(() => { void this.load(); });
+      if (this.src) this.scheduleAfterUpdate(() => { void this.load(); }, 'pdf-load');
     }
   }
 
   override disconnectedCallback(): void {
     this.generation++;
-    this.searchGeneration++;
+    this.resetSearchState();
+    this.pendingSearchResetEvent = false;
     this.anchorOperationGeneration++;
     this.beginAbortableLoad();
     this.cancelPendingPageMountWaits();
@@ -472,8 +740,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.pageCanvases.clear();
     this.textLayerContainers.clear();
     this.textLayerReadyPromises.clear();
-    this.pageTextCache.clear();
-    this.pageTextTruncated.clear();
+    this.clearPageTextCache();
     this.pageSearchIndexes.clear();
     this.mountedPageTextIndexes.clear();
     this.thumbnailRenderTasks.clear();
@@ -538,7 +805,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (this.isConnected) this.emit('lr-page-viewer-state-change', { snapshot });
   }
 
-  private createPageSource(count: number): VirtualListIndexedSource<number> {
+  private createPageSource(count: number): LyraVirtualListIndexedSource<number> {
     return Object.freeze({
       count,
       itemAt: (index: number) => index + 1,
@@ -547,7 +814,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     });
   }
 
-  private indexedPages(count: number): VirtualListIndexedSource<number> {
+  private indexedPages(count: number): LyraVirtualListIndexedSource<number> {
     if (count !== this.pdfPageSourceCount) {
       this.pdfPageSourceCount = count;
       this.pdfPageSource = this.createPageSource(count);
@@ -979,62 +1246,109 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (cached) {
       this.pageTextCache.delete(page);
       this.pageTextCache.set(page, cached); // bump recency (Map iteration order doubles as LRU order)
-      return cached;
+      return (await cached.promise).text;
     }
-    const promise = this.loadPageText(page);
-    this.pageTextCache.set(page, promise);
-    promise.catch(() => this.pageTextCache.delete(page));
+    const entry: PdfPageTextCacheEntry = {
+      cancelled: false,
+      promise: Promise.resolve({ text: '', truncated: false }),
+    };
+    this.pageTextCache.set(page, entry);
     if (this.pageTextCache.size > PAGE_TEXT_CACHE_LIMIT) {
       const oldestKey = this.pageTextCache.keys().next().value;
-      if (oldestKey !== undefined) this.pageTextCache.delete(oldestKey);
+      if (oldestKey !== undefined) this.evictPageTextCacheEntry(oldestKey);
     }
-    return promise;
+    entry.promise = this.loadPageText(page, entry);
+    void entry.promise.then(
+      (result) => {
+        // An evicted/replaced promise must never mutate metadata belonging to its successor.
+        if (this.pageTextCache.get(page) !== entry) return;
+        if (result.truncated) this.pageTextTruncated.add(page);
+        else this.pageTextTruncated.delete(page);
+      },
+      () => {
+        // Conditional identity is essential here: P1 can reject after eviction while a new P2 for
+        // the same page is already cached. Unconditionally deleting by page would erase P2 (ABA).
+        if (this.pageTextCache.get(page) !== entry) return;
+        this.pageTextCache.delete(page);
+        this.pageTextTruncated.delete(page);
+      },
+    );
+    return (await entry.promise).text;
   }
 
-  private async loadPageText(page: number): Promise<string> {
+  private evictPageTextCacheEntry(page: number): void {
+    const entry = this.pageTextCache.get(page);
+    if (!entry) return;
+    this.pageTextCache.delete(page);
+    this.pageTextTruncated.delete(page);
+    entry.cancelled = true;
+    void entry.reader?.cancel().catch(() => undefined);
+  }
+
+  private clearPageTextCache(): void {
+    for (const entry of this.pageTextCache.values()) {
+      entry.cancelled = true;
+      void entry.reader?.cancel().catch(() => undefined);
+    }
+    this.pageTextCache.clear();
+    this.pageTextTruncated.clear();
+  }
+
+  private async loadPageText(
+    page: number,
+    entry: PdfPageTextCacheEntry,
+  ): Promise<PdfPageTextResult> {
     if (this.loadState.kind !== 'ready') throw new Error('No PDF document is loaded.');
     const doc = this.loadState.doc;
     const pdfPage = await doc.getPage(page);
     const DOMExceptionCtor = this.ownerDocument.defaultView?.DOMException ?? DOMException;
-    if (this.loadState.kind !== 'ready' || this.loadState.doc !== doc) throw new DOMExceptionCtor('Superseded', 'AbortError');
-    const content = await pdfPage.getTextContent();
-    if (this.loadState.kind !== 'ready' || this.loadState.doc !== doc) throw new DOMExceptionCtor('Superseded', 'AbortError');
-    const items = Array.isArray(content.items)
-      ? content.items as { str?: string; hasEOL?: boolean }[]
-      : [];
-    const chunks: string[] = [];
-    let length = 0;
-    let inspected = 0;
-    let truncated = false;
-    for (const item of items) {
-      if (inspected++ >= TEXT_QUOTE_LIMITS.maxNodes) {
-        truncated = true;
-        break;
-      }
-      const value = typeof item?.str === 'string' ? item.str : '';
-      const remaining = TEXT_QUOTE_LIMITS.maxNodeCodeUnits - length;
-      if (remaining <= 0) {
-        truncated = true;
-        break;
-      }
-      const retained = value.slice(0, remaining);
-      chunks.push(retained);
-      length += retained.length;
-      if (retained.length !== value.length) {
-        truncated = true;
-        break;
-      }
-      if (length >= TEXT_QUOTE_LIMITS.maxNodeCodeUnits) {
-        truncated = true;
-        break;
-      }
-      chunks.push(item?.hasEOL ? '\n' : ' ');
-      length++;
+    if (entry.cancelled || this.loadState.kind !== 'ready' || this.loadState.doc !== doc) {
+      throw new DOMExceptionCtor('Superseded', 'AbortError');
     }
-    if (inspected < items.length) truncated = true;
-    if (truncated) this.pageTextTruncated.add(page);
-    else this.pageTextTruncated.delete(page);
-    return chunks.join('');
+    const accumulator: PdfTextAccumulator = {
+      chunks: [],
+      length: 0,
+      inspectedItems: 0,
+      truncated: false,
+    };
+    const source = pdfPage.streamTextContent?.();
+    // The pinned pdfjs-dist peer guarantees `streamTextContent()`. Refuse a non-stream capability
+    // rather than falling back to getTextContent(), whose implementation drains and materializes an
+    // unbounded items array before Lyra can enforce its page ceiling.
+    if (!isReadablePdfTextStream(source)) throw new Error('PDF text streaming is unavailable.');
+    const reader = source.getReader();
+    entry.reader = reader;
+    let inspectedChunks = 0;
+    try {
+      while (inspectedChunks++ < MAX_PDF_TEXT_CHUNKS) {
+        const result = await reader.read();
+        if (entry.cancelled || this.loadState.kind !== 'ready' || this.loadState.doc !== doc) {
+          void reader.cancel().catch(() => undefined);
+          throw new DOMExceptionCtor('Superseded', 'AbortError');
+        }
+        if (result.done) break;
+        const value = result.value;
+        appendPdfTextItems(
+          value && typeof value === 'object' && 'items' in value ? value.items : undefined,
+          accumulator,
+        );
+        if (accumulator.truncated) {
+          void reader.cancel().catch(() => undefined);
+          break;
+        }
+      }
+      if (inspectedChunks > MAX_PDF_TEXT_CHUNKS) {
+        accumulator.truncated = true;
+        void reader.cancel().catch(() => undefined);
+      }
+    } finally {
+      if (entry.reader === reader) entry.reader = undefined;
+      reader.releaseLock();
+    }
+    if (entry.cancelled || this.loadState.kind !== 'ready' || this.loadState.doc !== doc) {
+      throw new DOMExceptionCtor('Superseded', 'AbortError');
+    }
+    return { text: accumulator.chunks.join(''), truncated: accumulator.truncated };
   }
 
   /** Renders `page` into `canvas` at `width` CSS px (default 96), devicePixelRatio-aware. Cancels a
@@ -1044,34 +1358,35 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (this.loadState.kind !== 'ready') return false;
     const { pageCount } = this.loadState;
     if (!Number.isInteger(page) || page < 1 || page > pageCount) return false;
-    this.thumbnailRenderTasks.get(canvas)?.cancel();
-    this.thumbnailRenderTasks.delete(canvas);
-    const version = (this.thumbnailRenderVersions.get(canvas) ?? 0) + 1;
-    this.thumbnailRenderVersions.set(canvas, version);
-    const doc = this.loadState.doc;
-    const pdfPage = await doc.getPage(page);
-    if (
-      this.loadState.kind !== 'ready' ||
-      this.loadState.doc !== doc ||
-      this.thumbnailRenderVersions.get(canvas) !== version
-    ) return false;
     const width = options?.width ?? DEFAULT_THUMBNAIL_WIDTH;
     if (!Number.isFinite(width) || width <= 0 || width > MAX_THUMBNAIL_WIDTH) return false;
-    const unscaledViewport = pdfPage.getViewport({ scale: 1 });
-    if (!Number.isFinite(unscaledViewport.width) || unscaledViewport.width <= 0) return false;
-    const scale = width / unscaledViewport.width;
-    const viewport = pdfPage.getViewport({ scale });
-    const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio || 1;
-    canvas.width = Math.floor(viewport.width * dpr);
-    canvas.height = Math.floor(viewport.height * dpr);
-    canvas.style.width = `${viewport.width}px`;
-    canvas.style.height = `${viewport.height}px`;
-    const context = canvas.getContext('2d');
-    if (!context) return false;
-    context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const renderTask = pdfPage.render({ canvasContext: context, viewport });
-    this.thumbnailRenderTasks.set(canvas, renderTask);
+    this.thumbnailRenderTasks.get(canvas)?.cancel();
+    this.thumbnailRenderTasks.delete(canvas);
+    const version = ++this.thumbnailRenderGeneration;
+    this.thumbnailRenderVersions.set(canvas, version);
+    const doc = this.loadState.doc;
+    let renderTask: { promise: Promise<void>; cancel(): void } | undefined;
     try {
+      const pdfPage = await doc.getPage(page);
+      if (
+        this.loadState.kind !== 'ready' ||
+        this.loadState.doc !== doc ||
+        this.thumbnailRenderVersions.get(canvas) !== version
+      ) return false;
+      const unscaledViewport = pdfPage.getViewport({ scale: 1 });
+      if (!Number.isFinite(unscaledViewport.width) || unscaledViewport.width <= 0) return false;
+      const scale = width / unscaledViewport.width;
+      const viewport = pdfPage.getViewport({ scale });
+      const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio || 1;
+      canvas.width = Math.floor(viewport.width * dpr);
+      canvas.height = Math.floor(viewport.height * dpr);
+      canvas.style.width = `${viewport.width}px`;
+      canvas.style.height = `${viewport.height}px`;
+      const context = canvas.getContext('2d');
+      if (!context) return false;
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      renderTask = pdfPage.render({ canvasContext: context, viewport });
+      this.thumbnailRenderTasks.set(canvas, renderTask);
       await renderTask.promise;
       return this.thumbnailRenderTasks.get(canvas) === renderTask &&
         this.thumbnailRenderVersions.get(canvas) === version;
@@ -1079,7 +1394,12 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (isAbortError(error)) return false;
       throw error;
     } finally {
-      if (this.thumbnailRenderTasks.get(canvas) === renderTask) this.thumbnailRenderTasks.delete(canvas);
+      if (renderTask && this.thumbnailRenderTasks.get(canvas) === renderTask) {
+        this.thumbnailRenderTasks.delete(canvas);
+      }
+      if (this.thumbnailRenderVersions.get(canvas) === version) {
+        this.thumbnailRenderVersions.delete(canvas);
+      }
     }
   }
 
@@ -1225,11 +1545,21 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   }
 
   private buildMountedPageScope(container: HTMLElement): TextQuoteScope {
-    const items: Array<{ text: string; element: HTMLElement }> = [];
+    const items: Array<{
+      text: string;
+      element: HTMLElement;
+      node: Text;
+      joinBefore: boolean;
+    }> = [];
     const doc = container.ownerDocument;
-    const walker = doc.createTreeWalker(container, doc.defaultView?.NodeFilter.SHOW_ELEMENT ?? 1);
+    const showAll = doc.defaultView?.NodeFilter.SHOW_ALL ?? 0xffffffff;
+    const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
+    const walker = doc.createTreeWalker(container, showAll);
+    const textRunOwners = new WeakMap<Node, HTMLElement | null>();
+    textRunOwners.set(container, null);
     let traversed = 0;
     let traversalTruncated = false;
+    let previousRun: HTMLElement | null = null;
     let node: Node | null;
     while ((node = walker.nextNode())) {
       traversed++;
@@ -1237,13 +1567,27 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         traversalTruncated = true;
         break;
       }
-      const element = node as HTMLElement;
-      if (element.localName !== 'span') continue;
-      items.push({ text: element.textContent ?? '', element });
-      if (items.length > TEXT_QUOTE_LIMITS.maxNodes) {
+      const parentRun = node.parentNode ? textRunOwners.get(node.parentNode) ?? null : null;
+      const run = node.nodeType === 1 && (node as Element).localName === 'span'
+        ? parentRun ?? node as HTMLElement
+        : parentRun;
+      textRunOwners.set(node, run);
+      if (node.nodeType !== textNodeType) continue;
+      if (items.length >= TEXT_QUOTE_LIMITS.maxNodes) {
         traversalTruncated = true;
         break;
       }
+      const textNode = node as Text;
+      const element = textNode.parentElement ?? container;
+      items.push({
+        text: textNode.data,
+        element,
+        node: textNode,
+        // Text descendants within one pdf.js run concatenate exactly. A new positioned span needs
+        // the synthetic reading-order space that scopeFromItems traditionally supplies.
+        joinBefore: items.length === 0 || run !== previousRun,
+      });
+      previousRun = run;
     }
     const scope = scopeFromItems(items);
     if (traversalTruncated) scope.truncated = true;
@@ -1303,19 +1647,22 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  pages/1,000,000 corpus code units/4,000,000 search code units, and retained matches at 10,000;
    *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
   async search(query: string): Promise<number> {
+    // `lang` can change without a Lit property update; validate against a fresh effective locale
+    // before the unloaded/empty branches so locale-fold expansion still reports inexact rejection.
+    invalidateLyraLocaleCache(this);
     const generation = ++this.searchGeneration;
     this.searchQuery = query;
     this.clearSearchPaint();
-    if (this.loadState.kind !== 'ready') {
+    if (!boundedViewerSearchQuery(query, this.effectiveLocale).accepted) {
       this.searchMatches = [];
-      this.searchMatchCountExact = true;
+      this.searchMatchCountExact = false;
       this.searchActiveIndex = -1;
       this.emitSearchChange();
       return 0;
     }
-    if (query.length > TEXT_QUOTE_LIMITS.maxQueryCodeUnits) {
+    if (this.loadState.kind !== 'ready') {
       this.searchMatches = [];
-      this.searchMatchCountExact = false;
+      this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.emitSearchChange();
       return 0;
@@ -1417,13 +1764,24 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   /** Clears the query, matches, and any painted marks, and resets `lr-search-change` to a
    *  0-match/no-active-index state. */
   clearSearch(): void {
+    this.resetSearchState();
+    this.clearSearchPaint();
+    this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
+  }
+
+  private hasSearchState(): boolean {
+    return this.searchQuery !== ''
+      || this.searchMatches.length > 0
+      || !this.searchMatchCountExact
+      || this.searchActiveIndex !== -1;
+  }
+
+  private resetSearchState(): void {
     this.searchGeneration++;
     this.searchQuery = '';
     this.searchMatches = [];
     this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
-    this.clearSearchPaint();
-    this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
   }
 
   private emitSearchChange(): void {
@@ -1452,11 +1810,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const containers: Iterable<HTMLElement> = container ? [container] : this.textLayerContainers.values();
     for (const target of containers) {
       target.querySelectorAll('mark[part~="search-match"]').forEach((mark) => {
-        const parent = mark.parentNode;
-        if (!parent) return;
-        while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
-        parent.removeChild(mark);
-        parent.normalize();
+        unwrapPdfSearchMark(mark);
       });
       for (const cached of this.mountedPageTextIndexes.values()) {
         if (cached.container === target) cached.mappingDirty = true;
@@ -1496,18 +1850,24 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
     const mounted = this.mountedPageTextIndex(page);
     if (!mounted) return;
-    const ranges: Array<{ matchIndex: number; match: PdfSearchMatch; range: Range }> = [];
-    for (const { match, matchIndex } of nonOverlapping) {
-      const range = rangeFromTextQuoteMatch(mounted.scope, {
+    const materialized = rangesFromTextQuoteMatches(
+      mounted.scope,
+      nonOverlapping.map(({ match }) => ({
         start: match.start,
         end: match.start + match.length,
-      });
+      })),
+    );
+    const ranges: Array<{ matchIndex: number; match: PdfSearchMatch; range: Range }> = [];
+    for (let position = 0; position < nonOverlapping.length; position++) {
+      const { match, matchIndex } = nonOverlapping[position]!;
+      const range = materialized[position] ?? null;
       if (range) ranges.push({ matchIndex, match, range });
     }
     ranges.sort((a, b) => b.match.start - a.match.start);
     const budget: PdfPaintWorkBudget = {
       traversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes,
       codeUnits: TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
+      marks: this.remainingSearchMarkBudget(container),
     };
     let painted = false;
     for (const { matchIndex, range } of ranges) {
@@ -1519,72 +1879,192 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (painted) mounted.mappingDirty = true;
   }
 
+  private remainingSearchMarkBudget(except: HTMLElement): number {
+    let remaining = MAX_PAINTED_SEARCH_MARKS;
+    for (const container of this.textLayerContainers.values()) {
+      if (container === except) continue;
+      const count = container.querySelectorAll('mark[part~="search-match"]').length;
+      remaining -= Math.min(remaining, count);
+      if (remaining <= 0) return 0;
+    }
+    return remaining;
+  }
+
   // -- highlight painting --------------------------------------------------------------------------------
 
-  private async resolvePageHighlights(pageNumber: number): Promise<void> {
-    const container = this.textLayerContainers.get(pageNumber);
-    const canvas = this.pageCanvases.get(pageNumber);
-    if (!container || !canvas || this.loadState.kind !== 'ready') return;
+  private resolveMountedPageHighlights(): void {
     const candidates = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId);
-    const needsTextIndex = candidates.some((highlight) =>
-      highlight.anchor.kind === 'text-quote'
-      && (highlight.anchor.page == null || highlight.anchor.page === pageNumber));
-    const hadSearchPaint = needsTextIndex
-      && container.querySelector('mark[part~="search-match"]') !== null;
-    if (hadSearchPaint) this.clearSearchPaint(container);
-    const textIndex = needsTextIndex ? this.mountedPageTextIndex(pageNumber) ?? undefined : undefined;
-    const workBudget = textIndex?.index.createWorkBudget();
-    const pageRect = canvas.getBoundingClientRect();
-    const results: HighlightLayerItem[] = [];
-    const seen = new Set<string>();
-    const rectBudget = { remaining: MAX_HIGHLIGHT_RECTS };
-    for (const highlight of candidates) {
-      if (results.length >= MAX_PAINTED_HIGHLIGHTS || rectBudget.remaining <= 0) break;
-      if (seen.has(highlight.id)) continue;
-      seen.add(highlight.id);
-      const rects = this.resolveHighlightRectsForPage(
-        highlight.anchor,
-        pageNumber,
-        textIndex,
-        workBudget,
-        pageRect,
-        rectBudget,
-      );
-      if (rects.length) results.push({ id: highlight.id, rects, label: highlight.label, tone: highlight.tone });
+    const pages = [...this.pageCanvases.keys()]
+      .filter((pageNumber) => this.textLayerContainers.has(pageNumber))
+      .sort((left, right) => left - right);
+    const active = this.activeHighlightId
+      ? candidates.find((highlight) => highlight.id === this.activeHighlightId)
+      : undefined;
+    const activePage = active?.anchor.kind === 'page'
+      ? active.anchor.page
+      : active?.anchor.kind === 'region'
+        ? active.anchor.page ?? this.page
+        : active?.anchor.kind === 'text-quote'
+          ? active.anchor.page
+          : undefined;
+    if (activePage !== undefined) {
+      pages.sort((left, right) =>
+        Number(right === activePage) - Number(left === activePage));
     }
-    this.pageHighlightItems.set(pageNumber, results);
-    const layer = this.pageHighlightLayerElements.get(pageNumber);
-    if (layer) layer.items = results;
-    if (hadSearchPaint) this.paintSearchMatches(pageNumber);
+    for (const layer of this.pageHighlightLayerElements.values()) layer.items = [];
+    this.pageHighlightItems.clear();
+    const results = new Map<number, HighlightLayerItem[]>();
+    for (const pageNumber of pages) results.set(pageNumber, []);
+    const textIndexes = new Map<number, PdfPageTextIndex | null>();
+    const searchPaintPages = new Set<number>();
+    const budget: PdfHighlightPaintBudget = {
+      work: { remainingCodeUnits: TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits },
+      remainingResolutionAttempts: MAX_HIGHLIGHT_RESOLUTION_ATTEMPTS,
+      remainingItems: MAX_PAINTED_HIGHLIGHTS,
+      remainingRects: MAX_HIGHLIGHT_RECTS,
+    };
+    interface ResolutionOption {
+      pageNumber: number;
+      pageRect: DOMRect;
+      textIndex?: PdfPageTextIndex;
+      match?: TextQuoteMatch;
+      range?: Range | null;
+    }
+    const plans: Array<{ highlight: LyraHighlight; options: ResolutionOption[] }> = [];
+    const textOptionsByPage = new Map<number, ResolutionOption[]>();
+    const pageRects = new Map<number, DOMRect>();
+    for (const highlight of candidates) {
+      const options: ResolutionOption[] = [];
+      for (const pageNumber of this.mountedPagesForHighlight(highlight.anchor, pages)) {
+        const container = this.textLayerContainers.get(pageNumber);
+        const canvas = this.pageCanvases.get(pageNumber);
+        if (!container || !canvas || this.loadState.kind !== 'ready') continue;
+        let pageRect = pageRects.get(pageNumber);
+        if (!pageRect) {
+          pageRect = canvas.getBoundingClientRect();
+          pageRects.set(pageNumber, pageRect);
+        }
+        let textIndex: PdfPageTextIndex | undefined;
+        if (highlight.anchor.kind === 'text-quote') {
+          if (budget.remainingResolutionAttempts <= 0) break;
+          if (!textIndexes.has(pageNumber)) {
+            if (container.querySelector('mark[part~="search-match"]')) {
+              searchPaintPages.add(pageNumber);
+              this.clearSearchPaint(container);
+            }
+            textIndexes.set(pageNumber, this.mountedPageTextIndex(pageNumber));
+          }
+          textIndex = textIndexes.get(pageNumber) ?? undefined;
+          if (!textIndex) continue;
+          budget.remainingResolutionAttempts--;
+          const match = textIndex.index.resolve(highlight.anchor, budget.work);
+          if (!match) continue;
+          const option = { pageNumber, pageRect, textIndex, match };
+          options.push(option);
+          const pageOptions = textOptionsByPage.get(pageNumber) ?? [];
+          pageOptions.push(option);
+          textOptionsByPage.set(pageNumber, pageOptions);
+          continue;
+        }
+        options.push({ pageNumber, pageRect });
+      }
+      plans.push({ highlight, options });
+    }
+    // Scope provenance can include a full one-million-code-unit snapshot. Validate it once per
+    // mounted page, then materialize every admitted candidate for that page as one synchronous
+    // batch instead of multiplying the comparison by the 1,000-candidate admission ceiling.
+    for (const [pageNumber, options] of textOptionsByPage) {
+      const textIndex = textIndexes.get(pageNumber);
+      if (!textIndex) continue;
+      const ranges = rangesFromTextQuoteMatches(
+        textIndex.scope,
+        options.map(({ match }) => match),
+      );
+      for (let position = 0; position < options.length; position++) {
+        options[position]!.range = ranges[position] ?? null;
+      }
+    }
+    candidateLoop: for (const { highlight, options } of plans) {
+      if (budget.remainingItems <= 0 || budget.remainingRects <= 0) break;
+      for (const { pageNumber, pageRect, range } of options) {
+        const rects = this.resolveHighlightRectsForPage(
+          highlight.anchor,
+          pageNumber,
+          pageRect,
+          budget,
+          range,
+        );
+        if (rects.length === 0) continue;
+        results.get(pageNumber)!.push({
+          id: highlight.id,
+          rects,
+          label: highlight.label,
+          tone: highlight.tone,
+        });
+        budget.remainingItems--;
+        // One host highlight is one globally admitted item. A page-less quote searches mounted
+        // pages in order and stops at its first exact resolution instead of consuming one slot per
+        // page or letting page-one ordinary work starve the active candidate's later page.
+        continue candidateLoop;
+      }
+    }
+    for (const [pageNumber, pageItems] of results) {
+      this.pageHighlightItems.set(pageNumber, pageItems);
+      const layer = this.pageHighlightLayerElements.get(pageNumber);
+      if (layer) layer.items = pageItems;
+    }
+    for (const pageNumber of searchPaintPages) this.paintSearchMatches(pageNumber);
+  }
+
+  private *mountedPagesForHighlight(
+    anchor: LyraAnchor,
+    mountedPages: readonly number[],
+  ): Generator<number> {
+    const addressedPage = anchor.kind === 'page'
+      ? anchor.page
+      : anchor.kind === 'region'
+        ? anchor.page ?? this.page
+        : anchor.kind === 'text-quote'
+          ? anchor.page
+          : undefined;
+    if (addressedPage !== undefined) {
+      if (mountedPages.includes(addressedPage)) yield addressedPage;
+      return;
+    }
+    if (anchor.kind === 'text-quote') {
+      for (const pageNumber of mountedPages) yield pageNumber;
+    }
   }
 
   private resolveHighlightRectsForPage(
     anchor: LyraAnchor,
     pageNumber: number,
-    textIndex: PdfPageTextIndex | undefined,
-    workBudget: TextQuoteWorkBudget | undefined,
     pageRect: DOMRect,
-    rectBudget: { remaining: number },
+    budget: PdfHighlightPaintBudget,
+    range?: Range | null,
   ): { x: number; y: number; width: number; height: number }[] {
-    if (anchor.kind === 'page' && anchor.page === pageNumber) return [{ x: 0, y: 0, width: 100, height: 100 }];
+    if (anchor.kind === 'page' && anchor.page === pageNumber) {
+      if (budget.remainingRects <= 0) return [];
+      budget.remainingRects--;
+      return [{ x: 0, y: 0, width: 100, height: 100 }];
+    }
     if (anchor.kind === 'region' && (anchor.page ?? pageNumber) === pageNumber) {
       const rect = sanitizePercentRect(anchor.rect);
-      return rect ? [rect] : [];
+      if (!rect || budget.remainingRects <= 0) return [];
+      budget.remainingRects--;
+      return [rect];
     }
     if (
       anchor.kind === 'text-quote'
-      && textIndex
-      && workBudget
+      && range
       && (anchor.page == null || anchor.page === pageNumber)
     ) {
-      const match = textIndex.index.resolve(anchor, workBudget);
-      const range = match ? rangeFromTextQuoteMatch(textIndex.scope, match) : null;
-      if (!range) return [];
       if (!(pageRect.width > 0) || !(pageRect.height > 0)) return [];
       const rects: { x: number; y: number; width: number; height: number }[] = [];
       for (const rect of range.getClientRects()) {
-        if (rectBudget.remaining <= 0) break;
-        rectBudget.remaining--;
+        // Enumerate at most one past the remaining ceiling so a logical highlight is either exact
+        // or omitted; never return a visually misleading prefix of its rectangles.
+        if (rects.length >= budget.remainingRects) return [];
         rects.push({
           x: ((rect.left - pageRect.left) / pageRect.width) * 100,
           y: ((rect.top - pageRect.top) / pageRect.height) * 100,
@@ -1592,6 +2072,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
           height: (rect.height / pageRect.height) * 100,
         });
       }
+      budget.remainingRects -= rects.length;
       return rects;
     }
     return [];
@@ -1603,6 +2084,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       callback = (element) => {
         if (!element) {
           this.pageHighlightLayerElements.delete(pageNumber);
+          this.pageHighlightItems.delete(pageNumber);
+          this.highlightLayerRefs.delete(pageNumber);
           return;
         }
         const layer = element as LyraHighlightLayer;
@@ -1681,7 +2164,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private async renderPage(pageNumber: number, canvas: HTMLCanvasElement): Promise<void> {
     if (this.loadState.kind !== 'ready') return;
-    const version = (this.pageRenderVersions.get(pageNumber) ?? 0) + 1;
+    const version = ++this.pageRenderGeneration;
     this.pageRenderVersions.set(pageNumber, version);
     const doc = this.loadState.doc;
     const zoom = this.zoom;
@@ -1721,8 +2204,24 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       canvasContext.setTransform(dpr, 0, 0, dpr, 0, 0);
       renderTask = page.render({ canvasContext, viewport });
       this.pageRenderTasks.set(pageNumber, renderTask);
-      void this.renderTextLayer(pageNumber, page, viewport, version);
+      void this.renderTextLayer(pageNumber, page, viewport, version).catch((error: unknown) => {
+        if (
+          !isAbortError(error)
+          && this.isConnected
+          && this.loadState.kind === 'ready'
+          && this.loadState.doc === doc
+          && this.pageRenderVersions.get(pageNumber) === version
+          && this.pageCanvases.get(pageNumber) === canvas
+        ) this.emit('lr-render-error', { error });
+      });
       await renderTask.promise;
+      if (
+        !this.isConnected
+        || this.loadState.kind !== 'ready'
+        || this.loadState.doc !== doc
+        || this.pageRenderVersions.get(pageNumber) !== version
+        || this.pageCanvases.get(pageNumber) !== canvas
+      ) return;
       this.setPageError(canvas, false);
     } catch (error) {
       if (
@@ -1768,7 +2267,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     ) return;
     this.mountedPageTextIndexes.delete(pageNumber);
     container.replaceChildren();
-    const textLayer = new pdfjsLib.TextLayer({ textContentSource: page.streamTextContent(), container, viewport });
+    const textLayer = new pdfjsLib.TextLayer({
+      textContentSource: boundedPdfTextLayerSource(page.streamTextContent()),
+      container,
+      viewport,
+    });
     this.textLayers.set(pageNumber, textLayer);
     const renderPromise = textLayer.render().then(
       () => undefined,
@@ -1780,7 +2283,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     await renderPromise;
     if (this.textLayers.get(pageNumber) === textLayer && this.pageRenderVersions.get(pageNumber) === version) {
       this.markTextRunParts(container);
-      void this.resolvePageHighlights(pageNumber);
+      this.resolveMountedPageHighlights();
       // A page that mounts (or remounts, e.g. after a zoom change re-renders every visible page) while
       // it already has search matches needs its marks painted here too -- focusSearchMatch() only
       // paints the page it just navigated to, not every page that might scroll into view afterward.
@@ -1810,10 +2313,14 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (!callback) {
       callback = (element: Element | undefined): void => {
         if (!element) {
-          this.pageRenderVersions.set(pageNumber, (this.pageRenderVersions.get(pageNumber) ?? 0) + 1);
+          // Global render generations make deletion itself an invalidation: a later remount can
+          // never reuse an old call's token, so this per-page map need not retain every seen page.
+          this.pageRenderVersions.delete(pageNumber);
           this.pageCanvases.delete(pageNumber);
           this.pageRenderTasks.get(pageNumber)?.cancel();
           this.pageRenderTasks.delete(pageNumber);
+          this.pageHighlightItems.delete(pageNumber);
+          this.pageCanvasRefs.delete(pageNumber);
           return;
         }
         this.pageCanvases.set(pageNumber, element as HTMLCanvasElement);
@@ -1834,6 +2341,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
           this.textLayers.get(pageNumber)?.cancel();
           this.textLayers.delete(pageNumber);
           this.textLayerReadyPromises.delete(pageNumber);
+          this.pageHighlightItems.delete(pageNumber);
+          this.textLayerContainerRefs.delete(pageNumber);
           return;
         }
         this.textLayerContainers.set(pageNumber, element as HTMLElement);
@@ -1870,7 +2379,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private renderBody(): TemplateResult {
     switch (this.loadState.kind) {
       case 'ready': {
-        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged}></lr-virtual-list>`;
+        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeItemId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged}></lr-virtual-list>`;
       }
       case 'loading': return html`<div part="spinner">
         <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>

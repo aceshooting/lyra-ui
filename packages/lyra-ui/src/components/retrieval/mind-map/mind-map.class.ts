@@ -24,21 +24,14 @@ import {
 import { styles } from './mind-map.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_mindMapCollapsed,
-  LYRA_DEFAULT_mindMapExpanded,
-  LYRA_DEFAULT_mindMapLabel,
-  LYRA_DEFAULT_mindMapLeafStatus,
-  LYRA_DEFAULT_mindMapTopicStatus,
-  LYRA_DEFAULT_noData,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_mindMapCollapsed, LYRA_DEFAULT_mindMapExpanded, LYRA_DEFAULT_mindMapLabel, LYRA_DEFAULT_mindMapLeafStatus, LYRA_DEFAULT_mindMapTopicStatus, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraTopic };
 
 export interface LyraMindMapEventMap {
-  'lr-topic-select': CustomEvent<{ id: string }>;
-  'lr-topic-toggle': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-topic-select': CustomEvent<{ topicId: string }>;
+  'lr-topic-toggle': CustomEvent<{ topicId: string; expanded: boolean }>;
 }
 
 const DEFAULT_RING_GAP_PX = 96; // 6rem at the default 16px root font size
@@ -68,9 +61,9 @@ const NAV_KEYS = new Set([
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-mind-map
- * @event lr-topic-select - A *leaf* topic was activated. `detail: { id }`.
+ * @event lr-topic-select - A *leaf* topic was activated. `detail: { topicId }`.
  * @event lr-topic-toggle - A parent topic was activated (or auto-expanded by keyboard descent).
- * `detail: { id, expanded }`.
+ * `detail: { topicId, expanded }`.
  * @csspart base - The wrapper.
  * @csspart svg - The single-tab-stop SVG focus target.
  * @csspart node - A topic node group.
@@ -88,23 +81,22 @@ const NAV_KEYS = new Set([
  * @since 4.0.0
  */
 export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    mindMapCollapsed: LYRA_DEFAULT_mindMapCollapsed,
+    mindMapExpanded: LYRA_DEFAULT_mindMapExpanded,
+    mindMapLabel: LYRA_DEFAULT_mindMapLabel,
+    mindMapLeafStatus: LYRA_DEFAULT_mindMapLeafStatus,
+    mindMapTopicStatus: LYRA_DEFAULT_mindMapTopicStatus,
+    noData: LYRA_DEFAULT_noData,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'topics',
   ]);
-
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      mindMapCollapsed: LYRA_DEFAULT_mindMapCollapsed,
-      mindMapExpanded: LYRA_DEFAULT_mindMapExpanded,
-      mindMapLabel: LYRA_DEFAULT_mindMapLabel,
-      mindMapLeafStatus: LYRA_DEFAULT_mindMapLeafStatus,
-      mindMapTopicStatus: LYRA_DEFAULT_mindMapTopicStatus,
-      noData: LYRA_DEFAULT_noData,
-    };
-  // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
   static override get observedAttributes(): string[] {
@@ -340,7 +332,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     const next = new Map(this.expandedOverrides);
     next.set(node.id, expanded);
     this.expandedOverrides = next;
-    this.emit('lr-topic-toggle', { id: node.id, expanded });
+    this.emit('lr-topic-toggle', { topicId: node.id, expanded });
     if (announce) {
       this.setAnnouncement(
         this.localize(
@@ -354,7 +346,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   private activate(node: PlacedTopic): void {
     if (node.hasChildren) this.toggle(node);
-    else this.emit('lr-topic-select', { id: node.id });
+    else this.emit('lr-topic-select', { topicId: node.id });
   }
 
   private siblingsOf(node: PlacedTopic): PlacedTopic[] {

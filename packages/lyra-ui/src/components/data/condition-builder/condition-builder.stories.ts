@@ -31,6 +31,14 @@ const meta: Meta = {
   title: 'Condition Builder',
   component: 'lr-condition-builder',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Fields and the controlled condition model are normalized into bounded frozen snapshots (200 outer rows and 500 options/operators or array-valued condition entries). Blank field names, option values, and condition IDs are omitted; later duplicates are first-wins, and removal details use `conditionId`. Create and reassign a new array or record after changes; model event details are detached and frozen.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

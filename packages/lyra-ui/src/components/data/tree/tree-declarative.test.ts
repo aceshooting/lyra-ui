@@ -196,8 +196,8 @@ describe('tree declarative child model', () => {
 
     expect(events.length).to.equal(1);
     expect(events[0]!.detail).to.deep.equal({
-      id: install!.nodeId,
-      parentId: guides.nodeId,
+      nodeId: install!.nodeId,
+      parentNodeId: guides.nodeId,
       fromIndex: 0,
       toIndex: 1,
     });

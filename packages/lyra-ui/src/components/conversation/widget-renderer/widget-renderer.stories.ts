@@ -10,6 +10,14 @@ import type { LyraWidgetRenderer } from "./widget-renderer.js";
 const meta: Meta = {
   title: "Widget Renderer",
   component: "lr-widget-renderer",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Mapped elements are keyed across streamed documents. Unchanged resolved nodes also retain their mapped template and ref callback, so unrelated renderer updates do not reassign props or churn action and binding listeners.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

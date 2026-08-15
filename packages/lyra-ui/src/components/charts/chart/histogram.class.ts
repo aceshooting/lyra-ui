@@ -2,10 +2,10 @@ import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import {
   LyraChart,
-  lockChartType,
   type LyraChartConfiguration,
-  type Series,
+  type LyraChartSeries,
 } from './chart.class.js';
+import { lockChartType } from './chart-type-lock.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
@@ -34,8 +34,6 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFreq
  * @since 4.0.0
  */
 export class LyraHistogram extends LyraChart {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['values']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -51,6 +49,8 @@ export class LyraHistogram extends LyraChart {
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['values']);
 
   // Explicit rather than relying on `LyraChart`'s inherited `static styles` —
   // `histogram.styles.ts` re-exports the same `chart.styles.ts` sheet, so
@@ -95,7 +95,12 @@ export class LyraHistogram extends LyraChart {
     return normalized;
   }
 
-  /** @deprecated Use `appendSamples(values, maxSamples?)`. */
+  /**
+   * Inherited `LyraChart` signature, retained so histogram stays substitutable for its base class;
+   * `_label` has no meaning for rebinned samples and is ignored. Prefer the histogram-specific
+   * `appendSamples(values, maxSamples?)` alongside it — same behavior, without the unused label
+   * parameter.
+   */
   override appendData(_label: string, values: (number | null)[], maxPoints: number = 0): void {
     this.appendSamples(values, maxPoints);
   }
@@ -157,7 +162,7 @@ Object.defineProperty(LyraHistogram.prototype, 'labels', {
 Object.defineProperty(LyraHistogram.prototype, 'datasets', {
   configurable: true,
   enumerable: true,
-  get(this: LyraHistogram): Series[] {
+  get(this: LyraHistogram): LyraChartSeries[] {
     return [
       {
         label: this.seriesLabel || this.localize('histogramFrequency'),
@@ -165,7 +170,7 @@ Object.defineProperty(LyraHistogram.prototype, 'datasets', {
       },
     ];
   },
-  set(_v: Series[]) {
+  set(_v: LyraChartSeries[]) {
     /* derived from `values`/`bins`; direct writes are ignored */
   },
 });

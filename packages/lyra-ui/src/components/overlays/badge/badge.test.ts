@@ -312,6 +312,21 @@ describe('attention', () => {
     expect(animation.animationIterationCount).to.equal('infinite');
   });
 
+  it('lets explicit attention="none" suppress the pulse shorthand', async function () {
+    if (prefersReduced()) this.skip();
+    const el = (await fixture(
+      html`<lr-badge pulse attention="none">Quiet</lr-badge>`,
+    )) as LyraBadge;
+
+    expect(getComputedStyle(base(el)).animationName).to.equal('none');
+
+    el.removeAttribute('attention');
+    await el.updateComplete;
+    expect(el.attention).to.equal('none');
+    expect(el.hasAttribute('attention')).to.be.false;
+    expect(getComputedStyle(base(el)).animationName).to.not.equal('none');
+  });
+
   it('stops the attention animation entirely under prefers-reduced-motion: reduce', async () => {
     const el = (await fixture(html`<lr-badge attention="pulse">New</lr-badge>`)) as LyraBadge;
 

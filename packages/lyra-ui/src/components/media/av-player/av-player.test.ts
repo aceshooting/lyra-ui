@@ -336,7 +336,7 @@ function cueRows(el: LyraAvPlayer): HTMLButtonElement[] {
 }
 
 type TranscriptList = HTMLElement & {
-  activeId: string | number | '';
+  activeItemId: string | number | '';
   keyFunction?: (item: unknown, index: number) => string | number;
   renderItem: (item: unknown, index: number) => unknown;
   renderedRows: HTMLElement[];

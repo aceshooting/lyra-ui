@@ -30,8 +30,8 @@ graph data) and never mutates a graph.
 - `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-activate` (`detail: { id }`, a row's node button was activated),
-`lr-node-expand` (`detail: { id }`, a row's expand button was activated — deliberately the same
+**Events:** `lr-entity-activate` (`detail: { entityId }`, a row's node button was activated),
+`lr-node-expand` (`detail: { nodeId }`, a row's expand button was activated — deliberately the same
 name and detail shape as `lr-graph`'s own event, so one host handler serves both).
 
 **Slots:** none.
@@ -68,5 +68,7 @@ wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `r
 - A row is exactly one `[part="row"]` element in both rendering paths. Above `virtualizeAt` that
   element is the internal virtual-list's own row wrapper (the component renders only the row's
   content into it), so a `::part(row)` rule applies once, not twice.
+- Rows with blank neighbor ids and later rows repeating the same node id are omitted first-wins
+  before grouping, virtualization, rendering, or events.
 
 ---

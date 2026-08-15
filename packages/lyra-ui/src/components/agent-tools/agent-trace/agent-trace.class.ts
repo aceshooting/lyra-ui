@@ -2,6 +2,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { styles } from './agent-trace.styles.js';
 import { normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
@@ -98,8 +99,6 @@ export interface LyraAgentTraceEventMap {
  * @since 4.1.0
  */
 export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['spans', 'hiddenKinds']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -124,6 +123,8 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['spans', 'hiddenKinds']);
+
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-span-visibility-change',
@@ -144,8 +145,10 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
    *  back after `lr-span-visibility-change`. */
   @property({ attribute: false }) hiddenKinds: readonly LyraSpan['kind'][] = [];
 
-  /** Accessible name forwarded to the composed `<lr-trace-tree>`. See its own `label` property. */
-  @property() label = '';
+  /** Optional accessible-name override forwarded to the composed `<lr-trace-tree>`. Omission
+   *  leaves the composed tree's own `label` unset, so it localizes its own default; any supplied
+   *  string, including `''`, is forwarded verbatim. See `<lr-trace-tree>`'s own `label` property. */
+  @property() label?: string;
 
   /** Forwarded verbatim to the composed `<lr-trace-tree>`. */
   @property({ type: Boolean, attribute: 'show-tokens' }) showTokens = false;
@@ -153,8 +156,10 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   /** Forwarded verbatim to the composed `<lr-trace-tree>`. */
   @property({ type: Boolean, attribute: 'show-cost' }) showCost = false;
 
-  /** Forwarded verbatim to the composed `<lr-trace-tree>`. */
-  @property({ type: Boolean, attribute: 'hide-bars' }) hideBars = false;
+  /** Shows the inline duration bar on the composed `<lr-trace-tree>`, matching the
+   *  positive-polarity `showTokens`/`showCost` convention on this same element. Defaults to
+   *  `true`; set `show-bars="false"` to suppress the bar for dense/narrow embeddings. */
+  @property({ type: Boolean, attribute: 'show-bars', converter: trueDefaultBooleanConverter }) showBars = true;
 
   private presentKinds(spans: readonly LyraSpan[]): LyraSpan['kind'][] {
     const present = new Set(spans.map((s) => s.kind));
@@ -258,7 +263,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
           .label=${this.label}
           ?show-tokens=${this.showTokens}
           ?show-cost=${this.showCost}
-          ?hide-bars=${this.hideBars}
+          ?hide-bars=${!this.showBars}
           @lr-span-select=${this.onTreeSpanSelect}
         ></lr-trace-tree>
       </div>

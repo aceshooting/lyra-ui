@@ -100,3 +100,104 @@ describe('Markdown highlight resource bounds', () => {
     expect(maximumActive).to.be.at.most(4);
   });
 });
+
+describe('parseMarkdownDocument renderer overrides emit well-formed, matched-quote HTML', () => {
+  it('produces well-formed, independently addressable elements for every renderer override', async () => {
+    const marked = (await loadMarkdownDeps()).marked!;
+    const content = [
+      '# Heading One',
+      '',
+      'Paragraph text with `inline code` span.',
+      '',
+      '> Blockquote text here',
+      '',
+      '```text',
+      'fenced code body',
+      '```',
+      '',
+      '| Col A | Col B |',
+      '| --- | --- |',
+      '| 1 | 2 |',
+      '',
+      '[Link text](https://example.com/page "Link title")',
+      '',
+      '![Alt text](https://example.com/pic.png "Image title")',
+      '',
+      'Inline math $x^2$ done.',
+    ].join('\n');
+
+    const { html } = parseMarkdownDocument({
+      marked,
+      content,
+      gfm: true,
+      linkTarget: '_blank',
+      headingOffset: 0,
+      escapeHtmlOption: false,
+      highlightCodeOption: false,
+      getCachedHighlight: () => undefined,
+      failedHighlightKeys: new Set(),
+      headingAnchorsOption: false,
+      mathOption: true,
+      cachedKatex: {
+        renderToString: (tex: string) => `<math><mi>${tex}</mi></math>`,
+      },
+      pendingKeys: [],
+      headingTreeOut: [],
+    });
+
+    // A real browser HTML parser, not a string-content check: the historical bug (mismatched
+    // open/close attribute-quote characters) makes the parser swallow subsequent tag boundaries
+    // into a broken attribute value, so a corrupted document shows up here as missing/merged
+    // elements rather than as a substring difference.
+    const container = document.createElement('div');
+    container.innerHTML = html;
+
+    const heading = container.querySelector('[part="heading"]');
+    expect(heading, 'heading element').to.exist;
+    expect(heading!.tagName).to.equal('H1');
+    expect(heading!.textContent).to.equal('Heading One');
+
+    const paragraphs = container.querySelectorAll('[part="paragraph"]');
+    expect(paragraphs.length).to.be.at.least(3);
+
+    const codespan = container.querySelector('[part="inline-code"]');
+    expect(codespan, 'inline code element').to.exist;
+    expect(codespan!.textContent).to.equal('inline code');
+
+    const blockquote = container.querySelector('[part="blockquote"]');
+    expect(blockquote, 'blockquote element').to.exist;
+    expect(blockquote!.textContent).to.contain('Blockquote text here');
+
+    const codeBlock = container.querySelector('[part="code-block"]');
+    expect(codeBlock, 'code block element').to.exist;
+    expect(codeBlock!.tagName).to.equal('PRE');
+    expect(codeBlock!.getAttribute('tabindex')).to.equal('0');
+    expect(codeBlock!.querySelector('code')!.textContent).to.equal('fenced code body\n');
+
+    const table = container.querySelector('[part="table"]');
+    expect(table, 'table element').to.exist;
+    expect(table!.querySelector('thead th')!.textContent).to.equal('Col A');
+    expect(table!.querySelectorAll('tbody td')[0]!.textContent).to.equal('1');
+
+    const link = container.querySelector('[part="link"]');
+    expect(link, 'link element').to.exist;
+    expect(link!.getAttribute('href')).to.equal('https://example.com/page');
+    expect(link!.getAttribute('title')).to.equal('Link title');
+    expect(link!.getAttribute('target')).to.equal('_blank');
+    expect(link!.getAttribute('rel')).to.equal('noopener noreferrer');
+    expect(link!.textContent).to.equal('Link text');
+
+    const image = container.querySelector('[part="img"]');
+    expect(image, 'image element').to.exist;
+    expect(image!.getAttribute('src')).to.equal('https://example.com/pic.png');
+    expect(image!.getAttribute('alt')).to.equal('Alt text');
+    expect(image!.getAttribute('title')).to.equal('Image title');
+
+    const math = container.querySelector('[part="math"]');
+    expect(math, 'math element').to.exist;
+    expect(math!.getAttribute('data-display')).to.equal('inline');
+
+    // No renderer-emitted attribute soup should have leaked into text content anywhere in the tree.
+    expect(container.textContent).to.not.contain('part=');
+  });
+});

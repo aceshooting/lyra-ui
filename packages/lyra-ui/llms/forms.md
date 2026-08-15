@@ -163,7 +163,9 @@ therefore cannot widen a 320px LTR or RTL picker.
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
   `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = false`,
   `autocapitalize: string = ''`, and `autocorrect: boolean = true` (attribute values `on`/`off`) —
-  native editing-assistance properties forwarded to the internal filter input. The lowercase
+  native editing-assistance properties forwarded to the internal filter input. Removing a
+  `spellcheck` attribute after an override restores this component's declared `false` default.
+  The lowercase
   mapped IDLs `inputmode` and `enterkeyhint` delegate to the corresponding camel-case native
   properties
 - `inputValue: string` — the live filter input text; programmatic writes are event-silent
@@ -916,8 +918,8 @@ values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{
 
 **Custom states:** `disabled`, `range`, and `readonly`.
 
-**CSS parts (35):** `date-picker` / deprecated `base` (tokens on the same visible shell; use
-`date-picker`), `day`, `day-disabled`, `day-label`, `day-outside`,
+**CSS parts (35):** `date-picker` / permanent compatibility name `base` (tokens on the same
+visible shell; both names remain supported), `day`, `day-disabled`, `day-label`, `day-outside`,
 `day-placeholder`, `day-range-end`, `day-range-inner`, `day-range-preview`, `day-range-start`,
 `day-selected`, `day-today`, `day-weekend`, `footer`, `grid`, `header`, `month`, `month-label`,
 `months`, `nav`, `next`, `previous`, `title`, `view-cell`, `view-grid`, `view-item`,
@@ -1032,9 +1034,10 @@ exposes its validity states.
 
 **CSS parts (19):** `clear-button`, `date-input`, `date-picker`, `end`, `expand-button`,
 `expand-icon`, `form-control`, `form-control-input`, `form-control-label`, `hint`, `input`,
-`input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, deprecated
-`base` (use `date-input`), and deprecated `label` (use `form-control-label`). Lyra additionally
-retains `error`.
+`input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, permanent
+compatibility name `base` (a nested wrapper inside `date-input`), and permanent compatibility name
+`label` (the inner label-content wrapper inside `form-control-label`). Lyra additionally retains
+`error`.
 
 **Form value and validation:** a complete range submits `YYYY-MM-DD/YYYY-MM-DD`. A first range
 endpoint remains visible in `value` but contributes the empty string to `FormData` until the second
@@ -3735,16 +3738,21 @@ internal control's native `focus` and `blur` are re-dispatched as bubbling, comp
 each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
 `lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
 
-**Slots:** default label content. Flattened forwarding-slot assignment and later mutations keep the
-visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain it. A host
-`aria-label` wins on the internal radio by presence, including `aria-label=""`.
+**Slots:** default label content. In `appearance="button"`, `start`/`prefix` share the leading
+wrapper and `end`/`suffix` share the trailing wrapper, matching `lr-radio-button`; changing away
+from button appearance does not remove or rewrite the authored light-DOM content. Flattened
+forwarding-slot assignment and later mutations keep the visual label wrapper synchronized;
+element-only and visible `aria-hidden` decorations retain it. A host `aria-label` wins on the
+internal radio by presence, including `aria-label=""`.
 
 A standalone radio stays within its allocated inline size. Long or unbroken default labels wrap in
 LTR and RTL while the indicator retains its fixed geometry; an exact-320px story covers both.
 
 **CSS parts:** default appearance: `base`, `circle` / `control` (with Shoelace's
 `control--checked` state token), `dot` / `checked-icon`, and `label`. Button appearance: `base`,
-`button`, `control`, `button--checked` while selected, and `label`.
+`button`, `control`, `button--checked` while selected, `start` / `prefix`, `label`, and `end` /
+`suffix`. Empty leading, label, and trailing wrappers are hidden independently, so only present
+content contributes `--lr-radio-button-gap` spacing.
 Every `<lr-radio-button>` size tier keeps its interactive base at least 24px in both axes, including
 an empty-label control; the visible density can still grow with the shared size ladder.
 
@@ -3831,6 +3839,8 @@ its own alias.
 **Slots:** default (label text), `start` (leading content, typically an icon), and `end` (trailing
 content). Shoelace's `prefix` and `suffix` are retained as aliases for `start` and `end`,
 respectively; either spelling can be used, and both spellings share one wrapper at each edge.
+The leading, label, and trailing wrappers are hidden independently while empty, so missing regions
+do not contribute dead flex gaps.
 Host `aria-label` is forwarded to the internal radio by attribute presence, including
 `aria-label=""`; it is not replaced by the visible default-slot text.
 
@@ -4297,6 +4307,10 @@ internal focus/editor state, and suppresses enabled hover/active paint. Re-enabl
 Host `focus()` and `click()` are also synchronous no-ops under own or fieldset-cascaded disablement,
 including the same task that sets `disabled` before Lit has updated the still-rendered native draft.
 `blur()` remains available to release existing focus.
+When a focused token label, editor, or remove action disappears through its own removal or a
+controlled `value`/pristine `defaultValue` shrink, DOM focus moves to the nearest surviving
+equivalent surface at the clamped index. If no token remains it moves to the draft input; a newer
+explicit focus destination outside the component is never reclaimed.
 
 **`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
 jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
@@ -4599,10 +4613,10 @@ too. Both routes are topmost-aware through the shared nonmodal overlay stack, so
 picker remains open under a newer Lyra popup and receives the manager's focus handoff when that top
 layer closes.
 
-**CSS parts:** `base` (compatibility name for the field wrapper; use `color-picker`),
+**CSS parts:** `base` (permanent compatibility name on the same field wrapper as `color-picker`),
 `color-picker` (the field wrapper; it is the same node as `base` and `form-control`),
 `form-control` (the field wrapper; it is the same node as `base` and `color-picker`),
-`form-control-label` (the label; `label` is an alias kept for back-compat), `trigger-container`
+`form-control-label` (the label; `label` is its permanent compatibility name), `trigger-container`
 (the row wrapping the trigger), `trigger` (the swatch button that
 opens the panel), `panel` (the positioned `role="dialog"` surface), `grid` (the
 saturation/brightness square) and `grid-handle` (its draggable, keyboard-operable handle),
@@ -4880,7 +4894,8 @@ Both score branches format visible numeric labels with the effective locale (inc
 digits); segmented item values and submitted rubric values remain stable raw numbers/strings.
 
 **Properties:** `keys: readonly RubricKey[] = []` (attribute: false), where the exported immutable
-discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. Shared fields are
+discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. Keys use nonblank
+first-wins identity and retained valid spelling is not rewritten. Shared fields are
 `key`, `label?`, `description?`, and `required?`; only scores expose `min?`/`max?`/`step?`, only
 categories expose readonly `RubricKeyOption[]` plus `multiple?`, and only comments expose
 `placeholder?`. Runtime schema normalization retains the first occurrence of each nonempty key and

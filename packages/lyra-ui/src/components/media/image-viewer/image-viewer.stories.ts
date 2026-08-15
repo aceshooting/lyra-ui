@@ -8,7 +8,7 @@ const meta: Meta = {
   title: 'DocumentViewer/ImageViewer',
   component: 'lr-image-viewer',
   tags: ['autodocs'],
-  parameters: { docs: { description: { component: 'Full pan/zoom raster-image viewer with labeled region highlights whose activation emits `{ highlightId }`, plus opt-in region annotation; self-registers into the document-viewer registry for common image MIME types.' } } },
+  parameters: { docs: { description: { component: 'Full pan/zoom raster-image viewer with labeled region highlights whose activation emits `{ highlightId }`, plus opt-in region annotation. Malformed, empty, blank, and later duplicate highlight IDs are omitted first-wins before focus, active state, and events.' } } },
 };
 export default meta;
 type Story = StoryObj;

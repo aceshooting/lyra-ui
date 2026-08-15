@@ -804,7 +804,7 @@ describe("v9 controlled and immutable contracts", () => {
       html`<lr-document-library .documents=${docs} .selectedDocumentIds=${["d1"]}></lr-document-library>`
     )) as LyraDocumentLibrary;
     const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement & {
-      selectedKeys: ReadonlySet<string | number>;
+      selectedRowKeys: ReadonlySet<string | number>;
       updateComplete: Promise<unknown>;
     };
     let leakedTableSelections = 0;
@@ -818,7 +818,7 @@ describe("v9 controlled and immutable contracts", () => {
 
     expect(leakedTableSelections).to.equal(0);
     expect(el.selectedDocumentIds).to.deep.equal(["d1"]);
-    expect([...table.selectedKeys]).to.deep.equal(["d1"]);
+    expect([...table.selectedRowKeys]).to.deep.equal(['d1']);
   });
 
   it("translates canonical sort request/commit phases and honors a wrapper veto", async () => {

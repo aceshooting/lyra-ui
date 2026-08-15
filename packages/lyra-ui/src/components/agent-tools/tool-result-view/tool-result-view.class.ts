@@ -66,7 +66,7 @@ export interface LyraToolResultViewEventMap {
  *
  * Assigning `registry` synchronously copies at most 10,000 entries into a frozen readonly facade.
  * Later `set()`/`delete()` calls on the source map are not observed; create and assign a new map to
- * update dispatch. Renderer-definition identity is retained so lazy-render caches stay stable.
+ * update dispatch. Definition records are cloned and frozen; their callback identities are retained.
  *
  * @customElement lr-tool-result-view
  * @event lr-render-error - `detail: { toolName, error }` — fired immediately
@@ -82,12 +82,6 @@ export interface LyraToolResultViewEventMap {
  * @since 4.0.0
  */
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'registry',
-  ]);
-  protected static override readonly identityCollectionProperties =
-    Object.freeze(['registry']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -96,6 +90,12 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
     loading: LYRA_DEFAULT_loading,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'registry',
+  ]);
+  protected static override readonly identityCollectionProperties =
+    Object.freeze(['registry']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
 

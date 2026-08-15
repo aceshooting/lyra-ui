@@ -20,7 +20,8 @@ controls and exposes `role="group"` on its internal wrapper.
 
 **Properties:**
 
-- `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
+- `orientation: LyraOrientation = 'horizontal'` (reflected; the shared
+  `'horizontal' | 'vertical'` layout axis, with no component-local alias)
 - `label: string = ''` — accessible group-name fallback; a host `aria-label`, when present, wins
   including an explicitly empty value
 

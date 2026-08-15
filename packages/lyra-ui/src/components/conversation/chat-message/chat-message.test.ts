@@ -42,26 +42,26 @@ it("keeps native host role semantics independent from messageRole", async () => 
   expect(el.messageRole).to.equal("user");
 });
 
-it("names the message article with localized author identity and honors a host aria-label override", async () => {
+it('names the role-owning article with localized author identity and honors a host aria-label override', async () => {
   const el = (await fixture(html`
     <lr-chat-message
       message-role="system"
-      .strings=${{ promptStudioRoleSystem: "Système" }}
+      .strings=${{ promptStudioRoleSystem: 'Système' }}
       >hi</lr-chat-message
     >
   `)) as LyraChatMessage;
   const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
-  expect(bubble.getAttribute("role")).to.equal("article");
-  expect(bubble.hasAttribute("aria-label")).to.be.false;
-  expect(bubble.querySelector(".sr-only")?.textContent).to.equal("Système");
+  expect(bubble.getAttribute('role')).to.equal('article');
+  expect(bubble.getAttribute('aria-label')).to.equal('Système');
+  expect(bubble.querySelector('.sr-only') === null).to.equal(true);
 
-  el.setAttribute("aria-label", "Release assistant");
+  el.setAttribute('aria-label', 'Release assistant');
   await el.updateComplete;
-  expect(bubble.getAttribute("aria-label")).to.equal("Release assistant");
+  expect(bubble.getAttribute('aria-label')).to.equal('Release assistant');
 
-  el.setAttribute("aria-label", "");
+  el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(bubble.getAttribute("aria-label")).to.equal("");
+  expect(bubble.getAttribute('aria-label')).to.equal('');
 });
 
 it("normalizes a Date, an ISO string, and an invalid string for timestamp", async () => {

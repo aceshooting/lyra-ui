@@ -6,6 +6,14 @@ import type { Citation, GroundingAssessment } from '../../../ai/types.js';
 const meta: Meta = {
   title: 'Grounding Summary',
   component: 'lr-grounding-summary',
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A grounding scorecard that canonicalizes direct citations and nested assessment claims independently by nonblank id before composition, counts, rendering, and events. Evidence rows retain explicit list semantics even when list styling is reset.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

@@ -9,8 +9,10 @@ import type {
   DataGridSortingState,
 } from './data-grid-types.js';
 
-export function columnId<Row>(column: DataGridColumn<Row>, index: number): string {
-  return column.id || column.field || `column-${index + 1}`;
+export function columnId<Row>(column: DataGridColumn<Row>, _index: number): string {
+  if (typeof column.id === 'string' && column.id.trim() !== '') return column.id;
+  if (typeof column.field === 'string' && column.field.trim() !== '') return column.field;
+  return '';
 }
 
 export function pathValue(value: unknown, path: string): unknown {

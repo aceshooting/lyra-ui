@@ -7,6 +7,7 @@ import type {
 } from '../../../ai/types.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './retrieval-compare.styles.js';
@@ -37,6 +38,8 @@ export interface LyraRetrievalCompareEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Blank set ids and later duplicates are ignored before overlap, rendering, or activation. Within
+ * each retained set, blank chunk ids and later duplicates are likewise ignored. First records win.
  *
  * @customElement lr-retrieval-compare
  * @event lr-chunk-select - A result was activated. `detail: { setId, chunk }`.
@@ -60,8 +63,6 @@ export interface LyraRetrievalCompareEventMap {
  * @since 7.0.0
  */
 export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['sets']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -76,6 +77,8 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     retrievalCompareSparseScore: LYRA_DEFAULT_retrievalCompareSparseScore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['sets']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -98,8 +101,18 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     return Math.max(1, finiteCount(this.topK, 10));
   }
 
+  private get normalizedSets(): RetrievalComparisonSet[] {
+    return firstByRetrievalIdentity(
+      Array.isArray(this.sets) ? this.sets : [],
+      (set) => set.id
+    );
+  }
+
   private orderedChunks(set: RetrievalComparisonSet): RetrievalChunk[] {
-    return set.chunks
+    return firstByRetrievalIdentity(
+      Array.isArray(set.chunks) ? set.chunks : [],
+      (chunk) => chunk.id
+    )
       .map((chunk, index) => ({ chunk, index, rank: this.rank(chunk, index) }))
       .sort(
         (a, b) =>
@@ -126,19 +139,19 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     }).format(finiteRange(value, 0, 0, 1));
   }
 
-  private overlaps(): string[] {
+  private overlaps(sets: readonly RetrievalComparisonSet[]): string[] {
     const summaries: string[] = [];
-    for (let leftIndex = 0; leftIndex < this.sets.length; leftIndex += 1) {
-      const leftSet = this.sets[leftIndex]!;
+    for (let leftIndex = 0; leftIndex < sets.length; leftIndex += 1) {
+      const leftSet = sets[leftIndex]!;
       const left = new Set(
         this.orderedChunks(leftSet).map((chunk) => chunk.id)
       );
       for (
         let rightIndex = leftIndex + 1;
-        rightIndex < this.sets.length;
+        rightIndex < sets.length;
         rightIndex += 1
       ) {
-        const rightSet = this.sets[rightIndex]!;
+        const rightSet = sets[rightIndex]!;
         const right = new Set(
           this.orderedChunks(rightSet).map((chunk) => chunk.id)
         );
@@ -220,12 +233,13 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   };
 
   override render(): TemplateResult {
+    const sets = this.normalizedSets;
     const label = retrievalSemanticLabel(
       this,
       this.label || this.localize('retrievalCompareLabel')
     );
     const role = retrievalSemanticRole(this, 'region');
-    if (!this.sets.length) {
+    if (!sets.length) {
       return html`<section
         part="base"
         role=${role ?? nothing}
@@ -237,7 +251,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
         ></lr-empty>
       </section>`;
     }
-    const overlaps = this.overlaps();
+    const overlaps = this.overlaps(sets);
     return html`
       <section
         part="base"
@@ -246,7 +260,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
       >
         ${overlaps.map((summary) => html`<p part="overlap">${summary}</p>`)}
         <div part="sets">
-          ${this.sets.map((set, index) => this.renderSet(set, index))}
+          ${sets.map((set, index) => this.renderSet(set, index))}
         </div>
       </section>
     `;

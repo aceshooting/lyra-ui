@@ -167,6 +167,20 @@ step "pnpm build"
 pnpm build
 
 LOG_DIR="$(mktemp -d)"
+
+cleanup_logs() {
+  local exit_status=$?
+  trap - EXIT
+  if ! rm -rf -- "$LOG_DIR"; then
+    echo "failed to remove temporary lane logs: $LOG_DIR" >&2
+    if [[ "$exit_status" == "0" ]]; then
+      exit_status=1
+    fi
+  fi
+  exit "$exit_status"
+}
+
+trap cleanup_logs EXIT
 echo "lane logs: $LOG_DIR"
 
 declare -A LANE_PIDS=()

@@ -60,7 +60,7 @@ const EXPECTED_BUCKET_B_WRITE_TYPES = {
   'lr-breadcrumb-item': { href: 'string | undefined' },
   'lr-icon': { name: 'string | undefined', src: 'string | undefined' },
   'lr-icon-button': { name: 'string | undefined' },
-  'lr-split-panel': { snap: 'string | SnapFunction | undefined' },
+  'lr-split-panel': { snap: 'string | LyraSplitPanelSnapFunction | undefined' },
 };
 
 const EXPECTED_BUCKET_B_RUNTIME_DEFAULTS = {
@@ -370,7 +370,7 @@ test('fresh no-write CEM retains reviewed runtime and public-document subclass c
     ['lr-badge', 'size', 'BadgeSize', ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large']],
     ['lr-tag', 'variant', 'TagVariant', ['neutral', 'brand', 'success', 'warning', 'danger', 'primary', 'text']],
     ['lr-rating', 'size', 'LyraRatingSize', ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large']],
-    ['lr-toast-item', 'size', 'ToastSize', ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large']],
+    ['lr-toast-item', 'size', 'LyraToastSize', ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large']],
   ]) {
     assert.equal(member(tagName, name)?.type?.text, type, `${tagName}.${name} raw public type`);
     assert.equal(attribute(tagName, name)?.type?.text, type, `${tagName}[${name}] raw attribute type`);

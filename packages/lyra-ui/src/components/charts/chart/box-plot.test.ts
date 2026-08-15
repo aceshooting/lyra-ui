@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './box-plot.js';
 import type { LyraBoxPlot } from './box-plot.js';
-import { loadBoxPlotAndRegister } from './box-plot.class.js';
+import { loadBoxPlotAndRegister, LyraBoxPlot as LyraBoxPlotClass } from './box-plot.class.js';
 import type { ChartJsModule } from './chart-core-loader.js';
 import { styles } from './box-plot.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -182,7 +182,7 @@ it('fails closed with a clear Error for malformed named/default box-plot modules
 it('builds a boxplot Chart.js instance once both chart.js and the boxplot plugin load', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['K=2', 'K=3'];
-  el.boxes = [
+  el.datasets = [
     {
       label: 'Loss',
       data: [
@@ -200,7 +200,7 @@ it('applies an initial public hiddenDatasets snapshot when it creates the chart'
   const el = (await fixture(html`<lr-box-plot
     .hiddenDatasets=${[1]}
     .labels=${['A']}
-    .boxes=${[
+    .datasets=${[
       { label: 'Visible', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
       { label: 'Hidden', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
     ]}
@@ -214,27 +214,27 @@ it('applies an initial public hiddenDatasets snapshot when it creates the chart'
   expect(chart.isDatasetVisible(1)).to.be.false;
 });
 
-it('updates in place (same Chart instance) when only boxes/labels change', async () => {
+it('updates in place (same Chart instance) when only datasets/labels change', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
-  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const instance = (el as any).chart;
 
-  el.boxes = [{ label: 'x', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] }];
+  el.datasets = [{ label: 'x', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] }];
   await el.updateComplete;
   expect((el as any).chart).to.equal(instance);
 });
 
-it('preserves a legend-toggled hidden dataset across an in-place boxes-only update', async () => {
+it('preserves a legend-toggled hidden dataset across an in-place datasets-only update', async () => {
   // Mirrors chart.test.ts's identical box-shaped regression -- `LyraChart.draw()` already
   // snapshots/restores Chart.js's per-dataset visibility metadata around a full `chart.data`
   // reassignment; `LyraBoxPlot.draw()` must do the same, since it reassigns `chart.data` on every
-  // in-place `boxes` update exactly like `LyraChart` does.
+  // in-place `datasets` update exactly like `LyraChart` does.
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
-  el.boxes = [
+  el.datasets = [
     { label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
     { label: 'y', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
   ];
@@ -249,7 +249,7 @@ it('preserves a legend-toggled hidden dataset across an in-place boxes-only upda
   await el.updateComplete;
   expect(el.hiddenDatasets).to.deep.equal([1]);
 
-  el.boxes = [
+  el.datasets = [
     { label: 'x', data: [{ min: 10, q1: 20, median: 30, q3: 40, max: 50 }] },
     { label: 'y', data: [{ min: 20, q1: 30, median: 40, q3: 50, max: 60 }] },
   ];
@@ -262,7 +262,7 @@ it('preserves a legend-toggled hidden dataset across an in-place boxes-only upda
 it('uses the shared cancellable legend visibility contract instead of private Chart.js state', async () => {
   const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
-  el.boxes = [
+  el.datasets = [
     { label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
     { label: 'y', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
   ];
@@ -294,7 +294,7 @@ it('keeps a controlled hidden box series hidden when its show proposal is cancel
     legend
     .hiddenDatasets=${[0]}
     .labels=${['A']}
-    .boxes=${[
+    .datasets=${[
       { label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
     ]}
   ></lr-box-plot>`)) as LyraBoxPlot;
@@ -327,14 +327,14 @@ it('keeps a controlled hidden box series hidden when its show proposal is cancel
 it('renders a newly-added box series as pressed in the DOM legend on its first update', async () => {
   const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
-  el.boxes = [
+  el.datasets = [
     { label: 'Existing', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
   ];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const chart = (el as any).chart;
 
-  el.boxes = [
+  el.datasets = [
     { label: 'Existing', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
     { label: 'Appended', data: [{ min: 3, q1: 4, median: 5, q3: 6, max: 7 }] },
   ];
@@ -352,7 +352,7 @@ it('renders a newly-added box series as pressed in the DOM legend on its first u
 
 it('updates in place (same Chart instance) across a bare height change, instead of destroying and recreating the chart', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
-  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const instance = (el as any).chart;
@@ -388,17 +388,24 @@ it('uses height as a private fallback without overwriting the public --lr-chart-
 
 it('is accessible', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
-  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   await expect(el).to.be.accessible();
 });
 
+it('removes the deprecated v8 boxes/accessibleLabel/accessibleDescription accessors — datasets/label/description are the only surface', () => {
+  const proto = LyraBoxPlotClass.prototype as unknown as Record<string, unknown>;
+  expect(Object.getOwnPropertyDescriptor(proto, 'boxes')).to.equal(undefined);
+  expect(Object.getOwnPropertyDescriptor(proto, 'accessibleLabel')).to.equal(undefined);
+  expect(Object.getOwnPropertyDescriptor(proto, 'accessibleDescription')).to.equal(undefined);
+});
+
 it('forwards a host aria-label to the canvas and keeps the chart role on that semantic element only', async () => {
   const el = (await fixture(html`
-    <lr-box-plot aria-label="Latency distributions" accessible-label="Legacy box plot label"></lr-box-plot>
+    <lr-box-plot aria-label="Latency distributions" label="Ignored box plot label"></lr-box-plot>
   `)) as LyraBoxPlot;
-  el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
 
@@ -425,7 +432,7 @@ it('parses begin-at-zero="false" as false from plain HTML', async () => {
 
 it('formats generated median-summary values with the effective locale', async () => {
   const el = (await fixture(html`<lr-box-plot locale="de-DE"></lr-box-plot>`)) as LyraBoxPlot;
-  el.boxes = [
+  el.datasets = [
     {
       label: 'Latency',
       data: [
@@ -445,7 +452,7 @@ it('formats generated median-summary values with the effective locale', async ()
 it('positions its y axis at logical start in RTL', async () => {
   const wrapper = await fixture(html`<div dir="rtl"><lr-box-plot></lr-box-plot></div>`);
   const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
-  el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
 
@@ -460,7 +467,7 @@ it('can shrink to a 320px allocation with long chart content', async () => {
   `);
   const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
   el.labels = ['A category label that is intentionally very long'];
-  el.boxes = [
+  el.datasets = [
     {
       label: 'A deliberately long translated latency distribution label',
       data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }],
@@ -475,11 +482,11 @@ it('can shrink to a 320px allocation with long chart content', async () => {
 
 it('exposes a customizable accessible description and box-plot data table', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
-  el.accessibleLabel = 'Loss distributions';
-  el.accessibleDescription = 'Loss medians are stable across the two groups.';
+  el.label = 'Loss distributions';
+  el.description = 'Loss medians are stable across the two groups.';
   el.showDataTable = true;
   el.labels = ['K=2', 'K=3'];
-  el.boxes = [
+  el.datasets = [
     {
       label: 'Loss',
       data: [
@@ -515,7 +522,7 @@ it('caps the generated box-plot alternative at 1,000 endpoint-preserving records
     .strings=${{ chartDataSampled: 'Sampled records; use a custom table.' }}
   ></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = labels;
-  el.boxes = [{ label: 'Range', data: points }];
+  el.datasets = [{ label: 'Range', data: points }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
 
@@ -543,17 +550,17 @@ it('keeps an initially sampled box plot silent, then announces a later sampling 
   const el = (await fixture(html`<lr-box-plot
     .strings=${{ chartDataSampled: 'Sampled records; use a custom table.' }}
     .labels=${sampledLabels}
-    .boxes=${sampledBoxes}
+    .datasets=${sampledBoxes}
   ></lr-box-plot>`)) as LyraBoxPlot;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
   expect(politeTexts()).to.deep.equal([]);
 
   el.labels = ['C0'];
-  el.boxes = [{ label: 'Range', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
+  el.datasets = [{ label: 'Range', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
   await el.updateComplete;
   el.labels = sampledLabels;
-  el.boxes = sampledBoxes;
+  el.datasets = sampledBoxes;
   await el.updateComplete;
 
   expect(politeTexts()).to.deep.equal(['Sampled records; use a custom table.']);
@@ -648,7 +655,7 @@ it('rebinds its visibility observer, motion query, and style reads to its adopte
   const foreignWindow = frame.contentWindow!;
   const el = document.createElement('lr-box-plot') as LyraBoxPlot;
   el.labels = ['A'];
-  el.boxes = [
+  el.datasets = [
     { label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
   ];
   document.body.appendChild(el);
@@ -719,7 +726,7 @@ it('does not bundle lr-chart\'s unused reset-zoom-button styles', () => {
 
 it('does not construct a Chart.js instance if disconnected before the lazy peer import settles', async () => {
   const el = document.createElement('lr-box-plot') as LyraBoxPlot;
-  el.boxes = [{ label: 'a', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
+  el.datasets = [{ label: 'a', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
   document.body.appendChild(el);
   el.remove();
   await aTimeout(100);
@@ -729,7 +736,7 @@ it('does not construct a Chart.js instance if disconnected before the lazy peer 
 it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the host', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.legend = true;
-  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   el.style.setProperty('--lr-chart-grid-color', 'rgb(1, 2, 3)');
   el.style.setProperty('--lr-chart-tick-color', 'rgb(4, 5, 6)');
   el.style.setProperty('--lr-chart-legend-color', 'rgb(7, 8, 9)');
@@ -775,7 +782,7 @@ it('gives uncolored box-plot series concrete themed palette colors', async () =>
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.style.setProperty('--lr-color-chart-1', 'rgb(130, 80, 220)');
   el.style.setProperty('--lr-color-chart-2', 'rgb(20, 140, 155)');
-  el.boxes = [
+  el.datasets = [
     { label: 'A', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
     { label: 'B', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
   ];
@@ -790,7 +797,7 @@ it('gives uncolored box-plot series concrete themed palette colors', async () =>
 
 it('disables Chart.js animation when the user prefers reduced motion', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
-  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
@@ -810,7 +817,7 @@ it('disables Chart.js animation when the user prefers reduced motion', async () 
 
 it('refreshTheme() forces a redraw that re-reads out-of-band theme changes', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
-  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
@@ -825,7 +832,7 @@ it('refreshTheme() forces a redraw that re-reads out-of-band theme changes', asy
 it('skips redrawing when scrolled off-screen', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A', 'B'];
-  el.boxes = [
+  el.datasets = [
     {
       label: 'x',
       data: [
@@ -845,7 +852,7 @@ it('skips redrawing when scrolled off-screen', async () => {
 it('redraws once when it becomes visible again after being off-screen', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A', 'B'];
-  el.boxes = [
+  el.datasets = [
     {
       label: 'x',
       data: [
@@ -867,7 +874,7 @@ it('redraws once when it becomes visible again after being off-screen', async ()
 
 it('skips redrawing when the content signature is unchanged', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
-  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
   const dataRef = (el as any).chart.data;
@@ -883,7 +890,7 @@ describe('box-plot robustness regressions', () => {
         <table slot="data-table"><tbody><tr><td>Custom distributions</td></tr></tbody></table>
       </lr-box-plot>
     `)) as LyraBoxPlot;
-    el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
     await aTimeout(0);
@@ -893,7 +900,7 @@ describe('box-plot robustness regressions', () => {
 
   it('locale-formats summary counts, row ordinals, and every generated table number', async () => {
     const el = (await fixture(html`<lr-box-plot locale="ar-EG"></lr-box-plot>`)) as LyraBoxPlot;
-    el.boxes = [
+    el.datasets = [
       {
         label: 'Latency',
         data: [{ min: 1000, q1: 1100, median: 1234.5, q3: 1300, max: 1400 }],
@@ -927,7 +934,7 @@ describe('box-plot robustness regressions', () => {
         }}
       ></lr-box-plot>
     `)) as LyraBoxPlot;
-    el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.datasets = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
@@ -940,7 +947,7 @@ describe('box-plot robustness regressions', () => {
   it('drops malformed five-number points without poisoning valid summaries or table cells', async () => {
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
     el.labels = ['Broken', 'Valid'];
-    el.boxes = [
+    el.datasets = [
       {
         label: 'Latency',
         data: [
@@ -963,11 +970,11 @@ describe('box-plot robustness regressions', () => {
 
   it('does not recreate a detached chart from an already scheduled update', async () => {
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
-    el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
-    el.boxes = [{ label: 'x', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] }];
+    el.datasets = [{ label: 'x', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] }];
     el.remove();
     await el.updateComplete;
     expect((el as unknown as { chart?: unknown }).chart).to.equal(undefined);
@@ -976,7 +983,7 @@ describe('box-plot robustness regressions', () => {
   it('automatically refreshes canvas colors after an ancestor theme mutation', async () => {
     const wrapper = await fixture(html`<div><lr-box-plot></lr-box-plot></div>`);
     const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
-    el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
@@ -999,7 +1006,7 @@ describe('box-plot robustness regressions', () => {
     const el = (await fixture(html`
       <lr-box-plot style="--box-color: rgb(12, 34, 56)"></lr-box-plot>
     `)) as LyraBoxPlot;
-    el.boxes = [
+    el.datasets = [
       {
         label: 'Latency',
         color: 'var(--box-color)',
@@ -1030,7 +1037,7 @@ describe('box-plot context and flow', () => {
   it('redraws for live inherited lang and dir changes without another reactive property change', async () => {
     const wrapper = await fixture(html`<div lang="en-US" dir="ltr"><lr-box-plot></lr-box-plot></div>`);
     const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
-    el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.datasets = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
     expect((el as any).chart.options.locale).to.equal('en-US');
@@ -1054,7 +1061,7 @@ describe('box-plot context and flow', () => {
     `);
     const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
     el.labels = ['A'];
-    el.boxes = [{
+    el.datasets = [{
       label: 'A deliberately long translated latency distribution label that must remain visible',
       data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }],
     }];
@@ -1091,7 +1098,7 @@ describe('box-plot context and flow', () => {
     const el = (await fixture(html`
       <lr-box-plot legend style="--box-color: rgb(10, 20, 30)"></lr-box-plot>
     `)) as LyraBoxPlot;
-    el.boxes = [{
+    el.datasets = [{
       label: 'Latency',
       color: 'var(--box-color)',
       data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }],
@@ -1111,7 +1118,7 @@ describe('box-plot context and flow', () => {
 
   it('wraps long peer-load errors and skips theme redraw while off-screen', async () => {
     const el = (await fixture(html`<lr-box-plot style="inline-size: 180px"></lr-box-plot>`)) as LyraBoxPlot;
-    el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.datasets = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     el.strings = {
       boxPlotMissingLibrary:
         'A deliberately long translated dependency error that must wrap safely',
@@ -1173,7 +1180,7 @@ it('uses explicitly themed chart colors instead of its built-in fallbacks', asyn
     --lr-chart-tooltip-text: rgb(130, 140, 150);
   "></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
-  el.boxes = [{ label: 'S', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'S', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const options = (el as any).chart.options;
@@ -1191,7 +1198,7 @@ it('uses explicitly themed chart colors instead of its built-in fallbacks', asyn
 it('summarizes a series with no points as no-data rather than emitting a range', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
-  el.boxes = [{ label: 'Empty', data: [] }];
+  el.datasets = [{ label: 'Empty', data: [] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const summary = el.shadowRoot!.textContent ?? '';
@@ -1202,7 +1209,7 @@ it('summarizes a series with no points as no-data rather than emitting a range',
 it('describes a falling series distinctly from a rising one', async () => {
   const rising = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   rising.labels = ['A', 'B'];
-  rising.boxes = [{
+  rising.datasets = [{
     label: 'Up',
     data: [
       { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
@@ -1214,7 +1221,7 @@ it('describes a falling series distinctly from a rising one', async () => {
 
   const falling = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   falling.labels = ['A', 'B'];
-  falling.boxes = [{
+  falling.datasets = [{
     label: 'Down',
     data: [
       { min: 5, q1: 6, median: 7, q3: 8, max: 9 },
@@ -1231,7 +1238,7 @@ it('describes a falling series distinctly from a rising one', async () => {
 it('drops rendered datasets when the series count shrinks', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.labels = ['A'];
-  el.boxes = [
+  el.datasets = [
     { label: 'One', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
     { label: 'Two', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
     { label: 'Three', data: [{ min: 3, q1: 4, median: 5, q3: 6, max: 7 }] },
@@ -1240,7 +1247,7 @@ it('drops rendered datasets when the series count shrinks', async () => {
   await waitUntil(() => (el as any).chart != null);
   expect((el as any).chart.data.datasets.length).to.equal(3);
 
-  el.boxes = [{ label: 'One', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.datasets = [{ label: 'One', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
   await el.updateComplete;
   expect((el as any).chart.data.datasets.length, 'removed series are not left behind').to.equal(1);
 });
@@ -1266,7 +1273,7 @@ describe('per-box interactivity', () => {
   it('exposes the canvas as a keyboard-navigable surface', async () => {
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
     el.labels = ['A', 'B'];
-    el.boxes = twoSeries();
+    el.datasets = twoSeries();
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
 
@@ -1278,7 +1285,7 @@ describe('per-box interactivity', () => {
   it('announces the focused box summary and walks boxes with Arrow/Home/End', async () => {
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
     el.labels = ['A', 'B'];
-    el.boxes = twoSeries();
+    el.datasets = twoSeries();
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
 
@@ -1307,7 +1314,7 @@ describe('per-box interactivity', () => {
   it('emits lr-point-click carrying the five-number summary on keyboard activation', async () => {
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
     el.labels = ['A', 'B'];
-    el.boxes = twoSeries();
+    el.datasets = twoSeries();
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
 
@@ -1335,7 +1342,7 @@ describe('per-box interactivity', () => {
   it('emits lr-point-click from the wired pointer handler and stays silent on a miss', async () => {
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
     el.labels = ['A', 'B'];
-    el.boxes = twoSeries();
+    el.datasets = twoSeries();
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
 
@@ -1378,7 +1385,7 @@ describe('per-box interactivity', () => {
   it('keeps the keyboard cursor inside the data after the box count shrinks', async () => {
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
     el.labels = ['A', 'B'];
-    el.boxes = twoSeries();
+    el.datasets = twoSeries();
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
 
@@ -1387,7 +1394,7 @@ describe('per-box interactivity', () => {
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
     await el.updateComplete;
 
-    el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.datasets = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     el.labels = ['A'];
     await el.updateComplete;
 

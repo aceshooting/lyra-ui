@@ -37,6 +37,7 @@ const strings: LyraLocaleStrings = {
   toolSelectLimit: 'Somente as primeiras {count} ferramentas são exibidas.',
   sequenceStripEmpty: 'Nenhum item',
   sequenceStripCategoryCount: '{label}: {count}',
+  sequenceStripUnnamedCategory: 'Categoria sem nome',
   noColumns: 'Nenhuma coluna configurada',
   dataGridColumnMenu: 'Opções para {label}',
   dataGridPinStart: 'Fixar {label} no início',

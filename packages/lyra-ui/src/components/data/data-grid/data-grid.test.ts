@@ -464,6 +464,7 @@ it("exposes the exact public defaults", async () => {
   expect(element.columns).to.deep.equal([]);
   expect(element.data).to.deep.equal([]);
   expect(element.dataSource).to.equal(null);
+  expect(element.expandedRowKeys).to.deep.equal([]);
   expect(element.expandedKeys).to.deep.equal([]);
   expect(element.filterDebounce).to.equal(250);
   expect(element.filteredCount).to.equal(0);
@@ -487,6 +488,7 @@ it("exposes the exact public defaults", async () => {
   expect(element.searchTerm).to.equal("");
   expect(element.selectable).to.equal("none");
   expect(element.selectableRows).to.equal(null);
+  expect(element.selectedRowKeys).to.deep.equal([]);
   expect(element.selectedKeys).to.deep.equal([]);
   expect(element.selectedRows).to.deep.equal([]);
   expect(element.server).to.equal(false);
@@ -523,6 +525,74 @@ it("maps writable selectedRows onto current source-row keys", async () => {
   await element.updateComplete;
   expect(element.selectedKeys).to.deep.equal([1]);
   expect(element.selectedRows).to.deep.equal([rows[0]]);
+});
+
+it('canonicalizes row and column identities while retaining mirrored state aliases', async () => {
+  type IdentityRow = { readonly id: string; readonly name: string };
+  const first = { id: 'a', name: 'First' };
+  const duplicate = { id: 'a', name: 'Later duplicate' };
+  const tail = { id: 'b', name: 'Tail' };
+  const actionColumn: DataGridColumn<IdentityRow> = {
+    label: 'Action',
+    formatter: (_value, row) => row.name,
+  };
+  const element = (await fixture(
+    html`<lr-data-grid label="Identity rows" selectable="multiple"></lr-data-grid>`
+  )) as LyraDataGrid<IdentityRow>;
+  element.rowKey = 'id';
+  element.columns = [
+    null,
+    { id: '   ', label: 'Blank' },
+    { id: 'name', field: 'name', label: 'Name' },
+    { id: 'name', field: 'name', label: 'Later duplicate' },
+    actionColumn,
+  ] as unknown as readonly DataGridColumn<IdentityRow>[];
+  element.data = [
+    null,
+    { id: '   ', name: 'Blank' },
+    first,
+    duplicate,
+    tail,
+  ] as unknown as readonly IdentityRow[];
+  element.selectedRowKeys = ['   ', 'a', 'a'];
+  element.expandedRowKeys = ['   ', 'a', 'a'];
+  await element.updateComplete;
+
+  const columnIds = [
+    ...element.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[part~="header-cell"][data-column-id]'
+    ),
+  ].map((cell) => cell.dataset.columnId);
+  expect(columnIds.length).to.equal(2);
+  expect(columnIds[0]).to.equal('name');
+  expect(columnIds[1]?.startsWith('column-occurrence-')).to.equal(true);
+  expect(element.shadowRoot!.textContent).to.contain('First');
+  expect(element.shadowRoot!.textContent).to.contain('Tail');
+  expect(element.shadowRoot!.textContent).not.to.contain('Later duplicate');
+  expect(element.shadowRoot!.textContent).not.to.contain('Blank');
+  expect(element.selectedRowKeys).to.deep.equal(['a']);
+  expect(element.selectedKeys).to.deep.equal(['a']);
+  expect(element.expandedRowKeys).to.deep.equal(['a']);
+  expect(element.expandedKeys).to.deep.equal(['a']);
+
+  const eventPromise = oneEvent(element, 'lr-row-select');
+  (
+    element.shadowRoot!.querySelector('[part~="row"] input') as HTMLInputElement
+  ).click();
+  const detail = (await eventPromise).detail;
+  expect(detail.selectedRowKeys).to.deep.equal([]);
+  expect(detail.selectedKeys).to.deep.equal([]);
+
+  const actionIdentity = columnIds[1];
+  element.columns = [actionColumn, { id: 'name', field: 'name', label: 'Name' }];
+  element.data = [tail, first];
+  await element.updateComplete;
+  const reorderedIds = [
+    ...element.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[part~="header-cell"][data-column-id]'
+    ),
+  ].map((cell) => cell.dataset.columnId);
+  expect(reorderedIds[0]).to.equal(actionIdentity);
 });
 
 it("reflects the documented attribute surface and treats a bare selectable as multiple", async () => {
@@ -979,7 +1049,13 @@ it("selects eligible rows, maintains selectedRows, and emits keys and rows", asy
   const event = await eventPromise;
   expect(element.selectedKeys).to.deep.equal([1]);
   expect(element.selectedRows).to.deep.equal([rows[0]]);
+  expect(event.detail.selectedRowKeys).to.deep.equal([1]);
   expect(event.detail.selectedKeys).to.deep.equal([1]);
+  expect(event.detail.selectedRows[0] === rows[0]).to.equal(true);
+  expect(Object.isFrozen(event.detail)).to.equal(true);
+  expect(Object.isFrozen(event.detail.selectedKeys)).to.equal(true);
+  expect(Object.isFrozen(event.detail.selectedRowKeys)).to.equal(true);
+  expect(Object.isFrozen(event.detail.selectedRows)).to.equal(true);
 });
 
 // [part~='row']:hover and [part~='row'][aria-selected='true'] are both (0,2,0), so only source
@@ -1186,7 +1262,9 @@ it("filters trees from leaves and separates programmatic from user expansion eve
       '[part="expand-button"]'
     ) as HTMLButtonElement
   ).click();
-  expect((await collapse).detail.key).to.equal(10);
+  const collapseDetail = (await collapse).detail;
+  expect(collapseDetail.rowKey).to.equal(10);
+  expect(collapseDetail.key).to.equal(10);
   const expand = oneEvent(element, "lr-row-expand");
   (
     element.shadowRoot!.querySelector(
@@ -1386,6 +1464,9 @@ it("emits only the mirrored request event with an immutable snapshot and server 
   expect(request.detail.filters).to.deep.equal([
     { id: "team", value: "Runtime" },
   ]);
+  expect(Object.isFrozen(request.detail)).to.equal(true);
+  expect(Object.isFrozen(request.detail.sort)).to.equal(true);
+  expect(Object.isFrozen(request.detail.filters)).to.equal(true);
   expect(request.detail.signal).to.be.instanceOf(AbortSignal);
   expect(prefixedRequests).to.equal(0);
   expect(request.bubbles).to.equal(true);
@@ -1412,6 +1493,8 @@ it("keeps prior rows, clears loading, and emits a strict-console-safe server err
   await element.reload();
   const event = await errorEvent;
   expect(event.detail.error).to.equal(failure);
+  expect(Object.isFrozen(event.detail)).to.equal(true);
+  expect(Object.isFrozen(event.detail.request)).to.equal(true);
   expect(event.detail.request.signal.aborted).to.equal(false);
   expect(event.bubbles).to.equal(true);
   expect(event.composed).to.equal(true);
@@ -2033,6 +2116,8 @@ it("serializes, validates, applies, and resets view state without losing page or
   expect(state.pinning).to.deep.equal({ score: "right", name: false });
   expect(state.sort).to.deep.equal([{ id: "score", desc: true }]);
   expect(state.filters).to.deep.equal([{ id: "team", value: "Compiler" }]);
+  expect(state.selectedRowKeys).to.deep.equal([1]);
+  expect(state.expandedRowKeys).to.deep.equal([1]);
   expect(state.selectedKeys).to.deep.equal([1]);
   expect(state.expandedKeys).to.deep.equal([1]);
   expect(state.page).to.equal(0);
@@ -2630,7 +2715,7 @@ it("accepts foreign-realm event targets and ignores nested interactive activatio
     element.addEventListener("lr-cell-click", () => cellEvents++);
     const rowItem = internals.processedClientRows[0]!;
     cell.addEventListener("click", (event) => {
-      internals.onCellClick(event, rowItem, interactiveColumns[0]!, 0);
+      internals.onCellClick(event, rowItem, interactiveColumns[0]!, 'name', 0);
     });
     nestedButton.click();
     expect(cellEvents).to.equal(0);
@@ -2653,6 +2738,8 @@ it("emits cell activation details and makes context-menu cancellation suppress n
   cell.click();
   const clicked = await clickEvent;
   expect(clicked.detail.row.id).to.equal(1);
+  expect(clicked.detail.rowKey).to.equal('row-occurrence-1');
+  expect(clicked.detail.columnId).to.equal('name');
   expect(clicked.detail.value).to.equal("Ada");
   expect(clicked.detail.index).to.equal(0);
   expect(clicked.bubbles).to.equal(true);
@@ -3399,6 +3486,8 @@ it("copies and raises a context menu from the grid keyboard contract", async () 
     })
   );
   const { detail } = await menu;
+  expect(detail.rowKey).to.equal('row-occurrence-1');
+  expect(detail.columnId).to.equal('name');
   expect(detail.index).to.equal(0);
   expect(detail.value).to.equal("Ada");
 });
@@ -5877,6 +5966,7 @@ it("emits a frozen group expansion snapshot", async () => {
   const event = await expanded;
   expect(event.detail.columnId).to.equal("team");
   expect(event.detail.rows.length).to.be.greaterThan(0);
+  expect(event.detail.rows.every((row) => rows.includes(row))).to.equal(true);
   expect(Object.isFrozen(event.detail)).to.equal(true);
   expect(Object.isFrozen(event.detail.rows)).to.equal(true);
 });
@@ -5927,10 +6017,10 @@ it("accounts for expanded detail rows in aria-rowindex and aria-rowcount", async
 describe("data-grid processing helpers", () => {
   const locale = "en";
 
-  it("derives a column id from id, field, then position", () => {
+  it('derives a column id from id or field without positional identity', () => {
     expect(columnId({ id: "explicit", field: "name" }, 0)).to.equal("explicit");
     expect(columnId({ field: "name" }, 0)).to.equal("name");
-    expect(columnId({}, 2)).to.equal("column-3");
+    expect(columnId({}, 2)).to.equal('');
   });
 
   it("reads dot paths defensively", () => {

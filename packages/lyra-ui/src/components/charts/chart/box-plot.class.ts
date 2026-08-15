@@ -63,10 +63,6 @@ export interface LyraBoxPlotSeries {
   readonly data: readonly LyraBoxPlotSummary[];
   readonly color?: string;
 }
-/** @deprecated Use the namespaced `LyraBoxPlotSummary`. */
-export type BoxPlotPoint = LyraBoxPlotSummary;
-/** @deprecated Use the namespaced `LyraBoxPlotSeries`. */
-export type BoxPlotSeries = LyraBoxPlotSeries;
 
 // Defensive JS-side fallbacks for themeColors() below, mirroring the
 // light-mode default of each `--lr-chart-*` token's own fallback chain
@@ -131,7 +127,7 @@ export interface LyraBoxPlotPointDetail {
   datasetIndex: number;
   index: number;
   label: string | undefined;
-  value: BoxPlotPoint | null;
+  value: LyraBoxPlotSummary | null;
 }
 
 export interface LyraBoxPlotEventMap {
@@ -139,7 +135,7 @@ export interface LyraBoxPlotEventMap {
   'lr-before-legend-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
   'lr-legend-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
   'lr-datum-activate': CustomEvent<
-    LyraChartDatumActivateDetail<'box', BoxPlotPoint | null>
+    LyraChartDatumActivateDetail<'box', LyraBoxPlotSummary | null>
   >;
 }
 
@@ -149,7 +145,7 @@ export interface LyraBoxPlotEventMap {
  * them), so emitting the original would leak the peer's internal bookkeeping into a public event
  * and hand consumers a reference the chart is still writing to.
  */
-function summaryOf(point: BoxPlotPoint): BoxPlotPoint {
+function summaryOf(point: LyraBoxPlotSummary): LyraBoxPlotSummary {
   return {
     min: point.min,
     q1: point.q1,
@@ -259,7 +255,7 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @event lr-legend-visibility-change - Committed DOM legend visibility change.
  * @event lr-point-click - Fired when pointer input lands on a box, or when Enter/Space activates
  *   the keyboard-current box. `detail: { datasetIndex: number, index: number, label: string |
- *   undefined, value: BoxPlotPoint | null }`, where `value` is that box's complete five-number
+ *   undefined, value: LyraBoxPlotSummary | null }`, where `value` is that box's complete five-number
  *   summary. Mirrors `<lr-chart>`/`<lr-lite-chart>`'s event of the same name.
  * @event lr-datum-activate - Family-normalized box activation; the legacy detail plus `kind: 'box'`.
  * @slot data-table - An optional consumer-provided complete/paginated accessible table alternative.
@@ -286,12 +282,6 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @since 4.0.0
  */
 export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'labels',
-    'datasets',
-    'hiddenDatasets',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -322,6 +312,12 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'labels',
+    'datasets',
+    'hiddenDatasets',
+  ]);
+
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-before-legend-visibility-change',
@@ -337,13 +333,6 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   @property({ attribute: false }) labels: readonly string[] = [];
   @property({ attribute: false }) datasets: readonly LyraBoxPlotSeries[] = [];
-  /** @deprecated Use the family-consistent `datasets` property. */
-  get boxes(): readonly LyraBoxPlotSeries[] {
-    return this.datasets;
-  }
-  set boxes(value: readonly LyraBoxPlotSeries[]) {
-    this.datasets = value;
-  }
   /** Complete controlled legend visibility state. `undefined` keeps the default all-visible state. */
   @property({ attribute: false }) hiddenDatasets?: readonly number[];
   @property({ type: Boolean }) legend = false;
@@ -360,10 +349,6 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   @property() label: string | null = null;
   /** Accessible chart description. A generated five-number summary is used when unset. */
   @property() description: string | null = null;
-  /** @deprecated Use `label`. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel: string | null = null;
-  /** @deprecated Use `description`. */
-  @property({ attribute: 'accessible-description' }) accessibleDescription = '';
   /** Makes the generated data table visible; it remains screen-reader available when false. */
   @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
   /** Formats numeric axes, tooltips, generated table cells, summaries, and CSV export. */
@@ -545,7 +530,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   private effectiveHiddenDatasetIndexes(): number[] {
-    return normalizeHiddenDatasets(this.hiddenDatasets, this.boxes.length) ?? [];
+    return normalizeHiddenDatasets(this.hiddenDatasets, this.datasets.length) ?? [];
   }
 
   /** Synchronizes the public controlled visibility snapshot with Chart.js after data replacement. */
@@ -553,7 +538,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     if (!this.chart) return false;
     const datasetCount = this.chart.data.datasets?.length ?? 0;
     const sourceSeriesIndexes = this.dataTableSample().seriesIndexes;
-    const controlled = normalizeHiddenDatasets(this.hiddenDatasets, this.boxes.length);
+    const controlled = normalizeHiddenDatasets(this.hiddenDatasets, this.datasets.length);
     if (controlled === undefined) {
       for (let index = 0; index < datasetCount; index++) {
         const metadata = this.chart.getDatasetMeta?.(index);
@@ -606,7 +591,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       else this.style.removeProperty('--_lr-chart-height');
     }
     if (this.loading) return;
-    const contentChanged = ['labels', 'datasets', 'hiddenDatasets', 'legend', 'legendPosition', 'height', 'yLabel', 'beginAtZero', 'label', 'description', 'accessibleLabel', 'accessibleDescription', 'valueFormatter', 'formatter', 'locale', 'strings', 'loading'].some((name) =>
+    const contentChanged = ['labels', 'datasets', 'hiddenDatasets', 'legend', 'legendPosition', 'height', 'yLabel', 'beginAtZero', 'label', 'description', 'valueFormatter', 'formatter', 'locale', 'strings', 'loading'].some((name) =>
       changed.has(name),
     );
     const direction = this.effectiveDirection;
@@ -670,7 +655,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   /** The series color for a box index, honoring an explicit per-series `color` override. */
   private seriesColor(index: number, palette: string[] = seriesPalette(this)): string {
     const fallback = palette[index % palette.length] ?? 'transparent';
-    const series = this.boxes[index];
+    const series = this.datasets[index];
     return series?.color ? resolveCanvasColor(this, series.color, fallback) : fallback;
   }
 
@@ -710,7 +695,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       data: {
         labels: sample.rowIndexes.map((index) => this.labels[index] ?? ''),
         datasets: sample.seriesIndexes.map((sourceIndex) => {
-          const s = this.boxes[sourceIndex]!;
+          const s = this.datasets[sourceIndex]!;
           const color = this.seriesColor(sourceIndex, palette);
           return {
             label: s.label,
@@ -744,8 +729,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
                   callbacks: {
                     label: (context: { dataset?: { label?: unknown }; raw?: unknown }) => {
                       const raw = context.raw;
-                      const point = this.validPoint(raw as BoxPlotPoint)
-                        ? (raw as BoxPlotPoint)
+                      const point = this.validPoint(raw as LyraBoxPlotSummary)
+                        ? (raw as LyraBoxPlotSummary)
                         : undefined;
                       if (!point) return undefined;
                       const value = this.formatValue(point.median, 'tooltip');
@@ -779,7 +764,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   // Mirrors `LyraChart.draw()`'s reuse-existing-instance-when-possible
   // pattern: an update that doesn't need a new Chart.js instance (e.g. a
-  // bare `height` change, or new `boxes`/`labels` data) mutates the existing
+  // bare `height` change, or new `datasets`/`labels` data) mutates the existing
   // chart and does an incremental `.update('none')` instead of tearing down
   // and rebuilding the whole canvas/instance on every reactive update. Unlike
   // `LyraChart`, `LyraBoxPlot` has no raw `config` passthrough that could
@@ -838,7 +823,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       'max',
     ].map(escapeCsvField).join(',');
     const rows: string[] = [];
-    this.boxes.forEach((series) => {
+    this.datasets.forEach((series) => {
       series.data.forEach((point, index) => {
         if (!this.validPoint(point)) return;
         rows.push([
@@ -857,10 +842,9 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   private boxPlotDescription(): string {
     if (this.description) return this.description;
-    if (this.accessibleDescription) return this.accessibleDescription;
     const sample = this.dataTableSample();
     const summaries = sample.seriesIndexes.map((index) => {
-      const series = this.boxes[index]!;
+      const series = this.datasets[index]!;
       let count = 0;
       let first = 0;
       let last = 0;
@@ -909,7 +893,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     const sample = this.dataTableSample();
     const datums: LyraBoxPlotPointDetail[] = [];
     for (const datasetIndex of sample.seriesIndexes) {
-      const series = this.boxes[datasetIndex];
+      const series = this.datasets[datasetIndex];
       if (!series) continue;
       for (const index of sample.rowIndexes) {
         const point = series.data[index];
@@ -957,7 +941,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       )
       .join(this.localize('chartSummarySeparator'));
     return this.localize('liteChartMarkSummary', undefined, {
-      series: this.boxes[datum.datasetIndex]?.label || this.localize('chartSeriesLabel'),
+      series: this.datasets[datum.datasetIndex]?.label || this.localize('chartSeriesLabel'),
       label:
         datum.label ??
         this.localize('chartPointLabel', undefined, {
@@ -1003,7 +987,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     const datasetIndex = sample.seriesIndexes[hit.datasetIndex];
     const index = sample.rowIndexes[hit.index];
     if (datasetIndex === undefined || index === undefined) return;
-    const point = this.boxes[datasetIndex]?.data[index];
+    const point = this.datasets[datasetIndex]?.data[index];
     this.activateBox({
       datasetIndex,
       index,
@@ -1047,7 +1031,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.keyboardDatumAnnouncement = this.boxAnnouncement(datums[next]!, next, datums.length);
   }
 
-  private validPoint(point: BoxPlotPoint | null | undefined): point is BoxPlotPoint {
+  private validPoint(point: LyraBoxPlotSummary | null | undefined): point is LyraBoxPlotSummary {
     return !!point &&
       [point.min, point.q1, point.median, point.q3, point.max].every(Number.isFinite) &&
       point.min <= point.q1 &&
@@ -1057,16 +1041,16 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   private accessibleName(fallback: string): string {
-    return this.getAttribute('aria-label') ?? this.label ?? this.accessibleLabel ?? fallback;
+    return this.getAttribute('aria-label') ?? this.label ?? fallback;
   }
 
   private dataTableSample() {
     // Avoid spreading an unbounded consumer-provided list into Math.max(); this
     // table remains the bounded accessible fallback even for very wide data.
     let rowCount = this.labels.length;
-    for (const series of this.boxes) rowCount = Math.max(rowCount, series.data.length);
-    const indexes = sampleChartTableIndexes(rowCount, this.boxes.length);
-    return { rowCount, seriesCount: this.boxes.length, ...indexes };
+    for (const series of this.datasets) rowCount = Math.max(rowCount, series.data.length);
+    const indexes = sampleChartTableIndexes(rowCount, this.datasets.length);
+    return { rowCount, seriesCount: this.datasets.length, ...indexes };
   }
 
   private generatedDataIsSampled(): boolean {
@@ -1099,7 +1083,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         </thead>
         <tbody>
           ${sample.seriesIndexes.flatMap((seriesIndex) => {
-            const series = this.boxes[seriesIndex]!;
+            const series = this.datasets[seriesIndex]!;
             return sample.rowIndexes.map(
               (index) => {
                 const point = series.data[index];
@@ -1130,7 +1114,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   private toggleDataset(index: number): void {
     if (!this.chart) return;
-    if (index < 0 || index >= this.boxes.length) return;
+    if (index < 0 || index >= this.datasets.length) return;
     const hidden = this.effectiveHiddenDatasetIndexes();
     const wasHidden = hidden.includes(index);
     const nextHidden = wasHidden
@@ -1155,7 +1139,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     if (!this.legend) return nothing;
     const palette = seriesPalette(this);
     const forced = forcedColorsActive(this.ownerWindow);
-    const controlledHidden = normalizeHiddenDatasets(this.hiddenDatasets, this.boxes.length);
+    const controlledHidden = normalizeHiddenDatasets(this.hiddenDatasets, this.datasets.length);
     const controlledHiddenSet = controlledHidden === undefined
       ? undefined
       : new Set(controlledHidden);
@@ -1163,7 +1147,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     return html`
       <div part="legend" role="group" aria-label=${this.accessibleName(this.localize('boxPlot'))}>
         ${sample.seriesIndexes.map((index) => {
-          const series = this.boxes[index]!;
+          const series = this.datasets[index]!;
           const color = this.seriesColor(index, palette);
           // As in `LyraChart`, public controlled state replaces unobservable Chart.js metadata.
           const visible = controlledHiddenSet === undefined || !controlledHiddenSet.has(index);
@@ -1206,7 +1190,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         </div>
       `;
     }
-    const boxLabels = this.dataTableSample().seriesIndexes.map((index) => this.boxes[index]!.label);
+    const boxLabels = this.dataTableSample().seriesIndexes.map((index) => this.datasets[index]!.label);
     const label = this.accessibleName(
       (boxLabels.length
         ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(boxLabels)

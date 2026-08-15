@@ -14,6 +14,14 @@ const meta: Meta = {
   title: 'FilterBar',
   component: 'lr-filter-bar',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Filter definitions and values are detached, deeply frozen, and bounded at assignment; Lit icon payloads retain rendering identity. Create and reassign a new array or record after changes, and consume complete frozen value snapshots from filter-bar events.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -147,6 +155,28 @@ export const Loading: Story = {
       loading
       .filters=${dashboardFilters}
       .value=${{ status: 'open' }}
+    ></lr-filter-bar>
+  `,
+};
+
+/** Foreign/untyped built-in values are normalized before state, validity, reset, or chips use
+ * them. In particular, boolean `false` is the canonical empty built-in value rather than a blank
+ * active chip; custom boolean controls define emptiness through their own adapter below. */
+export const ForeignFalseBuiltInValue: Story = {
+  name: 'Foreign false built-in value (normalized empty)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The host supplies `false` for the required select through an untyped boundary. It is omitted as empty, so no blank active chip appears and required validity remains unsatisfied.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-filter-bar
+      style="max-width: 48rem"
+      .filters=${[{ ...dashboardFilters[0], required: true }]}
+      .value=${{ status: false }}
     ></lr-filter-bar>
   `,
 };

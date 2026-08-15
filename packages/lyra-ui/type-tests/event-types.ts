@@ -40,10 +40,10 @@ import type {
   ToolSelectDialogCloseReason,
 } from '../src/lyra.js';
 import type {
-  AppRailResizeDetail,
-  BoxPlotPoint,
-  BoxPlotSeries,
-  ChartPoint,
+  LyraAppRailResizeDetail,
+  LyraBoxPlotSummary,
+  LyraBoxPlotSeries,
+  LyraChartPoint,
   ChipSelectDetail,
   LyraMapChoroplethLayer,
   LyraGraphLink,
@@ -56,7 +56,7 @@ import type {
   LyraMapMarker,
   MenuItemChangeDetail,
   MenuItemType,
-  Series,
+  LyraChartSeries,
   ToolApprovalDialogWrap,
   LyraWidgetView,
 } from '../src/lyra.js';
@@ -391,11 +391,11 @@ void additionalBarrelEventMapTypes;
 // forbids). Fails to typecheck if the barrel ever drops one.
 const barrelPublicSurfaceTypes: [
   HeatmapSelectedCell,
-  ChartPoint,
-  Series,
+  LyraChartPoint,
+  LyraChartSeries,
   LyraChartType,
-  BoxPlotSeries,
-  BoxPlotPoint,
+  LyraBoxPlotSeries,
+  LyraBoxPlotSummary,
   LyraGraphNode,
   LyraGraphLink,
   LyraMapLegendEntry,
@@ -405,7 +405,7 @@ const barrelPublicSurfaceTypes: [
   MenuItemType,
   ToolApprovalDialogWrap,
   LyraComboboxSelectionDirection,
-  AppRailResizeDetail,
+  LyraAppRailResizeDetail,
   ChipSelectDetail,
   MenuItemChangeDetail,
   KbdLocalize,
@@ -472,7 +472,7 @@ toolSelect.addEventListener('lr-close', (event) => {
   void reason;
 });
 toolSelect.addEventListener('lr-change', (event) => {
-  const selected: readonly string[] = event.detail.selected;
+  const selected: readonly string[] = event.detail.selectedToolIds;
   void selected;
 });
 
@@ -609,18 +609,18 @@ list.addEventListener('lr-visible-range-changed', (event) => {
 // listener registered here got a bare `Event` -- `event.detail` didn't typecheck.
 declare const tree: LyraTree;
 tree.addEventListener('lr-node-toggle', (event) => {
-  const id: string = event.detail.id;
+  const id: string = event.detail.nodeId;
   const expanded: boolean = event.detail.expanded;
   void id;
   void expanded;
 });
 tree.addEventListener('lr-node-select', (event) => {
-  const id: string = event.detail.id;
+  const id: string = event.detail.nodeId;
   void id;
 });
 tree.addEventListener('lr-reorder', (event) => {
-  const id: string = event.detail.id;
-  const parentId: string | null = event.detail.parentId;
+  const id: string = event.detail.nodeId;
+  const parentId: string | null = event.detail.parentNodeId;
   const fromIndex: number = event.detail.fromIndex;
   const toIndex: number = event.detail.toIndex;
   void id;
@@ -675,9 +675,9 @@ window.addEventListener('lr-multi-split-collapse-change', (event) => {
 
 // A name emitted by more than one component becomes a union of those components' own entries, so
 // only what every arm carries is readable without narrowing. `lr-node-toggle` comes from both
-// `<lr-tree>` and `<lr-tree-item>` and both carry `{ id, expanded }`, so both still read.
+// `<lr-tree>` and `<lr-tree-item>` and both carry `{ nodeId, expanded }`, so both still read.
 document.addEventListener('lr-node-toggle', (event) => {
-  const id: string = event.detail.id;
+  const id: string = event.detail.nodeId;
   const expanded: boolean = event.detail.expanded;
   void id;
   void expanded;
@@ -698,7 +698,7 @@ document.addEventListener('lr-change', (event) => {
 // The precise, per-element maps remain the source of truth the global map is derived from, and
 // stay directly nameable for exactly that narrowing.
 declare const preciseChange: LyraSelectEventMap['lr-change'];
-const preciseChangeValue: string | string[] = preciseChange.detail.value;
+const preciseChangeValue: string | readonly string[] = preciseChange.detail.value;
 void preciseChangeValue;
 
 // `lr-frame-select` only fires for source locations that passed safe-integer validation, so its

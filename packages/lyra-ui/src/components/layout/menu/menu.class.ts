@@ -1,7 +1,10 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventDetailSnapshot,
+} from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
@@ -36,7 +39,7 @@ export type { MenuFocusTarget } from './menu-shared.js';
 /** WA-compatible selection detail. The complete item keeps `value`, checkbox state, and any
  * consumer metadata available without translating the activation into a lossy string. */
 export interface MenuItemSelectDetail {
-  item: LyraMenuItem;
+  readonly item: LyraMenuItem;
 }
 
 /** Where a submenu prefers to sit: beside its parent row, on the inline-end side. Resolved
@@ -71,7 +74,7 @@ interface OwnedTimeout {
 }
 
 export interface LyraMenuEventMap {
-  'lr-select': CustomEvent<MenuItemSelectDetail>;
+  'lr-select': CustomEvent<LyraEventDetailSnapshot<MenuItemSelectDetail>>;
 }
 /**
  * `<lr-menu>` — the inline semantic controller mapped from `<sl-menu>`. It owns the

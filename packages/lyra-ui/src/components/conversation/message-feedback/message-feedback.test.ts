@@ -189,7 +189,17 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
 
   it("toggles reason chips and includes only selected ids in lr-feedback-submit", async () => {
     const el = (await fixture(
-      html`<lr-message-feedback .detail=${{ reasons }}></lr-message-feedback>`
+      html`<lr-message-feedback
+        .detail=${{
+          reasons: [
+            null,
+            { id: '', label: 'Missing identity' },
+            { id: '   ', label: 'Blank identity' },
+            ...reasons,
+            { id: 'wrong', label: 'Duplicate reason' },
+          ],
+        } as unknown}
+      ></lr-message-feedback>`
     )) as LyraMessageFeedback;
     const down = el.shadowRoot!.querySelector(
       '[part="down-button"]'

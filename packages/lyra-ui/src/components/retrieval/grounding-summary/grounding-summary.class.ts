@@ -2,12 +2,13 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import {
   finiteCount,
-  finiteInteger,
   finiteRange,
 } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import '../../data/stat/stat.class.js';
 import '../citation-badge/citation-badge.class.js';
@@ -36,9 +37,6 @@ export interface LyraGroundingSummaryEventMap {
   'lr-claim-select': CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
 }
 
-/** Document-outline level used by the warnings and evidence section headings. */
-export type GroundingSummaryHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
-
 /**
  * `<lr-grounding-summary>` -- the claim-level scorecard for one generated answer: supported/
  * unsupported claim counts, citation coverage, an optional confidence score, any warnings, and
@@ -59,6 +57,8 @@ export type GroundingSummaryHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Blank claim/citation ids and later duplicates are ignored before counts, lookup, rendering, or
+ * activation. The first record for an id wins.
  *
  * @customElement lr-grounding-summary
  * @event lr-citation-select - An evidence citation badge was activated. `detail: { citation }`.
@@ -85,11 +85,6 @@ export type GroundingSummaryHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
  * @since 4.1.0
  */
 export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'assessment',
-    'citations',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -113,6 +108,11 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'assessment',
+    'citations',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -150,25 +150,45 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   })
   showClaims = true;
 
-  /** Heading level for the warnings and evidence sections. Clamped to the HTML outline range. */
-  @property({ type: Number, attribute: 'heading-level' })
-  headingLevel: GroundingSummaryHeadingLevel = 3;
+  /** Semantic level of the warnings and evidence section headings. Use `none` to keep the visual
+   *  heading text without exposing it to heading navigation. Invalid untyped values use level 3. */
+  @property({ attribute: 'heading-level' })
+  headingLevel: LyraHeadingLevel = '3';
+
+  private get normalizedCitations(): Citation[] {
+    return firstByRetrievalIdentity(
+      Array.isArray(this.citations) ? this.citations : [],
+      (citation) => citation.id
+    );
+  }
+
+  private normalizedClaims(
+    assessment: Readonly<GroundingAssessment>
+  ): GroundedClaim[] {
+    return firstByRetrievalIdentity(
+      Array.isArray(assessment.claims) ? assessment.claims : [],
+      (claim) => claim.id
+    );
+  }
 
   private sectionHeading(part: string, text: string): TemplateResult {
-    const level = finiteInteger(this.headingLevel, 3, 1, 6);
+    const level = resolveHeadingLevel(this.headingLevel);
     switch (level) {
-      case 1:
+      case '1':
         return html`<h1 part=${part}>${text}</h1>`;
-      case 2:
+      case '2':
         return html`<h2 part=${part}>${text}</h2>`;
-      case 4:
+      case '4':
         return html`<h4 part=${part}>${text}</h4>`;
-      case 5:
+      case '5':
         return html`<h5 part=${part}>${text}</h5>`;
-      case 6:
+      case '6':
         return html`<h6 part=${part}>${text}</h6>`;
-      default:
+      case '3':
         return html`<h3 part=${part}>${text}</h3>`;
+      default:
+        // 'none': visual text with no heading semantics -- the shared opt-out.
+        return html`<span part=${part}>${text}</span>`;
     }
   }
 
@@ -252,6 +272,8 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     const hasConfidence = typeof a.confidence === 'number';
     const warnings = a.warnings ?? [];
     const numberFormat = getNumberFormat(this.effectiveLocale);
+    const claims = this.normalizedClaims(a);
+    const citations = this.normalizedCitations;
 
     return html`
       <div
@@ -303,16 +325,16 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
               </div>
             `
           : nothing}
-        ${this.showClaims && a.claims?.length
+        ${this.showClaims && claims.length
           ? html`
               <lr-claim-evidence
                 part="claims"
-                .claims=${a.claims}
-                .citations=${this.citations}
+                .claims=${claims}
+                .citations=${citations}
               ></lr-claim-evidence>
             `
           : nothing}
-        ${this.citations.length > 0
+        ${citations.length > 0
           ? html`
               <div part="evidence">
                 ${this.sectionHeading(
@@ -320,10 +342,10 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
                   this.localize('groundingSummaryEvidenceHeading')
                 )}
                 <span part="evidence-count"
-                  >${numberFormat.format(this.citations.length)}</span
+                  >${numberFormat.format(citations.length)}</span
                 >
-                <ul part="evidence-list">
-                  ${this.citations.map((citation, index) =>
+                <ul part="evidence-list" role="list">
+                  ${citations.map((citation, index) =>
                     this.renderEvidenceItem(citation, index)
                   )}
                 </ul>

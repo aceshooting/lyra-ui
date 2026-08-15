@@ -68,6 +68,37 @@ export const styles = css`
     stroke-width: var(--lr-border-width-medium);
   }
 
+  [part='legend'] {
+    display: flex;
+    flex-wrap: wrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    gap: var(--lr-space-s);
+    align-items: center;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
+
+  [part='legend-item'] {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    gap: var(--lr-space-2xs);
+  }
+
+  [part='legend-swatch'] {
+    inline-size: var(--lr-size-0-75rem);
+    block-size: var(--lr-size-0-75rem);
+    border-radius: var(--lr-radius-xs);
+    flex: none;
+  }
+
+  [part='legend-label'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
   [part='empty'] {
     margin: 0;
     color: var(--lr-color-text-quiet);

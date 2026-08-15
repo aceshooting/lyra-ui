@@ -114,8 +114,6 @@ export interface LyraBrowserFrameEventMap {
  * @since 4.0.0
  */
 export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['pings']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -142,6 +140,8 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['pings']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
 

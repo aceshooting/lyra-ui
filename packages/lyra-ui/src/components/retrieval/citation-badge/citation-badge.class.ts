@@ -8,24 +8,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './citation-badge.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_citation,
-  LYRA_DEFAULT_citationHighConfidence,
-  LYRA_DEFAULT_citationLowConfidence,
-  LYRA_DEFAULT_citationMediumConfidence,
-  LYRA_DEFAULT_citationUnverified,
-  LYRA_DEFAULT_citationVerified,
-  LYRA_DEFAULT_citationWithCustomLabel,
-  LYRA_DEFAULT_citationWithStatus,
-  LYRA_DEFAULT_collapse,
-  LYRA_DEFAULT_details,
-  LYRA_DEFAULT_map,
-  LYRA_DEFAULT_navigation,
-  LYRA_DEFAULT_open,
-  LYRA_DEFAULT_progress,
-  LYRA_DEFAULT_search,
-  LYRA_DEFAULT_select,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_citationUnverified, LYRA_DEFAULT_citationVerified, LYRA_DEFAULT_citationWithCustomLabel, LYRA_DEFAULT_citationWithStatus, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type CitationBadgeStatus =
@@ -107,6 +90,10 @@ function isRealPreviewNode(n: Node): boolean {
  * both hidden and visible, so assistive technology can resolve the preview
  * as soon as focus causes it to open.
  *
+ * An authored host `aria-label` deliberately names only the custom-element boundary; it is not
+ * copied onto the internal button. Host naming does not cross the shadow boundary, so the button
+ * retains its localized citation/index/status name as the interactive control's own name.
+ *
  * Two distinct signals fire from the same badge: `lr-citation-activate`
  * (click, or Enter while focused — native `<button>` behavior, no listener
  * needed for the Enter case) is the lightweight "jump to this source"
@@ -154,26 +141,25 @@ function isRealPreviewNode(n: Node): boolean {
 export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      citation: LYRA_DEFAULT_citation,
-      citationHighConfidence: LYRA_DEFAULT_citationHighConfidence,
-      citationLowConfidence: LYRA_DEFAULT_citationLowConfidence,
-      citationMediumConfidence: LYRA_DEFAULT_citationMediumConfidence,
-      citationUnverified: LYRA_DEFAULT_citationUnverified,
-      citationVerified: LYRA_DEFAULT_citationVerified,
-      citationWithCustomLabel: LYRA_DEFAULT_citationWithCustomLabel,
-      citationWithStatus: LYRA_DEFAULT_citationWithStatus,
-      collapse: LYRA_DEFAULT_collapse,
-      details: LYRA_DEFAULT_details,
-      map: LYRA_DEFAULT_map,
-      navigation: LYRA_DEFAULT_navigation,
-      open: LYRA_DEFAULT_open,
-      progress: LYRA_DEFAULT_progress,
-      search: LYRA_DEFAULT_search,
-      select: LYRA_DEFAULT_select,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    citation: LYRA_DEFAULT_citation,
+    citationHighConfidence: LYRA_DEFAULT_citationHighConfidence,
+    citationLowConfidence: LYRA_DEFAULT_citationLowConfidence,
+    citationMediumConfidence: LYRA_DEFAULT_citationMediumConfidence,
+    citationUnverified: LYRA_DEFAULT_citationUnverified,
+    citationVerified: LYRA_DEFAULT_citationVerified,
+    citationWithCustomLabel: LYRA_DEFAULT_citationWithCustomLabel,
+    citationWithStatus: LYRA_DEFAULT_citationWithStatus,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

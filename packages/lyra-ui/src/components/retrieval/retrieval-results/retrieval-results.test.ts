@@ -56,18 +56,19 @@ function clickCheckbox(checkbox: LyraCheckbox): void {
   (checkbox.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
 }
 
-it('defaults to empty chunks/selectedIds, selectable, dedupe, sort="score", grouping="none", presentation="expanded", virtualizeAt=50, loading=false, hasMore=false, errorText=""', async () => {
+it('defaults to empty chunks/selectedChunkIds, selectable, dedupe, sort="score", grouping="none", presentation="expanded", virtualizeAt=50, loading=false, hasMore=false, errorText=""', async () => {
   const el = (await fixture(
     html`<lr-retrieval-results></lr-retrieval-results>`
   )) as LyraRetrievalResults;
   expect(el.chunks).to.deep.equal([]);
-  expect(el.selectedIds).to.deep.equal([]);
+  expect(el.selectedChunkIds).to.deep.equal([]);
   expect(el.selectable).to.be.true;
   expect(el.dedupe).to.be.true;
   expect(el.sort).to.equal("score");
   expect(el.grouping).to.equal("none");
   expect(el.presentation).to.equal("expanded");
   expect(el.virtualizeAt).to.equal(50);
+  expect(el.activeChunkId).to.equal('');
   expect(el.loading).to.be.false;
   expect(el.hasMore).to.be.false;
   expect(el.errorText).to.equal("");
@@ -81,6 +82,39 @@ it("shows chunkInspectorEmpty when chunks is empty and not loading", async () =>
   expect(
     el.shadowRoot!.querySelector('[part="empty"]')!.textContent
   ).to.include("No chunks retrieved");
+});
+
+it('announces later settled empty transitions without replaying initial empty content', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results></lr-retrieval-results>`
+  )) as LyraRetrievalResults;
+  const sink = document.querySelector(
+    '[data-lr-live-region="polite"]'
+  )!;
+  const initialCount = sink.children.length;
+
+  el.loading = true;
+  await el.updateComplete;
+  expect(sink.children.length).to.equal(initialCount);
+
+  el.loading = false;
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.equal('No chunks retrieved');
+
+  el.chunks = chunks;
+  await el.updateComplete;
+  el.chunks = [];
+  await el.updateComplete;
+  expect(sink.children.length).to.equal(initialCount + 2);
+
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  const reconnectedSink = document.querySelector(
+    '[data-lr-live-region="polite"]'
+  )!;
+  expect(reconnectedSink.children.length).to.equal(0);
 });
 
 it("keeps explicit-empty and dynamic host naming distinct from the initial-load spinner", async () => {
@@ -233,11 +267,17 @@ it('preserves given order when sort="none"', async () => {
   expect(ids).to.deep.equal(["c3", "c1", "c2"]);
 });
 
-it("deduplicates by id, keeping the higher-scoring duplicate", async () => {
+it('omits blank and later-duplicate chunk ids first-wins before sorting', async () => {
   const el = (await fixture(
     html`<lr-retrieval-results></lr-retrieval-results>`
   )) as LyraRetrievalResults;
   el.chunks = [
+    {
+      id: '',
+      text: 'empty id',
+      score: 1,
+      source: { id: 's0', name: 'invalid.pdf' },
+    },
     {
       id: "dup",
       text: "low score copy",
@@ -250,6 +290,12 @@ it("deduplicates by id, keeping the higher-scoring duplicate", async () => {
       score: 0.8,
       source: { id: "s1", name: "a.pdf" },
     },
+    {
+      id: '   ',
+      text: 'blank id',
+      score: 1,
+      source: { id: 's0', name: 'invalid.pdf' },
+    },
   ];
   await el.updateComplete;
   const rows = flatRows(el);
@@ -257,16 +303,16 @@ it("deduplicates by id, keeping the higher-scoring duplicate", async () => {
   const inspector = rows[0]!.querySelector(
     "lr-chunk-inspector"
   ) as LyraChunkInspector;
-  expect(inspector.chunks[0]!.text).to.equal("high score copy");
+  expect(inspector.chunks[0]!.text).to.equal('low score copy');
 });
 
-it("uses finite normalized scores when sorting and deduplicating hostile result data", async () => {
+it('uses finite normalized scores when sorting hostile result data', async () => {
   const el = (await fixture(
     html`<lr-retrieval-results></lr-retrieval-results>`
   )) as LyraRetrievalResults;
   el.chunks = [
     {
-      id: "dup",
+      id: 'high',
       text: "invalid copy",
       score: Number.NaN,
       source: { id: "s1", name: "a.pdf" },
@@ -290,7 +336,7 @@ it("uses finite normalized scores when sorting and deduplicating hostile result 
   ).to.include("0%");
 });
 
-it("keeps every duplicate when dedupe is false", async () => {
+it('keeps first-wins identity when dedupe is false', async () => {
   // `.dedupe=` (a property binding), not `?dedupe=` -- `dedupe` defaults to `true`, and a boolean
   // attribute binding that evaluates to `false` on a freshly-created element never actually removes
   // an attribute that was never present, so `attributeChangedCallback` never fires and the
@@ -303,10 +349,14 @@ it("keeps every duplicate when dedupe is false", async () => {
     { id: "dup", text: "b", score: 0.8, source: { id: "s1", name: "a.pdf" } },
   ];
   await el.updateComplete;
-  expect(flatRows(el).length).to.equal(2);
+  expect(flatRows(el).length).to.equal(1);
+  expect(
+    (flatRows(el)[0]!.querySelector('lr-chunk-inspector') as LyraChunkInspector)
+      .chunks[0]!.text,
+  ).to.equal('a');
 });
 
-it('keeps every duplicate when dedupe="false" is set as a plain HTML attribute (not a property binding)', async () => {
+it('keeps first-wins identity when dedupe="false" is set as a plain HTML attribute', async () => {
   // Unlike the `.dedupe=${false}` property-binding test above, this proves the *attribute* form
   // actually clears the `true` default too -- the gap a stock `type: Boolean` converter can't
   // close, since removing an attribute that was never present fires no `attributeChangedCallback`.
@@ -319,10 +369,10 @@ it('keeps every duplicate when dedupe="false" is set as a plain HTML attribute (
     { id: "dup", text: "b", score: 0.8, source: { id: "s1", name: "a.pdf" } },
   ];
   await el.updateComplete;
-  expect(flatRows(el).length).to.equal(2);
+  expect(flatRows(el).length).to.equal(1);
 });
 
-it("renders through the internal virtual-list once the deduplicated count exceeds virtualizeAt", async () => {
+it('renders through the internal virtual-list once the canonical count exceeds virtualizeAt', async () => {
   const many: RetrievalChunk[] = Array.from({ length: 5 }, (_, i) => ({
     id: `m${i}`,
     text: `chunk ${i}`,
@@ -531,14 +581,14 @@ describe("grouping", () => {
     expect(groups[0]!.label).to.equal("Untitled source");
   });
 
-  // The dedup-build + sort + group pipeline (`processedChunks`) is memoized on an instance field,
+  // The identity + sort + group pipeline (`processedChunks`) is memoized on an instance field,
   // refreshed only when `chunks`/`dedupe`/`sort`/`grouping` change (see `willUpdate()`). This
-  // exercises the full pipeline together -- a duplicate id that resolves to a *different* source
-  // than its lower-scoring twin, so the dedup winner's own source (not the loser's) must be the one
-  // that determines its group bucket -- then proves an unrelated `selectedIds`-only update leaves
+  // exercises the full pipeline together -- a later duplicate id resolves to a different source,
+  // so the first owner's source must be the one that determines its group bucket -- then proves an
+  // unrelated `selectedChunkIds`-only update leaves
   // the memoized output untouched, and a genuine `chunks` change still correctly invalidates and
   // recomputes it.
-  it("memoizes the deduped/sorted/grouped output, refreshing only when chunks/dedupe/sort/grouping actually change", async () => {
+  it('memoizes the canonicalized/sorted/grouped output, refreshing only when identity inputs change', async () => {
     const el = (await fixture(
       html`<lr-retrieval-results grouping="source"></lr-retrieval-results>`
     )) as LyraRetrievalResults;
@@ -578,23 +628,23 @@ describe("grouping", () => {
         startIndex: number;
       }[];
 
-    expect(itemsOf().map((c) => c.id)).to.deep.equal(["a1", "a3", "a2"]);
+    expect(itemsOf().map((c) => c.id)).to.deep.equal(['a3', 'a1', 'a2']);
     expect(
       itemsOf().find((c) => c.id === "a1")!.text,
-      "kept the higher-scoring duplicate"
-    ).to.equal("a1-hi");
+      'kept the first valid duplicate'
+    ).to.equal('a1-lo');
     expect(
       groupsOf().map((g) => g.key),
-      "the winning duplicate's own source drives its group, not the loser's"
-    ).to.deep.equal(["s2", "s1"]);
+      'the first duplicate owner drives its group'
+    ).to.deep.equal(['s2', 's1']);
     expect(groupsOf()[0]!.startIndex).to.equal(0);
-    expect(groupsOf()[1]!.startIndex).to.equal(2);
+    expect(groupsOf()[1]!.startIndex).to.equal(1);
     expect(list).to.exist;
 
-    // Unrelated update (selectedIds only): the memoized dedup/sort/group output must be unchanged.
-    el.selectedIds = ["a3"];
+    // Unrelated update (selectedChunkIds only): the memoized identity/sort/group output stays unchanged.
+    el.selectedChunkIds = ['a3'];
     await el.updateComplete;
-    expect(itemsOf().map((c) => c.id)).to.deep.equal(["a1", "a3", "a2"]);
+    expect(itemsOf().map((c) => c.id)).to.deep.equal(['a3', 'a1', 'a2']);
     expect(groupsOf().map((g) => g.key)).to.deep.equal(["s2", "s1"]);
 
     // A genuine `chunks` change must still invalidate the cache and be reflected.
@@ -625,9 +675,9 @@ describe("selection", () => {
     const listener = oneEvent(el, "lr-select");
     clickCheckbox(checkbox);
     const event = (await listener) as CustomEvent<RetrievalResultsSelectDetail>;
-    expect(event.detail.ids).to.deep.equal(["c2"]);
+    expect(event.detail.chunkIds).to.deep.equal(['c2']);
     expect(event.detail.chunks.map((c) => c.id)).to.deep.equal(["c2"]);
-    expect(el.selectedIds).to.deep.equal(["c2"]);
+    expect(el.selectedChunkIds).to.deep.equal(['c2']);
     await el.updateComplete;
     expect(
       (flatRows(el)[0]!.querySelector("lr-checkbox") as LyraCheckbox).checked
@@ -640,10 +690,10 @@ describe("selection", () => {
     );
     const event2 =
       (await listener2) as CustomEvent<RetrievalResultsSelectDetail>;
-    expect(event2.detail.ids).to.deep.equal([]);
+    expect(event2.detail.chunkIds).to.deep.equal([]);
   });
 
-  it("derives exactly one canonical selected record per id when duplicate rows stay visible", async () => {
+  it('derives exactly one first-wins selected record when dedupe is false', async () => {
     const low = {
       id: "dup",
       text: "low",
@@ -663,20 +713,20 @@ describe("selection", () => {
         .chunks=${[low, high]}
       ></lr-retrieval-results>`
     )) as LyraRetrievalResults;
-    expect(flatRows(el).length).to.equal(2);
+    expect(flatRows(el).length).to.equal(1);
 
     const pending = oneEvent(el, "lr-select");
     clickCheckbox(
       flatRows(el)[0]!.querySelector("lr-checkbox") as LyraCheckbox
     );
     const detail = (await pending).detail as RetrievalResultsSelectDetail;
-    expect(detail.ids).to.deep.equal(["dup"]);
+    expect(detail.chunkIds).to.deep.equal(['dup']);
     expect(detail.chunks.map((chunk) => [chunk.id, chunk.text])).to.deep.equal([
-      ["dup", "high"],
+      ['dup', 'low'],
     ]);
   });
 
-  it("derives the same canonical duplicate record from a virtualized projection", async () => {
+  it('derives the same first-wins duplicate record from a virtualized projection', async () => {
     const low = {
       id: "dup",
       text: "low",
@@ -705,9 +755,9 @@ describe("selection", () => {
     const pending = oneEvent(el, "lr-select");
     clickCheckbox(checkbox);
     const detail = (await pending).detail as RetrievalResultsSelectDetail;
-    expect(detail.ids).to.deep.equal(["dup"]);
+    expect(detail.chunkIds).to.deep.equal(['dup']);
     expect(detail.chunks.map((chunk) => [chunk.id, chunk.text])).to.deep.equal([
-      ["dup", "high"],
+      ['dup', 'low'],
     ]);
   });
 
@@ -730,18 +780,24 @@ describe("selection", () => {
     expect(el.shadowRoot!.querySelectorAll("lr-checkbox").length).to.equal(0);
   });
 
-  it("tolerates a dangling id in selectedIds (no matching chunk) without throwing", async () => {
+  it('canonicalizes and prunes selectedChunkIds against the current chunk model', async () => {
     const el = (await fixture(
       html`<lr-retrieval-results></lr-retrieval-results>`
     )) as LyraRetrievalResults;
     el.chunks = chunks;
-    el.selectedIds = ["does-not-exist"];
+    el.selectedChunkIds = ['c1', ' ', 'c1', 'does-not-exist', 'c2'];
     await el.updateComplete;
+    expect(el.selectedChunkIds).to.deep.equal(['c1', 'c2']);
     expect(flatRows(el).length).to.equal(3);
-    for (const row of flatRows(el)) {
-      expect((row.querySelector("lr-checkbox") as LyraCheckbox).checked).to.be
-        .false;
-    }
+    expect(
+      flatRows(el).filter(
+        (row) => (row.querySelector('lr-checkbox') as LyraCheckbox).checked,
+      ).length,
+    ).to.equal(2);
+
+    el.chunks = [chunks[1]!];
+    await el.updateComplete;
+    expect(el.selectedChunkIds).to.deep.equal(['c2']);
   });
 });
 
@@ -820,7 +876,7 @@ it("forwards lr-chunk-open from a row's lr-chunk-inspector, and never leaks the 
     events.length,
     "exactly one lr-chunk-open must reach the host, not the re-emit plus the leaked original from lr-chunk-inspector"
   ).to.equal(1);
-  expect(events[0]!.detail).to.deep.equal({ id: "c1", sourceId: "s1" });
+  expect(events[0]!.detail).to.deep.equal({ chunkId: 'c1', sourceId: 's1' });
 });
 
 it("suppresses the raw child checkbox change event after consuming it", async () => {
@@ -861,10 +917,33 @@ it("carries a retrieval locator through to lr-chunk-open and derives its visible
     ) as HTMLButtonElement
   ).click();
   expect((await pending).detail).to.deep.equal({
-    id: "c1",
-    sourceId: "s1",
+    chunkId: 'c1',
+    sourceId: 's1',
     anchor: locator,
   });
+});
+
+it('forwards activeChunkId to flat rows and the virtual list identity owner', async () => {
+  const flat = (await fixture(
+    html`<lr-retrieval-results active-chunk-id="c2"></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  flat.chunks = chunks;
+  await flat.updateComplete;
+  const currentInspector = flatRows(flat)
+    .map((row) => row.querySelector('lr-chunk-inspector') as LyraChunkInspector)
+    .find((inspector) => inspector.chunks[0]?.id === 'c2')!;
+  await currentInspector.updateComplete;
+  expect(currentInspector.activeChunkId).to.equal('c2');
+  expect(
+    currentInspector.shadowRoot!.querySelector('[part~="chunk"]')!.getAttribute('aria-current'),
+  ).to.equal('true');
+
+  const virtualized = (await fixture(
+    html`<lr-retrieval-results active-chunk-id="c2" virtualize-at="1"></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  virtualized.chunks = chunks;
+  await virtualized.updateComplete;
+  expect(vlist(virtualized).activeItemId).to.equal('c2');
 });
 
 describe("pagination", () => {
@@ -952,7 +1031,7 @@ it("is accessible with a populated, selectable, metadata-carrying result set", a
     html`<lr-retrieval-results></lr-retrieval-results>`
   )) as LyraRetrievalResults;
   el.chunks = chunks;
-  el.selectedIds = ["c1"];
+  el.selectedChunkIds = ['c1'];
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
@@ -1146,7 +1225,7 @@ it('renders and lets selection work under dir="rtl"', async () => {
   const listener = oneEvent(el, "lr-select");
   clickCheckbox(checkbox);
   const event = (await listener) as CustomEvent<RetrievalResultsSelectDetail>;
-  expect(event.detail.ids.length).to.equal(1);
+  expect(event.detail.chunkIds.length).to.equal(1);
 });
 
 it("can shrink to a 320px allocation without overflowing its host box", async () => {
@@ -1190,7 +1269,7 @@ describe("selected-row cssprop escape hatch", () => {
       "lr-retrieval-results"
     ) as LyraRetrievalResults;
     el.chunks = chunks;
-    el.selectedIds = ["c1"];
+    el.selectedChunkIds = ['c1'];
     await el.updateComplete;
     const rowBody = el.shadowRoot!.querySelector(
       '[part~="row-body"][data-selected]'
@@ -1252,7 +1331,7 @@ describe("row styling across both rendering paths", () => {
       ></lr-retrieval-results>`
     )) as LyraRetrievalResults;
     el.chunks = chunks;
-    el.selectedIds = ["c2"]; // c2 is the top-scoring chunk and the only one carrying metadata
+    el.selectedChunkIds = ['c2']; // c2 is the top-scoring chunk and the only one carrying metadata
     await el.updateComplete;
     await nextFrame();
     const list = el.shadowRoot!.querySelector("lr-virtual-list");

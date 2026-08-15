@@ -42,7 +42,7 @@ matches, and painted marks.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+search/navigation/clear, canonical source reset, and effective-locale re-evaluation. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base`, `body` (the scrollable wrapper around the fetched-state content, capped by

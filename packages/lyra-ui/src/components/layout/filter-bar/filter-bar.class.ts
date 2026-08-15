@@ -50,13 +50,14 @@ export interface LyraFilterBarOption {
   readonly label: string;
   /** Optional decorative leading visual rendered into the `<lr-option>`'s `start` slot — a status
    *  dot, a type glyph, a flag. Deliberately general Lit content rather than an icon-name string,
-   *  matching `LyraSegmentedItem`/`PaletteItem`'s own `icon` fields. It is rendered inert and
+   *  matching `LyraSegmentedItem`/`LyraPaletteItem`'s own `icon` fields. It is rendered inert and
    *  `aria-hidden`, so it never contributes to the option's accessible name. */
   readonly icon?: unknown;
 }
 
-/** One filter's current value. Built-in controls use strings/string arrays; custom controls may
- * also use a boolean (for example, an `lr-checkbox` filter). */
+/** One filter's current value. Built-in controls use strings/string arrays; an untyped boolean
+ * `false` at that boundary is canonical empty while `true` remains set. Custom controls may use
+ * either boolean meaning through their adapter (for example, an `lr-checkbox` filter). */
 export type LyraFilterBarFieldValue = string | readonly string[] | boolean | undefined;
 
 /** Value/label bridge for a custom filter control. The renderer wires one of the context's event
@@ -318,7 +319,13 @@ function snapshotFilterEntry(
 function snapshotFilterDefinitions(
   value: readonly LyraFilterBarFilterDefinition[] | null | undefined,
 ): readonly LyraFilterBarFilterDefinition[] {
-  if (!Array.isArray(value)) return EMPTY_FILTERS;
+  let isArray = false;
+  try {
+    isArray = Array.isArray(value);
+  } catch {
+    return EMPTY_FILTERS;
+  }
+  if (!isArray) return EMPTY_FILTERS;
   const snapshot = snapshotFilterEntry(
     value,
     { remaining: MAX_FILTER_COLLECTION_NODES, seen: new WeakMap() },
@@ -330,13 +337,34 @@ function snapshotFilterDefinitions(
 }
 
 function snapshotFilterFieldValue(value: unknown): LyraFilterBarFieldValue {
-  if (!Array.isArray(value)) {
+  let isArray = false;
+  try {
+    isArray = Array.isArray(value);
+  } catch {
+    return undefined;
+  }
+  if (!isArray) {
     return typeof value === 'string' || typeof value === 'boolean' || value === undefined
       ? value
       : undefined;
   }
   const output: string[] = [];
-  const length = Math.min(value.length, MAX_FILTER_COLLECTION_ENTRIES);
+  let sourceLength = 0;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
+    if (
+      descriptor &&
+      'value' in descriptor &&
+      typeof descriptor.value === 'number' &&
+      Number.isSafeInteger(descriptor.value) &&
+      descriptor.value >= 0
+    ) {
+      sourceLength = descriptor.value;
+    }
+  } catch {
+    return Object.freeze(output);
+  }
+  const length = Math.min(sourceLength, MAX_FILTER_COLLECTION_ENTRIES);
   for (let index = 0; index < length; index += 1) {
     let descriptor: PropertyDescriptor | undefined;
     try {
@@ -404,11 +432,11 @@ const DATE_INPUT_EXPORT_PARTS = [
   'hint: filter-control-hint',
 ].join(', ');
 
-/** A filter's value counts as "active" (shown as a chip, counted toward `hasActiveFilters`,
- *  satisfying `required`) once it's neither absent, `''`, nor `[]`. */
+/** A built-in filter's value counts as active (shown as a chip, counted toward
+ * `hasActiveFilters`, satisfying `required`) once it is neither absent, `false`, `''`, nor `[]`. */
 function isBuiltInSet(value: LyraFilterBarFieldValue): boolean {
   if (value == null) return false;
-  if (typeof value === 'boolean') return true;
+  if (typeof value === 'boolean') return value;
   return Array.isArray(value) ? value.length > 0 : value !== '';
 }
 

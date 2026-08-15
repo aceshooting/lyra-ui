@@ -114,7 +114,8 @@ export interface LyraTestResultsEventMap {
  * `<lr-test-results>` — a pass/fail suite summary with per-status counts, status filter
  * toggles, and per-test rows whose failures auto-expand by default and can host rich slotted
  * detail (e.g. a diff or code block) alongside the plain failure message.
- * At most 1,000 uniquely identified suite/test rows are mounted. Manually expanded identities and
+ * Empty/blank suite and test ids are omitted and duplicates use first-wins identity. At most 1,000
+ * uniquely identified suite/test rows are mounted. Manually expanded identities and
  * failures reserve positions before ordinary input-order rows, while the four summary counts cover
  * the complete normalized input. Foreign runtime statuses normalize once to the localized neutral
  * `skipped` fallback. Completion announcements require an explicit same-`runId`
@@ -169,8 +170,6 @@ export interface LyraTestResultsEventMap {
  * @since 4.0.0
  */
 export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['suites', 'statusFilter']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -202,6 +201,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     testResultsSkipped: LYRA_DEFAULT_testResultsSkipped,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['suites', 'statusFilter']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -308,12 +309,12 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     const normalizedTestKeys = new Set<string>();
     const counts: Record<TestStatus, number> = { passed: 0, failed: 0, skipped: 0, running: 0 };
     for (const suite of Array.isArray(this.suites) ? this.suites : []) {
-      if (!suite || typeof suite.id !== 'string' || suite.id === '' || suiteIds.has(suite.id)) continue;
+      if (!suite || typeof suite.id !== 'string' || suite.id.trim().length === 0 || suiteIds.has(suite.id)) continue;
       suiteIds.add(suite.id);
       const testIds = new Set<string>();
       const tests: TestCaseResult[] = [];
       for (const test of Array.isArray(suite.tests) ? suite.tests : []) {
-        if (!test || typeof test.id !== 'string' || test.id === '' || testIds.has(test.id)) continue;
+        if (!test || typeof test.id !== 'string' || test.id.trim().length === 0 || testIds.has(test.id)) continue;
         testIds.add(test.id);
         const status = normalizeTestStatus((test as { status?: unknown }).status);
         const normalized: TestCaseResult = {

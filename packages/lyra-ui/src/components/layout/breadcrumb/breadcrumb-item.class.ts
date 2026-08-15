@@ -7,7 +7,8 @@ import { safeLinkHref } from '../../../internal/safe-url.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './breadcrumb-item.styles.js';
 
-export type BreadcrumbItemTarget = '_blank' | '_parent' | '_self' | '_top';
+/** Reserved native browsing-context targets accepted by `lr-breadcrumb-item`. */
+export type LyraBreadcrumbItemTarget = '_blank' | '_parent' | '_self' | '_top';
 
 /**
  * `<lr-breadcrumb-item>` — one link, button, or current-page label in a breadcrumb.
@@ -56,7 +57,7 @@ export class LyraBreadcrumbItem extends LyraElement {
   }
   /** Native link target. When present, the rendered anchor always contributes
    * `noopener noreferrer` to `rel` — author tokens are merged, not ignored (see `rel`). */
-  @property() target?: BreadcrumbItemTarget;
+  @property() target?: LyraBreadcrumbItemTarget;
   /** Author-settable link relationship, merged with a non-negotiable security floor: `opener` is
    *  always stripped, and `noopener noreferrer` is force-added whenever `target` is set.
    *

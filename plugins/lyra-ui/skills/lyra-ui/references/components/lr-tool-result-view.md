@@ -29,8 +29,8 @@ shell around it.
   `ReadonlyMap<string, ToolRendererDefinition>` to dispatch against instead of the module-level
   default registry (see `registry.ts` below). Assignment synchronously copies at most 10,000
   entries behind a frozen readonly facade. Later mutation of the source map is not observed;
-  create and reassign a new map to update dispatch. Renderer-definition identity is retained so
-  lazy-load caching remains stable.
+  create and reassign a new map to update dispatch. Definition records are cloned and frozen while
+  callback identities are retained; lazy-load caching remains stable per assigned snapshot.
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name; the primary dispatch key
 - `result: unknown` (property only, no attribute) — the tool call's result payload, handed to the
   matched renderer's `render()` (and to `matches()` for shape-based dispatch, and to the

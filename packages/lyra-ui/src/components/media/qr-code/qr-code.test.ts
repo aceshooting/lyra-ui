@@ -711,7 +711,7 @@ describe('lr-qr-code', () => {
     expect(refreshCalls).to.equal(1);
   });
 
-  it('warns once and falls back to #000000 for an invalid legacy fill override', async () => {
+  it('warns once and falls back to #000000 for an invalid fill property', async () => {
     const el = (await fixture(
       html`<lr-qr-code fill="not-a-color"></lr-qr-code>`,
     )) as LyraQrCode;
@@ -813,7 +813,7 @@ describe('lr-qr-code', () => {
     expect([...ctx.getImageData(lightCenter, lightCenter, 1, 1).data.slice(0, 3)]).to.deep.equal([0, 255, 0]);
   });
 
-  it('supports the mapped fill/background property aliases', async () => {
+  it('supports the permanent upstream fill/background properties', async () => {
     const el = (await fixture(html`
       <lr-qr-code size="90" fill="#ff0000" background="#00ff00"></lr-qr-code>
     `)) as LyraQrCode;

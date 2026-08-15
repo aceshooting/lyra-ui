@@ -468,8 +468,14 @@ describe('lr-graph-query-builder', () => {
 
   it('clone-owns and freezes model, option, and saved-query inputs with unique actionable ids', async () => {
     const model = query({ relationshipTypes: ['works_for'], nodeTypes: ['person'] });
-    const options: GraphQueryTypeOption[] = [{ value: 'person', label: 'Person' }];
+    const options: GraphQueryTypeOption[] = [
+      { value: '', label: 'Missing identity' },
+      { value: '   ', label: 'Blank identity' },
+      { value: 'person', label: 'Person' },
+    ];
     const saved: GraphQuerySavedItem[] = [
+      { id: '', name: 'Missing identity', query: model },
+      { id: '   ', name: 'Blank identity', query: model },
       { id: 'same', name: 'First', query: model },
       { id: 'same', name: 'Duplicate', query: query({ startId: 'other' }) },
     ];
@@ -482,9 +488,10 @@ describe('lr-graph-query-builder', () => {
     `)) as LyraGraphQueryBuilder;
 
     (model.relationshipTypes as string[]).push('mutated');
-    (options[0] as { label?: string }).label = 'Mutated';
+    (options[2] as { label?: string }).label = 'Mutated';
     saved.push({ id: 'later', name: 'Later', query: query() });
     expect(el.value.relationshipTypes).to.deep.equal(['works_for']);
+    expect(el.nodeTypeOptions).to.have.length(1);
     expect(el.nodeTypeOptions[0]!.label).to.equal('Person');
     expect(el.savedQueries).to.have.length(1);
     expect(Object.isFrozen(el.value)).to.equal(true);
@@ -509,7 +516,7 @@ describe('lr-graph-query-builder', () => {
     expect(loadButton.textContent!.trim()).to.equal('Coworkers');
     setTimeout(() => loadButton.click());
     const ev = await oneEvent(el, 'lr-query-load');
-    expect(ev.detail.id).to.equal('s1');
+    expect(ev.detail.queryId).to.equal('s1');
     expect(el.value.startId).to.equal('node-9');
     expect(el.value.relationshipTypes).to.deep.equal(['works_for']);
   });
@@ -535,7 +542,7 @@ describe('lr-graph-query-builder', () => {
     const deleteButton = el.shadowRoot!.querySelector('[part="saved-delete-button"]') as HTMLElement;
     setTimeout(() => deleteButton.click());
     const ev = await oneEvent(el, 'lr-query-delete');
-    expect(ev.detail.id).to.equal('s1');
+    expect(ev.detail.queryId).to.equal('s1');
     expect(el.savedQueries).to.not.equal(saved);
     expect(el.savedQueries).to.deep.equal(saved);
     expect(el.savedQueries.length).to.equal(1);
@@ -547,7 +554,7 @@ describe('lr-graph-query-builder', () => {
       html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     el.addEventListener('lr-query-delete', (event) => {
-      el.savedQueries = el.savedQueries.filter((item) => item.id !== event.detail.id);
+      el.savedQueries = el.savedQueries.filter((item) => item.id !== event.detail.queryId);
     });
     const deleteButton = el.shadowRoot!.querySelector<HTMLElement>('[part="saved-delete-button"]')!;
     deleteButton.focus();
@@ -568,7 +575,7 @@ describe('lr-graph-query-builder', () => {
       html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`
     )) as LyraGraphQueryBuilder;
     el.addEventListener('lr-query-delete', (event) => {
-      el.savedQueries = el.savedQueries.filter((item) => item.id !== event.detail.id);
+      el.savedQueries = el.savedQueries.filter((item) => item.id !== event.detail.queryId);
     });
     const deleteButtons = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="saved-delete-button"]');
     deleteButtons[1]!.focus();

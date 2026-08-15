@@ -126,11 +126,12 @@ export class LyraBadge<
   /** Draws fully-rounded ends instead of the default rounded rectangle. */
   @property({ type: Boolean, reflect: true }) pill = false;
 
-  /** Opt-in attention-seeking animation. Stops entirely under `prefers-reduced-motion: reduce`. */
-  @property({ reflect: true }) attention: BadgeAttention = 'none';
+  /** Opt-in attention-seeking animation. An explicit `'none'` suppresses the `pulse` shorthand.
+   *  Stops entirely under `prefers-reduced-motion: reduce`. */
+  @property({ reflect: true, useDefault: true }) attention: BadgeAttention = 'none';
 
-  /** Upstream-compatible pulse shorthand. Equivalent to `attention="pulse"` unless the explicit
-   * `attention` property selects another animation. */
+  /** Upstream-compatible pulse shorthand. Equivalent to `attention="pulse"` only while the
+   *  `attention` attribute is omitted; every explicit attention value takes precedence. */
   @property({ type: Boolean, reflect: true }) pulse = false;
 
   // A `[part]` always contains a literal `<slot>` child element regardless of assigned content, so

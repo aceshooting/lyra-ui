@@ -65,7 +65,9 @@ light-DOM assertive announcement (see gotchas).
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
 table (region subtag wins, e.g. `en-US` → `us`; plain `en` → `gb`; override the table per-app if you
-need different defaults), plus `localeNativeName(tag: string): string`.
+need different defaults). Only the table's own entries are eligible for base-language fallback;
+inherited object members such as `constructor` resolve to `undefined`. Also exported:
+`localeNativeName(tag: string): string`.
 
 `localeNativeName()` returns a BCP-47 tag's **endonym** — the locale's name written in that locale
 itself (`'fr'` → `français`, `'pt-BR'` → `português (Brasil)`). That is what a language switcher

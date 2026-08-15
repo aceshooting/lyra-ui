@@ -1061,6 +1061,21 @@ describe('pan & zoom', () => {
 });
 
 describe('selection & roving focus', () => {
+  it('normalizes input and output handle identities first-valid/first-wins', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      {
+        id: 'node',
+        inputs: [{ id: ' ' }, { id: 'in', label: 'First' }, { id: 'in', label: 'Later' }],
+        outputs: [{ id: '' }, { id: 'out', label: 'First' }, { id: 'out', label: 'Later' }],
+      },
+    ];
+    await el.updateComplete;
+
+    expect(el.nodes[0]!.inputs).to.deep.equal([{ id: 'in', label: 'First' }]);
+    expect(el.nodes[0]!.outputs).to.deep.equal([{ id: 'out', label: 'First' }]);
+  });
+
   it('normalizes controlled selections against canonical node and edge identities', async () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;

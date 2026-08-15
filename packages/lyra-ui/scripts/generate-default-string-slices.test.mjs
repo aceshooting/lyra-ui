@@ -66,7 +66,7 @@ try {
     path.join(component, 'sample-export.class.ts'),
     "export { SAMPLE_KEYS } from './sample-keys.js';\nexport class LyraSampleExport extends LyraElement {}\n",
   );
-  const first = await generateDefaultStringSlices({ packageDir: fixture, write: true });
+  const first = await generateDefaultStringSlices({ packageDir: fixture, write: true, exclusions: {} });
   // Only `sample.class.ts` gets a slice. `sample-export.class.ts` re-exports the key map but never
   // calls localize() itself, so it needs no messages of its own -- it used to receive a slice purely
   // because helper modules were literal-walked unconditionally. `sample.class.ts` still resolves
@@ -85,7 +85,7 @@ try {
   assert.match(authored, /Concurrent authored prose must survive byte-for-byte/);
   const generated = await readFile(path.join(internal, 'default-strings.generated.ts'), 'utf8');
   assert.match(generated, /LYRA_DEFAULT_itemCount: LyraMessage = \{ one:/);
-  const second = await generateDefaultStringSlices({ packageDir: fixture, write: false });
+  const second = await generateDefaultStringSlices({ packageDir: fixture, write: false, exclusions: {} });
   assert.equal(second.rewrittenFileCount, 0);
   assert.equal(second.generatedChanged, false);
 } finally {
@@ -160,7 +160,7 @@ export class LyraGraphSample extends LyraElement {
     "export const SIDE_EFFECT_KEYS = { label: 'sideEffect' } as const;\n",
   );
 
-  const result = await generateDefaultStringSlices({ packageDir: graphFixture, write: true });
+  const result = await generateDefaultStringSlices({ packageDir: graphFixture, write: true, exclusions: {} });
   assert.equal(result.usedKeyCount, 4, 'type-only dependency edges must not enter runtime slices');
   const generated = await readFile(path.join(internal, 'default-strings.generated.ts'), 'utf8');
   assert.match(generated, /LYRA_DEFAULT_direct/);
@@ -240,7 +240,11 @@ export class LyraFalsePositiveSample extends LyraElement {
 }
 `,
   );
-  const result = await generateDefaultStringSlices({ packageDir: falsePositiveFixture, write: true });
+  const result = await generateDefaultStringSlices({
+    packageDir: falsePositiveFixture,
+    write: true,
+    exclusions: {},
+  });
   const generated = await readFile(path.join(internal, 'default-strings.generated.ts'), 'utf8');
   assert.doesNotMatch(generated, /LYRA_DEFAULT_copy\b/, 'a type-union member must not be treated as a localize() key');
   assert.doesNotMatch(generated, /LYRA_DEFAULT_loading\b/, 'a discriminated-union tag must not be treated as a localize() key');
@@ -330,7 +334,7 @@ export class LyraDynamicKeySample extends LyraElement {
 `,
   );
 
-  await generateDefaultStringSlices({ packageDir: helperFixture, write: true });
+  await generateDefaultStringSlices({ packageDir: helperFixture, write: true, exclusions: {} });
   const staticSlice = await readFile(path.join(staticOnly, 'static-key-sample.class.ts'), 'utf8');
   const dynamicSlice = await readFile(path.join(dynamicOnly, 'dynamic-key-sample.class.ts'), 'utf8');
 
@@ -390,13 +394,389 @@ export class LyraRootMapSample extends LyraElement {
 }
 `,
   );
-  await generateDefaultStringSlices({ packageDir: rootMapFixture, write: true });
+  await generateDefaultStringSlices({ packageDir: rootMapFixture, write: true, exclusions: {} });
   const slice = await readFile(path.join(component, 'root-map-sample.class.ts'), 'utf8');
   assert.match(slice, /LYRA_DEFAULT_statusHigh\b/, 'a key map in the class file must be reachable through its dynamic call');
   assert.match(slice, /LYRA_DEFAULT_statusLow\b/, 'a key map in the class file must be reachable through its dynamic call');
   assert.match(slice, /LYRA_DEFAULT_plainLabel\b/, 'the literal key alongside it is still detected');
 } finally {
   await rm(rootMapFixture, { recursive: true, force: true });
+}
+
+// A small number of component graphs intentionally import broad helper modules whose unrelated
+// localization lookups or catalog-shaped literals cannot be distinguished by the conservative
+// graph walk. Keep those proven false positives out of the owning component slices without
+// weakening dynamic-key discovery for the keys the components really resolve.
+const configuredFalsePositiveCatalog = `
+type Key =
+  | 'clear'
+  | 'collapse'
+  | 'date'
+  | 'details'
+  | 'fieldRequired'
+  | 'kbdEnterWord'
+  | 'map'
+  | 'navigation'
+  | 'open'
+  | 'progress'
+  | 'radioRequired'
+  | 'restore'
+  | 'search'
+  | 'select'
+  | 'selectValueMissing'
+  | 'timeInputHour';
+const DEFAULT_STRINGS: Record<Key, string> = {
+  clear: 'Clear',
+  collapse: 'Collapse',
+  date: 'Date',
+  details: 'Details',
+  fieldRequired: 'This field is required.',
+  kbdEnterWord: 'Enter',
+  map: 'Map',
+  navigation: 'Navigation',
+  open: 'Open',
+  progress: 'Progress',
+  radioRequired: 'Select an option.',
+  restore: 'Restore',
+  search: 'Search',
+  select: 'Select',
+  selectValueMissing: 'Select an option.',
+  timeInputHour: 'Hour',
+};
+`;
+const configuredFalsePositiveFixture = await mkdtemp(
+  path.join(tmpdir(), 'lyra-default-slice-configured-false-positive-'),
+);
+try {
+  const internal = path.join(configuredFalsePositiveFixture, 'src', 'internal');
+  const select = path.join(configuredFalsePositiveFixture, 'src', 'components', 'forms', 'select');
+  const radio = path.join(configuredFalsePositiveFixture, 'src', 'components', 'forms', 'radio');
+  const input = path.join(configuredFalsePositiveFixture, 'src', 'components', 'forms', 'input');
+  const kbd = path.join(configuredFalsePositiveFixture, 'src', 'components', 'overlays', 'kbd');
+  await Promise.all([
+    mkdir(internal, { recursive: true }),
+    mkdir(select, { recursive: true }),
+    mkdir(radio, { recursive: true }),
+    mkdir(input, { recursive: true }),
+    mkdir(kbd, { recursive: true }),
+  ]);
+  await writeFile(path.join(internal, 'localization.ts'), configuredFalsePositiveCatalog);
+  await writeFile(
+    path.join(internal, 'form-associated.ts'),
+    `export function unrelatedMixinLookup(host: unknown): string {
+  return resolveLyraString(host, 'fieldRequired');
+}
+export function attachInternalsSafely(): void {}
+`,
+  );
+  await writeFile(
+    path.join(internal, 'time-incidental.ts'),
+    `export const incidental = [
+  'collapse', 'date', 'details', 'map', 'navigation',
+  'open', 'progress', 'restore', 'search', 'select',
+];
+`,
+  );
+  await writeFile(
+    path.join(internal, 'kbd-incidental.ts'),
+    `export const incidental = [
+  'collapse', 'details', 'map', 'navigation', 'open', 'progress', 'search', 'select',
+];
+`,
+  );
+  await writeFile(
+    path.join(select, 'select.class.ts'),
+    `import { attachInternalsSafely } from '../../../internal/form-associated.js';
+export class LyraSelect extends LyraElement {
+  render() {
+    attachInternalsSafely();
+    return this.localize('selectValueMissing');
+  }
+}
+`,
+  );
+  await writeFile(
+    path.join(radio, 'radio.class.ts'),
+    `import { attachInternalsSafely } from '../../../internal/form-associated.js';
+export class LyraRadio extends LyraElement {
+  render() {
+    attachInternalsSafely();
+    return this.localize('radioRequired');
+  }
+}
+`,
+  );
+  await writeFile(
+    path.join(radio, 'radio-group.class.ts'),
+    `import { attachInternalsSafely } from '../../../internal/form-associated.js';
+export class LyraRadioGroup extends LyraElement {
+  render() {
+    attachInternalsSafely();
+    return this.localize('radioRequired');
+  }
+}
+`,
+  );
+  await writeFile(
+    path.join(radio, 'radio-button.class.ts'),
+    `import { LyraRadio } from './radio.class.js';
+export class LyraRadioButton extends LyraRadio {}
+`,
+  );
+  await writeFile(
+    path.join(input, 'time-input.class.ts'),
+    `import { incidental } from '../../../internal/time-incidental.js';
+export class LyraTimeInput extends LyraElement {
+  render(name: string) {
+    void incidental;
+    const keys: Record<string, string> = { hour: 'timeInputHour' };
+    return this.localize(keys[name]!) + this.localize('clear');
+  }
+}
+`,
+  );
+  await writeFile(
+    path.join(kbd, 'kbd.class.ts'),
+    `import { incidental } from '../../../internal/kbd-incidental.js';
+const NAMED_KEY_LABELS = { enter: { wordKey: 'kbdEnterWord' } } as const;
+function resolveKbd(localize: (key: string) => string): string {
+  const named = NAMED_KEY_LABELS.enter;
+  const resolve = (key: string): string => localize(key);
+  return resolve(named.wordKey);
+}
+export class LyraKbd extends LyraElement {
+  render() {
+    void incidental;
+    return resolveKbd((key) => this.localize(key));
+  }
+}
+`,
+  );
+
+  await generateDefaultStringSlices({ packageDir: configuredFalsePositiveFixture, write: true });
+  const slices = new Map(await Promise.all([
+    ['select', path.join(select, 'select.class.ts')],
+    ['radio', path.join(radio, 'radio.class.ts')],
+    ['radioGroup', path.join(radio, 'radio-group.class.ts')],
+    ['radioButton', path.join(radio, 'radio-button.class.ts')],
+    ['timeInput', path.join(input, 'time-input.class.ts')],
+    ['kbd', path.join(kbd, 'kbd.class.ts')],
+  ].map(async ([name, file]) => [name, await readFile(file, 'utf8')])));
+
+  assert.match(slices.get('select'), /LYRA_DEFAULT_selectValueMissing\b/);
+  assert.doesNotMatch(slices.get('select'), /LYRA_DEFAULT_fieldRequired\b/);
+  assert.match(slices.get('radio'), /LYRA_DEFAULT_radioRequired\b/);
+  assert.doesNotMatch(slices.get('radio'), /LYRA_DEFAULT_fieldRequired\b/);
+  assert.match(slices.get('radioGroup'), /LYRA_DEFAULT_radioRequired\b/);
+  assert.doesNotMatch(slices.get('radioGroup'), /LYRA_DEFAULT_fieldRequired\b/);
+  assert.doesNotMatch(
+    slices.get('radioButton'),
+    /LYRA_DEFAULT_/,
+    'the subclass inherits its parent slice and owns no localize call',
+  );
+  assert.match(slices.get('timeInput'), /LYRA_DEFAULT_clear\b/);
+  assert.match(slices.get('timeInput'), /LYRA_DEFAULT_timeInputHour\b/);
+  for (const key of [
+    'collapse', 'date', 'details', 'map', 'navigation',
+    'open', 'progress', 'restore', 'search', 'select',
+  ]) {
+    assert.doesNotMatch(slices.get('timeInput'), new RegExp(`LYRA_DEFAULT_${key}\\b`));
+  }
+  assert.match(slices.get('kbd'), /LYRA_DEFAULT_kbdEnterWord\b/);
+  for (const key of [
+    'collapse', 'details', 'map', 'navigation', 'open', 'progress', 'search', 'select',
+  ]) {
+    assert.doesNotMatch(slices.get('kbd'), new RegExp(`LYRA_DEFAULT_${key}\\b`));
+  }
+  const checked = await generateDefaultStringSlices({
+    packageDir: configuredFalsePositiveFixture,
+    write: false,
+  });
+  assert.equal(checked.rewrittenFileCount, 0, 'the configured target slices stay clean in check mode');
+  assert.equal(checked.generatedChanged, false, 'the configured target catalog stays clean in check mode');
+
+  const selectFile = path.join(select, 'select.class.ts');
+  const cleanSelect = slices.get('select');
+  const staleSelect = cleanSelect.replace(
+    '    selectValueMissing: LYRA_DEFAULT_selectValueMissing,\n',
+    '',
+  );
+  assert.notEqual(staleSelect, cleanSelect, 'the concurrency fixture must begin with a stale slice');
+  await writeFile(selectFile, staleSelect);
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      write: true,
+      beforeWrite: async () => {
+        await writeFile(selectFile, `${staleSelect}\n// Concurrent authored edit.\n`);
+      },
+    }),
+    /select\.class\.ts changed while default-string slices were being generated; refusing to overwrite it/,
+    'write mode must reject a file changed after its source snapshot was read',
+  );
+  assert.match(
+    await readFile(selectFile, 'utf8'),
+    /Concurrent authored edit/,
+    'the concurrent authored edit must survive the rejected write',
+  );
+  await generateDefaultStringSlices({
+    packageDir: configuredFalsePositiveFixture,
+    write: true,
+  });
+
+  const cleanSelectAfterTargetRace = await readFile(selectFile, 'utf8');
+  const staleSelectForGraphRace = cleanSelectAfterTargetRace.replace(
+    '    selectValueMissing: LYRA_DEFAULT_selectValueMissing,\n',
+    '',
+  );
+  const radioFile = path.join(radio, 'radio.class.ts');
+  const cleanRadio = await readFile(radioFile, 'utf8');
+  await writeFile(selectFile, staleSelectForGraphRace);
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      write: true,
+      beforeWrite: async () => {
+        await writeFile(radioFile, `${cleanRadio}\n// Concurrent clean-graph edit.\n`);
+      },
+    }),
+    /radio\.class\.ts changed while default-string slices were being generated; refusing to overwrite it/,
+    'write mode must reject a clean graph source changed after its snapshot was read',
+  );
+  assert.equal(
+    await readFile(selectFile, 'utf8'),
+    staleSelectForGraphRace,
+    'no pending output may be written when another scanned source changes',
+  );
+  assert.match(
+    await readFile(radioFile, 'utf8'),
+    /Concurrent clean-graph edit/,
+    'the concurrent clean-graph edit must survive the rejected write',
+  );
+  await generateDefaultStringSlices({
+    packageDir: configuredFalsePositiveFixture,
+    write: true,
+  });
+
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      exclusions: {
+        'src/components/forms/select/select.class.ts': ['selectValueMissing'],
+      },
+    }),
+    /selectValueMissing is now used by a literal localize\(\)\/resolveLyraString\(\) call/,
+    'an exclusion must fail closed if the owning class starts localizing that key directly',
+  );
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      exclusions: {
+        'src/components/forms/input/time-input.class.ts': ['timeInputHour'],
+      },
+    }),
+    /timeInputHour is now used by a dynamic localize\(\) flow/,
+    'an exclusion must reject a key reached through a local dynamic key map',
+  );
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      exclusions: {
+        'src/components/overlays/kbd/kbd.class.ts': ['kbdEnterWord'],
+      },
+    }),
+    /kbdEnterWord is now used by a dynamic localize\(\) flow/,
+    'an exclusion must reject a key reached through a local callback and nested key map',
+  );
+  const selectBeforeClassField = await readFile(selectFile, 'utf8');
+  const selectWithClassField = selectBeforeClassField.replace(
+    'export class LyraSelect extends LyraElement {\n',
+    `export class LyraSelect extends LyraElement {
+  private readonly validationKeys = { missing: 'fieldRequired' } as const;
+  validationMessage(name: 'missing'): string {
+    return this.localize(this.validationKeys[name]);
+  }
+`,
+  );
+  assert.notEqual(
+    selectWithClassField,
+    selectBeforeClassField,
+    'the class-field dynamic-flow fixture must be installed',
+  );
+  await writeFile(selectFile, selectWithClassField);
+  try {
+    await assert.rejects(
+      generateDefaultStringSlices({
+        packageDir: configuredFalsePositiveFixture,
+        exclusions: {
+          'src/components/forms/select/select.class.ts': ['fieldRequired'],
+        },
+      }),
+      /fieldRequired is now used by a dynamic localize\(\) flow/,
+      'an exclusion must reject a key reached through an owning-class field map',
+    );
+  } finally {
+    await writeFile(selectFile, selectBeforeClassField);
+  }
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      exclusions: {
+        'src/components/forms/select/select.class.ts': ['clear'],
+      },
+    }),
+    /clear is no longer discovered; remove the stale exclusion/,
+    'an exclusion must fail closed once the conservative walk stops discovering it',
+  );
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      exclusions: {
+        'src/components/forms/select/typo.class.ts': ['fieldRequired'],
+      },
+    }),
+    /typo\.class\.ts: default-string slice exclusion target is not a discovered class file/,
+    'a typo or deleted exclusion target must fail instead of silently persisting',
+  );
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      exclusions: {
+        'src/components/forms/select/select.class.ts': ['fieldRequired'],
+        'src/components/forms/radio/radio.class.ts': ['fieldRequired'],
+      },
+    }),
+    /Default-string slice exclusion paths must be sorted/,
+  );
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      exclusions: {
+        'src/components/forms/select/select.class.ts': [],
+      },
+    }),
+    /default-string slice exclusions must be a non-empty array/,
+  );
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      exclusions: {
+        'src/components/forms/select/select.class.ts': ['fieldRequired', 'fieldRequired'],
+      },
+    }),
+    /default-string slice exclusions must be sorted and unique/,
+  );
+  await assert.rejects(
+    generateDefaultStringSlices({
+      packageDir: configuredFalsePositiveFixture,
+      exclusions: {
+        'src/components/forms/select/select.class.ts': ['notInCatalog'],
+      },
+    }),
+    /excluded default-string key notInCatalog has no DEFAULT_STRINGS entry/,
+  );
+} finally {
+  await rm(configuredFalsePositiveFixture, { recursive: true, force: true });
 }
 
 // The walk has always COMPUTED the orphaned-key set and the CLI has always ignored it, so a

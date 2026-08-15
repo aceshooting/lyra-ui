@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs lyra-ui's complete browser-driven test surface locally: the full
-# src/**/*.test.ts suite (453 files) under Chromium (coverage-instrumented,
+# src/**/*.test.ts suite discovered from the live source tree under Chromium (coverage-instrumented,
 # matching the CI build-and-coverage job), Firefox, and WebKit (uninstrumented,
 # matching the weekly full-engine.yml sweep) -- plus SSR/hydration, visual
 # regression, and the other workspace package(s)' own tests.
@@ -93,6 +93,20 @@ step "pnpm build"
 pnpm build
 
 LOG_DIR="$(mktemp -d)"
+
+cleanup_logs() {
+  local exit_status=$?
+  trap - EXIT
+  if ! rm -rf -- "$LOG_DIR"; then
+    echo "failed to remove temporary lane logs: $LOG_DIR" >&2
+    if [[ "$exit_status" == "0" ]]; then
+      exit_status=1
+    fi
+  fi
+  exit "$exit_status"
+}
+
+trap cleanup_logs EXIT
 echo "lane logs: $LOG_DIR"
 
 lane_chromium() {

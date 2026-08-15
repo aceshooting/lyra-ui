@@ -53,14 +53,14 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole and is not cloned onto the strip
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
-(`composed: true`): `lr-entity-activate` (`detail: { id }`), `lr-node-expand` (`detail: { id }`),
-`lr-chunk-open` (`detail: { id, sourceId, anchor? }`), `lr-expand` (`detail: { id, expanded }`),
+(`composed: true`): `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`), `lr-node-expand` (`detail: { nodeId }`),
+`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-expand` (`detail: { chunkId, expanded }`),
 `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
-host the same way and are typed here too: `lr-entity-open` (`detail: { id }`, an entity chip
-double-click or Space), `lr-drill` (`detail: { id }`, a community card's title, drill button, or
-overflow chip), and `lr-relation-activate` (`detail: { relation, sourceId?, targetId? }`, a
+host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip
+double-click or Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or
+overflow chip), and `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a
 relationship path-strip edge).
 
 **Slots:** none.

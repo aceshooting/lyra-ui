@@ -23,7 +23,7 @@ describe('chart forced-colors encodings', () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = forcedColorsMatchMedia(originalMatchMedia);
     try {
-      const el = await fixture<LyraChart>(html`<lr-chart type="line" legend show-data-table></lr-chart>`);
+      const el = await fixture<LyraChart>(html`<lr-chart type="line" show-data-table></lr-chart>`);
       el.labels = ['Q1', 'Q2'];
       el.datasets = Array.from({ length: 8 }, (_, index) => ({
         label: `Series ${index + 1}`,

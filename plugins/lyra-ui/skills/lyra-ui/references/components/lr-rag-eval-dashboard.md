@@ -18,7 +18,8 @@
 Controlled RAG evaluation overview with latest metric cards, per-metric trends, evaluation slices,
 and run history. The host computes metrics and owns evaluation execution.
 
-**Properties:** `metrics: RagEvaluationMetric[] = []` and `runs: RagEvaluationRun[] = []`
+**Properties:** `metrics: LyraRagEvaluationMetric[] = []` and
+`runs: LyraRagEvaluationRun[] = []`
 (attribute: false); `metricId: string = ''` (attribute `metric-id`, with the first metric used for
 display when unset/unmatched); `slice: string = ''`; `label: string = ''` (visible heading and
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
@@ -26,9 +27,13 @@ while an explicitly empty host label stays empty on the region);
 `showChart: boolean = true` (attribute `show-chart`, reflected, string-aware true-default
 converter); `chartHeight: string = '220px'` (attribute `chart-height`).
 
-`RagEvaluationMetric = { id, label, category, format? }`, where category is
+`LyraRagEvaluationMetric = { id, label, category, format? }`, where category is
 `'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.
-`RagEvaluationRun = { id, label, metrics: Record<string, number>; slice?, timestamp?, metadata? }`.
+`LyraRagEvaluationRun = { id, label, metrics: Record<string, number>; slice?, timestamp?, metadata? }`.
+
+Metrics and runs are canonicalized independently by nonblank `id`. Malformed rows and later
+duplicates are omitted first-wins before metric fallback, slice derivation/filtering, cards, charts,
+history, counts, rendering, or actions.
 
 **Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
 `lr-run-select` (`{ run }`). All are controlled intents; the component does not mutate the

@@ -8,7 +8,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
 import type {
   LyraVirtualList,
-  VirtualListIndexedSource,
+  LyraVirtualListIndexedSource,
 } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './page-rail.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -175,7 +175,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   private focusRepairPending = false;
   private focusRepairGeneration = 0;
   private pageSourceCount = -1;
-  private pageSource: VirtualListIndexedSource<number> = this.createPageSource(0);
+  private pageSource: LyraVirtualListIndexedSource<number> = this.createPageSource(0);
   private viewerSnapshotIdentity?: number;
   private viewerSnapshotStatus?: LyraPageViewerStatus;
 
@@ -368,7 +368,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   /** `page` normalized to a finite integer clamped into `[1, effectivePageCount()]` (or held at the
    *  `1` default while no page count is known yet) -- guards `renderPageItem()`'s `aria-current`
-   *  comparison and the `lr-virtual-list` `active-id` binding from an out-of-range/NaN value, e.g.
+   *  comparison and the `lr-virtual-list` `active-item-id` binding from an out-of-range/NaN value, e.g.
    *  a consumer setting a stale mediated-mode `page` before also updating `page-count`. */
   private get safePage(): number {
     const count = this.effectivePageCount();
@@ -389,7 +389,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     return this.boundViewer ? this.resolvedPageCount : this.safePageCount;
   }
 
-  private createPageSource(count: number): VirtualListIndexedSource<number> {
+  private createPageSource(count: number): LyraVirtualListIndexedSource<number> {
     return Object.freeze({
       count,
       itemAt: (index: number) => index + 1,
@@ -398,7 +398,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     });
   }
 
-  private indexedPages(count: number): VirtualListIndexedSource<number> {
+  private indexedPages(count: number): LyraVirtualListIndexedSource<number> {
     if (count !== this.pageSourceCount) {
       this.pageSourceCount = count;
       this.pageSource = this.createPageSource(count);
@@ -701,7 +701,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
           exportparts="page:page, page-current:page-current, thumbnail:thumbnail, thumbnail-target:thumbnail-target, page-number:page-number, heat:heat, heat-dot:heat-dot, heat-dot-accent:heat-dot-accent, heat-dot-success:heat-dot-success, heat-dot-warning:heat-dot-warning, heat-dot-danger:heat-dot-danger, heat-dot-neutral:heat-dot-neutral, heat-dot-overflow:heat-dot-overflow"
           .source=${this.indexedPages(count)}
           .renderItem=${this.renderPageItem}
-          .activeId=${this.safePage}
+          .activeItemId=${this.safePage}
           @lr-visible-range-changed=${this.stopVirtualListEvent}
           @lr-virtual-scroll=${this.stopVirtualListEvent}
           @lr-load-more=${this.stopVirtualListEvent}

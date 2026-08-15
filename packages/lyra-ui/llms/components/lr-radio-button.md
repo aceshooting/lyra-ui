@@ -61,6 +61,8 @@ its own alias.
 **Slots:** default (label text), `start` (leading content, typically an icon), and `end` (trailing
 content). Shoelace's `prefix` and `suffix` are retained as aliases for `start` and `end`,
 respectively; either spelling can be used, and both spellings share one wrapper at each edge.
+The leading, label, and trailing wrappers are hidden independently while empty, so missing regions
+do not contribute dead flex gaps.
 Host `aria-label` is forwarded to the internal radio by attribute presence, including
 `aria-label=""`; it is not replaced by the visible default-slot text.
 

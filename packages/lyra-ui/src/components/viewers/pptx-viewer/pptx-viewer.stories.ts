@@ -41,6 +41,16 @@ export const UnsafeSource: Story = {
   render: () => html`<lr-pptx-viewer .src=${'javascript:alert(1)'}></lr-pptx-viewer>`,
 };
 
+export const RightToLeft: Story = {
+  render: () => html`<div dir="rtl">
+    <lr-pptx-viewer
+      style="display:block; min-height:24rem;"
+      src=${fixtureUrl}
+      name="Table fixture"
+    ></lr-pptx-viewer>
+  </div>`,
+};
+
 // The nav row (previous-button, slide-count text, next-button) is `justify-content: space-between`
 // with no flex-wrap fallback and had no narrow-allocation coverage.
 export const Narrow320: Story = {

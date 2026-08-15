@@ -163,7 +163,7 @@ it("renders a consumer override of the public --lr-cell-size geometry hook", asy
   ).to.equal(true);
 });
 
-it("co-tokenizes the mirrored date-picker part and deprecated base alias on one shell", async () => {
+it('co-tokenizes the mirrored date-picker part and permanent base compatibility name', async () => {
   const el = (await fixture(html`
     <lr-date-picker value="2026-07-15"></lr-date-picker>
   `)) as LyraDatePicker;

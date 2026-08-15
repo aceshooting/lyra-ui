@@ -23,9 +23,14 @@ describe('<lr-mutation-observer>', () => {
     const target = el.querySelector('div')!;
     const event = oneEvent(el, 'lr-mutation');
     target.append(document.createElement('span'));
-    const result = await event as CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>;
+    const result = await event as CustomEvent<{
+      readonly records: readonly MutationRecord[];
+      readonly mutationList: readonly MutationRecord[];
+    }>;
     expect(result.detail.records.length).to.be.greaterThan(0);
     expect(result.detail.mutationList).to.equal(result.detail.records);
+    expect(Object.isFrozen(result.detail)).to.equal(true);
+    expect(Object.isFrozen(result.detail.records)).to.equal(true);
   });
 
   it('coalesces synchronous mutations across multiple slotted targets into one shared-observer event', async () => {
@@ -38,7 +43,7 @@ describe('<lr-mutation-observer>', () => {
 
     let eventCount = 0;
     let lastRecordCount = 0;
-    el.addEventListener('lr-mutation', ((e: CustomEvent<{ records: MutationRecord[] }>) => {
+    el.addEventListener('lr-mutation', ((e: CustomEvent<{ readonly records: readonly MutationRecord[] }>) => {
       eventCount++;
       lastRecordCount = e.detail.records.length;
     }) as EventListener);

@@ -107,6 +107,15 @@ interface CellResizeState {
   currentH?: number;
 }
 
+interface PendingPlacementAnnouncement {
+  readonly cellId: string;
+  readonly kind: 'move' | 'resize';
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
 export interface LyraDashboardCellMoveDetail {
   readonly cellId: string;
   readonly position: Readonly<{ x: number; y: number }>;
@@ -164,10 +173,12 @@ export interface LyraDashboardGridEventMap {
  *
  * Collision: every move/resize request -- pointer or keyboard -- is resolved through `collision`
  * (`'reject'` the default, `'push'`, or `'overlap'`; see `resolveLyraDashboardPlacement()` for
- * the exact rule). A rejected request leaves `layout` untouched and only announces; an accepted
- * one emits `lr-cell-move`/`lr-cell-resize` plus a `lr-layout-change` snapshot of the full
+ * the exact rule). A rejected request leaves `layout` untouched and announces immediately. An
+ * accepted request emits `lr-cell-move`/`lr-cell-resize` plus a `lr-layout-change` snapshot of the full
  * proposed layout (including any `'push'` cascade) -- the host's one persistence hook: listen for
  * it and persist `event.detail.layout` however it likes (`localStorage`, a network call, neither).
+ * Success is announced only after a controlled `layout` assignment applies the requested target
+ * geometry; a host that ignores a request produces no false move/resize confirmation.
  *
  * Responsive: below a ~40rem container allocation (`@container`, not the viewport -- a dashboard
  * grid is commonly embedded in a panel of varying width), cells stack into a single flowing
@@ -183,8 +194,8 @@ export interface LyraDashboardGridEventMap {
  * @slot cell-{cellId} - A `layout` entry's cell content; auto-populated by a default composed
  *   `<lr-widget>`/`<lr-widget-renderer>` pair unless a light-DOM `[cell-id="{cellId}"]` child is
  *   authored instead.
- * @event lr-cell-move - `detail: { cellId, position, previous }` — an accepted move committed.
- * @event lr-cell-resize - `detail: { cellId, size, previous }` — an accepted resize committed.
+ * @event lr-cell-move - `detail: { cellId, position, previous }` — an accepted move request.
+ * @event lr-cell-resize - `detail: { cellId, size, previous }` — an accepted resize request.
  * @event lr-collision - `detail: { cellId, collidedCellIds, policy, accepted }` — a move/resize request
  *   overlapped at least one other cell, regardless of whether `policy` ultimately accepted it.
  * @event lr-layout-change - `detail: { layout }` — the full proposed layout after any accepted
@@ -196,8 +207,9 @@ export interface LyraDashboardGridEventMap {
  *   rendered while `cells-resizable`); the Ctrl/Cmd+Shift+Arrow keyboard path is the resize
  *   handle's full accessible equivalent, so the handle itself is `aria-hidden`.
  * @csspart live-region - The `aria-hidden` mirror of the current move/resize/collision
- *   announcement; the spoken copy is appended to the shared light-DOM polite sink only while
- *   the grid and all of its composed ancestors remain exposed to the accessibility tree.
+ *   announcement. Rejections announce immediately; accepted moves/resizes announce after the
+ *   host applies matching controlled `layout`. Spoken copy reaches the shared light-DOM polite
+ *   sink only while the grid and all composed ancestors remain exposed to the accessibility tree.
  * @cssprop [--lr-dashboard-grid-columns=12] - Author override for the column count; otherwise the
  *   normalized `columns` property supplies the computed value.
  * @cssprop [--lr-dashboard-grid-row-height=80px] - Author override for row track
@@ -235,8 +247,9 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private effectiveLayout: readonly LyraDashboardCell[] = Object.freeze([]);
 
   /** The grid's immutable, bounded cell snapshot. Assign a new readonly collection to update it;
-   * every move/resize remains a request event that the host applies or ignores. Invalid records
-   * are skipped and duplicate ids use the first valid occurrence. */
+   * every move/resize remains a request event that the host applies or ignores, and success is
+   * announced only when this controlled round trip contains the requested target geometry.
+   * Invalid records are skipped and duplicate ids use the first valid occurrence. */
   @property({ attribute: false })
   get layout(): readonly LyraDashboardCell[] {
     return this.effectiveLayout;
@@ -248,6 +261,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       this.authoredLayout,
       this.safeColumns
     );
+    this.announceAppliedPlacement();
     this.requestUpdate('layout', previous);
   }
   /** Column count of the underlying CSS Grid. */
@@ -324,6 +338,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private suppressedClickCellId = '';
   private suppressedClickTimer?: number;
   private suppressedClickWindow?: Window;
+  private pendingPlacementAnnouncement?: PendingPlacementAnnouncement;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -341,6 +356,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     this.defaultCellSyncQueued = false;
     this.restoreManagedAuthoredSlots();
     this.clearSuppressedClick();
+    this.pendingPlacementAnnouncement = undefined;
     // An in-flight drag/resize gesture holds window-level listeners; if the element is removed
     // mid-gesture nothing else ever detaches them, and a later unrelated pointerup would fire
     // against a detached tree with stale gesture state.
@@ -729,6 +745,39 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   // Shared commit path (keyboard nudge, and a pointer gesture's final drop)
   // ---------------------------------------------------------------------
 
+  private announceAppliedPlacement(): void {
+    const pending = this.pendingPlacementAnnouncement;
+    if (!pending) return;
+    this.pendingPlacementAnnouncement = undefined;
+    const cell = this.effectiveLayout.find(
+      (candidate) => candidate.cellId === pending.cellId
+    );
+    if (!cell) return;
+    const applied =
+      pending.kind === 'move'
+        ? cell.x === pending.x && cell.y === pending.y
+        : cell.w === pending.w && cell.h === pending.h;
+    if (!applied) return;
+    const number = getNumberFormat(this.effectiveLocale);
+    if (pending.kind === 'move') {
+      this.announcer.announce(
+        this.localize('dashboardCellMoved', undefined, {
+          label: this.cellLabel(cell),
+          x: number.format(cell.x + 1),
+          y: number.format(cell.y + 1),
+        })
+      );
+      return;
+    }
+    this.announcer.announce(
+      this.localize('dashboardCellResized', undefined, {
+        label: this.cellLabel(cell),
+        w: number.format(cell.w),
+        h: number.format(cell.h),
+      })
+    );
+  }
+
   private commitPlacement(
     cellId: string,
     requested: { x: number; y: number; w: number; h: number },
@@ -766,7 +815,6 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     const updated = result.layout.find(
       (candidate) => candidate.cellId === cellId
     )!;
-    const number = getNumberFormat(this.effectiveLocale);
     // `requested` is clamped (bounds + this cell's own min/max) before ever reaching collision
     // resolution, so e.g. a shrink-past-minW request can come back byte-identical to `cell` --
     // that's a real no-op, not a move/resize, and must not emit a spurious event.
@@ -775,6 +823,14 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
         ? updated.x === cell.x && updated.y === cell.y
         : updated.w === cell.w && updated.h === cell.h;
     if (unchanged) return false;
+    this.pendingPlacementAnnouncement = {
+      cellId,
+      kind,
+      x: updated.x,
+      y: updated.y,
+      w: updated.w,
+      h: updated.h,
+    };
     if (kind === 'move') {
       this.emit(
         'lr-cell-move',
@@ -784,13 +840,6 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
           previous: Object.freeze({ x: cell.x, y: cell.y }),
         })
       );
-      this.announcer.announce(
-        this.localize('dashboardCellMoved', undefined, {
-          label: this.cellLabel(cell),
-          x: number.format(updated.x + 1),
-          y: number.format(updated.y + 1),
-        })
-      );
     } else {
       this.emit(
         'lr-cell-resize',
@@ -798,13 +847,6 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
           cellId,
           size: Object.freeze({ w: updated.w, h: updated.h }),
           previous: Object.freeze({ w: cell.w, h: cell.h }),
-        })
-      );
-      this.announcer.announce(
-        this.localize('dashboardCellResized', undefined, {
-          label: this.cellLabel(cell),
-          w: number.format(updated.w),
-          h: number.format(updated.h),
         })
       );
     }

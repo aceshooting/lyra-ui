@@ -22,13 +22,19 @@ contract wholesale. Carries ids through events only — no entity data resolutio
 **Properties:**
 
 - `entityId: string = ''` (attribute `entity-id`)
-- `label: string = ''` — the chip's visible text
+- `text: string = ''` — the chip's visible text
 - `type: string = ''` (reflected) — lets a host theme per type from CSS, e.g.
   `lr-entity-chip[type='person'] { --lr-entity-chip-color: ... }`
 - `typeLabel?: string` (attribute `type-label`) — optional spoken/visible type qualifier
 
-**Events:** `lr-entity-activate` (`detail: { id }`, click, or Enter while focused),
-`lr-entity-open` (`detail: { id }`, dblclick, or Space while focused).
+The internal button always derives its own localized accessible name from `text` and optional
+`typeLabel`/`type`. Blank or whitespace-only `text` uses the localized “Untitled entity” fallback
+before the type template is composed, so it never produces a leading punctuation fragment such as
+`, person`. An authored host `aria-label` intentionally names only the custom-element boundary;
+it is not copied onto the shadow button because host naming does not cross that boundary.
+
+**Events:** `lr-entity-activate` (`detail: { entityId }`, click, or Enter while focused),
+`lr-entity-open` (`detail: { entityId }`, dblclick, or Space while focused).
 
 **Slots:** default — rich preview content (typically a compact `lr-entity-card`), shown in a
 floating popover on hover/focus. No content means no popover and no hover affordance at all.
@@ -44,7 +50,7 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 ```html
 <p>
   …first described by
-  <lr-entity-chip entity-id="e1" label="Ada Lovelace" type="person">
+  <lr-entity-chip entity-id="e1" text="Ada Lovelace" type="person">
     <lr-entity-card slot=""></lr-entity-card> </lr-entity-chip
   >.
 </p>
@@ -54,5 +60,6 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 
 - Reuses `lr-citation-badge`'s exact "real preview content" detection (an assigned element with no
   other `slot`, or non-whitespace text) to decide whether a popover exists at all.
+- A blank `entityId` disables the chip and cannot produce an activation/open event.
 
 ---

@@ -38,23 +38,33 @@ definition is a schema-shape error, never misreported as a value-serialization f
 - `ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean'` — the four leaf property
   types this renderer understands
 - `ToolParamFormPrimitive = string | number | boolean` — values accepted by the supported `const`
-- `ToolParamFormProperty { type: ToolParamFormPropertyType; enum?: string[]; description?: string;
-title?: string; default?: unknown; const?: ToolParamFormPrimitive; autocomplete?: string;
-spellcheck?: boolean; autocapitalize?: string; autoCorrect?: string; inputMode?: string;
-enterKeyHint?: string }` — one `schema.properties`
+- `ToolParamFormProperty { readonly type: ToolParamFormPropertyType; readonly enum?: readonly
+string[]; readonly description?: string; readonly title?: string; readonly default?: unknown;
+readonly const?: ToolParamFormPrimitive; readonly autocomplete?: string; readonly spellcheck?:
+boolean; readonly autocapitalize?: string; readonly autoCorrect?: string; readonly inputMode?:
+string; readonly enterKeyHint?: string }` — one `schema.properties`
   entry. `enum` is only meaningful when `type` is `'string'` (rendered as a `<lr-select>`); `const`
   enforces one exact primitive value; `title` is the display label; `description` is helper text;
   `default` pre-fills a field whenever `value` doesn't already have that key. For a free-form
   string field, `autocomplete`, `spellcheck`, `autocapitalize`, `autoCorrect`, `inputMode`, and
   `enterKeyHint` forward the corresponding native editing hints to the rendered text input;
   `spellcheck` defaults to `true`, and the other hints are omitted unless supplied.
-- `FlatToolParamSchema { type: 'object'; properties: Record<string, ToolParamFormProperty>; required?:
-string[] }` — the (intentionally flat) schema shape this component can render.
+- `FlatToolParamSchema { readonly type: 'object'; readonly properties:
+Readonly<Record<string, ToolParamFormProperty>>; readonly required?: readonly string[] }` — the
+  (intentionally flat) schema shape this component can render.
+- `ToolParamFormValue = Readonly<Record<string, unknown>>` — the clone-owned argument model.
 
 **Properties:**
 
-- `schema: FlatToolParamSchema = { type: 'object', properties: {} }` (attribute: false)
-- `value: Record<string, unknown> = {}` (attribute: false) — exactly what the consumer last set it to.
+- `schema: FlatToolParamSchema = { type: 'object', properties: {} }` (attribute: false) — a
+  detached, deeply frozen assignment snapshot, capped at 100 fields and required keys and 500 enum
+  choices per field. Exceeding a cap keeps the bounded prefix but fails validation closed. Create
+  and reassign a new schema after changes; mutating the caller's prior object has no effect.
+- `value: ToolParamFormValue = {}` (attribute: false) — a detached, deeply frozen assignment
+  snapshot, capped at 10,000 entries per array/plain record, 50,000 total nodes, and 16 nested
+  levels. Unsafe or oversized assignments fail serialization closed. Create and reassign a new
+  value after changes; mutating the caller's prior object has no effect. It represents exactly
+  what the consumer last assigned.
   A field with no entry in `value` but a schema `default` _displays_ (and is _emitted_, via
   `lr-input`) as that default, but the `value` property itself is left alone until the user actually
   edits that field. JSON Schema ordinarily treats `default` as an annotation; this renderer
@@ -70,7 +80,8 @@ string[] }` — the (intentionally flat) schema shape this component can render.
 
 **Getters:**
 
-- `effectiveValue: Record<string, unknown>` — `value` with every property missing from it filled in
+- `effectiveValue: ToolParamFormValue` — a detached, deeply frozen `value` snapshot with every
+  property missing from it filled in
   from `schema`'s own `default`; this is what actually renders and what `lr-input`'s detail carries.
   A key the user has explicitly cleared (a real own property set to `undefined`) stays cleared rather
   than snapping back to its default — only a key genuinely absent from `value` falls back.
@@ -84,9 +95,9 @@ string[] }` — the (intentionally flat) schema shape this component can render.
 **Methods:**
 
 - `getForm(): HTMLFormElement | null` — returns the browser-resolved owning form.
-- `checkValidity(): boolean` — synchronously re-snapshots even an in-place-mutated value/schema,
-  updates `ElementInternals`, and returns validity without revealing inline errors.
-- `reportValidity(): boolean` — performs the same resynchronization, reveals all current field/root
+- `checkValidity(): boolean` — synchronously updates `ElementInternals` from the current assigned
+  snapshots and returns validity without revealing inline errors.
+- `reportValidity(): boolean` — performs the same synchronization, reveals all current field/root
   errors, focuses the first invalid generated field when one exists, and delegates to native
   `ElementInternals.reportValidity()`. If `required` contains an unmet key absent from
   `properties`, there is no generated control to focus, so a localized, programmatically focusable
@@ -106,9 +117,10 @@ string[] }` — the (intentionally flat) schema shape this component can render.
   behaves like a single control under both a `<label>`-driven and a programmatic click; a no-op
   while `disabled`.
 
-**Events:** `lr-input` (`detail: { value: Record<string, unknown> }` — the full current value
-object, every property with defaults resolved, not just the field that changed), `lr-validity-change`
-(frozen `detail: { valid: boolean; errors: Readonly<Record<string, string>> }` — deduplicated on
+**Events:** `lr-input` (deeply frozen `detail: { value: ToolParamFormValue }` — the full detached
+current value snapshot, every property with defaults resolved, not just the field that changed),
+`lr-validity-change` (deeply frozen
+`detail: { valid: boolean; errors: Readonly<Record<string, string>> }` — deduplicated on
 effective native validity, including consumer custom errors and own/fieldset validation barring;
 fired once up front at connect time and after every effective change; serialization-only failures
 publish their root message as `errors.base` and `formError`), and no-detail `focus`/`blur` events for

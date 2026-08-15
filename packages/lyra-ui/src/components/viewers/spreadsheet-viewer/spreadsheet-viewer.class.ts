@@ -44,22 +44,7 @@ import {
 } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_anchorJumped,
-  LYRA_DEFAULT_anchorJumpedToPage,
-  LYRA_DEFAULT_anchorNotFound,
-  LYRA_DEFAULT_cellHighlightWithLabel,
-  LYRA_DEFAULT_documentPreviewEmpty,
-  LYRA_DEFAULT_documentPreviewFailedToLoad,
-  LYRA_DEFAULT_documentPreviewResourceTooLarge,
-  LYRA_DEFAULT_documentPreviewTypeDocument,
-  LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-  LYRA_DEFAULT_highlightWithLabel,
-  LYRA_DEFAULT_loadingDocument,
-  LYRA_DEFAULT_noData,
-  LYRA_DEFAULT_spreadsheetViewerLabel,
-  LYRA_DEFAULT_spreadsheetViewerUnavailable,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData, LYRA_DEFAULT_spreadsheetViewerLabel, LYRA_DEFAULT_spreadsheetViewerUnavailable } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 interface SpreadsheetSheet {
@@ -114,7 +99,7 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * The target sheet resolves from the anchor's own `sheet` field (falling back to a `Sheet!`-prefixed
  * `range`, then the currently active sheet when neither is set); `scrollToAnchor()` switches
  * `<lr-tab-group>`'s `active` tab first when the resolved sheet isn't already active, then scrolls the
- * addressed row into view via the virtualized list's `active-id`, then scrolls the first addressed
+ * addressed row into view via the virtualized list's `active-item-id`, then scrolls the first addressed
  * column horizontally into view. `highlights` paint a structural `part="cell-highlight"` cell
  * wrapping a focusable native `part="cell-highlight-action"` button, recomputed per row inside
  * `renderRow()` so a row scrolled out and back in reconstructs its highlight for free, with no
@@ -129,7 +114,7 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
- *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
+ *   changes, including source-reset and effective-locale re-evaluation. `detail: { query,
  *   matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code units,
  *   scans at most 4,000,000 cell code units, and retains at most 1,000 matches;
  *   `matchCountExact=false` identifies a ceiling-truncated lower bound.
@@ -164,25 +149,23 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
 ) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      anchorJumped: LYRA_DEFAULT_anchorJumped,
-      anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
-      anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-      cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
-      documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
-      documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
-      documentPreviewResourceTooLarge:
-        LYRA_DEFAULT_documentPreviewResourceTooLarge,
-      documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
-      documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-      highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
-      loadingDocument: LYRA_DEFAULT_loadingDocument,
-      noData: LYRA_DEFAULT_noData,
-      spreadsheetViewerLabel: LYRA_DEFAULT_spreadsheetViewerLabel,
-      spreadsheetViewerUnavailable: LYRA_DEFAULT_spreadsheetViewerUnavailable,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+    noData: LYRA_DEFAULT_noData,
+    spreadsheetViewerLabel: LYRA_DEFAULT_spreadsheetViewerLabel,
+    spreadsheetViewerUnavailable: LYRA_DEFAULT_spreadsheetViewerUnavailable,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, viewerLoadingStyles];
@@ -202,7 +185,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
    *  a match lives on a different sheet. */
   @state() private activeSheetIndex = 0;
   /** The virtualized body row currently scrolled into view on the active sheet -- bound to
-   *  `<lr-virtual-list>`'s own `active-id`. */
+   *  `<lr-virtual-list>`'s own `active-item-id`. */
   @state() private activeRowKey: number | '' = '';
   @state() private searchMatches: {
     sheetIndex: number;
@@ -213,6 +196,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
   private lastSearchLocale = '';
+  private pendingSearchResetEvent = false;
   private generation = 0;
   private loadLibrary: () => Promise<SheetJsApi | null> = loadSheetJsCached;
   private lastLoadSrc = '';
@@ -268,8 +252,10 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
-      // A new document invalidates every previous sheet/row/column coordinate -- reset silently
-      // (no event), mirroring <lr-pdf-viewer>'s identical src-change reset.
+      this.pendingSearchResetEvent ||= this.searchQuery !== ''
+        || this.searchMatches.length > 0
+        || !this.searchMatchCountExact
+        || this.searchActiveIndex !== -1;
       this.searchQuery = '';
       this.searchMatches = [];
       this.searchMatchCountExact = true;
@@ -292,6 +278,10 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       this.scheduleAfterUpdate(() => {
         void this.load();
       });
+    if (changed.has('src') && this.pendingSearchResetEvent) {
+      this.pendingSearchResetEvent = false;
+      this.emitSearchChange();
+    }
     const locale = this.effectiveLocale;
     if (locale !== this.lastSearchLocale) {
       const shouldRecompute = !!this.searchQuery;
@@ -535,7 +525,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
             sheet.name
           )}
         .keyFunction=${(_item: unknown, bodyIndex: number) => bodyIndex}
-        .activeId=${index === this.activeSheetIndex ? this.activeRowKey : ''}
+        .activeItemId=${index === this.activeSheetIndex ? this.activeRowKey : ''}
         item-role="row"
         row-index-offset="1"
         @lr-load-more=${this.stopInternalEvent}

@@ -32,7 +32,7 @@ export interface LyraStepItem {
    *  disabled step is locked. Omit for no `title` attribute at all (not an empty string). */
   title?: string;
   /** Optional leading topic glyph for this step (e.g. a payment icon on a "Payment" step) --
-   *  same `PaletteItem`/`MentionItem`/`LyraSegmentedItem` precedent: intentionally general content
+   *  same `LyraPaletteItem`/`MentionItem`/`LyraSegmentedItem` precedent: intentionally general content
    *  (a `TemplateResult`, an emoji string, etc.), not a square-icon-only field. Rendered
    *  additionally to, never instead of, the state-driven index chip/checkmark -- the icon
    *  identifies the step's topic, the chip/checkmark identifies its state. It is inert and hidden

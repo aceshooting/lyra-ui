@@ -10,7 +10,7 @@ import { LYRA_DEFAULT_loading } from '../../../internal/default-strings.generate
 
 
 export type LyraSkeletonShape = 'text' | 'circle' | 'rect';
-export type SkeletonEffect = 'pulse' | 'sheen' | 'none';
+export type LyraSkeletonEffect = 'pulse' | 'sheen' | 'none';
 
 /**
  * `<lr-skeleton>` — a loading placeholder mirroring the public Web Awesome/Shoelace skeleton
@@ -46,7 +46,7 @@ export class LyraSkeleton extends LyraElement {
 
   /** Placeholder geometry. This is named `shape` so it cannot be confused with semantic tone. */
   @property({ reflect: true, useDefault: true }) shape: LyraSkeletonShape = 'text';
-  @property() effect: SkeletonEffect = 'none';
+  @property() effect: LyraSkeletonEffect = 'none';
   @property() width?: string;
   @property() height?: string;
 

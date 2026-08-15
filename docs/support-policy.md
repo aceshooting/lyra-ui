@@ -19,7 +19,7 @@ Nothing on this page is proven by a human using the software. See
 
 | Engine | Supported from | Proven by CI |
 |---|---|---|
-| Chrome / Edge (Chromium) | **120** | Current stable — full test suite (CI `build-and-coverage`) |
+| Chrome / Edge (Chromium) | **120** | Current Playwright Chromium — full suite; Chrome and Edge channels — contract subset |
 | Firefox (Gecko) | **121** | Current stable — contract subset (CI `platform-contracts`) |
 | Safari (WebKit) | **16.4** | Current stable — contract subset (CI `platform-contracts`) |
 | Anything without native Custom Elements v1 + Shadow DOM (Internet Explorer, legacy Edge) | Not supported | — |
@@ -52,23 +52,24 @@ This table is the support window.
 
 ### What the CI matrix actually runs
 
-`.github/workflows/ci.yml` is authoritative. Today:
+`.github/workflows/ci.yml` is authoritative:
 
 - **`build-and-coverage`** — the complete `@web/test-runner` suite on Chromium (Playwright's pinned
   build), plus coverage floors, SSR render matrix, and DSD hydration.
-- **`platform-contracts`** — a matrix of `{firefox, webkit} × Node {20, 22}` running
-  `pnpm test:platform`, a curated subset of the suite (form association, the overlay manager,
-  overlay components, the form-control family, menu, split panel, tab group, tree, carousel, table,
-  virtual list). The exact file list is the `test:platform` script entry in
-  `packages/lyra-ui/package.json` — that entry, not this sentence, is the definition.
+- **`platform-contracts`** — a source-defined matrix running the curated `test:platform` subset.
+  Node 20 covers Firefox and Safari (WebKit); Node 22 covers Chromium, Chrome, Edge, Firefox, and
+  Safari. The exact browser/shard matrix lives in `.github/workflows/ci.yml`, and the exact test
+  inventory is the `test:platform` script entry in `packages/lyra-ui/package.json` — those sources,
+  not this summary, are the definition.
   The Firefox/Node 20 leg additionally builds and runs the clean packed-consumer install, import,
   type, style, tree-shaking, and framework-recipe matrix at the supported Node floor.
 
-Firefox and WebKit therefore have **contract-level** coverage, not full coverage. One known,
-deliberate gap: WebKit silently drops a programmatic `addRange()` into a shadow tree, so
-cross-shadow text selection is unverified there. Every selection-dependent test file currently sits
-outside `test:platform`, which is why the gap is latent rather than red. Adding one of those files
-to the matrix requires a WebKit guard first.
+Every named browser therefore has blocking per-push contract coverage; Playwright Chromium also
+runs the complete suite per push. Firefox and WebKit run the complete non-coverage suite weekly and
+before release through `.github/workflows/full-engine.yml`. One known, deliberate gap remains:
+WebKit silently drops a programmatic `addRange()` into a shadow tree, so cross-shadow text
+selection is unverified there. A selection-dependent test added to `test:platform` needs the
+documented WebKit guard first.
 
 ---
 

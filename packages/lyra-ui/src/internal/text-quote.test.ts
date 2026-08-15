@@ -12,6 +12,7 @@ import {
   scopeFromItems,
   resolveTextQuote,
   rangeFromTextQuoteMatch,
+  rangesFromTextQuoteMatches,
   findTextQuoteRanges,
   buildQuoteAnchor,
 } from './text-quote.js';
@@ -251,6 +252,23 @@ describe('bounded text quote indexing', () => {
     } as unknown as Range;
     expect(boundedSelectionRects(rectRange)).to.have.lengthOf(TEXT_SELECTION_RECT_LIMIT);
     expect(boundedSelectionRects(rectRange, Infinity)).to.have.lengthOf(TEXT_SELECTION_RECT_LIMIT);
+    const copiedRects = boundedSelectionRects(rectRange, 1);
+    const [copiedRect] = copiedRects;
+    expect(copiedRect).not.to.equal(rect);
+    expect(copiedRect).to.deep.equal({
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1,
+      top: 0,
+      right: 1,
+      bottom: 1,
+      left: 0,
+    });
+    expect(Object.isFrozen(copiedRects)).to.be.true;
+    expect(Object.isFrozen(copiedRect)).to.be.true;
+    rect.x = 99;
+    expect(copiedRect.x).to.equal(0);
   });
 });
 
@@ -453,6 +471,65 @@ describe('scopeFromElement + resolveTextQuote', () => {
 });
 
 describe('locale-aware search ranges', () => {
+  it('normalizes and maps canonical clusters split across adjacent text nodes', () => {
+    const root = document.createElement('div');
+    const base = document.createTextNode('e');
+    const mark = document.createTextNode('\u0301');
+    root.append(base, mark);
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      expect(scope.text).to.equal('é');
+      const range = resolveTextQuote(scope, { quote: 'é' });
+      expect(range?.startContainer).to.equal(base);
+      expect(range?.startOffset).to.equal(0);
+      expect(range?.endContainer).to.equal(mark);
+      expect(range?.endOffset).to.equal(1);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('normalizes a canonical cluster split across adjacent item spans without a synthetic space', () => {
+    const root = document.createElement('div');
+    const base = document.createElement('span');
+    const mark = document.createElement('span');
+    base.textContent = 'e';
+    mark.textContent = '\u0301';
+    root.append(base, mark);
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromItems([
+        { text: 'e', element: base },
+        { text: '\u0301', element: mark },
+      ]);
+      expect(scope.text).to.equal('é');
+      expect(resolveTextQuote(scope, { quote: 'é' })?.toString()).to.equal('e\u0301');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('normalizes a Hangul syllable split across adjacent item spans without a synthetic space', () => {
+    const root = document.createElement('div');
+    const leadingConsonant = document.createElement('span');
+    const vowel = document.createElement('span');
+    leadingConsonant.textContent = '\u1100';
+    vowel.textContent = '\u1161';
+    root.append(leadingConsonant, vowel);
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromItems([
+        { text: '\u1100', element: leadingConsonant },
+        { text: '\u1161', element: vowel },
+      ]);
+      expect(scope.text).to.equal('가');
+      expect(resolveTextQuote(scope, { quote: '가' })?.toString()).to.equal('\u1100\u1161');
+    } finally {
+      root.remove();
+    }
+  });
+
   it('uses the requested locale for Turkish case folding', () => {
     const root = document.createElement('div');
     root.textContent = 'İzmir';
@@ -474,6 +551,21 @@ describe('locale-aware search ranges', () => {
       const ranges = findTextQuoteRanges(scopeFromElement(root), 'foo', 'en');
       expect(ranges).to.have.length(1);
       expect(ranges[0]!.toString()).to.equal('Foo');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('rejects a raw-bounded query whose locale fold expands beyond the query ceiling', () => {
+    const root = document.createElement('div');
+    root.textContent = 'anything';
+    document.body.appendChild(root);
+    try {
+      const matches = createTextQuoteIndex(scopeFromElement(root), 'en')
+        .search('\u0130'.repeat(TEXT_QUOTE_LIMITS.maxQueryCodeUnits));
+      expect(matches).to.have.lengthOf(0);
+      expect(matches.matchCountExact).to.be.false;
+      expect(matches.scanComplete).to.be.false;
     } finally {
       root.remove();
     }
@@ -597,13 +689,102 @@ describe('resolveTextQuote defensive edge cases against hand-built scopes', () =
       const match = findTextQuoteMatches(scope, 'needle').at(0)!;
       root.firstChild!.textContent = 'a';
       expect(rangeFromTextQuoteMatch(scope, match)).to.be.null;
+
+      root.textContent = 'needle';
+      const sameLengthScope = scopeFromElement(root);
+      const sameLengthMatch = findTextQuoteMatches(sameLengthScope, 'needle').at(0)!;
+      (root.firstChild as Text).data = 'xxxxxx';
+      expect(rangeFromTextQuoteMatch(sameLengthScope, sameLengthMatch)).to.be.null;
+
+      root.textContent = 'needle';
+      const detachedScope = scopeFromElement(root);
+      const detachedMatch = findTextQuoteMatches(detachedScope, 'needle').at(0)!;
+      const detached = root.firstChild!;
+      detached.remove();
+      expect(rangeFromTextQuoteMatch(detachedScope, detachedMatch)).to.be.null;
+
+      root.append(detached);
+      const reparentedScope = scopeFromElement(root);
+      const reparentedMatch = findTextQuoteMatches(reparentedScope, 'needle').at(0)!;
+      const elsewhere = document.createElement('div');
+      document.body.append(elsewhere);
+      elsewhere.append(detached);
+      expect(rangeFromTextQuoteMatch(reparentedScope, reparentedMatch)).to.be.null;
+      elsewhere.remove();
+
+      root.replaceChildren(
+        document.createTextNode('ab'),
+        document.createTextNode('cd'),
+        document.createTextNode('ef'),
+      );
+      const multiNodeScope = scopeFromElement(root);
+      const multiNodeMatch = findTextQuoteMatches(multiNodeScope, 'abcdef').at(0)!;
+      (root.childNodes[1] as Text).data = 'XX';
+      expect(rangeFromTextQuoteMatch(multiNodeScope, multiNodeMatch)).to.be.null;
+
+      root.innerHTML = '<span>a</span><span>b</span><span>c</span>';
+      const ancestorScope = scopeFromElement(root);
+      const ancestorMatch = findTextQuoteMatches(ancestorScope, 'abc').at(0)!;
+      const inserted = document.createElement('span');
+      inserted.textContent = 'X';
+      root.insertBefore(inserted, root.lastElementChild);
+      expect(rangeFromTextQuoteMatch(ancestorScope, ancestorMatch)).to.be.null;
+
+      root.innerHTML = '<span>prefix</span><span>needle</span>';
+      const prefixScope = scopeFromElement(root);
+      const prefixMatch = findTextQuoteMatches(prefixScope, 'needle').at(0)!;
+      root.firstElementChild!.textContent = 'expanded prefix';
+      expect(rangeFromTextQuoteMatch(prefixScope, prefixMatch)).to.be.null;
+
+      root.innerHTML = '<span>needle</span>';
+      const boundaryScope = scopeFromElement(root);
+      const boundaryMatch = findTextQuoteMatches(boundaryScope, 'needle').at(0)!;
+      const prepended = document.createElement('p');
+      prepended.textContent = 'x';
+      root.prepend(prepended);
+      expect(rangeFromTextQuoteMatch(boundaryScope, boundaryMatch)).to.be.null;
+
+      root.innerHTML = '<p>needle</p>';
+      const suffixScope = scopeFromElement(root);
+      const suffixMatch = findTextQuoteMatches(suffixScope, 'needle').at(0)!;
+      const appended = document.createElement('span');
+      appended.textContent = 'new searchable text';
+      root.append(appended);
+      expect(rangeFromTextQuoteMatch(suffixScope, suffixMatch)).to.be.null;
+
       expect(rangeFromTextQuoteMatch(scope, { start: 99, end: 100 })).to.be.null;
 
       const span = document.createElement('span');
       span.textContent = 'x';
       const badItems = scopeFromItems([{ text: 'much longer', element: span }]);
-      const badMatch = findTextQuoteMatches(badItems, 'longer').at(0)!;
-      expect(rangeFromTextQuoteMatch(badItems, badMatch)).to.be.null;
+      expect(badItems.truncated).to.be.true;
+      expect(findTextQuoteMatches(badItems, 'longer')).to.have.length(0);
+      expect(rangeFromTextQuoteMatch(badItems, undefined as never)).to.be.null;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('materializes a bounded match batch after one fail-closed provenance validation', () => {
+    const root = document.createElement('div');
+    root.textContent = 'needle needle';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const matches = [...findTextQuoteMatches(scope, 'needle')];
+      const ranges = rangesFromTextQuoteMatches(scope, matches);
+      expect(ranges.map((range) => range?.toString())).to.deep.equal(['needle', 'needle']);
+
+      const first = root.firstChild as Text;
+      const hostile = {
+        get start(): number {
+          first.data = 'xxxxxx needle';
+          return 0;
+        },
+        end: 6,
+      };
+      const rejected = rangesFromTextQuoteMatches(scope, [hostile, matches[1]]);
+      expect(rejected).to.deep.equal([null, null]);
     } finally {
       root.remove();
     }
@@ -666,16 +847,12 @@ describe('buildQuoteAnchor deep boundaries', () => {
     }
     const node = document.createTextNode('needle');
     parent.appendChild(node);
-    document.body.appendChild(root);
-    try {
-      const range = document.createRange();
-      range.selectNodeContents(root);
-      const scope: TextQuoteScope = { text: '', segments: [], truncated: true };
-      expect(() => buildQuoteAnchor(range, scope)).to.not.throw();
-      expect(buildQuoteAnchor(range, scope)).to.deep.equal({ kind: 'text-quote', quote: '' });
-    } finally {
-      root.remove();
-    }
+    const range = document.createRange();
+    range.selectNodeContents(root);
+    const scope: TextQuoteScope = { text: '', segments: [], truncated: true };
+    let anchor: ReturnType<typeof buildQuoteAnchor>;
+    expect(() => { anchor = buildQuoteAnchor(range, scope); }).to.not.throw();
+    expect(anchor!).to.deep.equal({ kind: 'text-quote', quote: '' });
   });
 
   it('caps a selected quote before materializing it', () => {
@@ -697,6 +874,27 @@ describe('buildQuoteAnchor deep boundaries', () => {
 });
 
 describe('scopeFromItems + resolveTextQuote (simulated pdf text-layer items)', () => {
+  it('keeps a large flat sibling scope mappable within the aggregate traversal ceiling', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    try {
+      const items: Array<{ text: string; element: Element }> = [];
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < 4_096; index++) {
+        const span = document.createElement('span');
+        span.textContent = `item${index}`;
+        fragment.appendChild(span);
+        items.push({ text: span.textContent, element: span });
+      }
+      container.appendChild(fragment);
+      const scope = scopeFromItems(items);
+      expect(scope.truncated).to.be.false;
+      expect(resolveTextQuote(scope, { quote: 'item4095' })?.toString()).to.equal('item4095');
+    } finally {
+      container.remove();
+    }
+  });
+
   it('round-trips across multiple per-word span items', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -731,6 +929,26 @@ describe('scopeFromItems + resolveTextQuote (simulated pdf text-layer items)', (
     }
   });
 
+  it('keeps nested text nodes in one peer text run contiguous when joinBefore is false', () => {
+    const container = document.createElement('span');
+    const first = document.createElement('b');
+    const second = document.createElement('i');
+    first.textContent = 'hel';
+    second.textContent = 'lo';
+    container.append(first, second);
+    document.body.appendChild(container);
+    try {
+      const scope = scopeFromItems([
+        { text: 'hel', element: first, node: first.firstChild as Text },
+        { text: 'lo', element: second, node: second.firstChild as Text, joinBefore: false },
+      ]);
+      expect(scope.text).to.equal('hello');
+      expect(resolveTextQuote(scope, { quote: 'hello' })?.toString()).to.equal('hello');
+    } finally {
+      container.remove();
+    }
+  });
+
   it('skips items whose element has no text node', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -740,12 +958,13 @@ describe('scopeFromItems + resolveTextQuote (simulated pdf text-layer items)', (
       const scope = scopeFromItems([{ text: 'ignored', element: empty }]);
       expect(scope.text).to.equal('');
       expect(scope.segments).to.have.length(0);
+      expect(scope.truncated).to.be.true;
     } finally {
       container.remove();
     }
   });
 
-  it('skips an item whose own text collapses entirely to nothing', () => {
+  it('fails closed at an item whose authoritative text differs from its DOM node', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     try {
@@ -762,8 +981,10 @@ describe('scopeFromItems + resolveTextQuote (simulated pdf text-layer items)', (
         { text: 'World', element: makeSpan('World') },
       ];
       const scope = scopeFromItems(items);
-      expect(scope.text).to.equal('Hello World');
-      expect(scope.segments).to.have.length(2);
+      expect(scope.text).to.equal('Hello');
+      expect(scope.segments).to.have.length(1);
+      expect(scope.truncated).to.be.true;
+      expect(resolveTextQuote(scope, { quote: 'Hello World' })).to.be.null;
     } finally {
       container.remove();
     }
@@ -939,13 +1160,27 @@ describe('segmenter and case-fold defensive fallbacks', () => {
     Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: undefined });
     const root = document.createElement('div');
     root.textContent = 'İ Foo';
+    const hangulRoot = document.createElement('div');
+    const leadingConsonant = document.createElement('span');
+    const vowel = document.createElement('span');
+    leadingConsonant.textContent = '\u1100';
+    vowel.textContent = '\u1161';
+    hangulRoot.append(leadingConsonant, vowel);
     document.body.appendChild(root);
+    document.body.appendChild(hangulRoot);
     try {
       const ranges = findTextQuoteRanges(scopeFromElement(root), 'foo', 'en');
       expect(ranges).to.have.length(1);
       expect(ranges[0]!.toString()).to.equal('Foo');
+      const hangulScope = scopeFromItems([
+        { text: '\u1100', element: leadingConsonant },
+        { text: '\u1161', element: vowel },
+      ]);
+      expect(hangulScope.text).to.equal('가');
+      expect(resolveTextQuote(hangulScope, { quote: '가' })?.toString()).to.equal('\u1100\u1161');
     } finally {
       root.remove();
+      hangulRoot.remove();
       Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: OriginalSegmenter });
     }
   });

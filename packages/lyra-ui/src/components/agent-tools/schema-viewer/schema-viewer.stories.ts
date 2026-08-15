@@ -4,7 +4,7 @@ import './schema-viewer.js';
 
 const meta: Meta = {
   title: 'Agent Tools/Schema Viewer',
-  component: 'lr-schema-viewer',
+  component: 'lr-json-schema-viewer',
   parameters: {
     docs: {
       description: {
@@ -18,7 +18,7 @@ export default meta;
 type Story = StoryObj;
 
 export const ToolSchema: Story = {
-  render: () => html`<lr-schema-viewer
+  render: () => html`<lr-json-schema-viewer
     .schema=${{
       type: 'object',
       title: 'search',
@@ -28,14 +28,14 @@ export const ToolSchema: Story = {
         limit: { type: 'integer', minimum: 1, maximum: 50 },
       },
     }}
-  ></lr-schema-viewer>`,
+  ></lr-json-schema-viewer>`,
 };
 
 export const Narrow320: Story = {
   name: 'Narrow (320px, long content and validation state)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lr-schema-viewer
+      <lr-json-schema-viewer
         selected-path="/properties/long_customer_support_configuration_identifier"
         .issues=${[
           {
@@ -55,7 +55,7 @@ export const Narrow320: Story = {
             },
           },
         }}
-      ></lr-schema-viewer>
+      ></lr-json-schema-viewer>
     </div>
   `,
 };

@@ -9,10 +9,9 @@ import {
 } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 import { styles } from './card.styles.js';
-
-export type CardOrientation = 'horizontal' | 'vertical';
 
 export interface LyraCardEventMap {
   'lr-card-activate': CustomEvent<null>;
@@ -119,10 +118,11 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     converter: declaredDefaultConverter<LyraAppearance>('outlined'),
   }) appearance: LyraAppearance = 'outlined';
 
-  /** Section flow. Horizontal cards arrange media, body, and `actions` side by side. */
+  /** Section flow, using the shared `LyraOrientation` vocabulary. Horizontal cards arrange
+   * media, body, and `actions` side by side. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<CardOrientation>('vertical'),
-  }) orientation: CardOrientation = 'vertical';
+    converter: declaredDefaultConverter<LyraOrientation>('vertical'),
+  }) orientation: LyraOrientation = 'vertical';
 
   /** SSR presence hints. Hydrated cards also detect populated slots automatically. */
   @property({ type: Boolean, attribute: 'with-header', reflect: true })

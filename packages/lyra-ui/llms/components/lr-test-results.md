@@ -27,8 +27,9 @@ TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed
 `run-id`) identifies the source run, and `runState: TestRunState = 'idle'` (attribute `run-state`,
 reflected) exposes its lifecycle. `autoExpandFailures: boolean = true`
 (attribute `auto-expand-failures`). A duration renders only when it is finite and non-negative;
-invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Suite ids, then test
-ids within each suite, use deterministic first-wins identity. Foreign runtime statuses normalize
+invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Empty/blank suite and
+test ids are omitted; retained suite ids, then test ids within each suite, use deterministic
+first-wins identity. Foreign runtime statuses normalize
 once to the localized neutral `skipped` state, so every accepted row contributes to one coherent
 summary count and renders a label/glyph.
 

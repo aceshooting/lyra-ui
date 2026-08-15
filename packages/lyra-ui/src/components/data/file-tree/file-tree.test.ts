@@ -70,7 +70,7 @@ describe('lr-file-tree', () => {
       cursor = child;
     }
     const el = await fixture<LyraFileTree>(html`<lr-file-tree></lr-file-tree>`);
-    el.nodes = [root, duplicate, deepRoot] as never;
+    el.nodes = [{ path: '' }, { path: '   ' }, root, duplicate, deepRoot] as never;
     root['name'] = 'Mutated';
     await el.updateComplete;
 
@@ -86,6 +86,18 @@ describe('lr-file-tree', () => {
       node = node.children?.[0];
     }
     expect(depth).to.be.at.most(65);
+  });
+
+  it('inspects only the first 10,000 source positions even when sparse entries are invalid', async () => {
+    const sparse = new Array<FileTreeNode>(10_001);
+    sparse[9_999] = { path: 'inside.ts' };
+    sparse[10_000] = { path: 'outside.ts' };
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree></lr-file-tree>`);
+
+    el.nodes = sparse;
+
+    expect(el.nodes.map((node) => node.path)).to.deep.equal(['inside.ts']);
+    expect(Object.isFrozen(el.nodes)).to.equal(true);
   });
 
   it('forwards a live host aria-label to the internal tree with author precedence', async () => {
@@ -148,10 +160,10 @@ describe('lr-file-tree', () => {
     await el.updateComplete;
     const listener = oneEvent(el, 'lr-file-select');
     el.shadowRoot!.querySelector('lr-tree')!.dispatchEvent(
-      new CustomEvent('lr-node-select', { detail: { id: 'README.md' }, bubbles: true, composed: true }),
+      new CustomEvent('lr-node-select', { detail: { nodeId: 'README.md' }, bubbles: true, composed: true }),
     );
-    const event = (await listener) as CustomEvent<{ path: string }>;
-    expect(event.detail.path).to.equal('README.md');
+    const event = (await listener) as CustomEvent<{ filePath: string }>;
+    expect(event.detail.filePath).to.equal('README.md');
   });
 
   it('selects a legitimate file whose id contains the text " loading"', async () => {
@@ -160,12 +172,12 @@ describe('lr-file-tree', () => {
     await el.updateComplete;
     let selectedPath: string | undefined;
     el.addEventListener('lr-file-select', (event) => {
-      selectedPath = event.detail.path;
+      selectedPath = event.detail.filePath;
     });
 
     el.shadowRoot!.querySelector('lr-tree')!.dispatchEvent(
       new CustomEvent('lr-node-select', {
-        detail: { id: 'src/file loading states.ts' },
+        detail: { nodeId: 'src/file loading states.ts' },
         bubbles: true,
         composed: true,
       }),
@@ -186,7 +198,7 @@ describe('lr-file-tree', () => {
 
     el.shadowRoot!.querySelector('lr-tree')!.dispatchEvent(
       new CustomEvent('lr-node-select', {
-        detail: { id: 'README.md' },
+        detail: { nodeId: 'README.md' },
         bubbles: true,
         composed: true,
       }),
@@ -203,10 +215,10 @@ describe('lr-file-tree', () => {
     await el.updateComplete;
     const listener = oneEvent(el, 'lr-file-open');
     el.shadowRoot!.querySelector('lr-tree')!.dispatchEvent(
-      new CustomEvent('lr-node-select', { detail: { id: 'README.md' }, bubbles: true, composed: true }),
+      new CustomEvent('lr-node-select', { detail: { nodeId: 'README.md' }, bubbles: true, composed: true }),
     );
-    const event = (await listener) as CustomEvent<{ path: string }>;
-    expect(event.detail.path).to.equal('README.md');
+    const event = (await listener) as CustomEvent<{ filePath: string }>;
+    expect(event.detail.filePath).to.equal('README.md');
   });
 
   it('emits lr-load-children exactly once when a lazy (hasChildren, no children) directory expands', async () => {
@@ -215,10 +227,10 @@ describe('lr-file-tree', () => {
     await el.updateComplete;
     const listener = oneEvent(el, 'lr-load-children');
     el.shadowRoot!.querySelector('lr-tree')!.dispatchEvent(
-      new CustomEvent('lr-node-toggle', { detail: { id: 'lazy-dir', expanded: true }, bubbles: true, composed: true }),
+      new CustomEvent('lr-node-toggle', { detail: { nodeId: 'lazy-dir', expanded: true }, bubbles: true, composed: true }),
     );
-    const event = (await listener) as CustomEvent<{ path: string }>;
-    expect(event.detail.path).to.equal('lazy-dir');
+    const event = (await listener) as CustomEvent<{ filePath: string }>;
+    expect(event.detail.filePath).to.equal('lazy-dir');
   });
 
   it('setChildren() fulfills a lazy directory in place without a nodes reassignment from the host', async () => {

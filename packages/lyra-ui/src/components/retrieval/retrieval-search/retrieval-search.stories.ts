@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The query bar for a retrieval/RAG surface: query text, an active-filter/scope chip row, a vector/keyword/hybrid mode selector, and loading/error/empty status feedback. Fully controlled and network-free -- it only emits `lr-search` (a `RetrievalQuery` from `src/ai/types.ts`); the host performs the actual retrieval and toggles `loading` around it.',
+          'The query bar for a retrieval/RAG surface: query text, an active-filter/scope chip row, a vector/keyword/hybrid mode selector, and loading/error/empty status feedback. Fully controlled and network-free -- it only emits `lr-search`; when the host settles a later search as empty, the localized zero-result heading is announced politely without replaying initial or reconnect content.',
       },
     },
   },

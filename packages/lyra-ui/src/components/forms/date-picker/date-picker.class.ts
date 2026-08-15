@@ -43,11 +43,7 @@ import {
 } from './calendar-core.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_nextMonth,
-  LYRA_DEFAULT_previousMonth,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_nextMonth, LYRA_DEFAULT_previousMonth } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface DateRange {
@@ -150,7 +146,7 @@ export interface LyraDatePickerEventMap {
  * @slot footer - Content below the calendar grids.
  * @slot day-YYYY-MM-DD - Lyra extension for replacing an individual ISO calendar day's content.
  * @csspart date-picker - The visible date-picker shell.
- * @csspart base - Deprecated compatibility alias on the same visible shell; use `date-picker`.
+ * @csspart base - Permanent compatibility name on the same visible shell as `date-picker`.
  * @csspart months - The visible-month collection.
  * @csspart month - A visible month wrapper.
  * @csspart header - The month header.
@@ -223,13 +219,12 @@ export interface LyraDatePickerEventMap {
 export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      nextMonth: LYRA_DEFAULT_nextMonth,
-      previousMonth: LYRA_DEFAULT_previousMonth,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    nextMonth: LYRA_DEFAULT_nextMonth,
+    previousMonth: LYRA_DEFAULT_previousMonth,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

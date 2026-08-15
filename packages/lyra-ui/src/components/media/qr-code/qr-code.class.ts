@@ -164,9 +164,9 @@ function resolveQrColor(
  * Standard host `color` and `background-color` control foreground and
  * background paint. `--lr-qr-code-fill` and `--lr-qr-code-background` are
  * optional aliases for those host styles; otherwise inherited color and the
- * host's transparent background are preserved. Deprecated `fill` and
- * `background` values still take precedence during their compatibility
- * window. Shoelace migration inserts its historical black/white defaults.
+ * host's transparent background are preserved. The permanent upstream parity
+ * properties `fill` and `background` take precedence over those CSS inputs.
+ * Shoelace migration inserts its historical black/white defaults.
  *
  * The mirrored renderers use a fixed two backing pixels per CSS pixel rather
  * than the live device pixel ratio. Lyra preserves that geometry for ordinary
@@ -230,14 +230,12 @@ export class LyraQrCode extends LyraElement {
    *  comment for the full precedence order. Caller-supplied data, not routed through `localize()`. */
   @property() label = '';
 
-  /** Legacy foreground-module color override. A non-empty value takes precedence over host
-   * `color`.
-   * @deprecated Use the standard host CSS `color` property. */
+  /** Upstream-compatible foreground-module color. A non-empty value takes precedence over host
+   * `color` and `--lr-qr-code-fill`. */
   @property() fill = '';
 
-  /** Legacy canvas-background color override. A non-empty value takes precedence over host
-   * `background-color`.
-   * @deprecated Use the standard host CSS `background-color` property. */
+  /** Upstream-compatible canvas-background color. A non-empty value takes precedence over host
+   * `background-color` and `--lr-qr-code-background`. */
   @property() background = '';
 
   /** Safe media URL for an optional centered logo/image. */

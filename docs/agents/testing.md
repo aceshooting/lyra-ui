@@ -7,8 +7,9 @@
   `expect(el).to.be.accessible()`).
 - **TDD, failing-test-first.** Every behavior change starts with a test that fails for the right
   reason. Commit after each green step.
-- Test files are colocated siblings: `components/<name>/<name>.test.ts`. Run via `pnpm test` from
-  repo root (fans out to every package) or `packages/lyra-ui/` for just this package;
+- Test files are colocated siblings:
+  `src/components/<family>/<name>/<name>.test.ts`. Run via `pnpm test` from repo root (fans out to
+  every package) or `packages/lyra-ui/` for just this package;
   `pnpm test:watch` for iteration.
 - **Scoping `wtr` to specific files needs the flag repeated, not comma-joined.** `pnpm test
   --files "a.test.ts,b.test.ts"` and `pnpm test -- --files "..."` both silently report "Could not
@@ -18,16 +19,14 @@
 - Calling `oneEvent()` *after* a synchronous `dispatchEvent()` races and hangs — always set up
   the `oneEvent()` listener *before* triggering the dispatch (a pitfall that recurred across
   multiple plan docs' own sample code, always fixed the same way).
-- Every component gets at least one `it('is accessible', ...)` axe check in addition to behavior
-  tests, **run against an instance of its own tag** — not a sibling in the same family.
-  `check-component-coverage.mjs`'s accessibility gate only requires the substring `accessible`
-  somewhere in the family's combined test files, so a green `pnpm lint` does **not** prove a
-  given tag was ever axe-checked: `lr-tag` is "covered" by an axe call against `lr-badge`, and
-  `tree-node.test.ts` has no axe assertion of its own at all. Read the component's own
-  `.test.ts`.
-- **Run axe against populated/open states, not just the empty default render.** The DOM carrying
-  most a11y risk — open dialog chrome, data rows, an expanded listbox, highlight/overlay layers,
-  status footers — often doesn't exist in a freshly-constructed component. Two traps make an
+- Every component gets at least one axe check in addition to behavior tests, **run against the
+  exact instance of its own tag mounted by that test** — not a sibling or a separate fixture.
+  `check:qualification` enforces same-test, same-instance evidence, or a narrowly scoped recorded
+  exception for a component with no distinct data-bearing/open state.
+- **Run axe against a verified populated/open state, not just the empty default render.** The DOM
+  carrying most a11y risk — open dialog chrome, data rows, an expanded listbox,
+  highlight/overlay layers, status footers — often doesn't exist in a freshly-constructed
+  component. Two traps make an
   empty-state pass extra hollow: the chai assertion surfaces only axe *violations* and silently
   discards `incomplete` ("needs review") results (e.g. a prohibited `aria-label` on a role-less
   element is a hard violation only while that element has no text content), and a fixture that
@@ -152,7 +151,7 @@
   pipeline (unlike `hammerjs`/`maplibre-gl`, no CJS-interop shim exists for it in
   `web-test-runner.config.js`). Timer/interval-driven components (stall detection, coalescing,
   elapsed-time ticks) use real timers with short, generously-margined thresholds instead — see
-  `stream-status.test.ts` or `generation-status.test.ts` for the pattern. Fixing this properly
+  `stream-status.test.ts` for the pattern. Fixing this properly
   (adding a shim, or swapping to an ESM-compatible fake-timer library) is open — do it if a
   future test genuinely can't be written reliably with real timers, but don't reach for
   `@sinonjs/fake-timers` assuming it already works.
@@ -202,6 +201,6 @@
   left unset, the component's rendered DOM/events/behavior are unchanged from before the property
   existed — don't just infer this from the property having a default value. Nothing automated
   catches the omission, and new-feature work naturally focuses on exercising the new behavior
-  rather than proving the absence of a behavior change; `split.test.ts`'s
+  rather than proving the absence of a behavior change; `multi-split.test.ts`'s
   `'defaults to "container", leaving committed behavior unchanged'` and `heatmap.test.ts`'s
   equivalent are the pattern to match.

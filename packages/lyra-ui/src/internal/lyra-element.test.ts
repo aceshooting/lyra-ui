@@ -12,7 +12,11 @@ class Demo extends LyraElement {
   protected static override readonly immutableEventDetails = [
     "lr-snapshot",
     "lr-map-snapshot",
+    'lr-identity-items',
   ];
+  protected static override readonly identityEventDetailCollectionItems = {
+    'lr-identity-items': ['first', 'second'],
+  };
 
   beginLoadForTest(): AbortSignal | undefined {
     return this.beginAbortableLoad();
@@ -27,6 +31,7 @@ customElements.define(tag("demo-base"), Demo);
 interface DemoCollectionEntry {
   readonly label: string;
   readonly nested: Readonly<{ values: readonly number[] }>;
+  readonly when?: Date;
 }
 
 class DemoOwnedCollection extends LyraElement {
@@ -36,6 +41,14 @@ class DemoOwnedCollection extends LyraElement {
   items: readonly DemoCollectionEntry[] = [];
 }
 customElements.define(tag("demo-owned-collection"), DemoOwnedCollection);
+
+class DemoOwnedRecord extends LyraElement {
+  protected static override readonly ownedCollectionProperties = ['value'];
+
+  @property({ attribute: false })
+  value: Readonly<Record<string, unknown>> = {};
+}
+customElements.define(tag('demo-owned-record'), DemoOwnedRecord);
 
 class DemoIdentityCollection extends DemoOwnedCollection {
   protected static override readonly ownedCollectionProperties = [
@@ -225,7 +238,37 @@ it("owns bounded immutable collection and record snapshots", async () => {
   expect(el.items.length).to.equal(10_000);
 });
 
-it("does not invoke hostile array getters and retains safe siblings", async () => {
+it('detaches Date entries behind mutation-proof owner-realm facades', async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  const sourceDate = new Date('2026-08-15T12:00:00.000Z');
+  const expectedTime = sourceDate.getTime();
+
+  el.items = [
+    { label: 'dated', nested: { values: [] }, when: sourceDate },
+  ];
+  const snapshot = el.items[0]!.when!;
+  sourceDate.setUTCFullYear(2030);
+
+  expect(snapshot).not.to.equal(sourceDate);
+  expect(snapshot).to.be.instanceOf(Date);
+  expect(snapshot.constructor).to.equal(Date);
+  expect(snapshot.getTime()).to.equal(expectedTime);
+  expect(Object.isFrozen(snapshot)).to.be.true;
+  expect(() => snapshot.setTime(0)).to.throw(TypeError);
+  expect(() => Date.prototype.setTime.call(snapshot, 0)).to.throw(TypeError);
+  expect(snapshot.getTime()).to.equal(expectedTime);
+
+  const hostileDate = new Proxy(new Date(expectedTime), {});
+  el.items = [
+    { label: 'hostile', nested: { values: [] }, when: hostileDate },
+  ];
+  expect(el.items).to.deep.equal([]);
+  expect(Object.isFrozen(el.items)).to.be.true;
+});
+
+it('does not invoke hostile array getters and truncates before an unsafe present row', async () => {
   const el = await fixture<DemoOwnedCollection>(
     `<lr-demo-owned-collection></lr-demo-owned-collection>`
   );
@@ -247,10 +290,209 @@ it("does not invoke hostile array getters and retains safe siblings", async () =
   expect(() => {
     el.items = hostile;
   }).not.to.throw();
-  expect(el.items.length).to.equal(2);
-  expect(0 in el.items).to.be.false;
-  expect(el.items[1]!.label).to.equal("safe");
+  expect(el.items.length).to.equal(0);
   expect(Object.isFrozen(el.items)).to.be.true;
+});
+
+it('retains only complete typed rows when the global node budget is exhausted', async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  const rows = Array.from({ length: 10_000 }, (_, index) => ({
+    a: index,
+    b: index,
+    c: index,
+    d: index,
+    e: index,
+  }));
+
+  (el as unknown as { items: readonly Record<string, number>[] }).items = rows;
+
+  const snapshot = el.items as unknown as readonly Record<string, number>[];
+  expect(snapshot.length).to.equal(8_333);
+  expect(Object.keys(snapshot)).to.have.length(snapshot.length);
+  expect(Object.keys(snapshot.at(-1)!)).to.deep.equal(['a', 'b', 'c', 'd', 'e']);
+  expect(snapshot.every((row) => row !== null)).to.be.true;
+});
+
+it('fails closed for hostile and wrong-brand collection roots', async () => {
+  const owned = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  const identity = await fixture<DemoIdentityCollection>(
+    `<lr-demo-identity-collection></lr-demo-identity-collection>`
+  );
+  const proxyMap = new Proxy(new Map([['entry', { label: 'value' }]]), {});
+  const proxySet = new Proxy(new Set([{ label: 'value' }]), {});
+  const typed = new Uint8Array([1, 2, 3]);
+  const { proxy: revoked, revoke } = Proxy.revocable([], {});
+  revoke();
+
+  for (const source of [proxyMap, proxySet, typed, revoked]) {
+    expect(() => {
+      (owned as unknown as { items: unknown }).items = source;
+    }).not.to.throw();
+    expect(owned.items).to.deep.equal([]);
+    expect(Object.isFrozen(owned.items)).to.be.true;
+  }
+
+  for (const source of [proxyMap, proxySet, typed, revoked]) {
+    expect(() => {
+      (identity as unknown as { registry: unknown }).registry = source;
+    }).not.to.throw();
+    expect((identity.registry as ReadonlyMap<string, object>).size ?? 0).to.equal(0);
+    expect(Object.isFrozen(identity.registry)).to.be.true;
+  }
+});
+
+it('bounds hostile prototype traversal without invoking value accessors', async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  let prototypeReads = 0;
+  const makePrototype = (): object =>
+    new Proxy(Object.create(null) as object, {
+      getPrototypeOf() {
+        prototypeReads += 1;
+        return makePrototype();
+      },
+    });
+  const source = new Proxy(Object.create(null) as object, {
+    getPrototypeOf() {
+      prototypeReads += 1;
+      return makePrototype();
+    },
+  });
+
+  expect(() => {
+    (el as unknown as { items: unknown }).items = source;
+  }).not.to.throw();
+  expect(prototypeReads).to.be.at.most(66);
+  expect(el.items).to.deep.equal([]);
+  expect(Object.isFrozen(el.items)).to.be.true;
+
+  let inheritedKeyScans = 0;
+  const customPrototype = new Proxy(Object.create(null) as object, {
+    ownKeys() {
+      inheritedKeyScans += 1;
+      return [];
+    },
+  });
+  const customRecord = Object.assign(Object.create(customPrototype) as object, {
+    label: 'custom',
+    nested: { values: [] },
+  });
+  (el as unknown as { items: readonly object[] }).items = [customRecord];
+  expect(inheritedKeyScans).to.equal(0);
+  expect(el.items).to.deep.equal([]);
+  expect(Object.isFrozen(el.items)).to.be.true;
+});
+
+it('preserves bounded nested structure through domain validation depth', async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  let source: Record<string, unknown> = { label: 'leaf' };
+  for (let depth = 70; depth >= 0; depth -= 1)
+    source = { label: `depth-${depth}`, children: [source] };
+
+  (el as unknown as { items: readonly Record<string, unknown>[] }).items = [
+    source,
+  ];
+
+  let retained = el.items[0] as unknown as
+    | Readonly<Record<string, unknown>>
+    | undefined;
+  for (let depth = 0; depth <= 64; depth += 1) {
+    expect(retained?.label).to.equal(`depth-${depth}`);
+    expect(Object.isFrozen(retained)).to.be.true;
+    const children = retained?.children as
+      | readonly Readonly<Record<string, unknown>>[]
+      | undefined;
+    expect(Object.isFrozen(children)).to.be.true;
+    retained = children?.[0];
+  }
+});
+
+it('rejects an owning record when a present nested row exceeds the depth bound', async () => {
+  const el = await fixture<DemoOwnedRecord>(
+    `<lr-demo-owned-record></lr-demo-owned-record>`
+  );
+  let payload: Record<string, unknown> = { terminal: true };
+  for (let depth = 300; depth >= 0; depth -= 1)
+    payload = { child: payload };
+
+  el.value = {
+    validHeader: true,
+    rows: [{ payload }],
+  };
+
+  expect(el.value).to.deep.equal({});
+  expect(Object.isFrozen(el.value)).to.be.true;
+});
+
+it('rejects an owning record when a nested array length is unsafe or oversized', async () => {
+  const el = await fixture<DemoOwnedRecord>(
+    `<lr-demo-owned-record></lr-demo-owned-record>`
+  );
+  const hostileLength = new Proxy([], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'length') throw new Error('hostile length');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+
+  el.value = { validHeader: true, rows: hostileLength };
+  expect(el.value).to.deep.equal({});
+  expect(Object.isFrozen(el.value)).to.be.true;
+
+  el.value = { validHeader: true, rows: new Array(10_001) };
+  expect(el.value).to.deep.equal({});
+  expect(Object.isFrozen(el.value)).to.be.true;
+});
+
+it('detaches real DOMRect event values into frozen geometry records', async () => {
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
+  const source = new DOMRect(1, 2, 3, 4);
+  let detail: { readonly rects: readonly Readonly<DOMRectReadOnly>[] } | undefined;
+  el.addEventListener('lr-snapshot', (event) => {
+    detail = (event as CustomEvent).detail;
+  });
+
+  (el as unknown as { emit: (name: string, detail: unknown) => void }).emit(
+    'lr-snapshot',
+    { rects: [source] }
+  );
+  source.x = 99;
+
+  expect(detail!.rects[0] === source).to.be.false;
+  expect(detail!.rects[0]!.x).to.equal(1);
+  expect(Object.isFrozen(detail!.rects)).to.be.true;
+  expect(Object.isFrozen(detail!.rects[0])).to.be.true;
+});
+
+it('copies identity-item sequences once while preserving their item references', async () => {
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
+  const item = { mutable: true };
+  const source = [item];
+  let detail:
+    | { readonly first: readonly object[]; readonly second: readonly object[] }
+    | undefined;
+  el.addEventListener('lr-identity-items', (event) => {
+    detail = (event as CustomEvent).detail;
+  });
+
+  (el as unknown as { emit: (name: string, detail: unknown) => void }).emit(
+    'lr-identity-items',
+    { first: source, second: source }
+  );
+  source.push({ mutable: false });
+
+  expect(detail!.first === detail!.second).to.be.true;
+  expect(detail!.first[0] === item).to.be.true;
+  expect(detail!.first.length).to.equal(1);
+  expect(Object.isFrozen(detail!.first)).to.be.true;
+  expect(Object.isFrozen(item)).to.be.false;
 });
 
 it("preserves sparse positional semantics for owned and emitted arrays", async () => {
@@ -282,6 +524,9 @@ it("cannot bypass owned snapshots by shadowing the public constructor property",
   const el = await fixture<DemoOwnedCollection>(
     `<lr-demo-owned-collection></lr-demo-owned-collection>`
   );
+  // Lit itself consults the public instance `constructor` while scheduling an update. Keep this
+  // adversarial probe scoped to Lyra's assignment boundary rather than exercising Lit internals.
+  el.requestUpdate = () => undefined;
   Object.defineProperty(el, "constructor", { value: class Fake {} });
   const source = [{ label: "first", nested: { values: [1] } }];
   el.items = source;

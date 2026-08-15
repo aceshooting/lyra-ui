@@ -155,7 +155,7 @@ it('keeps a host aria-label on the host while the dialog panel remains title-lab
 
 it('renders the default label and a live "N of M tools enabled" subtitle', async () => {
   const el = (await fixture(
-    html`<lr-tool-select-dialog .tools=${TOOLS} .selected=${['web_search', 'run_python']}></lr-tool-select-dialog>`,
+    html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${['web_search', 'run_python']}></lr-tool-select-dialog>`,
   )) as LyraToolSelectDialog;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Select tools');
   expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent).to.equal('2 of 5 tools enabled');
@@ -480,35 +480,35 @@ describe('search filtering', () => {
 describe('selection', () => {
   it('emits lr-change with the tool added to selected when its checkbox is checked', async () => {
     const el = (await fixture(
-      html`<lr-tool-select-dialog .tools=${TOOLS} .selected=${['web_search']}></lr-tool-select-dialog>`,
+      html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     const listener = oneEvent(el, 'lr-change');
     clickCheckbox(checkboxFor(el, 'run_python'));
     const { detail } = await listener;
 
     expect(detail.useDefaults).to.be.false;
-    expect(detail.selected).to.have.members(['web_search', 'run_python']);
-    expect(el.selected).to.have.members(['web_search', 'run_python']);
+    expect(detail.selectedToolIds).to.have.members(['web_search', 'run_python']);
+    expect(el.selectedToolIds).to.have.members(['web_search', 'run_python']);
   });
 
   it('emits lr-change with the tool removed from selected when its checkbox is unchecked', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog
         .tools=${TOOLS}
-        .selected=${['web_search', 'run_python']}
+        .selectedToolIds=${['web_search', 'run_python']}
       ></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     const listener = oneEvent(el, 'lr-change');
     clickCheckbox(checkboxFor(el, 'web_search'));
     const { detail } = await listener;
 
-    expect(detail.selected).to.deep.equal(['run_python']);
-    expect(el.selected).to.deep.equal(['run_python']);
+    expect(detail.selectedToolIds).to.deep.equal(['run_python']);
+    expect(el.selectedToolIds).to.deep.equal(['run_python']);
   });
 
   it('proposes a checkbox change before committing and restores its checkbox when lr-change is canceled', async () => {
     const el = (await fixture(
-      html`<lr-tool-select-dialog .tools=${TOOLS} .selected=${['web_search']}></lr-tool-select-dialog>`,
+      html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     const checkbox = checkboxFor(el, 'web_search');
     let proposal: ToolSelectionChangeDetail | undefined;
@@ -518,7 +518,7 @@ describe('selection', () => {
     el.addEventListener('lr-change', (event) => {
       const change = event as CustomEvent<ToolSelectionChangeDetail>;
       proposal = change.detail;
-      selectedAtProposal = [...el.selected];
+      selectedAtProposal = [...el.selectedToolIds];
       useDefaultsAtProposal = el.useDefaults;
       cancelable = change.cancelable;
       change.preventDefault();
@@ -529,16 +529,16 @@ describe('selection', () => {
     await el.updateComplete;
 
     expect(cancelable).to.be.true;
-    expect(proposal).to.deep.equal({ selected: [], useDefaults: false });
+    expect(proposal).to.deep.equal({ selectedToolIds: [], useDefaults: false });
     expect(selectedAtProposal).to.deep.equal(['web_search']);
     expect(useDefaultsAtProposal).to.be.false;
-    expect(el.selected).to.deep.equal(['web_search']);
+    expect(el.selectedToolIds).to.deep.equal(['web_search']);
     expect(checkbox.checked).to.be.true;
   });
 
   it('emits one host lr-change for one bubbling tool-checkbox lr-change', async () => {
     const el = (await fixture(
-      html`<lr-tool-select-dialog .tools=${TOOLS} .selected=${[]}></lr-tool-select-dialog>`,
+      html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${[]}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     let count = 0;
     el.addEventListener('lr-change', () => count++);
@@ -551,7 +551,7 @@ describe('selection', () => {
 
   it('ignores clicks on a data-disabled tool row', async () => {
     const el = (await fixture(
-      html`<lr-tool-select-dialog .tools=${TOOLS} .selected=${[]}></lr-tool-select-dialog>`,
+      html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${[]}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     let fired = false;
     el.addEventListener('lr-change', () => (fired = true));
@@ -559,7 +559,7 @@ describe('selection', () => {
     await el.updateComplete;
 
     expect(fired).to.be.false;
-    expect(el.selected).to.deep.equal([]);
+    expect(el.selectedToolIds).to.deep.equal([]);
   });
 });
 
@@ -575,7 +575,7 @@ describe('useDefaults', () => {
 
   it('disables every non-individually-disabled row and shows a hint while true', async () => {
     const el = (await fixture(
-      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selected=${['web_search']}></lr-tool-select-dialog>`,
+      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     expect(checkboxFor(el, 'web_search').disabled).to.be.true;
     expect(checkboxFor(el, 'web_search').checked).to.be.true;
@@ -584,7 +584,7 @@ describe('useDefaults', () => {
 
   it('flips useDefaults false and emits lr-change when the switch is turned off', async () => {
     const el = (await fixture(
-      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selected=${['web_search']}></lr-tool-select-dialog>`,
+      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as HTMLElement;
     const base = toggle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
@@ -596,13 +596,13 @@ describe('useDefaults', () => {
     expect(el.useDefaults).to.be.false;
     expect(el.hasAttribute('use-defaults')).to.be.false;
     expect(detail.useDefaults).to.be.false;
-    expect(detail.selected).to.deep.equal(['web_search']);
+    expect(detail.selectedToolIds).to.deep.equal(['web_search']);
     expect(checkboxFor(el, 'web_search').disabled).to.be.false;
   });
 
   it('proposes a defaults change before committing and restores its switch when lr-change is canceled', async () => {
     const el = (await fixture(
-      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selected=${['web_search']}></lr-tool-select-dialog>`,
+      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS} .selectedToolIds=${['web_search']}></lr-tool-select-dialog>`,
     )) as LyraToolSelectDialog;
     const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as LyraSwitch;
     const base = toggle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
@@ -613,7 +613,7 @@ describe('useDefaults', () => {
     el.addEventListener('lr-change', (event) => {
       const change = event as CustomEvent<ToolSelectionChangeDetail>;
       proposal = change.detail;
-      selectedAtProposal = [...el.selected];
+      selectedAtProposal = [...el.selectedToolIds];
       useDefaultsAtProposal = el.useDefaults;
       cancelable = change.cancelable;
       change.preventDefault();
@@ -624,7 +624,7 @@ describe('useDefaults', () => {
     await el.updateComplete;
 
     expect(cancelable).to.be.true;
-    expect(proposal).to.deep.equal({ selected: ['web_search'], useDefaults: false });
+    expect(proposal).to.deep.equal({ selectedToolIds: ['web_search'], useDefaults: false });
     expect(selectedAtProposal).to.deep.equal(['web_search']);
     expect(useDefaultsAtProposal).to.be.true;
     expect(el.useDefaults).to.be.true;
@@ -918,7 +918,7 @@ it('is accessible while open with grouped, disabled, and use-defaults-locked too
     html`<lr-tool-select-dialog
       open
       .tools=${TOOLS}
-      .selected=${['web_search', 'run_python']}
+      .selectedToolIds=${['web_search', 'run_python']}
     ></lr-tool-select-dialog>`,
   )) as LyraToolSelectDialog;
   await el.updateComplete;
@@ -985,7 +985,7 @@ it('ignores programmatic child toggles while a tool is logically disabled', asyn
   el.shadowRoot!.querySelector('lr-checkbox')!.dispatchEvent(
     new CustomEvent('lr-change', { detail: { checked: true }, bubbles: true, composed: true }),
   );
-  expect(el.selected).to.deep.equal([]);
+  expect(el.selectedToolIds).to.deep.equal([]);
 });
 
 it('counts only unique known selected ids in the summary', async () => {
@@ -996,7 +996,7 @@ it('counts only unique known selected ids in the summary', async () => {
         { id: 'one', name: 'One' },
         { id: 'two', name: 'Two' },
       ]}
-      .selected=${['one', 'one', 'missing']}
+      .selectedToolIds=${['one', 'one', 'missing']}
     ></lr-tool-select-dialog>
   `)) as LyraToolSelectDialog;
   expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent!.trim()).to.equal('1 of 2 tools enabled');
@@ -1010,7 +1010,7 @@ it('uses the first tool for a duplicate id across grouping, rendering, counting,
         { id: 'same', name: 'First definition', category: 'First category' },
         { id: 'same', name: 'Second definition', category: 'Second category' },
       ]}
-      .selected=${['same', 'same']}
+      .selectedToolIds=${['same', 'same']}
     ></lr-tool-select-dialog>
   `);
 
@@ -1026,7 +1026,7 @@ it('uses the first tool for a duplicate id across grouping, rendering, counting,
     bubbles: true,
     composed: true,
   }));
-  expect((await pending).detail.selected).to.deep.equal(['same']);
+  expect((await pending).detail.selectedToolIds).to.deep.equal(['same']);
 });
 
 it('omits blank tool and selected identities before grouping, counting, and events', async () => {
@@ -1038,7 +1038,7 @@ it('omits blank tool and selected identities before grouping, counting, and even
         { id: '   ', name: 'Blank' },
         { id: 'kept', name: 'Kept' },
       ]}
-      .selected=${['', '   ', 'kept']}
+      .selectedToolIds=${['', '   ', 'kept']}
     ></lr-tool-select-dialog>
   `);
 
@@ -1052,7 +1052,7 @@ it('omits blank tool and selected identities before grouping, counting, and even
     bubbles: true,
     composed: true,
   }));
-  expect((await pending).detail.selected).to.deep.equal(['kept']);
+  expect((await pending).detail.selectedToolIds).to.deep.equal(['kept']);
 });
 
 it('bounds a large catalog while reserving selected identities and a keyboard-reachable continuation', async () => {
@@ -1064,7 +1064,7 @@ it('bounds a large catalog while reserving selected identities and a keyboard-re
     html`<lr-tool-select-dialog
       open
       .tools=${tools}
-      .selected=${['tool-200']}
+      .selectedToolIds=${['tool-200']}
       .strings=${{
         toolSelectLimit: 'Only {count} tools are currently mounted.',
         loadMore: 'Show the next tools',

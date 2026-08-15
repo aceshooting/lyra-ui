@@ -41,18 +41,13 @@ import {
 } from './toast-region-protocol.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_close,
-  LYRA_DEFAULT_closeWithContext,
-  LYRA_DEFAULT_closeWithTruncatedContext,
-  LYRA_DEFAULT_toastContentIncomplete,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWithTruncatedContext, LYRA_DEFAULT_toastContentIncomplete } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The library's one semantic-tone vocabulary. */
-export type ToastVariant = LyraVariant;
+export type LyraToastVariant = LyraVariant;
 /** The library's one size ladder. */
-export type ToastSize = LyraSize;
+export type LyraToastSize = LyraSize;
 
 function parseTime(value: string): number {
   const trimmed = value.trim();
@@ -70,7 +65,7 @@ function maxCssTime(value: string): number {
 
 const CLOSE_LABEL_GRAPHEME_LIMIT = 40;
 
-function isAssertiveVariant(variant: ToastVariant): boolean {
+function isAssertiveVariant(variant: LyraToastVariant): boolean {
   return variant === 'danger' || variant === 'warning';
 }
 
@@ -180,14 +175,13 @@ export interface LyraToastItemEventMap {
 export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      close: LYRA_DEFAULT_close,
-      closeWithContext: LYRA_DEFAULT_closeWithContext,
-      closeWithTruncatedContext: LYRA_DEFAULT_closeWithTruncatedContext,
-      toastContentIncomplete: LYRA_DEFAULT_toastContentIncomplete,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    close: LYRA_DEFAULT_close,
+    closeWithContext: LYRA_DEFAULT_closeWithContext,
+    closeWithTruncatedContext: LYRA_DEFAULT_closeWithTruncatedContext,
+    toastContentIncomplete: LYRA_DEFAULT_toastContentIncomplete,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, variants, styles];
@@ -202,7 +196,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   /** Visual size. Valid upstream `small`/`medium`/`large` values round-trip verbatim while the CSS
    * maps both spellings onto the same rendered ladder. */
-  @property({ reflect: true }) size: ToastSize = 'm';
+  @property({ reflect: true }) size: LyraToastSize = 'm';
   private get effectiveSize(): LyraSizeStep {
     const value = this.size as string;
     if (
@@ -215,7 +209,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   }
 
   /** Severity/variant. */
-  @property({ reflect: true }) variant: ToastVariant = 'neutral';
+  @property({ reflect: true }) variant: LyraToastVariant = 'neutral';
 
   /** Show the icon slot. */
   @property({ type: Boolean, attribute: 'with-icon' }) withIcon = false;
@@ -311,7 +305,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     super.updated(changed);
     if (this.hasAttribute('data-visible')) {
       const previousVariant = changed.get('variant') as
-        | ToastVariant
+        | LyraToastVariant
         | undefined;
       const urgencyChanged =
         changed.has('variant') &&

@@ -189,24 +189,29 @@ if [[ "${#CHANGESET_FILES[@]}" -eq 0 ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Parse each pending changeset's frontmatter to find which package(s) it
-# targets, so we can ask which of them to release this run.
+# Ask Changesets itself to parse the pending YAML, then consume its JSON plan. This accepts every
+# frontmatter spelling the CLI accepts (including single-quoted package names) and fails closed if
+# the status schema or a per-file mapping is missing.
 # ---------------------------------------------------------------------------
-changeset_packages() {
-  node -e '
-    const fs = require("fs");
-    const text = fs.readFileSync(process.argv[1], "utf8");
-    const m = text.match(/^---\n([\s\S]*?)\n---/);
-    if (!m) process.exit(0);
-    const pkgs = [...m[1].matchAll(/^"([^"]+)":\s*(major|minor|patch)\s*$/gm)].map((x) => x[1]);
-    console.log(pkgs.join(" "));
-  ' "$1"
-}
+changeset_plan="$(node scripts/changeset-release-plan.mjs)"
+declare -A CHANGESET_PLAN_PACKAGES
+declare -A CHANGESET_PLAN_IDS
+while IFS=$'\t' read -r changeset_id packages; do
+  [[ -n "$changeset_id" ]] || continue
+  CHANGESET_PLAN_IDS["$changeset_id"]=1
+  CHANGESET_PLAN_PACKAGES["$changeset_id"]="$packages"
+done <<< "$changeset_plan"
 
 declare -A FILE_PKGS
 CANDIDATE_NAMES=()
 for f in "${CHANGESET_FILES[@]}"; do
-  pkgs="$(changeset_packages "$f")"
+  changeset_id="${f##*/}"
+  changeset_id="${changeset_id%.md}"
+  if [[ "${CHANGESET_PLAN_IDS[$changeset_id]:-0}" -ne 1 ]]; then
+    echo "Error: Changesets status did not return a release plan for '$f'." >&2
+    exit 1
+  fi
+  pkgs="${CHANGESET_PLAN_PACKAGES[$changeset_id]:-}"
   FILE_PKGS["$f"]="$pkgs"
   for p in $pkgs; do
     [[ -n "${NAME_TO_DIR[$p]:-}" ]] || continue
@@ -411,6 +416,9 @@ for dir in "${RELEASE_DIRS[@]}"; do
   echo "==> [$name] Build"
   pnpm --filter "$name" --if-present run build
   echo
+  echo "==> [$name] Generate built component-quality evidence"
+  pnpm --filter "$name" --if-present run component-quality
+  echo
   echo "==> [$name] Test"
   if ci_confirmed_green_for_sha "$PRE_BUMP_SHA"; then
     echo "Skipping local re-run: GitHub CI already ran and passed in full for $PRE_BUMP_SHA" \
@@ -608,6 +616,8 @@ for dir in "${PKG_DIRS[@]}"; do
   [[ -f "$dir/src/internal/package-metadata.ts" ]] && git add "$dir/src/internal/package-metadata.ts"
   [[ -f "$dir/scripts/fixtures/component-metadata.json" ]] && git add "$dir/scripts/fixtures/component-metadata.json"
   [[ -f "$dir/scripts/fixtures/component-inventory.json" ]] && git add "$dir/scripts/fixtures/component-inventory.json"
+  [[ -f "$dir/scripts/fixtures/component-qualification.json" ]] && git add "$dir/scripts/fixtures/component-qualification.json"
+  [[ -f "$dir/scripts/fixtures/component-integration.json" ]] && git add "$dir/scripts/fixtures/component-integration.json"
   [[ -f "$dir/vscode-html-data.json" ]] && git add "$dir/vscode-html-data.json"
   [[ -f "$dir/vscode-css-data.json" ]] && git add "$dir/vscode-css-data.json"
   [[ -f "$dir/web-types.json" ]] && git add "$dir/web-types.json"
@@ -625,6 +635,8 @@ done
 if [[ "$LYRA_UI_RELEASED" -eq 1 ]]; then
   git add \
     .claude-plugin/marketplace.json \
+    docs/component-integration.md \
+    docs/component-quality.md \
     plugins/lyra-ui/.claude-plugin/plugin.json \
     plugins/lyra-ui/.codex-plugin/plugin.json \
     plugins/lyra-ui/skills/lyra-ui/references/ \

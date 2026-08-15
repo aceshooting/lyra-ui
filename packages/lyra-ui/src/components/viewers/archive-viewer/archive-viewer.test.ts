@@ -119,6 +119,36 @@ describe('archive localization', () => { it('defines archive messages', () => { 
 
 describe('lr-archive-viewer', () => {
   it('renders the empty state by default', async () => { const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No document to display.'); });
+
+  it('exposes max-height as a live scroll cap on the archive body', async () => {
+    const el = await fixture<LyraArchiveViewer>(
+      html`<lr-archive-viewer max-height="123px"></lr-archive-viewer>`,
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(el.maxHeight).to.equal('123px');
+    expect(base.style.getPropertyValue('--lr-archive-viewer-max-height')).to.equal('123px');
+    expect(getComputedStyle(body).maxBlockSize).to.equal('123px');
+    expect(getComputedStyle(body).overflowY).to.equal('auto');
+
+    el.maxHeight = '10rem';
+    await el.updateComplete;
+    expect(base.style.getPropertyValue('--lr-archive-viewer-max-height')).to.equal('10rem');
+  });
+
+  it('ignores unsafe maxHeight values before assigning the archive custom property', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    el.maxHeight = '10rem;position:fixed';
+    await el.updateComplete;
+    expect(base.style.position).to.equal('');
+    expect(base.style.getPropertyValue('--lr-archive-viewer-max-height')).to.equal('');
+    el.maxHeight = 'calc(10rem + 2px)';
+    await el.updateComplete;
+    expect(base.style.getPropertyValue('--lr-archive-viewer-max-height'))
+      .to.equal('calc(10rem + 2px)');
+  });
+
   it('lists ZIP entries and computes file sizes', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); const buffer = await buildZip({ 'README.txt': 'hello world', 'src/index.js': 'console.log(1);' }); const restore = stubFetch(buffer);
     try { el.src = 'https://example.test/archive.zip'; await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null || el.shadowRoot!.querySelector('[part="error"]') !== null, undefined, { timeout: 5000 }); expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true; const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: { name: string; dir: boolean; size: number }[] }; await waitUntil(() => list.items?.length === 3, undefined, { timeout: 5000 }); expect(list.items.map((item) => item.name).sort()).to.deep.equal(['README.txt', 'src/', 'src/index.js']); expect(list.items.find((item) => item.name === 'README.txt')!.size).to.equal(11); expect(list.items.find((item) => item.name === 'src/')!.dir).to.be.true; } finally { restore(); }
@@ -140,8 +170,8 @@ describe('lr-archive-viewer', () => {
         matchCountExact: true,
         activeIndex: 0,
       });
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: string };
-      expect(list.activeId).to.equal('src/index.js');
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: string };
+      expect(list.activeItemId).to.equal('src/index.js');
       expect(await el.searchNext()).to.be.true;
     } finally {
       restore();

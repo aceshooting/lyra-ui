@@ -5,15 +5,30 @@
  * entirely on `kind`.
  */
 export type LyraAnchor =
-  | { kind: 'page'; page: number } // pdf page, pptx slide
-  | { kind: 'text-quote'; quote: string; prefix?: string; suffix?: string; page?: number }
-  | { kind: 'fragment'; id: string } // heading/element id (markdown, html, docx)
-  | { kind: 'line-range'; start: number; end?: number } // code, terminal, text
-  | { kind: 'cell-range'; sheet?: string; range: string } // 'A1:C3' (spreadsheet, csv, dataset)
-  | { kind: 'cfi'; cfi: string } // epub
-  | { kind: 'time-range'; start: number; end?: number } // seconds (audio/video)
-  | { kind: 'region'; page?: number; rect: { x: number; y: number; width: number; height: number } } // percent units
-  | { kind: 'node-path'; path: (string | number)[] }; // json/xml tree
+  | { readonly kind: 'page'; readonly page: number } // pdf page, pptx slide
+  | {
+      readonly kind: 'text-quote';
+      readonly quote: string;
+      readonly prefix?: string;
+      readonly suffix?: string;
+      readonly page?: number;
+    }
+  | { readonly kind: 'fragment'; readonly id: string } // heading/element id (markdown, html, docx)
+  | { readonly kind: 'line-range'; readonly start: number; readonly end?: number } // code, terminal, text
+  | { readonly kind: 'cell-range'; readonly sheet?: string; readonly range: string } // 'A1:C3' (spreadsheet, csv, dataset)
+  | { readonly kind: 'cfi'; readonly cfi: string } // epub
+  | { readonly kind: 'time-range'; readonly start: number; readonly end?: number } // seconds (audio/video)
+  | {
+      readonly kind: 'region';
+      readonly page?: number;
+      readonly rect: Readonly<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>;
+    } // percent units
+  | { readonly kind: 'node-path'; readonly path: readonly (string | number)[] }; // json/xml tree
 
 /** Every possible `LyraAnchor['kind']` value, e.g. for a viewer's `anchorKinds` capability list. */
 export type LyraAnchorKind = LyraAnchor['kind'];
@@ -57,11 +72,23 @@ export interface HighlightActivateDetail {
   highlightId: string;
 }
 
+/** One detached, finite selection rectangle in an `lr-text-select` event. */
+export interface TextSelectRect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+}
+
 /** `lr-text-select` event detail. `anchor` is `null` when the selection couldn't be anchored. */
 export interface TextSelectDetail {
-  text: string;
-  anchor: LyraAnchor | null;
-  rects: DOMRect[];
+  readonly text: string;
+  readonly anchor: LyraAnchor | null;
+  readonly rects: readonly TextSelectRect[];
 }
 
 /** `lr-anchor-result` event detail. */

@@ -1,8 +1,8 @@
 import { tag } from '../../../internal/prefix.js';
-import type { LyraToast, ToastPlacement } from './toast.class.js';
+import type { LyraToast, LyraToastPlacement } from './toast.class.js';
 
-const DEFAULT_PLACEMENT: ToastPlacement = 'top-end';
-const regions = new WeakMap<Document, Map<ToastPlacement, LyraToast>>();
+const DEFAULT_PLACEMENT: LyraToastPlacement = 'top-end';
+const regions = new WeakMap<Document, Map<LyraToastPlacement, LyraToast>>();
 
 /**
  * Return the page-level toast region for one logical placement. This module intentionally has no
@@ -12,7 +12,7 @@ const regions = new WeakMap<Document, Map<ToastPlacement, LyraToast>>();
  * browsing contexts when it is toasted.
  */
 export function getToastRegion(
-  placement: ToastPlacement = DEFAULT_PLACEMENT,
+  placement: LyraToastPlacement = DEFAULT_PLACEMENT,
   ownerDocument: Document = document,
 ): LyraToast {
   let documentRegions = regions.get(ownerDocument);

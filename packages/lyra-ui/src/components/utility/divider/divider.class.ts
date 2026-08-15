@@ -3,7 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './divider.styles.js';
 
-export type DividerOrientation = 'horizontal' | 'vertical';
+export type LyraDividerOrientation = 'horizontal' | 'vertical';
 
 /**
  * `<lr-divider>` — a themeable semantic separator.
@@ -18,11 +18,11 @@ export type DividerOrientation = 'horizontal' | 'vertical';
  */
 export class LyraDivider extends LyraElement {
   static override styles = [LyraElement.styles, styles];
-  @property({ reflect: true }) orientation: DividerOrientation = 'horizontal';
+  @property({ reflect: true }) orientation: LyraDividerOrientation = 'horizontal';
   /** Shoelace-compatible vertical-orientation shorthand. */
   @property({ type: Boolean, reflect: true }) vertical = false;
   override render(): TemplateResult {
-    const orientation: DividerOrientation = this.vertical ? 'vertical' : this.orientation;
+    const orientation: LyraDividerOrientation = this.vertical ? 'vertical' : this.orientation;
     return html`<hr
       part="base"
       role="separator"

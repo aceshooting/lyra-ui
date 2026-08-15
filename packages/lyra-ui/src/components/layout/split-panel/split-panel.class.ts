@@ -20,10 +20,10 @@ const MAX_SNAP_SOURCE_CODE_UNITS = 16_384;
 const MAX_SNAP_TOKENS = 256;
 const POSITION_EPSILON = 0.000_1;
 
-export type SplitPanelOrientation = 'horizontal' | 'vertical';
-export type SplitPanelPrimary = 'start' | 'end';
+export type LyraSplitPanelOrientation = 'horizontal' | 'vertical';
+export type LyraSplitPanelPrimary = 'start' | 'end';
 
-export interface SnapFunctionParams {
+export interface LyraSplitPanelSnapFunctionParams {
   /** Proposed position in pixels, measured from the primary panel's edge. */
   pos: number;
   /** Split-panel size in pixels along its resize axis. */
@@ -32,24 +32,20 @@ export interface SnapFunctionParams {
   snapThreshold: number;
 }
 
-export type SnapFunction = (options: SnapFunctionParams) => number;
+export type LyraSplitPanelSnapFunction = (options: LyraSplitPanelSnapFunctionParams) => number;
 
 /** A snap function that returns the proposed position unchanged. */
-export const SNAP_NONE: SnapFunction = ({ pos }) => pos;
-
-/** Component-qualified alias of `SnapFunction`, for consumers that prefer the longer name. The
- *  parameter object keeps its single canonical name, `SnapFunctionParams`. */
-export type SplitPanelSnapFunction = SnapFunction;
+export const SNAP_NONE: LyraSplitPanelSnapFunction = ({ pos }) => pos;
 
 /** A proposed user-driven divider position, normalized after constraints and snapping. */
-export interface SplitPanelRepositionDetail {
+export interface LyraSplitPanelRepositionDetail {
   /** Position as a percentage from the selected primary pane's edge. */
   position: number;
   /** The same position in pixels from the selected primary pane's edge. */
   positionInPixels: number;
 }
 
-const snapConverter: ComplexAttributeConverter<string | SnapFunction | undefined> = {
+const snapConverter: ComplexAttributeConverter<string | LyraSplitPanelSnapFunction | undefined> = {
   fromAttribute(value): string {
     return value ?? '';
   },
@@ -60,7 +56,7 @@ const snapConverter: ComplexAttributeConverter<string | SnapFunction | undefined
 
 export interface LyraSplitPanelEventMap {
   /** Emitted before a pointer or keyboard interaction repositions the divider. */
-  'lr-reposition-request': CustomEvent<SplitPanelRepositionDetail>;
+  'lr-reposition-request': CustomEvent<LyraSplitPanelRepositionDetail>;
   /** Emitted whenever a pointer or keyboard interaction repositions the divider. */
   'lr-reposition': CustomEvent<null>;
 }
@@ -203,7 +199,7 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  *   content is inert, so the separator remains the sole resize control.
  * @event lr-reposition-request - A cancelable proposed divider position from a pointer drag or
  *   keyboard interaction. Call `preventDefault()` to keep `position` unchanged. Not fired when a
- *   consumer sets `position` or `positionInPixels` directly. `detail: SplitPanelRepositionDetail`.
+ *   consumer sets `position` or `positionInPixels` directly. `detail: LyraSplitPanelRepositionDetail`.
  * @event lr-reposition - Non-cancelable post-commit notification after a pointer or keyboard
  *   interaction moves the divider. Not fired when a consumer sets `position` or
  *   `positionInPixels` directly.
@@ -236,8 +232,8 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   private _startPosition = DEFAULT_POSITION;
-  private _orientation: SplitPanelOrientation = 'horizontal';
-  private _primary?: SplitPanelPrimary;
+  private _orientation: LyraSplitPanelOrientation = 'horizontal';
+  private _primary?: LyraSplitPanelPrimary;
   private _snapThreshold = DEFAULT_SNAP_THRESHOLD;
   private availableSize = 0;
   private pendingPositionInPixels?: number;
@@ -319,10 +315,10 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   /** Layout axis. Horizontal places panes at logical start and end.
    * @default 'horizontal' */
   @property({ reflect: true })
-  get orientation(): SplitPanelOrientation {
+  get orientation(): LyraSplitPanelOrientation {
     return this._orientation;
   }
-  set orientation(value: SplitPanelOrientation) {
+  set orientation(value: LyraSplitPanelOrientation) {
     const next = value === 'vertical' ? 'vertical' : 'horizontal';
     if (next === this._orientation) return;
     const old = this._orientation;
@@ -347,10 +343,10 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
 
   /** Pane whose pixel size remains fixed while the host resizes. */
   @property({ reflect: true })
-  get primary(): SplitPanelPrimary | undefined {
+  get primary(): LyraSplitPanelPrimary | undefined {
     return this._primary;
   }
-  set primary(value: SplitPanelPrimary | undefined | null) {
+  set primary(value: LyraSplitPanelPrimary | undefined | null) {
     const next = value === 'start' || value === 'end' ? value : undefined;
     if (next === this._primary) return;
     this.stopDragging();
@@ -376,16 +372,16 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     this.requestUpdate('primary', oldPrimary);
   }
 
-  private _snap: string | SnapFunction = '';
+  private _snap: string | LyraSplitPanelSnapFunction = '';
   /** Space-separated pixel/percent snap points, `repeat(...)`, or a snap callback. String
    * preprocessing reads at most 16,384 UTF-16 code units and retains at most 256 finite valid
    * tokens, caching their numeric value/unit projection until the source changes. Assigning the Web Awesome `undefined`
    * spelling restores the inert empty-string read default. */
   @property({ reflect: true, converter: snapConverter })
-  get snap(): string | SnapFunction {
+  get snap(): string | LyraSplitPanelSnapFunction {
     return this._snap;
   }
-  set snap(value: string | SnapFunction | undefined) {
+  set snap(value: string | LyraSplitPanelSnapFunction | undefined) {
     const old = this._snap;
     this._snap = value ?? '';
     this.requestUpdate('snap', old);
@@ -403,7 +399,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     this.requestUpdate('snapThreshold', old);
   }
 
-  private get effectiveOrientation(): SplitPanelOrientation {
+  private get effectiveOrientation(): LyraSplitPanelOrientation {
     return this.orientation;
   }
 

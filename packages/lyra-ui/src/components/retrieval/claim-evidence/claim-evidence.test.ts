@@ -53,6 +53,22 @@ it('stops the internal lr-citation-badge lr-citation-activate event before re-em
   expect(leaked).to.be.false;
 });
 
+it('lets a nested citation-open event cross the host unchanged', async () => {
+  const el = (await fixture(
+    html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`
+  )) as LyraClaimEvidence;
+  const detail = { index: 1, sourceId: 'doc-1', href: '#evidence' };
+  const pending = oneEvent(el, 'lr-citation-open');
+  el.shadowRoot!.querySelector('lr-citation-badge')!.dispatchEvent(
+    new CustomEvent('lr-citation-open', {
+      detail,
+      bubbles: true,
+      composed: true,
+    })
+  );
+  expect((await pending).detail).to.deep.equal(detail);
+});
+
 it('applies per-instance strings to claim status', async () => {
   const el = (await fixture(
     html`<lr-claim-evidence
@@ -148,4 +164,48 @@ it('tightens claim-trigger padding and gap when compact', async () => {
 
   expect(compactPadding).to.be.lessThan(defaultPadding);
   expect(compactGap).to.be.lessThan(parseFloat(getComputedStyle(defaultTrigger).columnGap));
+});
+
+it('omits blank and later duplicate claim and citation ids before lookup, render, and events', async () => {
+  const claim: GroundedClaim = {
+    id: 'claim',
+    text: 'First claim',
+    status: 'supported',
+    citationIds: ['citation'],
+  };
+  const citation: Citation = {
+    id: 'citation',
+    sourceId: 'source',
+    label: 'First citation',
+  };
+  const el = (await fixture(html`
+    <lr-claim-evidence
+      .claims=${[
+        { ...claim, id: '' },
+        claim,
+        { ...claim, text: 'Later claim' },
+      ]}
+      .citations=${[
+        { ...citation, id: '   ' },
+        citation,
+        { ...citation, label: 'Later citation' },
+      ]}
+    ></lr-claim-evidence>
+  `)) as LyraClaimEvidence;
+
+  expect(el.shadowRoot!.querySelectorAll('[part~="claim"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="claim-text"]')!.textContent).to.equal(
+    'First claim'
+  );
+
+  const claimPending = oneEvent(el, 'lr-claim-select');
+  (el.shadowRoot!.querySelector('[part="claim-trigger"]') as HTMLButtonElement).click();
+  expect((await claimPending).detail).to.deep.equal({ claim });
+
+  const citationPending = oneEvent(el, 'lr-citation-select');
+  (
+    el.shadowRoot!.querySelector('lr-citation-badge')!
+      .shadowRoot!.querySelector('button') as HTMLButtonElement
+  ).click();
+  expect((await citationPending).detail).to.deep.equal({ citation });
 });

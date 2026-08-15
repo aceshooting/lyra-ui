@@ -2093,10 +2093,11 @@ describe("native event relays", () => {
     ).to.be.true;
     expect(nativeEvents[0]!.relatedTarget === before).to.be.true;
     expect(nativeEvents[1]!.relatedTarget === after).to.be.true;
-    expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
+    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+    expect(aliases).to.deep.equal([]);
   }
 
-  it("relays exactly one native focus/blur pair and aliases in both rendering modes", async () => {
+  it('relays exactly one native focus/blur pair, and never lr-focus/lr-blur, in both rendering modes', async () => {
     const closedWrapper = await fixture<HTMLElement>(html`
       <div><lr-model-select .catalog=${CATALOG}></lr-model-select></div>
     `);

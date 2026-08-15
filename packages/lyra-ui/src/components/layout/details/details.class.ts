@@ -10,10 +10,7 @@ import { DisclosureMotionController } from './disclosure-motion.js';
 import { styles } from './details.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_details,
-  LYRA_DEFAULT_fieldRequired,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The library's one size ladder, in either spelling. */
@@ -105,12 +102,11 @@ export interface LyraDetailsEventMap {
 export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      details: LYRA_DEFAULT_details,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, sizes, styles];
@@ -143,6 +139,9 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     else void this.hide();
   }
 
+  /** Disables activation and removes the native summary from sequential keyboard navigation,
+   * matching the disabled trigger behavior of `lr-accordion-item`. Programmatic focus remains a
+   * native `<summary>` capability. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Groups disclosures in the same document or shadow root. Opening one closes its open peers. */
@@ -371,6 +370,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
         aria-label=${hostAriaLabel(this) ?? nothing}
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-disabled=${this.disabled ? 'true' : 'false'}
+        tabindex=${this.disabled ? '-1' : nothing}
         @click=${this.onClick}
       >
         <span part="header">

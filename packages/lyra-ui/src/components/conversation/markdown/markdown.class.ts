@@ -279,10 +279,10 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
    *  language-grammar bundle scoping shiki's build output to just those grammars instead of its
    *  full ~200-language bundle. Forwarded verbatim to `loadShikiHighlighterCore()`. Unset uses the
    *  default full-bundle loader, unchanged from how `<lr-code-block>` itself defaults. */
-  @property({ attribute: false }) override languages?: Record<
+  @property({ attribute: false }) override languages?: Readonly<Record<
     string,
     ShikiLanguageInput
-  >;
+  >>;
 
   /** Stamps a computed slug as `id` on every rendered heading. `getHeadingTree()` computes the
    *  same slugs regardless of this property -- it only controls whether the `id` attribute is
@@ -309,7 +309,7 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   /** @internal */
   protected override async tokenizePendingHighlight(
     pending: PendingHighlight,
-    languages: Record<string, ShikiLanguageInput> | undefined,
+    languages: Readonly<Record<string, ShikiLanguageInput>> | undefined,
     isCurrent: () => boolean
   ): Promise<MarkdownHighlightAttempt> {
     const normalizedLang = normalizeShikiLanguage(pending.lang);

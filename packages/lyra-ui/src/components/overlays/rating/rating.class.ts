@@ -45,10 +45,7 @@ import {
 } from '../../forms/form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_rating,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rating } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const DEFAULT_MAX = 5;
@@ -190,12 +187,11 @@ function starSolid(): SVGTemplateResult {
 export class LyraRating extends LyraElement<LyraRatingEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      rating: LYRA_DEFAULT_rating,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    rating: LYRA_DEFAULT_rating,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   /** Public WA-compatible intrinsic validator catalog. */

@@ -70,9 +70,12 @@ validated safe-URL sink actually rendered, not necessarily the raw `src` propert
 whitespace-padded value is trimmed, so it matches the rendered sink.
 The former generic `lr-open` event is removed in v9: notification and veto phases now have distinct,
 truthful names.
+Native `focus` and `blur` are each relayed once from the current primary action as bubbling,
+composed `FocusEvent`s whose target is the `lr-media-card` host.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the primary action for the
-current media kind.
+current media kind. The forwarded focus/blur transition produces the relayed host event described
+above.
 
 **Slots:** none.
 

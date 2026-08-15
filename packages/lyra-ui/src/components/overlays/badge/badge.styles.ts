@@ -180,7 +180,7 @@ export const styles = css`
   }
 
   /* --- attention ---------------------------------------------------------------------------- */
-  :host([pulse]) [part~='base'],
+  :host([pulse]:not([attention])) [part~='base'],
   :host([attention='pulse']) [part~='base'] {
     animation: lr-badge-pulse var(--lr-badge-attention-duration, var(--_lr-badge-attention-duration)) var(--lr-badge-attention-easing, var(--_lr-badge-attention-easing))
       infinite;

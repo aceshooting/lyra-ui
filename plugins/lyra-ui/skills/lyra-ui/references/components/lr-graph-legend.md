@@ -74,5 +74,7 @@ only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through
 - Ships no coupling to `lr-graph`'s optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers —
   `types`/`counts`/`hiddenTypes` are plain data the host derives from a graph, never a live reference
   to one.
+- Blank type ids and later duplicates are omitted first-wins. `hiddenTypes` is likewise projected
+  to nonblank first occurrences before visibility checks or change events.
 
 ---

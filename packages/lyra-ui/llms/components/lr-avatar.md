@@ -75,12 +75,13 @@ from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl`), `--lr-a
 variant's `-quiet` fill; there is no `--lr-color-surface-alt` token in this library, despite what
 older copies of this page claimed), `--lr-avatar-color` (default `var(--lr-color-text)`, whose
 private default changes for a non-neutral `variant` to that variant's loud color),
-`--lr-avatar-font-size` (default `var(--lr-font-size-sm)`) — the font size of the initials fallback,
+`--lr-avatar-font-size` (default `var(--lr-font-size-m)`) — the font size of the initials fallback,
 and of any `em`-sized slotted glyph. Its private default follows `size` alongside the diameter
-(`--lr-font-size-2xs` at `2xs`/`xs`, `--lr-font-size-xs` at `s`, `--lr-font-size-m` at `l`,
-`--lr-font-size-lg` at `xl`), so the initials track the circle instead of staying one fixed size
-across every tier. Every public value above can be inherited from an ancestor or set directly on
-the avatar and remains authoritative across size/variant states. Plus shared tokens
+(`--lr-font-size-xs` at `2xs`, `--lr-font-size-sm` at `xs`, `--lr-font-size-md-sm` at `s`,
+`--lr-font-size-m` at `m`, `--lr-font-size-lg` at `l`, and `--lr-font-size-xl` at `xl`), so the
+initials track the circle instead of staying one fixed size across every tier. Every public value
+above can be inherited from an ancestor or set directly on the avatar and remains authoritative
+across size/variant states. Plus shared tokens
 `--lr-radius`/`-pill`, `--lr-font-weight-semibold`.
 
 The variant colors are deliberately **not** the library's generic quiet-fill/on-quiet-text pairing:

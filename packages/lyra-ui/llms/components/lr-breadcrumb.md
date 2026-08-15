@@ -28,7 +28,7 @@ explicitly empty `aria-label=""`, which stays empty rather than falling back).
 
 **`lr-breadcrumb-item` properties:** `href: string = ''` (URL-sanitized; an unsafe scheme renders the
 non-link form; assigning `undefined` clears it and reads back as the canonical `''`),
-`target?: string`, and `current: boolean = false` (reflected — renders a
+`target?: LyraBreadcrumbItemTarget`, and `current: boolean = false` (reflected — renders a
 `<span aria-current="page">` instead of an `<a>`, even when `href` is set). A target derives
 the mandatory `noopener noreferrer` floor. `rel: string = 'noreferrer noopener'` is independently
 settable: author tokens are preserved, `opener` is stripped, and any target force-adds the floor. Each item

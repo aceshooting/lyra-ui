@@ -197,9 +197,8 @@ everything else) had most Node 22 legs finishing in 50-110s, of which roughly ha
 per-job overhead (checkout/install/browser setup) rather than test execution against the 26-file
 `test:platform` suite -- oversharded legs pay that fixed cost repeatedly for little parallelism
 gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
-uses `package.json#packageManager` (`pnpm@11.21.0`). The package's supported engine remains `node
-
-> =20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
+uses `package.json#packageManager` (`pnpm@11.21.0`). The package's supported engine remains
+`node >=20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
 20-job throughput limit, so `max-parallel` no longer needs to chase that cap.
 
 ## Scheduled full Firefox/WebKit suite
@@ -259,7 +258,7 @@ the same checksum-pinned actionlint workflow gate as `static-checks`.
 
 ## Full local test sweep: `scripts/test.sh`
 
-`./scripts/test.sh` runs the complete `src/**/*.test.ts` suite (453 files, not the curated
+`./scripts/test.sh` runs the complete discovered `src/**/*.test.ts` suite (not the curated
 `test:platform` subset) on Chromium, Firefox, and WebKit, plus SSR/hydration, visual regression,
 and the other workspace package(s)' own tests -- everything `full-engine.yml` covers weekly in CI,
 on demand and locally. It deliberately excludes `scripts/ci.sh`'s lint/build-artifact-freshness/

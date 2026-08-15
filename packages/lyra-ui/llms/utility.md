@@ -1,3 +1,14 @@
+## Breaking changes in 9.0.0
+
+TypeScript-only rename (no attribute/property/default change): `lr-divider`'s exported
+`DividerOrientation` type is now `LyraDividerOrientation`.
+
+TypeScript-only renames (no attribute/property/default change) across the `lr-format-number`/
+`lr-format-date`/`lr-format-bytes`/`lr-relative-time` family: `FormatNumberType`,
+`FormatNumberNotation`, `FormatCurrencyDisplay`, `FormatBytesUnit`, `FormatDisplay`, `FormatDateHour`,
+`FormatDateStyle`, `FormatDateText`, `FormatDateNumeric`, `FormatDateMonth`, `FormatDateTimeZoneName`,
+`RelativeTimeNumeric`, and `RelativeTimeUnit` are now `Lyra*`-prefixed equivalents.
+
 ## `lr-export-button`
 
 CSV/JSON download button with extensible event-driven formats — either single-format (click exports
@@ -301,7 +312,8 @@ the default slot and emits a composed event, while adding no layout of its own.
 **Properties:** `disabled: boolean = false` (reflected) and `box: 'content-box' | 'border-box' |
 'device-pixel-content-box' = 'content-box'` (reflected).
 
-**Events:** `lr-resize` with `{ entries: ResizeObserverEntry[] }` in `detail`.
+**Events:** `lr-resize` with a frozen `Readonly<{ entries: readonly ResizeObserverEntry[] }>`
+detail. The sequence is detached and bounded while each native observer entry retains identity.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 
@@ -319,7 +331,9 @@ space-separated values), `root: Element | string | null = null` (an element or m
 boolean = false` (reflected; unobserves a target after its first intersection).
 
 **Events:** mapped `lr-intersect` once per entry with `{ entry }`, plus the existing batch alias
-`lr-intersection` with `{ entries: IntersectionObserverEntry[] }`.
+`lr-intersection` with a frozen
+`Readonly<{ entries: readonly IntersectionObserverEntry[] }>` detail. The batch sequence is
+detached and bounded while each native observer entry retains identity.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 
@@ -340,8 +354,9 @@ mapped attributes reflect. Lyra's
 existing aliases remain: `observeAttributes` (`attributes`), `characterData` (`character-data`),
 `subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`.
 
-**Events:** `lr-mutation`; `detail.records` and mapped `detail.mutationList` reference the same
-`MutationRecord[]` batch.
+**Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
+`detail.records` and mapped `detail.mutationList` reference the same sequence, while each native
+`MutationRecord` retains identity.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 

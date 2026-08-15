@@ -88,7 +88,7 @@ it('Enter fires lr-node-select on the focused item', async () => {
     root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true })),
   );
   const ev = await oneEvent(el, 'lr-node-select');
-  expect(ev.detail).to.deep.equal({ id: '1' });
+  expect(ev.detail).to.deep.equal({ nodeId: '1' });
 });
 
 it('ArrowUp moves the roving tabindex to the previous visible item', async () => {

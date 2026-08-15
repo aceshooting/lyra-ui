@@ -19,6 +19,11 @@ function editor(el: LyraTokenInput): HTMLInputElement | null {
     '[part="token-editor"]'
   ) as HTMLInputElement | null;
 }
+function removeButtons(el: LyraTokenInput): HTMLButtonElement[] {
+  return Array.from(
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="remove"]')
+  );
+}
 function typeInto(field: HTMLInputElement, next: string): void {
   field.value = next;
   field.dispatchEvent(new Event("input", { bubbles: true }));
@@ -60,6 +65,58 @@ it("adds and removes tokens with the keyboard", async () => {
     })
   );
   expect(el.value).to.deep.equal([]);
+});
+
+it('moves focus to the draft input when a focused sole-token remove button removes itself', async () => {
+  const el = (await fixture(
+    html`<lr-token-input .value=${['alpha']}></lr-token-input>`
+  )) as LyraTokenInput;
+  const remove = removeButtons(el)[0]!;
+  remove.focus();
+  expect(el.shadowRoot!.activeElement === remove).to.equal(true);
+
+  remove.click();
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal([]);
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.id).to.equal(
+    'input'
+  );
+});
+
+it('moves focus to the nearest surviving remove action when a focused tail removes itself', async () => {
+  const el = (await fixture(
+    html`<lr-token-input .value=${['alpha', 'beta']}></lr-token-input>`
+  )) as LyraTokenInput;
+  const focused = removeButtons(el)[1]!;
+  focused.focus();
+
+  focused.click();
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(['alpha']);
+  expect(el.shadowRoot!.activeElement === removeButtons(el)[0]).to.equal(true);
+});
+
+it('retains focused-token repair through a synchronous controlled value echo', async () => {
+  const el = (await fixture(
+    html`<lr-token-input .value=${['alpha', 'beta']}></lr-token-input>`
+  )) as LyraTokenInput;
+  el.addEventListener(
+    'input',
+    () => {
+      el.value = [...el.value];
+    },
+    { once: true }
+  );
+  const focused = removeButtons(el)[1]!;
+  focused.focus();
+
+  focused.click();
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(['alpha']);
+  expect(el.shadowRoot!.activeElement === removeButtons(el)[0]).to.equal(true);
 });
 
 it("contains composed draft events while preserving its single public event sequence", async () => {
@@ -1720,6 +1777,64 @@ describe("editable tokens", () => {
       tokenLabels(el).map((label) => label.tabIndex),
       "the roving index must clamp instead of leaving no tab stop"
     ).to.deep.equal([0]);
+  });
+
+  it('moves real focus to the nearest token when a controlled value shrink removes the focused tail', async () => {
+    const el = (await fixture(html`
+      <lr-token-input
+        editable
+        .value=${['alpha', 'beta', 'gamma']}
+      ></lr-token-input>
+    `)) as LyraTokenInput;
+    tokenLabels(el)[2]!.focus();
+    expect(el.shadowRoot!.activeElement === tokenLabels(el)[2]).to.equal(true);
+
+    el.value = ['alpha', 'beta'];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement === tokenLabels(el)[1]).to.equal(true);
+    expect(tokenLabels(el)[1]!.textContent).to.equal('beta');
+  });
+
+  it('moves real focus to the nearest remove action when a pristine default shrinks', async () => {
+    const el = (await fixture(html`
+      <lr-token-input
+        editable
+        value='["alpha","beta","gamma"]'
+      ></lr-token-input>
+    `)) as LyraTokenInput;
+    const focused = removeButtons(el)[2]!;
+    focused.focus();
+    expect(el.shadowRoot!.activeElement === focused).to.equal(true);
+
+    el.defaultValue = ['alpha', 'beta'];
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['alpha', 'beta']);
+    expect(el.shadowRoot!.activeElement === removeButtons(el)[1]).to.equal(
+      true
+    );
+  });
+
+  it('does not reclaim focus moved outside after a controlled shrink', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-token-input
+          editable
+          .value=${['alpha', 'beta']}
+        ></lr-token-input>
+        <button type="button">Outside</button>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-token-input') as LyraTokenInput;
+    const outside = wrapper.querySelector('button')!;
+    tokenLabels(el)[1]!.focus();
+
+    el.value = ['alpha'];
+    outside.focus();
+    await el.updateComplete;
+
+    expect(el.ownerDocument.activeElement === outside).to.equal(true);
   });
 
   it('swaps the roving arrow keys under dir="rtl"', async () => {

@@ -202,7 +202,13 @@ function snapshotFormValue(value: unknown): {
   readonly truncated: boolean;
 } {
   if (value == null) return { value: Object.freeze({}), invalid: false, truncated: false };
-  if (typeof value !== 'object' || Array.isArray(value) || !isPlainRecord(value)) {
+  let isArray = false;
+  try {
+    isArray = Array.isArray(value);
+  } catch {
+    return { value: Object.freeze({}), invalid: true, truncated: false };
+  }
+  if (typeof value !== 'object' || isArray || !isPlainRecord(value)) {
     return { value: Object.freeze({}), invalid: true, truncated: false };
   }
   const budget: SnapshotBudget = {
@@ -230,12 +236,71 @@ const EMPTY_SCHEMA: FlatToolParamSchema = Object.freeze({
   properties: Object.freeze({}),
 });
 
+function snapshotSchemaStringArray(value: unknown): {
+  readonly value?: readonly string[];
+  readonly isArray: boolean;
+  readonly exceededLimit: boolean;
+} {
+  let isArray = false;
+  try {
+    isArray = Array.isArray(value);
+  } catch {
+    return { isArray: false, exceededLimit: false };
+  }
+  if (!isArray) return { isArray: false, exceededLimit: false };
+
+  let sourceLength = 0;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
+    if (
+      descriptor &&
+      'value' in descriptor &&
+      typeof descriptor.value === 'number' &&
+      Number.isSafeInteger(descriptor.value) &&
+      descriptor.value >= 0
+    ) {
+      sourceLength = descriptor.value;
+    }
+  } catch {
+    return { isArray: true, value: Object.freeze([]), exceededLimit: false };
+  }
+
+  const output: string[] = [];
+  for (let index = 0; index < Math.min(sourceLength, MAX_SCHEMA_FIELDS); index += 1) {
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    } catch {
+      continue;
+    }
+    if (descriptor && 'value' in descriptor && typeof descriptor.value === 'string') {
+      output.push(descriptor.value);
+    }
+  }
+  return {
+    isArray: true,
+    value: Object.freeze(output),
+    exceededLimit: sourceLength > MAX_SCHEMA_FIELDS,
+  };
+}
+
 function snapshotSchema(value: unknown): SchemaSnapshot {
   if (value == null) return { schema: EMPTY_SCHEMA, shapeError: '', exceededLimits: false };
-  if (typeof value !== 'object' || Array.isArray(value)) {
+  let isArray = false;
+  try {
+    isArray = Array.isArray(value);
+  } catch {
     return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
   }
-  const rootDescriptors = Object.getOwnPropertyDescriptors(value);
+  if (typeof value !== 'object' || isArray) {
+    return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
+  }
+  let rootDescriptors: PropertyDescriptorMap;
+  try {
+    rootDescriptors = Object.getOwnPropertyDescriptors(value);
+  } catch {
+    return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
+  }
   const typeDescriptor = rootDescriptors['type'];
   if (!typeDescriptor || !('value' in typeDescriptor) || typeDescriptor.value !== 'object') {
     return { schema: EMPTY_SCHEMA, shapeError: 'object', exceededLimits: false };
@@ -247,7 +312,6 @@ function snapshotSchema(value: unknown): SchemaSnapshot {
   if (
     propertiesValue === null ||
     typeof propertiesValue !== 'object' ||
-    Array.isArray(propertiesValue) ||
     !isPlainRecord(propertiesValue)
   ) {
     return { schema: EMPTY_SCHEMA, shapeError: 'properties', exceededLimits: false };
@@ -271,7 +335,12 @@ function snapshotSchema(value: unknown): SchemaSnapshot {
       exceededLimits = true;
       break;
     }
-    if (!('value' in descriptor) || descriptor.value === null || typeof descriptor.value !== 'object' || Array.isArray(descriptor.value)) {
+    if (
+      !('value' in descriptor) ||
+      descriptor.value === null ||
+      typeof descriptor.value !== 'object' ||
+      !isPlainRecord(descriptor.value)
+    ) {
       shapeError = 'properties';
       continue;
     }
@@ -294,13 +363,14 @@ function snapshotSchema(value: unknown): SchemaSnapshot {
 
   const requiredDescriptor = rootDescriptors['required'];
   let required: readonly string[] | undefined;
-  if (requiredDescriptor && 'value' in requiredDescriptor && Array.isArray(requiredDescriptor.value)) {
-    if (requiredDescriptor.value.length > MAX_SCHEMA_FIELDS) exceededLimits = true;
-    required = Object.freeze(
-      requiredDescriptor.value
-        .slice(0, MAX_SCHEMA_FIELDS)
-        .filter((entry: unknown): entry is string => typeof entry === 'string'),
-    );
+  if (requiredDescriptor && 'value' in requiredDescriptor) {
+    const requiredSnapshot = snapshotSchemaStringArray(requiredDescriptor.value);
+    if (requiredSnapshot.isArray) {
+      required = requiredSnapshot.value;
+      if (requiredSnapshot.exceededLimit) exceededLimits = true;
+    } else if (requiredDescriptor.enumerable) {
+      shapeError = 'properties';
+    }
   } else if (requiredDescriptor?.enumerable) {
     shapeError = 'properties';
   }

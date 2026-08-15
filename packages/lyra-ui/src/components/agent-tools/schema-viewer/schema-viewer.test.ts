@@ -1,7 +1,13 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './schema-viewer.js';
-import type { JsonSchemaNode, LyraSchemaViewer, SchemaValidationIssue } from './schema-viewer.js';
+import type { JsonSchemaNode, LyraJsonSchemaViewer, SchemaValidationIssue } from './schema-viewer.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+it('registers as lr-json-schema-viewer, freeing the generic lr-schema-viewer tag', async () => {
+  const el = (await fixture(html`<lr-json-schema-viewer></lr-json-schema-viewer>`)) as LyraJsonSchemaViewer;
+  expect(el.constructor.name).to.equal('LyraJsonSchemaViewer');
+  expect(customElements.get('lr-schema-viewer')).to.be.undefined;
+});
 
 function sinkTexts(): string[] {
   return Array.from(
@@ -22,11 +28,11 @@ const schema = {
 
 it('renders nested JSON Schema structure, constraints, required state, and validation issues', async () => {
   const el = (await fixture(
-    html`<lr-schema-viewer
+    html`<lr-json-schema-viewer
       .schema=${schema}
       .issues=${[{ path: '/properties/query', message: 'Query is required', severity: 'error' }]}
-    ></lr-schema-viewer>`,
-  )) as LyraSchemaViewer;
+    ></lr-json-schema-viewer>`,
+  )) as LyraJsonSchemaViewer;
   expect(el.shadowRoot!.querySelectorAll('[part~="node"]').length).to.be.greaterThan(2);
   expect(el.shadowRoot!.textContent).to.contain('Search query');
   expect(el.shadowRoot!.textContent).to.contain('Required');
@@ -34,16 +40,16 @@ it('renders nested JSON Schema structure, constraints, required state, and valid
 });
 
 it('emits the selected JSON Pointer and record', async () => {
-  const el = (await fixture(html`<lr-schema-viewer .schema=${schema}></lr-schema-viewer>`)) as LyraSchemaViewer;
+  const el = (await fixture(html`<lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`)) as LyraJsonSchemaViewer;
   const pending = oneEvent(el, 'lr-schema-select');
   (el.shadowRoot!.querySelector('[data-path="/properties/query"]') as HTMLButtonElement).click();
-  expect((await pending).detail).to.deep.equal({ path: '/properties/query', schema: schema.properties.query });
+  expect((await pending).detail).to.deep.equal({ schemaPath: '/properties/query', schema: schema.properties.query });
 });
 
 it('fails closed for malformed/circular input and is accessible', async () => {
   const circular: Record<string, unknown> = { type: 'object' };
   circular['properties'] = { self: circular };
-  const el = (await fixture(html`<lr-schema-viewer .schema=${circular}></lr-schema-viewer>`)) as LyraSchemaViewer;
+  const el = (await fixture(html`<lr-json-schema-viewer .schema=${circular}></lr-json-schema-viewer>`)) as LyraJsonSchemaViewer;
   expect(el.shadowRoot!.textContent).to.contain('Circular');
   await expect(el).shadowDom.to.be.accessible();
 });
@@ -64,8 +70,8 @@ it('renders supported composition and item branches while safely ignoring malfor
     { path: '/items', message: 'Each item needs a name', severity: 'warning' as const },
   ];
   const el = (await fixture(html`
-    <lr-schema-viewer .schema=${composite} .issues=${issues}></lr-schema-viewer>
-  `)) as LyraSchemaViewer;
+    <lr-json-schema-viewer .schema=${composite} .issues=${issues}></lr-json-schema-viewer>
+  `)) as LyraJsonSchemaViewer;
 
   const paths = Array.from(
     el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-path]'),
@@ -78,8 +84,8 @@ it('renders supported composition and item branches while safely ignoring malfor
 });
 
 it('distinguishes no selection from the empty JSON Pointer that selects the root', async () => {
-  const el = await fixture<LyraSchemaViewer>(html`
-    <lr-schema-viewer .schema=${schema}></lr-schema-viewer>
+  const el = await fixture<LyraJsonSchemaViewer>(html`
+    <lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>
   `);
   expect(el.selectedPath).to.equal(null);
   expect(el.shadowRoot!.querySelector('[part~="node-selected"]') === null).to.be.true;
@@ -91,9 +97,9 @@ it('distinguishes no selection from the empty JSON Pointer that selects the root
 });
 
 it('applies per-instance localized strings', async () => {
-  const el = (await fixture(html`<lr-schema-viewer
+  const el = (await fixture(html`<lr-json-schema-viewer
     .strings=${{ schemaViewerLabel: 'Localized schema browser' }}
-  ></lr-schema-viewer>`)) as LyraSchemaViewer;
+  ></lr-json-schema-viewer>`)) as LyraJsonSchemaViewer;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized schema browser');
 });
 
@@ -101,9 +107,9 @@ it('bounds broad schemas and exposes a localized truncation status', async () =>
   const properties = Object.fromEntries(
     Array.from({ length: 5_000 }, (_, index) => [`property-${index}`, { type: 'string' }]),
   );
-  const el = (await fixture(html`<lr-schema-viewer
+  const el = (await fixture(html`<lr-json-schema-viewer
     .schema=${{ type: 'object', properties }}
-  ></lr-schema-viewer>`)) as LyraSchemaViewer;
+  ></lr-json-schema-viewer>`)) as LyraJsonSchemaViewer;
   expect(el.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(500);
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
     'Only the first 500 schema nodes are shown.',
@@ -117,8 +123,8 @@ it('marks the limit when nested composition exhausts the remaining render budget
     index === 0 ? { type: 'object', properties: { nested: { type: 'string' } } } : { type: 'string' },
   );
   const el = (await fixture(html`
-    <lr-schema-viewer .schema=${{ type: 'object', properties: { payload: { allOf: branches } } }}></lr-schema-viewer>
-  `)) as LyraSchemaViewer;
+    <lr-json-schema-viewer .schema=${{ type: 'object', properties: { payload: { allOf: branches } } }}></lr-json-schema-viewer>
+  `)) as LyraJsonSchemaViewer;
 
   expect(el.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(500);
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
@@ -141,8 +147,8 @@ it('indexes validation issues once and bounds their rendered work independently 
     return nativeFilter.apply(this, args);
   };
   const el = (await fixture(html`
-    <lr-schema-viewer .schema=${{ type: 'object', properties }} .issues=${issues}></lr-schema-viewer>
-  `)) as LyraSchemaViewer;
+    <lr-json-schema-viewer .schema=${{ type: 'object', properties }} .issues=${issues}></lr-json-schema-viewer>
+  `)) as LyraJsonSchemaViewer;
   expect(el.shadowRoot!.querySelectorAll('[part="issue"]').length).to.equal(500);
   expect(filterCalls).to.be.at.most(1);
   expect(el.shadowRoot!.querySelector('[part="issue-limit"]')?.textContent).to.equal(
@@ -152,7 +158,7 @@ it('indexes validation issues once and bounds their rendered work independently 
 });
 
 it('announces newly reached node and issue ceilings through the shared light-DOM sink', async () => {
-  const el = (await fixture(html`<lr-schema-viewer .schema=${schema}></lr-schema-viewer>`)) as LyraSchemaViewer;
+  const el = (await fixture(html`<lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`)) as LyraJsonSchemaViewer;
   const properties = Object.fromEntries(
     Array.from({ length: 600 }, (_, index) => [`property-${index}`, { type: 'string' }]),
   );
@@ -183,21 +189,21 @@ it('clamps a hostile maxDepth request so deeply nested schemas stay stack-safe',
     current = child;
   }
   const el = (await fixture(html`
-    <lr-schema-viewer max-depth="10000" .schema=${root}></lr-schema-viewer>
-  `)) as LyraSchemaViewer;
+    <lr-json-schema-viewer max-depth="10000" .schema=${root}></lr-json-schema-viewer>
+  `)) as LyraJsonSchemaViewer;
   expect(el.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(101);
 });
 
 it('renders an info-severity issue with its own styling, distinct from the danger default', async () => {
   const el = (await fixture(html`
-    <lr-schema-viewer
+    <lr-json-schema-viewer
       .schema=${schema}
       .issues=${[
         { path: '/properties/query', message: 'Defaults to the account locale', severity: 'info' },
         { path: '/properties/options', message: 'Query is required' },
       ]}
-    ></lr-schema-viewer>
-  `)) as LyraSchemaViewer;
+    ></lr-json-schema-viewer>
+  `)) as LyraJsonSchemaViewer;
   const infoIssue = el.shadowRoot!.querySelector('[part="issue"][data-severity="info"]') as HTMLElement;
   const errorIssue = el.shadowRoot!.querySelector('[part="issue"][data-severity="error"]') as HTMLElement;
   expect((infoIssue) != null).to.equal(true);
@@ -209,7 +215,7 @@ it('renders an info-severity issue with its own styling, distinct from the dange
 
 it('allows selected and issue states to be rethemed independently', async () => {
   const el = (await fixture(html`
-    <lr-schema-viewer
+    <lr-json-schema-viewer
       style="
         --lr-schema-viewer-selected-border: rgb(1, 2, 3);
         --lr-schema-viewer-error-border: rgb(4, 5, 6);
@@ -217,8 +223,8 @@ it('allows selected and issue states to be rethemed independently', async () => 
       selected-path="/properties/query"
       .schema=${schema}
       .issues=${[{ path: '/properties/query', message: 'Required' }]}
-    ></lr-schema-viewer>
-  `)) as LyraSchemaViewer;
+    ></lr-json-schema-viewer>
+  `)) as LyraJsonSchemaViewer;
   const selected = el.shadowRoot!.querySelector('[part~="node-selected"]') as HTMLElement;
   const issue = el.shadowRoot!.querySelector('[part="issue"]') as HTMLElement;
   expect(getComputedStyle(selected).borderInlineStartColor).to.equal('rgb(1, 2, 3)');

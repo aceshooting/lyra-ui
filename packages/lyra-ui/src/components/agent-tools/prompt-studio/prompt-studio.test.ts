@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './prompt-studio.js';
 import type {
@@ -33,12 +33,16 @@ it('renders messages, resolves variables in preview, and exposes versions', asyn
   expect(el.shadowRoot!.querySelector('[data-version-id="v1"]')).to.exist;
 });
 
-it('uses the first duplicate message and version ids before rendering or emitting state', async () => {
+it('omits empty or blank message and version ids and uses the first duplicate', async () => {
   const duplicateMessages: PromptStudioMessage[] = [
+    { id: '', role: 'user', content: 'Missing identity' },
+    { id: '   ', role: 'user', content: 'Blank identity' },
     { id: 'same', role: 'user', content: 'First message' },
     { id: 'same', role: 'assistant', content: 'Second message' },
   ];
   const duplicateVersions: PromptStudioVersion[] = [
+    { id: '', label: 'Missing identity', messages: [] },
+    { id: '   ', label: 'Blank identity', messages: [] },
     { id: 'same-version', label: 'First version', messages: [] },
     { id: 'same-version', label: 'Second version', messages: [] },
   ];
@@ -308,6 +312,80 @@ it('renders light and dark native option palettes, resets select appearance, and
   expect(getComputedStyle(darkOption).color).to.equal('rgb(242, 242, 242)');
 });
 
+it('paints hover and active feedback on toolbar and direct action buttons', async () => {
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio
+      style="--lr-color-surface: rgb(10, 20, 30); --lr-color-surface-raised: rgb(40, 50, 60); --lr-color-mix-partner: rgb(100, 110, 120); --lr-color-mix-active: 50%;"
+      .messages=${messages}
+    ></lr-prompt-studio>
+  `);
+  const actions = [
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="save"]')!,
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="add-message"]')!,
+  ];
+
+  await resetMouse();
+  try {
+    for (const action of actions) {
+      const rest = getComputedStyle(action).backgroundColor;
+      const rect = action.getBoundingClientRect();
+      const position: [number, number] = [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ];
+
+      await sendMouse({ type: 'move', position });
+      await waitUntil(
+        () => getComputedStyle(action).backgroundColor !== rest,
+        `${action.getAttribute('part')} hover paint did not settle`,
+      );
+      const hover = getComputedStyle(action).backgroundColor;
+
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => {
+          const active = getComputedStyle(action).backgroundColor;
+          return active !== rest && active !== hover;
+        },
+        `${action.getAttribute('part')} active paint did not settle`,
+      );
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
+it('paints the variable field hover hook over its resting border', async () => {
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio
+      style="--lr-prompt-studio-field-hover-border: rgb(1, 2, 3);"
+      .messages=${messages}
+      .variables=${[{ name: 'audience', value: 'developers' }]}
+    ></lr-prompt-studio>
+  `);
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="variable"] input')!;
+  const rest = getComputedStyle(input).borderTopColor;
+  const rect = input.getBoundingClientRect();
+
+  await resetMouse();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(
+      () => getComputedStyle(input).borderTopColor !== rest,
+      'variable input hover paint did not settle',
+    );
+    expect(getComputedStyle(input).borderTopColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
+});
+
 it('renders and exposes a component-scoped theme hook for the selected version', async () => {
   const el = (await fixture(html`
     <lr-prompt-studio
@@ -516,11 +594,12 @@ it('honors a prevented message reorder without mutating state or emitting lr-cha
 it('emits a cancelable lr-change before mutating state, honoring a prevented edit', async () => {
   const original = messages.map((message) => ({ ...message }));
   const el = (await fixture(html`<lr-prompt-studio .messages=${original}></lr-prompt-studio>`)) as LyraPromptStudio;
+  const accepted = el.messages;
   let changeCount = 0;
   el.addEventListener('lr-change', (event) => {
     changeCount++;
     expect(event.cancelable).to.be.true;
-    expect(el.messages, 'messages must still be the pre-edit array while lr-change is pending').to.equal(original);
+    expect(el.messages, 'messages must still be the accepted pre-edit snapshot while lr-change is pending').to.equal(accepted);
     event.preventDefault();
   });
 
@@ -529,7 +608,7 @@ it('emits a cancelable lr-change before mutating state, honoring a prevented edi
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
 
   expect(changeCount).to.equal(1);
-  expect(el.messages).to.equal(original);
+  expect(el.messages).to.equal(accepted);
   expect(el.messages[0]!.content).to.equal(original[0]!.content);
 });
 

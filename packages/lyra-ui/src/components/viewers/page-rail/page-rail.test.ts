@@ -1116,22 +1116,22 @@ describe('lr-page-rail', () => {
     expect(viewer.renderCalls[0].width).to.equal(0);
   });
 
-  it('clamps an out-of-range or NaN page into [1, pageCount] for the virtual-list active-id binding', async () => {
+  it('clamps an out-of-range or NaN page into [1, pageCount] for the virtual-list active-item-id binding', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="5"></lr-page-rail>`);
     await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: unknown };
 
     el.page = 999;
     await el.updateComplete;
-    expect(list.activeId).to.equal(5);
+    expect(list.activeItemId).to.equal(5);
 
     el.page = NaN;
     await el.updateComplete;
-    expect(list.activeId).to.equal(1);
+    expect(list.activeItemId).to.equal(1);
 
     el.page = -3;
     await el.updateComplete;
-    expect(list.activeId).to.equal(1);
+    expect(list.activeItemId).to.equal(1);
   });
 });
 

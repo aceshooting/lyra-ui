@@ -64,8 +64,6 @@ interface PendingSuggestionFocus {
  * @since 4.0.0
  */
 export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['suggestions']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -73,6 +71,8 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     suggestionsLabel: LYRA_DEFAULT_suggestionsLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['suggestions']);
 
   static override styles = [LyraElement.styles, styles];
 

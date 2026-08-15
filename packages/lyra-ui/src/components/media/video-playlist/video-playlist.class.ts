@@ -2,7 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   MAX_NATIVE_PLAYBACK_RATE,
@@ -25,24 +25,24 @@ import { LYRA_DEFAULT_videoPlaylistLabel, LYRA_DEFAULT_videoPlaylistUntitled } f
 export type LyraVideoPlaylistRepeat = 'none' | 'one' | 'all';
 
 export interface LyraVideoPlaylistSource {
-  src: string;
-  type: string;
-  media: string;
+  readonly src: string;
+  readonly type: string;
+  readonly media: string;
 }
 
 export interface LyraVideoPlaylistTrack {
-  src: string;
-  kind: string;
-  srclang: string;
-  label: string;
-  default: boolean;
+  readonly src: string;
+  readonly kind: string;
+  readonly srclang: string;
+  readonly label: string;
+  readonly default: boolean;
 }
 
 export interface LyraVideoPlaylistVideo {
-  title: string;
-  poster: string;
-  sources: LyraVideoPlaylistSource[];
-  tracks: LyraVideoPlaylistTrack[];
+  readonly title: string;
+  readonly poster: string;
+  readonly sources: readonly LyraVideoPlaylistSource[];
+  readonly tracks: readonly LyraVideoPlaylistTrack[];
 }
 
 /**
@@ -58,13 +58,13 @@ export interface LyraVideoPlaylistItem {
 }
 
 export interface LyraVideoPlaylistChangeDetail {
-  previousIndex: number;
-  currentIndex: number;
-  video: LyraVideoPlaylistVideo;
+  readonly previousIndex: number;
+  readonly currentIndex: number;
+  readonly video: LyraVideoPlaylistVideo;
 }
 
 export interface LyraVideoPlaylistEventMap {
-  'lr-video-change': CustomEvent<LyraVideoPlaylistChangeDetail>;
+  'lr-video-change': CustomEvent<LyraEventDetailSnapshot<LyraVideoPlaylistChangeDetail>>;
   blur: FocusEvent;
   focus: FocusEvent;
   'lr-blur': CustomEvent<null>;
@@ -179,7 +179,7 @@ function trackSnapshot(
  * @slot - Direct `<lr-video>` children. Other elements are not playlist items.
  * @event lr-video-change - Emitted when `goTo()`, `next()`, `previous()`, or ended advancement
  *   selects a video. Detail is `{ previousIndex, currentIndex, video }`; `video` is a fresh,
- *   detached, mutable `{ title, poster, sources, tracks }` data snapshot with no live DOM nodes.
+ *   detached, recursively frozen `{ title, poster, sources, tracks }` data snapshot with no live DOM nodes.
  * @event {FocusEvent} focus - Relayed once from a playlist row as a bubbling, composed native
  *   event.
  * @event {FocusEvent} blur - Relayed once from a playlist row as a bubbling, composed native

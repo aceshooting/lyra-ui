@@ -127,8 +127,6 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  * @since 4.0.0
  */
 export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['detail']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -142,6 +140,8 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     feedbackSubmitted: LYRA_DEFAULT_feedbackSubmitted,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['detail']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -235,7 +235,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   private get detailReasons(): readonly MessageFeedbackReason[] {
     const seen = new Set<string>();
     return (this.detail?.reasons ?? []).filter((reason) => {
-      if (!reason.id || seen.has(reason.id)) return false;
+      if (!reason || typeof reason.id !== 'string' || reason.id.trim().length === 0 || seen.has(reason.id)) return false;
       seen.add(reason.id);
       return true;
     });

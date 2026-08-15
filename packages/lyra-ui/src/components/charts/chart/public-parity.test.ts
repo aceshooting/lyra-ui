@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from "@open-wc/testing";
 import "./chart.js";
-import type { LyraChart } from "./chart.js";
+import { LyraChart } from './chart.js';
 
 it("publishes the documented chart defaults and reflected negative controls", async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
@@ -129,7 +129,16 @@ it("drops non-finite public min/max values before they reach Chart.js", () => {
   expect(config.options.scales.y.max).to.equal(undefined);
 });
 
-it("shows the legend by default, lets without-legend hide it, and keeps legend as a positive alias", async () => {
+it('has no redundant positive-polarity legend property — without-legend is the only control', () => {
+  expect(Object.getOwnPropertyDescriptor(LyraChart.prototype, 'legend')).to.equal(undefined);
+});
+
+it('does not re-export the internal lockChartType helper from the public chart.ts barrel', async () => {
+  const barrel = await import('./chart.js');
+  expect('lockChartType' in barrel).to.equal(false);
+});
+
+it('shows the legend by default and lets without-legend hide it', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.datasets = [{ label: "Revenue", data: [1, 2] }];
   await el.updateComplete;
@@ -145,7 +154,6 @@ it("shows the legend by default, lets without-legend hide it, and keeps legend a
   expect(el.shadowRoot!.querySelectorAll('[part="legend"]').length).to.equal(0);
 
   el.withoutLegend = false;
-  el.legend = true;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="legend"]').length).to.equal(1);
 });

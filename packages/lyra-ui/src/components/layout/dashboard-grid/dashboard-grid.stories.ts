@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
 import "./dashboard-grid.js";
-import type { LyraDashboardCell } from "./dashboard-grid.js";
+import type {
+  LyraDashboardCell,
+  LyraDashboardGrid,
+  LyraDashboardLayoutChangeDetail,
+} from './dashboard-grid.js';
 
 const layout: LyraDashboardCell[] = [
   {
@@ -67,7 +71,7 @@ export const Editable: Story = {
     docs: {
       description: {
         story:
-          "Pointer-drag/resize a cell (mouse) or focus one and use Ctrl/Cmd+Arrow to move, Ctrl/Cmd+Shift+Arrow to resize -- both paths are fully equivalent. This story only listens for the events; it does not persist the resulting layout anywhere (the host always owns persistence).",
+          'Pointer-drag/resize a cell (mouse) or focus one and use Ctrl/Cmd+Arrow to move, Ctrl/Cmd+Shift+Arrow to resize -- both paths are fully equivalent. This controlled-host example applies each `lr-layout-change` proposal immediately; only that round trip produces the success announcement.',
       },
     },
   },
@@ -78,6 +82,11 @@ export const Editable: Story = {
       cells-resizable
       collision="push"
       .layout=${layout}
+      @lr-layout-change=${(
+        event: CustomEvent<LyraDashboardLayoutChangeDetail>
+      ) => {
+        (event.currentTarget as LyraDashboardGrid).layout = event.detail.layout;
+      }}
     ></lr-dashboard-grid>
   `,
 };

@@ -45,13 +45,16 @@ accessor itself, which still takes full priority.
 
 **Properties:**
 
-- `mode: AppRailMode` (custom accessor, reflected) — the getter always returns one of the three real
-  modes (`'full'|'icon-only'|'mobile'`), never `'auto'`. The setter accepts
-  `AppRailModeInput` (`AppRailMode | 'auto'`): assigning `'full'`/`'icon-only'`/`'mobile'` forces
-  that mode and stops the element responding to breakpoint changes; assigning the write-only
-  sentinel `'auto'` releases the force and immediately re-syncs to the current viewport width,
-  resuming automatic tracking. Settable via the `mode` attribute too (`mode="icon-only"`,
-  `mode="auto"`).
+- `mode: LyraAppRailMode` (custom accessor, reflected, read-only as of 9.0.0) — always resolves to
+  one of the three real modes (`'full'|'icon-only'|'mobile'`), never `'auto'`; assigning it now
+  throws (`el.mode = 'icon-only'` -> TypeError).
+- `forceMode?: 'full' | 'icon-only' | 'auto'` (attribute `force-mode`, reflected) — replaces `mode`'s
+  former write side as of 9.0.0. Assigning `'full'`/`'icon-only'` pins that mode and stops the
+  element responding to breakpoint changes; assigning `'auto'` (or leaving it unset) releases the
+  pin and resumes automatic viewport tracking. `'mobile'` can never be force-pinned here — the
+  mobile breakpoint is always tracked automatically regardless, mirroring `preferredMode`'s scope
+  below; widen `mobile-breakpoint` for a guaranteed-mobile state instead. Settable via the
+  `force-mode` attribute too (`force-mode="icon-only"`, `force-mode="auto"`).
 - `iconOnlyBreakpoint: string = '960px'` (attribute `icon-only-breakpoint`) — any valid CSS length,
   used directly in a `(max-width: ...)` media query; below it the rail switches from `'full'` to
   `'icon-only'`.
@@ -88,7 +91,7 @@ accessor itself, which still takes full priority.
   `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next
   mount. Effective `mode` is breakpoint-derived and never persisted. Unset means no persistence.
 - `persist: string = 'open width'` — whitespace-separated field allowlist used with `storageKey`.
-  Valid `AppRailPersistField` tokens are `open`, `width` (`railWidthPx`), and `preferred-mode`
+  Valid `LyraAppRailPersistField` tokens are `open`, `width` (`railWidthPx`), and `preferred-mode`
   (`preferredMode`). The default preserves the existing open+width behavior. Use
   `persist="width preferred-mode"` when overlay-open state is controlled or should stay
   session-only.
@@ -96,29 +99,29 @@ accessor itself, which still takes full priority.
   drag/keyboard resize can reach.
 - `maxRailWidthPx: number = 440` (attribute `max-rail-width-px`) — maximum `railWidthPx` a
   drag/keyboard resize can reach.
-- `dragging: boolean = false` (reflected) — `true` for the duration of an active pointer-driven
-  resize drag (not a keyboard step); reflected so a consumer (or this component's own styles) can
-  suppress `[part='base']`'s `transition: inline-size` during the drag, which otherwise visibly
-  "chases" the pointer instead of tracking it 1:1. Effectively read-only (this component owns the
-  transitions), but a plain reflected property like every other boolean here.
+- `dragging: boolean = false` (reflected, read-only as of 9.0.0) — `true` for the duration of an
+  active pointer-driven resize drag (not a keyboard step); reflected so a consumer (or this
+  component's own styles) can suppress `[part='base']`'s `transition: inline-size` during the drag,
+  which otherwise visibly "chases" the pointer instead of tracking it 1:1. This component always
+  owned every drag transition itself; assigning it now throws (`el.dragging = true` -> TypeError).
 
 Also settable as a plain `aria-label` attribute (not a reactive property): overrides the computed
 `label`/localized-default accessible name on both the navigation landmark and the mobile dialog
 role, matching `<lr-date-input>`'s `accessibleLabel`.
 
-**Events:** `lr-mode-change` (`detail: AppRailModeChangeDetail` = `{ mode: AppRailMode }`; the
-effective mode changed, whether from a breakpoint crossing or an explicit `mode` assignment — not
+**Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
+effective mode changed, whether from a breakpoint crossing or a `forceMode` assignment — not
 fired for a redundant reassignment to the mode already in effect), `lr-toggle`
-(`detail: AppRailToggleDetail` = `{ open: boolean }`; the mobile overlay is opening or closing — via
+(`detail: LyraAppRailToggleDetail` = `{ open: boolean }`; the mobile overlay is opening or closing — via
 the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a
 breakpoint/forced mode change leaving `'mobile'` while open — not fired when a consumer sets `open`
 directly. Cancelable for every trigger except the forced mode-change close, which always applies —
 vetoing that one would leave `open` stuck `true` in a mode where it's meaningless; call
 `preventDefault()` to keep the overlay as it is for the other triggers),
-`lr-rail-resize-request` (`detail: AppRailResizeDetail` = `{ widthPx: number }`; a cancelable
+`lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidthPx` — call `preventDefault()` to keep the current width. It is not fired when a consumer
-sets `railWidthPx` directly), and `lr-rail-resize` (`detail: AppRailResizeDetail` =
+sets `railWidthPx` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
 `{ widthPx: number }`; non-cancelable committed width, emitted immediately for a genuine keyboard
 step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/lost gestures, and
 consumer property writes emit no committed event).

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import { seriesPalette, type Series } from './chart.js';
+import { seriesPalette, type LyraChartSeries } from './chart.js';
 
 const meta: Meta = {
   title: 'Charts/Chart',
@@ -13,13 +13,12 @@ type Story = StoryObj;
 /** Click a legend item to hide its dataset; hidden items retain a line-through state and part hook. */
 export const Default: Story = {
   render: () => {
-    const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
+    const series: LyraChartSeries[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
       <lr-chart
         type="bar"
         height="16rem"
         style="width: 22rem"
-        legend
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
       ></lr-chart>
@@ -34,7 +33,7 @@ export const Default: Story = {
  */
 export const ControlledLegendVisibility: Story = {
   render: () => {
-    const series: Series[] = [
+    const series: LyraChartSeries[] = [
       { label: 'Revenue (vetoed)', data: [12, 19, 14, 22] },
       { label: 'Costs (initially hidden)', data: [7, 11, 9, 13] },
     ];
@@ -43,7 +42,6 @@ export const ControlledLegendVisibility: Story = {
         type="bar"
         height="16rem"
         style="inline-size: 26rem; max-inline-size: 100%;"
-        legend
         .hiddenDatasets=${[1]}
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
@@ -65,20 +63,19 @@ export const PreMountSeriesPalette: Story = {
     docs: {
       description: {
         story:
-          '`seriesPalette(scope?)` resolves the theme ramp before a chart element exists, so application code can build its Series array and chart-adjacent UI from the same colors.',
+          '`seriesPalette(scope?)` resolves the theme ramp before a chart element exists, so application code can build its LyraChartSeries array and chart-adjacent UI from the same colors.',
       },
     },
   },
   render: () => {
     const palette = seriesPalette(document.documentElement);
-    const series: Series[] = [
+    const series: LyraChartSeries[] = [
       { label: 'Revenue', data: [12, 19, 14, 22], color: palette[0] },
       { label: 'Costs', data: [7, 11, 9, 13], color: palette[1] },
     ];
     return html`
       <lr-chart
         type="line"
-        legend
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}
       ></lr-chart>
@@ -93,7 +90,6 @@ export const DoughnutCenterAndAutoLegend: Story = {
       type="doughnut"
       height="18rem"
       style="inline-size: 24rem; max-inline-size: 100%;"
-      legend
       legend-position="auto"
       .labels=${['Completed', 'Remaining']}
       .datasets=${[{ label: 'Work', data: [72, 28], color: ['var(--lr-color-success)', 'var(--lr-color-border)'] }]}
@@ -107,7 +103,6 @@ export const FormattedValues: Story = {
   render: () => html`
     <lr-chart
       type="bar"
-      legend
       show-data-table
       .formatter=${({ value, surface }: { value: number; surface: string }) =>
         surface === 'legend' ? `$${value.toFixed(0)} total` : `$${value.toFixed(2)}`}
@@ -121,7 +116,7 @@ export const FormattedValues: Story = {
 export const NarrowLongContent: Story = {
   name: 'Narrow RTL (320px) with long content',
   render: () => {
-    const series: Series[] = [
+    const series: LyraChartSeries[] = [
       { label: 'Revenue from subscriptions and professional services', data: [12, 19, 14, 22] },
     ];
     return html`
@@ -142,13 +137,13 @@ export const NarrowLongContent: Story = {
 
 /**
  * The `config` property is the raw Chart.js passthrough escape hatch — it is
- * deep-merged over the `Series`-generated config, so a nested key like
+ * deep-merged over the `LyraChartSeries`-generated config, so a nested key like
  * `options.plugins.title` can be set without discarding the rest of the
  * generated config the `type`/`labels`/`datasets` attributes produce.
  */
 export const ConfigPassthrough: Story = {
   render: () => {
-    const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
+    const series: LyraChartSeries[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
       <lr-chart
         type="bar"
@@ -215,7 +210,6 @@ export const ConfigDataAsEffectiveModel: Story = {
   render: () => html`
     <lr-chart
       type="bar"
-      legend
       show-data-table
       height="16rem"
       style="inline-size: 22rem; max-inline-size: 100%;"
@@ -234,7 +228,7 @@ export const ConfigDataAsEffectiveModel: Story = {
 /** `index-axis="y"` is Chart.js's own `indexAxis: 'y'`, flipping bars onto a horizontal axis. */
 export const Horizontal: Story = {
   render: () => {
-    const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
+    const series: LyraChartSeries[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
       <lr-chart
         type="bar"
@@ -251,7 +245,7 @@ export const Horizontal: Story = {
 /** `stacked` stacks every dataset sharing an axis on top of each other instead of side by side. */
 export const Stacked: Story = {
   render: () => {
-    const series: Series[] = [
+    const series: LyraChartSeries[] = [
       { label: 'Product A', data: [12, 19, 14, 22] },
       { label: 'Product B', data: [8, 11, 9, 15] },
     ];
@@ -261,7 +255,6 @@ export const Stacked: Story = {
         stacked
         stack-totals
         show-data-table
-        legend
         height="16rem"
         style="width: 22rem"
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
@@ -281,11 +274,10 @@ export const Stacked: Story = {
  */
 export const ThemedTokens: Story = {
   render: () => {
-    const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
+    const series: LyraChartSeries[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
       <lr-chart
         type="bar"
-        legend
         height="16rem"
         style="
           width: 22rem;
@@ -325,7 +317,6 @@ export const IndependentControlStateHooks: Story = {
   render: () => html`
     <lr-chart
       type="bar"
-      legend
       zoom
       show-data-table
       height="16rem"
@@ -393,7 +384,7 @@ export const PublicCssHooks: Story = {
  */
 export const PointClickAndRefreshTheme: Story = {
   render: () => {
-    const series: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
+    const series: LyraChartSeries[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
     return html`
       <lr-chart
         type="bar"

@@ -39,7 +39,7 @@ contract.
 indexOfKey?(key): number }`. When set it takes precedence over `items`. The indexed form performs
   bounded random access for only the rendered window instead of allocating `0…count`; invalid counts
   normalize to zero. Prefer a stable object identity and stable `keyAt`/`indexOfKey` implementations
-  for synthetic, paged, or remote collections. `indexOfKey` is required when `active-id` should
+  for synthetic, paged, or remote collections. `indexOfKey` is required when `active-item-id` should
   target an indexed source: the list never performs a count-sized fallback scan; invalid or
   out-of-range results mean no match. An array source receives the same clone-owned frozen sequence
   and row-identity contract as `items`; an indexed-source object passes through by identity.
@@ -84,7 +84,7 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   - it is never measured as a row, so a group header that is also a real row is not double-counted in
     `row-height="auto"` mode;
   - its measured height is applied as `scroll-padding-block-start` on the scroll container and
-    subtracted from top-aligned scroll targets, so `active-id`, `scrollToIndex({ align: 'start' })`
+    subtracted from top-aligned scroll targets, so `active-item-id`, `scrollToIndex({ align: 'start' })`
     and native keyboard scrolling all stop _below_ the band instead of parking the row behind it.
 
   The callback runs on every scroll-driven update, so keep it cheap and side-effect free. While the
@@ -111,7 +111,7 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
 - `overscan: number = 6` — extra rows rendered beyond the visible viewport on each side; finite
   values are floored and clamped to 0–100, while non-finite values use the default 6, so an invalid
   runtime value cannot disable windowing and render the entire collection.
-- `activeId: string | number | '' = ''` (attribute `active-id`) — when set and it matches a row's `keyFunction`
+- `activeItemId: string | number | '' = ''` (attribute `active-item-id`) — when set and it matches a row's `keyFunction`
   result (compared with `Object.is` against the typed value — attribute values arrive as strings, so
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
   this changes, and rendered with `aria-current="true"`.
@@ -136,7 +136,7 @@ the package root re-exports it too, but that entry pulls in the eager registrati
 import { groupByRecency } from "@aceshooting/lyra-ui/utilities/group-by-recency.js";
 ```
 
-**Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-id`'s
+**Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-item-id`'s
 automatic scroll-into-view, for a host that needs to scroll to a specific row without changing which
 row is "active." `options.align` is `'start'`, `'end'`, or `'auto'` (default — no scroll at all when
 already fully visible); `options.behavior` (default `'smooth'`) is forced to `'auto'` under
@@ -216,7 +216,7 @@ activation target.
     ></lr-conversation-item>
   `}
   .keyFunction=${(item) => item.id}
-  active-id=${currentId}
+  active-item-id=${currentId}
   ?has-more=${hasMorePages}
   ?loading=${isLoadingMore}
   @lr-load-more=${() => loadNextPage()}
@@ -266,7 +266,7 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   be set as JS properties (`.source=`, `.items=`, `.renderItem=`, …), never as HTML attribute strings.
 - The container is `role="list"` with rows `role="listitem"`, deliberately not `listbox`/`option` —
   this component only provides windowing, not the roving-tabindex/`aria-activedescendant`
-  keyboard-interaction contract a real `listbox` requires. `active-id` only scrolls a row into view and
+  keyboard-interaction contract a real `listbox` requires. `active-item-id` only scrolls a row into view and
   marks it `aria-current`; it is not a selection widget. Compose your own selection behavior on top if
   needed.
 - `[part="base"]` carries `tabindex="0"` unconditionally, since `renderItem`'s caller-supplied content

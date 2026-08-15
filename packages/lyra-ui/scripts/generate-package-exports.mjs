@@ -10,7 +10,8 @@ const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/agent-tools/tool-result-view/registry.ts',
   'src/components/charts/chart/chart-colors.ts',
-  'src/components/charts/chart/chart-loader.ts',
+  'src/components/charts/chart/chart-core-loader.ts',
+  'src/components/charts/chart/chart-feature-loader.ts',
   'src/components/charts/chart/chart-preload.ts',
   'src/components/conversation/code-block/code-loader.ts',
   'src/components/conversation/markdown/markdown-loader.ts',

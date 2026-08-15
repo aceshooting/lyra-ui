@@ -11,6 +11,7 @@ import {
   createTextQuoteIndex,
   emptyTextQuoteMatches,
   rangeFromTextQuoteMatch,
+  rangesFromTextQuoteMatches,
   scopeFromElement,
   TEXT_QUOTE_LIMITS,
   type TextQuoteIndex,
@@ -577,11 +578,19 @@ export function TextViewerTarget(
       const index = needsScope ? this.cachedTextIndex(root) : null;
       const highlightBudget = index?.createWorkBudget();
       let activeHostRange: Range | null = null;
-      let highlighted = 0;
+      const resolvedHighlights: Array<{ highlight: TextHighlight; match: TextQuoteMatch }> = [];
       for (const highlight of highlightsToPaint) {
-        if (highlight !== activeHighlight && highlighted >= HIGHLIGHT_PAINT_LIMIT) break;
+        if (resolvedHighlights.length >= HIGHLIGHT_PAINT_LIMIT) break;
         const match = index?.resolve(highlight.anchor, highlightBudget);
-        const range = match && index ? rangeFromTextQuoteMatch(index.scope, match) : null;
+        if (match) resolvedHighlights.push({ highlight, match });
+      }
+      const highlightRanges = index
+        ? rangesFromTextQuoteMatches(index.scope, resolvedHighlights.map(({ match }) => match))
+        : [];
+      let highlighted = 0;
+      for (let position = 0; position < resolvedHighlights.length; position++) {
+        const { highlight } = resolvedHighlights[position]!;
+        const range = highlightRanges[position] ?? null;
         add(highlight.tone ?? 'accent', range);
         if (range) highlighted++;
         if (highlight === activeHighlight) activeHostRange = range;
@@ -596,8 +605,11 @@ export function TextViewerTarget(
       let painted = 0;
       let activeSearchRange: Range | null = null;
       if (scope) {
-        for (const { index: matchIndex, match } of this.searchPaintWindow()) {
-          const range = rangeFromTextQuoteMatch(scope, match);
+        const window = this.searchPaintWindow();
+        const searchRanges = rangesFromTextQuoteMatches(scope, window.map(({ match }) => match));
+        for (let position = 0; position < window.length; position++) {
+          const { index: matchIndex } = window[position]!;
+          const range = searchRanges[position] ?? null;
           if (range) {
             add('accent', range);
             painted++;

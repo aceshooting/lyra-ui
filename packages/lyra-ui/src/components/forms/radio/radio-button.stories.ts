@@ -30,6 +30,14 @@ export const Default: StoryObj = {
 
 export const AdornmentAliases: StoryObj = {
   name: 'Start/end and prefix/suffix adornments',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Canonical and Shoelace slot spellings share the same edge wrappers. The label-only option shows that empty start/end wrappers collapse and contribute no extra gap; the aria-labelled empty option collapses all three content wrappers.',
+      },
+    },
+  },
   render: () => html`
     <lr-radio-group name="adornment-aliases" label="Adornment aliases" orientation="horizontal">
       <lr-radio-button value="canonical" checked>
@@ -42,6 +50,8 @@ export const AdornmentAliases: StoryObj = {
         Shoelace
         <span slot="suffix">Suffix</span>
       </lr-radio-button>
+      <lr-radio-button value="label-only">Label only</lr-radio-button>
+      <lr-radio-button value="empty" aria-label="Empty visual button"></lr-radio-button>
     </lr-radio-group>
   `,
 };

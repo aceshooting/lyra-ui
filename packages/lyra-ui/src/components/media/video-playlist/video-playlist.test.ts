@@ -243,7 +243,7 @@ describe('lr-video-playlist public contract', () => {
     expect(items(el)[0]!.tabIndex).to.equal(0);
   });
 
-  it('emits exact composed change detail as fresh mutable detached metadata snapshots', async () => {
+  it('emits exact composed change detail as fresh recursively frozen metadata snapshots', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>
         <lr-video title="First"></lr-video>
@@ -275,13 +275,11 @@ describe('lr-video-playlist public contract', () => {
         { src: 'data:text/vtt,WEBVTT', kind: 'captions', srclang: 'en', label: 'English', default: true },
       ],
     });
-    expect(Object.isFrozen(event.detail.video)).to.be.false;
-    expect(Object.isFrozen(event.detail.video.sources)).to.be.false;
-    expect(Object.isFrozen(event.detail.video.sources[0]!)).to.be.false;
-    expect(Object.isFrozen(event.detail.video.tracks[0]!)).to.be.false;
-    event.detail.video.title = 'Consumer-owned title';
-    event.detail.video.sources[0]!.src = 'https://example.test/consumer-owned.mp4';
-    event.detail.video.tracks[0]!.label = 'Consumer-owned captions';
+    expect(Object.isFrozen(event.detail)).to.be.true;
+    expect(Object.isFrozen(event.detail.video)).to.be.true;
+    expect(Object.isFrozen(event.detail.video.sources)).to.be.true;
+    expect(Object.isFrozen(event.detail.video.sources[0]!)).to.be.true;
+    expect(Object.isFrozen(event.detail.video.tracks[0]!)).to.be.true;
 
     const again = oneEvent(el, 'lr-video-change');
     el.goTo(1);

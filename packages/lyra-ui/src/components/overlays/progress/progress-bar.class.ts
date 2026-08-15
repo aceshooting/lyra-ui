@@ -20,7 +20,7 @@ import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generat
 
 
 /** The library's one semantic-tone vocabulary. */
-export type ProgressVariant = LyraVariant;
+export type LyraProgressVariant = LyraVariant;
 
 /**
  * `<lr-progress-bar>` — a determinate or indeterminate progress indicator. `variant` selects the
@@ -71,7 +71,7 @@ export class LyraProgressBar extends LyraElement {
   @property({ type: Boolean, reflect: true }) indeterminate = false;
   /** Semantic palette, read from the library's shared semantic-tone vocabulary. Recolors the
    *  indicator via the variant's loud fill from the shared semantic grid. */
-  @property({ reflect: true }) variant: ProgressVariant = 'brand';
+  @property({ reflect: true }) variant: LyraProgressVariant = 'brand';
   @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
   /** Mapped accessible-label property. */
   @property() label = '';

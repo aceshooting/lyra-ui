@@ -1,3 +1,11 @@
+## Breaking changes in 9.0.0
+
+`<lr-media-card>`'s `accessibleLabel` property now defaults to `null` instead of `''`
+(`string | null`, matching `<lr-pan-zoom>`/`<lr-zoomable-frame>`). Behavior is unchanged: an explicit
+empty string and the unset default both still fall through to the generated purpose-specific action
+name — only the value read back from an unset property differs. A consumer comparing against `''`
+should switch to `== null` / `?? ''`.
+
 ## `lr-flag`
 
 Country/language flag image. Flag artwork ships in a **separate, optional peer package**
@@ -50,7 +58,9 @@ light-DOM assertive announcement (see gotchas).
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
 table (region subtag wins, e.g. `en-US` → `us`; plain `en` → `gb`; override the table per-app if you
-need different defaults), plus `localeNativeName(tag: string): string`.
+need different defaults). Only the table's own entries are eligible for base-language fallback;
+inherited object members such as `constructor` resolve to `undefined`. Also exported:
+`localeNativeName(tag: string): string`.
 
 `localeNativeName()` returns a BCP-47 tag's **endonym** — the locale's name written in that locale
 itself (`'fr'` → `français`, `'pt-BR'` → `português (Brasil)`). That is what a language switcher
@@ -276,7 +286,8 @@ operations. Its runtime value is the underlying MapLibre map.
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2`
 - `mapStyle?: LyraMapStyleSpecification | string` (attribute: false) — required before a map is
-  constructed. `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from
+  constructed. Object assignments are detached and recursively frozen; create and reassign a new
+  style to update it. `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from
   MapLibre's `StyleSpecification`, including its string or multi-sprite form. No provider or style
   is selected implicitly: an unset, empty, or whitespace-only value renders the localized
   style-required failure and makes no tile/style request. Assign a hosted vector/raster style from
@@ -353,8 +364,9 @@ shared `maplibre-gl` import without constructing a map or allocating a WebGL con
 an element.
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`), `lr-map-click`
-(`detail: { lngLat: [lng, lat], feature? }` — feature only populated if a choropleth fill layer
-exists and was hit)
+(frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature? }`; the tuple and any
+hit GeoJSON feature are detached and recursively frozen — feature is only populated if a
+choropleth fill layer exists and was hit)
 
 **Slots:** none.
 
@@ -579,7 +591,8 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 programmatic `files` writes are silent. The hidden native picker's own `change` is contained inside
 the shadow root, so a picker selection exposes exactly one post-commit host `change`, not the
 implementation event plus a duplicate. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
-readonly `files` and `rejected` arrays, fired on both drop and manual file-picker selection) —
+frozen readonly `files` and `rejected` arrays and frozen rejected-file records, fired on both drop
+and manual file-picker selection; immutable `File` objects retain identity) —
 `LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
 }`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
 input (`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
@@ -1057,7 +1070,8 @@ or direct public value remains authoritative; `--lr-attachment-chip-compact-thum
 `1.75rem`), `--lr-attachment-chip-compact-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
 size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-duration` (default
-`0.8s`) controls the indeterminate rotation and stops under reduced motion; plus shared tokens `--lr-space-xs`, `--lr-space-s`,
+`var(--lr-transition-ambient)`) controls the indeterminate rotation's duration and easing and stops
+under reduced motion; plus shared tokens `--lr-space-xs`, `--lr-space-s`,
 `--lr-radius`, `--lr-color-text`, `--lr-color-danger`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-transition-base`, `--lr-focus-ring-width`,
 `--lr-focus-ring-color`, `--lr-focus-ring-offset`.
@@ -1111,8 +1125,8 @@ previous entry, reassigning `file` several times before the next paint leaks not
 
 - `file` always wins over `name`/`bytes`/`mimeType` when both are set — assigning those props while
   `file` is also set has no visible effect on the rendered chip.
-- A `0` `bytes` value and an unset `bytes` value are indistinguishable (there's no separate flag for
-  "genuinely empty file"); the `size` part is hidden entirely rather than showing a literal `"0 B"`.
+- A `0` `bytes` value is a known empty file and renders `"0 B"`; only omission means unknown and
+  hides the `size` part. Negative and non-finite writes normalize to omission.
 - `progress` only renders as a numeric bar when `status="uploading"` **and** `progress` is finite
   and `> 0`; otherwise it's either nothing (non-`uploading` status) or the indeterminate spinner
   (`uploading` with no known progress).
@@ -1224,9 +1238,12 @@ validated safe-URL sink actually rendered, not necessarily the raw `src` propert
 whitespace-padded value is trimmed, so it matches the rendered sink.
 The former generic `lr-open` event is removed in v9: notification and veto phases now have distinct,
 truthful names.
+Native `focus` and `blur` are each relayed once from the current primary action as bubbling,
+composed `FocusEvent`s whose target is the `lr-media-card` host.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the primary action for the
-current media kind.
+current media kind. The forwarded focus/blur transition produces the relayed host event described
+above.
 
 **Slots:** none.
 
@@ -1445,12 +1462,13 @@ from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl`), `--lr-a
 variant's `-quiet` fill; there is no `--lr-color-surface-alt` token in this library, despite what
 older copies of this page claimed), `--lr-avatar-color` (default `var(--lr-color-text)`, whose
 private default changes for a non-neutral `variant` to that variant's loud color),
-`--lr-avatar-font-size` (default `var(--lr-font-size-sm)`) — the font size of the initials fallback,
+`--lr-avatar-font-size` (default `var(--lr-font-size-m)`) — the font size of the initials fallback,
 and of any `em`-sized slotted glyph. Its private default follows `size` alongside the diameter
-(`--lr-font-size-2xs` at `2xs`/`xs`, `--lr-font-size-xs` at `s`, `--lr-font-size-m` at `l`,
-`--lr-font-size-lg` at `xl`), so the initials track the circle instead of staying one fixed size
-across every tier. Every public value above can be inherited from an ancestor or set directly on
-the avatar and remains authoritative across size/variant states. Plus shared tokens
+(`--lr-font-size-xs` at `2xs`, `--lr-font-size-sm` at `xs`, `--lr-font-size-md-sm` at `s`,
+`--lr-font-size-m` at `m`, `--lr-font-size-lg` at `l`, and `--lr-font-size-xl` at `xl`), so the
+initials track the circle instead of staying one fixed size across every tier. Every public value
+above can be inherited from an ancestor or set directly on the avatar and remains authoritative
+across size/variant states. Plus shared tokens
 `--lr-radius`/`-pill`, `--lr-font-weight-semibold`.
 
 The variant colors are deliberately **not** the library's generic quiet-fill/on-quiet-text pairing:
@@ -1689,7 +1707,8 @@ disconnect and reconnect.
 - `label: string = ''` — the group's `role="group"` accessible name. A host-level `aria-label` wins
   if both are set; with neither, no `aria-label` is rendered.
 
-**Events:** `lr-overflow-click` (`detail: { hiddenCount: number; hiddenAvatars: LyraAvatar[] }`) —
+**Events:** `lr-overflow-click` (frozen
+`detail: { readonly hiddenCount: number; readonly hiddenAvatars: readonly LyraAvatar[] }`) —
 the badge was activated by click or Enter/Space. Non-cancelable, purely informational: the
 component keeps rendering the same collapsed stack, and a host typically wires this to its own
 popover/dialog listing the hidden members. There is no `expanded` state and no `aria-expanded`.
@@ -1702,9 +1721,11 @@ avatars are hidden through reversible component-owned state.
 `overflow-badge` (the 40px-minimum action surface; only rendered while `max` is actively
 overflowing), and `overflow-badge-visual` (the avatar-tier-sized painted disc inside it).
 
-**Themeable custom properties:** `--lr-avatar-group-avatar-size` (default `var(--lr-size-2rem)`,
+**Themeable custom properties:** `--lr-avatar-group-avatar-size` (default `var(--lr-size-3rem)`,
 with a private default stepped across the same six tiers as `<lr-avatar>`'s `--lr-avatar-size`,
-from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl`),
+from `var(--lr-size-1-5rem)` at `2xs`, through `var(--lr-size-2rem)`/
+`var(--lr-size-2-5rem)`/`var(--lr-size-3rem)`/`var(--lr-size-4rem)`, to
+`var(--lr-size-5rem)` at `xl`),
 `--lr-avatar-group-overlap` (default `var(--lr-size-neg-6px)`, whose private default follows `size`;
 a logical `margin-inline-start`, so it auto-mirrors
 under `dir="rtl"` — setting `0` or a positive length turns the stack into normal spacing),
@@ -1713,10 +1734,11 @@ under `dir="rtl"` — setting `0` or a positive length turns the stack into norm
 `--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, with a private default that follows
 `variant`), `--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, with a private default
 that follows `variant`),
-`--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-sm)`) — the font size of the "+N"
+`--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-m)`) — the font size of the "+N"
 badge label. Its private default follows `size` alongside the badge diameter, matching
-`<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars it caps read at the
-same optical weight. An inherited or direct public value remains authoritative for every hook.
+`<lr-avatar>`'s own `--lr-avatar-font-size` scale (`xs`/`sm`/`md-sm`/`m`/`lg`/`xl` font tokens from
+the `2xs` through `xl` size tiers), so the badge and the avatars it caps read at the same optical
+weight. An inherited or direct public value remains authoritative for every hook.
 
 The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier while
 the nested visual disc stays exactly avatar-sized, so small tiers do not paint as oversized 40px
@@ -1840,8 +1862,8 @@ Renders `value` as a QR code using the optional `qrcode` peer dependency. **Prop
 `label`, `size` (clamped to `1`–`2048` CSS px), `radius` (clamped to `0`–`0.5`), and
 `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`, default `H`). Standard host `color` and
 `background-color` control paint; optional `--lr-qr-code-fill` and
-`--lr-qr-code-background` aliases override those host styles, while the legacy `fill` and
-`background` properties remain highest-precedence compatibility overrides. `image` accepts
+`--lr-qr-code-background` aliases override those host styles, while the permanent upstream parity
+properties `fill` and `background` remain the highest-precedence paint inputs. `image` accepts
 a safe media URL for a centered overlay, `imageBackground` (`image-background`) paints its coverage
 box, `imageCoverage` (`image-coverage`, default `0.5`) controls that box as a fraction of the canvas
 side, and `imagePadding` (`image-padding`, default `0`) pads the image within it. Image geometry is
@@ -1932,7 +1954,8 @@ exposed as pressed/operable during idle, loading, or error state.
 
 While effectively annotatable, `image-wrapper` is a named `role="group"` with the localized
 annotation hint. Only `region` highlights whose rectangle is finite, positive and wholly within
-the 0–100 image coordinate space are rendered. IDs use first-wins uniqueness. At most
+the 0–100 image coordinate space are rendered. Malformed, empty, and blank IDs are omitted; later
+duplicates use first-wins uniqueness. At most
 `IMAGE_VIEWER_HIGHLIGHT_LIMIT` (200) region buttons are projected at once; one roving `tabindex=0`
 is maintained, Arrow keys/Home/End move within the projection, and an active item beyond the
 leading window replaces its final entry so identity stays reachable. `data-truncated` and

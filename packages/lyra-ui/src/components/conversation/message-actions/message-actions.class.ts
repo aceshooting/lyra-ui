@@ -108,7 +108,8 @@ function editIcon(): SVGTemplateResult {
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  * Built-in control names normalize first-wins before rendering, focus navigation, or intent
- * events, so each built-in can occur at most once.
+ * events, so each built-in can occur at most once. Provider action ids must be nonblank and unique
+ * within that provider; invalid actions and later duplicates are omitted.
  *
  * @customElement lr-message-actions
  * @slot - Additional controls (e.g. `lr-copy-button`, `lr-icon-button`, `lr-branch-picker`)
@@ -137,8 +138,6 @@ function editIcon(): SVGTemplateResult {
  * @since 4.0.0
  */
 export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['controls']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -149,6 +148,8 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     regenerateResponse: LYRA_DEFAULT_regenerateResponse,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['controls']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -415,7 +416,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         if (
           !action ||
           typeof action.id !== 'string' ||
-          action.id.length === 0 ||
+          action.id.trim().length === 0 ||
           seen.has(action.id) ||
           typeof action.focus !== 'function' ||
           typeof action.setTabIndex !== 'function' ||

@@ -1,21 +1,14 @@
 import { expect } from '@open-wc/testing';
+import type { ChartJsModule } from './chart-core-loader.js';
 import {
-  loadChartJs,
-  loadChartModule,
-  loadAndRegisterChartModule,
   loadChartAndZoom,
+  loadChartAndRegisterZoom,
+  loadChartAndDataLabels,
   loadChartJsWithZoomResult,
   loadChartJsWithZoom,
   loadChartJsWithDataLabelsResult,
   loadChartJsWithDataLabels,
   loadDataLabelsPlugin,
-  type ChartJsModule,
-} from './chart-loader.js';
-import {
-  loadChartAndDataLabels,
-  loadChartAndRegisterZoom,
-  loadChartAndZoom as loadChartFeatureAndZoom,
-  loadDataLabelsPlugin as loadFeatureDataLabelsPlugin,
 } from './chart-feature-loader.js';
 
 const CHART_REGISTERABLE_KEYS = [
@@ -67,52 +60,6 @@ async function captureWarnings<T>(operation: () => Promise<T>): Promise<{
     console.warn = originalWarn;
   }
 }
-
-it('resolves the Chart.js module', async () => {
-  const mod = await loadChartJs();
-  expect(mod).to.not.be.null;
-  expect(mod!.Chart).to.exist;
-});
-
-it('caches the module — a second call returns the same promise result', async () => {
-  const a = await loadChartJs();
-  const b = await loadChartJs();
-  expect(a).to.equal(b);
-});
-
-describe('loadChartModule (independent Chart.js core loading)', () => {
-  it('normalizes a valid Chart.js default export', async () => {
-    const fallback = fakeChartModule();
-    expect(
-      await loadChartModule(() => Promise.resolve({ default: fallback } as never)),
-    ).to.equal(fallback);
-  });
-
-  it('fails closed and logs the real caught error when Chart.js cannot load', async () => {
-    const chartError = new Error('specific chart.js core failure reason');
-    const { result, warnings } = await captureWarnings(() =>
-      loadChartModule(() => Promise.reject(chartError)),
-    );
-    expect(result).to.equal(null);
-    expect(warnings.flat()).to.contain(chartError);
-    expect(warnings.flat().join(' ')).to.contain('pnpm add chart.js');
-  });
-
-  it('fails closed when core registration throws instead of memoizing a rejected promise', async () => {
-    const registrationError = new Error('core registration boom');
-    const chart = fakeChartModule();
-    const { result, warnings } = await captureWarnings(() =>
-      loadAndRegisterChartModule(
-        () => Promise.resolve(chart),
-        () => { throw registrationError; },
-      ),
-    );
-
-    expect(result).to.equal(null);
-    expect(warnings.flat()).to.contain(registrationError);
-    expect(warnings.flat().join(' ')).to.contain('could not register');
-  });
-});
 
 describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => {
   it('normalizes a valid Chart.js default export and prefers a valid named namespace', async () => {
@@ -382,8 +329,8 @@ describe('tagged feature-load results', () => {
   });
 });
 
-describe('loadChartJsWithZoomResult (memoized zoom-plugin load)', () => {
-  it('serializes two concurrent legacy callers behind the same in-flight promise, then exposes the matching tagged result', async () => {
+describe('loadChartJsWithZoomResult (memoized page-wide zoom-plugin load)', () => {
+  it('serializes two concurrent callers behind the same in-flight promise, then exposes the matching tagged result', async () => {
     let zoomImportCount = 0;
     const fakeZoomModule = await import('chartjs-plugin-zoom');
     const importZoom = () => {
@@ -418,8 +365,8 @@ describe('loadChartJsWithZoomResult (memoized zoom-plugin load)', () => {
   });
 });
 
-describe('loadChartJsWithDataLabelsResult (memoized data-labels plugin load)', () => {
-  it('serializes two concurrent legacy callers behind the same in-flight promise, then exposes the matching tagged result', async () => {
+describe('loadChartJsWithDataLabelsResult (memoized page-wide data-labels plugin load)', () => {
+  it('serializes two concurrent callers behind the same in-flight promise, then exposes the matching tagged result', async () => {
     let importCount = 0;
     const fakeModule = await import('chartjs-plugin-datalabels');
     const importDataLabels = () => {
@@ -434,7 +381,7 @@ describe('loadChartJsWithDataLabelsResult (memoized data-labels plugin load)', (
     const p2 = loadChartJsWithDataLabels(importDataLabels);
     expect(p1).to.equal(p2);
 
-    const [legacy] = await Promise.all([p1, p2]);
+    const [combined] = await Promise.all([p1, p2]);
     const result1 = loadChartJsWithDataLabelsResult();
     const result2 = loadChartJsWithDataLabelsResult();
     expect(result1).to.equal(result2);
@@ -444,8 +391,8 @@ describe('loadChartJsWithDataLabelsResult (memoized data-labels plugin load)', (
       throw new Error('Expected data labels to be available.');
     }
     expect(importCount).to.equal(1);
-    expect(legacy?.mod).to.equal(result.mod);
-    expect(legacy?.plugin).to.equal(result.plugin);
+    expect(combined?.mod).to.equal(result.mod);
+    expect(combined?.plugin).to.equal(result.plugin);
   });
 
   it('resolves undefined and warns (naming the component + package) when the data-labels plugin fails to load — a partial install must not break charts', async () => {
@@ -495,9 +442,9 @@ describe('loadChartJsWithDataLabelsResult (memoized data-labels plugin load)', (
   });
 });
 
-describe('chart feature loader default imports', () => {
+describe('un-memoized default-import paths', () => {
   it('loads installed peers through each un-memoized public default path', async () => {
-    const combined = await loadChartFeatureAndZoom(undefined, undefined, true);
+    const combined = await loadChartAndZoom(undefined, undefined, true);
     expect(combined === null).to.be.false;
     expect(typeof combined?.mod.Chart).to.equal('function');
     expect(typeof combined?.zoomPlugin?.id).to.equal('string');
@@ -509,7 +456,7 @@ describe('chart feature loader default imports', () => {
     }
     expect(typeof registered.plugin.id).to.equal('string');
 
-    const standalone = await loadFeatureDataLabelsPlugin();
+    const standalone = await loadDataLabelsPlugin();
     expect(typeof standalone?.id).to.equal('string');
 
     const dataLabels = await loadChartAndDataLabels(() => Promise.resolve(fakeChartModule()));
@@ -531,9 +478,9 @@ describe('chart feature loader default imports', () => {
     expect(attemptedPeerImport).to.be.false;
   });
 
-  it('keeps the legacy data-labels adapter independent of another test module cache', async () => {
+  it('keeps the data-labels adapter independent of another test module cache', async () => {
     const { loadChartJsWithDataLabels: loadInFreshRealm } = await import(
-      './chart-feature-loader.js?coverage-legacy-data-labels',
+      './chart-feature-loader.js?coverage-data-labels'
     );
     const legacy = await loadInFreshRealm();
     expect(typeof legacy?.mod.Chart).to.equal('function');

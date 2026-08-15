@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { firstByRetrievalIdentity, isNonBlankIdentity } from '../retrieval-identity.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
@@ -41,7 +42,7 @@ export interface LyraEntity {
 export type EntityCardAppearance = LyraFrame;
 
 export interface LyraEntityCardEventMap {
-  'lr-entity-activate': CustomEvent<{ id: string }>;
+  'lr-entity-activate': CustomEvent<{ entityId: string }>;
 }
 
 /** Derives themeable `--lr-badge-*` overrides from a data-driven type color -- the same "type
@@ -73,7 +74,7 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * @customElement lr-entity-card
  * @slot - Extra body content below the property rows (e.g. a `lr-neighbor-list`).
  * @slot actions - Extra header actions alongside the built-in focus button.
- * @event lr-entity-activate - The built-in focus button was activated. `detail: { id }`.
+ * @event lr-entity-activate - The built-in focus button was activated. `detail: { entityId }`.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row wrapping the type badge, title, and actions.
  * @csspart type-badge - The resolved entity-type badge.
@@ -94,11 +95,6 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * @since 4.0.0
  */
 export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'entity',
-    'types',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -111,6 +107,11 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
     untitledEntity: LYRA_DEFAULT_untitledEntity,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'entity',
+    'types',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -140,15 +141,19 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private resolvedType(type: string): LyraNodeTypeStyle | undefined {
-    return this.types.find((t) => t.id === type);
+    return firstByRetrievalIdentity(this.types, (entry) => entry?.id).find(
+      (entry) => entry.id === type
+    );
   }
 
   private onFocusClick = (): void => {
-    if (this.entity) this.emit('lr-entity-activate', { id: this.entity.id });
+    if (this.entity && isNonBlankIdentity(this.entity.id)) {
+      this.emit('lr-entity-activate', { entityId: this.entity.id });
+    }
   };
 
   override render(): TemplateResult {
-    if (!this.entity) {
+    if (!this.entity || !isNonBlankIdentity(this.entity.id)) {
       return html`<div part="base">
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;

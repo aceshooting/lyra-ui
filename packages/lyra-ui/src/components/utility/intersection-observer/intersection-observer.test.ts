@@ -70,6 +70,9 @@ describe('<lr-intersection-observer>', () => {
       latest!.callback([entry], {} as IntersectionObserver);
       const [batch, item] = await Promise.all([batchEvent, itemEvent]);
       expect(batch.detail.entries).to.deep.equal([entry]);
+      expect(batch.detail.entries[0] === entry).to.equal(true);
+      expect(Object.isFrozen(batch.detail)).to.equal(true);
+      expect(Object.isFrozen(batch.detail.entries)).to.equal(true);
       expect(item.detail.entry).to.equal(entry);
       expect(target.classList.contains('visible')).to.be.true;
       expect(latest?.unobserved.length).to.equal(1);

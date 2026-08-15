@@ -169,6 +169,20 @@ it("composes transcript and agent details from controlled data", async () => {
   expect(el.shadowRoot!.querySelector('[part="details"]')).to.exist;
 });
 
+it('gates built-in detail sections on canonical nonblank collection identities', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace></lr-agent-workspace>`);
+  el.tools = [{ id: ' ', name: 'blank', args: {}, status: 'success' }] as LyraAgentWorkspace['tools'];
+  el.retrievalChunks = [{ ...chunk, id: ' ' }, null] as unknown as LyraAgentWorkspace['retrievalChunks'];
+  el.citations = [{ id: ' ' }, null] as unknown as LyraAgentWorkspace['citations'];
+  el.contextSegments = [{ id: ' ', label: 'blank', text: '', tokens: 0 }] as LyraAgentWorkspace['contextSegments'];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('lr-tool-timeline') === null).to.be.true;
+  expect(el.shadowRoot!.querySelector('lr-retrieval-results') === null).to.be.true;
+  expect(el.shadowRoot!.querySelector('lr-grounding-summary') === null).to.be.true;
+  expect(el.shadowRoot!.querySelector('lr-context-inspector') === null).to.be.true;
+});
+
 it("forwards caller-supplied retrieval failure text through the child errorText contract", async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
     <lr-agent-workspace
@@ -334,19 +348,19 @@ it("forwards a controlled retrieval selection as lr-retrieval-select, without le
   const listener = oneEvent(el, "lr-retrieval-select");
   results.dispatchEvent(
     new CustomEvent("lr-select", {
-      detail: { ids: ["chunk-1"], chunks: [chunk] },
+      detail: { chunkIds: ['chunk-1'], chunks: [chunk] },
       bubbles: true,
       composed: true,
     })
   );
   const event = (await listener) as CustomEvent<{
-    ids: string[];
+    chunkIds: string[];
     chunks: (typeof chunk)[];
   }>;
 
-  expect(event.detail).to.deep.equal({ ids: ["chunk-1"], chunks: [chunk] });
+  expect(event.detail).to.deep.equal({ chunkIds: ['chunk-1'], chunks: [chunk] });
   expect(
-    el.selectedRetrievalIds,
+    el.selectedRetrievalChunkIds,
     "request events do not mutate controlled selection"
   ).to.deep.equal([]);
   expect(

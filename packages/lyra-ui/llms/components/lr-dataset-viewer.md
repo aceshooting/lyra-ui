@@ -23,7 +23,7 @@ item-role="row">` for the body) using the optional `papaparse` peer. The documen
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
 header row always occupying row 1 (this component always parses with a header row, so the first row
 is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed row into view via
-the virtualized list's `active-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
+the virtualized list's `active-item-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
 focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact. A jump
 whose document is replaced by a concurrent `src` reassignment mid-flight reports `found: false`
 rather than a phantom success, and a header-row target scrolls with the same
@@ -54,7 +54,7 @@ budget is a resource-limit error instead.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+search/navigation/clear, canonical source reset, and effective-locale re-evaluation. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base` (a persistent `role="region"` named by the host `aria-label` or `name`, in

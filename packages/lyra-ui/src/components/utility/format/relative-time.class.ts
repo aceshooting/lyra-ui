@@ -7,15 +7,18 @@ import { finiteDuration } from '../../../internal/numbers.js';
 import {
   relativeTimeFormatOptions,
   dateSourceConverter,
-  type FormatDisplay,
-  type RelativeTimeNumeric,
+  type LyraFormatDisplay,
+  type LyraRelativeTimeNumeric,
 } from './format-options.js';
 
-export type { FormatDisplay as RelativeTimeFormat, RelativeTimeNumeric } from './format-options.js';
+export type {
+  LyraFormatDisplay as RelativeTimeFormat,
+  LyraRelativeTimeNumeric,
+} from './format-options.js';
 
-export type RelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
+export type LyraRelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
 
-const DIVISORS: Record<RelativeTimeUnit, number> = {
+const DIVISORS: Record<LyraRelativeTimeUnit, number> = {
   year: 31_536_000,
   quarter: 7_884_000,
   month: 2_628_000,
@@ -25,7 +28,7 @@ const DIVISORS: Record<RelativeTimeUnit, number> = {
   minute: 60,
   second: 1,
 };
-const UNITS = Object.keys(DIVISORS) as RelativeTimeUnit[];
+const UNITS = Object.keys(DIVISORS) as LyraRelativeTimeUnit[];
 
 /**
  * `<lr-relative-time>` — locale-aware relative time that can refresh automatically. Numeric
@@ -39,9 +42,9 @@ const UNITS = Object.keys(DIVISORS) as RelativeTimeUnit[];
 export class LyraRelativeTime extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   @property({ converter: dateSourceConverter }) date: string | number | Date = new Date();
-  @property() unit: RelativeTimeUnit | 'auto' = 'auto';
-  @property() format: FormatDisplay = 'long';
-  @property() numeric: RelativeTimeNumeric = 'auto';
+  @property() unit: LyraRelativeTimeUnit | 'auto' = 'auto';
+  @property() format: LyraFormatDisplay = 'long';
+  @property() numeric: LyraRelativeTimeNumeric = 'auto';
   @property({ type: Boolean, attribute: 'sync' }) sync = false;
   private timer?: number;
   private timerOwner?: Window;
@@ -133,8 +136,8 @@ export class LyraRelativeTime extends LyraElement {
     | {
         target: number;
         seconds: number;
-        requestedUnit: RelativeTimeUnit | 'auto';
-        selected: RelativeTimeUnit;
+        requestedUnit: LyraRelativeTimeUnit | 'auto';
+        selected: LyraRelativeTimeUnit;
         value: number;
       }
     | undefined {
@@ -142,7 +145,7 @@ export class LyraRelativeTime extends LyraElement {
     const target = source instanceof Date ? source.getTime() : new Date(source).getTime();
     if (!Number.isFinite(target)) return undefined;
     const seconds = (target - Date.now()) / 1000;
-    const requestedUnit = this.unit === 'auto' || UNITS.includes(this.unit as RelativeTimeUnit) ? this.unit : 'auto';
+    const requestedUnit = this.unit === 'auto' || UNITS.includes(this.unit as LyraRelativeTimeUnit) ? this.unit : 'auto';
     const selected =
       requestedUnit === 'auto'
         ? UNITS.find((candidate) => Math.abs(seconds) >= DIVISORS[candidate]) ?? 'second'

@@ -33,7 +33,7 @@ import { composedParentElement } from '../../../internal/active-element.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -104,7 +104,6 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     radioRequired: LYRA_DEFAULT_radioRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END

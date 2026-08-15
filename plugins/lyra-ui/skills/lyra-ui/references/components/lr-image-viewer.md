@@ -69,7 +69,8 @@ exposed as pressed/operable during idle, loading, or error state.
 
 While effectively annotatable, `image-wrapper` is a named `role="group"` with the localized
 annotation hint. Only `region` highlights whose rectangle is finite, positive and wholly within
-the 0–100 image coordinate space are rendered. IDs use first-wins uniqueness. At most
+the 0–100 image coordinate space are rendered. Malformed, empty, and blank IDs are omitted; later
+duplicates use first-wins uniqueness. At most
 `IMAGE_VIEWER_HIGHLIGHT_LIMIT` (200) region buttons are projected at once; one roving `tabindex=0`
 is maintained, Arrow keys/Home/End move within the projection, and an active item beyond the
 leading window replaces its final entry so identity stays reachable. `data-truncated` and

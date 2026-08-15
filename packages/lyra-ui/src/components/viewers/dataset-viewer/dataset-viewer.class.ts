@@ -43,23 +43,7 @@ import {
 } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_anchorJumped,
-  LYRA_DEFAULT_anchorJumpedToPage,
-  LYRA_DEFAULT_anchorNotFound,
-  LYRA_DEFAULT_cellHighlightWithLabel,
-  LYRA_DEFAULT_datasetViewerCaption,
-  LYRA_DEFAULT_datasetViewerCaptionNamed,
-  LYRA_DEFAULT_datasetViewerEmpty,
-  LYRA_DEFAULT_datasetViewerMissingParser,
-  LYRA_DEFAULT_documentPreviewEmpty,
-  LYRA_DEFAULT_documentPreviewFailedToLoad,
-  LYRA_DEFAULT_documentPreviewResourceTooLarge,
-  LYRA_DEFAULT_documentPreviewTypeDataset,
-  LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-  LYRA_DEFAULT_highlightWithLabel,
-  LYRA_DEFAULT_loadingDocument,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface DatasetTable {
@@ -108,7 +92,7 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with
  * the header row always occupying row 1 (this component always parses with PapaParse's `header:
  * true`, so the first row is never part of the virtualized body) -- `scrollToAnchor()` scrolls the
- * addressed row into view via the virtualized list's `active-id`. A `sheet`-qualified anchor never
+ * addressed row into view via the virtualized list's `active-item-id`. A `sheet`-qualified anchor never
  * resolves here -- this viewer has no sheets. `highlights` paint as a `part="cell-highlight"` cell
  * wrapping a focusable `part="cell-highlight-action"` native button (keeping the ARIA table tree
  * intact) on membership, recomputed per row inside `renderRow()` so a row scrolled out and back
@@ -129,7 +113,7 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
- *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
+ *   changes, including source-reset and effective-locale re-evaluation. `detail: { query,
  *   matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code units,
  *   scans at most 4,000,000 cell code units, and retains at most 1,000 matches;
  *   `matchCountExact=false` identifies a ceiling-truncated lower bound.
@@ -165,26 +149,24 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
 ) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      anchorJumped: LYRA_DEFAULT_anchorJumped,
-      anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
-      anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-      cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
-      datasetViewerCaption: LYRA_DEFAULT_datasetViewerCaption,
-      datasetViewerCaptionNamed: LYRA_DEFAULT_datasetViewerCaptionNamed,
-      datasetViewerEmpty: LYRA_DEFAULT_datasetViewerEmpty,
-      datasetViewerMissingParser: LYRA_DEFAULT_datasetViewerMissingParser,
-      documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
-      documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
-      documentPreviewResourceTooLarge:
-        LYRA_DEFAULT_documentPreviewResourceTooLarge,
-      documentPreviewTypeDataset: LYRA_DEFAULT_documentPreviewTypeDataset,
-      documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-      highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
-      loadingDocument: LYRA_DEFAULT_loadingDocument,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
+    datasetViewerCaption: LYRA_DEFAULT_datasetViewerCaption,
+    datasetViewerCaptionNamed: LYRA_DEFAULT_datasetViewerCaptionNamed,
+    datasetViewerEmpty: LYRA_DEFAULT_datasetViewerEmpty,
+    datasetViewerMissingParser: LYRA_DEFAULT_datasetViewerMissingParser,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDataset: LYRA_DEFAULT_documentPreviewTypeDataset,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [
@@ -208,13 +190,14 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
 
   @state() private fetchState: DatasetFetchState = { kind: 'idle' };
   /** The virtualized body row currently scrolled into view via `scrollToAnchor()` or search
-   *  navigation -- bound to `<lr-virtual-list>`'s own `active-id`. */
+   *  navigation -- bound to `<lr-virtual-list>`'s own `active-item-id`. */
   @state() private activeRowKey: number | '' = '';
   @state() private searchMatches: { row: number; col: number }[] = [];
   private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
   private lastSearchLocale = '';
+  private pendingSearchResetEvent = false;
   private loadTask = new LatestTask();
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
@@ -269,8 +252,10 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
-      // A new document invalidates every previous row/column coordinate -- reset silently (no
-      // event), mirroring <lr-csv-viewer>'s identical src-change reset.
+      this.pendingSearchResetEvent ||= this.searchQuery !== ''
+        || this.searchMatches.length > 0
+        || !this.searchMatchCountExact
+        || this.searchActiveIndex !== -1;
       this.searchQuery = '';
       this.searchMatches = [];
       this.searchMatchCountExact = true;
@@ -292,6 +277,10 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       this.scheduleAfterUpdate(() => {
         void this.load();
       });
+    if (changed.has('src') && this.pendingSearchResetEvent) {
+      this.pendingSearchResetEvent = false;
+      this.emitSearchChange();
+    }
     const locale = this.effectiveLocale;
     if (locale !== this.lastSearchLocale) {
       const shouldRecompute = !!this.searchQuery;
@@ -702,7 +691,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
               .renderItem=${(row: unknown, index: number) =>
                 this.renderRow(row as Record<string, string>, index, fields)}
               .keyFunction=${(_item: unknown, index: number) => index}
-              .activeId=${this.activeRowKey}
+              .activeItemId=${this.activeRowKey}
               item-role="row"
               row-index-offset="1"
               @lr-load-more=${this.stopInternalEvent}

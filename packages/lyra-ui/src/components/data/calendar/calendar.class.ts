@@ -66,8 +66,6 @@ export type CalendarView = 'month' | 'agenda';
  * @since 4.0.0
  */
 export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['events']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -78,6 +76,8 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     calendarPreviousMonth: LYRA_DEFAULT_calendarPreviousMonth,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['events']);
 
   static override styles = [LyraElement.styles, styles];
   @property({ attribute: false }) events: readonly CalendarEvent[] = [];

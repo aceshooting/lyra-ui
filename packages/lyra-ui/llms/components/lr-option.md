@@ -84,7 +84,9 @@ therefore cannot widen a 320px LTR or RTL picker.
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
   `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = false`,
   `autocapitalize: string = ''`, and `autocorrect: boolean = true` (attribute values `on`/`off`) —
-  native editing-assistance properties forwarded to the internal filter input. The lowercase
+  native editing-assistance properties forwarded to the internal filter input. Removing a
+  `spellcheck` attribute after an override restores this component's declared `false` default.
+  The lowercase
   mapped IDLs `inputmode` and `enterkeyhint` delegate to the corresponding camel-case native
   properties
 - `inputValue: string` — the live filter input text; programmatic writes are event-silent

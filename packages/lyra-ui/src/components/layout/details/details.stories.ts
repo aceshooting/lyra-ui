@@ -15,6 +15,24 @@ export const AccessibleNamePrecedence: StoryObj = {
   </lr-details>`,
 };
 
+/** Disabled disclosures keep their native summary semantics and announced disabled state while
+ * leaving sequential Tab navigation, matching a disabled `lr-accordion-item` trigger. */
+export const Disabled: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The summary exposes `aria-disabled="true"`, blocks pointer/keyboard activation, and uses `tabindex="-1"` so sequential navigation skips the unavailable disclosure.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-details summary="Unavailable settings" disabled>
+      These settings are unavailable.
+    </lr-details>
+  `,
+};
+
 export const GroupedWithCustomIcons: StoryObj = {
   name: 'Named group, appearance, and custom icons',
   parameters: {

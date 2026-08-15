@@ -1477,7 +1477,7 @@ payload onto them once, at the edge.
   `lr-subagent-panel` for nested runs and `lr-mcp-app` only for executable MCP App resources.
 - **Show grounded output:** `lr-rag-answer`; pass claim records for `lr-claim-evidence`, use
   `lr-retrieval-compare` for retrieval tuning and `lr-rag-eval-dashboard` for run metrics.
-- **Develop prompts/tools:** `lr-prompt-studio` and `lr-schema-viewer`.
+- **Develop prompts/tools:** `lr-prompt-studio` and `lr-json-schema-viewer`.
 - **Build voice sessions:** `lr-realtime-session`; it composes the existing audio visualizer,
   push-to-talk control, and transcript feed while leaving transport ownership with the host.
 
@@ -2584,7 +2584,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-env-list": unknown;
   "lr-eval-dataset": unknown;
   "lr-eval-result": unknown;
-  "lr-evaluation-run": unknown;
+  "lr-eval-run": unknown;
   "lr-export-button": unknown;
   "lr-file-icon": unknown;
   "lr-file-input": unknown;
@@ -2700,7 +2700,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-retrieval-trace": unknown;
   "lr-rubric-form": unknown;
   "lr-scatter-chart": unknown;
-  "lr-schema-viewer": unknown;
+  "lr-json-schema-viewer": unknown;
   "lr-scroller": unknown;
   "lr-segmented": unknown;
   "lr-select": unknown;
@@ -2968,7 +2968,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-env-list": unknown;
   "lr-eval-dataset": unknown;
   "lr-eval-result": unknown;
-  "lr-evaluation-run": unknown;
+  "lr-eval-run": unknown;
   "lr-export-button": unknown;
   "lr-file-icon": unknown;
   "lr-file-input": unknown;
@@ -3084,7 +3084,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-retrieval-trace": unknown;
   "lr-rubric-form": unknown;
   "lr-scatter-chart": unknown;
-  "lr-schema-viewer": unknown;
+  "lr-json-schema-viewer": unknown;
   "lr-scroller": unknown;
   "lr-segmented": unknown;
   "lr-select": unknown;
@@ -3254,7 +3254,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-env-list": unknown;
   "lr-eval-dataset": unknown;
   "lr-eval-result": unknown;
-  "lr-evaluation-run": unknown;
+  "lr-eval-run": unknown;
   "lr-export-button": unknown;
   "lr-file-icon": unknown;
   "lr-file-input": unknown;
@@ -3370,7 +3370,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-retrieval-trace": unknown;
   "lr-rubric-form": unknown;
   "lr-scatter-chart": unknown;
-  "lr-schema-viewer": unknown;
+  "lr-json-schema-viewer": unknown;
   "lr-scroller": unknown;
   "lr-segmented": unknown;
   "lr-select": unknown;
@@ -3580,7 +3580,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-env-list": unknown;
   "lr-eval-dataset": unknown;
   "lr-eval-result": unknown;
-  "lr-evaluation-run": unknown;
+  "lr-eval-run": unknown;
   "lr-export-button": unknown;
   "lr-file-icon": unknown;
   "lr-file-input": unknown;
@@ -3696,7 +3696,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-retrieval-trace": unknown;
   "lr-rubric-form": unknown;
   "lr-scatter-chart": unknown;
-  "lr-schema-viewer": unknown;
+  "lr-json-schema-viewer": unknown;
   "lr-scroller": unknown;
   "lr-segmented": unknown;
   "lr-select": unknown;

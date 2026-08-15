@@ -52,9 +52,12 @@ the app level.
   infinitely-looping attention animation for a badge that has to be noticed: `pulse` draws an
   expanding ring, `bounce` hops the surface vertically (block-direction, so it needs no RTL
   mirroring). Both stop outright — not merely shorten — under `prefers-reduced-motion: reduce`.
+  The default does not materialize an attribute; an explicit `attention="none"` is authoritative
+  and suppresses the `pulse` shorthand.
 - `pulse: boolean = false` (reflected) — upstream-compatible shorthand for the pulse attention
-  treatment. Lyra's intentional `variant="neutral"` and `appearance="filled-outlined"` defaults
-  remain unchanged because the two pinned upstreams disagree on both defaults.
+  treatment while the `attention` attribute is omitted. Any explicit attention value wins. Lyra's
+  intentional `variant="neutral"` and `appearance="filled-outlined"` defaults remain unchanged
+  because the two pinned upstreams disagree on both defaults.
 - `withRemove: boolean = false` (attribute `with-remove`, reflected) — **`lr-tag` only, new in
   8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
   present on the markup.
@@ -77,9 +80,12 @@ removes its action, focus moves to the nearest available composed action. Focus 
 the listener is preserved.
 
 For a removable tag, `focus(options?)`, `blur()`, and `click()` delegate to its native remove
-button. Setting `withRemove` / `removable` false revokes `focus()` and `click()` synchronously,
-before the outgoing button is rerendered. `blur()` remains available during that same-task window
-so it can release the stale focused button; after render there is no owner to blur.
+button. A plain tag's `click()` retains native `HTMLElement.click()` behavior and dispatches one
+host `click`; its `focus()` has no delegated target. Setting `withRemove` / `removable` false
+revokes remove-button focus and activation synchronously before the outgoing button is rerendered,
+so same-task `click()` uses the plain host behavior instead of firing `lr-remove`. `blur()` remains
+available during that same-task window so it can release the stale focused button; after render
+there is no owner to blur.
 
 **Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
 (content after it) — both new in 8.0.0. Each wrapper collapses entirely (`display: none`, so no

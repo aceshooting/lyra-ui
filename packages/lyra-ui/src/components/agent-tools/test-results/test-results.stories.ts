@@ -6,6 +6,14 @@ import { testResultDetailSlotName, type TestSuiteResult } from './test-results.c
 const meta: Meta = {
   title: 'Test Results',
   component: 'lr-test-results',
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A bounded test-suite summary. Empty and blank suite or test IDs are omitted and later duplicates are first-wins before counts, state, slots, focus, and events.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

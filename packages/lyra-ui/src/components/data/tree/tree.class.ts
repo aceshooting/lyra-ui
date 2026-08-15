@@ -1,6 +1,9 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventDetailSnapshot,
+} from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
@@ -28,16 +31,22 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_treeNodeM
 export type { TreeBadge, LyraTreeNodeData, TreeSelection };
 
 export interface LyraTreeEventMap {
-  'lr-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
-  'lr-node-select': CustomEvent<{ id: string }>;
-  'lr-reorder': CustomEvent<{ id: string; parentId: string | null; fromIndex: number; toIndex: number }>;
-  'lr-selection-change': CustomEvent<{ readonly selection: readonly LyraTreeItem[] }>;
-  'lr-expand': CustomEvent<{ item: LyraTreeItem }>;
-  'lr-after-expand': CustomEvent<{ item: LyraTreeItem }>;
-  'lr-collapse': CustomEvent<{ item: LyraTreeItem }>;
-  'lr-after-collapse': CustomEvent<{ item: LyraTreeItem }>;
-  'lr-lazy-change': CustomEvent<{ item: LyraTreeItem; loading: boolean }>;
-  'lr-lazy-load': CustomEvent<{ item: LyraTreeItem; generation: number }>;
+  'lr-node-toggle': CustomEvent<{ nodeId: string; expanded: boolean }>;
+  'lr-node-select': CustomEvent<{ nodeId: string }>;
+  'lr-reorder': CustomEvent<{ nodeId: string; parentNodeId: string | null; fromIndex: number; toIndex: number }>;
+  'lr-selection-change': CustomEvent<
+    LyraEventDetailSnapshot<{ readonly selection: readonly LyraTreeItem[] }>
+  >;
+  'lr-expand': CustomEvent<LyraEventDetailSnapshot<{ readonly item: LyraTreeItem }>>;
+  'lr-after-expand': CustomEvent<LyraEventDetailSnapshot<{ readonly item: LyraTreeItem }>>;
+  'lr-collapse': CustomEvent<LyraEventDetailSnapshot<{ readonly item: LyraTreeItem }>>;
+  'lr-after-collapse': CustomEvent<LyraEventDetailSnapshot<{ readonly item: LyraTreeItem }>>;
+  'lr-lazy-change': CustomEvent<
+    LyraEventDetailSnapshot<{ readonly item: LyraTreeItem; readonly loading: boolean }>
+  >;
+  'lr-lazy-load': CustomEvent<
+    LyraEventDetailSnapshot<{ readonly item: LyraTreeItem; readonly generation: number }>
+  >;
 }
 
 const TREE_SELECTIONS = new Set<TreeSelection>(['single', 'multiple', 'leaf', 'leaf-multiple']);
@@ -116,6 +125,8 @@ function normalizeTreeData(input: unknown): {
   const rootLength = arrayLength(input);
   let truncated = false;
   let accepted = 0;
+  const seenIds = new Set<string>();
+  const identityFilteredCollections = new Set<MutableTreeNodeData[]>();
   const jobs: Array<{
     source: unknown;
     target: MutableTreeNodeData[];
@@ -138,14 +149,22 @@ function normalizeTreeData(input: unknown): {
     const raw = job.source;
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
       truncated = true;
+      identityFilteredCollections.add(job.target);
       continue;
     }
     const id = ownValue(raw, 'id');
     const label = ownValue(raw, 'label');
-    if (typeof id !== 'string' || id.length === 0 || typeof label !== 'string') {
+    if (
+      typeof id !== 'string' ||
+      id.trim() === '' ||
+      seenIds.has(id) ||
+      typeof label !== 'string'
+    ) {
       truncated = true;
+      identityFilteredCollections.add(job.target);
       continue;
     }
+    seenIds.add(id);
 
     const node: MutableTreeNodeData = { id, label };
     const selected = ownValue(raw, 'selected');
@@ -172,8 +191,8 @@ function normalizeTreeData(input: unknown): {
 
     const rawChildren = ownValue(raw, 'children');
     const childCount = arrayLength(rawChildren);
-    declaredChildrenAtPath.set(path, childCount);
     if (childCount === 0) continue;
+    declaredChildrenAtPath.set(path, childCount);
     if (job.depth >= TREE_MAX_RENDER_DEPTH || job.ancestors.has(raw)) {
       truncated = true;
       continue;
@@ -198,10 +217,20 @@ function normalizeTreeData(input: unknown): {
     if (node.children) Object.freeze(node.children);
     Object.freeze(node);
   }
+  const normalizedJobs = root.map((node, index) => ({ node, path: String(index) }));
+  while (normalizedJobs.length > 0) {
+    const { node, path } = normalizedJobs.pop()!;
+    const children = node.children ?? [];
+    if (identityFilteredCollections.has(children)) {
+      declaredChildrenAtPath.set(path, children.length);
+    }
+    for (let index = children.length - 1; index >= 0; index--)
+      normalizedJobs.push({ node: children[index]!, path: `${path}/${index}` });
+  }
   return {
     data: Object.freeze(root),
     declaredChildrenAtPath,
-    declaredRootCount: rootLength,
+    declaredRootCount: identityFilteredCollections.has(root) ? root.length : rootLength,
     truncated,
   };
 }
@@ -248,10 +277,9 @@ function isInertWithin(node: Element, root: Element): boolean {
  * library's own original shape and remains fully supported. A tree containing any author-written
  * `<lr-tree-item>` child is read purely as the declarative model and `data` is ignored, so the two
  * never interleave ambiguously; the empty state renders only when neither model has any items.
- * Data-model `LyraTreeNodeData.id` values are global identities and must be unique across the reachable
- * hierarchy. Invalid duplicates stay visible for diagnosis, but only the first depth-first
- * occurrence owns the id; every later occurrence is disabled and excluded from focus, selection,
- * expansion, and reorder requests until the host supplies unique data.
+ * Data-model `LyraTreeNodeData.id` values are nonblank global identities and must be unique across
+ * the reachable hierarchy. Malformed rows and later duplicate ids are omitted before rendering,
+ * focus, selection, expansion, or reorder requests; the first valid depth-first occurrence wins.
  *
  * Implements the WAI-ARIA treeitem keyboard pattern: a single roving
  * `tabindex` (tracked here as `activeId`, pushed down to every
@@ -281,9 +309,9 @@ function isInertWithin(node: Element, root: Element): boolean {
  * that a move already happened; unrelated updates keep an asynchronous request pending.
  *
  * @customElement lr-tree
- * @event lr-node-toggle - `detail: { id, expanded }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
- * @event lr-node-select - `detail: { id }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
- * @event lr-reorder - `detail: { id, parentId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused node within its **own parent's** child list (`parentId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent. Success is announced only after the rendered sibling order confirms the request.
+ * @event lr-node-toggle - `detail: { nodeId, expanded }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
+ * @event lr-node-select - `detail: { nodeId }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
+ * @event lr-reorder - `detail: { nodeId, parentNodeId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused node within its **own parent's** child list (`parentNodeId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent. Success is announced only after the rendered sibling order confirms the request.
  * @event lr-selection-change - Selection changed. `detail: { selection }`, where `selection` is the current `selectedItems` array.
  * @event lr-expand - Bubbles from the item whose expansion began. `detail: { item }`.
  * @event lr-after-expand - Bubbles after an item's expansion motion completes. `detail: { item }`.
@@ -1114,7 +1142,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * same-value, no-op assignment for them.
    */
   private onNodeActivate = (e: Event): void => {
-    const id = (e as CustomEvent<{ id: string }>).detail.id;
+    const id = (e as CustomEvent<{ nodeId: string }>).detail.nodeId;
     const node = this.allNodeElements().find((candidate) => candidate.nodeId === id);
     if (node && !node.isDisabled) {
       this.activeId = id;
@@ -1126,7 +1154,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   };
 
   private onNodeSelect = (event: Event): void => {
-    const id = (event as CustomEvent<{ id: string }>).detail.id;
+    const id = (event as CustomEvent<{ nodeId: string }>).detail.nodeId;
     const node = this.allNodeElements().find((candidate) => candidate.nodeId === id);
     if (!node || node.isDisabled) return;
     this.activeId = id;
@@ -1213,8 +1241,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       toIndex,
     };
     this.emit('lr-reorder', {
-      id,
-      parentId: parent?.nodeId ?? null,
+      nodeId: id,
+      parentNodeId: parent?.nodeId ?? null,
       fromIndex: index,
       toIndex,
     });

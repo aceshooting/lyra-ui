@@ -64,18 +64,7 @@ import {
 } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_chooseDate,
-  LYRA_DEFAULT_clear,
-  LYRA_DEFAULT_date,
-  LYRA_DEFAULT_dateInputFutureDisabled,
-  LYRA_DEFAULT_dateInputInvalid,
-  LYRA_DEFAULT_dateInputMaxMessage,
-  LYRA_DEFAULT_dateInputMinMessage,
-  LYRA_DEFAULT_dateInputPastDisabled,
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_openCalendar,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chooseDate, LYRA_DEFAULT_clear, LYRA_DEFAULT_date, LYRA_DEFAULT_dateInputFutureDisabled, LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_dateInputPastDisabled, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_openCalendar } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Determines the locale's day/month/year field order from a real formatted
@@ -303,10 +292,10 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   `preventDefault()` also cancels the native `invalid` event it aliases, suppressing the
  *   browser's own validation bubble and `reportValidity()`'s focus/scroll.
  * @csspart date-input - The date-input wrapper.
- * @csspart base - Deprecated alias wrapper for `date-input`.
+ * @csspart base - Permanent compatibility name for the nested base wrapper.
  * @csspart form-control - The outer form-control wrapper.
- * @csspart form-control-label - The label wrapper.
- * @csspart label - Deprecated label alias.
+ * @csspart form-control-label - The outer label wrapper.
+ * @csspart label - Permanent compatibility name for the inner label-content wrapper.
  * @csspart form-control-input - The editable date surface.
  * @csspart input-wrapper - The input and button wrapper.
  * @csspart input - The text input.
@@ -376,20 +365,19 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
 export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      chooseDate: LYRA_DEFAULT_chooseDate,
-      clear: LYRA_DEFAULT_clear,
-      date: LYRA_DEFAULT_date,
-      dateInputFutureDisabled: LYRA_DEFAULT_dateInputFutureDisabled,
-      dateInputInvalid: LYRA_DEFAULT_dateInputInvalid,
-      dateInputMaxMessage: LYRA_DEFAULT_dateInputMaxMessage,
-      dateInputMinMessage: LYRA_DEFAULT_dateInputMinMessage,
-      dateInputPastDisabled: LYRA_DEFAULT_dateInputPastDisabled,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      openCalendar: LYRA_DEFAULT_openCalendar,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    chooseDate: LYRA_DEFAULT_chooseDate,
+    clear: LYRA_DEFAULT_clear,
+    date: LYRA_DEFAULT_date,
+    dateInputFutureDisabled: LYRA_DEFAULT_dateInputFutureDisabled,
+    dateInputInvalid: LYRA_DEFAULT_dateInputInvalid,
+    dateInputMaxMessage: LYRA_DEFAULT_dateInputMaxMessage,
+    dateInputMinMessage: LYRA_DEFAULT_dateInputMinMessage,
+    dateInputPastDisabled: LYRA_DEFAULT_dateInputPastDisabled,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    openCalendar: LYRA_DEFAULT_openCalendar,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, sizes, styles];

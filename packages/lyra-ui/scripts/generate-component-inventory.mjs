@@ -1805,7 +1805,7 @@ const immutableTreeSelectionDrift = (member) => [
     member,
     expected: '{ selection: LyraTreeItem[] }',
     actual:
-      'CustomEvent<{ readonly selection: readonly LyraTreeItem[] }>',
+      'CustomEvent< LyraEventDetailSnapshot<{ readonly selection: readonly LyraTreeItem[] }> >',
   },
 ];
 
@@ -1829,21 +1829,21 @@ const WA_DATA_GRID_V9_DRIFT = [
     section: 'events',
     member: 'request',
     expected: 'Event',
-    actual: 'CustomEvent<DataGridRequest>',
+    actual: 'CustomEvent<LyraEventDetailSnapshot<DataGridRequest>>',
   },
   {
     code: 'event-type-mismatch',
     section: 'events',
     member: 'wa-column-move',
     expected: 'Event',
-    actual: 'CustomEvent<DataGridColumnMoveDetail>',
+    actual: 'CustomEvent<LyraEventDetailSnapshot<DataGridColumnMoveDetail>>',
   },
   {
     code: 'event-type-mismatch',
     section: 'events',
     member: 'wa-data-error',
     expected: 'Event',
-    actual: 'CustomEvent<DataGridDataErrorDetail>',
+    actual: 'CustomEvent<LyraEventDetailSnapshot<DataGridDataErrorDetail>>',
   },
   {
     code: 'missing-event',
@@ -1863,7 +1863,7 @@ const WA_DATA_GRID_V9_DRIFT = [
     section: 'events',
     member: 'wa-row-select',
     expected: 'Event',
-    actual: 'CustomEvent<DataGridSelectionDetail<Row>>',
+    actual: 'CustomEvent<Readonly<DataGridSelectionDetail<Row>>>',
   },
   {
     code: 'event-type-mismatch',
@@ -1969,6 +1969,13 @@ const SHOELACE_LIFECYCLE_CANCELABILITY_RATIONALE =
 
 const SL_SPLIT_PANEL_MODULE_EXPORT_DRIFT = [
   {
+    code: 'type-mismatch',
+    section: 'attributes',
+    member: 'snap',
+    expected: 'string | SnapFunction',
+    actual: 'string | LyraSplitPanelSnapFunction | undefined',
+  },
+  {
     code: 'module-export-signature-mismatch',
     section: 'moduleExports',
     member: 'SNAP_NONE',
@@ -2003,7 +2010,7 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'The published Shoelace manifest exports SNAP_NONE without documenting its callable signature; Lyra exports the same helper with an explicit typed parameter, so the tag rewrite remains available but consumers that call the helper require review.',
+        'The published Shoelace manifest exports SNAP_NONE without documenting its callable signature; Lyra exports the same helper with an explicit typed parameter, so the tag rewrite remains available but consumers that call the helper require review. Lyra also renamed its own SnapFunction export to LyraSplitPanelSnapFunction (a Lyra-original type, not part of the Shoelace public surface) as part of the 9.0.0 Lyra*-prefix harmonization.',
       expectedDrift: SL_SPLIT_PANEL_MODULE_EXPORT_DRIFT,
     },
   ],
@@ -2124,6 +2131,200 @@ const DECISION_OVERRIDES = new Map([
       rationale:
         'Lyra always renders a sandbox with an `allow-same-origin` default, rejects active and non-embeddable URL schemes, and drops `allow-same-origin` when paired with `allow-scripts`; migration leaves the use unchanged and reports the security-sensitive difference.',
       expectedDrift: [],
+    },
+  ],
+  [
+    'sl-resize-observer',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra freezes the entries array into an immutable snapshot at dispatch time; migrated code that mutates the array in place must create its own copy.',
+      expectedDrift: [
+        {
+          code: 'event-type-mismatch',
+          section: 'events',
+          member: 'sl-resize',
+          expected: '{ entries: ResizeObserverEntry[] }',
+          actual:
+            'CustomEvent< Readonly<{ entries: readonly ResizeObserverEntry[] }> >',
+        },
+      ],
+    },
+  ],
+  [
+    'wa-accordion',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra snapshots each expand/collapse event detail into a frozen readonly value at dispatch time rather than exposing a live mutable item reference; migrated handlers that mutate the event detail in place must be reviewed.',
+      expectedDrift: [
+        {
+          code: 'event-type-mismatch',
+          section: 'events',
+          member: 'wa-after-collapse',
+          expected: '{ item: LyraAccordionItem }',
+          actual:
+            'CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>',
+        },
+        {
+          code: 'event-type-mismatch',
+          section: 'events',
+          member: 'wa-after-expand',
+          expected: '{ item: LyraAccordionItem }',
+          actual:
+            'CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>',
+        },
+        {
+          code: 'event-type-mismatch',
+          section: 'events',
+          member: 'wa-collapse',
+          expected: '{ item: LyraAccordionItem }',
+          actual:
+            'CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>',
+        },
+        {
+          code: 'event-type-mismatch',
+          section: 'events',
+          member: 'wa-expand',
+          expected: '{ item: LyraAccordionItem }',
+          actual:
+            'CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>',
+        },
+      ],
+    },
+  ],
+  [
+    'wa-combobox',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra snapshots each input/change event\'s value into a frozen readonly value at dispatch time; migrated handlers that mutate the event detail in place must be reviewed.',
+      expectedDrift: [
+        {
+          code: 'event-type-mismatch',
+          section: 'events',
+          member: 'change',
+          expected: 'CustomEvent<{ value: string | string[] }>',
+          actual:
+            'CustomEvent< LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }> >',
+        },
+        {
+          code: 'event-constructor-mismatch',
+          section: 'events',
+          member: 'input',
+          expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
+          actual:
+            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }> >',
+        },
+        {
+          code: 'event-type-mismatch',
+          section: 'events',
+          member: 'input',
+          expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
+          actual:
+            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }> >',
+        },
+      ],
+    },
+  ],
+  [
+    'wa-resize-observer',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra freezes the entries array into an immutable snapshot at dispatch time; migrated code that mutates the array in place must create its own copy.',
+      expectedDrift: [
+        {
+          code: 'event-type-mismatch',
+          section: 'events',
+          member: 'wa-resize',
+          expected: '{ entries: ResizeObserverEntry[] }',
+          actual:
+            'CustomEvent< Readonly<{ entries: readonly ResizeObserverEntry[] }> >',
+        },
+      ],
+    },
+  ],
+  [
+    'wa-toast',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra\'s create() overloads reference the Lyra*-prefixed LyraToastOptions/LyraToastCreateOptions type names (renamed from the unprefixed spellings in 9.0.0) instead of the upstream\'s own ToastCreateOptions text; the method\'s actual parameter count, order, and runtime shape are unchanged, only the printed TypeScript type names differ.',
+      expectedDrift: [
+        {
+          code: 'method-signature-mismatch',
+          section: 'methods',
+          member: 'create',
+          expected: [
+            {
+              parameters: [
+                {
+                  name: 'message',
+                  type: 'string',
+                  optional: false,
+                  hasDefault: false,
+                },
+                {
+                  name: 'options',
+                  type: 'ToastCreateOptions',
+                  optional: true,
+                  hasDefault: false,
+                },
+              ],
+              returnType: 'Promise<WaToastItem>',
+            },
+          ],
+          actual: [
+            {
+              parameters: [
+                {
+                  name: 'options',
+                  type: 'LyraToastOptions',
+                  optional: false,
+                  hasDefault: false,
+                },
+              ],
+              returnType: 'Promise<LyraToastItem>',
+            },
+            {
+              parameters: [
+                {
+                  name: 'message',
+                  type: 'string',
+                  optional: false,
+                  hasDefault: false,
+                },
+                {
+                  name: 'options',
+                  type: 'LyraToastCreateOptions',
+                  optional: true,
+                  hasDefault: false,
+                },
+              ],
+              returnType: 'Promise<LyraToastItem>',
+            },
+            {
+              parameters: [
+                {
+                  name: 'messageOrOptions',
+                  type: 'string | LyraToastOptions',
+                  optional: false,
+                  hasDefault: false,
+                },
+                {
+                  name: 'legacyOptions',
+                  type: 'LyraToastCreateOptions',
+                  optional: false,
+                  hasDefault: true,
+                  default: '{}',
+                },
+              ],
+              returnType: 'Promise<LyraToastItem>',
+            },
+          ],
+        },
+      ],
     },
   ],
 ]);
@@ -3645,7 +3846,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['target'],
         "'_blank' | '_parent' | '_self' | '_top' | undefined",
-        'BreadcrumbItemTarget | undefined',
+        'LyraBreadcrumbItemTarget | undefined',
       ],
     ],
   ],
@@ -3730,9 +3931,9 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['display'],
         "'long' | 'short' | 'narrow'",
-        'FormatDisplay',
+        'LyraFormatDisplay',
       ],
-      ['attribute', ['unit'], "'byte' | 'bit'", 'FormatBytesUnit'],
+      ['attribute', ['unit'], '\'byte\' | \'bit\'', 'LyraFormatBytesUnit'],
     ],
   ],
   [
@@ -3742,26 +3943,26 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['day', 'hour', 'minute', 'second', 'year'],
         "'numeric' | '2-digit'",
-        'FormatDateNumeric | undefined',
+        'LyraFormatDateNumeric | undefined',
       ],
       [
         'attribute',
         ['era', 'weekday'],
         "'narrow' | 'short' | 'long'",
-        'FormatDateText | undefined',
+        'LyraFormatDateText | undefined',
       ],
-      ['attribute', ['hour-format'], "'auto' | '12' | '24'", 'FormatDateHour'],
+      ['attribute', ['hour-format'], '\'auto\' | \'12\' | \'24\'', 'LyraFormatDateHour'],
       [
         'attribute',
         ['month'],
         "'numeric' | '2-digit' | 'narrow' | 'short' | 'long'",
-        'FormatDateMonth | undefined',
+        'LyraFormatDateMonth | undefined',
       ],
       [
         'attribute',
         ['time-zone-name'],
         "'short' | 'long'",
-        'FormatDateTimeZoneName | undefined',
+        'LyraFormatDateTimeZoneName | undefined',
       ],
     ],
   ],
@@ -3772,13 +3973,13 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['currency-display'],
         "'symbol' | 'narrowSymbol' | 'code' | 'name'",
-        'FormatCurrencyDisplay',
+        'LyraFormatCurrencyDisplay',
       ],
       [
         'attribute',
         ['type'],
         "'currency' | 'decimal' | 'percent'",
-        'FormatNumberType',
+        'LyraFormatNumberType',
       ],
     ],
   ],
@@ -3865,8 +4066,8 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'sl-relative-time',
     [
-      ['attribute', ['format'], "'long' | 'short' | 'narrow'", 'FormatDisplay'],
-      ['attribute', ['numeric'], "'always' | 'auto'", 'RelativeTimeNumeric'],
+      ['attribute', ['format'], '\'long\' | \'short\' | \'narrow\'', 'LyraFormatDisplay'],
+      ['attribute', ['numeric'], '\'always\' | \'auto\'', 'LyraRelativeTimeNumeric'],
     ],
   ],
   [
@@ -3875,7 +4076,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   ],
   [
     'sl-skeleton',
-    [['attribute', ['effect'], "'pulse' | 'sheen' | 'none'", 'SkeletonEffect']],
+    [['attribute', ['effect'], '\'pulse\' | \'sheen\' | \'none\'', 'LyraSkeletonEffect']],
   ],
   [
     'sl-split-panel',
@@ -3884,7 +4085,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['primary'],
         "'start' | 'end' | undefined",
-        'SplitPanelPrimary | undefined',
+        'LyraSplitPanelPrimary | undefined',
       ],
     ],
   ],
@@ -3895,12 +4096,12 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'sl-tab-group',
     [
-      ['attribute', ['activation'], "'auto' | 'manual'", 'TabGroupActivation'],
+      ['attribute', ['activation'], '\'auto\' | \'manual\'', 'LyraTabGroupActivation'],
       [
         'attribute',
         ['placement'],
         "'top' | 'bottom' | 'start' | 'end'",
-        'TabGroupPlacement',
+        'LyraTabGroupPlacement',
       ],
     ],
   ],
@@ -4012,7 +4213,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['target'],
         "'_blank' | '_parent' | '_self' | '_top' | undefined",
-        'BreadcrumbItemTarget | undefined',
+        'LyraBreadcrumbItemTarget | undefined',
       ],
     ],
   ],
@@ -4072,7 +4273,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['orientation'],
         "'horizontal' | 'vertical'",
-        'ButtonGroupOrientation',
+        'LyraOrientation',
       ],
     ],
   ],
@@ -4273,7 +4474,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['orientation'],
         "'horizontal' | 'vertical'",
-        'DividerOrientation',
+        'LyraDividerOrientation',
       ],
     ],
   ],
@@ -4343,9 +4544,9 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['display'],
         "'long' | 'short' | 'narrow'",
-        'FormatDisplay',
+        'LyraFormatDisplay',
       ],
-      ['attribute', ['unit'], "'byte' | 'bit'", 'FormatBytesUnit'],
+      ['attribute', ['unit'], '\'byte\' | \'bit\'', 'LyraFormatBytesUnit'],
     ],
   ],
   [
@@ -4355,26 +4556,26 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['day', 'hour', 'minute', 'second', 'year'],
         "'numeric' | '2-digit'",
-        'FormatDateNumeric | undefined',
+        'LyraFormatDateNumeric | undefined',
       ],
       [
         'attribute',
         ['era', 'weekday'],
         "'narrow' | 'short' | 'long'",
-        'FormatDateText | undefined',
+        'LyraFormatDateText | undefined',
       ],
-      ['attribute', ['hour-format'], "'auto' | '12' | '24'", 'FormatDateHour'],
+      ['attribute', ['hour-format'], '\'auto\' | \'12\' | \'24\'', 'LyraFormatDateHour'],
       [
         'attribute',
         ['month'],
         "'numeric' | '2-digit' | 'narrow' | 'short' | 'long'",
-        'FormatDateMonth | undefined',
+        'LyraFormatDateMonth | undefined',
       ],
       [
         'attribute',
         ['time-zone-name'],
         "'short' | 'long'",
-        'FormatDateTimeZoneName | undefined',
+        'LyraFormatDateTimeZoneName | undefined',
       ],
     ],
   ],
@@ -4385,13 +4586,13 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['currency-display'],
         "'symbol' | 'narrowSymbol' | 'code' | 'name'",
-        'FormatCurrencyDisplay',
+        'LyraFormatCurrencyDisplay',
       ],
       [
         'attribute',
         ['type'],
         "'currency' | 'decimal' | 'percent'",
-        'FormatNumberType',
+        'LyraFormatNumberType',
       ],
     ],
   ],
@@ -4674,8 +4875,8 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-relative-time',
     [
-      ['attribute', ['format'], "'long' | 'short' | 'narrow'", 'FormatDisplay'],
-      ['attribute', ['numeric'], "'always' | 'auto'", 'RelativeTimeNumeric'],
+      ['attribute', ['format'], '\'long\' | \'short\' | \'narrow\'', 'LyraFormatDisplay'],
+      ['attribute', ['numeric'], '\'always\' | \'auto\'', 'LyraRelativeTimeNumeric'],
     ],
   ],
   [
@@ -4721,7 +4922,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   ],
   [
     'wa-skeleton',
-    [['attribute', ['effect'], "'pulse' | 'sheen' | 'none'", 'SkeletonEffect']],
+    [['attribute', ['effect'], '\'pulse\' | \'sheen\' | \'none\'', 'LyraSkeletonEffect']],
   ],
   [
     'wa-slider',
@@ -4753,13 +4954,13 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['orientation'],
         "'horizontal' | 'vertical'",
-        'SplitPanelOrientation',
+        'LyraSplitPanelOrientation',
       ],
       [
         'attribute',
         ['primary'],
         "'start' | 'end' | undefined",
-        'SplitPanelPrimary | undefined',
+        'LyraSplitPanelPrimary | undefined',
       ],
     ],
   ],
@@ -4777,12 +4978,12 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-tab-group',
     [
-      ['attribute', ['activation'], "'auto' | 'manual'", 'TabGroupActivation'],
+      ['attribute', ['activation'], '\'auto\' | \'manual\'', 'LyraTabGroupActivation'],
       [
         'attribute',
         ['placement'],
         "'top' | 'bottom' | 'start' | 'end'",
-        'TabGroupPlacement',
+        'LyraTabGroupPlacement',
       ],
     ],
   ],
@@ -4869,7 +5070,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['placement'],
         "'top-start' | 'top-center' | 'top-end' | 'bottom-start' | 'bottom-center' | 'bottom-end'",
-        'ToastPlacement',
+        'LyraToastPlacement',
       ],
     ],
   ],
@@ -4880,13 +5081,13 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['size'],
         "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'",
-        'ToastSize',
+        'LyraToastSize',
       ],
       [
         'attribute',
         ['variant'],
         "'brand' | 'success' | 'warning' | 'danger' | 'neutral'",
-        'ToastVariant',
+        'LyraToastVariant',
       ],
     ],
   ],
@@ -5052,7 +5253,7 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['orientation'],
         "'horizontal' | 'vertical'",
-        'CardOrientation',
+        'LyraOrientation',
       ],
     ],
   ],
@@ -5103,12 +5304,6 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-combobox',
     [
-      [
-        'attribute',
-        ['appearance'],
-        "'filled' | 'outlined' | 'filled-outlined'",
-        'Extract< LyraAppearance, \"filled\" | \"outlined\" | \"filled-outlined\" >',
-      ],
       [
         'property',
         ['filter'],
@@ -5454,7 +5649,7 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         'event',
         ['sl-select'],
         '{ item: SlMenuItem }',
-        'CustomEvent<MenuItemSelectDetail>',
+        'CustomEvent<LyraEventDetailSnapshot<MenuItemSelectDetail>>',
       ],
     ],
   ],
@@ -5465,7 +5660,7 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         'event',
         ['sl-mutation'],
         '{ mutationList: MutationRecord[] }',
-        'CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>',
+        'CustomEvent< Readonly<{ records: readonly MutationRecord[]; mutationList: readonly MutationRecord[]; }> >',
       ],
     ],
   ],
@@ -5640,7 +5835,7 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         'event',
         ['wa-mutation'],
         '{ mutationList: MutationRecord[] }',
-        'CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>',
+        'CustomEvent< Readonly<{ records: readonly MutationRecord[]; mutationList: readonly MutationRecord[]; }> >',
       ],
     ],
   ],
@@ -5673,7 +5868,7 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         'event',
         ['wa-video-change'],
         'CustomEvent<{ previousIndex: number; currentIndex: number; video: { title: string; poster: string; sources: unknown[]; tracks: unknown[] } }>',
-        'CustomEvent<LyraVideoPlaylistChangeDetail>',
+        'CustomEvent<LyraEventDetailSnapshot<LyraVideoPlaylistChangeDetail>>',
       ],
     ],
   ],
@@ -6621,14 +6816,19 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
   [
     'sl-qr-code',
     [
-      ['attributes', ['background'], false, null, true, 'background'],
-      ['attributes', ['fill'], false, null, true, 'color'],
       ['parts', ['base'], false, null, true, 'qr-code'],
-      ['properties', ['background'], false, null, true, 'background'],
-      ['properties', ['fill'], false, null, true, 'color'],
     ],
   ],
-  ['wa-qr-code', [['parts', ['base'], true, null, true, 'qr-code']]],
+  [
+    'wa-qr-code',
+    [
+      ['parts', ['base'], true, null, true, 'qr-code'],
+      ['attributes', ['background'], true, 'background', false, null],
+      ['attributes', ['fill'], true, 'color', false, null],
+      ['properties', ['background'], true, 'background', false, null],
+      ['properties', ['fill'], true, 'color', false, null],
+    ],
+  ],
   ...[
     'wa-badge',
     'wa-breadcrumb',
@@ -6671,6 +6871,14 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
     [['parts', ['label'], true, 'form-control-label', false, null]],
   ]),
   ['wa-video', [['parts', ['base'], true, 'video-wrapper', false, null]]],
+  [
+    'wa-date-input',
+    [
+      ['parts', ['base'], true, 'date-input', false, null],
+      ['parts', ['label'], true, 'form-control-label', false, null],
+    ],
+  ],
+  ['wa-date-picker', [['parts', ['base'], true, 'date-picker', false, null]]],
 ]);
 
 const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
@@ -6844,14 +7052,6 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     },
   ],
   [
-    'wa-accordion',
-    {
-      structuralTypeAliases: [
-        reviewedStructuralTypeAlias('LyraAccordionEventDetail'),
-      ],
-    },
-  ],
-  [
     'wa-button',
     { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] },
   ],
@@ -6866,14 +7066,6 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   [
     'wa-combobox',
     {
-      methodParameterTypeEquivalences: [
-        reviewedMethodParameterTypeEquivalence(
-          'formStateRestoreCallback',
-          'reason',
-          "'autocomplete' | 'restore'",
-          '"autocomplete" | "restore"',
-        ),
-      ],
       // `wa-invalid` is `preventDefault()`-able on `<lr-combobox>` because vetoing it also cancels
       // the native `invalid` event behind it, which is what suppresses the browser's own validation
       // bubble. `lr-show` is cancelable on every path. `lr-hide` is cancelable while connected, but

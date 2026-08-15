@@ -33,6 +33,7 @@ const strings: LyraLocaleStrings = {
   toolSelectLimit: 'מוצגים רק {count} הכלים הראשונים.',
   sequenceStripEmpty: 'אין פריטים',
   sequenceStripCategoryCount: '{label}: {count}',
+  sequenceStripUnnamedCategory: 'קטגוריה ללא שם',
   noColumns: 'לא הוגדרו עמודות',
   dataGridColumnMenu: 'אפשרויות עבור {label}',
   dataGridPinStart: 'הצמד את {label} להתחלה',

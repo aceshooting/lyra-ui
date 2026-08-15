@@ -129,7 +129,8 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * (a raster image has no selectable text), so `lr-text-select` is never emitted by this viewer.
  *
  * Region rectangles are canonical finite, positive percentages wholly inside the 0–100 image
- * space; IDs use first-wins uniqueness. At most `IMAGE_VIEWER_HIGHLIGHT_LIMIT` buttons are
+ * space; empty/blank IDs are omitted and duplicates use first-wins uniqueness. At most
+ * `IMAGE_VIEWER_HIGHLIGHT_LIMIT` buttons are
  * projected at once with one roving tab stop. An active tail item remains reachable by replacing
  * the final item in the leading window. Anchor success means the canonical rendered target was
  * scrolled into and visibly intersects the embedded viewport.
@@ -643,7 +644,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     const ids = new Set<string>();
     const result: NormalizedRegionHighlight[] = [];
     for (const highlight of this.highlights) {
-      if (typeof highlight.id !== 'string' || highlight.id === '' || ids.has(highlight.id)) continue;
+      if (!highlight || typeof highlight.id !== 'string' || highlight.id.trim().length === 0 || ids.has(highlight.id)) continue;
       if (highlight.anchor.kind !== 'region') continue;
       const rect = normalizeImageRegionRect(highlight.anchor.rect);
       if (!rect) continue;

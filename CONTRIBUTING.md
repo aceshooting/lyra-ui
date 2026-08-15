@@ -31,10 +31,11 @@ pnpm docs         # Storybook docs site at localhost:6006, demos every component
 ```
 
 Under Node 22 with the repository-pinned pnpm, run `./scripts/ci.sh` to reproduce the six primary
-CI jobs as one local aggregate. Use `./scripts/ci.sh --platform-matrix` to add the Node 20/22 ×
-Firefox/WebKit platform-contract matrix. `.github/workflows/ci.yml` is the authoritative,
-up-to-date gate list; [`docs/agents/ci-and-gates.md`](./docs/agents/ci-and-gates.md) documents the
-local aggregate and its prerequisites.
+CI jobs as one local aggregate. Use `./scripts/ci.sh --platform-matrix` to add all 11
+platform-contract legs: Firefox and Safari under Node 20, plus Chromium, Chrome, Edge, Firefox,
+and Safari under Node 22. `.github/workflows/ci.yml` is the authoritative, up-to-date gate list;
+[`docs/agents/ci-and-gates.md`](./docs/agents/ci-and-gates.md) documents the local aggregate and
+its prerequisites.
 
 The complete Firefox/WebKit suite also runs in four deterministic shards from the scheduled and
 manually dispatchable `.github/workflows/full-engine.yml` workflow. To reproduce a shard locally,

@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The model catalog and emitted inCatalog field share the unique nonempty first-wins catalog projection. The catalog is a bounded clone-owned frozen snapshot; create and reassign a new array after changes.',
+          'The model catalog and emitted inCatalog field share the unique nonempty first-wins catalog projection. The catalog is a bounded clone-owned frozen snapshot; create and reassign a new array after changes. Native focus and blur from the nested model selector stay contained; the panel exposes its consolidated lr-change event.',
       },
     },
   },

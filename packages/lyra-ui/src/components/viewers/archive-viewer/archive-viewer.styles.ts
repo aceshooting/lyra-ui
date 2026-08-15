@@ -53,6 +53,7 @@ export const virtualListHighlightStyles = css`
 export const styles = css`
   :host { display: block; }
   [part='base'] { display: flex; flex-direction: column; box-sizing: border-box; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); overflow: hidden; }
+  [part='body'] { min-block-size: 0; max-block-size: var(--lr-archive-viewer-max-height, none); overflow-y: auto; overflow-x: hidden; }
   /* Entry rows are produced by this component's renderItem but are committed into the embedded
      lr-virtual-list's OWN shadow root, one boundary deeper than this stylesheet: a bare
      [part='entry'] selector can never match one, so every row-level rule reaches through

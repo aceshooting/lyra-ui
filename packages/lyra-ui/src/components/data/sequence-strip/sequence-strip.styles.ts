@@ -65,9 +65,9 @@ export const styles = css`
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }
-  /* The tooltip centers on inset-inline-start: 50%, which anchors to the physical right edge
-     under RTL -- the fixed horizontal -50% translate must flip sign there or the tooltip sits
-     entirely start-of-center (translateX is physical; logical properties don't cover it). */
+  /* The tooltip is a child of the active cell, so this 50% inset tracks that cell instead of the
+     strip. Under RTL the inset anchors to the physical right edge; the fixed horizontal -50%
+     translate must flip sign there because translateX is physical, not logical. */
   :host(:dir(rtl)) [part='tooltip'] {
     transform: translate(50%, calc(-1 * var(--lr-size-6px)));
   }

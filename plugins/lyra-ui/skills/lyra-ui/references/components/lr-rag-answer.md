@@ -33,9 +33,15 @@ the article. The normalized state gives `errorText` precedence over a conflictin
 flag; `aria-busy="true"` and the spinner appear exactly in the resulting `loading` state, including
 while a partial property or slotted answer is streaming.
 
+`citations`, `sources`, and nested `assessment.claims` are canonicalized independently by nonblank
+`id`. Malformed rows and later duplicates are omitted first-wins before empty state, child
+composition, counts, rendering, lookup, or actions.
+
 **Events:** `lr-citation-select` (`{ citation, section: 'answer' | 'grounding' }`),
 `lr-claim-select` (`{ claim }`), and `lr-retry`. When `assessment` is present, grounding summary is
 the single citation presentation/action owner; the answer-level duplicate citation row is omitted.
+Both child badge signals (`lr-citation-activate` and `lr-citation-open`) are stopped at the answer
+boundary and translated into that one section-qualified `lr-citation-select` contract.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list. Either slot renders from its assigned content without requiring the corresponding

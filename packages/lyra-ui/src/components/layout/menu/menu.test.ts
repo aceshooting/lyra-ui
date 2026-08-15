@@ -237,6 +237,7 @@ it('emits only canonical cancelable lr-select with the complete item', async () 
   item.select();
   const event = (await pending) as CustomEvent<{ item: LyraMenuItem }>;
   expect(event.detail.item === item).to.equal(true);
+  expect(Object.isFrozen(event.detail)).to.equal(true);
   expect(event.cancelable).to.equal(true);
   expect([canonical, menuAlias, childAlias]).to.deep.equal([1, 0, 0]);
 });

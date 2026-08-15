@@ -32,13 +32,7 @@ import {
 } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_textareaCharacterCount,
-  LYRA_DEFAULT_textareaCharactersRemaining,
-  LYRA_DEFAULT_textareaLabel,
-  LYRA_DEFAULT_valueInvalid,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_textareaCharacterCount, LYRA_DEFAULT_textareaCharactersRemaining, LYRA_DEFAULT_textareaLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type TextareaResize =
@@ -162,15 +156,14 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
 export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      textareaCharacterCount: LYRA_DEFAULT_textareaCharacterCount,
-      textareaCharactersRemaining: LYRA_DEFAULT_textareaCharactersRemaining,
-      textareaLabel: LYRA_DEFAULT_textareaLabel,
-      valueInvalid: LYRA_DEFAULT_valueInvalid,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    textareaCharacterCount: LYRA_DEFAULT_textareaCharacterCount,
+    textareaCharactersRemaining: LYRA_DEFAULT_textareaCharactersRemaining,
+    textareaLabel: LYRA_DEFAULT_textareaLabel,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   /** Public WA-compatible intrinsic validator catalog. */

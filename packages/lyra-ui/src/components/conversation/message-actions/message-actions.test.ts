@@ -585,6 +585,23 @@ it("navigates a closed-shadow custom composite only through the logical-action p
   expect(provider.actionTabIndex).to.equal(-1);
 });
 
+it('omits provider actions with blank identities before roving focus', async () => {
+  const el = (await fixture(html`
+    <lr-message-actions .controls=${['regenerate']}>
+      <test-closed-toolbar-provider></test-closed-toolbar-provider>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  const provider = el.querySelector('test-closed-toolbar-provider') as ClosedToolbarProvider;
+  (provider.action as { id: string }).id = '   ';
+  provider.setUnavailable(false);
+  await el.updateComplete;
+
+  const regenerate = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="regenerate-button"]')!;
+  regenerate.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  expect(el.shadowRoot!.activeElement === regenerate).to.equal(true);
+  expect(provider.actionFocused).to.equal(false);
+});
+
 it("ArrowLeft/ArrowRight swap under RTL", async () => {
   const el = (await fixture(
     html`<lr-message-actions

@@ -140,7 +140,7 @@ it('accepts a custom registry prop instead of dispatching against the module-lev
   expect((base(el).querySelector('.default-registry')) == null).to.be.true;
 });
 
-it('takes a frozen readonly registry snapshot while retaining renderer identity', async () => {
+it('takes a recursively frozen readonly registry snapshot', async () => {
   const definition: ToolRendererDefinition = {
     render: () => litHtml`<span class="snapshotted-registry">yes</span>`,
   };
@@ -159,7 +159,10 @@ it('takes a frozen readonly registry snapshot while retaining renderer identity'
   source.set('later', { render: () => litHtml`later` });
 
   expect(base(el).querySelector('.snapshotted-registry')).to.exist;
-  expect(el.registry!.get('snapshotted') === definition).to.be.true;
+  const stored = el.registry!.get('snapshotted')!;
+  expect(stored === definition).to.be.false;
+  expect(stored.render === definition.render).to.be.true;
+  expect(Object.isFrozen(stored)).to.be.true;
   expect(el.registry!.has('later')).to.be.false;
   expect(Object.isFrozen(el.registry)).to.be.true;
   expect('set' in el.registry!).to.be.false;

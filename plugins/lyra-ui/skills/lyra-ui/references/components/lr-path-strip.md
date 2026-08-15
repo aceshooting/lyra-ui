@@ -27,10 +27,11 @@ reverse?: boolean }`
 - `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-activate` (`detail: { id }`, a node element activated),
-`lr-relation-activate` (`detail: { relation, sourceId?, targetId? }`, an edge element activated —
+**Events:** `lr-entity-activate` (`detail: { entityId, occurrenceIndex }`, a node element activated),
+`lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, an edge element activated —
 source/target resolved from the adjacent node elements, `undefined` when the path is malformed at
-that position).
+that position. `occurrenceIndex` is the original supplied array position, so repeated entity ids
+remain independently addressable).
 
 **Slots:** none.
 
@@ -60,5 +61,7 @@ that position).
 
 - Purely presentational rendering of a caller-supplied path — it never computes shortest paths or
   fetches relationship data itself, and never branches (one linear chain per instance).
+- Blank node ids and blank relation labels are omitted. Repeated nonblank identities are deliberate
+  path occurrences rather than duplicates; every event reports the supplied `occurrenceIndex`.
 
 ---

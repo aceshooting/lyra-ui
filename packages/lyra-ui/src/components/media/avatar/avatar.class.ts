@@ -47,7 +47,7 @@ export interface LyraAvatarEventMap {
  *   `variant` changes its private default to that variant's `-quiet` tint.
  * @cssprop [--lr-avatar-color=var(--lr-color-text)] - Initials/glyph color. Each non-neutral
  *   `variant` changes its private default to that variant's loud color.
- * @cssprop [--lr-avatar-font-size=var(--lr-font-size-sm)] - Font size of the initials fallback (and
+ * @cssprop [--lr-avatar-font-size=var(--lr-font-size-m)] - Font size of the initials fallback (and
  *   of any `em`-sized slotted glyph). `size` steps its private default alongside the diameter, so
  *   the initials track the circle instead of staying at one fixed size across every tier.
  * @status stable

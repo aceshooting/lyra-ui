@@ -14,10 +14,7 @@ import { styles } from './avatar-group.styles.js';
 import type { LyraAvatar, LyraAvatarShape } from '../avatar/avatar.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_showMoreCollapsed,
-  LYRA_DEFAULT_showMoreCount,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 type AvatarPresentationAttribute = 'size' | 'shape' | 'variant';
@@ -85,7 +82,7 @@ export interface LyraAvatarGroupEventMap {
  * Its private default follows `variant`; the public value remains authoritative.
  * @cssprop [--lr-avatar-group-badge-color=var(--lr-color-text)] - Overflow badge text color.
  * Its private default follows `variant`; the public value remains authoritative.
- * @cssprop [--lr-avatar-group-badge-font-size=var(--lr-font-size-sm)] - Font size of the "+N"
+ * @cssprop [--lr-avatar-group-badge-font-size=var(--lr-font-size-m)] - Font size of the "+N"
  * badge label. `size` steps its private default across the same six-step ladder as `<lr-avatar>`'s
  * own `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight.
  * @status stable
@@ -94,12 +91,11 @@ export interface LyraAvatarGroupEventMap {
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
-      showMoreCount: LYRA_DEFAULT_showMoreCount,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
+    showMoreCount: LYRA_DEFAULT_showMoreCount,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

@@ -1,7 +1,8 @@
-import { html, svg, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -49,12 +50,20 @@ export interface LyraEmbeddingExplorerEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Points with non-finite coordinates or blank ids and later valid duplicates are ignored before
+ * focus, selection, rendering, or activation. The first valid point for an id wins.
+ * Optional cluster membership is exposed both through the plot options' descriptions and a
+ * visible text legend, so cluster meaning never depends on color alone.
  *
  * @customElement lr-embedding-explorer
  * @event lr-point-select - A point was activated. `detail: { point }`.
  * @csspart base - The root wrapper.
  * @csspart plot - The SVG projection plot.
  * @csspart point - One focusable embedding point.
+ * @csspart legend - The visible cluster-name list.
+ * @csspart legend-item - One cluster's legend entry.
+ * @csspart legend-swatch - One cluster's decorative color swatch.
+ * @csspart legend-label - One cluster's visible name.
  * @csspart empty - The empty state.
  * @cssprop [--lr-embedding-explorer-selected-stroke=var(--lr-color-brand)] - Stroke color of the selected point.
  * @cssprop [--lr-embedding-explorer-height=360px] - The plot's `block-size`. Set on the host from
@@ -75,8 +84,6 @@ export interface LyraEmbeddingExplorerEventMap {
  * @since 6.2.0
  */
 export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['points']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -87,12 +94,14 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['points']);
+
   static override styles = [LyraElement.styles, specialistTokens, styles];
 
   /** Projected points in host order. Non-finite coordinates are omitted. */
   @property({ attribute: false }) points: readonly EmbeddingPoint[] = [];
   /** The selected point id. Controlled by the host. */
-  @property({ attribute: 'selected-id' }) selectedId = '';
+  @property({ attribute: 'selected-point-id' }) selectedPointId = '';
   /**
    * The plot's block size, as any CSS length the browser accepts for `block-size` — including
    * `auto`, which restores the aspect-ratio-preserved size derived from the `viewBox`. It is
@@ -100,15 +109,20 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
    * unset, so the plot falls back to `auto` rather than collapsing.
    */
   @property() height = '360px';
-  /** JS-only accessible name for the plot while no host `aria-label` is authored. A host label
-   *  independently names the explorer and is not cloned onto the plot. */
+  /** JS-only accessible name for the plot while no host `aria-label` is authored. An authored host
+   *  label governs the plot's name too (including an explicitly empty value), avoiding a competing
+   *  generic plot label while still naming the shadow-internal `listbox` itself. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private activeIndex = 0;
   private refocusAfterUpdate = false;
 
   private get validPoints(): EmbeddingPoint[] {
-    return this.points.filter(
-      (point) => Number.isFinite(point.x) && Number.isFinite(point.y)
+    return firstByRetrievalIdentity(
+      Array.isArray(this.points) ? this.points : [],
+      (point) =>
+        Number.isFinite(point.x) && Number.isFinite(point.y)
+          ? point.id
+          : undefined
     );
   }
 
@@ -223,7 +237,8 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   ): TemplateResult {
     const { x, y } = this.position(point, bounds);
     const label = this.announceLabel(point, index);
-    const selected = point.id === this.selectedId;
+    const cluster = String(point.cluster ?? '').trim();
+    const selected = point.id === this.selectedPointId;
     return svg`<g
       part="point"
       data-index=${index}
@@ -234,6 +249,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       role="option"
       aria-selected=${selected ? 'true' : 'false'}
       aria-label=${label}
+      aria-description=${cluster || nothing}
       @click=${() => this.activatePoint(point, index)}
       @focus=${() => {
         if (this.activeIndex !== index) this.activeIndex = index;
@@ -253,8 +269,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       ></line>
       <circle class="point-marker" r="6" fill=${
         PALETTE[
-          (clusterIndices.get(String(point.cluster ?? '')) ?? 0) %
-            PALETTE.length
+          (clusterIndices.get(cluster) ?? 0) % PALETTE.length
         ]
       }></circle>
       <title>${label}</title>
@@ -267,7 +282,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     const label =
       hostLabel === null
         ? this.accessibleLabel ?? this.localize('embeddingExplorerLabel')
-        : this.localize('embeddingExplorerLabel');
+        : hostLabel;
     if (points.length === 0)
       return html`<div part="base" role="region" aria-label=${label}>
         <p part="empty">${this.localize('embeddingExplorerEmpty')}</p>
@@ -282,11 +297,12 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
     );
     const clusters = [
-      ...new Set(points.map((point) => String(point.cluster ?? ''))),
+      ...new Set(points.map((point) => String(point.cluster ?? '').trim())),
     ].sort();
     const clusterIndices = new Map(
       clusters.map((cluster, index) => [cluster, index])
     );
+    const visibleClusters = clusters.filter((cluster) => cluster.trim() !== '');
     return html`<div part="base">
       <svg
         part="plot"
@@ -298,6 +314,36 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
           this.renderPoint(point, index, bounds, clusterIndices)
         )}
       </svg>
+      ${visibleClusters.length > 0
+        ? html`<div part="legend" role="list">
+            ${visibleClusters.map(
+              (cluster) => html`<span
+                part="legend-item"
+                role="listitem"
+                data-cluster=${cluster}
+              >
+                <svg
+                  part="legend-swatch"
+                  viewBox="0 0 12 12"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <circle
+                    cx="6"
+                    cy="6"
+                    r="5"
+                    fill=${
+                      PALETTE[
+                        (clusterIndices.get(cluster) ?? 0) % PALETTE.length
+                      ]
+                    }
+                  ></circle>
+                </svg>
+                <span part="legend-label">${cluster}</span>
+              </span>`
+            )}
+          </div>`
+        : nothing}
     </div>`;
   }
 }

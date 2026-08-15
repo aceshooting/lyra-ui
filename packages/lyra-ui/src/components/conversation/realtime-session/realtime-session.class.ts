@@ -79,8 +79,6 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  * @since 7.0.0
  */
 export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -99,6 +97,8 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     realtimeSessionUnmute: LYRA_DEFAULT_realtimeSessionUnmute,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles];
 

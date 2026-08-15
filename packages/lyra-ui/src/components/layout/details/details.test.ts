@@ -194,10 +194,12 @@ it("exposes disabled to assistive tech via aria-disabled on the summary, rendere
     '[part="summary"]'
   ) as HTMLElement;
   expect(summary.getAttribute("aria-disabled")).to.equal("true");
+  expect(summary.getAttribute('tabindex')).to.equal('-1');
 
   el.disabled = false;
   await el.updateComplete;
   expect(summary.getAttribute("aria-disabled")).to.equal("false");
+  expect(summary.hasAttribute('tabindex')).to.be.false;
 });
 
 it("blocks both pointer and synthesized keyboard activation while disabled", async () => {

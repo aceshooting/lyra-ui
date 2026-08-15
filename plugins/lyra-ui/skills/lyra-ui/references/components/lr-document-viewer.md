@@ -34,8 +34,9 @@ value, without suppressing the visible `name` heading.
   anchors/highlights, and download; the scalar `name`, `mimeType`, `src`, `anchor`, `highlights`,
   and `alt` properties resume their legacy behavior when `payload` is reset to `undefined`.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry
-  override. A native map assignment is copied behind a frozen readonly facade while renderer-
-  definition identity is retained; later source-map mutation is not observed. When unset, the
+  override. A native map assignment is copied behind a frozen readonly facade; definition records
+  are cloned and frozen while callback identities are retained. Later source-map or definition
+  mutation is not observed. When unset, the
   instance owns an immutable snapshot of the built-ins registered when it was constructed. A later
   module import/registration cannot mutate an existing viewer. A throwing consumer matcher or
   renderer is contained as the localized error state rather than escaping the update.

@@ -18,11 +18,17 @@ function baseSlug(text: string): string {
 /**
  * Dedupes slugs across one document parse: the first occurrence of a base slug keeps it bare, each
  * repeat appends `-1`, `-2`, ... incrementing until an unused candidate is found (so a real heading
- * that happens to already read e.g. "Overview 1" is never silently collided with). Scoped per
- * instance -- create one per parse/render pass, never share one across documents.
+ * that happens to already read e.g. "Overview 1" is never silently collided with). Each base keeps
+ * a monotonic next-suffix cursor, so a rejected candidate is inspected at most once for that base
+ * and long duplicate-heading runs stay linear. Scoped per instance -- create one per parse/render
+ * pass, never share one across documents.
  */
 export class Slugger {
   private readonly used = new Set<string>();
+  /** Next suffix worth probing for each duplicated base. Advancing this cursor means a candidate
+   *  rejected once is never revisited by a later duplicate, keeping one parse's aggregate suffix
+   *  membership work linear in the number of admitted headings. */
+  private readonly nextSuffix = new Map<string, number>();
 
   slug(text: string): string {
     const base = baseSlug(text);
@@ -31,12 +37,13 @@ export class Slugger {
       this.used.add(base);
       return base;
     }
-    let index = 1;
+    let index = this.nextSuffix.get(base) ?? 1;
     let candidate = `${base}-${index}`;
     while (this.used.has(candidate)) {
       index++;
       candidate = `${base}-${index}`;
     }
+    this.nextSuffix.set(base, index + 1);
     this.used.add(candidate);
     return candidate;
   }

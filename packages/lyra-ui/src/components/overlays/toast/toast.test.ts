@@ -2,7 +2,12 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { toast } from './toaster.js';
 import './toast.js';
-import type { LyraToast } from './toast.js';
+import type {
+  LyraToast,
+  LyraToastCreateOptions,
+  LyraToastOverflowDetail,
+  LyraToastPlacement,
+} from './toast.js';
 import type { LyraToastItem } from './toast-item.js';
 import { getToastRegion } from './toast-region.js';
 import {
@@ -171,6 +176,24 @@ it('reflects the placement property on <lr-toast>', async () => {
   region.placement = 'bottom-center';
   await region.updateComplete;
   expect(region.getAttribute('placement')).to.equal('bottom-center');
+});
+
+it('accepts every LyraToastPlacement literal via the JS property, matching the attribute grammar', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const placements: readonly LyraToastPlacement[] = toastPlacements;
+  for (const placement of placements) {
+    region.placement = placement;
+    await region.updateComplete;
+    expect(region.getAttribute('placement')).to.equal(placement);
+  }
+});
+
+it('accepts the canonical LyraToastCreateOptions contract for the legacy string-form create()', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const options: LyraToastCreateOptions = { variant: 'success', duration: 0, size: 'l' };
+  const item = await region.create('typed options', options);
+  expect(item.variant).to.equal('success');
+  expect(item.size).to.equal('l');
 });
 
 it('honors the mapped --gap and --width aliases without displacing the Lyra names', async () => {
@@ -609,9 +632,9 @@ it('coalesces overflow loss into one typed event and one localized polite announ
   region.strings = {
     toastOverflow: 'Skipped {count} notifications.',
   };
-  const events: Array<CustomEvent<{ count: number }>> = [];
+  const events: Array<CustomEvent<LyraToastOverflowDetail>> = [];
   region.addEventListener('lr-toast-overflow', (event) => {
-    events.push(event as CustomEvent<{ count: number }>);
+    events.push(event as CustomEvent<LyraToastOverflowDetail>);
   });
 
   const items = await Promise.all(

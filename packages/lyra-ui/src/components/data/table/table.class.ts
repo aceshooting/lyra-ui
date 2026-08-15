@@ -73,6 +73,11 @@ function keySet(values: Iterable<string | number>): Set<string | number> {
   const snapshot = new Set<string | number>();
   try {
     for (const value of values) {
+      if (typeof value === 'string') {
+        if (value.trim().length === 0) continue;
+      } else if (typeof value !== 'number') {
+        continue;
+      }
       snapshot.add(value);
       if (snapshot.size >= MAX_TABLE_COLLECTION_ENTRIES) break;
     }
@@ -439,13 +444,13 @@ export interface LyraTableEventMap<T = unknown> {
   'lr-sort-request': CustomEvent<TableSortRequestDetail>;
   'lr-sort': CustomEvent<TableSortCommitDetail>;
   'lr-row-click': CustomEvent<Readonly<{ row: T }>>;
-  'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; key: string | number }>>;
+  'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; rowKey: string | number }>>;
   'lr-load-more': CustomEvent<null>;
-  'lr-selection-change': CustomEvent<Readonly<{ keys: readonly (string | number)[] }>>;
+  'lr-selection-change': CustomEvent<Readonly<{ rowKeys: readonly (string | number)[] }>>;
   'lr-filter-change': CustomEvent<Readonly<{ text: string }>>;
   'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
-  'lr-cell-edit': CustomEvent<Readonly<{ row: T; key: string; value: string | number }>>;
-  'lr-column-resize': CustomEvent<Readonly<{ key: string; width: number }>>;
+  'lr-cell-edit': CustomEvent<Readonly<{ row: T; columnKey: string; value: string | number }>>;
+  'lr-column-resize': CustomEvent<Readonly<{ columnKey: string; width: number }>>;
 }
 /**
  * `<lr-table>` — a sort/select-aware data table.
@@ -454,7 +459,7 @@ export interface LyraTableEventMap<T = unknown> {
  * mode writes `sortKey`/`sortDir` and reorders the rendered rows before emitting `lr-sort`; server
  * mode leaves those properties controlled and emits the same committed transaction so the caller
  * can fetch and supply the corresponding row order. Single/multiple selection is self-managed in
- * one `selectedKeys` store; expansion remains controlled through `expandedKeys`.
+ * one `selectedRowKeys` store; expansion remains controlled through `expandedRowKeys`.
  *
  * Header/row activation is delegated: one `click` and one `keydown`
  * listener on `<table>` resolve the target via `closest('[data-col-key]'
@@ -507,16 +512,16 @@ export interface LyraTableEventMap<T = unknown> {
  * `canExpand` optionally gates which rows actually get an interactive
  * toggle — a row that fails it still gets a blank leading cell for column
  * alignment. Which rows are currently open is fully consumer-owned via
- * `expandedKeys` (a `Set<string | number>` of row keys, per `rowKey`/
+ * `expandedRowKeys` (a `Set<string | number>` of row keys, per `rowKey`/
  * `keyOf()`) — the table only reads it and emits `lr-row-expand-toggle`
- * on activation. (`selectedKeys` is self-managed for selection, and
+ * on activation. (`selectedRowKeys` is self-managed for selection, and
  * `sortKey`/`sortDir` are *not* a parallel case either: under
  * the default `sortMode: 'client'` the table writes them on header
  * activation.)
  *
  * Selection is opt-in through the `selectionMode` property. Use `single` or
  * `multiple` to self-manage row selection; the default `none` remains
- * presentational. `selectedKeys` contains the raw keys in every mode; single mode enforces one.
+ * presentational. `selectedRowKeys` contains the raw keys in every mode; single mode enforces one.
  *
  * `filterable` adds a compact search field above the grid. `filterText` is
  * controlled and emits `lr-filter-change`; `filter` can provide a typed
@@ -595,16 +600,16 @@ export interface LyraTableEventMap<T = unknown> {
  * @event lr-priority-columns-visibility-change - `priorityColumnsVisible` was toggled by
  *   `[part='reveal-columns-button']`. Frozen readonly `detail: { visible: boolean }`.
  * @event lr-row-expand-toggle - The row-expand chevron was activated.
- *   Frozen readonly `detail: { row, key }`. Fired only when `expandedContent` is set and
- *   the row passes `canExpand`; does not itself mutate `expandedKeys` — the
+ *   Frozen readonly `detail: { row, rowKey }`. Fired only when `expandedContent` is set and
+ *   the row passes `canExpand`; does not itself mutate `expandedRowKeys` — the
  *   consumer updates it and passes the new value back in.
  * @event lr-selection-change - Opt-in row selection changed. Frozen readonly
- *   `detail: { keys: readonly (string | number)[] }`.
+ *   `detail: { rowKeys: readonly (string | number)[] }`.
  * @event lr-filter-change - The filter field changed. Frozen readonly `detail: { text }`.
  * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page }`.
- * @event lr-cell-edit - An inline editor committed a value. `detail: { row, key, value }`.
+ * @event lr-cell-edit - An inline editor committed a value. `detail: { row, columnKey, value }`.
  * @event lr-column-resize - A resizable column changed width by pointer or keyboard. `detail:
- *   { key, width }`, where `width` is in CSS pixels. A pointer drag fires this once per pixel of
+ *   { columnKey, width }`, where `width` is in CSS pixels. A pointer drag fires this once per pixel of
  *   movement as non-cancelable live feedback, then once more, **cancelable**, for the final
  *   width committed at drag-end; a keyboard step (Home/End/Arrow) is already a single discrete
  *   action and fires that one cancelable commit directly. `preventDefault()` on a cancelable
@@ -640,7 +645,7 @@ export interface LyraTableEventMap<T = unknown> {
  *   absent for a row that fails `canExpand`.
  * @csspart row-expand-icon - The chevron icon inside `row-expand-toggle`.
  * @csspart expanded-row - The full-width panel `<tr>` rendered beneath a
- *   row whose key is in `expandedKeys`.
+ *   row whose key is in `expandedRowKeys`.
  * @csspart expanded-cell - The single `colspan`-spanning `<td>` inside
  *   `expanded-row`, containing `expandedContent(row)`.
  * @csspart group-row - A non-focusable group header row.
@@ -737,10 +742,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   private _columns: readonly TableColumn<T>[] = Object.freeze([]);
-  /** Clone-owned readonly column-definition sequence, bounded to 10,000 valid definitions. Blank
-   * keys and later duplicate keys are omitted (first valid occurrence wins) before any header,
-   * cell, sort, focus, or event path. Column objects and callbacks retain their identities;
-   * reassign the collection to update. */
+  /** Clone-owned readonly column-definition sequence, bounded to the first 10,000 source
+   * positions. Blank keys and later duplicate keys are omitted (first valid occurrence wins)
+   * before any header, cell, sort, focus, or event path. Column objects and callbacks retain their
+   * identities; reassign the collection to update. */
   @property({ attribute: false })
   get columns(): readonly TableColumn<T>[] {
     return this._columns;
@@ -749,17 +754,38 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const previous = this._columns;
     const columns: TableColumn<T>[] = [];
     const seen = new Set<string>();
-    if (Array.isArray(value)) {
-      for (const column of value) {
-        try {
-          const key = column?.key;
-          if (typeof key !== 'string' || key.trim().length === 0 || seen.has(key)) continue;
-          seen.add(key);
-          columns.push(column);
-          if (columns.length >= MAX_TABLE_COLLECTION_ENTRIES) break;
-        } catch {
-          // A malformed definition cannot reserve its key or suppress a later valid definition.
+    let length = 0;
+    try {
+      if (Array.isArray(value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
+        const sourceLength = descriptor && 'value' in descriptor ? descriptor.value : 0;
+        if (
+          typeof sourceLength === 'number' &&
+          Number.isSafeInteger(sourceLength) &&
+          sourceLength >= 0
+        ) {
+          length = Math.min(sourceLength, MAX_TABLE_COLLECTION_ENTRIES);
         }
+      }
+    } catch {
+      length = 0;
+    }
+    for (let index = 0; index < length; index += 1) {
+      let descriptor: PropertyDescriptor | undefined;
+      try {
+        descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      } catch {
+        continue;
+      }
+      if (!descriptor || !('value' in descriptor)) continue;
+      const column = descriptor.value as TableColumn<T>;
+      try {
+        const key = column?.key;
+        if (typeof key !== 'string' || key.trim().length === 0 || seen.has(key)) continue;
+        seen.add(key);
+        columns.push(column);
+      } catch {
+        // A malformed definition cannot reserve its key or suppress a later valid definition.
       }
     }
     this._columns = frozenArray(columns);
@@ -848,15 +874,17 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private _selectedKeys = new Set<string | number>();
   /** Selected raw row keys in every selection mode, bounded to 10,000 keys. Single mode replaces
    * this set with exactly one key per row activation; multiple mode toggles membership. Reads
-   * return immutable detached `ReadonlySet` facades; reassign a new set to update. */
+   * return immutable detached `ReadonlySet` facades; malformed and whitespace-only string keys are
+   * omitted while valid off-page keys are retained for server pagination. Reassign a new set to
+   * update. */
   @property({ attribute: false })
-  get selectedKeys(): ReadonlySet<string | number> {
+  get selectedRowKeys(): ReadonlySet<string | number> {
     return readonlyKeySet(this._selectedKeys);
   }
-  set selectedKeys(value: ReadonlySet<string | number>) {
+  set selectedRowKeys(value: ReadonlySet<string | number>) {
     const previous = this._selectedKeys;
     this._selectedKeys = keySet(value ?? []);
-    this.requestUpdate('selectedKeys', previous);
+    this.requestUpdate('selectedRowKeys', previous);
   }
   @property({ type: Boolean, reflect: true }) filterable = false;
   @property({ attribute: 'filter-text' }) filterText = '';
@@ -921,7 +949,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ type: Number, attribute: 'total-items' }) totalItems = -1;
   @property({ reflect: true, attribute: 'pagination-mode' }) paginationMode: 'client' | 'server' = 'client';
   /** Renders a full-width panel beneath a row when that row's key is in
-   *  `expandedKeys`. Table-level (not per-column) since the panel spans
+   *  `expandedRowKeys`. Table-level (not per-column) since the panel spans
    *  every column via `colspan`. Setting this makes every row render a
    *  leading chevron-toggle cell before all data columns; omit for no
    *  leading cell at all (unchanged output). */
@@ -933,20 +961,21 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  click handler. */
   @property({ attribute: false }) canExpand?: (row: T) => boolean;
   /** Consumer-owned open/closed state, bounded to 10,000 keys and keyed the same way as `rowKey`/
-   *  `selectedKeys`. The table never mutates this itself — it only reads it
+   *  `selectedRowKeys`. The table never mutates this itself — it only reads it
    *  to decide which rows currently render `expandedContent`; toggle it in
    *  response to `lr-row-expand-toggle`. Unlike this controlled expansion axis,
    *  selection and client sorting are self-managed. Reads return immutable detached `ReadonlySet`
-   *  facades; reassign a new set to update. */
+   *  facades; malformed and whitespace-only string keys are omitted and valid off-page keys remain
+   *  controlled. Reassign a new set to update. */
   private _expandedKeys = new Set<string | number>();
   @property({ attribute: false })
-  get expandedKeys(): ReadonlySet<string | number> {
+  get expandedRowKeys(): ReadonlySet<string | number> {
     return readonlyKeySet(this._expandedKeys);
   }
-  set expandedKeys(value: ReadonlySet<string | number>) {
+  set expandedRowKeys(value: ReadonlySet<string | number>) {
     const previous = this._expandedKeys;
     this._expandedKeys = keySet(value ?? []);
-    this.requestUpdate('expandedKeys', previous);
+    this.requestUpdate('expandedRowKeys', previous);
   }
   /** Overrides the auto-derived heat-tint domain (min/max of every `heatValue` result across every
    *  currently-rendered row — post-sort, pre-pagination, the same rows `footer(rows)` already sees).
@@ -1019,7 +1048,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @state() private activeColKey: string | null = null;
   /** Roving-tabindex position among body rows; `null` until a row is
    *  clicked/navigated to, at which point `focusedRowKey()` falls back to
-   *  the first surviving `selectedKeys` member (if it matches a row) or the first row. */
+   *  the first surviving `selectedRowKeys` member (if it matches a row) or the first row. */
   @state() private activeRowKey: string | null = null;
   @state() private editingCell: { rowKey: string; columnKey: string } | null = null;
   /** The persistent (`editTrigger: 'always'`) editor cell that most recently took focus, recorded by
@@ -1127,7 +1156,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // Unlike a pointer drag's per-pixel `onResizePointerMove` stream, every keyboard step here is
     // already a single, final, deliberately-committed width change -- exactly the kind of
     // "committed width" this event is scoped to be vetoable for.
-    const event = this.emit('lr-column-resize', Object.freeze({ key: column.key, width }), { cancelable: true });
+    const event = this.emit('lr-column-resize', Object.freeze({ columnKey: column.key, width }), { cancelable: true });
     if (!event.defaultPrevented) return;
     const reverted = new Map(this.resizedColumnWidths);
     if (previousWidth === undefined) reverted.delete(column.key);
@@ -1182,7 +1211,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const width = Math.min(state.maxWidth, Math.max(state.minWidth, state.startWidth + delta));
     if (this.resizedColumnWidths.get(state.key) === width) return;
     this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(state.key, width);
-    this.emit('lr-column-resize', Object.freeze({ key: state.key, width }));
+    this.emit('lr-column-resize', Object.freeze({ columnKey: state.key, width }));
   };
 
   private onResizeKeyDown = (event: KeyboardEvent): void => {
@@ -1269,7 +1298,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (committedWidth === undefined || committedWidth === state.previousWidth) return;
     const commitEvent = this.emit(
       'lr-column-resize',
-      Object.freeze({ key: state.key, width: committedWidth }),
+      Object.freeze({ columnKey: state.key, width: committedWidth }),
       { cancelable: true }
     );
     if (!commitEvent.defaultPrevented) return;
@@ -1881,10 +1910,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (
       this.selectionMode === 'single' &&
       this._selectedKeys.size > 1 &&
-      (changed.has('selectionMode') || changed.has('selectedKeys'))
+      (changed.has('selectionMode') || changed.has('selectedRowKeys'))
     ) {
       const first = this._selectedKeys.values().next().value as string | number | undefined;
-      this.selectedKeys = first === undefined ? new Set() : new Set([first]);
+      this.selectedRowKeys = first === undefined ? new Set() : new Set([first]);
     }
     // Restore a persisted `priorityColumnsVisible` preference once, before the first render, so the restored
     // value folds into the first paint with no follow-up update -- doing this in firstUpdated()
@@ -2040,7 +2069,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  intentionally kept as a separate pass from the rowsByKey/columnsByKey
    *  rebuild above: those two must stay in `willUpdate()` so `render()`'s
    *  own `focusedRowKey()` call sees the current update's identity maps
-   *  (e.g. freshly-assigned `selectedKeys` resolving to the correct
+   *  (e.g. freshly-assigned `selectedRowKeys` resolving to the correct
    *  roving-tabindex row on the very first paint), whereas the sticky-offset
    *  measurement can only run after that same paint has happened. Only runs
    *  when `hasSticky` is true (opt-in) and simply recomputes on every
@@ -2139,17 +2168,17 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const { row, key: selectedKey } = entry;
     this.emit('lr-row-click', Object.freeze({ row }));
     if (this.selectionMode === 'single') {
-      this.selectedKeys = new Set([selectedKey]);
-      const keys = Object.freeze([selectedKey] as const);
-      this.emit('lr-selection-change', Object.freeze({ keys }));
+      this.selectedRowKeys = new Set([selectedKey]);
+      const rowKeys = Object.freeze([selectedKey] as const);
+      this.emit('lr-selection-change', Object.freeze({ rowKeys }));
     } else if (this.selectionMode === 'multiple') {
       const rawKey = selectedKey;
       const next = new Set(this._selectedKeys);
       if (next.has(rawKey)) next.delete(rawKey);
       else next.add(rawKey);
-      this.selectedKeys = next;
-      const keys = Object.freeze([...next]);
-      this.emit('lr-selection-change', Object.freeze({ keys }));
+      this.selectedRowKeys = next;
+      const rowKeys = Object.freeze([...next]);
+      this.emit('lr-selection-change', Object.freeze({ rowKeys }));
     }
   }
 
@@ -2186,7 +2215,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       return;
     }
     const value = column.editType === 'number' && input.value !== '' ? Number(input.value) : input.value;
-    this.emit('lr-cell-edit', Object.freeze({ row: entry.row, key: columnKey, value }));
+    this.emit('lr-cell-edit', Object.freeze({ row: entry.row, columnKey, value }));
     if (isTransient) this.editingCell = null;
   }
 
@@ -2274,7 +2303,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private activateExpandToggle(key: string | number): void {
     const entry = this.rowsByKey.get(encodeKey(key));
-    if (entry !== undefined) this.emit('lr-row-expand-toggle', Object.freeze({ row: entry.row, key }));
+    if (entry !== undefined)
+      this.emit('lr-row-expand-toggle', Object.freeze({ row: entry.row, rowKey: key }));
   }
 
   /** Header cells currently in the tab sequence — excludes columns hidden by

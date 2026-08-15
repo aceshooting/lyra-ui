@@ -348,3 +348,31 @@ it('suppresses the canonical child menu selection after translating it', async (
   await sourceEvent;
   expect(leaked).to.equal(0);
 });
+
+it('omits blank and later duplicate source ids before summary, table rows, and actions', async () => {
+  const first = sources[0]!;
+  const el = (await fixture(
+    html`<lr-knowledge-base
+      .sources=${[
+        { ...first, id: '' },
+        first,
+        { ...first, name: 'Later duplicate', syncStatus: 'error' as const },
+        { ...first, id: ' ' },
+      ]}
+    ></lr-knowledge-base>`
+  )) as LyraKnowledgeBase;
+  await tableEl(el).updateComplete;
+
+  expect(tableEl(el).rows).to.deep.equal([first]);
+  expect(rowCells(el, 'source-name').map((cell) => cell.textContent)).to.deep.equal([
+    first.name,
+  ]);
+  const summary = [
+    ...el.shadowRoot!.querySelectorAll('[part="summary-stat"]'),
+  ] as LyraStat[];
+  expect(summary.map((stat) => stat.value)).to.deep.equal(['1', '1', '0', '0']);
+
+  const selected = oneEvent(el, 'lr-source-sync');
+  activate(menuItems(menuFor(el, 0)).find((entry) => entry.value === 'sync')!);
+  expect((await selected).detail).to.deep.equal({ sourceId: first.id });
+});

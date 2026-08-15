@@ -24,7 +24,7 @@ that row means — this table summarizes, the script decides.
 | Guarantee | Gate | Runs in |
 |---|---|---|
 | Every component has an axe-core assertion, in its own directory's tests, in a test that mounts its own tag | `check:qualification` + the browser suite | `pnpm lint`, `pnpm test` |
-| No axe-core violation in each component's qualifying populated/open state (or the complete default state for the two recorded primitive exemptions) | `check:qualification` + `expect(el).to.be.accessible()` in the browser suite | `pnpm lint`, `pnpm test`, CI `build-and-coverage` |
+| No axe-core violation in each component's qualifying populated/open state (or the complete default state for a recorded primitive exemption) | `check:qualification` + `expect(el).to.be.accessible()` in the browser suite | `pnpm lint`, `pnpm test`, CI `build-and-coverage` |
 | Every pinned upstream mapping records reviewed semantic, naming, keyboard, focus, state, announcement, and motion profiles; automatic mappings may not omit a recorded upstream behavior | `check:component-inventory` + `test:component-inventory` + `test:migrate-wa` | `pnpm lint` |
 | No axe-core `wcag2a`/`wcag2aa` violation on a curated set of representative story renderings in the built docs site | `storybook:check` | CI `docs-and-storybook` |
 | Every `--lr-color-<variant>-on-<emphasis>` token clears 4.5:1 against the `-fill-` token it pairs with (WCAG 2.2 SC 1.4.3), and the border tokens that identify a control clear 3:1 against the page surface (SC 1.4.11) — in **both** the light and dark palettes | `check:contrast` | `pnpm lint` |
@@ -36,23 +36,22 @@ that row means — this table summarizes, the script decides.
 | No layout that overflows the document at 390px, in LTR or RTL, on any component's docs page | `storybook:check` | CI `docs-and-storybook` |
 | Tracked visual baselines stay stable; pending-review axes still pass registration, nonblank, forced-colors pixel, and narrow-allocation guards without committing unreviewed PNGs | `test:visual` | CI `visual-regression` |
 
-Measured on this tree at 8.0.0:
+Current evidence:
 
 - Every public component carries exact same-test, same-instance axe-core evidence in its component
   directory, or a narrow reviewed exemption recorded by the qualification gate. The generated
   component-quality reference is the authoritative per-tag count and evidence index.
-- The Storybook sweep runs axe-core restricted to the `wcag2a` and `wcag2aa` tags over 21 story
+- The Storybook sweep runs axe-core restricted to the `wcag2a` and `wcag2aa` tags over curated
   renderings — mostly interacted-with states (a dialog while open, a toast after it fires, a picker
-  after a selection), plus one dark-theme rendering. It is a curated
+  after a selection), plus a dark-theme rendering. It is a curated
   smoke set, not per-component coverage; per-component axe coverage comes from the browser suite
   above.
 - The same sweep audits **every** component docs page for layout overflow, trapped overlays, and
   console/page errors at 980px, at 390px, and at 390px with `dir="rtl"`.
-- The visual-regression manifest covers 83 stories and 253 live captures. Every story exercises
-  light, dark, and RTL; selected intrinsic-color, chart, and responsive stories add real
-  forced-colors or 320px narrow browser axes. While human review is pending, 207 captures compare
-  with retained baselines and 46 remain explicitly ephemeral evidence. The manifest records every
-  per-profile and pending-review exemption and is the authoritative matrix.
+- The visual-regression manifest covers light, dark, and RTL for every enrolled story; selected
+  intrinsic-color, chart, and responsive stories add real forced-colors or 320px narrow browser
+  axes. `packages/lyra-ui/visual-baselines/manifest.json` is authoritative for the live story and
+  capture counts, comparison policy, and every per-profile or pending-review exemption.
 
 `check:qualification` is what keeps the first row from decaying: a component may not claim `stable`
 maturity without that per-tag evidence. Components that predate the gate carry dated, reviewed
@@ -131,8 +130,8 @@ authoritative per-tag evidence index.
 ## Reduced motion
 
 Every animation in the library is built from `--lr-*` motion tokens and is required to simplify or
-stop under `prefers-reduced-motion: reduce`. 92 of 266 component stylesheets carry an explicit
-`prefers-reduced-motion` block, and the shared motion helper clamps programmatic (Web Animations)
+stop under `prefers-reduced-motion: reduce`. Component stylesheets use explicit
+`prefers-reduced-motion` blocks, and the shared motion helper clamps programmatic (Web Animations)
 durations — including a consumer's own `--show-duration` override — to zero under the same query.
 Components that animate are expected to test **both** branches, not just the reduced one.
 

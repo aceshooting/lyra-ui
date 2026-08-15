@@ -95,8 +95,6 @@ export interface LyraMessagePartsEventMap
  * @since 7.0.0
  */
 export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['parts']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -108,6 +106,8 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     thinkingPanelLabel: LYRA_DEFAULT_thinkingPanelLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['parts']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([

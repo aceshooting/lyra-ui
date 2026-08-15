@@ -2,7 +2,7 @@ import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '@web/test-runner-commands';
 import './chart.js';
 import './doughnut-chart.js';
-import { seriesPalette, type LyraChart, type Series } from './chart.js';
+import { seriesPalette, LyraChart, type LyraChartSeries } from './chart.js';
 import { styles } from './chart.styles.js';
 import { loadChartAndZoom } from './chart-feature-loader.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -464,7 +464,7 @@ it('updates in place (same Chart instance) when only data changes', async () => 
 });
 
 it('preserves a legend-toggled hidden dataset across an in-place datasets-only update', async () => {
-  const el = (await fixture(html`<lr-chart legend></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [
@@ -493,7 +493,7 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
 });
 
 it('renders a persistent non-color legend state after hiding a dataset', async () => {
-  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
@@ -513,7 +513,7 @@ it('renders a persistent non-color legend state after hiding a dataset', async (
 });
 
 it('exposes a cancellable controlled legend proposal before committing an observable snapshot', async () => {
-  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
@@ -567,10 +567,44 @@ it('exposes a cancellable controlled legend proposal before committing an observ
   }
 });
 
+it('detaches and freezes both legend visibility event snapshots', () => {
+  type LegendDetail = {
+    readonly datasetIndex: number;
+    readonly visible: boolean;
+    readonly hiddenDatasets: readonly number[];
+  };
+  type LegendEmitter = {
+    emit(
+      name: 'lr-before-legend-visibility-change' | 'lr-legend-visibility-change',
+      detail: LegendDetail,
+      options?: { readonly cancelable?: boolean },
+    ): CustomEvent<LegendDetail>;
+  };
+
+  const el = document.createElement('lr-chart') as LyraChart;
+  const emitter = el as unknown as LegendEmitter;
+  const hiddenDatasets = [1];
+  const detail = { datasetIndex: 1, visible: false, hiddenDatasets };
+  const proposed = emitter.emit('lr-before-legend-visibility-change', detail, {
+    cancelable: true,
+  });
+  const committed = emitter.emit('lr-legend-visibility-change', detail);
+
+  hiddenDatasets.push(2);
+  for (const event of [proposed, committed]) {
+    expect(event.detail === detail).to.equal(false);
+    expect(event.detail.hiddenDatasets === hiddenDatasets).to.equal(false);
+    expect(event.detail.hiddenDatasets).to.deep.equal([1]);
+    expect(Object.isFrozen(event.detail)).to.equal(true);
+    expect(Object.isFrozen(event.detail.hiddenDatasets)).to.equal(true);
+  }
+  expect(proposed.detail === committed.detail).to.equal(false);
+  expect(proposed.detail.hiddenDatasets === committed.detail.hiddenDatasets).to.equal(false);
+});
+
 it('keeps a controlled hidden dataset hidden when its show proposal is canceled', async () => {
   const el = (await fixture(html`<lr-chart
     type="bar"
-    legend
     .hiddenDatasets=${[0]}
     .labels=${['A']}
     .datasets=${[{ label: 'Revenue', data: [1] }]}
@@ -602,7 +636,7 @@ it('keeps a controlled hidden dataset hidden when its show proposal is canceled'
 });
 
 it('does not preserve configured hidden state as a legend override when replacement data makes it visible', async () => {
-  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.config = {
     data: {
       labels: ['A'],
@@ -629,7 +663,7 @@ it('does not preserve configured hidden state as a legend override when replacem
 });
 
 it('preserves an explicit legend show override for a configured-hidden dataset', async () => {
-  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.config = {
     data: {
       labels: ['A'],
@@ -722,7 +756,7 @@ it('keeps a newly-added series visible instead of inheriting a stale hidden defa
 });
 
 it('renders a newly-added series as pressed in the DOM legend on its first update', async () => {
-  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'Existing', data: [1] }];
   await el.updateComplete;
@@ -751,7 +785,6 @@ it('uses effective dataset hidden state in the DOM legend before Chart.js exists
   // instance that happened to initialize before the assertion.
   (el as any).loadLibrary = () => new Promise(() => {});
   (el as any).loading = false;
-  el.legend = true;
   el.config = {
     data: {
       labels: ['A'],
@@ -769,7 +802,7 @@ it('uses effective dataset hidden state in the DOM legend before Chart.js exists
 });
 
 it('uses a newly-added effective dataset hidden flag before the in-place draw', async () => {
-  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'Existing', data: [1] }];
   await el.updateComplete;
@@ -846,7 +879,7 @@ it('rebuilds (new Chart instance) when type changes', async () => {
 });
 
 it('derives legend state from effective data when a type change will rebuild the chart', async () => {
-  const el = (await fixture(html`<lr-chart type="line" legend></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
@@ -869,7 +902,7 @@ it('derives legend state from effective data when a type change will rebuild the
 });
 
 it('resynchronizes the legend after a plugin change rebuilds the live chart', async () => {
-  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A'];
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
@@ -916,7 +949,7 @@ it('exposes an interactive application role with a dataset-label-derived aria-la
 
 it('forwards a host aria-label to the canvas and keeps the chart role on that semantic element only', async () => {
   const el = (await fixture(html`
-    <lr-chart aria-label="Quarterly revenue" accessible-label="Legacy chart label"></lr-chart>
+    <lr-chart aria-label="Quarterly revenue" label="Ignored chart label"></lr-chart>
   `)) as LyraChart;
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
@@ -979,8 +1012,8 @@ it('joins per-series summary sentences with the localizable chartSummarySeparato
 
 it('exposes a customizable accessible description and a data-table alternative', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
-  el.accessibleLabel = 'Revenue history';
-  el.accessibleDescription = 'Revenue rises from January through March.';
+  el.label = 'Revenue history';
+  el.description = 'Revenue rises from January through March.';
   el.showDataTable = true;
   el.labels = ['Jan', 'Feb', 'Mar'];
   el.datasets = [{ label: 'Revenue', data: [1, 2, 3] }];
@@ -1135,7 +1168,6 @@ it('renders independent hover and pressed theme hooks for each chart control sur
   const el = (await fixture(html`
     <lr-chart
       type="bar"
-      legend
       zoom
       show-data-table
       style="
@@ -1693,7 +1725,6 @@ it('gives [part=reset-zoom-button] a token-driven :focus-visible outline, like e
 it('resolves grid/tick/legend/tooltip colors from custom --lr-chart-* values set on the host', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
-  el.legend = true;
   el.xLabel = 'X';
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'x', data: [1, 2] }];
@@ -1774,7 +1805,6 @@ it('defaults pie slices to distinct palette colors across the data', async () =>
 
 it('configures a fixed or auto-responsive legend position', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
-  el.legend = true;
   el.legendPosition = 'left';
   expect((el as any).buildConfig().options.plugins.legend.position).to.equal('left');
 
@@ -1787,7 +1817,6 @@ it('applies one valueFormatter to numeric ticks, tooltips, and legend values', a
   const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A', 'B'];
   el.datasets = [{ label: 'Revenue', data: [10, 20] }];
-  el.legend = true;
   el.valueFormatter = (value, context) => `${context}:${value}`;
 
   const config = (el as any).buildConfig();
@@ -2673,7 +2702,7 @@ it('reports "no data" for a series with neither data nor points, instead of thro
   expect(description.textContent).to.contain('Empty: no data');
 });
 
-// --- Series.pointRadius array, Series.segmentColors, public seriesPalette() -----------------------
+// --- LyraChartSeries.pointRadius array, LyraChartSeries.segmentColors, public seriesPalette() -----------------------
 
 it('accepts a per-point pointRadius array', async () => {
   const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
@@ -3357,7 +3386,7 @@ describe('effective chart contract', () => {
   });
 
   it('retains typed x/y/r/per-point labels through render, export, events, keyboard, and table semantics', async () => {
-    const points: NonNullable<Series['points']> = [
+    const points: NonNullable<LyraChartSeries['points']> = [
       { x: 10, y: 20, r: 7, label: 'North cluster' },
       { x: 30, y: 40, r: 9, label: 'South cluster' },
     ];
@@ -3487,7 +3516,7 @@ describe('effective chart contract', () => {
   it('keeps a visible fallback table and a long wrapping legend in normal document flow', async () => {
     const wrapper = await fixture(html`
       <div style="inline-size: 256px">
-        <lr-chart show-data-table legend></lr-chart>
+        <lr-chart show-data-table></lr-chart>
         <div id="after">After chart</div>
       </div>
     `);
@@ -3525,7 +3554,7 @@ describe('effective chart contract', () => {
 
   it('re-resolves a public series color for the DOM legend on theme refresh', async () => {
     const el = (await fixture(html`
-      <lr-chart legend style="--series-color: rgb(10, 20, 30)"></lr-chart>
+      <lr-chart style="--series-color: rgb(10, 20, 30)"></lr-chart>
     `)) as LyraChart;
     el.datasets = [{ label: 'Revenue', data: [1], color: 'var(--series-color)' }];
     await el.updateComplete;
@@ -3799,7 +3828,7 @@ describe('coverage: dataset label/value fallbacks and CSV export edge branches',
   it('falls back to a numbered "Point N" label for a dataset with no label at all', () => {
     const el = document.createElement('lr-chart') as LyraChart;
     el.labels = ['A'];
-    el.datasets = [{ data: [1] }] as unknown as Series[];
+    el.datasets = [{ data: [1] }] as unknown as LyraChartSeries[];
     const csv = el.exportData('csv');
     expect(csv.split('\r\n')[0]).to.equal('label,Point 1');
   });
@@ -4553,10 +4582,9 @@ describe('coverage: legend/tooltip/table label fallbacks and misc guards', () =>
     expect(() => (el as any).toggleDataset(0)).to.not.throw();
   });
 
-  it('prioritizes the `description` property over accessibleDescription and the generated summary', async () => {
+  it('prioritizes the `description` property over the generated summary', async () => {
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     el.description = 'Explicit description wins.';
-    el.accessibleDescription = 'Should be ignored.';
     el.labels = ['A'];
     el.datasets = [{ label: 'x', data: [1] }];
     await el.updateComplete;
@@ -4565,18 +4593,17 @@ describe('coverage: legend/tooltip/table label fallbacks and misc guards', () =>
     expect(description.textContent).to.equal('Explicit description wins.');
   });
 
-  it('renders no legend markup when legend is disabled or withoutLegend overrides it', async () => {
-    const el = (await fixture(html`<lr-chart legend></lr-chart>`)) as LyraChart;
+  it('has no redundant positive-polarity legend property — withoutLegend is the only control', () => {
+    expect(Object.getOwnPropertyDescriptor(LyraChart.prototype, 'legend')).to.equal(undefined);
+  });
+
+  it('renders no legend markup when withoutLegend is set', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     el.labels = ['A'];
     el.datasets = [{ label: 'x', data: [1] }];
-    el.legend = false;
-    await el.updateComplete;
-    await waitUntil(() => (el as any).chart != null);
-    expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
-
-    el.legend = true;
     el.withoutLegend = true;
     await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
     expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
   });
 });

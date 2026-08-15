@@ -19,7 +19,9 @@ Renders an agent-streamed version-two declarative JSON widget document through a
 allowlisted `type -> lyra tag` registry. Mapped tags and children render declaratively, so populated
 documents work during SSR without a global `document`; primitive mapped props remain property-only
 and are assigned during hydration. Keyed reconciliation preserves the mapped element's focus,
-scroll position, and internal state across streamed document updates. Built-in `row`/`col`/`text`
+scroll position, and internal state across streamed document updates. An unchanged resolved mapped
+node also retains its memoized template and ref callback, so unrelated renderer updates neither
+reassign its props nor detach and reattach its action/binding listeners. Built-in `row`/`col`/`text`
 structural nodes render through ordinary nested templates. Not a
 form runtime (no input/select/form types in the default registry), no expression language or
 implicit state mutation, no remote widget/schema fetching, and it never renders arbitrary HTML or

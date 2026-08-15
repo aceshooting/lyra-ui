@@ -105,14 +105,14 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
 `undefined` when the id is not currently simulated.
 
-**Events:** `lr-node-click` (`detail: { id, x, y }`, where `x` and `y` are the clicked node's current
-local drawing coordinates), `lr-link-click` (`detail: { source, target,
-id? }`; the optional `id` is the stable `LyraGraphLink.id` supplied by the caller), `lr-node-enter`/
-`lr-node-leave` (`detail: { id }`, hover start/end, suppressed while dragging/panning),
-`lr-link-enter`/`lr-link-leave` (`detail: { source, target, id? }`, same hover contract),
-`lr-node-expand` (`detail: { id }`, a node was double-activated — native `dblclick`, or two
+**Events:** `lr-node-click` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
+local drawing coordinates), `lr-link-click` (`detail: { sourceNodeId, targetNodeId,
+linkId? }`; the optional `linkId` is the stable `LyraGraphLink.id` supplied by the caller), `lr-node-enter`/
+`lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning),
+`lr-link-enter`/`lr-link-leave` (`detail: { sourceNodeId, targetNodeId, linkId? }`, same hover contract),
+`lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-click`
-(`detail: { id }`, a hull was activated), `lr-selection-change`
+(`detail: { communityId }`, a hull was activated), `lr-selection-change`
 (`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
 (`detail: { k, x, y }`, a frame-coalesced camera/layout signal)
 
@@ -121,7 +121,7 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 **CSS parts:** `base`, `svg`, `node`, `link`, `arrowhead` (the marker path shared by directed links),
 `label`, `link-label` (a drawn edge label, only rendered when `showEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
-ring tracking `focusId`'s node), `hull` (a community hull), `community-label`,
+ring tracking `focusNodeId`'s node), `hull` (a community hull), `community-label`,
 `live-region`, `data-list`, `empty`, `error` (neutral visible message shown instead of the graph when
 the optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers fail to load; that transition is
 announced through a shared assertive light-DOM region — distinct from the empty state, which means
@@ -152,7 +152,7 @@ behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
 `--lr-graph-dimmed-opacity` (default `0.35`) — opacity of a node/link listed in
 `dimmedNodeIds`/`dimmedLinkIds`.
 `--lr-graph-hull-fill` (default `var(--lr-color-brand)`) — community hull fill/stroke color
-(overridden inline per hull from `GraphCommunity.color`).
+(overridden inline per hull from `LyraGraphCommunity.color`).
 `--lr-graph-hull-opacity` (default `0.12`) — hull element opacity (composites fill+stroke as one).
 Under `renderer="canvas"` these five are read from computed style at paint time (there are no
 per-node elements to inherit them), so they must be set on or above the `<lr-graph>` host itself.
@@ -194,9 +194,9 @@ localized `part="error"` alert. Install with
       dash: [6, 3],
     },
   ];
-  g.addEventListener("lr-node-click", (e) => console.log(e.detail.id));
+  g.addEventListener("lr-node-click", (e) => console.log(e.detail.nodeId));
   g.addEventListener("lr-link-click", (e) =>
-    console.log(e.detail.id, e.detail.source, e.detail.target)
+    console.log(e.detail.linkId, e.detail.sourceNodeId, e.detail.targetNodeId)
   );
 </script>
 ```
@@ -268,10 +268,15 @@ of the box with no host styling required); a host typically computes the set fro
 `lr-node-enter`/`lr-link-enter` hover (the complement of the hovered id's neighbor set) and assigns
 it back — `lr-knowledge-graph-explorer`'s own `highlight` property is exactly this composition,
 built-in. Empty (the default) renders every node/link at full opacity, unchanged from today.
-`communities: GraphCommunity[] = []` (attribute: false) draws one translucent convex-hull blob per
-entry behind links/nodes. Each entry is `GraphCommunity { id: string; label?: string; memberIds:
+`nodes`, `links`, `nodeTypes`, and `communities` use nonblank first-wins identities before lookup,
+layout, rendering, selection, or events. A link uses its explicit `id`, or `source->target` when
+`id` is omitted; a blank explicit `id` is invalid, while distinct explicit ids deliberately allow
+parallel links between the same endpoints. Retained identity spelling is not trimmed or rewritten.
+Community `memberIds` and controlled id arrays follow the same nonblank first-wins rule.
+`communities: LyraGraphCommunity[] = []` (attribute: false) draws one translucent convex-hull blob per
+entry behind links/nodes. Each entry is `LyraGraphCommunity { id: string; label?: string; memberIds:
 string[]; color?: string }`; membership is the union of `memberIds` and nodes whose `communityId`
-matches the entry id. `focusId: string | null = null` (attribute `focus-id`) tracks a persistent
+matches the entry id. `focusNodeId: string | null = null` (attribute `focus-node-id`) tracks a persistent
 focus ring (`[part="focus-halo"]`) around one node;
 `focusNode(id, options?)` and `fit(options?)` are the imperative camera-tween counterparts (pan/zoom
 to a node, or to fit the whole graph), both resolving once the tween settles. `lr-viewport-change`

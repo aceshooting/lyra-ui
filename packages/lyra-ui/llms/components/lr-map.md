@@ -24,7 +24,8 @@ operations. Its runtime value is the underlying MapLibre map.
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2`
 - `mapStyle?: LyraMapStyleSpecification | string` (attribute: false) — required before a map is
-  constructed. `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from
+  constructed. Object assignments are detached and recursively frozen; create and reassign a new
+  style to update it. `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from
   MapLibre's `StyleSpecification`, including its string or multi-sprite form. No provider or style
   is selected implicitly: an unset, empty, or whitespace-only value renders the localized
   style-required failure and makes no tile/style request. Assign a hosted vector/raster style from
@@ -101,8 +102,9 @@ shared `maplibre-gl` import without constructing a map or allocating a WebGL con
 an element.
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`), `lr-map-click`
-(`detail: { lngLat: [lng, lat], feature? }` — feature only populated if a choropleth fill layer
-exists and was hit)
+(frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature? }`; the tuple and any
+hit GeoJSON feature are detached and recursively frozen — feature is only populated if a
+choropleth fill layer exists and was hit)
 
 **Slots:** none.
 

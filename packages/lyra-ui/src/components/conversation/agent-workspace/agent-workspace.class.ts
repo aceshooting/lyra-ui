@@ -29,6 +29,26 @@ import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversa
 
 const MAX_RENDERED_MESSAGES = 500;
 
+function firstByWorkspaceIdentity<T>(
+  items: readonly T[],
+  identity: (item: T) => unknown
+): T[] {
+  const result: T[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    let id: unknown;
+    try {
+      id = identity(item);
+    } catch {
+      continue;
+    }
+    if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
+    seen.add(id);
+    result.push(item);
+  }
+  return result;
+}
+
 interface EffectiveWorkspaceMessage {
   message: ChatMessage;
   sourceIndex: number;
@@ -80,7 +100,7 @@ export interface LyraAgentWorkspaceEventMap {
  * @event lr-stop - Forwarded from the built-in composer.
  * @event lr-message-retry - A data-driven message's retry action was activated. `detail: { messageId }`.
  * @event lr-follow-change - Forwarded from the transcript viewport. `detail: { following }`.
- * @event lr-retrieval-select - Forwarded from the built-in retrieval results. `detail: { ids, chunks }`.
+ * @event lr-retrieval-select - Forwarded from the built-in retrieval results. `detail: { chunkIds, chunks }`.
  * @event lr-citation-select - Forwarded from the built-in grounding summary. `detail: { citation }`.
  * @event lr-tool-approval-decide - Forwarded from the built-in tool timeline.
  * @event lr-cancel - Forwarded from the built-in agent run.
@@ -105,18 +125,6 @@ export interface LyraAgentWorkspaceEventMap {
  * @since 4.2.0
  */
 export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'messages',
-    'run',
-    'metrics',
-    'tools',
-    'retrievalChunks',
-    'selectedRetrievalIds',
-    'groundingAssessment',
-    'citations',
-    'contextSegments',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -133,6 +141,18 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     composerPlaceholder: LYRA_DEFAULT_composerPlaceholder,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'messages',
+    'run',
+    'metrics',
+    'tools',
+    'retrievalChunks',
+    'selectedRetrievalIds',
+    'groundingAssessment',
+    'citations',
+    'contextSegments',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -153,14 +173,15 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   /** Additional metrics forwarded to `<lr-agent-run>`, such as token counts or latency. */
   @property({ attribute: false }) metrics: readonly AgentRunMetric[] = [];
 
-  /** Tool calls for the current run, rendered through `<lr-tool-timeline>`. */
+  /** Tool calls for the current run. Malformed/blank/later duplicate composite identities are
+   * ignored before section gating and forwarding to `<lr-tool-timeline>`. */
   @property({ attribute: false }) tools: readonly ToolTimelineEntry[] = [];
 
-  /** Retrieval chunks for the current answer or query. */
+  /** Retrieval chunks for the current answer or query, first-valid/first-wins by nonblank id. */
   @property({ attribute: false }) retrievalChunks: readonly RetrievalChunk[] = [];
 
   /** Controlled retrieval selection, forwarded to `<lr-retrieval-results>`. */
-  @property({ attribute: false }) selectedRetrievalIds: readonly string[] = [];
+  @property({ attribute: false }) selectedRetrievalChunkIds: readonly string[] = [];
 
   /** Loading state for the built-in retrieval result list. */
   @property({ type: Boolean, attribute: 'retrieval-loading' }) retrievalLoading = false;
@@ -174,10 +195,10 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   /** Grounding assessment for the current assistant answer. */
   @property({ attribute: false }) groundingAssessment: Readonly<GroundingAssessment> | null = null;
 
-  /** Citations displayed with the grounding summary. */
+  /** Citations displayed with the grounding summary, first-valid/first-wins by nonblank id. */
   @property({ attribute: false }) citations: readonly Citation[] = [];
 
-  /** Final model-call context segments. */
+  /** Final model-call context segments, first-valid/first-wins by nonblank id. */
   @property({ attribute: false }) contextSegments: readonly ContextInspectorSegment[] = [];
 
   /** Overall context-window token total. */
@@ -218,11 +239,33 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     return finiteCount(this.contextTotal);
   }
 
+  private get effectiveTools(): readonly ToolTimelineEntry[] {
+    return firstByWorkspaceIdentity(this.tools, (entry) => {
+      const id = entry.id;
+      if (typeof id !== 'string' || id.trim() === '') return undefined;
+      const sourceKey = entry.sourceKey;
+      return `${typeof sourceKey === 'string' ? sourceKey : ''}\u0000${id}`;
+    });
+  }
+
+  private get effectiveRetrievalChunks(): readonly RetrievalChunk[] {
+    return firstByWorkspaceIdentity(this.retrievalChunks, (chunk) => chunk.id);
+  }
+
+  private get effectiveCitations(): readonly Citation[] {
+    return firstByWorkspaceIdentity(this.citations, (citation) => citation.id);
+  }
+
+  private get effectiveContextSegments(): readonly ContextInspectorSegment[] {
+    return firstByWorkspaceIdentity(this.contextSegments, (segment) => segment.id);
+  }
+
   private get effectiveMessages(): readonly EffectiveWorkspaceMessage[] {
+    const source = this.messages;
     const seen = new Set<string>();
     const messages: EffectiveWorkspaceMessage[] = [];
-    for (let sourceIndex = 0; sourceIndex < this.messages.length; sourceIndex++) {
-      const message = this.messages[sourceIndex];
+    for (let sourceIndex = 0; sourceIndex < source.length; sourceIndex++) {
+      const message = source[sourceIndex];
       if (!message) continue;
       const id = message?.id;
       if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
@@ -299,6 +342,10 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   };
 
   private renderDetails(): TemplateResult {
+    const tools = this.effectiveTools;
+    const retrievalChunks = this.effectiveRetrievalChunks;
+    const citations = this.effectiveCitations;
+    const contextSegments = this.effectiveContextSegments;
     return html`
       <div part="details-content">
         ${this.run
@@ -307,18 +354,18 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               <lr-agent-run .run=${this.run} .metrics=${this.metrics}></lr-agent-run>
             </section>`
           : nothing}
-        ${this.tools.length > 0
+        ${tools.length > 0
           ? html`<section part="section">
               <h3 part="section-heading">${this.localize('agentWorkspaceTools')}</h3>
-              <lr-tool-timeline .entries=${this.tools}></lr-tool-timeline>
+              <lr-tool-timeline .entries=${tools}></lr-tool-timeline>
             </section>`
           : nothing}
-        ${this.retrievalChunks.length > 0 || this.retrievalLoading || this.retrievalErrorText
+        ${retrievalChunks.length > 0 || this.retrievalLoading || this.retrievalErrorText
           ? html`<section part="section">
               <h3 part="section-heading">${this.localize('agentWorkspaceRetrieval')}</h3>
               <lr-retrieval-results
-                .chunks=${this.retrievalChunks}
-                .selectedIds=${this.selectedRetrievalIds}
+                .chunks=${retrievalChunks}
+                .selectedChunkIds=${this.selectedRetrievalChunkIds}
                 .loading=${this.retrievalLoading}
                 .hasMore=${this.retrievalHasMore}
                 .errorText=${this.retrievalErrorText}
@@ -326,20 +373,20 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               ></lr-retrieval-results>
             </section>`
           : nothing}
-        ${this.groundingAssessment || this.citations.length > 0
+        ${this.groundingAssessment || citations.length > 0
           ? html`<section part="section">
               <h3 part="section-heading">${this.localize('agentWorkspaceGrounding')}</h3>
               <lr-grounding-summary
                 .assessment=${this.groundingAssessment}
-                .citations=${this.citations}
+                .citations=${citations}
               ></lr-grounding-summary>
             </section>`
           : nothing}
-        ${this.contextSegments.length > 0
+        ${contextSegments.length > 0
           ? html`<section part="section">
               <h3 part="section-heading">${this.localize('agentWorkspaceContext')}</h3>
               <lr-context-inspector
-                .segments=${this.contextSegments}
+                .segments=${contextSegments}
                 .total=${this.safeContextTotal}
               ></lr-context-inspector>
             </section>`
@@ -351,13 +398,13 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   private get hasBuiltInDetails(): boolean {
     return Boolean(
       this.run ||
-        this.tools.length > 0 ||
-        this.retrievalChunks.length > 0 ||
+        this.effectiveTools.length > 0 ||
+        this.effectiveRetrievalChunks.length > 0 ||
         this.retrievalLoading ||
         this.retrievalErrorText ||
         this.groundingAssessment ||
-        this.citations.length > 0 ||
-        this.contextSegments.length > 0,
+        this.effectiveCitations.length > 0 ||
+        this.effectiveContextSegments.length > 0,
     );
   }
 

@@ -20,4 +20,4 @@ export * from './spinner/spinner.js';
 export * from './toast/toast-item.js';
 export * from './toast/toast.js';
 export { toast } from './toast/toaster.js';
-export type { ToastHandle, ToastOptions } from './toast/toaster.js';
+export type { ToastHandle } from './toast/toaster.js';

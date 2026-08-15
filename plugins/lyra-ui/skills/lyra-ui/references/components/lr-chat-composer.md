@@ -88,7 +88,6 @@ validity and recomputes the current intrinsic constraints.
   trimming is left to the consumer. Submitting does **not** clear `value`
 - `lr-stop` (no detail) — fired by the built-in button while `status` is `"sending"` or
   `"streaming"`
-- `lr-blur` / `lr-focus` (`detail: null`) — prefixed notifications paired with native focus events
 - `lr-invalid` (no detail) — one bubbling/composed, cancelable alias when native validity fails;
   preventing it also prevents the native `invalid` event that produced it
 

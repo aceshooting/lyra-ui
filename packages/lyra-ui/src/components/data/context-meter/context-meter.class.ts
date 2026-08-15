@@ -86,8 +86,6 @@ function formatCount(n: number, locale: string): string {
  * @since 4.0.0
  */
 export class LyraContextMeter extends LyraElement {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['segments']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -98,6 +96,8 @@ export class LyraContextMeter extends LyraElement {
     contextMeterUsedOfTotal: LYRA_DEFAULT_contextMeterUsedOfTotal,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['segments']);
 
   static override styles = [LyraElement.styles, srOnly, styles];
 

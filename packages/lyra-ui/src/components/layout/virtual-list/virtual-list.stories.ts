@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './virtual-list.js';
 import type { LyraVirtualList } from './virtual-list.js';
-import type { VirtualListIndexedSource } from './virtual-list.js';
+import type { LyraVirtualListIndexedSource } from './virtual-list.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 interface DemoMessage {
@@ -24,7 +24,7 @@ function buildMessages(count: number): DemoMessage[] {
 
 const messages = buildMessages(2000);
 
-const indexedMessages: VirtualListIndexedSource<DemoMessage> = {
+const indexedMessages: LyraVirtualListIndexedSource<DemoMessage> = {
   count: 100_000,
   itemAt(index) {
     return {
@@ -113,7 +113,7 @@ export const IndexedSource: Story = {
     <lr-virtual-list
       style="max-width: 32rem; --lr-virtual-list-height: 20rem;"
       row-height="56"
-      active-id="indexed-90000"
+      active-item-id="indexed-90000"
       .source=${indexedMessages}
       .renderItem=${renderMessage}
     ></lr-virtual-list>
@@ -219,12 +219,12 @@ export const NarrowNoWrapOptOut: Story = {
   `,
 };
 
-/** `active-id` smoothly scrolls the matching row into view -- click a button to jump. */
+/** `active-item-id` smoothly scrolls the matching row into view -- click a button to jump. */
 export const ScrollToActive: Story = {
   render: () => {
     const setActive = (id: string) => {
       const list = document.getElementById('active-demo-list') as LyraVirtualList;
-      list.activeId = id;
+      list.activeItemId = id;
     };
     return html`
       <div style="display:flex; flex-direction:column; gap:0.5rem; max-width:32rem;">

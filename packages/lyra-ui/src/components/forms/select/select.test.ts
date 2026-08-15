@@ -465,6 +465,8 @@ it("emits exactly one native event pair and typed aliases with the new value", a
   expect(seen[1].detail).to.deep.equal({ value: "b" });
   expect(seen[2].detail).to.be.undefined;
   expect(seen[3].detail).to.deep.equal({ value: "b" });
+  expect(Object.isFrozen(seen[1].detail)).to.equal(true);
+  expect(Object.isFrozen(seen[3].detail)).to.equal(true);
   expect(seen[0].event instanceof InputEvent).to.be.true;
   expect(seen[2].event.constructor === Event).to.be.true;
   expect(

@@ -74,8 +74,6 @@ export interface LyraTranscriptFeedEventMap {
  * @since 4.0.0
  */
 export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -86,6 +84,8 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     transcriptFeedLabel: LYRA_DEFAULT_transcriptFeedLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -128,6 +128,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   private get normalizedEntries(): LyraTranscriptEntry[] {
     const seen = new Set<string>();
     return this.entries.filter((entry) => {
+      if (entry === null || typeof entry !== 'object') return false;
       if (typeof entry.id !== 'string' || entry.id.trim().length === 0 || seen.has(entry.id)) return false;
       seen.add(entry.id);
       return true;

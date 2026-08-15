@@ -170,7 +170,7 @@ for (const [label, upstream] of [
 }
 assert.match(
   migration,
-  /\| `<sl-resize-observer>` \| `<lr-resize-observer>` \| `rewritten` \| Automatic: tag\/import plus events: sl-resize → lr-resize\. \|/,
+  /\| `<sl-resize-observer>` \| `<lr-resize-observer>` \| `warning-required` \| Manual: Lyra freezes the entries array into an immutable snapshot at dispatch time; migrated code that mutates the array in place must create its own copy\. \|/,
 );
 assert.match(
   migration,
@@ -178,8 +178,8 @@ assert.match(
 );
 assert.match(
   migration,
-  /\| `<wa-accordion>` \| `<lr-accordion>` \| `rewritten` \| Automatic: tag\/import plus events:/,
-  'C-567 guidance must stop freezing the removed legacy-details warning',
+  /\| `<wa-accordion>` \| `<lr-accordion>` \| `warning-required` \| Manual: Lyra snapshots each expand\/collapse event detail into a frozen readonly value at dispatch time/,
+  'accordion migration guidance must expose the immutable event-detail contract',
 );
 assert.doesNotMatch(
   migration,

@@ -42,7 +42,7 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
   set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
   name for the same union.
 
-**Events:** `lr-entity-activate` (`detail: { id }`, the built-in focus button was activated).
+**Events:** `lr-entity-activate` (`detail: { entityId }`, the built-in focus button was activated).
 
 **Slots:** default (extra body content below the property rows, e.g. a `lr-neighbor-list`),
 `actions` (extra header actions alongside the built-in focus button).
@@ -76,7 +76,7 @@ from tokens.
   document
     .getElementById("card")
     .addEventListener("lr-entity-activate", (e) =>
-      graph.focusNode(e.detail.id)
+      graph.focusNode(e.detail.entityId)
     );
 </script>
 ```
@@ -87,5 +87,7 @@ from tokens.
   against `--lr-color-surface` — the lower percentage is required to hold WCAG AA 4.5:1 text
   contrast for arbitrary, unvetted type colors (even 10% isn't safe margin for every hue in the
   palette).
+- A blank `entity.id` renders the empty state. Blank/later duplicate `types[].id` entries cannot
+  become badge lookup owners.
 
 ---

@@ -41,13 +41,6 @@ export function sanitizeCssColor(color: unknown): string | undefined {
   return propertyAccepts('color', color, SAFE_SWATCH_COLOR_FALLBACK) ? color : undefined;
 }
 
-/**
- * @deprecated Historical name for {@linkcode sanitizeCssColor}. It was a wrapper that did nothing
- * but call it -- one guard behind two names, which reads as two different policies. Call
- * `sanitizeCssColor()`; this alias exists only so the remaining call sites keep resolving.
- */
-export { sanitizeCssColor as sanitizeSwatchColor };
-
 /** Returns a CSS length only when it is valid for the named sizing property. */
 export function sanitizeCssLength(
   value: unknown,

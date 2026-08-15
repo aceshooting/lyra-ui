@@ -45,6 +45,14 @@ const meta: Meta = {
   title: 'Knowledge Graph/Graph Query Builder',
   component: 'lr-graph-query-builder',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'The query, type options, and saved queries are normalized into bounded deeply frozen snapshots (500 type entries and 200 saved queries). Empty and blank option values and saved-query IDs are omitted and later duplicates are first-wins. Load/delete details use `queryId`. Create and reassign a new object or array after changes; query event details are detached and frozen.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -181,9 +189,9 @@ export const ControlledRemovalFocus: Story = {
         relationshipTypes: ['works_for', 'founded_by'],
       }}
       .savedQueries=${[...savedQueries, { ...savedQueries[0]!, id: 'saved-2', name: 'Second saved traversal' }]}
-      @lr-query-delete=${(event: CustomEvent<{ id: string }>) => {
+      @lr-query-delete=${(event: CustomEvent<{ queryId: string }>) => {
         const builder = event.currentTarget as LyraGraphQueryBuilder;
-        builder.savedQueries = builder.savedQueries.filter((item) => item.id !== event.detail.id);
+        builder.savedQueries = builder.savedQueries.filter((item) => item.id !== event.detail.queryId);
       }}
     ></lr-graph-query-builder>
   `,

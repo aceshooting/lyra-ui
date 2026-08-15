@@ -1,7 +1,10 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventDetailSnapshot,
+} from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import {
   composedParentElement,
@@ -65,14 +68,18 @@ const TREE_ITEM_EXPORT_PARTS = [
 ].join(', ');
 
 export interface LyraTreeItemEventMap {
-  'lr-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
-  'lr-node-select': CustomEvent<{ id: string }>;
-  'lr-expand': CustomEvent<{ item: LyraTreeItem }>;
-  'lr-after-expand': CustomEvent<{ item: LyraTreeItem }>;
-  'lr-collapse': CustomEvent<{ item: LyraTreeItem }>;
-  'lr-after-collapse': CustomEvent<{ item: LyraTreeItem }>;
-  'lr-lazy-change': CustomEvent<{ item: LyraTreeItem; loading: boolean }>;
-  'lr-lazy-load': CustomEvent<{ item: LyraTreeItem; generation: number }>;
+  'lr-node-toggle': CustomEvent<{ nodeId: string; expanded: boolean }>;
+  'lr-node-select': CustomEvent<{ nodeId: string }>;
+  'lr-expand': CustomEvent<LyraEventDetailSnapshot<{ readonly item: LyraTreeItem }>>;
+  'lr-after-expand': CustomEvent<LyraEventDetailSnapshot<{ readonly item: LyraTreeItem }>>;
+  'lr-collapse': CustomEvent<LyraEventDetailSnapshot<{ readonly item: LyraTreeItem }>>;
+  'lr-after-collapse': CustomEvent<LyraEventDetailSnapshot<{ readonly item: LyraTreeItem }>>;
+  'lr-lazy-change': CustomEvent<
+    LyraEventDetailSnapshot<{ readonly item: LyraTreeItem; readonly loading: boolean }>
+  >;
+  'lr-lazy-load': CustomEvent<
+    LyraEventDetailSnapshot<{ readonly item: LyraTreeItem; readonly generation: number }>
+  >;
 }
 /**
  * `<lr-tree-item>` — one row of `<lr-tree>`, in either of two child models.
@@ -119,8 +126,8 @@ export interface LyraTreeItemEventMap {
  * @slot children - Where nested `<lr-tree-item>` children are projected. Assigned by this component — authors write the children in the default slot.
  * @slot expand-icon - The disclosure icon shown while expanded. Falls back to the owning tree's slot, then the built-in chevron.
  * @slot collapse-icon - The disclosure icon shown while collapsed. Falls back to the owning tree's slot, then the built-in chevron.
- * @event lr-node-toggle - `detail: { id, expanded }`, fired when this node is expanded or collapsed (via `expand()`/`collapse()`, the toggle button, or ArrowRight/ArrowLeft).
- * @event lr-node-select - `detail: { id }`, fired when this node's primary action is activated (via `select()`, clicking anywhere in its row, or Enter/Space).
+ * @event lr-node-toggle - `detail: { nodeId, expanded }`, fired when this node is expanded or collapsed (via `expand()`/`collapse()`, the toggle button, or ArrowRight/ArrowLeft).
+ * @event lr-node-select - `detail: { nodeId }`, fired when this node's primary action is activated (via `select()`, clicking anywhere in its row, or Enter/Space).
  * @event lr-expand - Fired when expansion begins. `detail: { item }`.
  * @event lr-after-expand - Fired after the expansion motion completes. `detail: { item }`.
  * @event lr-collapse - Fired when collapse begins. `detail: { item }`.
@@ -162,6 +169,11 @@ export interface LyraTreeItemEventMap {
  * @cssstate selected - The item is selected.
  * @cssprop [--show-duration=var(--lr-duration-base)] - Expansion motion duration.
  * @cssprop [--hide-duration=var(--lr-duration-base)] - Collapse motion duration.
+ * @cssprop [--indent-size=var(--lr-space-l)] - Indentation step applied once per nesting depth.
+ * @cssprop [--indent-guide-color=var(--lr-color-border)] - Indentation guide color.
+ * @cssprop [--indent-guide-offset=0] - Block-axis inset at both ends of the indentation guide.
+ * @cssprop [--indent-guide-style=solid] - Indentation guide border style.
+ * @cssprop [--indent-guide-width=0] - Indentation guide width.
  * @cssprop [--lr-tree-depth=0] - Internal indent plumbing, not a retheming knob: this node's
  *   `depth`, written inline onto `[part="row"]` by the component and multiplied by
  *   `--indent-size` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
@@ -662,7 +674,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     this._collapsing = !expanded;
     this.expanded = expanded;
     this.emit(expanded ? 'lr-expand' : 'lr-collapse', { item: this });
-    this.emit('lr-node-toggle', { id: this.nodeId, expanded });
+    this.emit('lr-node-toggle', { nodeId: this.nodeId, expanded });
     this.scheduleAfterEvent(expanded, this.lifecycleGeneration);
   }
 
@@ -790,7 +802,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
    */
   select(): void {
     if (this.isDisabled) return;
-    this.emit('lr-node-select', { id: this.nodeId });
+    this.emit('lr-node-select', { nodeId: this.nodeId });
     this.focus();
   }
 

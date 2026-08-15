@@ -186,19 +186,23 @@ it('retains zero as an explicit full-history rendering opt-in', async () => {
 it('uses first-wins identity and rejects empty or blank transcript ids from rendering', async () => {
   const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [
+    null,
+    7,
     { id: 'same', text: 'first' },
     { id: 'same', text: 'second' },
     { id: '', text: 'missing identity' },
     { id: '   ', text: 'blank identity' },
-  ];
+  ] as unknown as LyraTranscriptEntry[];
   await el.updateComplete;
   expect(entryEls(el)).to.have.lengthOf(1);
   expect(el.shadowRoot!.querySelector('[part="text"]')!.textContent).to.equal('first');
 
   el.entries = [
+    null,
+    false,
     { id: '', text: 'missing identity' },
     { id: '   ', text: 'blank identity' },
-  ];
+  ] as unknown as LyraTranscriptEntry[];
   await el.updateComplete;
   expect(entryEls(el)).to.have.lengthOf(0);
   expect(el.shadowRoot!.querySelector('[part="empty"]') != null).to.equal(true);

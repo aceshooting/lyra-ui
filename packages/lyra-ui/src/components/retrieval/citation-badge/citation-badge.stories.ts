@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An inline `[n]` citation marker with a hover/focus preview popover and confidence/verification coloring. Preview content is exposed as a `role="tooltip"` with a stable `aria-describedby` relationship whenever it exists. Fires `lr-citation-activate` on click/Enter and `lr-citation-open` on dblclick/Space — a consumer wires those to scrolling to (or fully opening) the matching source, typically a `<lr-source-card>` sharing the same `source-id`.',
+          'An inline `[n]` citation marker with a hover/focus preview popover and confidence/verification coloring. Preview content is exposed as a `role="tooltip"` with a stable `aria-describedby` relationship whenever it exists. Fires `lr-citation-activate` on click/Enter and `lr-citation-open` on dblclick/Space. An authored host aria-label intentionally names the custom-element boundary and is not copied onto the shadow button, which retains its localized citation name.',
       },
     },
   },

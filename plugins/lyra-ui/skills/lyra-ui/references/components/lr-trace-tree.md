@@ -31,7 +31,7 @@ reaching `Intl.NumberFormat`. A row's accessible name includes its optional `det
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
 the same bounded runtime projection: provider records are normalized with deterministic first-wins
 identity, then at most 500 mount. The controlled `activeSpanId` and its resolvable ancestor path
-reserve positions before ordinary input-order spans. Non-object records, empty ids, non-finite
+reserve positions before ordinary input-order spans. Non-object records, empty/blank ids, non-finite
 starts/ends, and later duplicate ids are omitted; negative starts clamp to zero, ends clamp to at
 least their start, unknown kinds become `other`, and unknown statuses become `pending`. A localized
 `[part="limit"]` note exposes truncation.

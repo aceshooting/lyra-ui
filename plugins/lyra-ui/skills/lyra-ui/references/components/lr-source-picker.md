@@ -25,11 +25,12 @@ stance `lr-tool-select-dialog` already takes.
 - `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:
 string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
   a tree — presence of `children` makes a row a group/folder with tri-state select. Input is
-  normalized once into a deterministic first-id-wins model with identity/cycle detection, a depth
-  ceiling of 64 and a 2,000-node ceiling; rejected/truncated input fails closed with localized
-  visible status rather than recursing or exposing duplicate controls
-- `selectedIds: string[] = []` (attribute: false) — controlled; duplicates and ids that are not
-  leaves in the current `sources` tree are pruned, and the host assigns updates back from
+  normalized once into a deterministic nonblank first-id-wins model with identity/cycle detection,
+  a depth ceiling of 64 and a 2,000-node ceiling; blank/whitespace ids, duplicate ids, and other
+  rejected/truncated input fail closed with localized visible status rather than recursing or
+  exposing ambiguous controls
+- `selectedSourceIds: string[] = []` (attribute: false) — controlled; blank ids, duplicates, and ids
+  that are not leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
 - `showSelectAll: boolean = true` (attribute `show-select-all`)
 - `searchable: boolean = true`
@@ -39,7 +40,7 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,
   which retains the distinct `label`/localized name
 
-**Events:** `lr-sources-change` (`detail: { selectedIds }`, the complete updated leaf-id array,
+**Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
 fired after every toggle including select-all).
 
 **Slots:** none.
@@ -90,7 +91,7 @@ set the step, not the depth. Plus shared tokens otherwise.
   ];
   picker.addEventListener(
     "lr-sources-change",
-    (e) => (retrievalScope = e.detail.selectedIds)
+    (e) => (retrievalScope = e.detail.selectedSourceIds)
   );
 </script>
 ```

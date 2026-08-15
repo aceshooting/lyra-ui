@@ -28,6 +28,12 @@ Collection inputs are clone-owned readonly snapshots, so reassign `data`, `colum
 state arrays to update them; mutating the array originally assigned has no effect.
 Column records are also copied and frozen synchronously. Row object
 identities are preserved so formatter callbacks and `selectedRows` still refer to caller records.
+Column identity uses a nonblank `id`, then a nonblank `field`, then stable definition-object
+occurrence; malformed, blank, and later-duplicate identities are omitted first-wins. When `rowKey`
+is set, malformed, blank, and later-duplicate row identities are omitted first-wins before
+rendering, focus, selection, expansion, or events. Without `rowKey`, stable row-object occurrence
+replaces positional identity, so reordering the same records does not transfer DOM or controlled
+state to another row.
 
 **Properties:**
 
@@ -41,7 +47,8 @@ identities are preserved so formatter callbacks and `selectedRows` still refer t
 - `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
-- `expandedKeys: readonly Array<string | number> = []` (JS-only).
+- `expandedRowKeys: readonly Array<string | number> = []` (JS-only).
+  The mirrored `expandedKeys` spelling remains a compatibility alias for this same state.
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
 - `filteredCount: number` (read-only, JS-only) — matching client rows before paging.
 - `filterFromLeafRows: boolean = false` (`filter-from-leaf-rows`) — retains ancestors of matching
@@ -70,9 +77,10 @@ identities are preserved so formatter callbacks and `selectedRows` still refer t
 - `selectable: '' | 'single' | 'multiple' | 'none' = 'none'` (`selectable`, reflected) — a bare
   `selectable` attribute means `multiple`.
 - `selectableRows: ((row) => boolean) | null = null` (JS-only).
-- `selectedKeys: readonly Array<string | number> = []` (JS-only).
+- `selectedRowKeys: readonly Array<string | number> = []` (JS-only).
+  The mirrored `selectedKeys` spelling remains a compatibility alias for this same state.
 - `selectedRows: readonly Row[]` (writable, JS-only) — assigning rows that belong to the current source
-  maps them to `selectedKeys`; detached rows are ignored and single-selection mode keeps the first.
+  maps them to `selectedRowKeys`; detached rows are ignored and single-selection mode keeps the first.
 - `server: boolean = false` (`server`, reflected).
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (`size`, reflected).
 - `sort: readonly Array<{ readonly id: string; readonly desc: boolean }> = []` (JS-only).
@@ -152,14 +160,17 @@ the current page, Ctrl+C copies, and Shift+F10 requests a cell context menu. Inl
 movement swaps under RTL. Keyboard events from an interactive formatter descendant remain owned by
 that descendant.
 
-**Events:** `request`; `lr-cell-click`; cancelable `lr-cell-contextmenu` (canceling it suppresses the
+**Events:** `request`; `lr-cell-click` and cancelable `lr-cell-contextmenu` carry canonical
+`rowKey`/`columnId` alongside the row, column, value, and display index (canceling the latter suppresses the
 native menu); `lr-column-move`; `lr-column-pin`; `lr-column-resize` (`detail.finished` distinguishes
 live and committed resize). `pointerup` commits a pointer drag. `pointercancel` or lost capture
 restores the exact pre-gesture width state; after a live move it emits the restored width with
 `finished: false`, and it never emits a canceled `finished: true` commit. `lr-column-visibility-change`;
 `lr-data-error`;
 `lr-filter-change`; `lr-page-change`; `lr-row-collapse`; `lr-row-expand`; `lr-group-collapse` and
-`lr-group-expand` (frozen `{ key, columnId, value, rows }` snapshots); `lr-row-select`;
+`lr-group-expand` (frozen `{ key, columnId, value, rows }` snapshots); `lr-row-select` with
+canonical `{ selectedRowKeys, selectedRows }` plus mirrored `selectedKeys`; row expand/collapse
+details use canonical `rowKey` plus mirrored `key`;
 `lr-sort-change`; `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
 notification with no raw platform error text). Every library event bubbles and is composed; only `lr-cell-contextmenu` is

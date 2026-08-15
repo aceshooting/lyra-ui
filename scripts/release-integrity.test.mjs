@@ -22,6 +22,10 @@ import {
   waitForSuccessfulCi,
   waitForSuccessfulFullEngine,
 } from './release-integrity.mjs';
+import {
+  changesetPackagePlan,
+  renderChangesetPackagePlan,
+} from './changeset-release-plan.mjs';
 import { normalizeBrowserInput } from './plan-test-browsers.mjs';
 import { updateReadmeStatusLine } from './update-readme-status.mjs';
 
@@ -41,6 +45,63 @@ const successfulFullEngineJobs = () =>
     status: 'completed',
     conclusion: 'success',
   }));
+
+test('derives per-file package ownership from validated Changesets status JSON', () => {
+  const plan = changesetPackagePlan({
+    changesets: [
+      {
+        id: 'single-quoted-frontmatter',
+        releases: [
+          { name: '@aceshooting/lyra-ui', type: 'major' },
+          { name: '@aceshooting/lyra-flags', type: 'patch' },
+        ],
+      },
+      {
+        id: 'flags-only',
+        releases: [{ name: '@aceshooting/lyra-flags', type: 'minor' }],
+      },
+      { id: 'valid-empty-changeset', releases: [] },
+    ],
+  });
+
+  assert.deepEqual(plan, [
+    {
+      id: 'single-quoted-frontmatter',
+      packages: ['@aceshooting/lyra-ui', '@aceshooting/lyra-flags'],
+    },
+    { id: 'flags-only', packages: ['@aceshooting/lyra-flags'] },
+    { id: 'valid-empty-changeset', packages: [] },
+  ]);
+  assert.equal(
+    renderChangesetPackagePlan(plan),
+    'single-quoted-frontmatter\t@aceshooting/lyra-ui @aceshooting/lyra-flags\n' +
+      'flags-only\t@aceshooting/lyra-flags\n' +
+      'valid-empty-changeset\t',
+  );
+});
+
+test('fails closed on malformed or ambiguous Changesets status entries', () => {
+  assert.throws(() => changesetPackagePlan({}), /no changesets array/u);
+  assert.throws(
+    () =>
+      changesetPackagePlan({
+        changesets: [
+          { id: 'duplicate', releases: [{ name: '@aceshooting/lyra-ui', type: 'major' }] },
+          { id: 'duplicate', releases: [{ name: '@aceshooting/lyra-flags', type: 'patch' }] },
+        ],
+      }),
+    /duplicate id/u,
+  );
+  assert.throws(
+    () =>
+      changesetPackagePlan({
+        changesets: [
+          { id: 'bad-type', releases: [{ name: '@aceshooting/lyra-ui', type: 'breaking' }] },
+        ],
+      }),
+    /invalid release type/u,
+  );
+});
 
 test('budgets the platform matrix for degraded fresh-runner OS dependency setup', () => {
   const workflow = readFileSync(
@@ -107,10 +168,13 @@ test('keeps workflow-dispatch browser input out of shell source after allowlist 
   assert.doesNotMatch(testJob, /--browsers\s+"\$\{\{ matrix\.browser \}\}"/u);
 });
 
-test('scopes GitHub Pages write credentials to the deployment job', () => {
+test('deploys docs from the committed manifest with scoped Pages credentials', () => {
   const workflow = readFileSync(
     path.join(repoRoot, '.github/workflows/deploy-docs.yml'),
     'utf8'
+  );
+  const rootPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
   );
   const workflowPermissions = workflow.slice(
     workflow.indexOf('\npermissions:'),
@@ -126,6 +190,51 @@ test('scopes GitHub Pages write credentials to the deployment job', () => {
   assert.doesNotMatch(workflowPermissions, /pages: write|id-token: write/u);
   assert.doesNotMatch(buildJob, /pages: write|id-token: write/u);
   assert.match(deployJob, /permissions:\n\s+pages: write\n\s+id-token: write/u);
+  assert.match(buildJob, /- run: pnpm docs:build/u);
+  assert.doesNotMatch(
+    buildJob,
+    /pnpm --filter @aceshooting\/lyra-ui run manifest(?:\s|$)/u
+  );
+  assert.match(rootPackage.scripts['docs:build'], /^pnpm manifest:check &&/u);
+});
+
+test('root scripts keep canonical docs and policy entrypoints only', () => {
+  const rootPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
+  );
+
+  assert.equal(rootPackage.scripts.dev, 'storybook dev -p 6006');
+  assert.equal(rootPackage.scripts.docs, rootPackage.scripts.dev);
+  assert.equal(rootPackage.scripts.storybook, undefined);
+  assert.equal(rootPackage.scripts['build-storybook'], undefined);
+  assert.equal(rootPackage.scripts['provenance:check'], undefined);
+});
+
+test('full browser sweep scripts remove their temporary lane logs on every exit', () => {
+  for (const relativePath of ['scripts/test.sh', 'scripts/test_all_browsers.sh']) {
+    const source = readFileSync(path.join(repoRoot, relativePath), 'utf8');
+    const tempDirectoryIndex = source.indexOf('LOG_DIR="$(mktemp -d)"');
+    const cleanupIndex = source.indexOf('cleanup_logs()');
+    const trapIndex = source.indexOf('trap cleanup_logs EXIT');
+    const cleanup = source.slice(cleanupIndex, trapIndex);
+
+    assert.ok(
+      tempDirectoryIndex >= 0,
+      `${relativePath} must create isolated lane logs`
+    );
+    assert.ok(
+      cleanupIndex > tempDirectoryIndex,
+      `${relativePath} must define cleanup after mktemp`
+    );
+    assert.ok(
+      trapIndex > cleanupIndex,
+      `${relativePath} must install its cleanup trap`
+    );
+    assert.match(cleanup, /local exit_status=\$\?/u);
+    assert.match(cleanup, /trap - EXIT/u);
+    assert.match(cleanup, /rm -rf -- "\$LOG_DIR"/u);
+    assert.match(cleanup, /exit "\$exit_status"/u);
+  }
 });
 
 test('runs a checksum-pinned actionlint in CI and the local aggregate', () => {
@@ -766,6 +875,8 @@ test('release script pins its repository and pushes release refs atomically', ()
     /Changesets expanded the release to publishable dependents/
   );
   assert.match(publishScript, /Changesets auto-expanded dependent/);
+  assert.match(publishScript, /node scripts\/changeset-release-plan\.mjs/);
+  assert.doesNotMatch(publishScript, /matchAll\(\/\^"/u);
   let gateCursor = publishScript.indexOf('pnpm changeset version');
   for (const command of [
     'run package-metadata',
@@ -774,6 +885,7 @@ test('release script pins its repository and pushes release refs atomically', ()
     'run manifest',
     'run lint',
     'run build',
+    'run component-quality',
     'run test',
     'run default-string-slices',
     'run framework-types',
@@ -799,6 +911,22 @@ test('release script pins its repository and pushes release refs atomically', ()
       `${command} must follow release-time LLM generation`
     );
     gateCursor = commandIndex;
+  }
+  const stagingBlock = publishScript.slice(
+    publishScript.indexOf('git add README.md'),
+    publishScript.indexOf('unexpected_tracked_changes=')
+  );
+  for (const generatedEvidence of [
+    'scripts/fixtures/component-qualification.json',
+    'scripts/fixtures/component-integration.json',
+    'docs/component-quality.md',
+    'docs/component-integration.md',
+  ]) {
+    assert.match(
+      stagingBlock,
+      new RegExp(generatedEvidence.replaceAll('.', '\\.'), 'u'),
+      `release commit must include regenerated ${generatedEvidence}`
+    );
   }
   const pushMain = publishScript.indexOf(
     'git push origin "$release_sha:refs/heads/main"'

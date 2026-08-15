@@ -129,7 +129,7 @@ describe('defaults', () => {
     expect(el.mimeType).to.equal('');
     expect(el.filename).to.equal('');
     expect(el.alt).to.equal('');
-    expect(el.accessibleLabel).to.equal('');
+    expect(el.accessibleLabel).to.equal(null);
   });
 
   it('renders the inert file-chip fallback with "Untitled file" when nothing is set', async () => {
@@ -170,6 +170,43 @@ it('forwards host focus(), blur(), and click() to the resolved primary action', 
   el.click();
   expect(opens).to.equal(1);
   expect(button.disabled).to.be.false;
+});
+
+it('relays one bubbling composed native focus/blur pair from every primary action', async () => {
+  const cases = [
+    {
+      markup: html`<lr-media-card src="https://example.test/a.png" kind="image"></lr-media-card>`,
+      part: 'base',
+    },
+    {
+      markup: html`<lr-media-card src="https://example.test/a.mp4" kind="video"></lr-media-card>`,
+      part: 'open-button',
+    },
+    {
+      markup: html`<lr-media-card src="https://example.test/a.pdf" kind="file"></lr-media-card>`,
+      part: 'base',
+    },
+  ] as const;
+
+  for (const { markup, part } of cases) {
+    const el = (await fixture(markup)) as LyraMediaCard;
+    const events: FocusEvent[] = [];
+    el.addEventListener('focus', (event) => events.push(event));
+    el.addEventListener('blur', (event) => events.push(event));
+
+    el.focus({ preventScroll: true });
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal(part);
+    el.blur();
+
+    expect(events.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(events.every((event) => event instanceof FocusEvent)).to.be.true;
+    expect(
+      events.every(
+        (event) =>
+          event.target === el && event.bubbles && event.composed,
+      ),
+    ).to.be.true;
+  }
 });
 
 describe('kind resolution', () => {
@@ -675,6 +712,13 @@ describe('accessibility', () => {
     expect(link.getAttribute('aria-label')).to.equal('Save quarterly report');
 
     file.accessibleLabel = '';
+    await file.updateComplete;
+    expect(link.getAttribute('aria-label')).to.equal('Open report.pdf');
+
+    // An explicit null -- the property's default -- renders identically to the
+    // explicit empty string above: both fall through to the generated
+    // purpose-specific name rather than naming the action with an empty string.
+    file.accessibleLabel = null;
     await file.updateComplete;
     expect(link.getAttribute('aria-label')).to.equal('Open report.pdf');
   });

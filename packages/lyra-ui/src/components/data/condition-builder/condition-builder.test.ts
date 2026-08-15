@@ -147,12 +147,17 @@ describe('lr-condition-builder v9 contract', () => {
 
   it('clone-owns bounded structured inputs, drops duplicate identities, and rejects hostile accessors', async () => {
     const fields: ConditionBuilderField[] = [
+      { name: '', type: 'string' },
+      { name: '   ', type: 'string' },
+      { name: 'blank-options', type: 'enum', options: [{ value: '' }, { value: '   ' }] },
       { name: 'name', type: 'string', options: [{ value: 'a', label: 'A' }] },
       { name: 'name', type: 'number' },
     ];
     const value: ConditionBuilderValue = {
       combinator: 'and',
       conditions: [
+        { id: '', field: 'name', operator: 'eq', value: 'missing' },
+        { id: '   ', field: 'name', operator: 'eq', value: 'blank' },
         { id: 'same', field: 'name', operator: 'eq', value: 'first' },
         { id: 'same', field: 'name', operator: 'eq', value: 'second' },
       ],
@@ -162,10 +167,11 @@ describe('lr-condition-builder v9 contract', () => {
     (value.conditions as unknown as unknown[]).push(hostile);
     const el = (await fixture(html`<lr-condition-builder .fields=${fields} .value=${value}></lr-condition-builder>`)) as LyraConditionBuilder;
 
-    (fields[0] as { name: string }).name = 'mutated';
-    (value.conditions[0] as { field: string }).field = 'mutated';
-    expect(el.fields).to.have.length(1);
-    expect(el.fields[0]!.name).to.equal('name');
+    (fields[3] as { name: string }).name = 'mutated';
+    (value.conditions[2] as { field: string }).field = 'mutated';
+    expect(el.fields.map((field) => field.name)).to.deep.equal(['blank-options', 'name']);
+    expect(el.fields[0]!.options).to.deep.equal(undefined);
+    expect(el.fields[1]!.name).to.equal('name');
     expect(el.value.conditions).to.have.length(1);
     expect(el.value.conditions[0]!.field).to.equal('name');
     expect(Object.isFrozen(el.fields)).to.equal(true);
@@ -378,7 +384,7 @@ describe('lr-condition-builder v9 contract', () => {
     el.removeCondition('c1');
     const removeEvent = await removePromise;
     const inputEvent = await inputPromise;
-    expect(removeEvent.detail.id).to.equal('c1');
+    expect(removeEvent.detail.conditionId).to.equal('c1');
     expect(inputEvent.detail.value.conditions.map((c: { id: string }) => c.id)).to.deep.equal(['c2']);
   });
 

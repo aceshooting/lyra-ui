@@ -186,8 +186,8 @@ component and a release blocker for a new one.
 - A public property, type, method, getter, event, slot, CSS part, or custom property is
   incomplete until the class JSDoc, behavior tests, an illustrative Storybook story, the
   component's section in `packages/lyra-ui/llms/<family>.md`, and the generated
-  `custom-elements.json` agree. Run `pnpm --filter @aceshooting/lyra-ui run llms` to regenerate
-  `llms-full.txt`/`llms/components/` afterwards;
+  `custom-elements.json` agree. Regenerate the manifest and editor data, then run `./package.sh`
+  to refresh `llms-full.txt`, `llms/components/`, and the packaged references;
   `pnpm --filter @aceshooting/lyra-ui exec node scripts/llms-gap-report.mjs <family>` lists
   exactly which names are still undocumented, and CI fails on any that remain. **That gate only
   checks a member's name appears somewhere in its doc section — not that any stated default,

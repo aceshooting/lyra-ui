@@ -97,6 +97,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-contactviewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-csvviewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-datasetviewer--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-geojsonview-legacy-tag--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-geojsonviewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-highlightlayer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentviewer-htmlviewer--docs</loc></url>
@@ -119,7 +120,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/entity-dossier--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/env-list--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/evaldataset--docs</loc></url>
-  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/evaluationrun--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/evalrun--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/exportbutton--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-alert--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/feedback-callout--docs</loc></url>

@@ -96,6 +96,10 @@ internal focus/editor state, and suppresses enabled hover/active paint. Re-enabl
 Host `focus()` and `click()` are also synchronous no-ops under own or fieldset-cascaded disablement,
 including the same task that sets `disabled` before Lit has updated the still-rendered native draft.
 `blur()` remains available to release existing focus.
+When a focused token label, editor, or remove action disappears through its own removal or a
+controlled `value`/pristine `defaultValue` shrink, DOM focus moves to the nearest surviving
+equivalent surface at the clamped index. If no token remains it moves to the draft input; a newer
+explicit focus destination outside the component is never reclaimed.
 
 **`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
 jobs: it splits a committed draft into several tokens, and — _only when it is exactly one

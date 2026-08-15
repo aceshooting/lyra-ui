@@ -15,7 +15,10 @@ export function boundedViewerSearchQuery(
   locale: string,
 ): BoundedViewerSearchQuery {
   if (query.length > VIEWER_SEARCH_QUERY_LIMIT) return { needle: '', accepted: false };
-  return { needle: query.trim().toLocaleLowerCase(resolveIntlLocale(locale)), accepted: true };
+  const needle = query.trim().toLocaleLowerCase(resolveIntlLocale(locale));
+  return needle.length <= VIEWER_SEARCH_QUERY_LIMIT
+    ? { needle, accepted: true }
+    : { needle: '', accepted: false };
 }
 
 /** Charges at least one unit per model field so empty-cell/page collections remain bounded too. */
@@ -52,6 +55,9 @@ export class ViewerSearchWorkBudget {
   /** Searches logical concatenation without first joining an attacker-sized string collection. */
   includesJoined(values: Iterable<string>, needle: string, locale: string): boolean {
     const chunks: string[] = [];
+    const availableWork = this.remaining;
+    let retainedCodeUnits = 0;
+    let asciiOnly = true;
     let inspectedAny = false;
     for (const value of values) {
       inspectedAny = true;
@@ -64,7 +70,10 @@ export class ViewerSearchWorkBudget {
         continue;
       }
       const retainedLength = Math.min(value.length, this.remaining);
-      chunks.push(value.slice(0, retainedLength));
+      const chunk = value.slice(0, retainedLength);
+      chunks.push(chunk);
+      retainedCodeUnits += retainedLength;
+      if (asciiOnly && /[^\x00-\x7f]/u.test(chunk)) asciiOnly = false;
       this.remaining -= retainedLength;
       if (retainedLength !== value.length) {
         this.complete = false;
@@ -75,7 +84,25 @@ export class ViewerSearchWorkBudget {
       if (this.remaining <= 0) this.complete = false;
       else this.remaining--;
     }
-    return chunks.join('').toLocaleLowerCase(resolveIntlLocale(locale)).includes(needle);
+    // Locale lower-casing can expand source text (for example U+0130 becomes two code units in
+    // English). Reserve output work before asking the engine to allocate the folded string. ASCII
+    // is length-preserving; for non-ASCII input, four output code units per source code unit is a
+    // conservative bound above the Unicode full-lowercase mappings implemented by supported
+    // engines. Inputs that cannot fit both their source and possible folded output fail closed.
+    const maximumFoldedCodeUnits = asciiOnly ? retainedCodeUnits : retainedCodeUnits * 4;
+    if (retainedCodeUnits + maximumFoldedCodeUnits > availableWork) {
+      this.remaining = 0;
+      this.complete = false;
+      return false;
+    }
+    const folded = chunks.join('').toLocaleLowerCase(resolveIntlLocale(locale));
+    if (folded.length > this.remaining) {
+      this.remaining = 0;
+      this.complete = false;
+      return false;
+    }
+    this.remaining -= folded.length;
+    return folded.includes(needle);
   }
 
   get exhausted(): boolean {

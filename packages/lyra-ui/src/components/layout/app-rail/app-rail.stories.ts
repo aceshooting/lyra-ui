@@ -85,7 +85,7 @@ export const ForcedFull: Story = {
   name: "Forced: full",
   render: () =>
     page(html`
-      <lr-app-rail label="Primary" mode="full" style="block-size:100%;">
+      <lr-app-rail label="Primary" force-mode="full" style="block-size:100%;">
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
         ${navItems}
       </lr-app-rail>
@@ -96,7 +96,7 @@ export const ForcedIconOnly: Story = {
   name: "Forced: icon-only",
   render: () =>
     page(html`
-      <lr-app-rail label="Primary" mode="icon-only" style="block-size:100%;">
+      <lr-app-rail label="Primary" force-mode="icon-only" style="block-size:100%;">
         <span slot="header" style="padding:0.5rem; font-weight:600;">A</span>
         ${navItems}
       </lr-app-rail>
@@ -106,8 +106,15 @@ export const ForcedIconOnly: Story = {
 export const ForcedMobile: Story = {
   name: "Forced: mobile (click the toggle)",
   render: () =>
+    // 'mobile' can't be force-pinned via force-mode (the mobile breakpoint is always tracked
+    // automatically -- see forceMode's own doc), so an oversized mobile-breakpoint keeps the
+    // real breakpoint match true regardless of this preview frame's actual width instead.
     page(html`
-      <lr-app-rail label="Primary" mode="mobile" style="block-size:100%;">
+      <lr-app-rail
+        label="Primary"
+        mobile-breakpoint="9999px"
+        style="block-size:100%;"
+      >
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
         ${navItems}
         <span slot="footer" style="padding:0.5rem;">Jordan Lee</span>
@@ -132,7 +139,7 @@ export const ExternalMobileControl: Story = {
         <lr-app-rail
           hide-toggle
           label="Primary"
-          mode="mobile"
+          mobile-breakpoint="9999px"
           style="block-size:100%;"
         >
           <span slot="header" style="padding:0.5rem; font-weight:600;"
@@ -163,7 +170,7 @@ export const NarrowRtlLongContent: Story = {
     >
       <lr-app-rail
         label="التنقل الرئيسي"
-        mode="mobile"
+        mobile-breakpoint="9999px"
         .open=${context.viewMode !== "docs"}
         style="block-size: 100%; --lr-app-rail-mobile-width: 320px;"
       >
@@ -206,7 +213,7 @@ export const ThemedInteractionStates: Story = {
           --lr-app-rail-toggle-active-color: ${storyColor("warning")};
         "
       >
-        <lr-app-rail mode="mobile"></lr-app-rail>
+        <lr-app-rail mobile-breakpoint="9999px"></lr-app-rail>
       </div>
       <div
         style="
@@ -216,7 +223,7 @@ export const ThemedInteractionStates: Story = {
         "
       >
         <lr-app-rail
-          mode="full"
+          force-mode="full"
           resizable
           style="inline-size: var(--lr-app-rail-width); block-size: var(--lr-size-10rem);"
         ></lr-app-rail>
@@ -230,7 +237,7 @@ export const MobileOpenInitially: Story = {
     page(html`
       <lr-app-rail
         label="Primary"
-        mode="mobile"
+        mobile-breakpoint="9999px"
         .open=${context.viewMode !== "docs"}
         style="block-size:100%;"
       >
@@ -295,7 +302,7 @@ export const CancelableResize: Story = {
     page(html`
       <lr-app-rail
         label="Primary"
-        mode="full"
+        force-mode="full"
         resizable
         rail-width-px="280"
         @lr-rail-resize-request=${capRailResizeRequest}

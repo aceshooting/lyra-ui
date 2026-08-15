@@ -92,8 +92,6 @@ export interface LyraStackTraceEventMap {
  * @since 4.0.0
  */
 export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['internalPatterns']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -107,6 +105,8 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     stackTraceShowFrames: LYRA_DEFAULT_stackTraceShowFrames,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['internalPatterns']);
 
   static override styles = [LyraElement.styles, styles];
 

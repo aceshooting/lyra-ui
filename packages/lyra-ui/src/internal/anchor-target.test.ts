@@ -426,6 +426,9 @@ describe('DocumentAnchorTarget mixin', () => {
       expect(detail.anchor).to.exist;
       expect(detail.anchor!.kind).to.equal('text-quote');
       expect(detail.rects).to.be.an('array');
+      expect(Object.isFrozen(detail)).to.be.true;
+      expect(Object.isFrozen(detail.anchor)).to.be.true;
+      expect(Object.isFrozen(detail.rects)).to.be.true;
     } finally {
       restoreSelection();
     }

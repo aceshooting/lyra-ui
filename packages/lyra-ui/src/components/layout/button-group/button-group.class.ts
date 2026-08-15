@@ -3,9 +3,8 @@ import { property } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './button-group.styles.js';
-
-export type ButtonGroupOrientation = 'horizontal' | 'vertical';
 
 /**
  * `<lr-button-group>` — a responsive grouping primitive for related actions.
@@ -23,9 +22,10 @@ export type ButtonGroupOrientation = 'horizontal' | 'vertical';
 export class LyraButtonGroup extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
+  /** Logical control axis, using the shared `LyraOrientation` vocabulary. */
   @property({ reflect: true,
-    converter: declaredDefaultConverter<ButtonGroupOrientation>('horizontal'),
-  }) orientation: ButtonGroupOrientation = 'horizontal';
+    converter: declaredDefaultConverter<LyraOrientation>('horizontal'),
+  }) orientation: LyraOrientation = 'horizontal';
   /** Accessible group-name fallback when the host `aria-label` is absent. */
   @property() label = '';
 

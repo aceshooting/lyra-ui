@@ -40,6 +40,9 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   `virtualizeThreshold`/`virtualize-threshold` _and_ compared inclusively (`>=`), so a migration
   that only renames the attribute shifts the switchover point by one item
 
+Queue item ids must be nonblank and unique. Malformed rows and later duplicates are omitted
+first-wins before empty state, counts, virtualization, failure announcements, rendering, or actions.
+
 **Events:**
 
 - `lr-retry` (`detail: IngestionRetryEventDetail` = `RetryEventDetail & { itemId: string }` =
@@ -72,11 +75,10 @@ visible without being re-announced. Assert against that document-level region ra
 
 In virtualized mode (above `virtualizeAt`) the rows live in the internal
 `lr-virtual-list`'s shadow root, and `item`, `item-header`, `item-name`, `item-progress`,
-`item-meta`, `item-error`, `item-actions`, `retry-button` and `cancel-button` are forwarded out
-through `exportparts`, so `lr-ingestion-queue::part(item)` and the rest keep working from a consumer
-stylesheet. `item-stage`, `item-chunk-count`, `item-embedding-status` and `item-attempts` are not
-forwarded, so those four are only reachable through `::part()` while the queue is below the
-threshold.
+`item-meta`, `item-stage`, `item-chunk-count`, `item-embedding-status`, `item-attempts`, `item-error`,
+`item-actions`, `retry-button` and `cancel-button` are forwarded out through `exportparts`, so every
+documented row part remains reachable as `lr-ingestion-queue::part(...)` above and below the
+virtualization threshold.
 
 **Themeable custom properties:** `--lr-ingestion-queue-max-height` (default `none`) — non-virtualized
 mode only: caps how tall the list grows before it scrolls internally. No effect once virtualized —

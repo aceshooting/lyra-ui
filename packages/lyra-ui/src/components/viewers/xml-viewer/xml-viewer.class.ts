@@ -98,6 +98,10 @@ function elementChildren(node: Element): Element[] {
   return Array.from(node.children);
 }
 
+interface PathResolutionBudget {
+  remaining: number;
+}
+
 /** Detects the `<parsererror>` document `DOMParser` produces instead of throwing, whose exact
  *  shape (root element vs. nested inside the root) differs across browser engines. */
 function findParserError(doc: Document): string | null {
@@ -166,9 +170,15 @@ function validateDocumentComplexity(node: Node): void {
 /** Resolves a `node-path` (element child-indices, with an optional trailing `'@attrName'`
  *  segment addressing one of the resolved element's attributes) to its target. Returns `null`
  *  when any segment is out of range or a non-trailing segment isn't a valid element index. */
-function resolvePath(root: Element, path: PathSegment[]): { element: Element; attr?: string } | null {
+function resolvePath(
+  root: Element,
+  path: readonly PathSegment[],
+  budget?: PathResolutionBudget,
+): { element: Element; attr?: string } | null {
+  if (budget && budget.remaining-- <= 0) return null;
   let current: Element = root;
   for (let i = 0; i < path.length; i++) {
+    if (budget && budget.remaining-- <= 0) return null;
     const segment = path[i]!; // safe: i < path.length
     if (typeof segment === 'string') {
       if (!segment.startsWith('@') || i !== path.length - 1) return null;
@@ -176,13 +186,15 @@ function resolvePath(root: Element, path: PathSegment[]): { element: Element; at
       if (!attr || !current.hasAttribute(attr)) return null;
       return { element: current, attr };
     }
-    const children = elementChildren(current);
+    const children = current.children;
     // A range check alone is not an index guard: NaN fails both comparisons and a fractional
     // index passes them, so `children[segment]` would non-null-assert `undefined` -- yielding a
     // truthy `{ element: undefined }` for a trailing segment (a false "found" result) or a
     // TypeError on the next iteration for a non-trailing one.
     if (!Number.isInteger(segment) || segment < 0 || segment >= children.length) return null;
-    current = children[segment]!; // safe: integer + bounds checked on the line above
+    const child = children.item(segment);
+    if (!child) return null;
+    current = child;
   }
   return { element: current };
 }
@@ -240,7 +252,7 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @event lr-error - A clipboard write failed; generic no-detail notification.
  * @event lr-copy-error - A clipboard write failed. `detail: { ok: false, text, reason, error }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match
- *   index changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: {
+ *   index changes, including source-reset and effective-locale re-evaluation. `detail: {
  *   query, matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code
  *   units, scans at most 4,000,000 tag/attribute/text code units, and retains at most 10,000
  *   matches; a false `matchCountExact` makes `matchCount` a lower bound after any ceiling.
@@ -268,8 +280,9 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @csspart comment - A comment leaf.
  * @csspart cdata - A CDATA section leaf.
  * @csspart pi - A processing-instruction leaf.
- * @csspart toggle - An element's expand/collapse button (hidden, but present for row alignment,
- *   only on elements with renderable children).
+ * @csspart toggle - An element's expand/collapse button (only on elements with renderable
+ *   children). Its collapsed chevron mirrors with effective RTL direction; the expanded chevron
+ *   points down in either direction.
  * @csspart toggle-placeholder - A non-interactive alignment spacer in place of `toggle` on an
  *   empty element. It is accessibility-hidden and cannot be revealed into a phantom control by
  *   consumer CSS.
@@ -397,6 +410,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   private renderedHighlights = new Map<string, { highlight: LyraHighlight; index: number; total: number }>();
   private searchState: SearchState = EMPTY_SEARCH;
   private lastSearchLocale = '';
+  private pendingSearchStateEvent = false;
   private generation = 0;
   private readonly announcements = new ViewerAnnouncementController(this);
   @state() private copyFeedback: { key: string; status: 'success' | 'error' } | null = null;
@@ -415,12 +429,16 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (this.hasUpdated && (changed.has('src') || changed.has('xml'))) this.resetCopyFeedback();
+    if (changed.has('src') || changed.has('xml')) {
+      this.pendingSearchStateEvent ||= this.resetSearchForSourceReplacement();
+    }
     const locale = this.effectiveLocale;
     if (this.lastSearchLocale && locale !== this.lastSearchLocale && this.xmlState.kind === 'loaded') {
       this.searchState = this.computeSearch(this.xmlState.doc);
       this.activeSearchIndex = this.searchState.ordered.length
         ? Math.min(Math.max(0, this.activeSearchIndex), this.searchState.ordered.length - 1)
         : -1;
+      if (this.searchQuery !== '') this.pendingSearchStateEvent = true;
     }
     this.lastSearchLocale = locale;
   }
@@ -436,6 +454,10 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       this.scheduleAfterUpdate(() => {
         void this.loadFromSrc();
       });
+    }
+    if (this.pendingSearchStateEvent) {
+      this.pendingSearchStateEvent = false;
+      this.emitSearchChange();
     }
   }
 
@@ -466,6 +488,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
 
   private parseInline(raw: string): void {
     const generation = ++this.generation;
+    this.pendingSearchStateEvent ||= this.resetSearchForSourceReplacement();
     try {
       this.setDoc(parseXmlDocument(raw, this.ownerDocument), generation);
     } catch (error) {
@@ -482,6 +505,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     if (this._xml !== undefined) return;
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
+    this.pendingSearchStateEvent ||= this.resetSearchForSourceReplacement();
     if (!this.src) {
       this.xmlState = { kind: 'idle' };
       return;
@@ -515,6 +539,17 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       };
       this.emit('lr-render-error', { error });
     }
+  }
+
+  private resetSearchForSourceReplacement(): boolean {
+    const changed = this.searchQuery !== ''
+      || this.searchState.ordered.length > 0
+      || !this.searchState.matchCountExact
+      || this.activeSearchIndex !== -1;
+    this.searchQuery = '';
+    this.searchState = EMPTY_SEARCH;
+    this.activeSearchIndex = -1;
+    return changed;
   }
 
   private setDoc(doc: Document, generation: number): void {
@@ -668,11 +703,12 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const seen = new Set<string>();
     const resolved: Array<{ highlight: LyraHighlight; pathKey: string }> = [];
     const candidates = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId);
+    const resolutionBudget: PathResolutionBudget = { remaining: MAX_NODES };
     for (const highlight of candidates) {
       if (seen.has(highlight.id)) continue;
       seen.add(highlight.id);
       if (highlight.anchor.kind !== 'node-path') continue;
-      if (!resolvePath(root, highlight.anchor.path)) continue;
+      if (!resolvePath(root, highlight.anchor.path, resolutionBudget)) continue;
       resolved.push({
         highlight,
         pathKey: JSON.stringify(highlight.anchor.path.filter((s): s is number => typeof s === 'number')),
@@ -696,7 +732,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     });
   }
 
-  private expandAncestors(path: PathSegment[]): void {
+  private expandAncestors(path: readonly PathSegment[]): void {
     const next = new Map(this.expandedOverrides);
     for (let i = 0; i < path.length; i++) {
       if (typeof path[i] !== 'number') continue;
@@ -709,9 +745,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
    *  and own text, layered over the already-parsed document -- accepts at most 4,096 query code
    *  units, scans at most 4,000,000 code units, resolves at most 10,000 retained matches, and fires
    *  `lr-search-change`; `detail.matchCountExact=false` identifies a ceiling-truncated lower
-   *  bound. Matches are re-derived automatically whenever the document
-   *  reloads with the same query still set; the active index is clamped and the recomputed state
-   *  fires `lr-search-change` again (see `setDoc()`). */
+   *  bound. Replacing the source invalidates document-relative matches and emits the canonical
+   *  empty `lr-search-change` reset. */
   async search(query: string): Promise<number> {
     this.searchQuery = query;
     this.searchState = this.xmlState.kind === 'loaded' ? this.computeSearch(this.xmlState.doc) : EMPTY_SEARCH;

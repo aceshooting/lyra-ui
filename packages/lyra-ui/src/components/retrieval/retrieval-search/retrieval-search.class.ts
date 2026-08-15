@@ -71,7 +71,7 @@ export interface LyraRetrievalSearchEventMap {
  * chips, `<lr-spinner>` for the loading state, and `<lr-empty>` (compact) for the empty state.
  * `filters`/`scope` chip removal updates this component's own copy first, then emits
  * `lr-filters-change` with the complete next state -- the same "update, then emit; reassign to
- * control" round-trip `<lr-source-picker>`'s `selectedIds` already establishes. `empty` is a
+ * control" round-trip `<lr-source-picker>`'s `selectedSourceIds` already establishes. `empty` is a
  * host-driven flag (the last completed search returned zero results); this component holds no
  * results data of its own -- see `<lr-retrieval-results>` for rendering the actual chunk list.
  *
@@ -105,8 +105,6 @@ export interface LyraRetrievalSearchEventMap {
  * @since 4.1.0
  */
 export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['filters', 'scope']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -126,6 +124,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['filters', 'scope']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -174,8 +174,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   @property({ attribute: 'error-text' }) errorText = '';
 
   /** Host-driven flag: the last completed search returned zero results. Renders a compact
-   *  `<lr-empty>` beneath the search row. Never inferred by this component itself -- see the
-   *  class doc; it holds no results data of its own. */
+   *  `<lr-empty>` beneath the search row and politely announces later transitions into that
+   *  settled state. Never inferred by this component itself -- see the class doc; it holds no
+   *  results data of its own. */
   @property({ type: Boolean, reflect: true }) empty = false;
 
   /** Placeholder for the query field. Empty string (the default) falls back to the localized
@@ -193,11 +194,17 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   private isMounting = true;
   private errorAnnouncementSink?: AnnouncementSink;
+  private emptyAnnouncementSink?: AnnouncementSink;
+  private wasEmptyPresented = false;
   private chipFocusGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
+    this.emptyAnnouncementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
     });
@@ -207,6 +214,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     this.isMounting = true;
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
+    this.emptyAnnouncementSink?.release();
+    this.emptyAnnouncementSink = undefined;
+    this.wasEmptyPresented = false;
     super.disconnectedCallback();
   }
 
@@ -222,6 +232,16 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     ) {
       this.errorAnnouncementSink?.announce(this.errorText);
     }
+    const emptyPresented = this.empty && !this.loading && this.errorText === '';
+    if (
+      !wasMounting &&
+      !this.wasEmptyPresented &&
+      emptyPresented &&
+      this.isConnected
+    ) {
+      this.emptyAnnouncementSink?.announce(this.localize('noMatches'));
+    }
+    this.wasEmptyPresented = emptyPresented;
   }
 
   private modeItems(): LyraSegmentedItem[] {

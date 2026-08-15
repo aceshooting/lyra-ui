@@ -22,7 +22,8 @@ is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`
 `aria-setsize`), so the sequence is walkable item by item rather than collapsed into one summary
 string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/ArrowRight and
 Home/End move the stop — direction-aware, so the arrows swap under RTL — and focusing a cell shows
-the same `[part="tooltip"]` detail that pointer hover does. The tooltip is visual only and is not
+the same `[part="tooltip"]` detail that pointer hover does. That tooltip is positioned from the
+active cell, not from the center of the whole strip. The tooltip is visual only and is not
 wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
 text and describing it again would duplicate the announcement. Cells are inspectable, not
 actionable: there is no per-cell click/activation event, so unlike `<lr-heatmap>` there is nothing
@@ -53,17 +54,19 @@ total. The optional legend likewise mounts at most 200 categories and exposes
 categoryId, readonly marker?, readonly label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
   subagent-dispatched turn); `label` is per-item hover/focus tooltip text _and_ that cell's own
-  `role="listitem"` accessible name, falling back to the matching category's own `label` (or its
-  `id`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
+  `role="listitem"` accessible name, falling back to the matching category's own nonblank `label`,
+  then localized `sequenceStripUnnamedCategory` (`"Unnamed category"` in the built-in English
+  catalog) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
 - `categories: readonly SequenceStripCategory[] = []` (attribute: false) — `{ readonly id,
 readonly color, readonly label? }`; `color`
   is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,
   declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
   used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
-  back to `id` itself when unset. Both collection properties are cloned and frozen at assignment,
-  bounded to the first 10,000 source entries, and require reassignment after changes; duplicate ids
-  use the first valid entry, so identity is deterministic
+  back to localized `sequenceStripUnnamedCategory` when omitted or blank rather than exposing the
+  internal `id`. Both collection properties are cloned and frozen at assignment,
+  bounded to the first 10,000 source entries, and require reassignment after changes; empty/blank
+  ids are omitted and duplicates use the first valid entry, so identity is deterministic
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`; a standard host `aria-label` remains a distinct host name
@@ -99,8 +102,9 @@ as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label p
 `categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the
 color chip, matching that category's cell color), `legend-marker-swatch` (the marker row's chip
 instead: a neutral chip carrying the same bottom bar a `marker: true` cell paints, in the same
-`--lr-sequence-strip-marker-color`), `legend-label` (the category's `label`, or its `id` when
-unset), `window-range` (bounded item projection/total), and `legend-limit` (bounded legend/total).
+`--lr-sequence-strip-marker-color`), `legend-label` (the category's nonblank `label`, or localized
+`sequenceStripUnnamedCategory`), `window-range` (bounded item projection/total), and `legend-limit`
+(bounded legend/total).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
 block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the

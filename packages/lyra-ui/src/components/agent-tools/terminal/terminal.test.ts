@@ -532,8 +532,9 @@ describe('lr-terminal', () => {
       expect(perLine.get(line.number)?.id, `perLine at line ${line.number}`).to.equal(expected?.id);
     }
 
+    const ownerById = new Map([...owners].map(([highlight, line]) => [highlight.id, line]));
     for (const h of highlights) {
-      expect(owners.get(h), `owner line of ${h.id}`).to.equal(expectedOwners.get(h));
+      expect(ownerById.get(h.id), `owner line of ${h.id}`).to.equal(expectedOwners.get(h));
     }
   });
 
@@ -542,7 +543,7 @@ describe('lr-terminal', () => {
     // instead of a per-row this.searchMatches.some() scan, together with the highlight map. It
     // checks every one of 12 lines against an independently
     // reasoned expectation. Search state is poked directly (bypassing search()/searchNext(),
-    // which themselves scroll the view via activeId and would otherwise make which lines are
+    // which themselves scroll the view via activeItemId and would otherwise make which lines are
     // actually mounted depend on virtual-list's own scroll-into-view timing) so this test stays
     // about renderLine()'s lookup wiring, not virtualization/scrolling.
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
@@ -787,12 +788,13 @@ describe('lr-terminal', () => {
 
       const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
       const line = list.shadowRoot!.querySelector('[data-line-number="1"]') as HTMLElement;
+      const range = ownerDocument.createRange();
+      range.selectNodeContents(line);
       const selection = {
         isCollapsed: false,
         anchorNode: line,
         focusNode: line,
-        toString: () => 'frame output',
-        getRangeAt: () => ({ getClientRects: () => [] }),
+        getRangeAt: () => range,
       } as unknown as Selection;
       ownerDocument.getSelection = () => selection;
       (list.shadowRoot as unknown as { getSelection?: () => Selection | null }).getSelection = () => null;
@@ -845,19 +847,58 @@ describe('lr-terminal', () => {
       [...line.querySelector('span')!.childNodes].find((n) => n.nodeType === Node.TEXT_NODE)!;
     // WebKit does not expose ShadowRoot.getSelection(), so use a deterministic selection-shaped
     // value here and leave native cross-shadow selection support to the component's fail-closed path.
+    const range = document.createRange();
+    range.setStart(textNodeOf(lines[0]), 0);
+    range.setEnd(textNodeOf(lines[1]), 3);
+    const sourceRect = new DOMRect(1, 2, 3, 4);
+    Object.defineProperty(range, 'getClientRects', {
+      configurable: true,
+      value: () => [sourceRect],
+    });
     const selection = {
       isCollapsed: false,
       anchorNode: textNodeOf(lines[0]),
       focusNode: textNodeOf(lines[1]),
-      toString: () => 'first\nsec',
-      getRangeAt: () => ({ getClientRects: () => [] }),
+      getRangeAt: () => range,
     } as unknown as Selection;
     (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => selection;
+    el.addEventListener('lr-text-select', (rawEvent) => {
+      const detail = (rawEvent as CustomEvent<{
+        text: string;
+        rects: readonly { x: number }[];
+      }>).detail;
+      try {
+        (detail as { text: string }).text = 'mutated';
+      } catch {
+        // Frozen event snapshots reject listener mutation in strict mode.
+      }
+      try {
+        (detail.rects as { x: number }[]).push({ x: 99 });
+      } catch {
+        // Frozen collection snapshots reject listener mutation in strict mode.
+      }
+      try {
+        (detail.rects[0] as { x: number }).x = 99;
+      } catch {
+        // Frozen geometry snapshots reject listener mutation in strict mode.
+      }
+    }, { once: true });
     const listener = oneEvent(el, 'lr-text-select');
     el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    const event = (await listener) as CustomEvent<{ text: string; anchor: { kind: string; start: number; end: number } | null }>;
+    const event = (await listener) as CustomEvent<{
+      text: string;
+      anchor: { kind: string; start: number; end: number } | null;
+      rects: readonly { x: number; y: number; width: number; height: number }[];
+    }>;
     expect(event.detail.text).to.be.a('string').and.not.equal('');
     expect(event.detail.anchor).to.deep.equal({ kind: 'line-range', start: 1, end: 2 });
+    expect(event.detail.rects).to.have.lengthOf(1);
+    expect(event.detail.rects[0]).not.to.equal(sourceRect);
+    expect(event.detail.rects[0]).to.include({ x: 1, y: 2, width: 3, height: 4 });
+    expect(Object.isFrozen(event.detail)).to.be.true;
+    expect(Object.isFrozen(event.detail.anchor)).to.be.true;
+    expect(Object.isFrozen(event.detail.rects)).to.be.true;
+    expect(Object.isFrozen(event.detail.rects[0])).to.be.true;
   });
 
   it('does not emit lr-text-select when nothing is selected (collapsed selection)', async () => {
@@ -895,26 +936,26 @@ describe('lr-terminal', () => {
     el.follow = false; // keep write() itself from moving the scroll target
     el.write('a\nb\nc');
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
-    expect(list.activeId).to.equal('');
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: unknown };
+    expect(list.activeItemId).to.equal('');
     el.scrollToBottom();
     await el.updateComplete;
-    expect(list.activeId).to.equal(3);
+    expect(list.activeItemId).to.equal(3);
   });
 
   it('scrollToBottom() on an empty buffer clears the scroll target instead of throwing', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.scrollToBottom();
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
-    expect(list.activeId).to.equal('');
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: unknown };
+    expect(list.activeItemId).to.equal('');
   });
 
   it('the "jump to latest" button re-engages follow, scrolls to the last line, and emits lr-follow-change', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('a\nb\nc');
     await el.updateComplete;
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: unknown };
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: unknown };
     const released = oneEvent(el, 'lr-follow-change');
     list.dispatchEvent(new CustomEvent('lr-visible-range-changed', {
       detail: { start: 0, end: 0 },
@@ -930,7 +971,7 @@ describe('lr-terminal', () => {
     const event = (await listener) as CustomEvent<{ following: boolean }>;
     expect(event.detail.following).to.be.true;
     expect(el.follow).to.be.true;
-    expect(list.activeId).to.equal(3);
+    expect(list.activeItemId).to.equal(3);
   });
 
   it('pressing End in the viewport re-engages follow via the same jump-to-latest path', async () => {
@@ -1111,12 +1152,15 @@ describe('lr-terminal', () => {
     // than a real Range/addRange() at an element (non-text) boundary -- Chromium's Selection
     // doesn't reliably preserve such a boundary's exact container across addRange(), so a real
     // selection can't deterministically reproduce this case.
+    const outside = document.createTextNode('outside text');
+    const range = document.createRange();
+    range.setStart(outside, 0);
+    range.setEnd(outside, outside.data.length);
     const fakeSelection = {
       isCollapsed: false,
       anchorNode: document.body,
       focusNode: document.body,
-      toString: () => 'outside text',
-      getRangeAt: () => ({ getClientRects: () => [] }),
+      getRangeAt: () => range,
     } as unknown as Selection;
     (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => fakeSelection;
     const listener = oneEvent(el, 'lr-text-select');
@@ -1132,24 +1176,22 @@ describe('lr-terminal', () => {
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const line = list.shadowRoot!.querySelector('[data-line-number="1"]') as HTMLElement;
-    // A real Selection can't be coerced into throwing from getRangeAt() once isCollapsed is
-    // false (rangeCount is then guaranteed >= 1), so this exercises the defensive try/catch
-    // around getClientRects() with a minimal stand-in exposing just the members onViewportPointerUp
-    // actually reads -- the same shadow-scoped getSelection() override style the passing
-    // lr-text-select tests above already use, just returning a stub instead of the real selection.
+    const range = document.createRange();
+    range.selectNodeContents(line);
+    Object.defineProperty(range, 'getClientRects', {
+      configurable: true,
+      value: () => { throw new Error('no rects'); },
+    });
     const fakeSelection = {
       isCollapsed: false,
       anchorNode: line,
       focusNode: line,
-      toString: () => 'first',
-      getRangeAt: () => {
-        throw new Error('no range');
-      },
+      getRangeAt: () => range,
     } as unknown as Selection;
     (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => fakeSelection;
     const listener = oneEvent(el, 'lr-text-select');
     el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    const event = (await listener) as CustomEvent<{ text: string; rects: DOMRect[] }>;
+    const event = (await listener) as CustomEvent<{ text: string; rects: readonly DOMRectReadOnly[] }>;
     expect(event.detail.text).to.equal('first');
     expect(event.detail.rects).to.deep.equal([]);
   });

@@ -622,10 +622,18 @@ describe('lr-test-results', () => {
       name: `test ${index}`,
       status: 'passed' as const,
     }));
-    tests.splice(1, 0, { ...tests[0]!, name: 'duplicate must not replace first' });
+    tests.splice(
+      1,
+      0,
+      { ...tests[0]!, id: '   ', name: 'blank identity must be omitted' },
+      { ...tests[0]!, name: 'duplicate must not replace first' },
+    );
     const el = await fixture<LyraTestResults>(html`
       <lr-test-results
-        .suites=${[{ id: 'suite', name: 'suite', tests }]}
+        .suites=${[
+          { id: '   ', name: 'blank suite', tests: [tests[0]!] },
+          { id: 'suite', name: 'suite', tests },
+        ]}
         .strings=${{ testResultsLimit: 'Showing the first {count} tests' }}
       ></lr-test-results>
     `);

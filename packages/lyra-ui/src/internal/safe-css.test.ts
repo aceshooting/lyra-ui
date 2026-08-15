@@ -5,12 +5,12 @@ import {
   sanitizeCssLength,
   sanitizeCssResize,
   sanitizePercentRect,
-  sanitizeSwatchColor,
 } from './safe-css.js';
 
 describe('sanitizeCssColor (the swatch guard)', () => {
-  it('is the one implementation the historical sanitizeSwatchColor name resolves to', () => {
-    expect(sanitizeSwatchColor === sanitizeCssColor, 'one guard, not two policies').to.equal(true);
+  it('no longer exports the historical sanitizeSwatchColor alias', async () => {
+    const module = (await import('./safe-css.js')) as Record<string, unknown>;
+    expect(module.sanitizeSwatchColor).to.equal(undefined);
   });
 
   it('allows hex, keyword, function, and custom-property color syntax', () => {

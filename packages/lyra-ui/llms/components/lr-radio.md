@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -59,16 +59,21 @@ internal control's native `focus` and `blur` are re-dispatched as bubbling, comp
 each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
 `lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
 
-**Slots:** default label content. Flattened forwarding-slot assignment and later mutations keep the
-visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain it. A host
-`aria-label` wins on the internal radio by presence, including `aria-label=""`.
+**Slots:** default label content. In `appearance="button"`, `start`/`prefix` share the leading
+wrapper and `end`/`suffix` share the trailing wrapper, matching `lr-radio-button`; changing away
+from button appearance does not remove or rewrite the authored light-DOM content. Flattened
+forwarding-slot assignment and later mutations keep the visual label wrapper synchronized;
+element-only and visible `aria-hidden` decorations retain it. A host `aria-label` wins on the
+internal radio by presence, including `aria-label=""`.
 
 A standalone radio stays within its allocated inline size. Long or unbroken default labels wrap in
 LTR and RTL while the indicator retains its fixed geometry; an exact-320px story covers both.
 
 **CSS parts:** default appearance: `base`, `circle` / `control` (with Shoelace's
 `control--checked` state token), `dot` / `checked-icon`, and `label`. Button appearance: `base`,
-`button`, `control`, `button--checked` while selected, and `label`.
+`button`, `control`, `button--checked` while selected, `start` / `prefix`, `label`, and `end` /
+`suffix`. Empty leading, label, and trailing wrappers are hidden independently, so only present
+content contributes `--lr-radio-button-gap` spacing.
 Every `<lr-radio-button>` size tier keeps its interactive base at least 24px in both axes, including
 an empty-label control; the visible density can still grow with the shared size ladder.
 

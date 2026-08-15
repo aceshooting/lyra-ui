@@ -10,7 +10,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './toast.styles.js';
-import type { LyraToastItem, ToastVariant } from './toast-item.class.js';
+import type { LyraToastItem, LyraToastVariant } from './toast-item.class.js';
 import './toast-item.class.js';
 import {
   isToastRegionEntry,
@@ -29,7 +29,7 @@ import { LYRA_DEFAULT_toastOverflow } from '../../../internal/default-strings.ge
 const MAX_VISIBLE_TOASTS = 3;
 const MAX_QUEUED_TOASTS = 20;
 
-export type ToastPlacement =
+export type LyraToastPlacement =
   | 'top-start'
   | 'top-center'
   | 'top-end'
@@ -45,9 +45,9 @@ export type LyraToastIcon =
 /** Canonical options shared by the imperative helper and a toast region's object-form `create()`. */
 export interface LyraToastOptions {
   message: string;
-  placement?: ToastPlacement;
+  placement?: LyraToastPlacement;
   ownerDocument?: Document;
-  variant?: ToastVariant;
+  variant?: LyraToastVariant;
   duration?: number;
   /** Item size. Long upstream spellings remain observable on the created item. */
   size?: LyraSize;
@@ -60,18 +60,18 @@ export interface LyraToastOptions {
 }
 
 /** Options accepted beside the legacy string-form `create(message, options)`. */
-export type ToastCreateOptions = Omit<
+export type LyraToastCreateOptions = Omit<
   LyraToastOptions,
   'message' | 'placement'
 >;
 
-export interface ToastOverflowDetail {
+export interface LyraToastOverflowDetail {
   /** Number of queued notifications discarded in the coalesced admission burst. */
   count: number;
 }
 
 export interface LyraToastEventMap {
-  'lr-toast-overflow': CustomEvent<ToastOverflowDetail>;
+  'lr-toast-overflow': CustomEvent<LyraToastOverflowDetail>;
 }
 
 /**
@@ -112,17 +112,16 @@ export interface LyraToastEventMap {
 export class LyraToast extends LyraElement<LyraToastEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      toastOverflow: LYRA_DEFAULT_toastOverflow,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    toastOverflow: LYRA_DEFAULT_toastOverflow,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
   /** Where the stack anchors on screen. */
-  @property({ reflect: true }) placement: ToastPlacement = 'top-end';
+  @property({ reflect: true }) placement: LyraToastPlacement = 'top-end';
 
   private readonly toastInternals = attachInternalsSafely(this);
   private childObserver?: MutationObserver;
@@ -347,10 +346,10 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
    * `LyraToastOptions` contract with `toast()`; the legacy string form remains supported. A
    * detached region rejects immediately rather than returning an update promise that cannot run. */
   create(options: LyraToastOptions): Promise<LyraToastItem>;
-  create(message: string, options?: ToastCreateOptions): Promise<LyraToastItem>;
+  create(message: string, options?: LyraToastCreateOptions): Promise<LyraToastItem>;
   async create(
     messageOrOptions: string | LyraToastOptions,
-    legacyOptions: ToastCreateOptions = {}
+    legacyOptions: LyraToastCreateOptions = {}
   ): Promise<LyraToastItem> {
     if (!this.isConnected)
       throw new TypeError('A toast region must be connected before create().');

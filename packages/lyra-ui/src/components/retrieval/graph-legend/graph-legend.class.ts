@@ -2,6 +2,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { canonicalIdentityList, firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './graph-legend.styles.js';
@@ -74,8 +75,6 @@ const FALLBACK_PALETTE = [
  * @since 4.0.0
  */
 export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['types', 'hiddenTypes', 'counts']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -85,6 +84,8 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     legendTypeShown: LYRA_DEFAULT_legendTypeShown,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['types', 'hiddenTypes', 'counts']);
 
   static override styles = [
     LyraElement.styles,
@@ -147,15 +148,16 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   }
 
   private isVisible(id: string): boolean {
-    return !this.hiddenTypes.includes(id);
+    return !canonicalIdentityList(this.hiddenTypes).includes(id);
   }
 
   private toggle(type: LyraNodeTypeStyle): void {
     if (!this.interactive) return;
+    const hiddenTypes = canonicalIdentityList(this.hiddenTypes);
     const wasVisible = this.isVisible(type.id);
     const next = wasVisible
-      ? [...this.hiddenTypes, type.id]
-      : this.hiddenTypes.filter((id) => id !== type.id);
+      ? [...hiddenTypes, type.id]
+      : hiddenTypes.filter((id) => id !== type.id);
     this.hiddenTypes = next;
     this.liveText = this.localize(
       wasVisible ? 'legendTypeHidden' : 'legendTypeShown',
@@ -180,6 +182,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   }
 
   override render(): TemplateResult {
+    const types = firstByRetrievalIdentity(this.types, (type) => type?.id);
     const groupLabel = retrievalSemanticLabel(
       this,
       this.label || this.localize('graphLegendLabel')
@@ -191,7 +194,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
         role=${groupRole ?? nothing}
         aria-label=${groupLabel ?? nothing}
       >
-        ${this.types.map((type, index) => {
+        ${types.map((type, index) => {
           const visible = this.isVisible(type.id);
           const color = this.swatchColor(type, index);
           const count = this.counts?.[type.id];

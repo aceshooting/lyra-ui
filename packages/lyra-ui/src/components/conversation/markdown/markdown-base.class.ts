@@ -140,7 +140,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract headingOffset: number;
   abstract streaming: boolean;
   abstract highlightCode: boolean;
-  abstract languages?: Record<string, ShikiLanguageInput>;
+  abstract languages?: Readonly<Record<string, ShikiLanguageInput>>;
   abstract headingAnchors: boolean;
   abstract math: boolean;
 
@@ -155,7 +155,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   /** Performs only the variant-specific Shiki loading/tokenization step. */
   protected abstract tokenizePendingHighlight(
     pending: PendingHighlight,
-    languages: Record<string, ShikiLanguageInput> | undefined,
+    languages: Readonly<Record<string, ShikiLanguageInput>> | undefined,
     isCurrent: () => boolean
   ): Promise<MarkdownHighlightAttempt>;
 
@@ -172,6 +172,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     index: TextQuoteIndex;
     mappingDirty: boolean;
   };
+  private textQuoteLocale?: string;
   private markdownTextScopeBuilds = 0;
   private resolvedHighlightRanges: ResolvedHighlightRange[] = [];
   private mathFailureReported = false;
@@ -296,11 +297,16 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     applyMarkdownAriaBusy(this, !this.deps || this.streaming);
+    const locale = this.effectiveLocale;
+    const localeChanged = this.textQuoteLocale !== undefined && this.textQuoteLocale !== locale;
+    this.textQuoteLocale = locale;
+    if (localeChanged) this.textQuoteIndexCache = undefined;
     if (changed.has('renderedHtml')) this.textQuoteIndexCache = undefined;
     if (
       changed.has('renderedHtml') ||
       changed.has('highlights') ||
-      changed.has('activeHighlightId')
+      changed.has('activeHighlightId') ||
+      (localeChanged && this.highlights.length > 0)
     ) {
       this.repaintHighlights();
     }

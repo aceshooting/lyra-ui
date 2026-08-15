@@ -68,7 +68,7 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   );
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
-  assert.equal(state.metadata.deprecations.length, 24);
+  assert.equal(state.metadata.deprecations.length, 10);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {
@@ -531,11 +531,11 @@ test('validation rejects unsorted, pre-introduction, and future deprecation reco
   metadata.deprecations.reverse();
   const icon = metadata.deprecations.find((entry) => entry.tag === 'lr-icon');
   icon.since = '3.0.0';
-  const dateInput = metadata.deprecations.find(
-    (entry) => entry.tag === 'lr-date-input' && entry.name === 'label'
+  const knownDate = metadata.deprecations.find(
+    (entry) => entry.tag === 'lr-known-date' && entry.name === 'label'
   );
-  dateInput.since = '9.0.0';
-  dateInput.removalNotBefore = '11.0.0';
+  knownDate.since = '9.0.0';
+  knownDate.removalNotBefore = '11.0.0';
 
   const findings = validateComponentMetadata(metadata, { ...state, metadata });
   assert.ok(
@@ -551,7 +551,7 @@ test('validation rejects unsorted, pre-introduction, and future deprecation reco
   assert.ok(
     findings.some((finding) =>
       finding.includes(
-        'lr-date-input:part:label: deprecation cannot start after the current package version'
+        'lr-known-date:part:label: deprecation cannot start after the current package version'
       )
     )
   );
@@ -651,19 +651,6 @@ test('CEM projection surfaces status, since, policy, and structured member depre
   assert.equal(autoWidth.deprecation.removalNotBefore, '10.0.0');
   assert.deepEqual(autoWidthAttribute.deprecation, autoWidth.deprecation);
 
-  const dateInput = declarations.find(
-    (entry) => entry.tagName === 'lr-date-input'
-  );
-  const basePart = dateInput.cssParts.find((entry) => entry.name === 'base');
-  const labelPart = dateInput.cssParts.find((entry) => entry.name === 'label');
-  assert.equal(basePart.deprecation.since, '8.0.0');
-  assert.deepEqual(basePart.deprecation.replacement, {
-    kind: 'part',
-    name: 'date-input',
-    usage: '::part(date-input)',
-  });
-  assert.equal(labelPart.deprecation.removalNotBefore, '10.0.0');
-
   const knownDate = declarations.find(
     (entry) => entry.tagName === 'lr-known-date'
   );
@@ -741,20 +728,19 @@ test('Storybook presentation exposes central maturity and structured deprecation
     presentation.graduationCriteria,
     /demonstrate sustained reliability/
   );
+  assert.deepEqual(presentation.deprecations, []);
+
+  const knownDatePresentation = componentMetadataPresentation(
+    index.get('lr-known-date')
+  );
   assert.deepEqual(
-    presentation.deprecations.map((entry) => ({
+    knownDatePresentation.deprecations.map((entry) => ({
       subject: entry.subject,
       since: entry.since,
       replacement: entry.replacement,
       removalNotBefore: entry.removalNotBefore,
     })),
     [
-      {
-        subject: 'part base',
-        since: '8.0.0',
-        replacement: '::part(date-input)',
-        removalNotBefore: '10.0.0',
-      },
       {
         subject: 'part label',
         since: '8.0.0',

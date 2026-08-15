@@ -1,18 +1,18 @@
 import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import type { ComplexAttributeConverter } from 'lit';
 
-export type FormatNumberType = 'currency' | 'decimal' | 'percent';
-export type FormatNumberNotation = 'standard' | 'compact' | 'scientific' | 'engineering';
-export type FormatCurrencyDisplay = 'symbol' | 'narrowSymbol' | 'code' | 'name';
-export type FormatBytesUnit = 'byte' | 'bit';
-export type FormatDisplay = 'long' | 'short' | 'narrow';
-export type FormatDateHour = 'auto' | '12' | '24';
-export type FormatDateStyle = 'full' | 'long' | 'medium' | 'short';
-export type FormatDateText = 'narrow' | 'short' | 'long';
-export type FormatDateNumeric = 'numeric' | '2-digit';
-export type FormatDateMonth = FormatDateNumeric | FormatDateText;
-export type FormatDateTimeZoneName = 'short' | 'long';
-export type RelativeTimeNumeric = 'always' | 'auto';
+export type LyraFormatNumberType = 'currency' | 'decimal' | 'percent';
+export type LyraFormatNumberNotation = 'standard' | 'compact' | 'scientific' | 'engineering';
+export type LyraFormatCurrencyDisplay = 'symbol' | 'narrowSymbol' | 'code' | 'name';
+export type LyraFormatBytesUnit = 'byte' | 'bit';
+export type LyraFormatDisplay = 'long' | 'short' | 'narrow';
+export type LyraFormatDateHour = 'auto' | '12' | '24';
+export type LyraFormatDateStyle = 'full' | 'long' | 'medium' | 'short';
+export type LyraFormatDateText = 'narrow' | 'short' | 'long';
+export type LyraFormatDateNumeric = 'numeric' | '2-digit';
+export type LyraFormatDateMonth = LyraFormatDateNumeric | LyraFormatDateText;
+export type LyraFormatDateTimeZoneName = 'short' | 'long';
+export type LyraRelativeTimeNumeric = 'always' | 'auto';
 
 const NUMBER_TYPES = ['currency', 'decimal', 'percent'] as const;
 const NUMBER_NOTATIONS = ['standard', 'compact', 'scientific', 'engineering'] as const;
@@ -82,10 +82,10 @@ function orderedDigits(
 }
 
 export interface NumberFormatInputs {
-  type: FormatNumberType;
-  notation: FormatNumberNotation;
+  type: LyraFormatNumberType;
+  notation: LyraFormatNumberNotation;
   currency: string;
-  currencyDisplay: FormatCurrencyDisplay;
+  currencyDisplay: LyraFormatCurrencyDisplay;
   withoutGrouping: boolean;
   noGrouping: boolean;
   minimumIntegerDigits?: number;
@@ -136,19 +136,19 @@ export function numberFormatOptions(input: NumberFormatInputs): Intl.NumberForma
 }
 
 export interface DateFormatInputs {
-  weekday?: FormatDateText;
-  era?: FormatDateText;
-  year?: FormatDateNumeric;
-  month?: FormatDateMonth;
-  day?: FormatDateNumeric;
-  hour?: FormatDateNumeric;
-  minute?: FormatDateNumeric;
-  second?: FormatDateNumeric;
-  timeZoneName?: FormatDateTimeZoneName;
-  dateStyle?: FormatDateStyle;
-  timeStyle?: FormatDateStyle;
+  weekday?: LyraFormatDateText;
+  era?: LyraFormatDateText;
+  year?: LyraFormatDateNumeric;
+  month?: LyraFormatDateMonth;
+  day?: LyraFormatDateNumeric;
+  hour?: LyraFormatDateNumeric;
+  minute?: LyraFormatDateNumeric;
+  second?: LyraFormatDateNumeric;
+  timeZoneName?: LyraFormatDateTimeZoneName;
+  dateStyle?: LyraFormatDateStyle;
+  timeStyle?: LyraFormatDateStyle;
   timeZone?: string;
-  hourFormat: FormatDateHour;
+  hourFormat: LyraFormatDateHour;
 }
 
 /** Builds one valid `Intl.DateTimeFormat` option family; preset and granular fields never mix. */
@@ -184,8 +184,8 @@ export interface ByteFormatResult {
 /** Scales a byte/bit quantity using a finite decimal step and builds its validated unit options. */
 export function byteFormat(
   value: number,
-  unit: FormatBytesUnit,
-  display: FormatDisplay,
+  unit: LyraFormatBytesUnit,
+  display: LyraFormatDisplay,
   unitStep: number,
   decimals: number,
 ): ByteFormatResult {
@@ -210,8 +210,8 @@ export function byteFormat(
 
 /** Builds runtime-safe options for `Intl.RelativeTimeFormat`. */
 export function relativeTimeFormatOptions(
-  format: FormatDisplay,
-  numeric: RelativeTimeNumeric,
+  format: LyraFormatDisplay,
+  numeric: LyraRelativeTimeNumeric,
 ): Intl.RelativeTimeFormatOptions {
   return {
     style: closedValue(format, DISPLAY_STYLES, 'long'),

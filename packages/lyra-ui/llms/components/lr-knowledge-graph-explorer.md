@@ -20,11 +20,12 @@ neighborhood expansion, pinned nodes, path finding between pins, node selection,
 overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-list`,
 `lr-path-strip`, and `lr-popover.showAt()`.
 
-**Properties:** (host-supplied data, rendered as given)
+**Properties:** (host-supplied data, identity-normalized before rendering)
 
 - `nodes: LyraGraphNode[] = []`, `links: LyraGraphLink[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,
-  `communities: GraphCommunity[] = []` (all attribute: false) — exactly `lr-graph`'s own types,
-  forwarded verbatim; see the `lr-graph` section above for each shape
+  `communities: LyraGraphCommunity[] = []` (all attribute: false) — exactly `lr-graph`'s own types,
+  projected through `lr-graph`'s shared nonblank, first-wins identity policy before derived lookups
+  and forwarding; see the `lr-graph` section above for each shape
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
@@ -70,7 +71,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   closing/invalidating the details selection. Clearing reports `null`. Direct host assignments to
   `selectedNodeId` remain silent, and one interaction emits at most once even when a composed
   child also reports its primitive click event.
-- `lr-path-request` (`detail: { sourceId: string; targetId: string }`) — the "Find path" action was
+- `lr-path-request` (`detail: { sourceNodeId: string; targetNodeId: string }`) — the "Find path" action was
   activated with exactly two nodes pinned. This component has no traversal algorithm; the host
   computes/fetches the path and assigns it back through `path`.
 - `lr-pin-change` (`detail: { pinnedNodeIds: string[] }`) — the complete updated array. Already
@@ -79,9 +80,9 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   box. Already self-applied before emitting, so reassigning back is optional; a direct host
   assignment to `searchQuery` stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-click`
-  (`detail: { id, x, y }`), `lr-link-click` (`detail: { source, target, id? }`), `lr-community-click`
-  (`detail: { id }`), `lr-node-expand` (`detail: { id }`, from `lr-graph` and/or `lr-neighbor-list`),
-  `lr-relation-activate` (`detail: { relation, sourceId?, targetId? }`, from `lr-path-strip`).
+  (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-click`
+  (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
+  `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle). Receives no data; an overriding consumer reads the

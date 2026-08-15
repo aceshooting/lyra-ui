@@ -38,7 +38,9 @@ at the same size tier, so the toolbar row renders as one flush line.
   (caller-owned text, not localized) in a neutral visible region. A new non-empty value is announced
   through a shared assertive light-DOM region; initial and reconnect content is not replayed
 - `empty: boolean = false` (reflected) — host-driven "the last completed search returned zero
-  results"; never inferred, since this component holds no results data (see `lr-retrieval-results`)
+  results"; never inferred, since this component holds no results data (see `lr-retrieval-results`).
+  A later transition into the settled empty state announces the localized “No matches” heading
+  through the shared polite light-DOM region; initial and reconnect content is not replayed
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
 - `label: string = ''` — fallback name for the `role="search"` landmark; falls back to a localized

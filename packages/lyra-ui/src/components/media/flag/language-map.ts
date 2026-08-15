@@ -63,12 +63,19 @@ export const LANGUAGE_TO_COUNTRY: Record<string, string> = {
   ca: 'es',
 };
 
+function mappedCountry(language: string): string | undefined {
+  return Object.hasOwn(LANGUAGE_TO_COUNTRY, language)
+    ? LANGUAGE_TO_COUNTRY[language]
+    : undefined;
+}
+
 /**
  * Resolve a BCP-47-ish language tag to a flag country code.
  * A region subtag wins (`en-US` → `us`); otherwise the base language is mapped. The region subtag
  * isn't always in the second position -- a script subtag (e.g. `zh-Hant-TW`, ISO 15924, always 4
  * letters) can sit between the base language and the region, so every subtag after the base is
- * scanned for the first 2-letter alpha match rather than assuming it's always `parts[1]`.
+ * scanned for the first 2-letter alpha match rather than assuming it's always `parts[1]`. Base
+ * language fallback accepts only the lookup table's own entries, never inherited object members.
  */
 export function languageToCountry(language: string): string | undefined {
   if (typeof language !== 'string') return undefined;
@@ -77,7 +84,7 @@ export function languageToCountry(language: string): string | undefined {
   try {
     const locale = new Intl.Locale(normalized);
     if (locale.region && ALPHA2_RE.test(locale.region)) return locale.region.toLowerCase();
-    return LANGUAGE_TO_COUNTRY[locale.language.toLowerCase()];
+    return mappedCountry(locale.language.toLowerCase());
   } catch {
     // Older engines or malformed input use the bounded structural fallback below.
   }
@@ -93,7 +100,7 @@ export function languageToCountry(language: string): string | undefined {
     if (part.length === 1) break;
     if (ALPHA2_RE.test(part)) return part;
   }
-  return LANGUAGE_TO_COUNTRY[base];
+  return mappedCountry(base);
 }
 
 /**

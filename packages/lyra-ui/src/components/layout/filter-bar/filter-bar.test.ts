@@ -100,6 +100,21 @@ it("renders one composed control per filter, matched to its declared type", asyn
   ).to.equal("range");
 });
 
+it('treats a foreign boolean false as empty for every built-in filter path', async () => {
+  const el = (await fixture(
+    html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+  )) as LyraFilterBar;
+
+  el.value = { status: false };
+  await el.updateComplete;
+
+  expect(Object.hasOwn(el.value, 'status')).to.be.false;
+  expect(el.hasActiveFilters).to.be.false;
+  expect(el.invalidFilterIds).to.deep.equal(['status']);
+  expect(el.checkValidity()).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="active-filters"]') === null).to.be.true;
+});
+
 it("forwards common field and input parts from every built-in composed control", async () => {
   const filters: LyraFilterBarFilterDefinition[] = [
     ...basicFilters.slice(0, 3),

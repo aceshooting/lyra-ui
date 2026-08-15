@@ -9,7 +9,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import type { LyraVirtualList, VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
+import type { LyraVirtualList, LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './activity-feed.styles.js';
 import {
   literalSetConverter,
@@ -149,8 +149,6 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @since 4.0.0
  */
 export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -168,6 +166,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -471,7 +471,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     this.setFollowFromUser(nearBottom);
   };
 
-  private onVirtualListRangeChanged = (e: CustomEvent<VirtualListRange>): void => {
+  private onVirtualListRangeChanged = (e: CustomEvent<LyraVirtualListRange>): void => {
     e.stopPropagation();
     if (this.mode !== 'live') return;
     if (this.anchoringVirtualTail) return;

@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './evaluation-run.js';
-import type { EvaluationExampleResult, EvaluationToolApprovalDetail } from './evaluation-run.class.js';
+import type { EvalExampleResult, EvalToolApprovalDetail } from './evaluation-run.class.js';
 
 const meta: Meta = {
-  title: 'EvaluationRun',
-  component: 'lr-evaluation-run',
+  title: 'EvalRun',
+  component: 'lr-eval-run',
   tags: ['autodocs'],
   parameters: {
     docs: {
@@ -19,7 +19,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const examples: EvaluationExampleResult[] = [
+const examples: EvalExampleResult[] = [
   {
     id: 'ex-1',
     label: 'Refund policy question',
@@ -68,19 +68,19 @@ const examples: EvaluationExampleResult[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lr-evaluation-run style="max-width: 40rem;" .examples=${examples}></lr-evaluation-run>`,
+  render: () => html`<lr-eval-run style="max-width: 40rem;" .examples=${examples}></lr-eval-run>`,
 };
 
 export const WithExplicitTotal: Story = {
   name: 'With an explicit total (batch still streaming in)',
   render: () =>
-    html`<lr-evaluation-run style="max-width: 40rem;" .examples=${examples.slice(0, 2)} total="4"></lr-evaluation-run>`,
+    html`<lr-eval-run style="max-width: 40rem;" .examples=${examples.slice(0, 2)} total="4"></lr-eval-run>`,
 };
 
 export const StaleExplicitTotal: Story = {
   name: 'Observed examples exceed a stale explicit total',
   render: () =>
-    html`<lr-evaluation-run style="max-width: 40rem;" .examples=${examples.slice(0, 3)} total="1"></lr-evaluation-run>`,
+    html`<lr-eval-run style="max-width: 40rem;" .examples=${examples.slice(0, 3)} total="1"></lr-eval-run>`,
 };
 
 export const AsyncApprovalVeto: Story = {
@@ -94,7 +94,7 @@ export const AsyncApprovalVeto: Story = {
     },
   },
   render: () => {
-    const pendingExamples: EvaluationExampleResult[] = [
+    const pendingExamples: EvalExampleResult[] = [
       {
         ...examples[0]!,
         toolTrace: [
@@ -109,36 +109,36 @@ export const AsyncApprovalVeto: Story = {
       },
     ];
     return html`
-      <lr-evaluation-run
+      <lr-eval-run
         style="max-width: 40rem;"
         .examples=${pendingExamples}
-        @lr-example-tool-approval-decide=${(event: CustomEvent<EvaluationToolApprovalDetail>) => {
+        @lr-example-tool-approval-decide=${(event: CustomEvent<EvalToolApprovalDetail>) => {
           event.preventDefault();
           const output = (event.currentTarget as HTMLElement).nextElementSibling;
           if (output) output.textContent = `Pending approval for ${event.detail.exampleId}/${event.detail.invocationId}`;
         }}
-      ></lr-evaluation-run>
+      ></lr-eval-run>
       <p role="status">No decision pending.</p>
     `;
   },
 };
 
 export const Empty: Story = {
-  render: () => html`<lr-evaluation-run style="max-width: 40rem;"></lr-evaluation-run>`,
+  render: () => html`<lr-eval-run style="max-width: 40rem;"></lr-eval-run>`,
 };
 
 export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lr-evaluation-run
+      <lr-eval-run
         label="Evaluation run for the multilingual customer-support production benchmark"
         .strings=${{
           evaluationRunProgressSummary:
             '{completed} of {total} customer-support benchmark examples have completed evaluation',
         }}
         .examples=${examples}
-      ></lr-evaluation-run>
+      ></lr-eval-run>
     </div>
   `,
 };

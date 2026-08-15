@@ -130,25 +130,25 @@ export interface LyraDocumentRendererAdapterDefinition<
 
 interface DocumentRendererDefinitionBase {
   /** Matches files that do not have an exact normalized MIME-type registration. */
-  matches?: (file: DocumentFile) => boolean;
+  readonly matches?: (file: DocumentFile) => boolean;
 }
 
 /** A renderer whose implementation is already available. */
 export interface DirectDocumentRendererDefinition extends DocumentRendererDefinitionBase {
   /** Renders the file as Lit-compatible content, a DOM node, or plain text. */
-  render: (file: DocumentFile) => unknown;
+  readonly render: (file: DocumentFile) => unknown;
   /** Static legacy capability declaration. Payload adapters derive capabilities instead. */
-  capabilities?: AnchorTargetCapabilities;
-  adapter?: never;
-  load?: never;
+  readonly capabilities?: AnchorTargetCapabilities;
+  readonly adapter?: never;
+  readonly load?: never;
 }
 
 /** A direct renderer driven by a typed, discriminator-specific payload adapter. */
 export interface LyraAdaptedDocumentRendererDefinition extends DocumentRendererDefinitionBase {
-  adapter: LyraDocumentRendererAdapter;
-  render?: never;
-  capabilities?: never;
-  load?: never;
+  readonly adapter: LyraDocumentRendererAdapter;
+  readonly render?: never;
+  readonly capabilities?: never;
+  readonly load?: never;
 }
 
 /** A resolved definition that can render immediately. */
@@ -158,11 +158,11 @@ export type LyraResolvedDocumentRendererDefinition =
 
 /** A renderer whose implementation is loaded only after a matching file is opened. */
 export interface LazyDocumentRendererDefinition extends DocumentRendererDefinitionBase {
-  render?: never;
-  adapter?: never;
+  readonly render?: never;
+  readonly adapter?: never;
   /** Capability declaration available before the legacy direct renderer is loaded. */
-  capabilities?: AnchorTargetCapabilities;
-  load: () => Promise<
+  readonly capabilities?: AnchorTargetCapabilities;
+  readonly load: () => Promise<
     DirectDocumentRendererDefinition | { default: DirectDocumentRendererDefinition }
   >;
 }

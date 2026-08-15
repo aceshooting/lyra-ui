@@ -8,7 +8,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Command sequences are copied, bounded, and frozen while each row retains its identity for `onSelect`; create and reassign a new array after sequence or row changes.',
+          'Command sequences are copied, bounded, and frozen while each row retains its identity for `onSelect`; create and reassign a new array after sequence or row changes. The platform-neutral `mod` hotkey prefers Client Hints and falls back through legacy platform and reduced user-agent signals.',
       },
     },
   },

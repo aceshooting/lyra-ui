@@ -3,7 +3,18 @@ import type { Meta, StoryObj } from '@storybook/web-components';
 import './prompt-studio.js';
 import type { LyraPromptStudio, PromptStudioMessageReorderDetail } from './prompt-studio.js';
 
-const meta: Meta = { title: 'Agent Tools/Prompt Studio', component: 'lr-prompt-studio' };
+const meta: Meta = {
+  title: 'Agent Tools/Prompt Studio',
+  component: 'lr-prompt-studio',
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A prompt-development workbench. Empty and blank message or version IDs are omitted and later duplicates are first-wins before editing, focus, selection, and events.',
+      },
+    },
+  },
+};
 export default meta;
 type Story = StoryObj;
 

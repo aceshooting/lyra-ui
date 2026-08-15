@@ -7,7 +7,7 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEF
 
 /**
  * `<lr-scatter-chart>` — `<lr-chart>` with a `"scatter"` default and the mirrored writable type. Feed
- * points via `Series.points`.
+ * points via `LyraChartSeries.points`.
  *
  * @customElement lr-scatter-chart
  * @status stable

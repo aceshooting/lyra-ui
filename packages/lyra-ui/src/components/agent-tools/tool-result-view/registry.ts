@@ -45,7 +45,7 @@ export interface ToolRenderContext {
 
 interface ToolRendererDefinitionBase {
   /** Facade/shape-based dispatch predicate -- see the module doc's dispatch order. */
-  matches?: (payload: unknown) => boolean;
+  readonly matches?: (payload: unknown) => boolean;
 }
 
 /** A renderer whose implementation is already available synchronously. */
@@ -64,22 +64,22 @@ export interface DirectToolRendererDefinition extends ToolRendererDefinitionBase
    * failure (or any other `ToolResultStatus`) while still rendering real content, instead of
    * throwing and losing that content to the `<lr-json-viewer>` fallback.
    */
-  render: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown;
+  readonly render: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown;
   /** Direct definitions cannot also declare a lazy loader. */
-  load?: never;
+  readonly load?: never;
 }
 
 /** A code-split renderer definition. Its loader must resolve to a direct renderer. */
 export interface LazyToolRendererDefinition extends ToolRendererDefinitionBase {
   /** Lazy definitions cannot ambiguously carry a direct renderer too. */
-  render?: never;
+  readonly render?: never;
   /**
    * Lazy loader for a code-split renderer. Resolves to either a definition
    * directly, or a `{ default }`-shaped module namespace object (so
    * `load: () => import('./my-renderer.js')` works unmodified when that
    * module's default export is itself a `ToolRendererDefinition`).
    */
-  load: () => Promise<DirectToolRendererDefinition | { default: DirectToolRendererDefinition }>;
+  readonly load: () => Promise<DirectToolRendererDefinition | { default: DirectToolRendererDefinition }>;
 }
 
 /**

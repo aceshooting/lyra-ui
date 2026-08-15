@@ -21,12 +21,19 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 
 - `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in
   render order. Every definition carries a nonempty, whitespace-stable, unique `filterId`; invalid
-  definitions and later duplicate filter IDs are ignored deterministically. Writing
-  `null` or `undefined` clears the schema; reads remain the canonical non-null empty array.
+  definitions and later duplicate filter IDs are ignored deterministically. The first 10,000
+  definitions and nested collection entries are detached and deeply frozen at assignment; the
+  optional Lit `icon` payload retains its rendering identity. Create and reassign a new array after
+  changes. Writing `null` or `undefined` clears the schema; reads remain the canonical non-null
+  empty array.
 - `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by `filterId`.
   Cleared fields are omitted. Reads, writes, event details, and string-array fields are immutable
-  snapshots rather than references to caller-owned data. Writing `null` or `undefined` clears the
-  value; reads remain the canonical non-null empty record.
+  snapshots rather than references to caller-owned data, capped at 10,000 record keys and 10,000
+  entries per string-array field. Create and reassign a new record after changes. Writing `null` or
+  `undefined` clears the value; reads remain the canonical non-null empty record. Built-in controls
+  use strings/string arrays; if an untyped boundary supplies a boolean, `false` is canonical empty
+  and omitted while `true` remains set. Custom controls instead use their adapter's `isEmpty` or
+  `clearValue` contract, so either boolean can be meaningful in a custom domain.
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`. A host
   `aria-label` wins by attribute presence, including an explicitly empty value.
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
@@ -44,7 +51,8 @@ auto minima and cap themselves to the allocated inline size. A single unbroken l
 value therefore stays inside a 320px LTR or RTL bar, with the chip's own label ellipsis retaining
 overflow ownership rather than widening the page.
 
-Each edit exposes one filter-bar `lr-input` carrying the complete value object. A built-in or
+Each edit exposes one filter-bar `lr-input` carrying a detached, deeply frozen snapshot of the
+complete value object. A built-in or
 custom control's own `lr-input`/`lr-change` aliases stay inside the wrapper so their incompatible
 detail shapes cannot escape as duplicate bar events; native-style `input`/`change` events from the
 composed controls continue bubbling normally.

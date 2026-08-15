@@ -67,21 +67,48 @@ describe("lr-embedding-explorer", () => {
     expect(plot.getAttribute("aria-label")).to.equal("Vectors");
   });
 
-  it("keeps host naming distinct from the plot across explicit-empty and dynamic changes", async () => {
+  it('lets the host aria-label govern the plot across explicit-empty and dynamic changes', async () => {
     const el = (await fixture(html`
       <lr-embedding-explorer aria-label="Author vectors" .points=${points}></lr-embedding-explorer>
     `)) as LyraEmbeddingExplorer;
     const plot = () => el.shadowRoot!.querySelector('[part="plot"]')!;
     expect(el.getAttribute("aria-label")).to.equal("Author vectors");
-    expect(plot().getAttribute("aria-label")).to.equal("Embedding explorer");
+    expect(plot().getAttribute('aria-label')).to.equal('Author vectors');
     el.setAttribute("aria-label", "");
     await el.updateComplete;
     expect(el.getAttribute("aria-label")).to.equal("");
-    expect(plot().getAttribute("aria-label")).to.equal("Embedding explorer");
+    expect(plot().getAttribute('aria-label')).to.equal('');
     el.setAttribute("aria-label", "Revised vectors");
     await el.updateComplete;
     expect(el.getAttribute("aria-label")).to.equal("Revised vectors");
-    expect(plot().getAttribute("aria-label")).to.equal("Embedding explorer");
+    expect(plot().getAttribute('aria-label')).to.equal('Revised vectors');
+  });
+
+  it('renders cluster membership as text and exposes it on each matching option', async () => {
+    const el = (await fixture(html`
+      <lr-embedding-explorer
+        .points=${[
+          { id: 'a', x: 0, y: 0, label: 'Alpha', cluster: 'Research' },
+          { id: 'b', x: 1, y: 1, label: 'Beta', cluster: 'Operations' },
+        ]}
+      ></lr-embedding-explorer>
+    `)) as LyraEmbeddingExplorer;
+    const legend = el.shadowRoot!.querySelector('[part="legend"]')!;
+    expect(legend.getAttribute('role')).to.equal('list');
+    expect(
+      [...legend.querySelectorAll('[part="legend-item"]')].map((item) => ({
+        role: item.getAttribute('role'),
+        text: item.textContent?.trim(),
+      }))
+    ).to.deep.equal([
+      { role: 'listitem', text: 'Operations' },
+      { role: 'listitem', text: 'Research' },
+    ]);
+    expect(
+      [...el.shadowRoot!.querySelectorAll('[part="point"]')].map((point) =>
+        point.getAttribute('aria-description')
+      )
+    ).to.deep.equal(['Research', 'Operations']);
   });
 
   it("resolves distinct clusters through the canonical chart palette tokens", async () => {
@@ -199,7 +226,7 @@ describe("lr-embedding-explorer", () => {
   it("exposes selectable points as listbox options with explicit selected state", async () => {
     const el = (await fixture(
       html`<lr-embedding-explorer
-        selected-id="b"
+        selected-point-id="b"
         .points=${points}
       ></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
@@ -451,5 +478,31 @@ describe("lr-embedding-explorer", () => {
       html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
     await expect(populated).to.be.accessible();
+  });
+
+  it('omits blank and later duplicate point ids after coordinate validation before selection and actions', async () => {
+    const first = { id: 'same', x: 1, y: 1, label: 'First valid' };
+    const el = (await fixture(html`
+      <lr-embedding-explorer
+        selected-point-id="same"
+        .points=${[
+          { id: '', x: 0, y: 0, label: 'Blank' },
+          { id: 'same', x: Number.NaN, y: 0, label: 'Invalid coordinates' },
+          first,
+          { ...first, x: 2, label: 'Later duplicate' },
+        ]}
+      ></lr-embedding-explorer>
+    `)) as LyraEmbeddingExplorer;
+
+    const rendered = el.shadowRoot!.querySelectorAll('[part="point"]');
+    expect(rendered.length).to.equal(1);
+    expect(rendered[0]!.getAttribute('data-selected')).to.equal('true');
+    expect(rendered[0]!.getAttribute('aria-label')).to.contain('First valid');
+
+    const selected = oneEvent(el, 'lr-point-select');
+    rendered[0]!.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, composed: true })
+    );
+    expect((await selected).detail).to.deep.equal({ point: first });
   });
 });

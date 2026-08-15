@@ -56,7 +56,8 @@ Fires whenever _either_ child control's own `lr-change` fires, and always carrie
 settings snapshot, not just whichever field actually changed. `inCatalog` is recomputed fresh from
 `catalog`/`model` on every emission (mirroring `lr-model-select`'s own `effectiveEntries` logic)
 rather than cached from the last child event, so it's still correct even when `model` was just
-assigned directly instead of via the child's own event.
+assigned directly instead of via the child's own event. The nested selector's native `focus` and
+`blur` events remain contained at that child boundary; the panel does not declare or relay them.
 
 **Slots:** none — this is a fixed two-control composition, not a generic layout shell.
 

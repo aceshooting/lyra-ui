@@ -88,11 +88,6 @@ export interface LyraChartSeries {
   readonly type?: 'line' | 'bar';
 }
 
-/** @deprecated Use the namespaced, readonly `LyraChartPoint`. */
-export type ChartPoint = LyraChartPoint;
-/** @deprecated Use the namespaced, readonly `LyraChartSeries`. */
-export type Series = LyraChartSeries;
-
 export type LyraChartType =
   | 'line'
   | 'bar'
@@ -372,8 +367,8 @@ type BrowserWindow = Window & typeof globalThis;
  * Recursively merges `override` onto `base`, matching JSON-merge semantics:
  * plain objects are merged key-by-key at every depth; arrays, functions, and
  * any other value type are replaced wholesale by `override`'s value. Used to
- * deep-merge the raw `config` passthrough over the `Series`-generated config
- * in `buildConfig()` so a nested key (e.g. `config.options.scales.y`) only
+ * deep-merge the raw `config` passthrough over the `LyraChartSeries`-generated
+ * config in `buildConfig()` so a nested key (e.g. `config.options.scales.y`) only
  * overrides the keys it sets, rather than clobbering the whole generated
  * sibling object (e.g. the rest of the generated `y` axis config).
  */
@@ -447,12 +442,12 @@ interface EffectiveChartData {
   datasets: LyraChartDatasetConfiguration[];
 }
 
-function isChartPoint(value: unknown): value is ChartPoint {
+function isChartPoint(value: unknown): value is LyraChartPoint {
   if (!isPlainObject(value)) return false;
   return Number.isFinite(value['x']) && Number.isFinite(value['y']);
 }
 
-function normalizedChartPoint(value: unknown): ChartPoint | null {
+function normalizedChartPoint(value: unknown): LyraChartPoint | null {
   if (!isChartPoint(value)) return null;
   const radius = value.r;
   return {
@@ -486,14 +481,14 @@ function labelText(value: unknown): string {
  * ChartJS['config']` property alongside its simplified attributes — "a
  * flexible wrapper around Chart.js" supporting *both* simplified attributes
  * and full Chart.js configuration passthrough, not a `data`/`options` prop
- * pair. `lr-chart` mirrors that dual surface: the `Series`-based
- * `datasets`/`labels`/`type`/`legend`/`xLabel`/`yLabel`/`zoom` attributes
+ * pair. `lr-chart` mirrors that dual surface: the `LyraChartSeries`-based
+ * `datasets`/`labels`/`type`/`withoutLegend`/`xLabel`/`yLabel`/`zoom` attributes
  * below are the simplified surface (compatible with WA's `type`, `xLabel`,
- * `yLabel`, `withoutLegend`-equivalent `legend`, etc.), and the additional
+ * `yLabel`, `withoutLegend`, etc.), and the additional
  * `config` property is the raw-passthrough escape hatch — a
  * `LyraChartConfiguration` deep-merged over the generated config in
  * `buildConfig()`, mirroring WA's `config` property without discarding the
- * `Series` shape the rest of this component family (subclasses, box-plot,
+ * `LyraChartSeries` shape the rest of this component family (subclasses, box-plot,
  * histogram) is built on.
  *
  * @customElement lr-chart
@@ -502,7 +497,7 @@ function labelText(value: unknown): string {
  *   data-table value is activated, or when Enter/Space activates the keyboard-current canvas datum.
  *   `detail: { datasetIndex: number, index: number, label: string |
  *   undefined, value: unknown }`. For scatter/bubble data, `label` prefers the per-point label and
- *   `value` is the complete typed `ChartPoint` (`x`, `y`, optional `r`, optional `label`).
+ *   `value` is the complete typed `LyraChartPoint` (`x`, `y`, optional `r`, optional `label`).
  * @event lr-datum-activate - Family-normalized activation event. Its detail adds `kind`
  *   (`bar`, `point`, `segment`, or `slice`) to the `lr-point-click` detail.
  * @event lr-before-legend-visibility-change - Cancelable proposal emitted before a DOM legend
@@ -513,7 +508,7 @@ function labelText(value: unknown): string {
  * @csspart base - The chart wrapper.
  * @csspart plot - The fixed-height canvas/overlay region.
  * @csspart canvas - The Chart.js canvas.
- * @csspart legend - The wrapping DOM legend rendered when `legend` is set.
+ * @csspart legend - The wrapping DOM legend, rendered unless `withoutLegend` is set.
  * @csspart legend-item - A keyboard-operable series visibility toggle.
  * @csspart legend-item-hidden - Added to a `legend-item` while its dataset is hidden.
  * @csspart legend-swatch - The resolved series-color swatch in a legend item.
@@ -668,8 +663,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * indexes are ignored when state is applied or emitted.
    */
   @property({ attribute: false }) hiddenDatasets?: readonly number[];
-  /** Positive compatibility alias for the visible legend. */
-  @property({ type: Boolean, converter: trueDefaultBooleanConverter }) legend = true;
   /** Accessible chart description. */
   @property() description: string | null = null;
   /** Controls which cartesian grid axes are drawn. */
@@ -702,7 +695,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: false }) valueFormatter?: LyraChartValueFormatter;
   /** Unified context-object formatter for visual, tooltip, table/export, and spoken values. */
   @property({ attribute: false }) formatter?: LyraChartFormatter;
-  /** Chart-wide default fill-under-line setting for line-type series; a series's own `Series.fill` overrides it. */
+  /** Chart-wide default fill-under-line setting for line-type series; a series's own `LyraChartSeries.fill` overrides it. */
   @property({ type: Boolean }) area = false;
   @property({ type: Boolean }) zoom = false;
   @property() height = '280px';
@@ -711,10 +704,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: 'y2-label' }) y2Label = '';
   @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter })
   beginAtZero = true;
-  /** @deprecated Use the mirrored `label` property. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel: string | null = null;
-  /** @deprecated Use the mirrored `description` property. */
-  @property({ attribute: 'accessible-description' }) accessibleDescription = '';
   /** Makes the generated data table visible; it remains screen-reader available when false. */
   @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
   /** Stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only meaningful for `bar` and `line` types. */
@@ -747,11 +736,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /**
    * Raw Chart.js configuration passthrough — mirrors `wa-chart`'s `config`
-   * property. Recursively deep-merged over the `Series`-derived config in
-   * `buildConfig()` (any key at any nesting depth — e.g.
+   * property. Recursively deep-merged over the `LyraChartSeries`-derived
+   * config in `buildConfig()` (any key at any nesting depth — e.g.
    * `config.options.scales.y.min` — wins over the generated equivalent
    * without discarding sibling keys the generated config set), for consumers
-   * who need full Chart.js control beyond the simplified `Series` shape.
+   * who need full Chart.js control beyond the simplified `LyraChartSeries` shape.
    *
    * Caveat: the merge only recurses into plain objects — an *array* value
    * (e.g. `config.plugins` as an inline-plugin array, or `config.data.datasets`)
@@ -1546,7 +1535,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'labels',
       'datasets',
       'hiddenDatasets',
-      'legend',
       'description',
       'grid',
       'indexAxis',
@@ -1580,7 +1568,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private seriesToDataset(
-    s: Series,
+    s: LyraChartSeries,
     index: number,
     palette: string[],
     effectiveType: EffectiveChartType,
@@ -1997,7 +1985,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * `r` scale Chart.js v4 uses for radar/polarArea, and the cartesian
    * `x`/`y`(/`y2`) block for every other (line/bar/scatter/bubble) type — with
    * `x` itself further split within that block: scatter and bubble datasets
-   * carry raw numeric `{x, y(, r)}` points (via `Series.points`) and need a
+   * carry raw numeric `{x, y(, r)}` points (via `LyraChartSeries.points`) and need a
    * linear `x` scale, while line/bar plot against `labels` and need the
    * default categorical one. `theme` (from `themeColors()`) drives every
    * scale's `ticks.color`/`grid.color`/axis `title.color` so grid lines and
@@ -2560,7 +2548,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 }
               : {}),
             // Chart.js's tooltip plugin has no per-dataset `tooltip.enabled`
-            // — `Series.noTooltip` is implemented here instead, via the one
+            // — `LyraChartSeries.noTooltip` is implemented here instead, via the one
             // mechanism the core tooltip plugin actually reads.
             filter: (item: ChartTooltipContext) =>
               !this.effectiveData().datasets[item.datasetIndex]?.noTooltip,
@@ -2599,7 +2587,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (!effectiveConfig) return generated;
 
     // Raw Chart.js passthrough (mirrors `wa-chart`'s `config` property) —
-    // deep-merge `config` over the `Series`-derived config at every nesting
+    // deep-merge `config` over the `LyraChartSeries`-derived config at every nesting
     // level (see `deepMerge` above), letting consumers override or extend a
     // single nested key (e.g. `config.options.scales.y.min`) without
     // clobbering the rest of the generated sibling object.
@@ -2770,12 +2758,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private accessibleName(fallback: string): string {
-    return this.getAttribute('aria-label') ?? this.label ?? this.accessibleLabel ?? fallback;
+    return this.getAttribute('aria-label') ?? this.label ?? fallback;
   }
 
   private chartDescription(): string {
     if (this.description) return this.description;
-    if (this.accessibleDescription) return this.accessibleDescription;
     const effective = this.effectiveData();
     const sample = this.dataTableSample(effective);
     const includePointDetails = !this.hasCustomDataTable();
@@ -3123,7 +3110,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private get showsLegend(): boolean {
-    return this.legend && !this.withoutLegend;
+    return !this.withoutLegend;
   }
 }
 
@@ -3131,30 +3118,4 @@ declare global {
   interface HTMLElementTagNameMap {
     'lr-chart': LyraChart;
   }
-}
-
-/**
- * Installs a read-only `type` accessor pair on a `LyraChart` subclass's
- * prototype, locking it to `value` — assigning `.type` afterwards (attribute
- * or property) is silently ignored. `LyraChart` declares `type` as a plain
- * (decorator-managed) class field, and TypeScript forbids a subclass from
- * re-declaring a base field as a getter/setter pair via ordinary class
- * syntax (TS2611), so the accessor pair is installed directly on the
- * prototype instead, which is runtime-equivalent (same shadowing semantics
- * as a class-syntax override) without tripping that check. Shared by every
- * `lr-*-chart` subclass (bar/line/pie/doughnut/scatter/bubble/radar/
- * polarArea) plus `lr-histogram`, replacing what used to be an identical
- * ~16-line `Object.defineProperty` block copy-pasted into each file.
- */
-export function lockChartType(ctor: Function, value: string): void {
-  Object.defineProperty(ctor.prototype, 'type', {
-    configurable: true,
-    enumerable: true,
-    get(): string {
-      return value;
-    },
-    set(_v: string) {
-      /* locked to `value`; direct writes are ignored */
-    },
-  });
 }

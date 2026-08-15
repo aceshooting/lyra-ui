@@ -31,11 +31,11 @@ type _VoiceFocusUsesNativeConstructor = AssertTrue<
 type _VoiceBlurUsesNativeConstructor = AssertTrue<
   LyraVoicePickerEventMap['blur'] extends FocusEvent ? true : false
 >;
-type _VoiceFocusAliasIsCustom = AssertTrue<
-  LyraVoicePickerEventMap['lr-focus'] extends CustomEvent<null> ? true : false
+type _VoiceFocusAliasIsAbsent = AssertFalse<
+  'lr-focus' extends keyof LyraVoicePickerEventMap ? true : false
 >;
-type _VoiceBlurAliasIsCustom = AssertTrue<
-  LyraVoicePickerEventMap['lr-blur'] extends CustomEvent<null> ? true : false
+type _VoiceBlurAliasIsAbsent = AssertFalse<
+  'lr-blur' extends keyof LyraVoicePickerEventMap ? true : false
 >;
 type _KnownDateInputIsNative = AssertTrue<
   LyraKnownDateEventMap['input'] extends InputEvent ? true : false
@@ -85,8 +85,8 @@ export type EventDetailContractAssertions =
   | _ModelBlurUsesNativeConstructor
   | _VoiceFocusUsesNativeConstructor
   | _VoiceBlurUsesNativeConstructor
-  | _VoiceFocusAliasIsCustom
-  | _VoiceBlurAliasIsCustom
+  | _VoiceFocusAliasIsAbsent
+  | _VoiceBlurAliasIsAbsent
   | _KnownDateInputIsNative
   | _KnownDateChangeIsNative
   | _KnownDateInputKeepsCompatibilityDetail

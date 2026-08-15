@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './spinner.js';
-import type { LyraSpinner } from './spinner.js';
+import type { LyraSpinner, LyraSpinnerLabelPlacement } from './spinner.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 class SpinnerLabelForwardWrapper extends HTMLElement {
@@ -112,7 +112,8 @@ it('is accessible with a rich forwarded visible label and host naming override',
 
 it('can render the visible-label branch before a browser render root exists', () => {
   const el = document.createElement('lr-spinner') as LyraSpinner;
-  el.labelPlacement = 'after';
+  const placement: LyraSpinnerLabelPlacement = 'after';
+  el.labelPlacement = placement;
   el.append('Loading files');
   expect(() => el.render()).not.to.throw();
 });

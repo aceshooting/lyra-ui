@@ -32,6 +32,15 @@ export const AnchorsAndHighlights: Story = {
 };
 export const NoSourceSet: Story = { render: () => html`<lr-archive-viewer style="max-inline-size: 28rem;"></lr-archive-viewer>` };
 
+export const MaxHeight: Story = {
+  render: () => html`<lr-archive-viewer
+    style="max-inline-size: 28rem;"
+    max-height="10rem"
+    src=${source}
+    name="archive.zip"
+  ></lr-archive-viewer>`,
+};
+
 /** Baseline narrow-allocation coverage with a long archive name and populated entry list. */
 export const Narrow320: Story = {
   render: () => html`

@@ -157,10 +157,10 @@ too. Both routes are topmost-aware through the shared nonmodal overlay stack, so
 picker remains open under a newer Lyra popup and receives the manager's focus handoff when that top
 layer closes.
 
-**CSS parts:** `base` (compatibility name for the field wrapper; use `color-picker`),
+**CSS parts:** `base` (permanent compatibility name on the same field wrapper as `color-picker`),
 `color-picker` (the field wrapper; it is the same node as `base` and `form-control`),
 `form-control` (the field wrapper; it is the same node as `base` and `color-picker`),
-`form-control-label` (the label; `label` is an alias kept for back-compat), `trigger-container`
+`form-control-label` (the label; `label` is its permanent compatibility name), `trigger-container`
 (the row wrapping the trigger), `trigger` (the swatch button that
 opens the panel), `panel` (the positioned `role="dialog"` surface), `grid` (the
 saturation/brightness square) and `grid-handle` (its draggable, keyboard-operable handle),

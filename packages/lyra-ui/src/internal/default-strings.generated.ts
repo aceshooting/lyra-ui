@@ -1070,6 +1070,7 @@ export const LYRA_DEFAULT_selectionToolbarLabel: LyraMessage = 'Selection action
 export const LYRA_DEFAULT_sendMessage: LyraMessage = 'Send message';
 export const LYRA_DEFAULT_sequenceStripCategoryCount: LyraMessage = '{label}: {count}';
 export const LYRA_DEFAULT_sequenceStripEmpty: LyraMessage = 'No items';
+export const LYRA_DEFAULT_sequenceStripUnnamedCategory: LyraMessage = 'Unnamed category';
 export const LYRA_DEFAULT_showAllColumns: LyraMessage = 'Show all columns';
 export const LYRA_DEFAULT_showFewerColumns: LyraMessage = 'Show fewer columns';
 export const LYRA_DEFAULT_showLess: LyraMessage = 'Show less';

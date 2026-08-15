@@ -25,6 +25,8 @@ arrays; persistence and execution remain host-owned.
 cancelable `lr-change` before updating the current arrays, while the host remains responsible for
 persistence.
 `versions: readonly PromptStudioVersion[] = []` is a property-only host-controlled input;
+empty/blank message and version ids are omitted and later duplicates use deterministic first-wins
+identity before rendering, editing, focus, selection, and events;
 `selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
 `heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
 label when unset;

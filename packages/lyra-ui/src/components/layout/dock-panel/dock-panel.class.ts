@@ -9,11 +9,7 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_dockPanelCollapse,
-  LYRA_DEFAULT_dockPanelExpand,
-  LYRA_DEFAULT_dockPanelResize,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Which edge of the panel's own container it's docked to. `'start'`/`'end'`
@@ -133,13 +129,12 @@ interface DragState {
 export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      dockPanelCollapse: LYRA_DEFAULT_dockPanelCollapse,
-      dockPanelExpand: LYRA_DEFAULT_dockPanelExpand,
-      dockPanelResize: LYRA_DEFAULT_dockPanelResize,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    dockPanelCollapse: LYRA_DEFAULT_dockPanelCollapse,
+    dockPanelExpand: LYRA_DEFAULT_dockPanelExpand,
+    dockPanelResize: LYRA_DEFAULT_dockPanelResize,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

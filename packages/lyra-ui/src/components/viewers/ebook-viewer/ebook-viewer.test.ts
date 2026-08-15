@@ -663,7 +663,7 @@ describe("lr-ebook-viewer", () => {
         cfi: "epubcfi(/6/2!/4)",
       });
       expect(event.detail.rects).to.have.lengthOf(1);
-      expect(event.detail.rects[0].toJSON()).to.deep.include({
+      expect(event.detail.rects[0]).to.deep.include({
         x: 0,
         y: 0,
         width: 10,

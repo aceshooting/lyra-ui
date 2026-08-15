@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import process from "node:process";
-import { fileURLToPath } from "node:url";
+import { readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const outputFile = path.join(repoRoot, ".github", "release-qualification.json");
+const outputFile = path.join(repoRoot, '.github', 'release-qualification.json');
 
 function scalar(value) {
   value = value.trim();
   if (
     value.length >= 2 &&
-    ((value.startsWith("'") && value.endsWith("'")) ||
+    ((value.startsWith(`'`) && value.endsWith(`'`)) ||
       (value.startsWith('"') && value.endsWith('"')))
   ) {
     return value.slice(1, -1);
@@ -60,15 +60,15 @@ function markedJobs(source, label) {
 
 function jobName(job) {
   const name = job.lines.find((line) => /^\s{4}name:\s*/.test(line));
-  return name ? scalar(name.replace(/^\s{4}name:\s*/, "")) : job.id;
+  return name ? scalar(name.replace(/^\s{4}name:\s*/, '')) : job.id;
 }
 
 function parseInlineArray(value, label) {
   const match = value.trim().match(/^\[(.*)\]$/);
   if (!match)
     throw new Error(`${label}: matrix axis must use a finite inline array`);
-  if (match[1].trim() === "") return [];
-  return match[1].split(",").map((entry) => scalar(entry));
+  if (match[1].trim() === '') return [];
+  return match[1].split(',').map((entry) => scalar(entry));
 }
 
 function matrixRows(job, label) {
@@ -138,7 +138,7 @@ function requiredJobNames(source, label) {
   const names = [];
   for (const job of markedJobs(source, label)) {
     const name = jobName(job);
-    if (job.kind === "required") names.push(name);
+    if (job.kind === 'required') names.push(name);
     else {
       for (const row of matrixRows(job, label))
         names.push(interpolateMatrix(name, row, `${label}/${job.id}`));
@@ -154,18 +154,18 @@ export function deriveReleaseQualification({ ciSource, fullEngineSource }) {
     schemaVersion: 1,
     workflows: {
       ci: {
-        name: workflowName(ciSource, "CI"),
-        path: ".github/workflows/ci.yml",
-        event: "push",
-        headBranch: "main",
-        requiredJobs: requiredJobNames(ciSource, "CI"),
+        name: workflowName(ciSource, 'CI'),
+        path: '.github/workflows/ci.yml',
+        event: 'push',
+        headBranch: 'main',
+        requiredJobs: requiredJobNames(ciSource, 'CI'),
       },
       fullEngine: {
-        name: workflowName(fullEngineSource, "full-engine"),
-        path: ".github/workflows/full-engine.yml",
-        event: "workflow_dispatch",
-        headBranch: "main",
-        requiredJobs: requiredJobNames(fullEngineSource, "full-engine"),
+        name: workflowName(fullEngineSource, 'full-engine'),
+        path: '.github/workflows/full-engine.yml',
+        event: 'workflow_dispatch',
+        headBranch: 'main',
+        requiredJobs: requiredJobNames(fullEngineSource, 'full-engine'),
       },
     },
   };
@@ -174,12 +174,12 @@ export function deriveReleaseQualification({ ciSource, fullEngineSource }) {
 export function generateReleaseQualification() {
   return deriveReleaseQualification({
     ciSource: readFileSync(
-      path.join(repoRoot, ".github", "workflows", "ci.yml"),
-      "utf8"
+      path.join(repoRoot, '.github', 'workflows', 'ci.yml'),
+      'utf8'
     ),
     fullEngineSource: readFileSync(
-      path.join(repoRoot, ".github", "workflows", "full-engine.yml"),
-      "utf8"
+      path.join(repoRoot, '.github', 'workflows', 'full-engine.yml'),
+      'utf8'
     ),
   });
 }
@@ -192,22 +192,22 @@ const isMain =
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
-  const mode = process.argv[2] ?? "--check";
+  const mode = process.argv[2] ?? '--check';
   const expected = serialized(generateReleaseQualification());
-  if (mode === "--write") {
+  if (mode === '--write') {
     writeFileSync(outputFile, expected);
     console.log(`Wrote ${path.relative(repoRoot, outputFile)}.`);
-  } else if (mode === "--check") {
-    const actual = readFileSync(outputFile, "utf8");
+  } else if (mode === '--check') {
+    const actual = readFileSync(outputFile, 'utf8');
     if (actual !== expected) {
       throw new Error(
-        ".github/release-qualification.json is stale; run node scripts/generate-release-qualification.mjs --write"
+        '.github/release-qualification.json is stale; run node scripts/generate-release-qualification.mjs --write'
       );
     }
-    console.log("Release qualification manifest is fresh.");
+    console.log('Release qualification manifest is fresh.');
   } else {
     throw new Error(
-      "Usage: generate-release-qualification.mjs [--check|--write]"
+      'Usage: generate-release-qualification.mjs [--check|--write]'
     );
   }
 }

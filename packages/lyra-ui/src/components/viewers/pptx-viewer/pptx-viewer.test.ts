@@ -252,6 +252,50 @@ describe("lr-pptx-viewer", () => {
     }
   });
 
+  it('contains rejected slide navigation with the localized error state and lr-render-error', async () => {
+    const fake = fakeModule();
+    const boom = new Error('slide navigation failed');
+    fake.viewer.goToSlide = async () => {
+      throw boom;
+    };
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      const errors: unknown[] = [];
+      el.addEventListener('lr-render-error', (event) => errors.push(event.detail.error));
+      const outcome = await el.goToSlide(1).then(
+        () => 'resolved',
+        () => 'rejected',
+      );
+      await el.updateComplete;
+
+      expect(outcome).to.equal('resolved');
+      expect(errors).to.deep.equal([boom]);
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent)
+        .to.equal('Failed to render this presentation.');
+      expect(fake.calls.destroy).to.equal(1);
+
+      let laterSlideChanges = 0;
+      el.addEventListener('lr-slide-change', () => laterSlideChanges++);
+      fake.viewer.currentSlideIndex = 1;
+      fake.viewer.dispatchEvent(new CustomEvent('slidechange', { detail: { index: 1 } }));
+      await aTimeout(0);
+
+      expect(laterSlideChanges).to.equal(0);
+      expect(el.pageViewerSnapshot).to.deep.include({
+        status: 'error',
+        page: 1,
+        pageCount: 0,
+      });
+    } finally {
+      restore();
+    }
+  });
+
   it("publishes atomic page state and maps one-based page assignments to slide navigation", async () => {
     const fake = fakeModule(3);
     const restore = stubFetch();
@@ -1112,6 +1156,35 @@ describe("styling", () => {
     expect(css).to.match(/\[part=["']previous-button["']\]:hover/);
     expect(css).to.match(/\[part=["']next-button["']\]:hover/);
   });
+
+  it('mirrors slide-navigation chevrons when inherited direction changes', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const wrapper = await fixture<HTMLDivElement>(html`
+        <div dir="ltr"><lr-pptx-viewer></lr-pptx-viewer></div>
+      `);
+      const el = wrapper.querySelector('lr-pptx-viewer') as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const previous = el.shadowRoot!.querySelector('[part="previous-icon"]') as HTMLElement;
+      const next = el.shadowRoot!.querySelector('[part="next-icon"]') as HTMLElement;
+      const horizontalScale = (icon: HTMLElement): number => {
+        const transform = getComputedStyle(icon).transform;
+        return transform === 'none' ? 1 : new DOMMatrix(transform).a;
+      };
+
+      expect(horizontalScale(previous)).to.be.closeTo(-1, 0.001);
+      expect(horizontalScale(next)).to.be.closeTo(1, 0.001);
+      wrapper.dir = 'rtl';
+      await waitUntil(() => horizontalScale(previous) > 0.99 && horizontalScale(next) < -0.99);
+      expect(horizontalScale(previous)).to.be.closeTo(1, 0.001);
+      expect(horizontalScale(next)).to.be.closeTo(-1, 0.001);
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe("PPTX registry", () => {
@@ -1136,7 +1209,7 @@ describe("PPTX registry", () => {
       host
     );
     const rendered = host.querySelector("lr-pptx-viewer") as LyraPptxViewer;
-    expect(rendered.anchor).to.equal(anchor);
+    expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.highlights).to.deep.equal(highlights);
     expect(definition.capabilities).to.deep.equal({
       anchors: ["text-quote", "fragment"],

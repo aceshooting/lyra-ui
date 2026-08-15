@@ -60,8 +60,6 @@ export interface LyraModelSelectEventMap {
   change: Event;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 /**
  * `<lr-model-select>` — a provider/model picker that renders as a closed
@@ -104,8 +102,6 @@ export interface LyraModelSelectEventMap {
  *   rendering mode, retaining `relatedTarget`.
  * @event {FocusEvent} focus - Owner-realm native focus relayed once from the active control in
  *   either rendering mode, retaining `relatedTarget`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-invalid - The picker failed a validity check. Cancelable: calling `preventDefault()`
  *   also cancels the native `invalid` event behind it, suppressing the browser's own validation
  *   bubble so an app can present the failure its own way.
@@ -163,8 +159,6 @@ export interface LyraModelSelectEventMap {
  * @since 4.0.0
  */
 export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -177,6 +171,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     notInCatalog: LYRA_DEFAULT_notInCatalog,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
 
   static formAssociated = true;
   // `sizes` before `styles`: the shared sheet declares the --lr-form-control-* knobs per tier, and
@@ -285,7 +281,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     locale: () => this.effectiveLocale,
     searchableFields: (entry) => [entry.id, entry.label],
     emitChange: (detail) => this.emit('lr-change', detail),
-    emitFocusAlias: (type) => this.emit(type),
+    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- native focus/blur (already
+    // relayed by the controller itself) are the only focus notifications this control emits now.
+    // The controller still requires this hook, so it's a no-op rather than an omitted property.
+    emitFocusAlias: () => {},
     onValueChange: (value, oldValue) => {
       this.internals.setFormValue(value);
       this.updateValidity();

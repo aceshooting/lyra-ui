@@ -250,7 +250,7 @@ describe("registry dispatch", () => {
     expect(el.shadowRoot!.querySelector("#custom-registry-output")).to.exist;
   });
 
-  it("owns a frozen registry sequence without cloning renderer definitions", async () => {
+  it('owns recursively frozen registry definitions while retaining callbacks', async () => {
     const definition = {
       render: () => html`<p id="owned-registry-output"></p>`,
     };
@@ -267,7 +267,10 @@ describe("registry dispatch", () => {
     await el.updateComplete;
 
     expect(el.shadowRoot!.querySelector("#owned-registry-output")).to.exist;
-    expect(el.registry!.get("application/pdf") === definition).to.be.true;
+    const stored = el.registry!.get('application/pdf')!;
+    expect(stored === definition).to.be.false;
+    expect(stored.render === definition.render).to.be.true;
+    expect(Object.isFrozen(stored)).to.be.true;
     expect(el.registry!.has("application/json")).to.be.false;
     expect(Object.isFrozen(el.registry)).to.be.true;
     expect("set" in el.registry!).to.be.false;

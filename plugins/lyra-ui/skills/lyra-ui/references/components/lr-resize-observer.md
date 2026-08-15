@@ -21,7 +21,8 @@ the default slot and emits a composed event, while adding no layout of its own.
 **Properties:** `disabled: boolean = false` (reflected) and `box: 'content-box' | 'border-box' |
 'device-pixel-content-box' = 'content-box'` (reflected).
 
-**Events:** `lr-resize` with `{ entries: ResizeObserverEntry[] }` in `detail`.
+**Events:** `lr-resize` with a frozen `Readonly<{ entries: readonly ResizeObserverEntry[] }>`
+detail. The sequence is detached and bounded while each native observer entry retains identity.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 

@@ -25,8 +25,10 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 'conflicted' | 'ignored'` (shared with `lr-file-tree`); the diffstat is summed from `additions`/
 `deletions` across `files`. Counts are normalized to finite non-negative integers before per-file
 display, total arithmetic, localization, and accessible summaries. `path` is the file identity;
-empty/blank paths and later duplicates are omitted before both diffstat arithmetic and row events. `filesCollapsed:
-boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
+empty/blank paths and later duplicates are omitted before both diffstat arithmetic and row events. `filesExpanded:
+boolean = false` (attribute `files-expanded`, reflected — renamed from `filesCollapsed` in 9.0.0,
+default inverted so the rendered starting state is unchanged: `el.filesCollapsed = true` becomes
+`el.filesExpanded = false`), and `copyable: boolean = true` (reflected).
 `compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
 row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
 so pair it with `frame="plain"` to drop the chrome entirely. `frame: LyraFrame = 'card'` (reflected)
@@ -38,7 +40,7 @@ alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
-**Events:** `lr-file-select` (`detail: { path: string }`), `lr-toggle` (`detail: { collapsed: boolean
+**Events:** `lr-file-select` (`detail: { filePath: string }`), `lr-toggle` (`detail: { collapsed: boolean
 }`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
 resolves successfully). A failed or unavailable write emits the compatibility `lr-error` event
 (no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:

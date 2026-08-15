@@ -58,8 +58,6 @@ export interface LyraKnowledgeBaseAdminEventMap {
  * @since 6.2.0
  */
 export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['sources', 'ingestionItems']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -69,6 +67,8 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     knowledgeBaseAdminSourcesTab: LYRA_DEFAULT_knowledgeBaseAdminSourcesTab,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['sources', 'ingestionItems']);
 
   static override styles = [LyraElement.styles, styles];
 

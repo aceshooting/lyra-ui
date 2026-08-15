@@ -7,12 +7,18 @@
  *
  * @internal
  */
-export function firstByIdentity<T>(items: readonly T[], identity: (item: T) => string): T[] {
+export function firstByIdentity<T>(items: readonly T[], identity: (item: T) => unknown): T[] {
   const projected: T[] = [];
   const seen = new Set<string>();
   for (const item of items) {
-    const key = identity(item);
-    if (typeof key !== 'string' || key.trim().length === 0 || seen.has(key)) continue;
+    let key: unknown;
+    try {
+      key = identity(item);
+    } catch {
+      continue;
+    }
+    if (typeof key !== 'string' || key.trim().length === 0) continue;
+    if (seen.has(key)) continue;
     seen.add(key);
     projected.push(item);
   }

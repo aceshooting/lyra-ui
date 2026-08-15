@@ -485,6 +485,31 @@ it('contains auxiliary native input/change events from both composed controls', 
   expect(changes).to.equal(0);
 });
 
+it('contains the nested model selector native focus and blur events without silencing the selector itself', async () => {
+  const wrapper = await fixture(html`<div>
+    <lr-model-settings-panel .catalog=${CATALOG}></lr-model-settings-panel>
+  </div>`);
+  const el = wrapper.querySelector('lr-model-settings-panel') as LyraModelSettingsPanel;
+  const select = modelSelect(el);
+  let childFocuses = 0;
+  let childBlurs = 0;
+  let leakedFocuses = 0;
+  let leakedBlurs = 0;
+  select.addEventListener('focus', () => childFocuses++);
+  select.addEventListener('blur', () => childBlurs++);
+  wrapper.addEventListener('focus', () => leakedFocuses++);
+  wrapper.addEventListener('blur', () => leakedBlurs++);
+
+  select.focus();
+  expect(select.shadowRoot!.activeElement !== null).to.equal(true);
+  select.blur();
+
+  expect(childFocuses).to.equal(1);
+  expect(childBlurs).to.equal(1);
+  expect(leakedFocuses).to.equal(0);
+  expect(leakedBlurs).to.equal(0);
+});
+
 it('blocks genuine child changes when capture disables the panel in the same dispatch', async () => {
   const el = (await fixture(html`
     <lr-model-settings-panel .catalog=${CATALOG}></lr-model-settings-panel>

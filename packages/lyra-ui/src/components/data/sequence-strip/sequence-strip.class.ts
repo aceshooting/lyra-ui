@@ -8,7 +8,7 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -19,7 +19,7 @@ export interface SequenceStripItem {
    *  independent of the primary category color (e.g. a subagent-dispatched turn). */
   readonly marker?: boolean;
   /** Per-item text shown in the hover/focus tooltip and exposed as the item's accessible name
-   *  (falls back to the category's own `label`, or its `id`, when unset). */
+   *  (falls back to the category's own `label`, or the localized unnamed-category label). */
   readonly label?: string;
 }
 
@@ -28,7 +28,8 @@ export interface SequenceStripCategory {
   /** A CSS color. Invalid values and `url()` paint servers render transparently. */
   readonly color: string;
   /** Human-readable name used in the auto-generated `aria-label` summary and as the hover-tooltip
-   *  fallback text for items with no `label` of their own. Falls back to `id` itself when unset. */
+   *  fallback text for items with no `label` of their own. An omitted or blank label uses the
+   *  localized unnamed-category label rather than exposing an internal id. */
   readonly label?: string;
 }
 
@@ -47,6 +48,8 @@ const MAX_SEQUENCE_COLLECTION_ENTRIES = 10_000;
  * detail tooltip as pointer hover. Cells are inspectable rather than actionable, so they do not
  * emit an activation event. A host `aria-label` names the host itself without being duplicated on
  * the internal list; `accessible-label` names that list, otherwise its category summary does.
+ * A category whose label is omitted or blank uses the localized unnamed-category label for
+ * affected list-item names and tooltips, its summary clause, and its legend row.
  * Controlled item refreshes preserve the focused
  * item by id, clamp to the nearest survivor, and focus the stable list when the strip becomes empty.
  * A queued arrow/Home/End focus is generation- and identity-bound: replacing `items`, disconnecting,
@@ -60,7 +63,8 @@ const MAX_SEQUENCE_COLLECTION_ENTRIES = 10_000;
  * @csspart base - The root strip wrapper (`role="list"`).
  * @csspart cell - Each named, roving-focus item cell, background-colored by its category.
  * @csspart marker - The small bottom marker on a cell whose item sets `marker: true`.
- * @csspart tooltip - The hover/focus tooltip showing the active item's label.
+ * @csspart tooltip - The hover/focus tooltip showing the active item's label, positioned from that
+ * active cell.
  * @csspart legend - The static category key rendered below the strip when `showLegend` is set
  * (`aria-hidden` — it repeats the strip's own `aria-label` visually).
  * @csspart legend-item - One swatch + label pair in the legend, one per `categories` entry (plus one
@@ -68,7 +72,8 @@ const MAX_SEQUENCE_COLLECTION_ENTRIES = 10_000;
  * @csspart legend-swatch - The color chip of a legend item, matching that category's cell color.
  * @csspart legend-marker-swatch - The chip of the `markerLabel` legend row: a neutral chip carrying
  * the same bottom bar a `marker: true` cell paints, in the same `--lr-sequence-strip-marker-color`.
- * @csspart legend-label - The text of a legend item (the category's `label`, or its `id`).
+ * @csspart legend-label - The text of a legend item (the category's `label`, or the localized
+ * unnamed-category label).
  * @csspart window-range - Visible numeric range/total disclosure when item projection is windowed.
  * @csspart legend-limit - Visible rendered/total category count when the legend is bounded.
  * @cssprop [--lr-sequence-strip-height=var(--lr-size-1-5rem)] - Block size of the strip.
@@ -85,6 +90,7 @@ export class LyraSequenceStrip extends LyraElement {
     ...super.defaultStrings,
     sequenceStripCategoryCount: LYRA_DEFAULT_sequenceStripCategoryCount,
     sequenceStripEmpty: LYRA_DEFAULT_sequenceStripEmpty,
+    sequenceStripUnnamedCategory: LYRA_DEFAULT_sequenceStripUnnamedCategory,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -93,8 +99,8 @@ export class LyraSequenceStrip extends LyraElement {
   private _items: readonly SequenceStripItem[] = [];
   private _categories: readonly SequenceStripCategory[] = [];
 
-  /** Frozen snapshot of at most the first 10,000 items. Duplicate ids use the first entry. Reassign
-   * to update. */
+  /** Frozen snapshot of at most the first 10,000 items. Empty/blank ids are omitted and duplicate
+   * ids use the first entry. Reassign to update. */
   @property({ attribute: false })
   get items(): readonly SequenceStripItem[] { return this._items; }
   set items(value: readonly SequenceStripItem[]) {
@@ -104,7 +110,7 @@ export class LyraSequenceStrip extends LyraElement {
     if (Array.isArray(value)) {
       for (const item of value.slice(0, MAX_SEQUENCE_COLLECTION_ENTRIES)) {
         try {
-          if (!item || typeof item.id !== 'string' || !item.id || seen.has(item.id)) continue;
+          if (!item || typeof item.id !== 'string' || item.id.trim().length === 0 || seen.has(item.id)) continue;
           seen.add(item.id);
           next.push(Object.freeze({
             id: item.id,
@@ -121,8 +127,8 @@ export class LyraSequenceStrip extends LyraElement {
     this.requestUpdate('items', previous);
   }
 
-  /** Frozen snapshot of at most the first 10,000 categories. Duplicate ids use the first entry.
-   * Reassign to update. */
+  /** Frozen snapshot of at most the first 10,000 categories. Empty/blank ids are omitted and
+   * duplicate ids use the first entry. Reassign to update. */
   @property({ attribute: false })
   get categories(): readonly SequenceStripCategory[] { return this._categories; }
   set categories(value: readonly SequenceStripCategory[]) {
@@ -132,7 +138,7 @@ export class LyraSequenceStrip extends LyraElement {
     if (Array.isArray(value)) {
       for (const category of value.slice(0, MAX_SEQUENCE_COLLECTION_ENTRIES)) {
         try {
-          if (!category || typeof category.id !== 'string' || !category.id || seen.has(category.id)) continue;
+          if (!category || typeof category.id !== 'string' || category.id.trim().length === 0 || seen.has(category.id)) continue;
           seen.add(category.id);
           next.push(Object.freeze({
             id: category.id,
@@ -234,13 +240,23 @@ export class LyraSequenceStrip extends LyraElement {
     return sanitizeCssColor(categories.get(categoryId)?.color) ?? 'transparent';
   }
 
+  private categoryLabel(
+    categoryId: string,
+    categories: ReadonlyMap<string, SequenceStripCategory>,
+  ): string {
+    const label = categories.get(categoryId)?.label;
+    return label !== undefined && label.trim().length > 0
+      ? label
+      : this.localize('sequenceStripUnnamedCategory');
+  }
+
   private autoSummary(): string {
     const counts = new Map<string, number>();
     const categories = this.categoryMap();
     for (const item of this.items) counts.set(item.categoryId, (counts.get(item.categoryId) ?? 0) + 1);
     if (counts.size === 0) return this.localize('sequenceStripEmpty');
     const clauses = [...counts.entries()].map(([categoryId, count]) => {
-      const label = categories.get(categoryId)?.label ?? categoryId;
+      const label = this.categoryLabel(categoryId, categories);
       return this.localize('sequenceStripCategoryCount', undefined, {
         label,
         count: getNumberFormat(this.effectiveLocale).format(count),
@@ -264,8 +280,8 @@ export class LyraSequenceStrip extends LyraElement {
   }
 
   private itemLabel(item: SequenceStripItem, categories = this.categoryMap()): string {
-    if (item.label) return item.label;
-    return categories.get(item.categoryId)?.label ?? item.categoryId;
+    if (item.label !== undefined && item.label.trim().length > 0) return item.label;
+    return this.categoryLabel(item.categoryId, categories);
   }
 
   private onCellEnter(index: number): void {
@@ -321,6 +337,7 @@ export class LyraSequenceStrip extends LyraElement {
    *  nothing from the inspectable sequence. */
   private renderLegend(): TemplateResult {
     const renderedCategories = this.categories.slice(0, MAX_RENDERED_CATEGORIES);
+    const categoryMap = this.categoryMap();
     const number = getNumberFormat(this.effectiveLocale);
     return html`
       <div part="legend" aria-hidden="true">
@@ -331,7 +348,7 @@ export class LyraSequenceStrip extends LyraElement {
                 part="legend-swatch"
                 style=${styleMap({ backgroundColor: sanitizeCssColor(category.color) ?? 'transparent' })}
               ></span>
-              <span part="legend-label">${category.label ?? category.id}</span>
+              <span part="legend-label">${this.categoryLabel(category.id, categoryMap)}</span>
             </span>
           `,
         )}
@@ -356,6 +373,7 @@ export class LyraSequenceStrip extends LyraElement {
     const activeIndex = this.hoverIndex ?? this.keyboardIndex;
     const active = activeIndex !== null ? this.items[activeIndex] : undefined;
     const tabStop = this.keyboardIndex ?? 0;
+    const tooltipIndex = activeIndex ?? tabStop;
     const maxStart = Math.max(0, this.items.length - MAX_RENDERED_ITEMS);
     const windowStart = Math.min(maxStart, Math.max(0, tabStop - Math.floor(MAX_RENDERED_ITEMS / 2)));
     const renderedItems = this.items.slice(windowStart, windowStart + MAX_RENDERED_ITEMS);
@@ -389,10 +407,16 @@ export class LyraSequenceStrip extends LyraElement {
               @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, index)}
             >
               ${item.marker ? html`<span part="marker"></span>` : nothing}
+              ${index === tooltipIndex
+                ? html`
+                    <span id="sequence-strip-tooltip" part="tooltip" ?hidden=${!active}>
+                      ${active ? this.itemLabel(active, categoryMap) : ''}
+                    </span>
+                  `
+                : nothing}
             </span>`;
           },
         )}
-        <div id="sequence-strip-tooltip" part="tooltip" ?hidden=${!active}>${active ? this.itemLabel(active, categoryMap) : ''}</div>
       </div>
       ${this.items.length > renderedItems.length
         ? html`<div part="window-range" aria-hidden="true">${number.format(windowStart + 1)}–${number.format(windowStart + renderedItems.length)} / ${number.format(this.items.length)}</div>`

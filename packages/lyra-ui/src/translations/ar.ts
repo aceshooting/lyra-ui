@@ -34,6 +34,7 @@ const strings: LyraLocaleStrings = {
   toolSelectLimit: 'يتم عرض أول {count} أداة فقط.',
   sequenceStripEmpty: 'لا توجد عناصر',
   sequenceStripCategoryCount: '{label}: {count}',
+  sequenceStripUnnamedCategory: 'فئة غير مسماة',
   noColumns: 'لم يتم تكوين أي أعمدة',
   dataGridColumnMenu: 'خيارات {label}',
   dataGridPinStart: 'تثبيت {label} في البداية',

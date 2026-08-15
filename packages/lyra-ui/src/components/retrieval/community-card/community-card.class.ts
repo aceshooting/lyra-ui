@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { isNonBlankIdentity, firstByRetrievalIdentity } from '../retrieval-identity.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -29,8 +30,8 @@ export type CommunityCardAppearance = LyraFrame;
 
 export interface LyraCommunityCardEventMap {
   /** The drill button, header, or overflow chip -- all three mean "show me this whole community". */
-  'lr-drill': CustomEvent<{ id: string }>;
-  'lr-entity-activate': CustomEvent<{ id: string }>;
+  'lr-drill': CustomEvent<{ communityId: string }>;
+  'lr-entity-activate': CustomEvent<{ entityId: string }>;
 }
 
 /**
@@ -44,8 +45,8 @@ export interface LyraCommunityCardEventMap {
  *
  * @customElement lr-community-card
  * @slot actions - Extra header actions alongside the built-in drill button.
- * @event lr-drill - `detail: { id }`.
- * @event lr-entity-activate - A member chip was activated. `detail: { id }`.
+ * @event lr-drill - `detail: { communityId }`.
+ * @event lr-entity-activate - A member chip was activated. `detail: { entityId }`.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row.
  * @csspart title - The community label, `role="heading" aria-level="3"` wrapping a `<button>`.
@@ -61,8 +62,6 @@ export interface LyraCommunityCardEventMap {
  * @since 4.0.0
  */
 export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['members']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -75,6 +74,8 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
     untitledCommunity: LYRA_DEFAULT_untitledCommunity,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['members']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -101,27 +102,33 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   }
 
   private onDrill = (): void => {
-    if (this.community) this.emit('lr-drill', { id: this.community.id });
+    if (this.community && isNonBlankIdentity(this.community.id)) {
+      this.emit('lr-drill', { communityId: this.community.id });
+    }
   };
 
   override render(): TemplateResult {
-    if (!this.community) {
+    if (!this.community || !isNonBlankIdentity(this.community.id)) {
       return html`<div part="base">
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;
     }
     const community = this.community;
+    const members = firstByRetrievalIdentity(
+      this.members,
+      (member) => member?.id
+    );
     const titleText = community.label || this.localize('untitledCommunity');
     const suppliedMemberCount = community.memberCount;
     const memberCount = Math.max(
-      this.members.length,
+      members.length,
       suppliedMemberCount !== undefined &&
         Number.isSafeInteger(suppliedMemberCount) &&
         suppliedMemberCount >= 0
         ? suppliedMemberCount
-        : this.members.length
+        : members.length
     );
-    const visibleMembers = this.members.slice(0, this.effectiveMaxMembers);
+    const visibleMembers = members.slice(0, this.effectiveMaxMembers);
     const overflowCount = Math.max(0, memberCount - visibleMembers.length);
     const numberFormat = getNumberFormat(this.effectiveLocale);
 
@@ -154,7 +161,8 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
                 (m) => html`<button
                   part="member"
                   type="button"
-                  @click=${() => this.emit('lr-entity-activate', { id: m.id })}
+                  @click=${() =>
+                    this.emit('lr-entity-activate', { entityId: m.id })}
                 >
                   <lr-chip>${m.label || m.id}</lr-chip>
                 </button>`

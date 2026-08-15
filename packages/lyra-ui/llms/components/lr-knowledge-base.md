@@ -39,6 +39,9 @@ errorMessage?: string }` (all four types exported here), where
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
   affordance, e.g. for a read-only or permission-gated view
 
+Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
+before summary totals, empty state, table rows, or source actions.
+
 **Events:** `lr-source-create` (`detail: undefined` — nothing exists yet to reference),
 `lr-source-sync` (`detail: { sourceId: string }`), `lr-source-pause` (`detail: { sourceId: string }`),
 `lr-source-delete` (`detail: { sourceId: string }`, no built-in confirmation, matching

@@ -35,11 +35,11 @@ import type {
   BadgeVariant,
   LyraDateInputValidator,
   LyraRatingSize,
-  SnapFunction,
+  LyraSplitPanelSnapFunction,
+  LyraToastOptions,
   TagVariant,
-  ToastSize,
-  ToastCreateOptions,
-  ToastOptions,
+  LyraToastSize,
+  LyraToastCreateOptions,
 } from '../src/lyra.js';
 
 // These assignments are the public TypeScript spellings exposed by the pinned Shoelace 2.20.1
@@ -88,16 +88,16 @@ declare const toastItem: LyraToastItem;
 toastItem.size = 'small';
 toastItem.size = 'medium';
 toastItem.size = 'large';
-const toastSize: ToastSize = toastItem.size;
+const toastSize: LyraToastSize = toastItem.size;
 
 declare const toastRegion: LyraToast;
 void toastRegion.create('Small toast', { size: 'small' });
-const toastCreateOptions: ToastCreateOptions = { size: 'medium' };
-const toastOptions: ToastOptions = { message: 'Large toast', size: 'large' };
+const toastCreateOptions: LyraToastCreateOptions = { size: 'medium' };
+const toastOptions: LyraToastOptions = { message: 'Large toast', size: 'large' };
 
 declare const splitPanel: LyraSplitPanel;
 splitPanel.snap = undefined;
-const splitSnap: string | SnapFunction = splitPanel.snap;
+const splitSnap: string | LyraSplitPanelSnapFunction = splitPanel.snap;
 
 // Web Awesome's public `Validator` object contract is intentionally represented structurally so
 // this test does not add an upstream package dependency to Lyra's type-test graph.

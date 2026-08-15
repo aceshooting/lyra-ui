@@ -24,6 +24,7 @@ import {
 import type {
   LyraAnchor,
   LyraHighlightTone,
+  TextSelectRect,
 } from '../document-viewer/anchors.js';
 import {
   getEpubJs,
@@ -40,7 +41,7 @@ import { styles } from './ebook-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
-import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_QUERY_LIMIT } from '../viewer-search-limits.js';
 import { boundedSelectionRects, boundedSelectionText } from '../../../internal/text-quote.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -127,7 +128,7 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * @event lr-location-change - The reading location changed (from `rendition`'s own `relocated`
  *   event). `detail: { cfi, href }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
- *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
+ *   changes, including source-reset and effective-locale re-evaluation. `detail: { query,
  *   matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code units,
  *   inspects at most 1,000 spine items and 4,000,000 result code units, and retains at most 10,000
  *   matches; a false `matchCountExact` makes `matchCount` a lower bound (including when a spine
@@ -226,7 +227,9 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   private rendition?: EpubRendition;
   private generation = 0;
   private searchQuery = '';
+  private lastSearchLocale = '';
   private searchGeneration = 0;
+  private pendingSearchResetEvent = false;
   private anchorOperationGeneration = 0;
   /** CFI most recently assigned by a peer `relocated` callback. Tracking the value rather than a
    * boolean lets a controlled consumer replace `location` synchronously from
@@ -255,6 +258,10 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.ebookState.kind === 'error' ? this.ebookState.message : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (changed.has('src') && this.pendingSearchResetEvent) {
+      this.pendingSearchResetEvent = false;
+      this.emitSearchChange();
+    }
     if (changed.has('location')) {
       const fromRelocated = this.relocatedLocation === this.location;
       this.relocatedLocation = undefined;
@@ -262,6 +269,24 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     }
     if ((changed.has('highlights') || changed.has('activeHighlightId')) && this.rendition) {
       this.repaintAnnotations();
+    }
+    const locale = this.effectiveLocale;
+    if (locale !== this.lastSearchLocale) {
+      const shouldRecompute = this.searchQuery !== '';
+      this.lastSearchLocale = locale;
+      if (shouldRecompute) {
+        this.scheduleAfterUpdate(() => {
+          void this.search(this.searchQuery);
+        }, 'search');
+      }
+    }
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('src')) {
+      this.pendingSearchResetEvent ||= this.hasSearchState();
+      this.resetSearchState();
     }
   }
 
@@ -305,19 +330,29 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   }
 
   private teardown(): void {
+    const shouldEmitSearchReset = this.hasSearchState();
     this.book?.destroy();
     this.book = undefined;
     this.rendition = undefined;
-    // A destroyed rendition's own annotations/CFIs stop being meaningful, and a fresh renderTo()
-    // starts with no painted annotations -- reset silently (no event) rather than leaving stale
-    // state a following load() (or a reconnect that never reloads) could act on.
+    this.resetSearchState();
+    this.paintedHighlightCfis = [];
+    if (shouldEmitSearchReset && this.isConnected) this.emitSearchChange();
+  }
+
+  private hasSearchState(): boolean {
+    return this.searchQuery !== ''
+      || this.searchMatches.length > 0
+      || !this.searchMatchCountExact
+      || this.searchActiveIndex !== -1;
+  }
+
+  private resetSearchState(): void {
     this.searchGeneration++;
     this.searchQuery = '';
     this.searchMatches = [];
     this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
     this.searchAnnotationCfi = undefined;
-    this.paintedHighlightCfis = [];
   }
 
   private async load(): Promise<void> {
@@ -429,10 +464,13 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   /** Maps selection geometry from an epub.js chapter viewport through every containing iframe
    *  into this component's owner viewport. `getClientRects()` is already scroll-adjusted; each
    *  frame's live border box and content viewport ratio add its position, border and CSS scale. */
-  private translateSelectionRects(rects: readonly DOMRect[], sourceWindow?: Window): DOMRect[] {
+  private translateSelectionRects(
+    rects: readonly TextSelectRect[],
+    sourceWindow?: Window,
+  ): TextSelectRect[] {
     const ownerWindow = this.ownerDocument.defaultView;
     if (!ownerWindow || !sourceWindow) return [];
-    const translated: DOMRect[] = [];
+    const translated: TextSelectRect[] = [];
     for (const rect of rects) {
       let x = Number(rect.x ?? rect.left);
       let y = Number(rect.y ?? rect.top);
@@ -486,7 +524,16 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         current = frame.ownerDocument.defaultView;
       }
       if (!valid || current !== ownerWindow) continue;
-      translated.push(new ownerWindow.DOMRect(x, y, width, height));
+      translated.push(Object.freeze({
+        x,
+        y,
+        width,
+        height,
+        top: y,
+        right: x + width,
+        bottom: y + height,
+        left: x,
+      }));
     }
     return translated;
   }
@@ -653,13 +700,18 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  isn't `cfi` aren't paintable against epub.js's own annotation API and are skipped. */
   private repaintHighlights(): void {
     if (!this.rendition) return;
-    for (const cfi of this.paintedHighlightCfis) this.rendition.annotations.remove(cfi, 'highlight');
+    const work = new ViewerSearchWorkBudget();
+    for (const cfi of this.paintedHighlightCfis) {
+      if (!work.consume(cfi)) break;
+      this.rendition.annotations.remove(cfi, 'highlight');
+    }
     this.paintedHighlightCfis = [];
     let painted = 0;
     for (const highlight of prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)) {
       if (highlight.anchor.kind !== 'cfi') continue;
       if (painted >= MAX_PAINTED_HIGHLIGHTS) break;
-      const cfi = highlight.anchor.cfi;
+      const cfi = highlight.anchor.cfi.trim();
+      if (!cfi || cfi.length > VIEWER_SEARCH_QUERY_LIMIT || !work.consume(cfi)) continue;
       const tone = highlight.tone ?? 'accent';
       const active = highlight.id === this.activeHighlightId;
       const styles: Record<string, string> = this.resolveHighlightFill(TONE_FILL_TOKEN[tone]);
@@ -727,6 +779,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     const generation = ++this.searchGeneration;
     const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
     this.searchQuery = query;
+    this.lastSearchLocale = this.effectiveLocale;
     this.clearSearchAnnotation();
     if (!boundedQuery.accepted) {
       this.searchMatches = [];

@@ -27,6 +27,10 @@ while an explicitly empty host label stays empty on the region).
 is clamped to 0–1 for localized percent display. `Citation` is the shared AI citation record
 (`id`, source/chunk ids, label, locator/ranges, quote, metadata).
 
+Claims and citations are canonicalized independently by nonblank `id`. Malformed rows and later
+duplicates are omitted first-wins before empty state, controlled selection, evidence lookup,
+rendering, or events.
+
 - `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
   evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
   density knob: each claim's border and background stay. `false` (the default) keeps the full
@@ -37,7 +41,10 @@ is clamped to 0–1 for localized percent display. `Citation` is the shared AI c
   nested inside an already-bordered container don't double the frame. `plain` wins over `compact`
   when both are set — nothing left to tighten.
 
-**Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`).
+**Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`). A nested
+`lr-citation-badge` activation is contained and translated to `lr-citation-select`; the distinct
+composed `lr-citation-open` event intentionally crosses `lr-claim-evidence` unchanged with its
+`{ sourceId, index, href }` detail.
 
 **CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
 `confidence`, `explanation`, `evidence`, `empty`.

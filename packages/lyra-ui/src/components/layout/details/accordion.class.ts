@@ -5,7 +5,10 @@ import {
   deepActiveElementIn,
 } from '../../../internal/active-element.js';
 import { isAccessibilitySubtreeExcluded } from '../../../internal/accessibility-visibility.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventDetailSnapshot,
+} from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraAccordionItem } from './accordion-item.class.js';
 import type {
@@ -23,13 +26,13 @@ import { styles } from './accordion.styles.js';
 
 export type LyraAccordionMode = 'single' | 'single-collapsible' | 'multiple';
 export interface LyraAccordionEventDetail {
-  item: LyraAccordionItem;
+  readonly item: LyraAccordionItem;
 }
 export interface LyraAccordionEventMap {
-  'lr-expand': CustomEvent<LyraAccordionEventDetail>;
-  'lr-after-expand': CustomEvent<LyraAccordionEventDetail>;
-  'lr-collapse': CustomEvent<LyraAccordionEventDetail>;
-  'lr-after-collapse': CustomEvent<LyraAccordionEventDetail>;
+  'lr-expand': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
+  'lr-after-expand': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
+  'lr-collapse': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
+  'lr-after-collapse': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
 }
 
 function normalizeMode(value: unknown): LyraAccordionMode {
@@ -70,6 +73,19 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  * @since 4.0.0
  */
 export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-expand': Object.freeze(['item']),
+    'lr-after-expand': Object.freeze(['item']),
+    'lr-collapse': Object.freeze(['item']),
+    'lr-after-collapse': Object.freeze(['item']),
+  });
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-expand',
+    'lr-after-expand',
+    'lr-collapse',
+    'lr-after-collapse',
+  ]);
+
   static override styles = [LyraElement.styles, styles];
 
   #_mode: LyraAccordionMode = 'multiple';

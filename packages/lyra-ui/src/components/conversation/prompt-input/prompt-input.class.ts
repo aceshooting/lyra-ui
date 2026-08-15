@@ -23,6 +23,7 @@ import type {
   LyraAttachmentFilesDetail,
 } from '../../media/attachment-trigger/attachment-trigger.class.js';
 import type { LyraSourceEntry } from '../../retrieval/source-picker/source-picker.class.js';
+import { firstByRetrievalIdentity as firstByPromptIdentity } from '../../retrieval/retrieval-identity.js';
 import type {
   LyraMentionItem,
   LyraMentionPopover,
@@ -79,8 +80,6 @@ export interface LyraPromptInputEventMap {
   blur: FocusEvent;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-submit': CustomEvent<{ value: string }>;
   'lr-stop': CustomEvent<null>;
   'lr-mention-select': CustomEvent<{
@@ -93,7 +92,7 @@ export interface LyraPromptInputEventMap {
   'lr-attachment-remove': CustomEvent<LyraAttachmentIdDetail>;
   'lr-model-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   'lr-voice-change': CustomEvent<{ value: string; inCatalog: boolean }>;
-  'lr-sources-change': CustomEvent<LyraEventDetailSnapshot<{ selectedIds: string[] }>>;
+  'lr-sources-change': CustomEvent<LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>>;
   'lr-queue-change': CustomEvent<LyraEventDetailSnapshot<PromptQueueChangeDetail>>;
   'lr-send-now': CustomEvent<LyraEventDetailSnapshot<{ item: PromptQueueItem }>>;
   'lr-camera-request': CustomEvent<null>;
@@ -135,12 +134,12 @@ type LyraPromptInputCustomEventName = Exclude<
  * @slot footer - Content below the composer.
  * @event input - One native `InputEvent` for a user edit of the primary prompt value.
  * @event change - One native `Event` when the primary prompt edit is committed.
- * @event focus - One native `FocusEvent` when the primary prompt receives focus.
- * @event blur - One native `FocusEvent` when the primary prompt loses focus.
+ * @event focus - One native `FocusEvent` relayed only from the primary prompt textarea, not from
+ *   any composed control (model/voice picker, attachment trigger, prompt queue).
+ * @event blur - One native `FocusEvent` relayed only from the primary prompt textarea, not from
+ *   any composed control.
  * @event lr-input - Prompt text changed. `detail: { value }`.
  * @event lr-change - Prompt text edit was committed. `detail: { value }`.
- * @event lr-focus - Prefixed notification paired with native `focus`.
- * @event lr-blur - Prefixed notification paired with native `blur`.
  * @event lr-submit - Prompt submission was requested. `detail: { value }`.
  * @event lr-stop - Stop generation was requested.
  * @event lr-mention-select - A mention or slash command was inserted.
@@ -148,7 +147,7 @@ type LyraPromptInputCustomEventName = Exclude<
  * @event lr-attachment-remove - Attachment removal was requested. `detail: { attachmentId }`.
  * @event lr-model-change - Model selection changed. `detail: { value, inCatalog }`.
  * @event lr-voice-change - Voice selection changed. `detail: { value, inCatalog }`.
- * @event lr-sources-change - Retrieval source selection changed. `detail: { selectedIds }`.
+ * @event lr-sources-change - Retrieval source selection changed. `detail: { selectedSourceIds }`.
  * @event lr-queue-change - The queued prompts changed.
  * @event lr-send-now - Immediate submission of a queued prompt was requested. `detail: { item }`.
  * @event lr-camera-request - Camera capture was requested.
@@ -172,6 +171,17 @@ type LyraPromptInputCustomEventName = Exclude<
  * @since 7.0.0
  */
 export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    promptInputAttachments: LYRA_DEFAULT_promptInputAttachments,
+    promptInputControls: LYRA_DEFAULT_promptInputControls,
+    promptInputLabel: LYRA_DEFAULT_promptInputLabel,
+    promptInputSources: LYRA_DEFAULT_promptInputSources,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'attachments',
     'attachmentCapabilities',
@@ -183,17 +193,6 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     'selectedSourceIds',
     'queue',
   ]);
-
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    promptInputAttachments: LYRA_DEFAULT_promptInputAttachments,
-    promptInputControls: LYRA_DEFAULT_promptInputControls,
-    promptInputLabel: LYRA_DEFAULT_promptInputLabel,
-    promptInputSources: LYRA_DEFAULT_promptInputSources,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -261,8 +260,13 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property() model = '';
   @property({ attribute: false }) voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>;
   @property() voice = '';
+  /** Retrieval sources keyed by unique nonblank `id`; malformed and later duplicate roots are
+   * omitted before controls are rendered or forwarded. */
   @property({ attribute: false }) sources: readonly LyraSourceEntry[] = [];
+  /** Controlled source identities, normalized to unique nonblank values before forwarding. */
   @property({ attribute: false }) selectedSourceIds: readonly string[] = [];
+  /** Queued prompts keyed by unique nonblank `id`; malformed and later duplicate rows are omitted
+   * before section gating or forwarding. */
   @property({ attribute: false }) queue: readonly PromptQueueItem[] = [];
   @property() label = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -547,6 +551,32 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     relayNativeEvent(this, event);
   };
 
+  // `focus`/`blur` are composed, bubbling relays -- every composed control this element renders
+  // (model/voice picker, the default attachment trigger, prompt queue) relays its own native
+  // focus/blur the same way, so without this filter any of their focus/blur changes would bubble
+  // straight through as if they were this element's own. A `composedPath().includes(this.composer)`
+  // check (the onNativeInput/onNativeChange shape) is not precise enough here: the default
+  // attachment trigger renders as light-DOM content slotted *into* `<lr-chat-composer>`'s own
+  // `start` slot, so it sits inside the composer's subtree without being the composer's own
+  // relayed event. Only an event whose `target` *is* the composer itself -- i.e. the composer's
+  // own relay of its internal textarea's focus/blur -- is admitted; every other composed control
+  // is stopped here.
+  private onNativeFocus = (event: FocusEvent): void => {
+    if (event.target !== this.composer) {
+      event.stopPropagation();
+      return;
+    }
+    relayNativeEvent(this, event);
+  };
+
+  private onNativeBlur = (event: FocusEvent): void => {
+    if (event.target !== this.composer) {
+      event.stopPropagation();
+      return;
+    }
+    relayNativeEvent(this, event);
+  };
+
   private syncSuggestionAria(): boolean {
     const input = this.composer?.input;
     const popover = this.suggestionPopover;
@@ -608,6 +638,18 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       seen.add(id);
       return true;
     });
+  }
+
+  private get effectiveSources(): readonly LyraSourceEntry[] {
+    return firstByPromptIdentity(this.sources, (source) => source.id);
+  }
+
+  private get effectiveSelectedSourceIds(): readonly string[] {
+    return firstByPromptIdentity(this.selectedSourceIds, (sourceId) => sourceId);
+  }
+
+  private get effectiveQueue(): readonly PromptQueueItem[] {
+    return firstByPromptIdentity(this.queue, (item) => item.id);
   }
 
   private renderDefaultAttachmentTrigger(): TemplateResult {
@@ -682,10 +724,11 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   private renderControls(): TemplateResult | typeof nothing {
     const modelCatalog = normalizeCatalog<LyraModelCatalogEntry>(this.modelCatalog);
     const voiceCatalog = normalizeCatalog<LyraVoiceCatalogEntry>(this.voiceCatalog);
+    const sources = this.effectiveSources;
     if (
       modelCatalog.length === 0 &&
       voiceCatalog.length === 0 &&
-      !this.sources.length
+      sources.length === 0
     )
       return nothing;
     return html`<div
@@ -713,7 +756,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             ) => this.reemit(event, 'lr-voice-change')}
           ></lr-voice-picker>`
         : nothing}
-      ${this.sources.length
+      ${sources.length
         ? html`<details
             part="sources"
             .inert=${this.disabled}
@@ -724,10 +767,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             </summary>
             <lr-source-picker
               part="source-picker"
-              .sources=${this.sources}
-              .selectedIds=${this.selectedSourceIds}
+              .sources=${sources}
+              .selectedSourceIds=${this.effectiveSelectedSourceIds}
               @lr-sources-change=${(
-                event: CustomEvent<{ selectedIds: string[] }>
+                event: CustomEvent<{ selectedSourceIds: string[] }>
               ) => this.reemit(event, 'lr-sources-change')}
             ></lr-source-picker>
           </details>`
@@ -739,17 +782,20 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     const label =
       this.accessibleLabel ?? (this.label || this.localize('promptInputLabel'));
     const attachments = this.effectiveAttachments;
+    const queue = this.effectiveQueue;
     const hasChips = attachments.length > 0 || this.slotPresence.has('chips');
     return html`<section
       part="base"
       aria-label=${label}
       @input=${this.onNativeInput}
       @change=${this.onNativeChange}
+      @focus=${this.onNativeFocus}
+      @blur=${this.onNativeBlur}
     >
-      ${this.queue.length
+      ${queue.length
         ? html`<lr-prompt-queue
             part="queue"
-            .items=${this.queue}
+            .items=${queue}
             .disabled=${this.disabled}
             @lr-queue-change=${(event: CustomEvent<PromptQueueChangeDetail>) =>
               this.reemit(event, 'lr-queue-change')}

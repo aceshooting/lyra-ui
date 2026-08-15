@@ -163,6 +163,60 @@ describe("lr-widget-renderer", () => {
     expect(event.detail.actionId).to.equal("second");
   });
 
+  it('does not reassign props or churn listeners when the resolved mapped node is unchanged', async () => {
+    const el = await fixture<LyraWidgetRenderer>(html`
+      <lr-widget-renderer
+        .document=${documentFor({
+          type: 'button',
+          id: 'stable-button',
+          props: { variant: 'brand' },
+          actionId: 'refresh',
+        })}
+      ></lr-widget-renderer>
+    `);
+    const button = el.shadowRoot!.querySelector('lr-button') as HTMLElement & {
+      variant: string;
+    };
+    let variant = button.variant;
+    let propertyAssignments = 0;
+    let listenerAdds = 0;
+    let listenerRemovals = 0;
+    Object.defineProperty(button, 'variant', {
+      configurable: true,
+      get: () => variant,
+      set: (value: string) => {
+        propertyAssignments++;
+        variant = value;
+      },
+    });
+    const originalAdd = button.addEventListener.bind(button);
+    const originalRemove = button.removeEventListener.bind(button);
+    button.addEventListener = ((
+      type: string,
+      listener: EventListenerOrEventListenerObject,
+      options?: boolean | AddEventListenerOptions,
+    ): void => {
+      if (type === 'click') listenerAdds++;
+      originalAdd(type, listener, options);
+    }) as typeof button.addEventListener;
+    button.removeEventListener = ((
+      type: string,
+      listener: EventListenerOrEventListenerObject,
+      options?: boolean | EventListenerOptions,
+    ): void => {
+      if (type === 'click') listenerRemovals++;
+      originalRemove(type, listener, options);
+    }) as typeof button.removeEventListener;
+
+    el.requestUpdate();
+    await el.updateComplete;
+
+    expect(propertyAssignments).to.equal(0);
+    expect(listenerAdds).to.equal(0);
+    expect(listenerRemovals).to.equal(0);
+    expect(button.variant).to.equal('brand');
+  });
+
   it("restores a retained element's original property when a document removes that prop", async () => {
     const registry = createWidgetTypeRegistry([
       [

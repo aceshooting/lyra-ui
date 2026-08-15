@@ -6,7 +6,12 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
 
 export interface LyraMutationObserverEventMap {
-  'lr-mutation': CustomEvent<{ records: MutationRecord[]; mutationList: MutationRecord[] }>;
+  'lr-mutation': CustomEvent<
+    Readonly<{
+      records: readonly MutationRecord[];
+      mutationList: readonly MutationRecord[];
+    }>
+  >;
 }
 
 /**
@@ -17,13 +22,23 @@ export interface LyraMutationObserverEventMap {
  * @customElement lr-mutation-observer
  * @slot - Elements to observe.
  * @event lr-mutation - Observed DOM mutations; `detail.records` and
- * `detail.mutationList` reference the same `MutationRecord[]` batch.
+ * `detail.mutationList` reference the same frozen readonly batch, whose native records retain
+ * identity.
  * @csspart base - The non-layout wrapper around the observed slot.
  * @status stable
  * @since 4.0.0
  */
 export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventMap> {
   static override styles = [LyraElement.styles, styles];
+
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-mutation',
+  ]);
+
+  protected static override readonly identityEventDetailCollectionItems =
+    Object.freeze({
+      'lr-mutation': Object.freeze(['records', 'mutationList']),
+    });
 
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, attribute: 'child-list', reflect: true }) childList = false;
@@ -136,7 +151,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
       ) {
         return;
       }
-      const mutationList = [...records];
+      const mutationList = Object.freeze([...records]);
       this.emit('lr-mutation', { records: mutationList, mutationList });
     });
     this.observer = observer;

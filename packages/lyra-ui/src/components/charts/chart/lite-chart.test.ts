@@ -1,9 +1,16 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './lite-chart.js';
-import type { LyraLiteChart } from './lite-chart.js';
+import { LyraLiteChart } from './lite-chart.js';
 import { styles } from './lite-chart.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+
+it('removes the deprecated v8 padLeft/hideAxis/selectedIndex accessors — valueAxisGutter/withoutValueAxis/selectedIndices are the only surface', () => {
+  const proto = LyraLiteChart.prototype as unknown as Record<string, unknown>;
+  expect(Object.getOwnPropertyDescriptor(proto, 'padLeft')).to.equal(undefined);
+  expect(Object.getOwnPropertyDescriptor(proto, 'hideAxis')).to.equal(undefined);
+  expect(Object.getOwnPropertyDescriptor(proto, 'selectedIndex')).to.equal(undefined);
+});
 
 it('provides hover feedback for keyboard-focusable bars and points', () => {
   // Pseudo-class presence is the behavior under test; synthetic pointer events do not
@@ -1440,9 +1447,9 @@ it('renders a zero-height but focusable/titled bar for a zero value by default (
   expect(bars[0].getAttribute('tabindex')).to.equal('0');
 });
 
-// --- padLeft ------------------------------------------------------------------
+// --- valueAxisGutter ------------------------------------------------------------------
 
-it('padLeft overrides the default 36px left padding, shifting the plot origin', async () => {
+it('valueAxisGutter overrides the default 36px left padding, shifting the plot origin', async () => {
   const defaultEl = (await fixture(
     html`<lr-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
@@ -1452,7 +1459,7 @@ it('padLeft overrides the default 36px left padding, shifting the plot origin', 
   const defaultX = Number((defaultEl.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement).getAttribute('x'));
 
   const el = (await fixture(
-    html`<lr-lite-chart type="bar" pad-left="80" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
+    html`<lr-lite-chart type="bar" value-axis-gutter="80" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -1464,9 +1471,9 @@ it('padLeft overrides the default 36px left padding, shifting the plot origin', 
   expect(x).to.be.closeTo(80 + (212 - 212 * 0.8) / 2, 0.5);
 });
 
-it('falls back to the 36px default axis gutter when pad-left is non-finite, instead of a NaN bar position', async () => {
+it('falls back to the 36px default axis gutter when value-axis-gutter is non-finite, instead of a NaN bar position', async () => {
   const el = (await fixture(
-    html`<lr-lite-chart type="bar" pad-left="not-a-number" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
+    html`<lr-lite-chart type="bar" value-axis-gutter="not-a-number" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
@@ -1478,13 +1485,13 @@ it('falls back to the 36px default axis gutter when pad-left is non-finite, inst
   expect(bar.getAttribute('x')).to.not.contain('NaN');
 });
 
-it('clamps a negative padLeft to 0 instead of a negative axis gutter, without throwing', async () => {
+it('clamps a negative valueAxisGutter to 0 instead of a negative axis gutter, without throwing', async () => {
   const el = (await fixture(
     html`<lr-lite-chart type="bar" .labels=${['only']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
   )) as LyraLiteChart;
   (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
   (el as unknown as { plotHeight: number }).plotHeight = 150;
-  el.padLeft = -50;
+  el.valueAxisGutter = -50;
   await el.updateComplete;
   const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   const x = Number(bar.getAttribute('x'));
@@ -1503,7 +1510,7 @@ it('barGapRatio overrides the default 0.2 gap fraction, changing bar width relat
   (el as unknown as { plotHeight: number }).plotHeight = 150;
   await el.updateComplete;
   const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
-  const slot = 300 - 36 - 8; // a single category spans the whole plot (default padLeft)
+  const slot = 300 - 36 - 8; // a single category spans the whole plot (default valueAxisGutter)
   const expectedWidth = slot * (1 - 0.5); // groupCount 1, no BAR_GAP term
   expect(Number(bar.getAttribute('width'))).to.be.closeTo(expectedWidth, 0.5);
 });
@@ -1614,12 +1621,12 @@ it('scale has no effect on type="line" (regression)', async () => {
   });
 });
 
-// --- hideAxis ---------------------------------------------------------------------
+// --- withoutValueAxis ---------------------------------------------------------------------
 
-it('hideAxis suppresses gridlines and y-axis tick labels but leaves x-axis category labels alone', async () => {
+it('withoutValueAxis suppresses gridlines and y-axis tick labels but leaves x-axis category labels alone', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"
-    hide-axis
+    without-value-axis
     .labels=${BAR_LABELS}
     .datasets=${BAR_DATASETS}
   ></lr-lite-chart>`);
@@ -1630,7 +1637,7 @@ it('hideAxis suppresses gridlines and y-axis tick labels but leaves x-axis categ
   );
 });
 
-it('renders gridlines and y-axis tick labels by default (hideAxis unset, regression)', async () => {
+it('renders gridlines and y-axis tick labels by default (withoutValueAxis unset, regression)', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${BAR_LABELS}
@@ -2095,9 +2102,9 @@ it('can shrink to a 320px allocation with long chart content', async () => {
   expect(el.getBoundingClientRect().width).to.be.at.most(320);
 });
 
-// --- selectedIndex -------------------------------------------------------------------
+// --- selectedIndices -------------------------------------------------------------------
 
-describe('selectedIndex', () => {
+describe('selectedIndices', () => {
   it('renders selected bar and point outline color and width from component hooks', async () => {
     for (const type of ['bar', 'line'] as const) {
       const el = await mount(html`
@@ -2109,7 +2116,7 @@ describe('selectedIndex', () => {
           "
           .labels=${['a']}
           .datasets=${[{ label: 'x', data: [1] }]}
-          .selectedIndex=${[0]}
+          .selectedIndices=${[0]}
         ></lr-lite-chart>
       `);
       const mark = el.shadowRoot!.querySelector<SVGElement>(`[part="${type === 'bar' ? 'bar' : 'point'}"]`)!;
@@ -2128,7 +2135,7 @@ describe('selectedIndex', () => {
           { label: 'x', data: [1, 2] },
           { label: 'y', data: [3, 4] },
         ]}
-        .selectedIndex=${[1]}
+        .selectedIndices=${[1]}
       ></lr-lite-chart>
     `);
     el.style.height = '300px';
@@ -2139,7 +2146,7 @@ describe('selectedIndex', () => {
     expect(selected).to.have.length(2); // both datasets' bar at category index 1
   });
 
-  it('reflects nothing when selectedIndex is empty (the default)', async () => {
+  it('reflects nothing when selectedIndices is empty (the default)', async () => {
     const el = await mount(html`
       <lr-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 'x', data: [1] }]}></lr-lite-chart>
     `);
@@ -2157,7 +2164,7 @@ describe('selectedIndex', () => {
         rounded-bars
         .labels=${['a', 'b']}
         .datasets=${[{ label: 's', data: [1, 2] }]}
-        .selectedIndex=${[1]}
+        .selectedIndices=${[1]}
       ></lr-lite-chart>
     `);
     const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')];
@@ -2604,7 +2611,7 @@ describe('lite-chart robustness regressions', () => {
       <lr-lite-chart
         .labels=${['A', 'B']}
         .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
-        .selectedIndex=${[1]}
+        .selectedIndices=${[1]}
       ></lr-lite-chart>
     `);
     expect(
@@ -2618,7 +2625,7 @@ describe('lite-chart robustness regressions', () => {
         type="line"
         .labels=${['A', 'B']}
         .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
-        .selectedIndex=${[1]}
+        .selectedIndices=${[1]}
       ></lr-lite-chart>
     `);
     const points = [...line.shadowRoot!.querySelectorAll('[part="point"]')];

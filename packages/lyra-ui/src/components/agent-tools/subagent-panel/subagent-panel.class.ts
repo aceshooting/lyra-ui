@@ -95,8 +95,6 @@ interface OrderedRuns {
  * @since 7.0.0
  */
 export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['runs']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -119,6 +117,8 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['runs']);
+
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-run-activate',
@@ -128,7 +128,9 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   @property({ attribute: false }) runs: readonly SubagentRun[] = [];
   @property({ attribute: 'selected-run-id' }) selectedRunId: string | null = null;
-  @property() label = '';
+  /** Optional accessible-name override for the `role="tree"` element. Omission localizes the
+   *  default; any supplied string, including `''`, is rendered verbatim. */
+  @property() label?: string;
 
   /** Roving-tabindex focus target. `null` defaults the first rendered row to `tabindex="0"`. */
   @state() private focusedId: string | null = null;
@@ -408,7 +410,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   };
 
   override render(): TemplateResult {
-    const label = this.label || this.localize('subagentPanelLabel');
+    const label = this.label == null ? this.localize('subagentPanelLabel') : this.label;
     const ordered = this.orderedRunsCache;
     const firstId = ordered.rows[0]?.run.id;
     return html`

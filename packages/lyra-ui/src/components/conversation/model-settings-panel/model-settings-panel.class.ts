@@ -65,6 +65,8 @@ const DEFAULT_TEMPERATURE = 1;
  * The visible temperature readout uses the effective locale and switches to bounded scientific
  * notation when a full decimal expansion would disturb the layout. The slider retains the exact
  * finite value through `aria-valuenow`.
+ * Native `focus` and `blur` relayed by the nested model selector remain local to that child; this
+ * panel exposes only its declared consolidated `lr-change` event.
  *
  * @customElement lr-model-settings-panel
  * @event lr-change - Either child control changed. `detail: { model: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
@@ -79,8 +81,6 @@ const DEFAULT_TEMPERATURE = 1;
  * @since 4.0.0
  */
 export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -91,6 +91,8 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
     temperature: LYRA_DEFAULT_temperature,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -250,6 +252,8 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             .allowCustom=${this.allowCustom}
             .disabled=${this.disabled}
             placeholder=${this.localize('selectModel')}
+            @focus=${this.containNativeEvent}
+            @blur=${this.containNativeEvent}
             @lr-change=${this.onModelChange}
           ></lr-model-select>
         </div>

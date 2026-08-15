@@ -108,6 +108,19 @@ export const ringStyles = css`
   :host {
     display: inline-block;
     color: var(--lr-color-brand);
+    /* Palette slot: which color the active 'variant' contributes to the indicator, read from the
+       shared semantic grid's loud fill (imported alongside this sheet as 'variants' in the class
+       file's static styles). It sits *inside* the two consumer-facing override names below in the
+       fallback chain -- an explicit --lr-progress-ring-indicator-color or the upstream
+       --indicator-color alias still wins outright, exactly as before this token existed. The
+       standalone default here (brand) matches the value this indicator always rendered before
+       variant support existed. */
+    --_lr-progress-ring-indicator-variant-color: var(--lr-color-brand);
+  }
+  /* [variant] is always present -- 'variant' reflects its 'brand' property default on first
+     render -- but the bare :host default above still guards a not-yet-updated element. */
+  :host([variant]) {
+    --_lr-progress-ring-indicator-variant-color: var(--lr-color-fill-loud);
   }
   [part~="base"] {
     position: relative;
@@ -145,7 +158,13 @@ export const ringStyles = css`
   [part="indicator"] {
     stroke: var(
       --lr-progress-ring-indicator-color,
-      var(--indicator-color, var(--lr-color-brand))
+      var(
+        --indicator-color,
+        var(
+          --lr-progress-ring-indicator-variant-color,
+          var(--_lr-progress-ring-indicator-variant-color)
+        )
+      )
     );
     stroke-width: var(
       --lr-progress-ring-indicator-width,

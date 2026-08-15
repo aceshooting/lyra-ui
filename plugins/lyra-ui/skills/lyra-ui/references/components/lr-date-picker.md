@@ -6,7 +6,7 @@
 - **Class** `LyraDatePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated part** `base` since `8.2.3`; use part `::part(date-picker)`; removal not before `10.0.0` — The date-picker part identifies the visible shell explicitly; base remains on that same node during the compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 36 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-input` (same section below)
@@ -85,8 +85,8 @@ values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{
 
 **Custom states:** `disabled`, `range`, and `readonly`.
 
-**CSS parts (35):** `date-picker` / deprecated `base` (tokens on the same visible shell; use
-`date-picker`), `day`, `day-disabled`, `day-label`, `day-outside`,
+**CSS parts (35):** `date-picker` / permanent compatibility name `base` (tokens on the same
+visible shell; both names remain supported), `day`, `day-disabled`, `day-label`, `day-outside`,
 `day-placeholder`, `day-range-end`, `day-range-inner`, `day-range-preview`, `day-range-start`,
 `day-selected`, `day-today`, `day-weekend`, `footer`, `grid`, `header`, `month`, `month-label`,
 `months`, `nav`, `next`, `previous`, `title`, `view-cell`, `view-grid`, `view-item`,
@@ -201,9 +201,10 @@ exposes its validity states.
 
 **CSS parts (19):** `clear-button`, `date-input`, `date-picker`, `end`, `expand-button`,
 `expand-icon`, `form-control`, `form-control-input`, `form-control-label`, `hint`, `input`,
-`input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, deprecated
-`base` (use `date-input`), and deprecated `label` (use `form-control-label`). Lyra additionally
-retains `error`.
+`input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, permanent
+compatibility name `base` (a nested wrapper inside `date-input`), and permanent compatibility name
+`label` (the inner label-content wrapper inside `form-control-label`). Lyra additionally retains
+`error`.
 
 **Form value and validation:** a complete range submits `YYYY-MM-DD/YYYY-MM-DD`. A first range
 endpoint remains visible in `value` but contributes the empty string to `FormData` until the second

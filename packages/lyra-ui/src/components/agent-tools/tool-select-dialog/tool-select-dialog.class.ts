@@ -29,7 +29,7 @@ export interface ToolSelectDialogTool {
   /** Literal icon hint (e.g. an emoji), rendered next to `name` -- same
    *  "opaque string, not a registry lookup" convention as `<lr-tool-call-chip>`'s `icon`. */
   icon?: string;
-  /** Individually gates this tool regardless of `useDefaults`/`selected` -- e.g. a tool that
+  /** Individually gates this tool regardless of `useDefaults`/`selectedToolIds` -- e.g. a tool that
    *  requires admin approval before it can ever be enabled. */
   disabled?: boolean;
   /** Supporting text shown under a `disabled` row (e.g. "requires admin approval"). Ignored when `disabled` is falsy. */
@@ -43,7 +43,7 @@ export type ToolSelectFilter = (tool: ToolSelectDialogTool, query: string) => bo
 
 /** The proposed state carried by the cancelable `lr-change` event. */
 export interface ToolSelectionChangeDetail {
-  readonly selected: readonly string[];
+  readonly selectedToolIds: readonly string[];
   readonly useDefaults: boolean;
 }
 
@@ -99,7 +99,7 @@ interface ToolProjection {
  * other overlay in the same document.
  *
  * `useDefaults` is a single top-level switch: while `true`, every per-tool
- * checkbox below renders disabled (still reflecting whatever `selected`
+ * checkbox below renders disabled (still reflecting whatever `selectedToolIds`
  * holds — a consumer should populate that with its own default tool set
  * whenever `useDefaults` is true) and a hint explains that turning the
  * switch off is how to customize. Turning it off is the "customize"
@@ -115,7 +115,7 @@ interface ToolProjection {
  *
  * Matching tools mount in user-driven batches of 200. Matching selected identities reserve batch
  * positions before ordinary input-order matches, so the checked rows behind the controlled
- * `selected` summary remain available without first loading every preceding tool. When more
+ * `selectedToolIds` summary remain available without first loading every preceding tool. When more
  * matches remain, a localized limit notice and Load more button make the bounded projection
  * explicit and provide a keyboard-reachable continuation; search can independently narrow the
  * complete catalog. `tools`, selection counts, and emitted ids retain the caller's complete catalog.
@@ -127,7 +127,7 @@ interface ToolProjection {
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
  * Changes already apply live via `lr-change`, so this is optional.
  * @event lr-change - A proposed enabled-tool selection or `useDefaults` toggle.
- * `detail: { selected: string[], useDefaults: boolean }`. Cancelable; preventing it preserves
+ * `detail: { selectedToolIds: string[], useDefaults: boolean }`. Cancelable; preventing it preserves
  * both properties and restores the built-in checkbox or switch to its current checked state.
  * @event lr-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
  * via Escape, a backdrop click, or a `close()` call.
@@ -166,8 +166,6 @@ interface ToolProjection {
  * @since 4.0.0
  */
 export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['tools', 'selected']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -187,6 +185,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['tools', 'selected']);
+
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-change',
@@ -201,9 +201,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   /** The currently-enabled tool ids. Empty ids are omitted and duplicates are treated as one
    *  selection. */
-  @property({ attribute: false }) selected: readonly string[] = [];
+  @property({ attribute: false }) selectedToolIds: readonly string[] = [];
 
-  /** Whether the conversation is using the default tool set (`true`) or a custom selection (`false`) — see the class doc for the exact interaction with `selected`/per-tool editing. */
+  /** Whether the conversation is using the default tool set (`true`) or a custom selection (`false`) — see the class doc for the exact interaction with `selectedToolIds`/per-tool editing. */
   @property({ type: Boolean, reflect: true, attribute: 'use-defaults' }) useDefaults = false;
 
   /** The dialog's visible heading and accessible name. Omission uses the localized default; any
@@ -339,7 +339,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private emitChange(next: ToolSelectionChangeDetail): boolean {
     const event = this.emit(
       'lr-change',
-      { selected: [...next.selected], useDefaults: next.useDefaults },
+      { selectedToolIds: [...next.selectedToolIds], useDefaults: next.useDefaults },
       { cancelable: true },
     );
     return !event.defaultPrevented;
@@ -362,7 +362,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private onDefaultsToggle = (e: CustomEvent<{ checked: boolean }>): void => {
     e.stopPropagation();
     const next: ToolSelectionChangeDetail = {
-      selected: this.uniqueSelectedIds,
+      selectedToolIds: this.uniqueSelectedToolIds,
       useDefaults: e.detail.checked,
     };
     if (this.emitChange(next)) {
@@ -375,17 +375,17 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private onToolToggle(tool: ToolSelectDialogTool, e: CustomEvent<{ checked: boolean }>): void {
     e.stopPropagation();
     if (tool.disabled || this.useDefaults) return;
-    const set = new Set(this.selected);
+    const set = new Set(this.selectedToolIds);
     e.detail.checked ? set.add(tool.id) : set.delete(tool.id);
     const next: ToolSelectionChangeDetail = {
-      selected: [...set],
+      selectedToolIds: [...set],
       useDefaults: this.useDefaults,
     };
     if (this.emitChange(next)) {
-      this.selected = next.selected;
+      this.selectedToolIds = next.selectedToolIds;
       return;
     }
-    this.restoreChildChecked(e, this.selected.includes(tool.id));
+    this.restoreChildChecked(e, this.selectedToolIds.includes(tool.id));
   }
 
   private categoryId(category: ToolCategoryKey): string {
@@ -406,8 +406,14 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     });
   }
 
-  private get uniqueSelectedIds(): string[] {
-    return [...new Set(this.selected.filter((id) => id.trim().length > 0))];
+  private get uniqueSelectedToolIds(): string[] {
+    return [
+      ...new Set(
+        (this.selectedToolIds as readonly unknown[]).filter(
+          (id): id is string => typeof id === 'string' && id.trim().length > 0
+        )
+      ),
+    ];
   }
 
   /** Tools grouped by `category` (first-seen order), with an uncategorized
@@ -438,7 +444,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       .map((category) => ({ category, tools: byCategory.get(category)!.filter(matches) }))
       .filter((group) => group.tools.length > 0);
     const totalMatches = matchingGroups.reduce((total, group) => total + group.tools.length, 0);
-    const selectedIds = new Set(this.uniqueSelectedIds);
+    const selectedIds = new Set(this.uniqueSelectedToolIds);
     const chosenIds = new Set<string>();
     for (const group of matchingGroups) {
       for (const tool of group.tools) {
@@ -484,7 +490,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
         <lr-checkbox
           part="tool-checkbox"
           value=${tool.id}
-          ?checked=${this.selected.includes(tool.id)}
+          ?checked=${this.selectedToolIds.includes(tool.id)}
           ?disabled=${rowDisabled}
           @lr-change=${(e: CustomEvent<{ checked: boolean }>) => this.onToolToggle(tool, e)}
         >
@@ -534,7 +540,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       ? this.localize('searchToolsPlaceholder')
       : this.searchPlaceholder;
     const knownIds = new Set(uniqueTools.map((tool) => tool.id));
-    const selectedCount = new Set(this.selected.filter((id) => knownIds.has(id))).size;
+    const selectedCount = new Set(
+      this.selectedToolIds.filter((id) => knownIds.has(id))
+    ).size;
     const number = getNumberFormat(this.effectiveLocale);
     const panelLabel = hostAriaLabel(this) === null && this.accessibleLabel ? this.accessibleLabel : null;
     return html`

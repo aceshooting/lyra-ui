@@ -23,11 +23,7 @@ import {
 } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_codeEditorLabel,
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_valueInvalid,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_codeEditorLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraCodeEditorEventMap {
@@ -118,13 +114,12 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      codeEditorLabel: LYRA_DEFAULT_codeEditorLabel,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      valueInvalid: LYRA_DEFAULT_valueInvalid,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    codeEditorLabel: LYRA_DEFAULT_codeEditorLabel,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

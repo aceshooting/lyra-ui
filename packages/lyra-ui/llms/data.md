@@ -238,6 +238,12 @@ Collection inputs are clone-owned readonly snapshots, so reassign `data`, `colum
 state arrays to update them; mutating the array originally assigned has no effect.
 Column records are also copied and frozen synchronously. Row object
 identities are preserved so formatter callbacks and `selectedRows` still refer to caller records.
+Column identity uses a nonblank `id`, then a nonblank `field`, then stable definition-object
+occurrence; malformed, blank, and later-duplicate identities are omitted first-wins. When `rowKey`
+is set, malformed, blank, and later-duplicate row identities are omitted first-wins before
+rendering, focus, selection, expansion, or events. Without `rowKey`, stable row-object occurrence
+replaces positional identity, so reordering the same records does not transfer DOM or controlled
+state to another row.
 
 **Properties:**
 
@@ -251,7 +257,8 @@ identities are preserved so formatter callbacks and `selectedRows` still refer t
 - `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
-- `expandedKeys: readonly Array<string | number> = []` (JS-only).
+- `expandedRowKeys: readonly Array<string | number> = []` (JS-only).
+  The mirrored `expandedKeys` spelling remains a compatibility alias for this same state.
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
 - `filteredCount: number` (read-only, JS-only) — matching client rows before paging.
 - `filterFromLeafRows: boolean = false` (`filter-from-leaf-rows`) — retains ancestors of matching
@@ -280,9 +287,10 @@ identities are preserved so formatter callbacks and `selectedRows` still refer t
 - `selectable: '' | 'single' | 'multiple' | 'none' = 'none'` (`selectable`, reflected) — a bare
   `selectable` attribute means `multiple`.
 - `selectableRows: ((row) => boolean) | null = null` (JS-only).
-- `selectedKeys: readonly Array<string | number> = []` (JS-only).
+- `selectedRowKeys: readonly Array<string | number> = []` (JS-only).
+  The mirrored `selectedKeys` spelling remains a compatibility alias for this same state.
 - `selectedRows: readonly Row[]` (writable, JS-only) — assigning rows that belong to the current source
-  maps them to `selectedKeys`; detached rows are ignored and single-selection mode keeps the first.
+  maps them to `selectedRowKeys`; detached rows are ignored and single-selection mode keeps the first.
 - `server: boolean = false` (`server`, reflected).
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (`size`, reflected).
 - `sort: readonly Array<{ readonly id: string; readonly desc: boolean }> = []` (JS-only).
@@ -362,14 +370,17 @@ the current page, Ctrl+C copies, and Shift+F10 requests a cell context menu. Inl
 movement swaps under RTL. Keyboard events from an interactive formatter descendant remain owned by
 that descendant.
 
-**Events:** `request`; `lr-cell-click`; cancelable `lr-cell-contextmenu` (canceling it suppresses the
+**Events:** `request`; `lr-cell-click` and cancelable `lr-cell-contextmenu` carry canonical
+`rowKey`/`columnId` alongside the row, column, value, and display index (canceling the latter suppresses the
 native menu); `lr-column-move`; `lr-column-pin`; `lr-column-resize` (`detail.finished` distinguishes
 live and committed resize). `pointerup` commits a pointer drag. `pointercancel` or lost capture
 restores the exact pre-gesture width state; after a live move it emits the restored width with
 `finished: false`, and it never emits a canceled `finished: true` commit. `lr-column-visibility-change`;
 `lr-data-error`;
 `lr-filter-change`; `lr-page-change`; `lr-row-collapse`; `lr-row-expand`; `lr-group-collapse` and
-`lr-group-expand` (frozen `{ key, columnId, value, rows }` snapshots); `lr-row-select`;
+`lr-group-expand` (frozen `{ key, columnId, value, rows }` snapshots); `lr-row-select` with
+canonical `{ selectedRowKeys, selectedRows }` plus mirrored `selectedKeys`; row expand/collapse
+details use canonical `rowKey` plus mirrored `key`;
 `lr-sort-change`; `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
 (frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
 notification with no raw platform error text). Every library event bubbles and is composed; only `lr-cell-contextmenu` is
@@ -466,7 +477,7 @@ it survives and otherwise clamps focus to the nearest surviving index. Moving fo
 table before the update is applied always wins; nested editors and controls keep their independent
 focus contracts.
 
-**9.0 migration:** replace `selectedKey = key` with `selectedKeys = new Set([key])`; both single
+**9.0 migration:** replace `selectedKey = key` with `selectedRowKeys = new Set([key])`; both single
 and multiple modes now use that one store. Replace `columnsHidden` with read-only
 `hasHiddenPriorityColumns`, `showAllColumns` with `priorityColumnsVisible`, and the two former
 column-visibility events with `lr-priority-columns-visibility-change { visible }`. Column
@@ -479,7 +490,7 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 **Properties:**
 
 - `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection,
-  bounded to 10,000 valid definitions; blank keys and later duplicates are omitted first-wins
+  bounded to the first 10,000 source positions; blank keys and later duplicates are omitted first-wins
   before header, cell, sort, focus, and event paths; reassign to update) — `{ key, label,
 headerCell?, width?, minWidth?, maxWidth?,
 resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
@@ -597,10 +608,11 @@ cell: (row) => unknown }` —
   row. Empty string identities and later duplicates are omitted; the first valid occurrence wins
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
-- `selectedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
+- `selectedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
   store in every mode, bounded to 10,000 keys. Single mode enforces at most one key; multiple mode
-  toggles membership. Reads return immutable detached `ReadonlySet` facades; reassign a new set to
-  update
+  toggles membership. Malformed and whitespace-only string keys are omitted, while valid
+  unmatched/off-page keys remain controlled state for server pagination. Reads return immutable detached `ReadonlySet`
+  facades; reassign a new set to update
 - `filterable: boolean = false` (attribute `filterable`, reflected) — renders a localized search
   field above the grid
 - `filterText: string = ''` (attribute `filter-text`) — controlled filter text
@@ -656,9 +668,10 @@ cell: (row) => unknown }` —
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
   renders a full-width detail row beneath expanded records
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
-- `expandedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
-  expanded state bounded to 10,000 keys; reads return immutable detached `ReadonlySet` facades,
-  and consumers reassign it after
+- `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
+  expanded state bounded to 10,000 keys; malformed and whitespace-only string keys are omitted while valid
+  off-page keys remain controlled; reads return immutable detached `ReadonlySet` facades, and
+  consumers reassign it after
   `lr-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
 - `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
@@ -704,11 +717,11 @@ cell: (row) => unknown }` —
 sort properties; server mode leaves them controlled. Other events are `lr-row-click`
 (`detail: { row }`), `lr-load-more` (fired on the "load more" button),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and `lr-row-expand-toggle`
-(`detail: { row, key }`; the table does not mutate `expandedKeys`), and
-`lr-selection-change` (frozen readonly `detail: { keys }`) when selection is enabled, `lr-filter-change`
+(`detail: { row, rowKey }`; the table does not mutate `expandedRowKeys`), and
+`lr-selection-change` (frozen readonly `detail: { rowKeys }`) when selection is enabled, `lr-filter-change`
 (frozen readonly `detail: { text }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
-filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, key, value }`) for editable
-columns, and `lr-column-resize` (`detail: { key, width }`, `width` in CSS pixels) on every pointer or
+filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
+columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or
 keyboard resize step. **Only the commit is cancelable.** A pointer drag fires the event once per
 pixel of movement as non-cancelable live feedback, then exactly once more — `cancelable: true` — for
 the width committed at drag-end (and only when that width actually differs from the pre-drag one).
@@ -844,7 +857,7 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   keeps `aria-sort` and the header chevron honest — otherwise clicking the group column would flip
   both while changing nothing. To force a group order in any other case, sort `rows` into it before
   assigning them (or set `sort-mode="server"` and own the whole ordering).
-- both single and multiple row selection use `selectedKeys`; the component does not synthesize a
+- both single and multiple row selection use `selectedRowKeys`; the component does not synthesize a
   checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — a typed accessible name for the
   `<table role="grid">`. A plain `aria-label` HTML attribute on the host is also forwarded (read via
@@ -1677,7 +1690,8 @@ is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`
 `aria-setsize`), so the sequence is walkable item by item rather than collapsed into one summary
 string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/ArrowRight and
 Home/End move the stop — direction-aware, so the arrows swap under RTL — and focusing a cell shows
-the same `[part="tooltip"]` detail that pointer hover does. The tooltip is visual only and is not
+the same `[part="tooltip"]` detail that pointer hover does. That tooltip is positioned from the
+active cell, not from the center of the whole strip. The tooltip is visual only and is not
 wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
 text and describing it again would duplicate the announcement. Cells are inspectable, not
 actionable: there is no per-cell click/activation event, so unlike `<lr-heatmap>` there is nothing
@@ -1708,17 +1722,19 @@ total. The optional legend likewise mounts at most 200 categories and exposes
 categoryId, readonly marker?, readonly label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
   subagent-dispatched turn); `label` is per-item hover/focus tooltip text _and_ that cell's own
-  `role="listitem"` accessible name, falling back to the matching category's own `label` (or its
-  `id`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
+  `role="listitem"` accessible name, falling back to the matching category's own nonblank `label`,
+  then localized `sequenceStripUnnamedCategory` (`"Unnamed category"` in the built-in English
+  catalog) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
 - `categories: readonly SequenceStripCategory[] = []` (attribute: false) — `{ readonly id,
 readonly color, readonly label? }`; `color`
   is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,
   declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
   used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
-  back to `id` itself when unset. Both collection properties are cloned and frozen at assignment,
-  bounded to the first 10,000 source entries, and require reassignment after changes; duplicate ids
-  use the first valid entry, so identity is deterministic
+  back to localized `sequenceStripUnnamedCategory` when omitted or blank rather than exposing the
+  internal `id`. Both collection properties are cloned and frozen at assignment,
+  bounded to the first 10,000 source entries, and require reassignment after changes; empty/blank
+  ids are omitted and duplicates use the first valid entry, so identity is deterministic
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`; a standard host `aria-label` remains a distinct host name
@@ -1754,8 +1770,9 @@ as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label p
 `categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the
 color chip, matching that category's cell color), `legend-marker-swatch` (the marker row's chip
 instead: a neutral chip carrying the same bottom bar a `marker: true` cell paints, in the same
-`--lr-sequence-strip-marker-color`), `legend-label` (the category's `label`, or its `id` when
-unset), `window-range` (bounded item projection/total), and `legend-limit` (bounded legend/total).
+`--lr-sequence-strip-marker-color`), `legend-label` (the category's nonblank `label`, or localized
+`sequenceStripUnnamedCategory`), `window-range` (bounded item projection/total), and `legend-limit`
+(bounded legend/total).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
 block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
@@ -1829,8 +1846,8 @@ owner context maintained by `<lr-tree>`.
   library's own original shape and is where per-row icons, secondary descriptions and badges live —
   the declarative model has none of those. `<lr-tree>` creates and reconciles the
   `<lr-tree-item>` children by `id`, and each item renders its own subtree into its own shadow root.
-  Every reachable `LyraTreeNodeData.id` must be globally unique. For invalid duplicate input, the first
-  depth-first occurrence owns the public id; later occurrences remain visible but render disabled
+  Every reachable `LyraTreeNodeData.id` must be nonblank and globally unique. Malformed rows and
+  later duplicates are omitted before rendering; the first valid depth-first occurrence wins
   and cannot receive focus, selection, expansion, or reorder requests. Supplying unique refreshed
   data releases that fail-closed state.
 
@@ -1872,7 +1889,7 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
   author-supplied host `aria-label` takes precedence by presence and is never overwritten or
   removed by later object refreshes; removing the author attribute restores the current data name.
   `id` is the event, roving-focus, reconciliation, and reorder identity and must be unique across
-  the complete reachable hierarchy; later duplicate occurrences fail closed as described above
+  the complete reachable hierarchy; malformed/blank rows and later duplicates are omitted as described above
 - `selection: 'single'|'multiple'|'leaf'|'leaf-multiple' = 'single'` — self-managed selection for
   both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
   checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
@@ -1920,12 +1937,12 @@ roving stop to the next reachable row instead of stranding it, and the state is 
 and resolved only after the affected rendered item cascade settles).
 
 **Events:** `lr-selection-change` (`detail: { selection }`, where both the detail and selection
-snapshot are frozen) and `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
+snapshot are frozen) and `lr-reorder` (`detail: { nodeId, parentNodeId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
 component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
 moved node. The live region likewise announces a completed move only after the rendered sibling
 order confirms the exact requested swap. Ignored or rejected requests stay silent, and unrelated
-updates do not prematurely discard an asynchronously persisted request. `parentId` is `null` for a
+updates do not prematurely discard an asynchronously persisted request. `parentNodeId` is `null` for a
 top-level item, and `fromIndex`/`toIndex` are **sibling-scoped
 indices**, not positions in the flattened visible list. The move is constrained to one sibling list
 and never fires at a subtree boundary, so a reorder can never become a reparent: Ctrl+ArrowDown on
@@ -1991,7 +2008,7 @@ when assigned):
 `<lr-tree>` drive both with one implementation:
 
 - `nodeId: string` — this item's identity: `item.id` in the data model, or a generated per-element
-  id in the declarative one (where the markup carries no id of its own). It is the `id` every
+  id in the declarative one (where the markup carries no id of its own). It is the `nodeId` every
   `lr-node-toggle` / `lr-node-select` / `lr-reorder` detail carries, and what the tree tracks its
   roving tabindex by
 - `isDisabled: boolean` — `item.disabled` in the data model, the `disabled` property in the
@@ -2014,8 +2031,8 @@ from its own light-DOM children in the declarative one. A grandchild is not incl
 its own parent. `getChildrenItems({ includeDisabled = true } = {})` is the upstream-compatible
 public spelling over the same direct-child list.
 
-**Events:** `lr-node-toggle` (`detail: { id, expanded }`, fired by `expand()`/`collapse()` — via
-the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { id }`, fired by `select()`
+**Events:** `lr-node-toggle` (`detail: { nodeId, expanded }`, fired by `expand()`/`collapse()` — via
+the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { nodeId }`, fired by `select()`
 — via clicking anywhere in the row or Enter/Space) — dispatched from `lr-tree-item`,
 bubble/compose up through `lr-tree`'s light DOM. `lr-expand`/`lr-collapse` fire when a transition
 begins; `lr-after-expand`/`lr-after-collapse` fire after the matching themeable duration. Rapid
@@ -2053,8 +2070,13 @@ same names, so one selector on the outer item, such as `lr-tree-item::part(row)`
 parts at every rendered depth. Declarative children remain light-DOM hosts and can be matched
 directly as `<lr-tree-item>` elements.
 
-**Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
-`--show-duration`/`--hide-duration` (both default through `--lr-duration-base`);
+**Themeable custom properties:** `--indent-size` (default `var(--lr-space-l)`, applied once per
+nesting depth), `--indent-guide-color` (default `var(--lr-color-border)`),
+`--indent-guide-offset` (default `0`, the guide's block-axis inset at both ends),
+`--indent-guide-style` (default `solid`), and `--indent-guide-width` (default `0`); these mirrored
+properties are consumed directly by every `<lr-tree-item>` and may be set on an item or inherited
+from `<lr-tree>`. `--lr-tree-depth` is internal and set inline per row for indentation;
+`--show-duration`/`--hide-duration` both default through `--lr-duration-base`;
 `--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
 `--lr-tree-checkbox-checked-border-color`, `--lr-tree-checkbox-checked-bg`,
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,
@@ -2351,7 +2373,8 @@ owns none of that.
   previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
 }]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
-  `{ id, label? }` handles; reassign a collection after changes
+  `{ id, label? }` handles; blank ids and later duplicates are omitted first-valid/first-wins;
+  reassign a collection after changes
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`
 
@@ -2843,7 +2866,8 @@ A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes wit
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
-cycle-safe, first-path-wins snapshot bounded to 10,000 nodes and 64 descendant levels),
+cycle-safe snapshot omitting empty/blank paths and retaining the first duplicate path, bounded to
+the first 10,000 inspected source positions across 64 descendant levels; reassign after changes),
 `selectedPath: string | null = null` (attribute `selected-path`), and `label: string = ''`.
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
 and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
@@ -2853,9 +2877,9 @@ including an explicit empty string; removing it restores `label` or the localize
 `revealPath(path)` expands every ancestor directory and scrolls the target row into view, resolving
 `true` once found. `expandAll()` and `collapseAll()` forward to the underlying `<lr-tree>`.
 
-**Events:** `lr-file-select` (frozen readonly `detail: { path, node }`, a row was activated),
-`lr-file-open` (frozen readonly `detail: { path, node }`, Enter/click on an already-selected file
-row), and `lr-load-children` (frozen readonly `detail: { path }`, a lazy unloaded directory
+**Events:** `lr-file-select` (frozen readonly `detail: { filePath, node }`, a row was activated),
+`lr-file-open` (frozen readonly `detail: { filePath, node }`, Enter/click on an already-selected file
+row), and `lr-load-children` (frozen readonly `detail: { filePath }`, a lazy unloaded directory
 expanded).
 
 **CSS parts:** `base` — the root wrapper.
@@ -2955,9 +2979,11 @@ focused control never move external focus.
 `nodeTypeOptions: readonly GraphQueryTypeOption[]`, `relationshipTypeOptions: readonly
 GraphQueryTypeOption[]`, and `savedQueries: readonly GraphQuerySavedItem[]`; `hopLimit`, frozen
 `errors`, `form`, `validity`, `validationMessage`, and `willValidate`. Type-option values and saved
-query ids are unique first-wins identities; malformed/hostile records are skipped, nested queries
+query ids are nonblank unique first-wins identities; malformed/hostile records are skipped, nested queries
 are normalized snapshots, collections are capped at 500 options / 200 saved queries, and strings
-at 256 characters.
+at 256 characters. `value.relationshipTypes` and `value.nodeTypes` are each capped at 500 entries.
+Create and reassign a new value, options array, or saved-query array after changes; mutating a
+previous caller-owned object cannot change the builder's assigned snapshots.
 
 **Methods and form callbacks:** `getForm()`, `focus(options?)`, `blur()`, `click()`,
 `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, `formDisabledCallback(disabled)`,
@@ -2988,9 +3014,9 @@ default. Run, save, load, and delete share one two-phase contract: cancelable
 `lr-before-query-delete` requests precede any local effect; non-cancelable `lr-query-run`,
 `lr-query-save`, `lr-query-load`, and `lr-query-delete` notifications follow only when accepted.
 The matching before/accepted pair reuses one frozen payload: `{ query }` for run,
-`{ name, query }` for save, `{ id, query }` for load, and `{ id }` for delete.
+`{ name, query }` for save, `{ queryId, query }` for load, and `{ queryId }` for delete.
 Run validates before its request. Save veto preserves the draft name. Load requests frozen
-`{ id, query }` before changing `value`, so veto preserves the current query; its accepted event
+`{ queryId, query }` before changing `value`, so veto preserves the current query; its accepted event
 fires after the new value is applied. Delete remains controlled, so the host removes the accepted
 id from `savedQueries`. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and those
 eight phased action events.
@@ -3041,10 +3067,11 @@ granular import path, class/type imports, selectors, and framework bindings toge
 
 **Properties:** clone-owned readonly `fields`, clone-owned readonly `value`, and `disabled`.
 Structured inputs are bounded (200 fields and conditions, 500 options per field, 256 characters
-per string), malformed records are skipped, duplicate field names/condition ids use the first
-valid record, and closed field/operator/combinator values normalize to their documented fallback.
+per string), malformed records and blank field names/option values/condition ids are skipped,
+duplicates use the first valid record, and closed field/operator/combinator values normalize to
+their documented fallback.
 Returned arrays and records are frozen snapshots, so mutate-and-reuse does not bypass Lit's
-assignment boundary.
+assignment boundary. Create and reassign a new `fields` array or `value` record after changes.
 
 For a field declared as `type: 'number'`, non-finite controlled values normalize to `undefined`.
 The same applies when field metadata arrives after `value`, and when a numeric input string
@@ -3053,7 +3080,8 @@ the model, and serializing the query cannot silently turn infinity into JSON `nu
 
 **Methods:** `addCondition()` appends a condition using the first available field and emits a frozen
 `lr-add-condition`; it is a no-op while disabled or when there are no fields.
-`removeCondition(id)` removes the matching condition and emits `lr-remove-condition`; it is a
+`removeCondition(id)` removes the matching condition and emits `lr-remove-condition`
+(`detail: { conditionId }`); it is a
 no-op while disabled or when the id is absent.
 
 **Events:** `lr-input`, `lr-add-condition`, `lr-remove-condition`; all details and nested model
@@ -3117,12 +3145,16 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-data-data-grid-data-grid-types-contracts`** — Supporting data types and helpers for this component family.
   `DataGridCellContextMenuDetail {
   originalEvent: unknown;
+  rowKey: unknown;
+  columnId: unknown;
   column: unknown;
   value: unknown;
   row: unknown;
   index: unknown;
 }`
   `DataGridCellDetail {
+  rowKey: unknown;
+  columnId: unknown;
   column: unknown;
   value: unknown;
   row: unknown;
@@ -3244,6 +3276,7 @@ These named interfaces and helper signatures are available to typed integrations
   total: unknown;
 }`
   `DataGridRowDetail {
+  rowKey: unknown;
   key: unknown;
   row: unknown;
 }`
@@ -3251,6 +3284,7 @@ These named interfaces and helper signatures are available to typed integrations
   align: unknown;
 }`
   `DataGridSelectionDetail {
+  selectedRowKeys: unknown;
   selectedKeys: unknown;
   selectedRows: unknown;
 }`
@@ -3266,6 +3300,8 @@ These named interfaces and helper signatures are available to typed integrations
   sort: unknown;
   filters: unknown;
   search: unknown;
+  selectedRowKeys: unknown;
+  expandedRowKeys: unknown;
   selectedKeys: unknown;
   expandedKeys: unknown;
   page: unknown;
@@ -3402,7 +3438,7 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-data-graph-query-builder-graph-query-builder-contracts`** — Supporting data types and helpers for this component family.
   `GraphQueryDeleteDetail {
-  id: unknown;
+  queryId: unknown;
 }`
   `GraphQuery {
   startId: unknown;
@@ -3414,7 +3450,7 @@ These named interfaces and helper signatures are available to typed integrations
   maxHops: unknown;
 }`
   `GraphQueryLoadDetail {
-  id: unknown;
+  queryId: unknown;
   query: unknown;
 }`
   `GraphQueryRunDetail {

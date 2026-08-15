@@ -14,6 +14,10 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { firstByIdentity } from '../collection-identity.js';
+import {
+  boundedSelectionRects,
+  boundedSelectionText,
+} from '../../../internal/text-quote.js';
 import type {
   LyraAnchor,
   LyraHighlight,
@@ -23,7 +27,7 @@ import type {
 } from '../../viewers/document-viewer/anchors.js';
 import { styles } from './terminal.styles.js';
 import type { LyraFrame } from '../../../internal/variants.js';
-import type { VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
+import type { LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   writeClipboardText,
@@ -253,10 +257,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   /** Line-range highlights keyed by stable id. Empty/blank ids are omitted and duplicates normalize
    *  first-wins before range ownership, activation, and anchor lookup. */
-  @property({ attribute: false }) highlights: LyraHighlight[] = [];
+  @property({ attribute: false }) highlights: readonly LyraHighlight[] = [];
   @property({ attribute: false }) activeHighlightId: string | null = null;
 
-  private get normalizedHighlights(): LyraHighlight[] {
+  private get normalizedHighlights(): readonly LyraHighlight[] {
     return firstByIdentity(Array.isArray(this.highlights) ? this.highlights : [], (highlight) => highlight.id);
   }
 
@@ -780,7 +784,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   // --- Follow tracking via virtual-list's visible-range event ---------------
 
-  private onVisibleRangeChanged = (e: CustomEvent<VirtualListRange>): void => {
+  private onVisibleRangeChanged = (e: CustomEvent<LyraVirtualListRange>): void => {
     e.stopPropagation();
     const atBottom = this.lines.length === 0 || e.detail.end >= this.lines.length - 1;
     if (atBottom !== this.follow) {
@@ -812,8 +816,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const listShadow = this.renderRoot.querySelector('lr-virtual-list')?.shadowRoot;
     const selection =
       shadowGetSelection(listShadow) ?? shadowGetSelection(this.shadowRoot) ?? this.ownerDocument.getSelection();
-    const text = selection?.toString() ?? '';
-    if (!selection || selection.isCollapsed || text === '') return;
+    if (!selection || selection.isCollapsed) return;
+    let range: Range;
+    try {
+      range = selection.getRangeAt(0);
+    } catch {
+      return;
+    }
+    const text = boundedSelectionText(range);
+    if (text === '') return;
     const lineNumberOf = (node: Node | null): number | null => {
       let el: Node | null = node;
       while (el) {
@@ -831,11 +842,12 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       startLine !== null && endLine !== null
         ? { kind: 'line-range', start: Math.min(startLine, endLine), end: Math.max(startLine, endLine) }
         : null;
-    let rects: DOMRect[] = [];
+    let rects: TextSelectDetail['rects'] = Object.freeze([]);
     try {
-      rects = [...selection.getRangeAt(0).getClientRects()];
+      rects = boundedSelectionRects(range);
     } catch {
-      rects = [];
+      // A live Range can be invalidated between text and geometry capture. Keep the bounded
+      // text/anchor event useful while failing closed on its optional geometry.
     }
     this.emit('lr-text-select', { text, anchor, rects });
   };
@@ -987,7 +999,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
                 activeMatchLineNumber,
               )}
             .keyFunction=${(item: unknown) => (item as TerminalLine).number}
-            .activeId=${this.scrollTargetLineNumber ?? ''}
+            .activeItemId=${this.scrollTargetLineNumber ?? ''}
             row-height=${this.wrap ? 'auto' : '24'}
             @lr-visible-range-changed=${this.onVisibleRangeChanged}
           ></lr-virtual-list>

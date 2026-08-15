@@ -91,13 +91,13 @@ export interface GraphQuerySaveDetail {
 
 /** Frozen payload shared by the load request and accepted notification. */
 export interface GraphQueryLoadDetail {
-  readonly id: string;
+  readonly queryId: string;
   readonly query: GraphQuery;
 }
 
 /** Frozen payload shared by the delete request and accepted notification. */
 export interface GraphQueryDeleteDetail {
-  readonly id: string;
+  readonly queryId: string;
 }
 
 const MAX_TYPES = 500;
@@ -177,7 +177,7 @@ function normalizeTypeOptions(value: unknown): readonly GraphQueryTypeOption[] {
   for (const candidate of value.slice(0, MAX_TYPES)) {
     if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
     const optionValue = boundedString(ownValue(candidate, 'value'));
-    if (!optionValue || values.has(optionValue)) continue;
+    if (optionValue.trim().length === 0 || values.has(optionValue)) continue;
     values.add(optionValue);
     const label = boundedString(ownValue(candidate, 'label'));
     result.push(Object.freeze({ value: optionValue, ...(label ? { label } : {}) }));
@@ -192,7 +192,7 @@ function normalizeSavedQueries(value: unknown): readonly GraphQuerySavedItem[] {
   for (const candidate of value.slice(0, MAX_SAVED_QUERIES)) {
     if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
     const id = boundedString(ownValue(candidate, 'id'));
-    if (!id || ids.has(id)) continue;
+    if (id.trim().length === 0 || ids.has(id)) continue;
     ids.add(id);
     result.push(Object.freeze({
       id,
@@ -288,14 +288,14 @@ export interface LyraGraphQueryBuilderEventMap {
  *   Vetoing it preserves the draft name and suppresses `lr-query-save`.
  * @event lr-query-save - Non-cancelable accepted Save notification. Frozen
  *   `detail: { name, query }`; the host assigns an id and appends to `savedQueries`.
- * @event lr-before-query-load - Cancelable load request with frozen `detail: { id, query }`,
+ * @event lr-before-query-load - Cancelable load request with frozen `detail: { queryId, query }`,
  *   emitted before `value` changes. Vetoing it preserves the current query.
  * @event lr-query-load - Non-cancelable accepted Load notification emitted after `value` changes.
- *   Frozen `detail: { id, query }` contains the accepted query.
- * @event lr-before-query-delete - Cancelable delete request with frozen `detail: { id }`.
+ *   Frozen `detail: { queryId, query }` contains the accepted query.
+ * @event lr-before-query-delete - Cancelable delete request with frozen `detail: { queryId }`.
  *   Vetoing it suppresses `lr-query-delete`.
  * @event lr-query-delete - Non-cancelable accepted Delete notification. Frozen
- *   `detail: { id }`; the host removes the matching entry from `savedQueries`.
+ *   `detail: { queryId }`; the host removes the matching entry from `savedQueries`.
  * @event lr-invalid - Cancelable alias when the complete builder fails native validity; vetoing it
  *   also suppresses the native invalid default.
  * @csspart base - The outer wrapper around every section.
@@ -562,8 +562,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return this.internals.willValidate;
   }
 
-  /** The complete controlled query model. Its normalized value at the first update is the form
-   *  reset default; later property writes and user edits change only the live value. */
+  /** The complete controlled query model, detached and deeply frozen with at most 500 relationship
+   *  and node type entries. Reassign a new model after changes. Its normalized value at the first
+   *  update is the form reset default; later property writes and user edits change only the live
+   *  value. */
   get value(): GraphQuery {
     return this._value;
   }
@@ -897,7 +899,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     if (this.effectiveDisabled) return;
     const detail = (): GraphQueryLoadDetail =>
       Object.freeze({
-      id: item.id,
+      queryId: item.id,
       query: normalizeGraphQuery(item.query),
     });
     if (this.emit('lr-before-query-load', detail(), { cancelable: true }).defaultPrevented) return;
@@ -907,7 +909,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   private deleteQuery(item: GraphQuerySavedItem): void {
     if (this.effectiveDisabled) return;
-    const detail = (): GraphQueryDeleteDetail => Object.freeze({ id: item.id });
+    const detail = (): GraphQueryDeleteDetail => Object.freeze({ queryId: item.id });
     if (this.emit('lr-before-query-delete', detail(), { cancelable: true }).defaultPrevented) return;
     this.emit('lr-query-delete', detail());
   }

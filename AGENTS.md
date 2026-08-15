@@ -114,8 +114,9 @@ its baseline in all three engines; see
   split along real data dependencies (`lint`, `static-checks`, `build-and-coverage`,
   `packed-consumer`, `docs-and-storybook`, `visual-regression`) rather than one linear job, so a
   red check names the specific job to reproduce instead of "build-test". A separate
-  `platform-contracts` matrix job runs the fast `test:platform` subset on Firefox/WebKit × Node
-  20/22. `.github/workflows/full-engine.yml` runs the complete non-coverage suite in four
+  `platform-contracts` matrix job runs the fast `test:platform` subset on Firefox and Safari
+  (WebKit) under Node 20/22, with Chromium, Chrome, and Edge also covered under Node 22.
+  `.github/workflows/full-engine.yml` runs the complete non-coverage suite in four
   deterministic shards per browser on a weekly schedule and by manual dispatch; releases require
   the push CI and all eight dispatched shards to succeed for the exact main commit before any
   release tag is created.
@@ -285,8 +286,8 @@ Security-sensitive; no automated gate covers any of it. Full rules:
 - Peer loaders validate the required capability: prefer a named API when the package provides one,
   then a validated default export; default-shaped peers use `mod.default ?? mod`. Getting sanitizer
   normalization wrong makes it silently no-op (a security bug, not an interop nit).
-- Peer load failure fails closed with a localized `role="alert"`; empty-but-valid results get
-  their own state, never the error path.
+- Peer load failure fails closed with a visible localized fallback and a separate light-DOM
+  announcement; empty-but-valid results get their own state, never the error path.
 - A new optional peer registers in `peerDependencies` + `peerDependenciesMeta.optional` +
   `devDependencies` — all three.
 
@@ -312,16 +313,17 @@ Release blockers for new components, bugs in existing ones. Full rules:
   that keep value/validity in sync, and specify the event contract before implementation.
 - Every `:focus-visible` / `cursor: pointer` part has a matching `:hover` rule (the
   most-repeated defect in this library's history).
-- Wrap internal state qualifiers in `:where()` so consumer `::part()` rules can win; target the
-  node that actually receives the pseudo-class state.
+- Wrap internal state qualifiers in `:where()` to keep sibling rules within the shadow stylesheet
+  low-specificity; target the node that actually receives the pseudo-class state.
 - Respond to allocation, not viewport: container queries (with `container-type` and a tokenized
   `contain-intrinsic-inline-size` fallback in the same rule), 320px + long-content and
   shrink-to-fit coverage; dark mode keys off tokens/`data-*`, with `prefers-color-scheme` demoted
   to a fallback.
 - Motion uses tokens and stops under `prefers-reduced-motion`; test both branches.
 - A public API change is incomplete until JSDoc + tests + story + `llms/<family>.md` + the
-  regenerated manifest all agree (`pnpm llms`, `pnpm manifest`); verify numeric/parity claims by
-  hand; helper examples import granular subpaths, never the root barrel.
+  regenerated manifest agree; run `pnpm manifest`, regenerate editor data, then `./package.sh` so
+  generated llms and packaged references agree too. Verify numeric/parity claims by hand; helper
+  examples import granular subpaths, never the root barrel.
 
 ## Testing conventions — digest
 

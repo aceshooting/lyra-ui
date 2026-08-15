@@ -396,7 +396,7 @@ describe("lr-retrieval-trace", () => {
     expect(event.detail).to.deep.equal({
       stageId: "retrieve",
       action: "open",
-      id: "c1",
+      chunkId: 'c1',
       sourceId: "s1",
       anchor: { kind: "page", page: 12 },
     });

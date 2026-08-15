@@ -65,7 +65,8 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * messages, `{{variable}}` substitution, version selection, preview, save, and run intents.
  * The host owns persistence and model execution. Opting into message reordering exposes native,
  * keyboard-operable move controls; every proposed move is cancelable before the editor state changes.
- * Duplicate message/version ids use deterministic first-wins semantics. Variable rows are
+ * Empty/blank message and version ids are omitted; duplicates use deterministic first-wins
+ * semantics. Variable rows are
  * occurrence-addressed because their names are editable and may temporarily be empty or repeated;
  * duplicate names remain independently editable while placeholder resolution uses the first one.
  * Variable values resolve recursively; undefined and cyclic placeholders remain intact.
@@ -115,8 +116,6 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * @since 7.0.0
  */
 export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['messages', 'variables', 'versions']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -142,6 +141,8 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     promptStudioVersions: LYRA_DEFAULT_promptStudioVersions,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['messages', 'variables', 'versions']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -207,7 +208,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   private uniqueMessages(source = this.messages): PromptStudioMessage[] {
     const seen = new Set<string>();
     return source.filter((message) => {
-      if (!message || typeof message.id !== 'string' || message.id === '' || seen.has(message.id)) return false;
+      if (!message || typeof message.id !== 'string' || message.id.trim().length === 0 || seen.has(message.id)) return false;
       seen.add(message.id);
       return true;
     });
@@ -216,7 +217,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   private uniqueVersions(): PromptStudioVersion[] {
     const seen = new Set<string>();
     return this.versions.filter((version) => {
-      if (!version || typeof version.id !== 'string' || version.id === '' || seen.has(version.id)) return false;
+      if (!version || typeof version.id !== 'string' || version.id.trim().length === 0 || seen.has(version.id)) return false;
       seen.add(version.id);
       return true;
     });

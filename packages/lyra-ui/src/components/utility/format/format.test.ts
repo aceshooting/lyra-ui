@@ -8,6 +8,19 @@ import type { LyraFormatDate } from './format-date.class.js';
 import type { LyraFormatNumber } from './format-number.class.js';
 import type { LyraRelativeTime } from './relative-time.class.js';
 
+// Note on the format-options.ts family's Lyra*-prefixed rename (FormatNumberType ->
+// LyraFormatNumberType, and 12 siblings): a wtr/esbuild-run `it()` block cannot verify a
+// type-only rename -- `import type` and type annotations are erased before the test ever
+// executes (esbuild strips an unresolvable `import type` silently, with no build error), so an
+// in-file "compile-time regression" test would pass identically whether or not the export
+// exists; a prior version of this file carried exactly that non-functional pattern. Real
+// protection is `tsc --noEmit -p tsconfig.json` (part of `pnpm lint`): every one of these 13
+// types is the declared type of a real `@property` in format-number.class.ts/format-date.class.ts/
+// format-bytes.class.ts/relative-time.class.ts, so reverting an export name while its usage
+// stays put fails the build at that usage site directly -- verified by hand for the divider
+// sibling rename by temporarily reverting the export and re-running tsc, which failed with
+// "Cannot find name" at the usage sites; the same shape applies here.
+
 it('formats numbers and bytes through Intl', async () => {
   const el = await fixture(
     html`<div>

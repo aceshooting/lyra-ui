@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'ToolParamForm',
   component: 'lr-tool-param-form',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Schema and value records are detached, deeply frozen, and synchronously bounded at assignment (100 fields/required keys, 500 enum choices, and finite nested-value budgets). Create and reassign a new record after changes; input and validity events expose detached frozen details.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

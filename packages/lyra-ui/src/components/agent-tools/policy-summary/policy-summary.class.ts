@@ -113,8 +113,6 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * @since 4.1.0
  */
 export class LyraPolicySummary extends LyraElement {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['decisions']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -145,6 +143,8 @@ export class LyraPolicySummary extends LyraElement {
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['decisions']);
 
   static override styles = [LyraElement.styles, styles];
 

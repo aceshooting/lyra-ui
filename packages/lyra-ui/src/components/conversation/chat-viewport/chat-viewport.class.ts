@@ -4,7 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
-import { LyraVirtualList, type VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
+import { LyraVirtualList, type LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './chat-viewport.styles.js';
 import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -537,7 +537,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const list = this.virtualListEl;
     if (!list) return;
     if (e.composedPath()[0] !== list) return;
-    const detail = (e as CustomEvent<VirtualListRange>).detail;
+    const detail = (e as CustomEvent<LyraVirtualListRange>).detail;
     if (
       !detail ||
       !Number.isFinite(detail.start) ||

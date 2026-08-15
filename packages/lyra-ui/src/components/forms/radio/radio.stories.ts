@@ -22,11 +22,29 @@ export const IndependentPointerTheme: StoryObj = {
 
 export const ButtonAppearance: StoryObj = {
   name: 'WA button appearance on lr-radio',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`appearance="button"` supports the same `start`/`prefix` and `end`/`suffix` adornment slots as `<lr-radio-button>`. Empty leading, label, or trailing regions collapse instead of contributing an extra content gap.',
+      },
+    },
+  },
   render: () => html`
     <lr-radio-group label="Plan" name="plan" orientation="horizontal">
-      <lr-radio appearance="button" value="free" checked>Free</lr-radio>
-      <lr-radio appearance="button" value="pro">Pro</lr-radio>
-      <lr-radio appearance="button" value="team">Team</lr-radio>
+      <lr-radio appearance="button" value="free" checked>
+        <span slot="start" aria-hidden="true">●</span>
+        Free
+      </lr-radio>
+      <lr-radio appearance="button" value="pro">
+        <span slot="prefix" aria-hidden="true">◆</span>
+        Pro
+        <span slot="suffix">Popular</span>
+      </lr-radio>
+      <lr-radio appearance="button" value="team">
+        Team
+        <span slot="end" aria-hidden="true">→</span>
+      </lr-radio>
     </lr-radio-group>
   `,
 };

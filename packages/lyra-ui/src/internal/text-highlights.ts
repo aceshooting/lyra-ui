@@ -5,6 +5,13 @@ const TONE_NAMES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger
 const DEFAULT_FLASH_MS = 1800; // mirrors --lr-transition-ambient's default duration (see tokens.styles.ts)
 /** The fallback mutates the DOM once per retained Range, so it shares the viewer search paint cap. */
 const FALLBACK_RANGE_LIMIT = 200;
+const FALLBACK_MARK_LIMIT = 200;
+
+interface FallbackPaintBudget {
+  traversalNodes: number;
+  codeUnits: number;
+  marks: number;
+}
 
 /** Minimal shape of the CSS Custom Highlight API's `Highlight` this module needs -- declared locally
  *  (not as a global augmentation) since this toolchain's DOM lib typings don't yet include it. */
@@ -151,28 +158,42 @@ function nextNodeWithin(node: Node, root: Node): Node | null {
  *  Highlight API path's separately-registered `Highlight` objects, letting a stylesheet distinguish
  *  an active/flash mark from a genuine `setRanges`-painted one even when they share the same `tone`.
  *  `data-lr-highlight-tone` is kept alongside it so tone-based selection still works. */
-function wrapRangeInMarks(range: Range, name: string, tone: LyraHighlightTone, doc: Document): HTMLElement[] {
+function wrapRangeInMarks(
+  range: Range,
+  name: string,
+  tone: LyraHighlightTone,
+  doc: Document,
+  budget: FallbackPaintBudget,
+): HTMLElement[] {
   const ancestor = range.commonAncestorContainer;
   const view = doc.defaultView;
   const textNodeType = view?.Node.TEXT_NODE ?? 3;
   const covered: Text[] = [];
-  let traversed = 0;
-  let inspectedCodeUnits = 0;
   let node: Node | null = ancestor;
-  while (node && traversed < TEXT_QUOTE_LIMITS.maxTraversalNodes) {
-    traversed++;
+  while (node && budget.traversalNodes > 0 && budget.codeUnits > 0) {
+    budget.traversalNodes--;
     if (node.nodeType === textNodeType) {
       const textNode = node as Text;
-      if (inspectedCodeUnits + textNode.data.length > TEXT_QUOTE_LIMITS.maxCorpusCodeUnits) break;
-      inspectedCodeUnits += textNode.data.length;
+      if (textNode.data.length > budget.codeUnits) {
+        budget.codeUnits = 0;
+        break;
+      }
+      budget.codeUnits -= textNode.data.length;
       try {
-        if (textNode.data.length > 0 && range.intersectsNode(textNode)) covered.push(textNode);
+        if (textNode.data.length > 0 && range.intersectsNode(textNode)) {
+          covered.push(textNode);
+          if (covered.length > budget.marks) return [];
+        }
       } catch {
-        // A stale host Range is simply unpaintable; keep the fallback fail-closed.
+        // A stale host Range is wholly unpaintable; never wrap a prefix collected before failure.
+        return [];
       }
     }
     node = nextNodeWithin(node, ancestor);
   }
+  // Never turn a citation into a shorter, incorrect one when the aggregate walk could not prove
+  // that it reached the Range's complete common ancestor.
+  if (node) return [];
   const marks: HTMLElement[] = [];
   for (const textNode of covered) {
     const inRange = splitTextNodeAtRange(range, textNode);
@@ -184,6 +205,8 @@ function wrapRangeInMarks(range: Range, name: string, tone: LyraHighlightTone, d
     inRange.parentNode?.insertBefore(mark, inRange);
     mark.appendChild(inRange);
     marks.push(mark);
+    budget.marks--;
+    if (budget.marks <= 0) break;
   }
   return marks;
 }
@@ -191,9 +214,27 @@ function wrapRangeInMarks(range: Range, name: string, tone: LyraHighlightTone, d
 function unwrapMark(mark: HTMLElement): void {
   const parent = mark.parentNode;
   if (!parent) return;
+  const before = mark.previousSibling;
+  const firstMoved = mark.firstChild;
   while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+  const after = mark.nextSibling;
   parent.removeChild(mark);
-  parent.normalize(); // merges the restored text back with untouched sibling text nodes
+  let cursor = before?.nodeType === Node.TEXT_NODE ? before : firstMoved ?? after;
+  let localSteps = 0;
+  while (cursor && cursor.parentNode === parent && localSteps++ < 4) {
+    if (cursor.nodeType !== Node.TEXT_NODE) break;
+    const text = cursor as Text;
+    if (text.data === '') {
+      const next = text.nextSibling;
+      text.remove();
+      cursor = next;
+      continue;
+    }
+    const next = text.nextSibling;
+    if (next?.nodeType !== Node.TEXT_NODE) break;
+    text.appendData((next as Text).data);
+    next.remove();
+  }
 }
 
 function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
@@ -208,9 +249,14 @@ function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
   function paint(name: string, tone: LyraHighlightTone, ranges: Range[]): void {
     clear(name);
     const marks: HTMLElement[] = [];
+    const budget: FallbackPaintBudget = {
+      traversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes,
+      codeUnits: TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
+      marks: FALLBACK_MARK_LIMIT,
+    };
     const count = Math.min(ranges.length, FALLBACK_RANGE_LIMIT);
-    for (let index = 0; index < count; index++) {
-      marks.push(...wrapRangeInMarks(ranges[index]!, name, tone, doc));
+    for (let index = 0; index < count && budget.traversalNodes > 0 && budget.codeUnits > 0 && budget.marks > 0; index++) {
+      marks.push(...wrapRangeInMarks(ranges[index]!, name, tone, doc, budget));
     }
     marksByName.set(name, marks);
   }

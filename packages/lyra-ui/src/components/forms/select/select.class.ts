@@ -2,7 +2,10 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { Placement } from '@floating-ui/dom';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventDetailSnapshot,
+} from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
@@ -54,14 +57,7 @@ import {
 } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_clear,
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_removeWithContext,
-  LYRA_DEFAULT_select,
-  LYRA_DEFAULT_selectSelectedOverflow,
-  LYRA_DEFAULT_selectValueMissing,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select, LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 function isLyraOptionElement(value: unknown): value is LyraOption {
@@ -86,8 +82,12 @@ export interface LyraSelectEventMap {
   'lr-clear': CustomEvent<null>;
   input: InputEvent;
   change: Event;
-  'lr-input': CustomEvent<{ value: string | string[] }>;
-  'lr-change': CustomEvent<{ value: string | string[] }>;
+  'lr-input': CustomEvent<
+    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+  >;
+  'lr-change': CustomEvent<
+    LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>
+  >;
   blur: FocusEvent;
   focus: FocusEvent;
   'lr-blur': CustomEvent<null>;
@@ -174,7 +174,7 @@ export interface LyraSelectEventMap {
  * @event {InputEvent} input - Fired alongside `change` on every
  *   selection change (native `<select>` doesn't meaningfully distinguish the two either).
  * @event lr-input - Prefixed compatibility alias for `input`; `detail: { value }`.
- * @event {CustomEvent<{ value: string | string[] }>} lr-change - Prefixed compatibility alias
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }>>} lr-change - Prefixed compatibility alias
  *   fired after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s
  *   `lr-change`. Not fired for a programmatic `value` assignment.
  * @event lr-clear - The `with-clear` button emptied the selection, fired after the
@@ -300,16 +300,14 @@ export interface LyraSelectEventMap {
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      clear: LYRA_DEFAULT_clear,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      removeWithContext: LYRA_DEFAULT_removeWithContext,
-      select: LYRA_DEFAULT_select,
-      selectSelectedOverflow: LYRA_DEFAULT_selectSelectedOverflow,
-      selectValueMissing: LYRA_DEFAULT_selectValueMissing,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    select: LYRA_DEFAULT_select,
+    selectSelectedOverflow: LYRA_DEFAULT_selectSelectedOverflow,
+    selectValueMissing: LYRA_DEFAULT_selectValueMissing,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   /** Public WA-compatible intrinsic validator catalog. */

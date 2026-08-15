@@ -163,8 +163,6 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 - `blur` / `focus` (no detail) — one owner-realm native `FocusEvent` re-dispatched from the active
   control in either mode (the closed trigger button or free-text input), retaining `relatedTarget`
   and bubbling/composed unlike the shadow-internal original.
-- `lr-blur` and `lr-focus` (no detail) — prefixed compatibility aliases, each fired immediately
-  after its unprefixed counterpart.
 - `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
 
 **Slots:** `label` (custom visible label content), `hint` (custom hint content), `error` (custom

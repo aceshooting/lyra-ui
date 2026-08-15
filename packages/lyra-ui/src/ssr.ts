@@ -53,7 +53,7 @@ export const LYRA_SSR_CLIENT_RENDER_REASONS = Object.freeze({
   [tag('date-input')]: reason('shadow-dom-query', 'coordinates a rendered slot listener during its first update'),
   [tag('dock-panel')]: reason('layout-measurement', 'reads window dimensions while deriving its initial panel size'),
   [tag('eval-dataset')]: reason('shadow-dom-query', 'queries a nested export menu during its initial render'),
-  [tag('evaluation-run')]: reason('shadow-dom-query', 'derives progress text from rendered shadow content'),
+  [tag('eval-run')]: reason('shadow-dom-query', 'derives progress text from rendered shadow content'),
   [tag('export-button')]: reason('shadow-dom-query', 'queries its rendered menu items during its first update'),
   [tag('file-tree')]: reason('document-focus', 'reads document focus while constructing its initial tree state'),
   [tag('mind-map')]: reason('computed-style', 'resolves live computed token units for its initial SVG geometry'),

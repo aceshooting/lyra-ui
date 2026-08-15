@@ -74,10 +74,12 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @customElement lr-pptx-viewer
  * @event lr-load - Fired after a presentation opens. `detail: { slideCount }`.
  * @event lr-slide-change - Fired when the active slide changes.
- * @event lr-render-error - Fired for terminal fetch/open/render failures. Recoverable post-load
- *   slide/node/search failures use `lr-viewer-diagnostic` without also posing as terminal errors.
+ * @event lr-render-error - Fired for terminal fetch/open/render failures and rejected public slide
+ *   navigation. Navigation rejection enters the localized error state. Recoverable post-load
+ *   slide/node/search events use `lr-viewer-diagnostic` without also posing as terminal errors.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change - Fired whenever search state
- *   changes. Search accepts at most 4,096 query code units, validates at most 4,000,000 result code
+ *   changes, including source-reset and effective-locale re-evaluation. Search accepts at most
+ *   4,096 query code units, validates at most 4,000,000 result code
  *   units, and retains at most 10,000 valid matches; `matchCountExact=false` identifies a
  *   ceiling-truncated lower bound. Bubbling, composed, and non-cancelable.
  * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
@@ -99,10 +101,10 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  *   document-level assertive region.
  * @csspart nav - Slide navigation controls.
  * @csspart previous-button - Previous-slide button.
- * @csspart previous-icon - Previous-slide icon.
+ * @csspart previous-icon - Previous-slide icon; mirrors with effective RTL direction.
  * @csspart slide-count - Current slide indicator.
  * @csspart next-button - Next-slide button.
- * @csspart next-icon - Next-slide icon.
+ * @csspart next-icon - Next-slide icon; mirrors with effective RTL direction.
  * @csspart container - The renderer-owned output container.
  * @cssprop [--lr-pptx-viewer-max-height=none] - Maximum block size of the scrollable renderer
  *   output container before it scrolls internally. Also settable via the `max-height` property.
@@ -155,6 +157,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     const viewer = this.viewer;
     const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
     this.pptxSearchQuery = query;
+    this.lastSearchLocale = this.effectiveLocale;
     this.disposeSearchHighlight();
     viewer?.clearSearchHighlights();
     if (!boundedQuery.accepted) {
@@ -242,7 +245,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   private generation = 0;
   private readonly announcements = new ViewerAnnouncementController(this);
   private pptxSearchQuery = '';
+  private lastSearchLocale = '';
   private pptxSearchMatches: PptxTextSearchResult[] = [];
+  private pendingSearchResetEvent = false;
   private pptxSearchMatchCountExact = true;
   private pptxSearchActiveIndex = -1;
   private pptxSearchGeneration = 0;
@@ -283,16 +288,34 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       this.phase === 'error' ? this.errorMessage : this.localize('loading'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.mount(); });
+    if (changed.has('src') && this.pendingSearchResetEvent) {
+      this.pendingSearchResetEvent = false;
+      this.emitPptxSearchChange();
+    }
     if (changed.has('page') && this.viewer && this.page - 1 !== this.currentSlideIndex) {
       const page = this.page;
       this.scheduleAfterUpdate(() => {
         if (this.page === page) void this.goToSlide(page - 1);
       }, 'page-navigation');
     }
+    const locale = this.effectiveLocale;
+    if (locale !== this.lastSearchLocale) {
+      const shouldRecompute = this.pptxSearchQuery !== '';
+      this.lastSearchLocale = locale;
+      if (shouldRecompute) {
+        this.scheduleAfterUpdate(() => {
+          void this.search(this.pptxSearchQuery);
+        }, 'search');
+      }
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('src')) {
+      this.pendingSearchResetEvent ||= this.hasPptxSearchState();
+      this.resetPptxSearchState();
+    }
     if (changed.has('page') || changed.has('slideCount')) {
       this.page = finiteInteger(this.page, 1, 1, Math.max(1, this.slideCount));
     }
@@ -342,10 +365,31 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.announcements.adopted();
   }
 
+  /** Navigates to a zero-based slide index. A current renderer rejection is contained, enters the
+   * localized error state, and emits `lr-render-error`; invalid or stale navigation is a no-op. */
   async goToSlide(index: number): Promise<void> {
     const viewer = this.viewer;
     if (!viewer || !Number.isSafeInteger(index) || index < 0 || index >= viewer.slideCount) return;
-    await viewer.goToSlide(index);
+    const generation = this.generation;
+    try {
+      await viewer.goToSlide(index);
+    } catch (error) {
+      if (
+        isAbortError(error)
+        || !this.isConnected
+        || generation !== this.generation
+        || viewer !== this.viewer
+      ) return;
+      this.teardown();
+      this.phase = 'error';
+      this.slideCount = 0;
+      this.currentSlideIndex = 0;
+      this.page = 1;
+      this.errorMessage = this.localize('pptxViewerRenderError');
+      this.publishPageViewerSnapshot('error', 0);
+      this.emit('lr-render-error', { error });
+      return;
+    }
     if (viewer === this.viewer && viewer.currentSlideIndex !== this.currentSlideIndex) {
       this.commitSlide(viewer.currentSlideIndex);
     }
@@ -420,14 +464,27 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   private teardown(): void {
+    const shouldEmitSearchReset = this.hasPptxSearchState();
     this.generation++;
-    this.pptxSearchGeneration++;
-    this.disposeSearchHighlight();
-    this.viewer?.clearSearchHighlights();
     this.viewerUnsubscribe?.();
     this.viewerUnsubscribe = undefined;
     this.viewer?.destroy();
     this.viewer = undefined;
+    this.resetPptxSearchState();
+    if (shouldEmitSearchReset) this.emitPptxSearchChange();
+  }
+
+  private hasPptxSearchState(): boolean {
+    return this.pptxSearchQuery !== ''
+      || this.pptxSearchMatches.length > 0
+      || !this.pptxSearchMatchCountExact
+      || this.pptxSearchActiveIndex !== -1;
+  }
+
+  private resetPptxSearchState(): void {
+    this.pptxSearchGeneration++;
+    this.disposeSearchHighlight();
+    this.viewer?.clearSearchHighlights();
     this.pptxSearchQuery = '';
     this.pptxSearchMatches = [];
     this.pptxSearchMatchCountExact = true;

@@ -111,7 +111,8 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 programmatic `files` writes are silent. The hidden native picker's own `change` is contained inside
 the shadow root, so a picker selection exposes exactly one post-commit host `change`, not the
 implementation event plus a duplicate. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
-readonly `files` and `rejected` arrays, fired on both drop and manual file-picker selection) —
+frozen readonly `files` and `rejected` arrays and frozen rejected-file records, fired on both drop
+and manual file-picker selection; immutable `File` objects retain identity) —
 `LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
 }`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
 input (`multiple` unset) receives more than one file (in which case _all_ files are rejected, none

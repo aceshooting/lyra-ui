@@ -93,8 +93,8 @@ npm install @aceshooting/lyra-ui
 ```
 
 ```js
-import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
-import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
+import '@aceshooting/lyra-ui/components/lr-combobox.js';
+import '@aceshooting/lyra-ui/components/lr-option.js';
 ```
 
 ```html
@@ -198,8 +198,8 @@ Lyra ships plain custom elements — no framework-specific wrapper package neede
 
 ```tsx
 // React 19+
-import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
-import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
+import '@aceshooting/lyra-ui/components/lr-combobox.js';
+import '@aceshooting/lyra-ui/components/lr-option.js';
 import type {} from '@aceshooting/lyra-ui/custom-elements-jsx';
 
 <lr-combobox label="Fruit" clearable>
@@ -247,8 +247,9 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
   browser-only capabilities start after hydration.
 - **Browsers** — any evergreen browser with Custom Elements v1 + Shadow DOM support (Chrome, Edge,
   Firefox, Safari). Every push runs the complete suite against Chromium plus a platform-contract
-  suite (a curated fast subset) against Chrome, Edge, Firefox, and Safari (WebKit) on Node 20 and
-  22. The two engines that only get the fast subset per-push (Firefox, Safari/WebKit) get the
+  suite (a curated fast subset) across Chromium, Chrome, Edge, Firefox, and Safari (WebKit). Node
+  20 exercises Firefox and Safari; Node 22 exercises all five browsers. The two engines that only
+  get the fast subset per-push (Firefox, Safari/WebKit) get the
   *complete* suite weekly and before every release via
   [`full-engine.yml`](https://github.com/aceshooting/lyra-ui/actions/workflows/full-engine.yml).
   [`test-all-browsers.yml`](https://github.com/aceshooting/lyra-ui/actions/workflows/test-all-browsers.yml)

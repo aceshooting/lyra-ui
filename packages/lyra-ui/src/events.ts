@@ -16,10 +16,10 @@ import type { LyraComparePanelEventMap } from './components/agent-tools/compare-
 import type { LyraConfirmBarEventMap } from './components/agent-tools/confirm-bar/confirm-bar.class.js';
 import type { LyraEvalDatasetEventMap } from './components/agent-tools/eval-dataset/eval-dataset.class.js';
 import type { LyraEvalResultEventMap } from './components/agent-tools/eval-result/eval-result.class.js';
-import type { LyraEvaluationRunEventMap } from './components/agent-tools/evaluation-run/evaluation-run.class.js';
+import type { LyraEvalRunEventMap } from './components/agent-tools/evaluation-run/evaluation-run.class.js';
 import type { LyraMcpAppEventMap } from './components/agent-tools/mcp-app/mcp-app.class.js';
 import type { LyraPromptStudioEventMap } from './components/agent-tools/prompt-studio/prompt-studio.class.js';
-import type { LyraSchemaViewerEventMap } from './components/agent-tools/schema-viewer/schema-viewer.class.js';
+import type { LyraJsonSchemaViewerEventMap } from './components/agent-tools/schema-viewer/schema-viewer.class.js';
 import type { LyraSpanWaterfallEventMap } from './components/agent-tools/span-waterfall/span-waterfall.class.js';
 import type { LyraStackTraceEventMap } from './components/agent-tools/stack-trace/stack-trace.class.js';
 import type { LyraSubagentPanelEventMap } from './components/agent-tools/subagent-panel/subagent-panel.class.js';
@@ -514,16 +514,16 @@ export type LyraBeforeQueryRunEvent = LyraGraphQueryBuilderEventMap['lr-before-q
 export type LyraBeforeQuerySaveEvent = LyraGraphQueryBuilderEventMap['lr-before-query-save'];
 
 /**
- * `lr-blur` — dispatched by 35 components: `<lr-animated-image>`, `<lr-attachment-trigger>`,
- * `<lr-av-player>`, `<lr-button>`, `<lr-chat-composer>`, `<lr-checkbox>`, `<lr-code-editor>`,
- * `<lr-color-picker>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-icon-button>`, `<lr-input>`,
- * `<lr-locale-picker>`, `<lr-model-select>`, `<lr-native-time-input>`, `<lr-number-input>`,
- * `<lr-otp-input>`, `<lr-pan-zoom>`, `<lr-phone-input>`, `<lr-prompt-input>`, `<lr-radio-button>`,
- * `<lr-radio>`, `<lr-rating>`, `<lr-select>`, `<lr-sequence-playback>`, `<lr-slider>`,
- * `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-time-range>`, `<lr-token-input>`,
- * `<lr-video-playlist>`, `<lr-video>`, `<lr-voice-picker>`, `<lr-zoomable-frame>`.
+ * `lr-blur` — dispatched by 31 components: `<lr-animated-image>`, `<lr-attachment-trigger>`,
+ * `<lr-av-player>`, `<lr-button>`, `<lr-checkbox>`, `<lr-code-editor>`, `<lr-color-picker>`,
+ * `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-icon-button>`, `<lr-input>`, `<lr-locale-picker>`,
+ * `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-pan-zoom>`,
+ * `<lr-phone-input>`, `<lr-radio-button>`, `<lr-radio>`, `<lr-rating>`, `<lr-select>`,
+ * `<lr-sequence-playback>`, `<lr-slider>`, `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`,
+ * `<lr-time-range>`, `<lr-token-input>`, `<lr-video-playlist>`, `<lr-video>`,
+ * `<lr-zoomable-frame>`.
  *
- * A union of 32 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 28 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAnimatedImageEventMap['lr-blur']`.
  */
 export type LyraBlurEvent =
@@ -531,7 +531,6 @@ export type LyraBlurEvent =
   | LyraAttachmentTriggerEventMap['lr-blur']
   | LyraAvPlayerEventMap['lr-blur']
   | LyraButtonEventMap['lr-blur']
-  | LyraChatComposerEventMap['lr-blur']
   | LyraCheckboxEventMap['lr-blur']
   | LyraCodeEditorEventMap['lr-blur']
   | LyraColorPickerEventMap['lr-blur']
@@ -540,11 +539,9 @@ export type LyraBlurEvent =
   | LyraIconButtonEventMap['lr-blur']
   | LyraInputEventMap['lr-blur']
   | LyraLocalePickerEventMap['lr-blur']
-  | LyraModelSelectEventMap['lr-blur']
   | LyraOtpInputEventMap['lr-blur']
   | LyraPanZoomEventMap['lr-blur']
   | LyraPhoneInputEventMap['lr-blur']
-  | LyraPromptInputEventMap['lr-blur']
   | LyraRadioEventMap['lr-blur']
   | LyraRatingEventMap['lr-blur']
   | LyraSelectEventMap['lr-blur']
@@ -557,7 +554,6 @@ export type LyraBlurEvent =
   | LyraTokenInputEventMap['lr-blur']
   | LyraVideoEventMap['lr-blur']
   | LyraVideoPlaylistEventMap['lr-blur']
-  | LyraVoicePickerEventMap['lr-blur']
   | LyraZoomableFrameEventMap['lr-blur'];
 
 /**
@@ -690,8 +686,8 @@ export type LyraChangeEvent =
 export type LyraChipSelectEvent = LyraChipEventMap['lr-chip-select'];
 
 /**
- * `lr-chunk-open` — dispatched by 3 components: `<lr-chunk-inspector>`, `<lr-entity-dossier>`,
- * `<lr-retrieval-results>`.
+ * `lr-chunk-open` — dispatched by 4 components: `<lr-chunk-inspector>`, `<lr-entity-dossier>`,
+ * `<lr-provenance-panel>`, `<lr-retrieval-results>`.
  *
  * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
@@ -1121,7 +1117,7 @@ export type LyraEditEvent = LyraMessageActionsEventMap['lr-edit'];
  * `<lr-entity-chip>`, `<lr-entity-dossier>`, `<lr-neighbor-list>`, `<lr-path-strip>`,
  * `<lr-provenance-panel>`.
  *
- * A union of 5 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 7 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraCommunityCardEventMap['lr-entity-activate']`.
  */
@@ -1129,8 +1125,10 @@ export type LyraEntityActivateEvent =
   | LyraCommunityCardEventMap['lr-entity-activate']
   | LyraEntityCardEventMap['lr-entity-activate']
   | LyraEntityChipEventMap['lr-entity-activate']
+  | LyraEntityDossierEventMap['lr-entity-activate']
   | LyraNeighborListEventMap['lr-entity-activate']
-  | LyraPathStripEventMap['lr-entity-activate'];
+  | LyraPathStripEventMap['lr-entity-activate']
+  | LyraProvenancePanelEventMap['lr-entity-activate'];
 
 /**
  * `lr-entity-open` — dispatched by 3 components: `<lr-entity-chip>`, `<lr-entity-dossier>`,
@@ -1187,18 +1185,18 @@ export type LyraEventSelectEvent = LyraCalendarEventMap['lr-event-select'];
 export type LyraExampleAddRequestEvent = LyraEvalDatasetEventMap['lr-example-add-request'];
 
 /**
- * `lr-example-citation-select` — dispatched by `<lr-evaluation-run>`.
+ * `lr-example-citation-select` — dispatched by `<lr-eval-run>`.
  *
- * Detail type: `LyraEvaluationRunEventMap['lr-example-citation-select']`.
+ * Detail type: `LyraEvalRunEventMap['lr-example-citation-select']`.
  */
-export type LyraExampleCitationSelectEvent = LyraEvaluationRunEventMap['lr-example-citation-select'];
+export type LyraExampleCitationSelectEvent = LyraEvalRunEventMap['lr-example-citation-select'];
 
 /**
- * `lr-example-claim-select` — dispatched by `<lr-evaluation-run>`.
+ * `lr-example-claim-select` — dispatched by `<lr-eval-run>`.
  *
- * Detail type: `LyraEvaluationRunEventMap['lr-example-claim-select']`.
+ * Detail type: `LyraEvalRunEventMap['lr-example-claim-select']`.
  */
-export type LyraExampleClaimSelectEvent = LyraEvaluationRunEventMap['lr-example-claim-select'];
+export type LyraExampleClaimSelectEvent = LyraEvalRunEventMap['lr-example-claim-select'];
 
 /**
  * `lr-example-remove-request` — dispatched by `<lr-eval-dataset>`.
@@ -1215,36 +1213,37 @@ export type LyraExampleRemoveRequestEvent = LyraEvalDatasetEventMap['lr-example-
 export type LyraExampleSelectEvent = LyraEvalDatasetEventMap['lr-example-select'];
 
 /**
- * `lr-example-toggle` — dispatched by `<lr-evaluation-run>`.
+ * `lr-example-toggle` — dispatched by `<lr-eval-run>`.
  *
- * Detail type: `LyraEvaluationRunEventMap['lr-example-toggle']`.
+ * Detail type: `LyraEvalRunEventMap['lr-example-toggle']`.
  */
-export type LyraExampleToggleEvent = LyraEvaluationRunEventMap['lr-example-toggle'];
+export type LyraExampleToggleEvent = LyraEvalRunEventMap['lr-example-toggle'];
 
 /**
- * `lr-example-tool-activate` — dispatched by `<lr-evaluation-run>`.
+ * `lr-example-tool-activate` — dispatched by `<lr-eval-run>`.
  *
- * Detail type: `LyraEvaluationRunEventMap['lr-example-tool-activate']`.
+ * Detail type: `LyraEvalRunEventMap['lr-example-tool-activate']`.
  */
-export type LyraExampleToolActivateEvent = LyraEvaluationRunEventMap['lr-example-tool-activate'];
+export type LyraExampleToolActivateEvent = LyraEvalRunEventMap['lr-example-tool-activate'];
 
 /**
- * `lr-example-tool-approval-decide` — dispatched by `<lr-evaluation-run>`.
+ * `lr-example-tool-approval-decide` — dispatched by `<lr-eval-run>`.
  *
- * Detail type: `LyraEvaluationRunEventMap['lr-example-tool-approval-decide']`.
+ * Detail type: `LyraEvalRunEventMap['lr-example-tool-approval-decide']`.
  */
-export type LyraExampleToolApprovalDecideEvent = LyraEvaluationRunEventMap['lr-example-tool-approval-decide'];
+export type LyraExampleToolApprovalDecideEvent = LyraEvalRunEventMap['lr-example-tool-approval-decide'];
 
 /**
- * `lr-example-tool-render-error` — dispatched by `<lr-evaluation-run>`.
+ * `lr-example-tool-render-error` — dispatched by `<lr-eval-run>`.
  *
- * Detail type: `LyraEvaluationRunEventMap['lr-example-tool-render-error']`.
+ * Detail type: `LyraEvalRunEventMap['lr-example-tool-render-error']`.
  */
-export type LyraExampleToolRenderErrorEvent = LyraEvaluationRunEventMap['lr-example-tool-render-error'];
+export type LyraExampleToolRenderErrorEvent = LyraEvalRunEventMap['lr-example-tool-render-error'];
 
 /**
- * `lr-expand` — dispatched by 7 components: `<lr-accordion>`, `<lr-chunk-inspector>`,
- * `<lr-entity-dossier>`, `<lr-memory-panel>`, `<lr-source-card>`, `<lr-tree-item>`, `<lr-tree>`.
+ * `lr-expand` — dispatched by 8 components: `<lr-accordion>`, `<lr-chunk-inspector>`,
+ * `<lr-entity-dossier>`, `<lr-memory-panel>`, `<lr-provenance-panel>`, `<lr-source-card>`,
+ * `<lr-tree-item>`, `<lr-tree>`.
  *
  * A union of 6 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAccordionEventMap['lr-expand']`.
@@ -1383,16 +1382,16 @@ export type LyraFinishEvent = LyraAnimationEventMap['lr-finish'];
 export type LyraFitChangeEvent = LyraImageViewerEventMap['lr-fit-change'];
 
 /**
- * `lr-focus` — dispatched by 35 components: `<lr-animated-image>`, `<lr-attachment-trigger>`,
- * `<lr-av-player>`, `<lr-button>`, `<lr-chat-composer>`, `<lr-checkbox>`, `<lr-code-editor>`,
- * `<lr-color-picker>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-icon-button>`, `<lr-input>`,
- * `<lr-locale-picker>`, `<lr-model-select>`, `<lr-native-time-input>`, `<lr-number-input>`,
- * `<lr-otp-input>`, `<lr-pan-zoom>`, `<lr-phone-input>`, `<lr-prompt-input>`, `<lr-radio-button>`,
- * `<lr-radio>`, `<lr-rating>`, `<lr-select>`, `<lr-sequence-playback>`, `<lr-slider>`,
- * `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-time-range>`, `<lr-token-input>`,
- * `<lr-video-playlist>`, `<lr-video>`, `<lr-voice-picker>`, `<lr-zoomable-frame>`.
+ * `lr-focus` — dispatched by 31 components: `<lr-animated-image>`, `<lr-attachment-trigger>`,
+ * `<lr-av-player>`, `<lr-button>`, `<lr-checkbox>`, `<lr-code-editor>`, `<lr-color-picker>`,
+ * `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-icon-button>`, `<lr-input>`, `<lr-locale-picker>`,
+ * `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-pan-zoom>`,
+ * `<lr-phone-input>`, `<lr-radio-button>`, `<lr-radio>`, `<lr-rating>`, `<lr-select>`,
+ * `<lr-sequence-playback>`, `<lr-slider>`, `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`,
+ * `<lr-time-range>`, `<lr-token-input>`, `<lr-video-playlist>`, `<lr-video>`,
+ * `<lr-zoomable-frame>`.
  *
- * A union of 32 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 28 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraAnimatedImageEventMap['lr-focus']`.
  */
 export type LyraFocusEvent =
@@ -1400,7 +1399,6 @@ export type LyraFocusEvent =
   | LyraAttachmentTriggerEventMap['lr-focus']
   | LyraAvPlayerEventMap['lr-focus']
   | LyraButtonEventMap['lr-focus']
-  | LyraChatComposerEventMap['lr-focus']
   | LyraCheckboxEventMap['lr-focus']
   | LyraCodeEditorEventMap['lr-focus']
   | LyraColorPickerEventMap['lr-focus']
@@ -1409,11 +1407,9 @@ export type LyraFocusEvent =
   | LyraIconButtonEventMap['lr-focus']
   | LyraInputEventMap['lr-focus']
   | LyraLocalePickerEventMap['lr-focus']
-  | LyraModelSelectEventMap['lr-focus']
   | LyraOtpInputEventMap['lr-focus']
   | LyraPanZoomEventMap['lr-focus']
   | LyraPhoneInputEventMap['lr-focus']
-  | LyraPromptInputEventMap['lr-focus']
   | LyraRadioEventMap['lr-focus']
   | LyraRatingEventMap['lr-focus']
   | LyraSelectEventMap['lr-focus']
@@ -1426,7 +1422,6 @@ export type LyraFocusEvent =
   | LyraTokenInputEventMap['lr-focus']
   | LyraVideoEventMap['lr-focus']
   | LyraVideoPlaylistEventMap['lr-focus']
-  | LyraVoicePickerEventMap['lr-focus']
   | LyraZoomableFrameEventMap['lr-focus'];
 
 /**
@@ -2732,11 +2727,11 @@ export type LyraRunSelectEvent = LyraRagEvalDashboardEventMap['lr-run-select'];
 export type LyraSaveEvent = LyraPromptStudioEventMap['lr-save'];
 
 /**
- * `lr-schema-select` — dispatched by `<lr-schema-viewer>`.
+ * `lr-schema-select` — dispatched by `<lr-json-schema-viewer>`.
  *
- * Detail type: `LyraSchemaViewerEventMap['lr-schema-select']`.
+ * Detail type: `LyraJsonSchemaViewerEventMap['lr-schema-select']`.
  */
-export type LyraSchemaSelectEvent = LyraSchemaViewerEventMap['lr-schema-select'];
+export type LyraSchemaSelectEvent = LyraJsonSchemaViewerEventMap['lr-schema-select'];
 
 /**
  * `lr-scroll` — dispatched by `<lr-scroller>`.
@@ -3288,8 +3283,8 @@ export type LyraToolCallChipSelectEvent = LyraToolCallChipEventMap['lr-tool-call
 export type LyraToolRenderErrorEvent = LyraToolTimelineEventMap['lr-tool-render-error'];
 
 /**
- * `lr-toolbar-actions-change` — dispatched by 3 components: `<lr-branch-picker>`,
- * `<lr-copy-button>`, `<lr-message-feedback>`.
+ * `lr-toolbar-actions-change` — dispatched by 4 components: `<lr-branch-picker>`,
+ * `<lr-context-inspector>`, `<lr-copy-button>`, `<lr-message-feedback>`.
  *
  * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.

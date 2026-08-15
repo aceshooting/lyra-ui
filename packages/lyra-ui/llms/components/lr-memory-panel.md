@@ -38,16 +38,20 @@ shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded
 - `label: string = ''` — fallback name for the stable overall group. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
+Each memory list is canonicalized independently by nonblank `id`. Malformed rows and later
+duplicates are omitted first-wins before empty state, focus/disclosure state, confirmations, counts,
+rendering, or actions.
+
 **Events:**
 
-- `lr-add` (`detail: LyraMemoryAddDetail` = `{ item: LyraMemoryItem }`) — a pending "promote to
+- `lr-add` (`detail: LyraMemoryAddDetail` = `{ memory: LyraMemoryItem }`) — a pending "promote to
   long-term" was approved; the short-term item as-is. Only offered on short-term items.
-- `lr-remove` (`detail: LyraMemoryRemoveDetail` = `{ id: string; scope: 'short-term' | 'long-term' }`)
+- `lr-remove` (`detail: LyraMemoryRemoveDetail` = `{ memoryId: string; scope: 'short-term' | 'long-term' }`)
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: undefined`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-expand` (`detail: LyraMemoryExpandDetail` = `{ id: string; expanded: boolean }`) — an item's
-  provenance disclosure was toggled.
+- `lr-expand` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
+  'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled.
 
 **Slots:** none.
 

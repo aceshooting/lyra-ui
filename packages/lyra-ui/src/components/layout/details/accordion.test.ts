@@ -226,6 +226,8 @@ describe('<lr-accordion>', () => {
     items[0]!.expand();
     const expandEvent = (await itemExpanded) as CustomEvent<{ item: LyraAccordionItem }>;
     expect(expandEvent.detail.item.id).to.equal('method-item');
+    expect(expandEvent.detail.item === items[0]).to.equal(true);
+    expect(Object.isFrozen(expandEvent.detail)).to.equal(true);
 
     const collapsedIds: string[] = [];
     accordion.addEventListener('lr-after-collapse', (event) => collapsedIds.push(event.detail.item.id));

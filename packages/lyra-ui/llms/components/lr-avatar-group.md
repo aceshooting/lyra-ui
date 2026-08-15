@@ -37,7 +37,8 @@ disconnect and reconnect.
 - `label: string = ''` — the group's `role="group"` accessible name. A host-level `aria-label` wins
   if both are set; with neither, no `aria-label` is rendered.
 
-**Events:** `lr-overflow-click` (`detail: { hiddenCount: number; hiddenAvatars: LyraAvatar[] }`) —
+**Events:** `lr-overflow-click` (frozen
+`detail: { readonly hiddenCount: number; readonly hiddenAvatars: readonly LyraAvatar[] }`) —
 the badge was activated by click or Enter/Space. Non-cancelable, purely informational: the
 component keeps rendering the same collapsed stack, and a host typically wires this to its own
 popover/dialog listing the hidden members. There is no `expanded` state and no `aria-expanded`.
@@ -50,9 +51,11 @@ avatars are hidden through reversible component-owned state.
 `overflow-badge` (the 40px-minimum action surface; only rendered while `max` is actively
 overflowing), and `overflow-badge-visual` (the avatar-tier-sized painted disc inside it).
 
-**Themeable custom properties:** `--lr-avatar-group-avatar-size` (default `var(--lr-size-2rem)`,
+**Themeable custom properties:** `--lr-avatar-group-avatar-size` (default `var(--lr-size-3rem)`,
 with a private default stepped across the same six tiers as `<lr-avatar>`'s `--lr-avatar-size`,
-from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl`),
+from `var(--lr-size-1-5rem)` at `2xs`, through `var(--lr-size-2rem)`/
+`var(--lr-size-2-5rem)`/`var(--lr-size-3rem)`/`var(--lr-size-4rem)`, to
+`var(--lr-size-5rem)` at `xl`),
 `--lr-avatar-group-overlap` (default `var(--lr-size-neg-6px)`, whose private default follows `size`;
 a logical `margin-inline-start`, so it auto-mirrors
 under `dir="rtl"` — setting `0` or a positive length turns the stack into normal spacing),
@@ -61,10 +64,11 @@ under `dir="rtl"` — setting `0` or a positive length turns the stack into norm
 `--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, with a private default that follows
 `variant`), `--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, with a private default
 that follows `variant`),
-`--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-sm)`) — the font size of the "+N"
+`--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-m)`) — the font size of the "+N"
 badge label. Its private default follows `size` alongside the badge diameter, matching
-`<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars it caps read at the
-same optical weight. An inherited or direct public value remains authoritative for every hook.
+`<lr-avatar>`'s own `--lr-avatar-font-size` scale (`xs`/`sm`/`md-sm`/`m`/`lg`/`xl` font tokens from
+the `2xs` through `xl` size tiers), so the badge and the avatars it caps read at the same optical
+weight. An inherited or direct public value remains authoritative for every hook.
 
 The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier while
 the nested visual disc stays exactly avatar-sized, so small tiers do not paint as oversized 40px

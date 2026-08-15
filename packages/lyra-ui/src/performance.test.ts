@@ -12,7 +12,7 @@ import './components/viewers/csv-viewer/csv-viewer.js';
 import './components/viewers/spreadsheet-viewer/spreadsheet-viewer.js';
 import * as XLSX from 'xlsx';
 import type { LyraVirtualList } from './components/layout/virtual-list/virtual-list.js';
-import type { LyraLiteChart, LiteSeries } from './components/charts/chart/lite-chart.js';
+import type { LyraLiteChart, LyraLiteChartSeries } from './components/charts/chart/lite-chart.js';
 import type { LyraHeatmap } from './components/data/heatmap/heatmap.js';
 import type { LyraTable, TableColumn } from './components/data/table/table.js';
 import type { LyraGraph, GraphNode, GraphLink } from './components/retrieval/graph/graph.js';
@@ -181,7 +181,7 @@ it('keeps lite-chart dataset churn within the large-series budget', async () => 
   const host = (await fixture(html`<lr-lite-chart type="line"></lr-lite-chart>`)) as LyraLiteChart;
   const labels = Array.from({ length: 1_000 }, (_, index) => `${index}`);
   const data = labels.map((_, index) => Math.sin(index / 24) * 50 + 50);
-  const series: LiteSeries[] = [{ label: 'Series', data }];
+  const series: LyraLiteChartSeries[] = [{ label: 'Series', data }];
   host.labels = labels;
   host.datasets = series;
   const result = await benchmark(host, (iteration) => {

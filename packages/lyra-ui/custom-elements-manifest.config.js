@@ -417,8 +417,8 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
     'lr-split-panel',
     {
       snap: {
-        readType: 'string | SnapFunction',
-        writeType: 'string | SnapFunction | undefined',
+        readType: 'string | LyraSplitPanelSnapFunction',
+        writeType: 'string | LyraSplitPanelSnapFunction | undefined',
       },
     },
   ],

@@ -15,11 +15,11 @@
 
 ## `lr-retrieval-results`
 
-Orchestration-level ranked-chunk surface: takes raw `RetrievalChunk[]` and adds deduplication,
-optional source grouping, multi-selection, pagination/infinite loading, and a compact/expanded
-switch. Each row wraps exactly one chunk in an internal `lr-chunk-inspector` (fed a single-element
-array), reusing its score bar, tier coloring, title+page rendering, and expandable text verbatim.
-Large sets window through an internal `lr-virtual-list`.
+Orchestration-level ranked-chunk surface: takes raw `RetrievalChunk[]` and adds identity
+canonicalization, optional source grouping, multi-selection, pagination/infinite loading, and a
+compact/expanded switch. Each row wraps exactly one chunk in an internal `lr-chunk-inspector` (fed
+a single-element array), reusing its score bar, tier coloring, title+page rendering, and expandable
+text verbatim. Large sets window through an internal `lr-virtual-list`.
 
 **Properties:**
 
@@ -27,16 +27,18 @@ Large sets window through an internal `lr-virtual-list`.
   `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; text: string; score: number;
 source: DocumentRef; metadata?: Record<string, unknown>; rank?: number; locator?: DocumentLocator;
 queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreakdown }`. The raw,
-  un-deduplicated/unsorted/ungrouped result set; host-owned. Internally mapped to
+  unsorted/ungrouped result set; host-owned. Blank ids and later duplicate ids are omitted
+  first-wins before sorting, grouping, selection, rendering, or events. Internally mapped to
   `lr-chunk-inspector`'s flatter `LyraChunk` via `source.id → sourceId`, `source.name → title`, and
   `locator → anchor`; a `page`-kind `locator` additionally supplies the inspector's visible `page`.
   Nothing is ever guessed from `metadata` — a chunk with no `locator` simply leaves `anchor`/`page`
   unset
-- `selectedIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. The component
-  updates its own copy on toggle _then_ emits `lr-select`; reassign to control. An id with no
-  matching chunk is harmless
+- `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
+  ids, duplicates, and ids absent from the canonical chunk model are pruned. The component updates
+  its own copy on toggle _then_ emits `lr-select`; reassign to control
 - `selectable: boolean = true` (reflected) — shows a per-row `lr-checkbox`
-- `dedupe: boolean = true` (reflected) — drops duplicate `id`s, keeping the higher `score`
+- `dedupe: boolean = true` (reflected) — retained for compatibility; malformed, blank, and later
+  duplicate chunk ids are always omitted first-wins so identity never becomes ambiguous
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
 - `grouping: 'source' | 'custom' | 'none' = 'none'` — `'source'` buckets rows under a header per
   `source.id` (the header text is that source's `name`, or a localized "untitled source" when it has
@@ -47,7 +49,7 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
 - `groupBy?: (chunk: RetrievalChunk) => string` (attribute: false) — `grouping="custom"` only: the
   group id for each chunk (a date bucket, a relevance tier, a domain-specific bucket). Left unset,
   `'custom'` degrades to the same flat list `'none'` renders rather than inventing a key, so the
-  built-in dedup/sort/virtualization pipeline stays usable either way. The same escape hatch
+  built-in identity/sort/virtualization pipeline stays usable either way. The same escape hatch
   `lr-thread-list` already exposes
 - `groupLabel?: (id: string, chunks: RetrievalChunk[]) => string` (attribute: false) —
   `grouping="custom"` only: the group's header text. Left unset, the group id is shown verbatim
@@ -59,9 +61,10 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   bar only and omits `metadata` entirely
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   forwarded to every per-row `lr-chunk-inspector`
-- `virtualizeAt: number = 50` (attribute `virtualize-at`) — row count (after dedup, before grouping)
-  above which rendering switches to the internal `lr-virtual-list`
-- `activeId: string = ''` (attribute `active-id`) — the chunk currently open in a viewer; forwarded
+- `virtualizeAt: number = 50` (attribute `virtualize-at`) — row count (after identity
+  canonicalization, before grouping) above which rendering switches to the internal
+  `lr-virtual-list`
+- `activeChunkId: string = ''` (attribute `active-chunk-id`) — the chunk currently open in a viewer; forwarded
   to each row and to the virtual list (which scrolls the matching row into view)
 - `loading: boolean = false` (reflected)
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — while virtualized, forwarded to the
@@ -74,17 +77,20 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty
 
+When a later update enters the settled empty state — including a completed loading cycle that
+found no results — the localized empty message is announced through the shared polite light-DOM
+region. Initial empty content, loading intermediates, and reconnects are not replayed.
+
 **Events:**
 
-- `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ ids: string[]; chunks: RetrievalChunk[] }`)
+- `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks: RetrievalChunk[] }`)
   — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
   host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
-  deduplicated even when `dedupe=false` keeps duplicate rows visible; the highest finite score wins
-  and equal scores keep first appearance.
+  canonicalized nonblank/first-wins regardless of the legacy `dedupe` switch.
 - `lr-load-more` (`detail: undefined`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
-- `lr-chunk-open` (`detail: { id, sourceId, anchor? }`) — forwarded verbatim from a row's
+- `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) — forwarded verbatim from a row's
   `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`.
 
 **Slots:** none.

@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './radio-button.js';
 import './radio.js';
 import './radio-group.js';
@@ -45,6 +45,110 @@ it('projects canonical and Shoelace adornment aliases through shared parts', asy
   expect(suffixSlot.assignedElements().map((element) => element.id)).to.deep.equal(['suffix']);
   expect(getComputedStyle(start).maxInlineSize).to.equal('40%');
   expect(getComputedStyle(end).maxInlineSize).to.equal('40%');
+});
+
+it('collapses empty start, label, and end wrappers on both button authoring paths', async () => {
+  for (const markup of [
+    html`<lr-radio-button aria-label="Choice"></lr-radio-button>`,
+    html`<lr-radio appearance="button" aria-label="Choice"></lr-radio>`,
+  ]) {
+    const el = await fixture<HTMLElement & { updateComplete: Promise<unknown> }>(markup);
+    const root = el.shadowRoot!;
+    const wrappers = (): HTMLElement[] => [
+      root.querySelector<HTMLElement>('[part~="start"]')!,
+      root.querySelector<HTMLElement>('[part="label"]')!,
+      root.querySelector<HTMLElement>('[part~="end"]')!,
+    ];
+
+    expect(root.querySelectorAll('[part~="start"]').length, el.localName).to.equal(1);
+    expect(root.querySelectorAll('[part="label"]').length, el.localName).to.equal(1);
+    expect(root.querySelectorAll('[part~="end"]').length, el.localName).to.equal(1);
+    expect(wrappers().map((wrapper) => getComputedStyle(wrapper).display)).to.deep.equal([
+      'none',
+      'none',
+      'none',
+    ]);
+
+    const start = document.createElement('span');
+    start.slot = 'prefix';
+    start.textContent = 'Leading';
+    const label = document.createTextNode('Label');
+    const end = document.createElement('span');
+    end.slot = 'suffix';
+    end.textContent = 'Trailing';
+
+    el.append(label);
+    await waitUntil(() => wrappers().map((wrapper) => wrapper.hidden).join() === 'true,false,true');
+
+    label.remove();
+    el.append(start);
+    await waitUntil(() => wrappers().map((wrapper) => wrapper.hidden).join() === 'false,true,true');
+
+    start.remove();
+    el.append(end);
+    await waitUntil(() => wrappers().map((wrapper) => wrapper.hidden).join() === 'true,true,false');
+
+    el.append(start, label);
+    await waitUntil(() => wrappers().every((wrapper) => getComputedStyle(wrapper).display !== 'none'));
+
+    start.remove();
+    label.remove();
+    end.remove();
+    await waitUntil(() => wrappers().every((wrapper) => getComputedStyle(wrapper).display === 'none'));
+  }
+});
+
+it('tracks in-place text mutations through a forwarded button adornment slot', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+  const text = wrapper.ownerDocument.createTextNode(' ');
+  wrapper.append(text);
+
+  const root = wrapper.attachShadow({ mode: 'open' });
+  root.innerHTML = `
+    <lr-radio appearance="button" aria-label="Choice">
+      <slot slot="prefix"></slot>
+    </lr-radio>
+  `;
+  const el = root.querySelector<HTMLElement & { updateComplete: Promise<unknown> }>('lr-radio')!;
+  await el.updateComplete;
+  const start = el.shadowRoot!.querySelector<HTMLElement>('[part~="start"]')!;
+
+  await waitUntil(() => start.hidden);
+  text.data = 'Forwarded prefix';
+  await waitUntil(() => !start.hidden);
+  text.data = ' ';
+  await waitUntil(() => start.hidden);
+});
+
+it('preserves all button adornment slots when lr-radio leaves and re-enters button appearance', async () => {
+  const el = await fixture<HTMLElement & {
+    appearance: 'default' | 'button';
+    updateComplete: Promise<unknown>;
+  }>(html`
+    <lr-radio appearance="button" value="a">
+      <span id="start" slot="start">Start</span>
+      <span id="prefix" slot="prefix">Prefix</span>
+      Alpha
+      <span id="end" slot="end">End</span>
+      <span id="suffix" slot="suffix">Suffix</span>
+    </lr-radio>
+  `);
+  const assignedIds = (): string[][] => [
+    ...el.shadowRoot!.querySelectorAll<HTMLSlotElement>(
+      'slot[name="start"], slot[name="prefix"], slot[name="end"], slot[name="suffix"]',
+    ),
+  ].map((slot) => slot.assignedElements().map((element) => element.id));
+
+  expect(assignedIds()).to.deep.equal([['start'], ['prefix'], ['end'], ['suffix']]);
+
+  el.appearance = 'default';
+  await el.updateComplete;
+  expect(el.querySelectorAll('[slot="start"], [slot="prefix"], [slot="end"], [slot="suffix"]').length)
+    .to.equal(4);
+
+  el.appearance = 'button';
+  await el.updateComplete;
+  expect(assignedIds()).to.deep.equal([['start'], ['prefix'], ['end'], ['suffix']]);
 });
 
 it('contains a standalone unbroken button label at 320px in LTR and RTL', async () => {

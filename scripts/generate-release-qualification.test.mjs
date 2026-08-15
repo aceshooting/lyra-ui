@@ -1,9 +1,9 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import assert from 'node:assert/strict';
+import test from 'node:test';
 
-import { deriveReleaseQualification } from "./generate-release-qualification.mjs";
+import { deriveReleaseQualification } from './generate-release-qualification.mjs';
 
-test("derives required job names and expands workflow-owned matrices", () => {
+test('derives required job names and expands workflow-owned matrices', () => {
   const ciSource = `
 name: CI
 jobs:
@@ -49,40 +49,40 @@ jobs:
     schemaVersion: 1,
     workflows: {
       ci: {
-        name: "CI",
-        path: ".github/workflows/ci.yml",
-        event: "push",
-        headBranch: "main",
+        name: 'CI',
+        path: '.github/workflows/ci.yml',
+        event: 'push',
+        headBranch: 'main',
         requiredJobs: [
-          "chromium / Node 22 / shard 1/2",
-          "chromium / Node 22 / shard 2/2",
-          "firefox / Node 20 / shard 1/1",
-          "lint",
-          "stable-check",
+          'chromium / Node 22 / shard 1/2',
+          'chromium / Node 22 / shard 2/2',
+          'firefox / Node 20 / shard 1/1',
+          'lint',
+          'stable-check',
         ],
       },
       fullEngine: {
-        name: "Full browser-engine suite",
-        path: ".github/workflows/full-engine.yml",
-        event: "workflow_dispatch",
-        headBranch: "main",
+        name: 'Full browser-engine suite',
+        path: '.github/workflows/full-engine.yml',
+        event: 'workflow_dispatch',
+        headBranch: 'main',
         requiredJobs: [
-          "firefox / shard 1/2",
-          "firefox / shard 2/2",
-          "webkit / shard 1/2",
-          "webkit / shard 2/2",
+          'firefox / shard 1/2',
+          'firefox / shard 2/2',
+          'webkit / shard 1/2',
+          'webkit / shard 2/2',
         ],
       },
     },
   });
 });
 
-test("fails closed on an unmarked workflow or unresolved matrix interpolation", () => {
+test('fails closed on an unmarked workflow or unresolved matrix interpolation', () => {
   assert.throws(
     () =>
       deriveReleaseQualification({
-        ciSource: "name: CI\njobs:\n  lint:\n    runs-on: ubuntu-latest",
-        fullEngineSource: "name: Full\njobs: {}",
+        ciSource: 'name: CI\njobs:\n  lint:\n    runs-on: ubuntu-latest',
+        fullEngineSource: 'name: Full\njobs: {}',
       }),
     /no release-qualification jobs/
   );

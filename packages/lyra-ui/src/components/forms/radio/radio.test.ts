@@ -1242,6 +1242,9 @@ it("exposes exactly one aggregate lr-change shape when an owned radio is clicked
   expect(events.every((event) => event.target === group)).to.be.true;
   expect(events.map((event) => event.detail.value)).to.deep.equal(["a", "b"]);
   expect(events.map((event) => event.detail.radio)).to.deep.equal([a, b]);
+  expect(events.every((event) => Object.isFrozen(event.detail))).to.be.true;
+  expect(events[0]!.detail.radio === a).to.be.true;
+  expect(events[1]!.detail.radio === b).to.be.true;
 });
 
 it("emits only the aggregate alias to a capture listener registered before group connect", async () => {

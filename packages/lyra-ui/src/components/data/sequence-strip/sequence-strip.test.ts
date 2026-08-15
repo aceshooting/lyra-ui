@@ -1,6 +1,7 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './sequence-strip.js';
 import type { LyraSequenceStrip } from './sequence-strip.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const categories = [
   { id: 'text', color: '#4f46e5', label: 'Text' },
@@ -111,17 +112,21 @@ it('bounds the DOM window for 200 and 500 items at 320px without sacrificing ful
 it('snapshots readonly models and enforces first-wins unique item/category ids', async () => {
   const el = (await fixture(html`<lr-sequence-strip show-legend></lr-sequence-strip>`)) as LyraSequenceStrip;
   const sourceItems = [
+    { id: '', categoryId: 'first', label: 'Missing item identity' },
+    { id: '   ', categoryId: 'first', label: 'Blank item identity' },
     { id: 'same', categoryId: 'first', label: 'First item' },
     { id: 'same', categoryId: 'second', label: 'Duplicate item' },
   ];
   const sourceCategories = [
+    { id: '', color: '#000', label: 'Missing category identity' },
+    { id: '   ', color: '#000', label: 'Blank category identity' },
     { id: 'first', color: '#111', label: 'First category' },
     { id: 'first', color: '#222', label: 'Duplicate category' },
   ];
   el.items = sourceItems;
   el.categories = sourceCategories;
-  sourceItems[0]!.label = 'Mutated caller value';
-  sourceCategories[0]!.label = 'Mutated caller category';
+  sourceItems[2]!.label = 'Mutated caller value';
+  sourceCategories[2]!.label = 'Mutated caller category';
   await el.updateComplete;
 
   expect(el.items.length).to.equal(1);
@@ -249,6 +254,37 @@ it('honors a .strings override for the per-category summary clause in the render
   );
 });
 
+it('gives an unnamed category a localized nonempty list-item and tooltip label', async () => {
+  const el = (await fixture(html`
+    <lr-sequence-strip
+      .strings=${{ sequenceStripUnnamedCategory: 'Sans catégorie' }}
+    ></lr-sequence-strip>
+  `)) as LyraSequenceStrip;
+  el.items = [{ id: 'unnamed-item', categoryId: 'unnamed-category' }];
+  el.categories = [{ id: 'unnamed-category', color: '#4f46e5', label: '   ' }];
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
+  expect(cell.getAttribute('aria-label')).to.equal('Sans catégorie');
+  cell.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Sans catégorie');
+  await expect(el).to.be.accessible();
+});
+
+it('uses the English unnamed-category fallback without exposing an internal category id', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.items = [{ id: 'unnamed-item', categoryId: 'internal-category-id' }];
+  el.categories = [{ id: 'internal-category-id', color: '#4f46e5' }];
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
+  expect(cell.getAttribute('aria-label')).to.equal('Unnamed category');
+  cell.focus();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Unnamed category');
+});
+
 describe('hover tooltip', () => {
   const labeledItems = [
     { id: '1', categoryId: 'text', label: 'Turn 1: text' },
@@ -279,6 +315,77 @@ describe('hover tooltip', () => {
     cell.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+  });
+
+  it('anchors the pointer tooltip to the hovered cell rather than the whole strip', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 480px">
+        <lr-sequence-strip></lr-sequence-strip>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-sequence-strip') as LyraSequenceStrip;
+    el.items = [
+      ...labeledItems,
+      { id: '3', categoryId: 'text', label: 'Turn 3: text' },
+      { id: '4', categoryId: 'tool', label: 'Turn 4: tool' },
+    ];
+    el.categories = categories;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')[0]!;
+    const cellRect = cell.getBoundingClientRect();
+
+    await resetMouse();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(cellRect.left + cellRect.width / 2),
+          Math.round(cellRect.top + cellRect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')?.hidden === false,
+        'pointer tooltip did not open over the hovered cell',
+      );
+      const tooltipRect = el.shadowRoot!
+        .querySelector<HTMLElement>('[part="tooltip"]')!
+        .getBoundingClientRect();
+
+      expect(tooltipRect.left + tooltipRect.width / 2).to.be.closeTo(
+        cellRect.left + cellRect.width / 2,
+        1,
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('anchors the focus tooltip to the focused cell rather than the whole strip', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 480px">
+        <lr-sequence-strip></lr-sequence-strip>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-sequence-strip') as LyraSequenceStrip;
+    el.items = [
+      ...labeledItems,
+      { id: '3', categoryId: 'text', label: 'Turn 3: text' },
+      { id: '4', categoryId: 'tool', label: 'Turn 4: tool' },
+    ];
+    el.categories = categories;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')[3]!;
+
+    cell.focus();
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!;
+    const cellRect = cell.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+
+    expect(tooltipRect.left + tooltipRect.width / 2).to.be.closeTo(
+      cellRect.left + cellRect.width / 2,
+      1,
+    );
   });
 
   it('shows item details on keyboard focus and roves with arrow/Home/End keys', async () => {
@@ -432,7 +539,7 @@ describe('hover tooltip', () => {
   });
 
   it('flips the tooltip centering translate under dir="rtl"', async () => {
-    const tooltipTranslateX = async (dirAttr: string): Promise<number> => {
+    const tooltipGeometry = async (dirAttr: string): Promise<{ centerDelta: number; translateX: number }> => {
       const el = (await fixture(
         html`<lr-sequence-strip dir=${dirAttr}></lr-sequence-strip>`,
       )) as LyraSequenceStrip;
@@ -443,13 +550,24 @@ describe('hover tooltip', () => {
       cell.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
       await el.updateComplete;
       const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
-      return new DOMMatrixReadOnly(getComputedStyle(tooltip).transform).m41;
+      const cellRect = cell.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      return {
+        centerDelta:
+          tooltipRect.left + tooltipRect.width / 2 -
+          (cellRect.left + cellRect.width / 2),
+        translateX: new DOMMatrixReadOnly(getComputedStyle(tooltip).transform).m41,
+      };
     };
     // The tooltip centers on inset-inline-start: 50%, which anchors to the physical right edge
     // under RTL -- its centering translateX must resolve leftward (negative) in LTR and
-    // rightward (positive) in RTL to stay over the strip's horizontal center.
-    expect(await tooltipTranslateX('ltr')).to.be.lessThan(0);
-    expect(await tooltipTranslateX('rtl')).to.be.greaterThan(0);
+    // rightward (positive) in RTL to stay over the active cell's horizontal center.
+    const ltr = await tooltipGeometry('ltr');
+    const rtl = await tooltipGeometry('rtl');
+    expect(ltr.translateX).to.be.lessThan(0);
+    expect(rtl.translateX).to.be.greaterThan(0);
+    expect(ltr.centerDelta).to.be.closeTo(0, 1);
+    expect(rtl.centerDelta).to.be.closeTo(0, 1);
   });
 
   it('is accessible with items, categories, and markers set', async () => {

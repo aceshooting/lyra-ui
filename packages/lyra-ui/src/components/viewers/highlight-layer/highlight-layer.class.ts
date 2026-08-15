@@ -89,10 +89,6 @@ export interface LyraHighlightLayerEventMap {
  * @since 4.0.0
  */
 export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'items',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -102,6 +98,10 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'items',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
 

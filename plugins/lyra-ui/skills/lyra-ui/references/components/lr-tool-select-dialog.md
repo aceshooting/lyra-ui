@@ -29,7 +29,7 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   ordinary, first-seen category and is not merged into or reordered with that uncategorized bucket.
   `icon` is a literal glyph (e.g. an emoji) rendered next to `name` — an opaque string, not a registry
   lookup, the same convention `<lr-tool-call-chip>`'s `icon` uses. `disabled` individually gates a
-  tool regardless of `useDefaults`/`selected` (e.g. a tool requiring admin approval);
+  tool regardless of `useDefaults`/`selectedToolIds` (e.g. a tool requiring admin approval);
   `description` and `disabledReason` are supporting descriptions associated with the checkbox
   through its stable `aria-describedby` owner; only `name` contributes to the checkbox's accessible
   name. `disabledReason` is ignored when `disabled` is falsy.
@@ -37,7 +37,7 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   whether `tool` matches an already-trimmed, already-lowercased `query`. Assign `filter` to replace the
   built-in case-insensitive name/description substring match entirely (mirrors `<lr-combobox>`'s
   `OptionFilter` convention).
-- `ToolSelectionChangeDetail { selected: string[]; useDefaults: boolean }` — the `lr-change` detail
+- `ToolSelectionChangeDetail { selectedToolIds: string[]; useDefaults: boolean }` — the `lr-change` detail
   shape.
 - `ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | string` — the `lr-close` detail;
   `'escape'`/`'backdrop'` come from the dialog's own built-in dismiss triggers, any other string is
@@ -50,7 +50,7 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   across all categories. `id` is the public identity: empty/blank ids are omitted and when provider
   data repeats one, the first occurrence wins consistently for grouping, filtering, counts,
   selection, and emitted ids.
-- `selected: string[] = []` (attribute: false) — the currently-enabled tool ids. Empty/blank ids
+- `selectedToolIds: string[] = []` (attribute: false) — the currently-enabled tool ids. Empty/blank ids
   are omitted and repeated ids are treated as one selection.
 - `useDefaults: boolean = false` (attribute `use-defaults`, reflected) — whether the conversation is
   using the default tool set (`true`) or a custom selection (`false`).
@@ -75,7 +75,7 @@ void` performs the reasoned API dismissal;
 
 **Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
 `useDefaults` state) is cancelable and fires before either property changes. Calling
-`preventDefault()` retains the current `selected`/`useDefaults` values and restores the built-in
+`preventDefault()` retains the current `selectedToolIds`/`useDefaults` values and restores the built-in
 checkbox or switch. A host can prevent a proposal while it validates or persists it, then assign
 the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
@@ -109,10 +109,10 @@ dependencies of this package imported directly, not optional peers.
     { id: 'python', name: 'Python', category: 'Code', description: 'Run sandboxed Python' },
     { id: 'admin', name: 'Admin console', disabled: true, disabledReason: 'Requires admin approval' },
   ]}
-  .selected=${enabledToolIds}
+  .selectedToolIds=${enabledToolIds}
   ?use-defaults=${usingDefaults}
   ?open=${dialogOpen}
-  @lr-change=${(e) => updateTools(e.detail.selected, e.detail.useDefaults)}
+  @lr-change=${(e) => updateTools(e.detail.selectedToolIds, e.detail.useDefaults)}
   @lr-close=${() => (dialogOpen = false)}
 >
   <button slot="footer" @click=${(e) => e.target.closest('lr-tool-select-dialog').close('done')}>

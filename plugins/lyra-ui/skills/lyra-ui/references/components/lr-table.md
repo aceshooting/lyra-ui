@@ -31,7 +31,7 @@ it survives and otherwise clamps focus to the nearest surviving index. Moving fo
 table before the update is applied always wins; nested editors and controls keep their independent
 focus contracts.
 
-**9.0 migration:** replace `selectedKey = key` with `selectedKeys = new Set([key])`; both single
+**9.0 migration:** replace `selectedKey = key` with `selectedRowKeys = new Set([key])`; both single
 and multiple modes now use that one store. Replace `columnsHidden` with read-only
 `hasHiddenPriorityColumns`, `showAllColumns` with `priorityColumnsVisible`, and the two former
 column-visibility events with `lr-priority-columns-visibility-change { visible }`. Column
@@ -44,7 +44,7 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 **Properties:**
 
 - `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection,
-  bounded to 10,000 valid definitions; blank keys and later duplicates are omitted first-wins
+  bounded to the first 10,000 source positions; blank keys and later duplicates are omitted first-wins
   before header, cell, sort, focus, and event paths; reassign to update) — `{ key, label,
 headerCell?, width?, minWidth?, maxWidth?,
 resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
@@ -162,10 +162,11 @@ cell: (row) => unknown }` —
   row. Empty string identities and later duplicates are omitted; the first valid occurrence wins
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
-- `selectedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
+- `selectedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
   store in every mode, bounded to 10,000 keys. Single mode enforces at most one key; multiple mode
-  toggles membership. Reads return immutable detached `ReadonlySet` facades; reassign a new set to
-  update
+  toggles membership. Malformed and whitespace-only string keys are omitted, while valid
+  unmatched/off-page keys remain controlled state for server pagination. Reads return immutable detached `ReadonlySet`
+  facades; reassign a new set to update
 - `filterable: boolean = false` (attribute `filterable`, reflected) — renders a localized search
   field above the grid
 - `filterText: string = ''` (attribute `filter-text`) — controlled filter text
@@ -221,9 +222,10 @@ cell: (row) => unknown }` —
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
   renders a full-width detail row beneath expanded records
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
-- `expandedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
-  expanded state bounded to 10,000 keys; reads return immutable detached `ReadonlySet` facades,
-  and consumers reassign it after
+- `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
+  expanded state bounded to 10,000 keys; malformed and whitespace-only string keys are omitted while valid
+  off-page keys remain controlled; reads return immutable detached `ReadonlySet` facades, and
+  consumers reassign it after
   `lr-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
 - `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
@@ -269,11 +271,11 @@ cell: (row) => unknown }` —
 sort properties; server mode leaves them controlled. Other events are `lr-row-click`
 (`detail: { row }`), `lr-load-more` (fired on the "load more" button),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and `lr-row-expand-toggle`
-(`detail: { row, key }`; the table does not mutate `expandedKeys`), and
-`lr-selection-change` (frozen readonly `detail: { keys }`) when selection is enabled, `lr-filter-change`
+(`detail: { row, rowKey }`; the table does not mutate `expandedRowKeys`), and
+`lr-selection-change` (frozen readonly `detail: { rowKeys }`) when selection is enabled, `lr-filter-change`
 (frozen readonly `detail: { text }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
-filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, key, value }`) for editable
-columns, and `lr-column-resize` (`detail: { key, width }`, `width` in CSS pixels) on every pointer or
+filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
+columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or
 keyboard resize step. **Only the commit is cancelable.** A pointer drag fires the event once per
 pixel of movement as non-cancelable live feedback, then exactly once more — `cancelable: true` — for
 the width committed at drag-end (and only when that width actually differs from the pre-drag one).
@@ -409,7 +411,7 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   keeps `aria-sort` and the header chevron honest — otherwise clicking the group column would flip
   both while changing nothing. To force a group order in any other case, sort `rows` into it before
   assigning them (or set `sort-mode="server"` and own the whole ordering).
-- both single and multiple row selection use `selectedKeys`; the component does not synthesize a
+- both single and multiple row selection use `selectedRowKeys`; the component does not synthesize a
   checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — a typed accessible name for the
   `<table role="grid">`. A plain `aria-label` HTML attribute on the host is also forwarded (read via

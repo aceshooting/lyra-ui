@@ -4,9 +4,9 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './format.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { byteFormat, type FormatBytesUnit, type FormatDisplay } from './format-options.js';
+import { byteFormat, type LyraFormatBytesUnit, type LyraFormatDisplay } from './format-options.js';
 
-export type { FormatBytesUnit, FormatDisplay } from './format-options.js';
+export type { LyraFormatBytesUnit, LyraFormatDisplay } from './format-options.js';
 
 const DEFAULT_UNIT_STEP = 1000;
 const DEFAULT_DECIMALS = 1;
@@ -22,8 +22,8 @@ const DEFAULT_DECIMALS = 1;
 export class LyraFormatBytes extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   @property({ type: Number }) value = 0;
-  @property() unit: FormatBytesUnit = 'byte';
-  @property() display: FormatDisplay = 'short';
+  @property() unit: LyraFormatBytesUnit = 'byte';
+  @property() display: LyraFormatDisplay = 'short';
   @property({ type: Number, attribute: 'unit-step' }) unitStep = DEFAULT_UNIT_STEP;
   @property({ type: Number }) decimals = DEFAULT_DECIMALS;
 

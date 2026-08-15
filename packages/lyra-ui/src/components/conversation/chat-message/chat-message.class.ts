@@ -1,7 +1,6 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -114,8 +113,8 @@ export interface LyraChatMessageEventMap {
  *
  * `messageRole` identifies the author (`user`/`assistant`/`system`, matching
  * the vocabulary of chat/completion APIs). The platform `role` property remains available for
- * host semantics; author identity is applied to the internal article and can be overridden with
- * a host `aria-label`.
+ * host semantics; the localized author identity directly names the internal article through its
+ * `aria-label`, and a host `aria-label` overrides that fallback by attribute presence.
  *
  * `actionsPosition="outside"` renders the `actions` slot as a sibling immediately after the
  * message bubble instead of nested inside the footer.
@@ -212,7 +211,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles];
 
   // `status` needs a hand-written accessor (see `previousStatus` below) so
   // it's declared via `static properties` + `noAccessor` rather than
@@ -223,7 +222,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     status: { reflect: true, noAccessor: true },
   };
 
-  /** Who authored the message. The author is exposed as the internal article's accessible name. */
+  /** Who authored the message. Its localized identity directly names the internal article. */
   @property({ reflect: true, attribute: 'message-role' }) messageRole: ChatMessageRole = 'assistant';
 
   /** Optional stable application-defined identifier for this message. Included in `lr-message-retry`
@@ -468,6 +467,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
           ? 'promptStudioRoleSystem'
           : 'promptStudioRoleAssistant',
     );
+    const articleLabel = this.hasAttribute('aria-label')
+      ? (this.getAttribute('aria-label') ?? '')
+      : authorLabel;
     const actionsBlock = html`<span part="actions" ?hidden=${!this.hasActionsSlot}
       ><slot name="actions" @slotchange=${this.onActionsSlotChange}></slot
     ></span>`;
@@ -479,10 +481,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
       <div
         part="bubble"
         role="article"
-        aria-label=${this.hasAttribute('aria-label') ? (this.getAttribute('aria-label') ?? '') : nothing}
+        aria-label=${articleLabel}
         tabindex="-1"
       >
-        ${this.hasAttribute('aria-label') ? nothing : html`<span class="sr-only">${authorLabel}</span>`}
         <div part="header" ?hidden=${!showHeader}>
           <span part="avatar" ?hidden=${!this.hasAvatarSlot}
             ><slot name="avatar" @slotchange=${this.onAvatarSlotChange}></slot

@@ -43,8 +43,13 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
   owner (the group omits its duplicate role/name); an explicitly empty host label stays empty
 - `showClaims: boolean = true` (attribute `show-claims`) — renders `assessment.claims` through
   `lr-claim-evidence`; set false to keep the aggregate scorecard only
-- `headingLevel: 1 | 2 | 3 | 4 | 5 | 6 = 3` (attribute `heading-level`) — real heading level used
-  by both warnings and evidence sections, clamped to the HTML outline range
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — shared semantic heading
+  level used by both warnings and evidence sections; `'none'` keeps the visual text without
+  exposing a heading role, and invalid untyped values fall back to level 3
+
+Direct citations and `assessment.claims` are canonicalized independently by nonblank `id` before
+counts, child composition, rendering, or events. Malformed rows and later duplicate ids are omitted;
+the first valid occurrence wins.
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
@@ -59,7 +64,8 @@ _span_ to jump to. The composed `lr-claim-evidence` also surfaces
 `stats` (the claim-count/coverage/confidence `lr-stat`
 row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-count`,
 `warnings-list` (a `<ul>`), `warning` (one `<li>`), `evidence` (omitted when `citations` is empty),
-`evidence-heading` (a real `h1`–`h6`), `evidence-count`, `evidence-list` (a `<ul>`),
+`evidence-heading` (a real `h1`–`h6`), `evidence-count`, `evidence-list` (a `<ul role="list">` so
+its semantics survive list-style resets),
 `evidence-item` (one `<li>` containing a badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
 `Citation.span` range, omitted when unset), `claims` (the composed claim-evidence audit), `empty`

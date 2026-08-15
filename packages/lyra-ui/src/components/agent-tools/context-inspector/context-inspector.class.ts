@@ -130,6 +130,8 @@ export interface LyraContextInspectorEventMap
  * @event lr-error - A clipboard write failed in the embedded copy control.
  * @event lr-copy-error - The embedded copy control's compatibility error event for the same
  *   clipboard failure.
+ * @event lr-toolbar-actions-change - No-detail coordination event surfaced unchanged from the
+ *   embedded copy button when its logical toolbar action changes availability or backing trigger.
  * @event lr-export - `detail: { format }`, surfaced by the embedded `lr-export-button`, one row
  *   per segment. Cancelable — see that component's own contract for substituting a
  *   server-generated export.
@@ -161,8 +163,6 @@ export interface LyraContextInspectorEventMap
  * @since 4.1.0
  */
 export class LyraContextInspector extends LyraElement<LyraContextInspectorEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['segments', 'exportFormats']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -186,6 +186,8 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['segments', 'exportFormats']);
 
   static override styles = [LyraElement.styles, styles];
 

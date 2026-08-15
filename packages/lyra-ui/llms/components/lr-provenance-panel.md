@@ -34,12 +34,13 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
 
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
-conduit, every affordance it renders also reaches a listener on the panel itself, and all four are
-part of its typed event map: `lr-entity-activate` (`detail: { id }`, from an entity chip, community
-card member, or path-strip node), `lr-entity-open` (`detail: { id }`, an entity chip double-click or
-Space), `lr-drill` (`detail: { id }`, a community card's title, drill button, or overflow chip), and
-`lr-relation-activate` (`detail: { relation, sourceId?, targetId? }`, a relationship path-strip
-edge).
+conduit, every affordance it renders also reaches a listener on the panel itself, and all are
+part of its typed event map: `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`, from an entity chip, community
+card member, or path-strip node), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
+`lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
+edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-expand`
+(`detail: { chunkId, expanded }`) from the chunk inspector.
 
 **Slots:** none.
 

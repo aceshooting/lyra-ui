@@ -28,8 +28,9 @@ mapped attributes reflect. Lyra's
 existing aliases remain: `observeAttributes` (`attributes`), `characterData` (`character-data`),
 `subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`.
 
-**Events:** `lr-mutation`; `detail.records` and mapped `detail.mutationList` reference the same
-`MutationRecord[]` batch.
+**Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
+`detail.records` and mapped `detail.mutationList` reference the same sequence, while each native
+`MutationRecord` retains identity.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 

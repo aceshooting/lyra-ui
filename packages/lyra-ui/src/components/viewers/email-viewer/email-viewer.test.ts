@@ -332,7 +332,9 @@ describe("lr-email-viewer", () => {
       anchor,
       highlights,
     }) as LyraEmailViewer;
-    expect(rendered.anchor).to.equal(anchor);
+    expect(rendered.anchor).to.deep.equal(anchor);
+    expect(rendered.anchor).not.to.equal(anchor);
+    expect(Object.isFrozen(rendered.anchor)).to.be.true;
     expect(rendered.highlights).to.deep.equal(highlights);
     expect(definition.capabilities).to.deep.equal({
       anchors: ["text-quote", "fragment"],
@@ -735,7 +737,7 @@ describe("lr-email-viewer", () => {
   });
 
   describe("attachments", () => {
-    it("retains attachment content as Uint8Array and never creates an object URL itself", async () => {
+    it('emits immutable Blob attachment content and never creates an object URL itself', async () => {
       const originalCreateObjectURL = URL.createObjectURL;
       let createObjectUrlCalled = false;
       URL.createObjectURL = (() => {
@@ -752,12 +754,14 @@ describe("lr-email-viewer", () => {
             ) as HTMLButtonElement
           ).click();
           const event = (await listener) as CustomEvent<{
-            attachment: { filename: string; content?: Uint8Array };
+            attachment: { filename: string; content?: Blob };
           }>;
           expect(event.detail.attachment.filename).to.equal("notes.txt");
-          expect(event.detail.attachment.content).to.be.instanceOf(Uint8Array);
+          expect(event.detail.attachment.content).to.be.instanceOf(Blob);
           expect(
-            new TextDecoder().decode(event.detail.attachment.content)
+            new TextDecoder().decode(
+              await event.detail.attachment.content!.arrayBuffer()
+            )
           ).to.equal("hello attachment");
           expect(createObjectUrlCalled).to.be.false;
         } finally {
@@ -906,36 +910,36 @@ describe("lr-email-viewer", () => {
         const bytesListener = oneEvent(el, "lr-attachment-open");
         (buttons[0] as HTMLButtonElement).click();
         const bytesEvent = (await bytesListener) as CustomEvent<{
-          attachment: { content?: Uint8Array };
+          attachment: { content?: Blob };
         }>;
-        expect(bytesEvent.detail.attachment.content).to.be.instanceOf(
-          Uint8Array
-        );
-        expect(Array.from(bytesEvent.detail.attachment.content!)).to.deep.equal(
-          [1, 2, 3]
-        );
+        expect(bytesEvent.detail.attachment.content).to.be.instanceOf(Blob);
+        expect(
+          Array.from(
+            new Uint8Array(
+              await bytesEvent.detail.attachment.content!.arrayBuffer()
+            )
+          )
+        ).to.deep.equal([1, 2, 3]);
 
         const stringListener = oneEvent(el, "lr-attachment-open");
         (buttons[1] as HTMLButtonElement).click();
         const stringEvent = (await stringListener) as CustomEvent<{
-          attachment: { content?: Uint8Array };
+          attachment: { content?: Blob };
         }>;
-        expect(stringEvent.detail.attachment.content).to.be.instanceOf(
-          Uint8Array
-        );
+        expect(stringEvent.detail.attachment.content).to.be.instanceOf(Blob);
         expect(
-          new TextDecoder().decode(stringEvent.detail.attachment.content)
+          new TextDecoder().decode(
+            await stringEvent.detail.attachment.content!.arrayBuffer()
+          )
         ).to.equal("plain string content");
 
         const bufferListener = oneEvent(el, "lr-attachment-open");
         (buttons[2] as HTMLButtonElement).click();
         const bufferEvent = (await bufferListener) as CustomEvent<{
-          attachment: { content?: Uint8Array };
+          attachment: { content?: Blob };
         }>;
-        expect(bufferEvent.detail.attachment.content).to.be.instanceOf(
-          Uint8Array
-        );
-        expect(bufferEvent.detail.attachment.content!.byteLength).to.equal(4);
+        expect(bufferEvent.detail.attachment.content).to.be.instanceOf(Blob);
+        expect(bufferEvent.detail.attachment.content!.size).to.equal(4);
       } finally {
         restore();
       }

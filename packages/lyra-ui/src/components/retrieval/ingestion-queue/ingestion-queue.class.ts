@@ -9,6 +9,7 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
   acquireAnnouncementSink,
@@ -169,6 +170,8 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Blank item ids and later duplicates are ignored before failure state, counts, virtualization,
+ * rendering, or actions. The first item for an id wins.
  *
  * @customElement lr-ingestion-queue
  * @event lr-retry - A row's retry affordance was activated (only rendered for `stage="failed"`
@@ -213,8 +216,6 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  * @since 4.1.0
  */
 export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -240,6 +241,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     retry: LYRA_DEFAULT_retry,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
@@ -272,8 +275,15 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     return finiteCount(this.virtualizeAt, DEFAULT_VIRTUALIZE_AT);
   }
 
-  private get isVirtualized(): boolean {
-    return this.items.length > this.effectiveVirtualizeAt;
+  private normalizeItems(value: unknown): IngestionQueueItem[] {
+    return firstByRetrievalIdentity(
+      Array.isArray(value) ? (value as readonly IngestionQueueItem[]) : [],
+      (item) => item.id
+    );
+  }
+
+  private get normalizedItems(): IngestionQueueItem[] {
+    return this.normalizeItems(this.items);
   }
 
   override connectedCallback(): void {
@@ -300,10 +310,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     this.isMounting = false;
     if (wasMounting || !changed.has('items')) return;
 
-    const previousItems =
-      (changed.get('items') as IngestionQueueItem[] | undefined) ?? [];
+    const previousItems = this.normalizeItems(changed.get('items'));
     const previousById = new Map(previousItems.map((item) => [item.id, item]));
-    const freshErrors = this.items.flatMap((item) => {
+    const freshErrors = this.normalizedItems.flatMap((item) => {
       if (item.stage !== 'failed' || !item.error) return [];
       const previous = previousById.get(item.id);
       return !previous ||
@@ -491,13 +500,14 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   };
 
   override render(): TemplateResult {
+    const items = this.normalizedItems;
     const ariaLabel = retrievalSemanticLabel(
       this,
       this.label || this.localize('ingestionQueueLabel')
     );
     const regionRole = retrievalSemanticRole(this, 'region');
 
-    if (this.items.length === 0) {
+    if (items.length === 0) {
       return html`<div
         part="base"
         role=${regionRole ?? nothing}
@@ -515,7 +525,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
       </div>`;
     }
 
-    const virtualized = this.isVirtualized;
+    const virtualized = items.length > this.effectiveVirtualizeAt;
     return html`
       <div
         part="base"
@@ -528,15 +538,15 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
         ${virtualized
           ? html`<lr-virtual-list
               part="list"
-              exportparts="item:item, item-header:item-header, item-name:item-name, item-progress:item-progress, item-meta:item-meta, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"
-              .items=${this.items}
+              exportparts="item:item, item-header:item-header, item-name:item-name, item-stage:item-stage, item-progress:item-progress, item-meta:item-meta, item-chunk-count:item-chunk-count, item-embedding-status:item-embedding-status, item-attempts:item-attempts, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"
+              .items=${items}
               .renderItem=${(item: unknown) =>
                 this.itemTemplate(item as IngestionQueueItem, false)}
               .keyFunction=${(item: unknown) => (item as IngestionQueueItem).id}
             ></lr-virtual-list>`
           : html`<div part="list" role="list">
               ${repeat(
-                this.items,
+                items,
                 (item) => item.id,
                 (item) => this.itemTemplate(item, true)
               )}

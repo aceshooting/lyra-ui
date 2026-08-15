@@ -50,6 +50,8 @@ embedded `lr-copy-button`), `lr-export` (`detail: { format: string }`, from the 
 `lr-export-button`), `lr-export-complete` (`detail: { format: string }`, after a non-cancelled export
 finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { ok: false;
 text: string; reason: string; error: unknown }`, the detailed clipboard failure),
+`lr-toolbar-actions-change` (no detail, surfaced unchanged when the embedded copy button's logical
+toolbar action changes availability or backing trigger),
 `lr-export-error` (`detail: { format: ExportFormat; error: unknown }`, the embedded export could not
 complete), and the cancelable `lr-show` / `lr-hide` lifecycle events from the embedded export-format
 menu. These composed child events surface unchanged; the inspector does not emit duplicate copies.

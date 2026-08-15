@@ -73,6 +73,7 @@ const classCssPropertyDeclarationExemptions = new Set([
   'retrieval/source-picker/source-picker.class.ts:--lr-source-picker-depth',
   'utility/icon/icon.class.ts:--lr-icon-rotate',
   'utility/json-viewer/json-viewer.class.ts:--lr-json-viewer-max-height',
+  'viewers/archive-viewer/archive-viewer.class.ts:--lr-archive-viewer-max-height',
   'viewers/calendar-viewer/calendar-viewer.class.ts:--lr-calendar-viewer-max-height',
   'viewers/contact-viewer/contact-viewer.class.ts:--lr-contact-viewer-max-height',
   'viewers/csv-viewer/csv-viewer.class.ts:--lr-csv-viewer-max-height',

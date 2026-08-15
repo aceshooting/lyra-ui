@@ -283,23 +283,68 @@ describe('acquireHighlightHandle (fallback path, forced via a hidden Highlight g
     }
   });
 
+  it('unwraps with bounded adjacent-text cleanup without recursively normalizing the parent', () => {
+    const root = makeContent('<p>bounded cleanup path</p>');
+    try {
+      const parent = root.firstElementChild as HTMLElement;
+      let normalizeCalls = 0;
+      Object.defineProperty(parent, 'normalize', {
+        configurable: true,
+        value: () => { normalizeCalls++; },
+      });
+      const handle = acquireHighlightHandle({}, document);
+      handle.setRanges('accent', [rangeOverText(root, 'cleanup')]);
+      expect(root.querySelector('mark')).to.exist;
+      handle.release();
+      expect(normalizeCalls).to.equal(0);
+      expect(parent.childNodes).to.have.length(1);
+      expect(parent.textContent).to.equal('bounded cleanup path');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('fails closed before mutating a range that would exceed the aggregate mark ceiling', () => {
+    const root = makeContent('');
+    try {
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < 201; index++) fragment.append(document.createTextNode('x'));
+      root.append(fragment);
+      const range = document.createRange();
+      range.selectNodeContents(root);
+      const handle = acquireHighlightHandle({}, document);
+      handle.setRanges('accent', [range]);
+      expect(root.querySelector('mark')).to.not.exist;
+      expect(root.textContent).to.equal('x'.repeat(201));
+      handle.release();
+    } finally {
+      root.remove();
+    }
+  });
+
   it('bounds the common-ancestor walk for a fallback range', () => {
     const root = makeContent('');
     try {
       const fragment = document.createDocumentFragment();
       for (let index = 0; index < 25_000; index++) fragment.append(document.createTextNode('x'));
       root.append(fragment);
-      const range = document.createRange();
-      range.selectNodeContents(root);
-      const originalIntersectsNode = range.intersectsNode.bind(range);
+      const firstRange = document.createRange();
+      firstRange.selectNodeContents(root);
+      const secondRange = firstRange.cloneRange();
+      const originalFirstIntersectsNode = firstRange.intersectsNode.bind(firstRange);
+      const originalSecondIntersectsNode = secondRange.intersectsNode.bind(secondRange);
       let intersectionChecks = 0;
-      range.intersectsNode = (node) => {
+      firstRange.intersectsNode = (node) => {
         intersectionChecks++;
-        return originalIntersectsNode(node);
+        return originalFirstIntersectsNode(node);
+      };
+      secondRange.intersectsNode = (node) => {
+        intersectionChecks++;
+        return originalSecondIntersectsNode(node);
       };
 
       const handle = acquireHighlightHandle({}, document);
-      handle.setRanges('accent', [range]);
+      handle.setRanges('accent', [firstRange, secondRange]);
       expect(intersectionChecks).to.be.at.most(20_000);
       handle.release();
     } finally {

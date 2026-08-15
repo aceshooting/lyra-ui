@@ -133,16 +133,24 @@ function snapshotRecord<Value extends object>(
   }
   try {
     if (Array.isArray(value)) return INVALID_ANIMATION;
+    const prototype = Object.getPrototypeOf(value);
+    const directPrototype =
+      prototype === null ||
+      Object.getOwnPropertyDescriptor(prototype, 'constructor')?.value?.name ===
+        'Object';
     const snapshot: Record<string, unknown> = {};
     let propertyCount = 0;
-    for (const key in value) {
+    const keys = directPrototype ? ownAnimationRecordKeys(value) : Object.keys(value);
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor?.enumerable) continue;
       propertyCount += 1;
-      if (propertyCount > maximumProperties) return INVALID_ANIMATION;
-      if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+      if (propertyCount > maximumProperties || !('value' in descriptor))
+        return INVALID_ANIMATION;
       Object.defineProperty(snapshot, key, {
         configurable: false,
         enumerable: true,
-        value: (value as Record<string, unknown>)[key],
+        value: descriptor.value,
         writable: false,
       });
     }
@@ -152,16 +160,34 @@ function snapshotRecord<Value extends object>(
   }
 }
 
+function* ownAnimationRecordKeys(value: object): IterableIterator<string> {
+  for (const key in value) {
+    if (Object.getOwnPropertyDescriptor(value, key)?.enumerable) yield key;
+  }
+}
+
 function snapshotKeyframes(
   value: unknown,
 ): readonly Readonly<Keyframe>[] | typeof INVALID_ANIMATION {
   try {
     if (!Array.isArray(value)) return INVALID_ANIMATION;
-    const length = value.length;
+    const lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
+    if (
+      !lengthDescriptor ||
+      !('value' in lengthDescriptor) ||
+      typeof lengthDescriptor.value !== 'number'
+    )
+      return INVALID_ANIMATION;
+    const length = lengthDescriptor.value;
     if (length > MAX_ANIMATION_KEYFRAMES) return INVALID_ANIMATION;
     const snapshot: Readonly<Keyframe>[] = [];
     for (let index = 0; index < length; index += 1) {
-      const keyframe = snapshotRecord<Keyframe>(value[index], MAX_KEYFRAME_PROPERTIES);
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !('value' in descriptor)) return INVALID_ANIMATION;
+      const keyframe = snapshotRecord<Keyframe>(
+        descriptor.value,
+        MAX_KEYFRAME_PROPERTIES,
+      );
       if (keyframe === INVALID_ANIMATION) return INVALID_ANIMATION;
       snapshot.push(keyframe);
     }
@@ -181,17 +207,33 @@ function snapshotAnimation(animation: unknown): StoredAnimation {
   if (animation === null) return null;
   if (typeof animation !== 'object' || animation === null) return INVALID_ANIMATION;
   try {
-    const candidate = animation as Partial<LyraElementAnimation>;
-    const keyframes = snapshotKeyframes(candidate.keyframes);
+    const keyframesDescriptor = Object.getOwnPropertyDescriptor(
+      animation,
+      'keyframes',
+    );
+    if (!keyframesDescriptor || !('value' in keyframesDescriptor))
+      return INVALID_ANIMATION;
+    const keyframes = snapshotKeyframes(keyframesDescriptor.value);
     if (keyframes === INVALID_ANIMATION) return INVALID_ANIMATION;
 
-    const rtlCandidate = candidate.rtlKeyframes;
+    const rtlDescriptor = Object.getOwnPropertyDescriptor(
+      animation,
+      'rtlKeyframes',
+    );
+    if (rtlDescriptor && !('value' in rtlDescriptor)) return INVALID_ANIMATION;
+    const rtlCandidate = rtlDescriptor?.value;
     const rtlKeyframes = rtlCandidate === undefined
       ? undefined
       : snapshotKeyframes(rtlCandidate);
     if (rtlKeyframes === INVALID_ANIMATION) return INVALID_ANIMATION;
 
-    const optionsCandidate = candidate.options;
+    const optionsDescriptor = Object.getOwnPropertyDescriptor(
+      animation,
+      'options',
+    );
+    if (optionsDescriptor && !('value' in optionsDescriptor))
+      return INVALID_ANIMATION;
+    const optionsCandidate = optionsDescriptor?.value;
     const options = optionsCandidate === undefined
       ? undefined
       : snapshotOptions(optionsCandidate);

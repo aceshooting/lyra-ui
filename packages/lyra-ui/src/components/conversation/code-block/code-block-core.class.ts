@@ -35,6 +35,7 @@ import {
 import type {
   LyraAnchor,
   LyraHighlight,
+  TextSelectRect,
 } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -51,9 +52,9 @@ export interface LyraCodeBlockCoreEventMap {
   'lr-toggle': CustomEvent<{ collapsed: boolean }>;
   'lr-line-activate': CustomEvent<{ line: number }>;
   'lr-text-select': CustomEvent<{
-    text: string;
-    anchor: LyraAnchor;
-    rects: DOMRect[];
+    readonly text: string;
+    readonly anchor: LyraAnchor;
+    readonly rects: readonly TextSelectRect[];
   }>;
 }
 /**
@@ -213,7 +214,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   /** Host-supplied highlights to paint over the code. Only `line-range` anchors are meaningful
    *  here — every other `LyraAnchor` kind is ignored. */
-  @property({ attribute: false }) highlights: LyraHighlight[] = [];
+  @property({ attribute: false }) highlights: readonly LyraHighlight[] = [];
 
   /** The `highlights` entry, if any, currently treated as active (`data-active` on its lines). */
   @property({ attribute: 'active-highlight-id' }) activeHighlightId:
@@ -223,7 +224,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
   // Declaration quote style is part of the published API snapshot normalizer.
   // prettier-ignore
-  readonly anchorKinds: LyraAnchor['kind'][] = ['line-range'];
+  readonly anchorKinds: readonly LyraAnchor['kind'][] = ['line-range'];
 
   @state() private focusedLine = 1;
   private restoreFocusedLineAfterUpdate = false;
@@ -236,10 +237,10 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
    *  highlighted output. For a TypeScript annotation, use `import type { ShikiLanguageInput } from
    *  '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; this granular
    *  type-only import emits no registration side effect. */
-  @property({ attribute: false }) languages: Record<
+  @property({ attribute: false }) languages: Readonly<Record<
     string,
     ShikiLanguageInput
-  > = {};
+  >> = {};
 
   // `null` covers every reason the plain-text fallback is showing: `language`
   // is unset, isn't a key in `languages`, or the fine-grained highlighter

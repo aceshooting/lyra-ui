@@ -33,6 +33,7 @@ const strings: LyraLocaleStrings = {
   toolSelectLimit: '仅显示前{count}个工具。',
   sequenceStripEmpty: '暂无项目',
   sequenceStripCategoryCount: '{label}：{count}',
+  sequenceStripUnnamedCategory: '未命名类别',
   noColumns: '未配置任何列',
   dataGridColumnMenu: '{label} 的选项',
   dataGridPinStart: '将 {label} 固定到开头',

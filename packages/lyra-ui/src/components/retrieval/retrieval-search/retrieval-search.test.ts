@@ -599,6 +599,34 @@ describe("loading / error / empty status region", () => {
     expect(empty.tagName.toLowerCase()).to.equal("lr-empty");
   });
 
+  it('announces only a later settled zero-result transition from light DOM', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search></lr-retrieval-search>`
+    )) as LyraRetrievalSearch;
+    const sink = document.querySelector(
+      '[data-lr-live-region="polite"]'
+    )!;
+    const initialCount = sink.children.length;
+
+    el.loading = true;
+    el.empty = true;
+    await el.updateComplete;
+    expect(sink.children.length).to.equal(initialCount);
+
+    el.loading = false;
+    await el.updateComplete;
+    expect(sink.lastElementChild?.textContent).to.equal('No matches');
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    const reconnectedSink = document.querySelector(
+      '[data-lr-live-region="polite"]'
+    )!;
+    expect(reconnectedSink.children.length).to.equal(0);
+  });
+
   it("prioritizes loading over error and empty", async () => {
     const el = (await fixture(
       html`<lr-retrieval-search

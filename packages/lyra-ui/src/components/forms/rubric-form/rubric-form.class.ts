@@ -102,8 +102,8 @@ function normalizeRubricKeys(next: readonly RubricKey[]): RubricKey[] {
   for (const candidate of next as readonly unknown[]) {
     if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
     const raw = candidate as RuntimeRubricKeyInput;
-    const key = typeof raw.key === 'string' ? raw.key.trim() : '';
-    if (!key || seen.has(key)) continue;
+    const key = typeof raw.key === 'string' ? raw.key : '';
+    if (key.trim().length === 0 || seen.has(key)) continue;
     seen.add(key);
     const common = {
       key,

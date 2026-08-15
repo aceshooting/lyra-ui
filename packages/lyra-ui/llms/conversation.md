@@ -1,3 +1,17 @@
+## Breaking changes and fixes in 9.0.0
+
+Fixed: `<lr-markdown>`/`<lr-markdown-core>`'s renderer overrides (heading, paragraph, code-block,
+table, link, image, inline/block math) previously emitted HTML with mismatched open/close
+attribute-quote characters, which could corrupt the parsed DOM for real documents containing those
+constructs. Output is now well-formed HTML for every renderer override, using matched single-quote
+attribute delimiters; no public API changed.
+
+Breaking (v9): `<lr-model-select>`, `<lr-voice-picker>`, `<lr-prompt-input>`, and `<lr-chat-composer>`
+no longer emit the v8 `lr-focus`/`lr-blur` compatibility-alias events. Listen for the native-named
+`focus`/`blur` events instead. Also fixed as part of the same change: `<lr-prompt-input>`'s `focus`/
+`blur` now relay only from its own primary textarea; a descendant control's own focus/blur no longer
+leaks through as the composite element's own focus/blur.
+
 ## `lr-markdown`
 
 Sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on
@@ -348,8 +362,10 @@ level).
 
 - `messageRole: ChatMessageRole = 'assistant'` (`'user' | 'assistant' | 'system'`, attribute
   `message-role`, reflected) — identifies the author without colliding with the platform `role`
-  attribute. The internal article receives the localized author name and styling exposes the same
-  state through `data-role`; a bare `role="assistant"` is never an authoring API.
+  attribute. The role-owning internal article receives the localized author name directly through
+  `aria-label`; a host `aria-label` overrides it by attribute presence (including an explicitly
+  empty override). Styling exposes the same state through `data-role`; a bare `role="assistant"`
+  is never an authoring API.
 - `status: ChatMessageStatus = 'sent'` (`'sending' | 'sent' | 'failed' | 'streaming'`, reflected) —
   drives the footer's status dot/text, `status="failed"`'s danger treatment on the bubble, and the
   built-in retry button
@@ -667,7 +683,6 @@ validity and recomputes the current intrinsic constraints.
   trimming is left to the consumer. Submitting does **not** clear `value`
 - `lr-stop` (no detail) — fired by the built-in button while `status` is `"sending"` or
   `"streaming"`
-- `lr-blur` / `lr-focus` (`detail: null`) — prefixed notifications paired with native focus events
 - `lr-invalid` (no detail) — one bubbling/composed, cancelable alias when native validity fails;
   preventing it also prevents the native `invalid` event that produced it
 
@@ -1189,8 +1204,6 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 - `blur` / `focus` (no detail) — one owner-realm native `FocusEvent` re-dispatched from the active
   control in either mode (the closed trigger button or free-text input), retaining `relatedTarget`
   and bubbling/composed unlike the shadow-internal original.
-- `lr-blur` and `lr-focus` (no detail) — prefixed compatibility aliases, each fired immediately
-  after its unprefixed counterpart.
 - `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
 
 **Slots:** `label` (custom visible label content), `hint` (custom hint content), `error` (custom
@@ -1827,7 +1840,8 @@ Fires whenever _either_ child control's own `lr-change` fires, and always carrie
 settings snapshot, not just whichever field actually changed. `inCatalog` is recomputed fresh from
 `catalog`/`model` on every emission (mirroring `lr-model-select`'s own `effectiveEntries` logic)
 rather than cached from the last child event, so it's still correct even when `model` was just
-assigned directly instead of via the child's own event.
+assigned directly instead of via the child's own event. The nested selector's native `focus` and
+`blur` events remain contained at that child boundary; the panel does not declare or relay them.
 
 **Slots:** none — this is a fixed two-control composition, not a generic layout shell.
 
@@ -1987,6 +2001,9 @@ thumbs-only `lr-message-feedback`. A colliding event from an
 arbitrary slotted child is contained at that slot boundary rather than being mistaken for a
 built-in action.
 
+Composite toolbar providers must expose nonblank action ids that are unique within that provider;
+invalid actions and later duplicates are omitted before roving focus ownership.
+
 **Slots:** default — additional controls (e.g. `lr-copy-button`, `lr-icon-button`,
 `lr-branch-picker`) appended after the built-ins; they participate in the toolbar's arrow-key
 navigation.
@@ -2008,8 +2025,9 @@ uses the ordinary re-activate-to-clear toggle.
 **Properties:** `rating: MessageFeedbackValue = null` (`'up' | 'down' | null`, reflected),
 `detail?: MessageFeedbackDetailConfiguration` (attribute: false) — one configuration with optional
 `reasons?: readonly { id, label }[]` and `commentable?: boolean`; omit it for thumbs-only feedback.
-The record and nested reasons are a bounded clone-owned frozen snapshot; create and reassign a new
-detail record after changes.
+The record and nested reasons are a bounded clone-owned frozen snapshot; malformed, empty, blank,
+and later duplicate reason ids are omitted first-wins before selection and submission. Create and
+reassign a new detail record after changes.
 `detailFor: 'none' | 'up' | 'down' | 'both' = 'down'` (attribute `detail-for`) selects which rating
 owns that one detail panel. `disabled: boolean = false` (reflected) makes a recorded rating read-only, and
 `pending: boolean = false` (reflected) — set automatically when a submit listener prevents the
@@ -2369,8 +2387,9 @@ false` (reflected) — shows the built-in search field. `filter?: (thread, query
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
 arbitrary grouping callbacks below, or render a flat list. `groupBy?: (thread: LyraChatThread) => string`
-(attribute: false) derives each group id in `grouping="custom"`; omitting it leaves the custom mode
-flat. `getGroupLabel?: (context: ThreadGroupContext) => string` (attribute: false) supplies the
+(attribute: false) derives each group id in `grouping="custom"`; rows whose callback throws or
+returns a malformed or blank ID are omitted from that grouped view, and omitting the callback leaves
+custom mode flat. `getGroupLabel?: (context: ThreadGroupContext) => string` (attribute: false) supplies the
 plain-text accessible/visible label; `renderGroupAdornment?: (context) => TemplateResult` supplies
 separate rich content beside the toggle without nesting it inside the button. `groupOrder?: string[] | ((a: string, b:
 string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an
@@ -2619,7 +2638,9 @@ Renders an agent-streamed version-two declarative JSON widget document through a
 allowlisted `type -> lyra tag` registry. Mapped tags and children render declaratively, so populated
 documents work during SSR without a global `document`; primitive mapped props remain property-only
 and are assigned during hydration. Keyed reconciliation preserves the mapped element's focus,
-scroll position, and internal state across streamed document updates. Built-in `row`/`col`/`text`
+scroll position, and internal state across streamed document updates. An unchanged resolved mapped
+node also retains its memoized template and ref callback, so unrelated renderer updates neither
+reassign its props nor detach and reattach its action/binding listeners. Built-in `row`/`col`/`text`
 structural nodes render through ordinary nested templates. Not a
 form runtime (no input/select/form types in the default registry), no expression language or
 implicit state mutation, no remote widget/schema fetching, and it never renders arbitrary HTML or
@@ -2888,10 +2909,10 @@ before the input renders.
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
 neither. Plus owner-realm native `input`/`change` (retaining each free-text `InputEvent` payload)
-and native `FocusEvent` `focus`/`blur` (retaining `relatedTarget`), with `lr-focus`/`lr-blur`
-compatibility aliases. The trigger/input, listbox popup, and sibling preview control form one focus
-boundary, so moving within them does not close or touch the picker and only leaving the component
-emits the outer pair. One bubbling/composed `lr-invalid` alias fires when native validity fails.
+and native `FocusEvent` `focus`/`blur` (retaining `relatedTarget`). The trigger/input, listbox popup,
+and sibling preview control form one focus boundary, so
+moving within them does not close or touch the picker and only leaving the component emits the
+outer pair. One bubbling/composed `lr-invalid` alias fires when native validity fails.
 
 **Slots:** `label` (custom visible label content), `hint`, `error`.
 
@@ -2994,8 +3015,8 @@ redactedFields?: string[]; needsApproval?: boolean; approved?: boolean }`
 - `retrievalChunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk` from
   `@aceshooting/lyra-ui/ai`**: `{ id, text, score, source: DocumentRef, metadata? }`, forwarded to
   `lr-retrieval-results`
-- `selectedRetrievalIds: string[] = []` (attribute: false) — controlled selection forwarded to
-  `lr-retrieval-results.selectedIds`
+- `selectedRetrievalChunkIds: string[] = []` (attribute: false) — controlled selection forwarded to
+  `lr-retrieval-results.selectedChunkIds`
 - `retrievalLoading: boolean = false` (attribute `retrieval-loading`), `retrievalHasMore: boolean =
 false` (attribute `retrieval-has-more`), `retrievalErrorText: string = ''` (attribute
   `retrieval-error-text`, caller-supplied text) — all forwarded to `lr-retrieval-results`
@@ -3032,7 +3053,7 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
   (`detail: null`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
-- `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ ids: string[]; chunks:
+- `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks:
 RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
 - `lr-citation-select` (`detail: CitationSelectEventDetail` = `{ citation: Citation }`, from
   `@aceshooting/lyra-ui/ai`) — forwarded from the built-in grounding summary.
@@ -3168,6 +3189,9 @@ LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: readon
 `sources: readonly LyraSourceEntry[] = []`, `selectedSourceIds: readonly string[] = []`, and `queue:
 readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+Source roots and queued prompts require unique nonblank `id` values; malformed rows and later
+duplicates are omitted first-wins before section gating and child forwarding. Controlled selected
+source ids use the same unique nonblank projection.
 
 Every array-valued property above is a clone-owned, bounded, frozen readonly snapshot, including
 nested source children and queued attachments. Mutating a previously assigned collection has no
@@ -3189,11 +3213,11 @@ HTMLTextAreaElement | null`, `selectionStart: number | null`, `selectionEnd: num
 are no-ops before the textarea has rendered.
 
 **Events:** native `input`, `change`, `focus`, and `blur` are each relayed once from the primary
-textarea, paired with `lr-input`, `lr-change`, `lr-focus`, and `lr-blur`; `lr-submit` (`{ value }`),
+textarea, paired with `lr-input` and `lr-change`; `lr-submit` (`{ value }`),
 `lr-stop` (`null`), `lr-mention-select` (`{ suggestionId, index, label, trigger }`),
 `lr-attachments-add` (`{ capability, files }`), `lr-attachment-remove` (`{ attachmentId }`),
 `lr-model-change`/`lr-voice-change`
-(`{ value, inCatalog }`), `lr-sources-change` (`{ selectedIds }`), `lr-queue-change`
+(`{ value, inCatalog }`), `lr-sources-change` (`{ selectedSourceIds }`), `lr-queue-change`
 (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,
 `lr-audio-request`, `lr-attachment-retry` (`{ attachmentId }`), and cancelable
 `lr-attachment-preview-request` (`{ attachmentId, name, mimeType, src }`). Child events are stopped
@@ -3402,6 +3426,19 @@ These named interfaces and helper signatures are available to typed integrations
     conversationId: unknown;
   }`
 
+- **`components-conversation-markdown-katex-loader-contracts`** — Supporting data types and helpers for this component family.
+  `KatexApi {
+    renderToString(/* public names: tex, options */): unknown;
+  }`
+
+- **`components-conversation-markdown-markdown-base-contracts`** — Supporting data types and helpers for this component family.
+  `MarkdownVariantContext {
+    tag: unknown;
+    connectedInstances: unknown;
+    sharedParser: unknown;
+    katexState: unknown;
+  }`
+
 - **`components-conversation-markdown-markdown-loader-contracts`** — Supporting data types and helpers for this component family.
   `getMarkdownDepsIfLoaded(): unknown`
   `loadMarkdownAndSanitizer(/* public names: importMarked, importDompurify */): unknown`
@@ -3466,6 +3503,18 @@ These named interfaces and helper signatures are available to typed integrations
     html: unknown;
   }`
   `preloadMarkdown(): unknown`
+
+- **`components-conversation-markdown-markdown-shared-contracts`** — Supporting data types and helpers for this component family.
+  `MarkdownKatexState {
+    getIfLoaded: unknown;
+    isConfirmedMissing: unknown;
+    startLoad(/* public names: onResolved */): unknown;
+  }`
+  `PendingHighlight {
+    key: unknown;
+    lang: unknown;
+    code: unknown;
+  }`
 
 - **`components-conversation-message-actions-toolbar-actions-contracts`** — Supporting data types and helpers for this component family.
   `isLyraToolbarActionProvider(/* public names: value */): unknown`

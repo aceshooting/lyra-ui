@@ -103,14 +103,24 @@ export function snapshotFlowHandles(
   value: readonly FlowHandle[] | undefined,
 ): readonly FlowHandle[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  return Object.freeze(
-    value.slice(0, MAX_FLOW_COLLECTION_ENTRIES).map((handle) =>
-      Object.freeze({
-        id: typeof handle?.id === 'string' ? handle.id : '',
-        ...(typeof handle?.label === 'string' ? { label: handle.label } : {}),
-      }),
-    ),
-  );
+  const result: FlowHandle[] = [];
+  const seen = new Set<string>();
+  for (const handle of value.slice(0, MAX_FLOW_COLLECTION_ENTRIES)) {
+    try {
+      const id = handle?.id;
+      if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
+      seen.add(id);
+      result.push(
+        Object.freeze({
+          id,
+          ...(typeof handle?.label === 'string' ? { label: handle.label } : {}),
+        })
+      );
+    } catch {
+      // A malformed handle cannot reserve its id or suppress a later valid occurrence.
+    }
+  }
+  return Object.freeze(result);
 }
 
 export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode[] {

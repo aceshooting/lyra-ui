@@ -6,9 +6,7 @@
 - **Class** `LyraLiteChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/lite-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated property** `hideAxis` / `hide-axis` since `8.2.3`; use property `without-value-axis`; removal not before `10.0.0` — withoutValueAxis identifies the affected axis precisely while hideAxis remains a compatibility alias.
-- **Deprecated property** `padLeft` / `pad-left` since `8.2.3`; use property `value-axis-gutter="…"`; removal not before `10.0.0` — valueAxisGutter uses logical purpose-based naming while padLeft remains a compatibility alias for the same allocation.
-- **Deprecated property** `selectedIndex` since `8.2.3`; use property `.selectedIndices = […]`; removal not before `10.0.0` — selectedIndices accurately names the plural controlled selection while selectedIndex remains a compatibility alias.
+- **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 17 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

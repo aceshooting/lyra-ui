@@ -99,15 +99,18 @@ it("emits lr-files with all files accepted when no mime restrictions are set", a
     html`<lr-file-input multiple></lr-file-input>`
   )) as LyraFileInput;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const first = makeFile('a.csv', 'text/csv');
+  const second = makeFile('b.csv', 'text/csv');
   setTimeout(() =>
-    dropWith(base, [
-      makeFile("a.csv", "text/csv"),
-      makeFile("b.csv", "text/csv"),
-    ])
+    dropWith(base, [first, second])
   );
   const ev = await oneEvent(el, "lr-files");
   expect(ev.detail.files.length).to.equal(2);
+  expect(ev.detail.files[0] === first).to.equal(true);
   expect(ev.detail.rejected.length).to.equal(0);
+  expect(Object.isFrozen(ev.detail)).to.equal(true);
+  expect(Object.isFrozen(ev.detail.files)).to.equal(true);
+  expect(Object.isFrozen(ev.detail.rejected)).to.equal(true);
 });
 
 it("rejects files not in allowedMimeTypes", async () => {

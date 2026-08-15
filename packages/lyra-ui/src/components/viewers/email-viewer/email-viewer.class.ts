@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
   isAbortError,
@@ -31,6 +31,14 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 
 export interface ParsedEmailAttachment { filename: string; mimeType: string; size: number; content?: Uint8Array; }
 export interface ParsedEmail { from: string; to: string; subject: string; date: string; bodyHtml: string | null; bodyText: string | null; attachments: ParsedEmailAttachment[]; }
+export interface LyraEmailAttachmentOpenDetail {
+  readonly attachment: Readonly<{
+    filename: string;
+    mimeType: string;
+    /** Immutable binary snapshot. Read bytes with `arrayBuffer()`; no object URL is created. */
+    content?: Blob;
+  }>;
+}
 type EmailFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
@@ -39,7 +47,7 @@ type EmailFetchState =
 
 export interface LyraEmailViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
-  'lr-attachment-open': CustomEvent<{ attachment: { filename: string; mimeType: string; content?: Uint8Array } }>;
+  'lr-attachment-open': CustomEvent<LyraEventDetailSnapshot<LyraEmailAttachmentOpenDetail>>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
@@ -53,7 +61,18 @@ function normalizeAttachmentContent(content: ArrayBuffer | Uint8Array | string):
   return new TextEncoder().encode(content);
 }
 
-class LyraEmailViewerBase extends LyraElement<LyraEmailViewerEventMap> {}
+function immutableAttachmentBlob(content: Uint8Array, mimeType: string): Blob {
+  const copied = new Uint8Array(content.byteLength);
+  copied.set(content);
+  return new Blob([copied], { type: mimeType });
+}
+
+class LyraEmailViewerBase extends LyraElement<LyraEmailViewerEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-attachment-open',
+    'lr-text-select',
+  ]);
+}
 
 /** The maximal trailing run of lines that are empty or start with `>`, split off only when that
  *  run contains at least 3 actual `>`-quoted lines (a short quote-looking tail -- padded by blank
@@ -119,9 +138,9 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  * Parses `.eml` messages with the optional `postal-mime` peer and renders
  * their HTML body only after DOMPurify sanitization and inside a paint-contained surface.
  * Plain-text messages remain useful without DOMPurify. Attachment rows are real buttons that emit
- * `lr-attachment-open` with the attachment's decoded bytes -- this component itself never
- * opens, downloads, or object-URLs the content; a host routes the event into e.g.
- * `URL.createObjectURL(new Blob([content], { type: mimeType }))` -> `lr-document-viewer` ->
+ * `lr-attachment-open` with an immutable Blob snapshot of the decoded bytes -- this component
+ * never opens, downloads, or object-URLs the content; a host routes the Blob into e.g.
+ * `URL.createObjectURL(content)` -> `lr-document-viewer` ->
  * revoke on `lr-close`. `fold-quotes` collapses trailing quoted-reply text/HTML behind a
  * localized toggle.
  * A nonempty host `aria-label` makes the host the sole named semantic owner; otherwise the shadow
@@ -129,9 +148,8 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  *
  * @customElement lr-email-viewer
  * @event lr-render-error - Fired when fetching or parsing the message fails.
- * @event lr-attachment-open - An attachment button was activated. `detail: { attachment:
- *   { filename, mimeType, content? } }`. This component never opens, downloads, or object-URLs the
- *   content itself — see the class doc's composition recipe.
+ * @event lr-attachment-open - An attachment button was activated. Recursively frozen `detail:
+ *   { attachment: { filename, mimeType, content?: Blob } }`; read bytes with `arrayBuffer()`.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change -
  *   Fired whenever search state changes. `matchCountExact=false` makes the retained count a lower
  *   bound. Bubbling, composed, and non-cancelable.
@@ -466,7 +484,15 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
         type="button"
         part="attachment-button"
         aria-label=${this.localize('emailViewerOpenAttachment', undefined, { filename: attachment.filename })}
-        @click=${() => this.emit('lr-attachment-open', { attachment: { filename: attachment.filename, mimeType: attachment.mimeType, content: attachment.content } })}
+        @click=${() => this.emit('lr-attachment-open', {
+          attachment: {
+            filename: attachment.filename,
+            mimeType: attachment.mimeType,
+            content: attachment.content
+              ? immutableAttachmentBlob(attachment.content, attachment.mimeType)
+              : undefined,
+          },
+        })}
       ><span part="attachment-name">${attachment.filename}</span><span part="attachment-size">${formatFileSize(
         attachment.size,
         (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),

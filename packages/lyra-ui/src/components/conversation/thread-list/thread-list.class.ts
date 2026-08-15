@@ -11,7 +11,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import type {
   LyraVirtualList,
-  VirtualListGroup,
+  LyraVirtualListGroup,
 } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './thread-list.styles.js';
@@ -246,8 +246,6 @@ function defaultFilter(
  * @since 4.0.0
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['threads', 'groupOrder', 'collapsedGroupIds', 'rowActions']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -272,6 +270,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     unpinConversation: LYRA_DEFAULT_unpinConversation,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['threads', 'groupOrder', 'collapsedGroupIds', 'rowActions']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -301,7 +301,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  `'none'` for a flat list in host order. */
   @property() grouping: ThreadListGrouping = 'date';
 
-  /** `grouping="custom"`: derives an arbitrary controlled group id for every visible thread. */
+  /** `grouping="custom"`: derives an arbitrary controlled nonblank group id for every visible
+   * thread. Rows whose callback fails or returns an invalid id are omitted from the grouped view. */
   @property({ attribute: false }) groupBy?: (thread: LyraChatThread) => string;
 
   /** Returns the semantic string label for any date or custom group. */
@@ -542,6 +543,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private get normalizedThreads(): LyraChatThread[] {
     const seen = new Set<string>();
     return this.threads.filter((thread) => {
+      if (thread === null || typeof thread !== 'object') return false;
       if (typeof thread.id !== 'string' || thread.id.trim().length === 0 || seen.has(thread.id)) return false;
       seen.add(thread.id);
       return true;
@@ -682,7 +684,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         return visible.map((thread) => ({ kind: 'thread', thread }));
       const grouped = new Map<string, LyraChatThread[]>();
       for (const thread of visible) {
-        const id = this.groupBy(thread);
+        let id: unknown;
+        try {
+          id = this.groupBy(thread);
+        } catch {
+          continue;
+        }
+        if (typeof id !== 'string' || id.trim().length === 0) continue;
         const existing = grouped.get(id);
         if (existing) existing.push(thread);
         else grouped.set(id, [thread]);
@@ -1143,8 +1151,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Position anchors for `lr-virtual-list`'s sticky layer: one entry per group header row, keyed by
    *  group id. Every label is empty on purpose -- the header is already rendered as a real row, so a
    *  `[part="group"]` marker would be a second, duplicate header stacked on top of it. */
-  private stickyAnchors(items: ThreadListItem[]): VirtualListGroup[] {
-    const anchors: VirtualListGroup[] = [];
+  private stickyAnchors(items: ThreadListItem[]): LyraVirtualListGroup[] {
+    const anchors: LyraVirtualListGroup[] = [];
     this.stickyGroupItems.clear();
     items.forEach((item, index) => {
       if (item.kind !== 'group') return;
@@ -1155,7 +1163,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   // Stable identity: a fresh arrow per render would invalidate the child's property on every update.
-  private renderStickyGroup = (group: VirtualListGroup): unknown => {
+  private renderStickyGroup = (group: LyraVirtualListGroup): unknown => {
     const item = this.stickyGroupItems.get(String(group.key));
     return item ? this.renderGroupHeader(item, { sticky: true }) : nothing;
   };
@@ -1268,7 +1276,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 : undefined}
               .renderItem=${this.renderItem}
               .keyFunction=${this.itemKey}
-              .activeId=${this.activeConversationId
+              .activeItemId=${this.activeConversationId
                 ? this.threadItemKey(this.activeConversationId)
                 : ''}
             ></lr-virtual-list>`}

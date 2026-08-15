@@ -263,8 +263,6 @@ export interface LyraMultiSplitEventMap {
  * @since unreleased
  */
 export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['sizes', 'defaultSizes', 'panelConstraints']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -272,6 +270,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     resizeDivider: LYRA_DEFAULT_resizeDivider,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['sizes', 'defaultSizes', 'panelConstraints']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([

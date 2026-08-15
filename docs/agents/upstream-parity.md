@@ -70,8 +70,8 @@ while doing something else. The vocabulary rules apply to every component, mirro
   polarity inversion above. Two authoring consequences. Never write `— (extra)` for a component when
   an upstream ships a tag of that name — the codemod then skips it and the consumer's markup keeps a
   dead prefix that renders nothing. Never name an upstream tag from memory; check it against the
-  fixture first. Regenerate `llms/migration.md` with `pnpm llms` in the same change as the table
-  edit.
+  fixture first. Run `./package.sh` to regenerate `llms/migration.md` and the packaged reference
+  in the same change as the table edit.
 
 - **A capability an upstream exposes publicly does not live only in `src/internal/`.** Both
   upstreams publish their anchored-positioning primitive, their screen-reader-only wrapper, and
@@ -154,10 +154,10 @@ while doing something else. The vocabulary rules apply to every component, mirro
   above `export class Lyra*` and declares the new `@slot`/`@csspart`/`@cssprop`/`@event` alongside
   the `@property` itself (`cem` feeds `custom-elements.json`;
   `manifest:check` + `manifest:coverage`); a test asserts the rendered result; a story renders it;
-  the authored `llms/<family>.md` documents it (`llms-freshness` + `llms:check`, `pnpm llms`
+  the authored `llms/<family>.md` documents it (`llms-freshness` + `llms:check`, `./package.sh`
   regenerating `llms-full.txt`, `llms/index.md`, `llms/components/<tag>.md`, `llms/migration.md`);
   the manifest and the editor data derived from it are regenerated in order — `pnpm manifest` →
-  `generate-editor-data` → `pnpm llms` — and committed together; and for a mirrored member the
+  `generate-editor-data` → `./package.sh` — and committed together; and for a mirrored member the
   README row and the `upstream-tags.json` entry move in the same change
   (`check-migration-coverage.mjs`). Member-specific gates cover the rest: `check:event-contracts` +
   `check:event-barrel` + `check:event-types` for a new event, `check-part-reachability.mjs` for a

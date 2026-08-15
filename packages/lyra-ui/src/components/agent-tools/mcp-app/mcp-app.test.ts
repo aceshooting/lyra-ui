@@ -266,6 +266,52 @@ it('builds host-context and correlated tool-result message envelopes through the
   ]);
 });
 
+it('delivers host-context to the real always-opaque sandboxed frame instead of throwing', async () => {
+  // The sandbox never grants allow-same-origin, so every resolved resource's frame -- html or src
+  // alike -- carries a forced-opaque origin. Browsers report that origin to the *recipient* as the
+  // literal string "null" (expectedOrigin(), consulted correctly by onMessage() for the inbound
+  // direction), but a real postMessage() call REJECTS that same string as an outbound
+  // targetOrigin with a SyntaxError -- only "*" or a value that parses as an absolute URL is
+  // accepted, and no URL serializes to "null". So the one behavior actually worth locking down
+  // here is a real, unmocked round trip through the platform API: it must not throw, and the
+  // opaque-origin frame must actually receive the message -- proving '*' is the correct choice for
+  // this always-opaque target, not merely the leftover default of a dead ternary.
+  const token = `mcp-post-origin-${crypto.randomUUID()}`;
+  let cleanup = (): void => {};
+  const received = new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error('Timed out waiting for the relayed host-context')), 3_000);
+    const handler = (event: MessageEvent): void => {
+      if (event.data?.token !== token) return;
+      cleanup();
+      resolve();
+    };
+    cleanup = () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener('message', handler);
+    };
+    window.addEventListener('message', handler);
+  });
+  try {
+    const el = await fixture<LyraMcpApp>(html`<lr-mcp-app
+      .resource=${{
+        uri: 'ui://weather/current',
+        html: `<script>
+          window.addEventListener('message', (event) => {
+            if (event.data && event.data.channel === 'lyra-mcp-app' && event.data.type === 'host-context') {
+              parent.postMessage({ token: ${JSON.stringify(token)} }, '*');
+            }
+          });
+        </script>`,
+      }}
+    ></lr-mcp-app>`);
+    await oneEvent(el, 'lr-mcp-ready');
+    expect(() => el.postHostContext({ theme: 'dark' })).to.not.throw();
+    await received;
+  } finally {
+    cleanup();
+  }
+});
+
 it('fails closed on uncorrelated or ambiguous tool-result options at runtime', () => {
   const el = document.createElement('lr-mcp-app') as LyraMcpApp;
   const messages: unknown[] = [];

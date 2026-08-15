@@ -431,6 +431,56 @@ describe("lr-rag-answer", () => {
     );
   });
 
+  it('contains and translates citation-open from answer and grounding badges', async () => {
+    const citation = { id: 'c1', sourceId: 'd1', label: 'First' };
+    const el = (await fixture(html`
+      <lr-rag-answer
+        answer='Answer'
+        .citations=${[citation]}
+        .sources=${[{ id: 'd1', name: 'guide.md' }]}
+      ></lr-rag-answer>
+    `)) as LyraRagAnswer;
+    let leaked = 0;
+    el.addEventListener('lr-citation-open', () => leaked++);
+    const answerPending = oneEvent(el, 'lr-citation-select');
+    el.shadowRoot!.querySelector('lr-citation-badge')!.dispatchEvent(
+      new CustomEvent('lr-citation-open', {
+        detail: { index: 1, sourceId: 'd1' },
+        bubbles: true,
+        composed: true,
+      })
+    );
+    expect((await answerPending).detail).to.deep.equal({
+      citation,
+      section: 'answer',
+    });
+    expect(leaked).to.equal(0);
+
+    el.assessment = {
+      supportedClaims: 1,
+      unsupportedClaims: 0,
+      coverage: 1,
+    };
+    await el.updateComplete;
+    const summary = el.shadowRoot!.querySelector('lr-grounding-summary') as
+      | (HTMLElement & { updateComplete: Promise<unknown> })
+      | null;
+    await summary!.updateComplete;
+    const groundingPending = oneEvent(el, 'lr-citation-select');
+    summary!.dispatchEvent(
+      new CustomEvent('lr-citation-open', {
+        detail: { index: 1, sourceId: 'd1' },
+        bubbles: true,
+        composed: true,
+      })
+    );
+    expect((await groundingPending).detail).to.deep.equal({
+      citation,
+      section: 'grounding',
+    });
+    expect(leaked).to.equal(0);
+  });
+
   it("ignores an activation whose index falls outside the citation list", async () => {
     const el = (await fixture(html`<lr-rag-answer
       answer="Answer"
@@ -528,5 +578,68 @@ describe("lr-rag-answer", () => {
       el.disconnectedCallback();
       window.MutationObserver = OriginalMutationObserver;
     }
+  });
+
+  it('omits blank and later duplicate citation, source, and nested claim ids before composition and actions', async () => {
+    const firstCitation = { id: 'citation-1', sourceId: 'source-1' };
+    const firstSource = { id: 'source-1', name: 'First source' };
+    const firstClaim = {
+      id: 'claim-1',
+      text: 'First claim',
+      status: 'supported' as const,
+      citationIds: ['citation-1'],
+    };
+    const el = (await fixture(
+      html`<lr-rag-answer answer="Answer"></lr-rag-answer>`
+    )) as LyraRagAnswer;
+    el.citations = [
+      { ...firstCitation, id: ' ' },
+      firstCitation,
+      { ...firstCitation, sourceId: 'later-source' },
+    ];
+    el.sources = [
+      { ...firstSource, id: '' },
+      firstSource,
+      { ...firstSource, name: 'Later source' },
+    ];
+    el.assessment = {
+      supportedClaims: 1,
+      unsupportedClaims: 0,
+      coverage: 1,
+      claims: [
+        { ...firstClaim, id: '' },
+        firstClaim,
+        { ...firstClaim, text: 'Later claim' },
+      ],
+    };
+    await el.updateComplete;
+
+    const summary = el.shadowRoot!.querySelector('lr-grounding-summary') as
+      | (HTMLElement & {
+          assessment: { claims?: readonly unknown[] };
+          citations: readonly unknown[];
+          updateComplete: Promise<unknown>;
+        })
+      | null;
+    expect(summary).to.exist;
+    expect(summary!.assessment.claims).to.deep.equal([firstClaim]);
+    expect(summary!.citations).to.deep.equal([firstCitation]);
+    expect(el.shadowRoot!.querySelectorAll('lr-source-card').length).to.equal(1);
+
+    el.assessment = null;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('lr-citation-badge').length).to.equal(1);
+    const selected = oneEvent(el, 'lr-citation-select');
+    el.shadowRoot!.querySelector<HTMLElement>('lr-citation-badge')!.dispatchEvent(
+      new CustomEvent('lr-citation-activate', {
+        bubbles: true,
+        composed: true,
+        detail: { index: 1 },
+      })
+    );
+    expect((await selected).detail).to.deep.equal({
+      citation: firstCitation,
+      section: 'answer',
+    });
   });
 });

@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Paints modules across the full canvas with a fixed 2× backing store at ordinary sizes. Host color and background-color control paint; add CSS padding when output needs a quiet zone.',
+          'Paints modules across the full canvas with a fixed 2× backing store at ordinary sizes. Host color and background-color control paint; the permanent upstream `fill` and `background` properties remain the highest-precedence paint inputs. Add CSS padding when output needs a quiet zone.',
       },
     },
   },

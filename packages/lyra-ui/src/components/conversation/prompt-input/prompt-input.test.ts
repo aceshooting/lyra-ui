@@ -771,7 +771,7 @@ it("translates composed control events from its host without leaking the raw chi
     new CustomEvent("lr-sources-change", {
       bubbles: true,
       composed: true,
-      detail: { selectedIds: ["doc-1"] },
+      detail: { selectedSourceIds: ['doc-1'] },
     })
   );
   expect(sourceTargets).to.deep.equal(["LR-PROMPT-INPUT"]);
@@ -1252,7 +1252,7 @@ it("forwards readOnly/minLength/maxLength and keeps read-only edits inert", asyn
   expect(textarea.maxLength).to.equal(6);
 });
 
-it("publishes exactly one native and prefixed focus/blur pair for the primary editor", async () => {
+it('publishes exactly one native focus/blur pair for the primary editor, and never lr-focus/lr-blur', async () => {
   const wrapper = await fixture(html`<div>
     <button id="before" type="button">Before</button>
     <lr-prompt-input></lr-prompt-input>
@@ -1269,8 +1269,8 @@ it("publishes exactly one native and prefixed focus/blur pair for the primary ed
   const blurs: FocusEvent[] = [];
   let prefixedFocuses = 0;
   let prefixedBlurs = 0;
-  el.addEventListener("focus", (event) => focuses.push(event));
-  el.addEventListener("blur", (event) => blurs.push(event));
+  el.addEventListener('focus', (event) => focuses.push(event as FocusEvent));
+  el.addEventListener('blur', (event) => blurs.push(event as FocusEvent));
   el.addEventListener("lr-focus", () => prefixedFocuses++);
   el.addEventListener("lr-blur", () => prefixedBlurs++);
 
@@ -1284,8 +1284,46 @@ it("publishes exactly one native and prefixed focus/blur pair for the primary ed
   expect(blurs[0]).to.be.instanceOf(FocusEvent);
   expect(focuses[0]?.target === el).to.be.true;
   expect(blurs[0]?.target === el).to.be.true;
-  expect(prefixedFocuses).to.equal(1);
-  expect(prefixedBlurs).to.equal(1);
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(prefixedFocuses).to.equal(0);
+  expect(prefixedBlurs).to.equal(0);
+});
+
+it('does not leak a descendant control\'s own native focus/blur as the composite\'s focus/blur', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-input .modelCatalog=${['fast']}></lr-prompt-input>`
+  )) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector(
+    'lr-chat-composer'
+  ) as LyraChatComposer;
+  await composer.updateComplete;
+  const modelSelect = el.shadowRoot!.querySelector(
+    'lr-model-select'
+  ) as HTMLElement & { focus(): void; blur(): void };
+  const attachmentTrigger = el.shadowRoot!.querySelector(
+    'lr-attachment-trigger'
+  ) as HTMLElement & { focus(): void; blur(): void };
+  const focuses: FocusEvent[] = [];
+  const blurs: FocusEvent[] = [];
+  el.addEventListener('focus', (event) => focuses.push(event as FocusEvent));
+  el.addEventListener('blur', (event) => blurs.push(event as FocusEvent));
+
+  modelSelect.focus();
+  modelSelect.blur();
+  attachmentTrigger.focus();
+  attachmentTrigger.blur();
+
+  expect(focuses).to.have.lengthOf(0);
+  expect(blurs).to.have.lengthOf(0);
+
+  // The primary composer's own focus/blur still relays exactly once -- only descendants leak.
+  composer.focus();
+  composer.blur();
+
+  expect(focuses).to.have.lengthOf(1);
+  expect(blurs).to.have.lengthOf(1);
+  expect(focuses[0]?.target === el).to.be.true;
+  expect(blurs[0]?.target === el).to.be.true;
 });
 
 it("does not render empty chips/footer wrappers and tracks live/reconnected slot content", async () => {
@@ -1562,4 +1600,39 @@ it("normalizes attachment identity before rendering and keys surviving chips by 
   chips = [...el.shadowRoot!.querySelectorAll<LyraAttachmentChip>("lr-attachment-chip")];
   expect(chips.map((chip) => chip.attachmentId)).to.deep.equal(["second", "first"]);
   expect(chips[0] === retainedSecond, "the same attachment keeps its rendered chip").to.equal(true);
+});
+
+it('normalizes source, selected-source, and queue identities before rendering or section gating', async () => {
+  const el = await fixture<LyraPromptInput>(html`<lr-prompt-input
+    .sources=${[
+      null,
+      { id: '   ', label: 'Blank' },
+      { id: 'source-a', label: 'First source' },
+      { id: 'source-a', label: 'Ignored duplicate' },
+    ] as unknown as LyraPromptInput['sources']}
+    .selectedSourceIds=${['', 'source-a', 'source-a']}
+    .queue=${[
+      undefined,
+      { id: '', value: 'Blank' },
+      { id: 'queue-a', value: 'First queued prompt' },
+      { id: 'queue-a', value: 'Ignored duplicate' },
+    ] as unknown as LyraPromptInput['queue']}
+  ></lr-prompt-input>`);
+
+  const picker = el.shadowRoot!.querySelector('lr-source-picker') as HTMLElement & {
+    sources: readonly { id: string; label: string }[];
+    selectedSourceIds: readonly string[];
+  };
+  const queue = el.shadowRoot!.querySelector('lr-prompt-queue') as HTMLElement & {
+    items: readonly { id: string; value: string }[];
+  };
+  expect(picker.sources.map((source) => source.label)).to.deep.equal(['First source']);
+  expect(picker.selectedSourceIds).to.deep.equal(['source-a']);
+  expect(queue.items.map((item) => item.value)).to.deep.equal(['First queued prompt']);
+
+  el.sources = [null, { id: ' ', label: 'Blank' }] as unknown as typeof el.sources;
+  el.queue = [false, { id: '', value: 'Blank' }] as unknown as typeof el.queue;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lr-source-picker') === null).to.be.true;
+  expect(el.shadowRoot!.querySelector('lr-prompt-queue') === null).to.be.true;
 });

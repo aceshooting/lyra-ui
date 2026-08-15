@@ -1,3 +1,43 @@
+## Breaking changes in 9.0.0
+
+**`lr-app-rail`:** `mode`'s write side is removed: the accessor is now strictly read-only (always resolves to
+'full'/'icon-only'/'mobile', never 'auto'). A new `forceMode` property/attribute (`force-mode`, type
+`'full' | 'icon-only' | 'auto'`, unset by default) replaces it: assign 'full'/'icon-only' to pin that
+mode, 'auto' (or unset) to release the pin and resume automatic breakpoint tracking. Unlike the
+removed mode setter, 'mobile' can no longer be force-pinned — the mobile breakpoint is always tracked
+automatically regardless, mirroring `preferredMode`'s existing scope; if a consumer needs a
+guaranteed-mobile demo/test state, widen `mobile-breakpoint` instead. Whether the rail is currently
+pinned is now itself observable (`forceMode === 'auto'` or unset means auto-tracking). `dragging`
+loses its public setter — it's read-only; assigning it now throws (`el.dragging = true` ->
+TypeError), matching that this component has always owned every drag transition itself. Exported
+types renamed (TypeScript-only, no markup/runtime change): `AppRailMode` -> `LyraAppRailMode`,
+`AppRailModeInput` -> `LyraAppRailModeInput`, `AppRailPreferredMode` -> `LyraAppRailPreferredMode`,
+`AppRailPersistField` -> `LyraAppRailPersistField`, `AppRailModeChangeDetail` ->
+`LyraAppRailModeChangeDetail`, `AppRailToggleDetail` -> `LyraAppRailToggleDetail`,
+`AppRailResizeDetail` -> `LyraAppRailResizeDetail`.
+
+**`lr-tab-group`:** Exported types renamed, TypeScript-only: `TabGroupPlacement` ->
+`LyraTabGroupPlacement`, `TabGroupActivation` -> `LyraTabGroupActivation`.
+
+**`lr-virtual-list`:** Exported types renamed, TypeScript-only: `VirtualListRange` ->
+`LyraVirtualListRange`, `VirtualListGroup` -> `LyraVirtualListGroup`, `VirtualListItemRole` ->
+`LyraVirtualListItemRole`, `VirtualListRowHeight` -> `LyraVirtualListRowHeight`,
+`VirtualListIndexedSource` -> `LyraVirtualListIndexedSource`, `VirtualListSource` ->
+`LyraVirtualListSource`, `VirtualListScroll` -> `LyraVirtualListScroll`.
+
+**`lr-split-panel`:** Exported types renamed, TypeScript-only: `SplitPanelOrientation` ->
+`LyraSplitPanelOrientation`, `SplitPanelPrimary` -> `LyraSplitPanelPrimary`, `SnapFunctionParams` ->
+`LyraSplitPanelSnapFunctionParams`, `SnapFunction` -> `LyraSplitPanelSnapFunction`,
+`SplitPanelRepositionDetail` -> `LyraSplitPanelRepositionDetail`. The unused, undocumented
+`SplitPanelSnapFunction` compatibility alias (of what is now `LyraSplitPanelSnapFunction`) is deleted
+outright — import `LyraSplitPanelSnapFunction` directly. `SNAP_NONE` and the `<lr-split-panel>`
+tag/runtime API are unchanged.
+
+**`lr-widget`:** `LyraWidgetView.icon` widens from `TemplateResult` to `unknown`, matching
+`LyraSegmentedItem.icon`/`LyraStepItem.icon`. Purely additive: an existing `TemplateResult` icon
+value keeps working unchanged; a plain string, DOM node, or any other Lit-renderable value is now
+also accepted.
+
 ## `lr-multi-split`
 
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
@@ -726,7 +766,8 @@ controls and exposes `role="group"` on its internal wrapper.
 
 **Properties:**
 
-- `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
+- `orientation: LyraOrientation = 'horizontal'` (reflected; the shared
+  `'horizontal' | 'vertical'` layout axis, with no component-local alias)
 - `label: string = ''` — accessible group-name fallback; a host `aria-label`, when present, wins
   including an explicitly empty value
 
@@ -1558,7 +1599,7 @@ contract.
 indexOfKey?(key): number }`. When set it takes precedence over `items`. The indexed form performs
   bounded random access for only the rendered window instead of allocating `0…count`; invalid counts
   normalize to zero. Prefer a stable object identity and stable `keyAt`/`indexOfKey` implementations
-  for synthetic, paged, or remote collections. `indexOfKey` is required when `active-id` should
+  for synthetic, paged, or remote collections. `indexOfKey` is required when `active-item-id` should
   target an indexed source: the list never performs a count-sized fallback scan; invalid or
   out-of-range results mean no match. An array source receives the same clone-owned frozen sequence
   and row-identity contract as `items`; an indexed-source object passes through by identity.
@@ -1603,7 +1644,7 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   - it is never measured as a row, so a group header that is also a real row is not double-counted in
     `row-height="auto"` mode;
   - its measured height is applied as `scroll-padding-block-start` on the scroll container and
-    subtracted from top-aligned scroll targets, so `active-id`, `scrollToIndex({ align: 'start' })`
+    subtracted from top-aligned scroll targets, so `active-item-id`, `scrollToIndex({ align: 'start' })`
     and native keyboard scrolling all stop _below_ the band instead of parking the row behind it.
 
   The callback runs on every scroll-driven update, so keep it cheap and side-effect free. While the
@@ -1630,7 +1671,7 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
 - `overscan: number = 6` — extra rows rendered beyond the visible viewport on each side; finite
   values are floored and clamped to 0–100, while non-finite values use the default 6, so an invalid
   runtime value cannot disable windowing and render the entire collection.
-- `activeId: string | number | '' = ''` (attribute `active-id`) — when set and it matches a row's `keyFunction`
+- `activeItemId: string | number | '' = ''` (attribute `active-item-id`) — when set and it matches a row's `keyFunction`
   result (compared with `Object.is` against the typed value — attribute values arrive as strings, so
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
   this changes, and rendered with `aria-current="true"`.
@@ -1655,7 +1696,7 @@ the package root re-exports it too, but that entry pulls in the eager registrati
 import { groupByRecency } from "@aceshooting/lyra-ui/utilities/group-by-recency.js";
 ```
 
-**Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-id`'s
+**Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-item-id`'s
 automatic scroll-into-view, for a host that needs to scroll to a specific row without changing which
 row is "active." `options.align` is `'start'`, `'end'`, or `'auto'` (default — no scroll at all when
 already fully visible); `options.behavior` (default `'smooth'`) is forced to `'auto'` under
@@ -1735,7 +1776,7 @@ activation target.
     ></lr-conversation-item>
   `}
   .keyFunction=${(item) => item.id}
-  active-id=${currentId}
+  active-item-id=${currentId}
   ?has-more=${hasMorePages}
   ?loading=${isLoadingMore}
   @lr-load-more=${() => loadNextPage()}
@@ -1785,7 +1826,7 @@ default estimate with sparse `ResizeObserver` measurements for rows that have ac
   be set as JS properties (`.source=`, `.items=`, `.renderItem=`, …), never as HTML attribute strings.
 - The container is `role="list"` with rows `role="listitem"`, deliberately not `listbox`/`option` —
   this component only provides windowing, not the roving-tabindex/`aria-activedescendant`
-  keyboard-interaction contract a real `listbox` requires. `active-id` only scrolls a row into view and
+  keyboard-interaction contract a real `listbox` requires. `active-item-id` only scrolls a row into view and
   marks it `aria-current`; it is not a selection widget. Compose your own selection behavior on top if
   needed.
 - `[part="base"]` carries `tabindex="0"` unconditionally, since `renderItem`'s caller-supplied content
@@ -1854,13 +1895,16 @@ accessor itself, which still takes full priority.
 
 **Properties:**
 
-- `mode: AppRailMode` (custom accessor, reflected) — the getter always returns one of the three real
-  modes (`'full'|'icon-only'|'mobile'`), never `'auto'`. The setter accepts
-  `AppRailModeInput` (`AppRailMode | 'auto'`): assigning `'full'`/`'icon-only'`/`'mobile'` forces
-  that mode and stops the element responding to breakpoint changes; assigning the write-only
-  sentinel `'auto'` releases the force and immediately re-syncs to the current viewport width,
-  resuming automatic tracking. Settable via the `mode` attribute too (`mode="icon-only"`,
-  `mode="auto"`).
+- `mode: LyraAppRailMode` (custom accessor, reflected, read-only as of 9.0.0) — always resolves to
+  one of the three real modes (`'full'|'icon-only'|'mobile'`), never `'auto'`; assigning it now
+  throws (`el.mode = 'icon-only'` -> TypeError).
+- `forceMode?: 'full' | 'icon-only' | 'auto'` (attribute `force-mode`, reflected) — replaces `mode`'s
+  former write side as of 9.0.0. Assigning `'full'`/`'icon-only'` pins that mode and stops the
+  element responding to breakpoint changes; assigning `'auto'` (or leaving it unset) releases the
+  pin and resumes automatic viewport tracking. `'mobile'` can never be force-pinned here — the
+  mobile breakpoint is always tracked automatically regardless, mirroring `preferredMode`'s scope
+  below; widen `mobile-breakpoint` for a guaranteed-mobile state instead. Settable via the
+  `force-mode` attribute too (`force-mode="icon-only"`, `force-mode="auto"`).
 - `iconOnlyBreakpoint: string = '960px'` (attribute `icon-only-breakpoint`) — any valid CSS length,
   used directly in a `(max-width: ...)` media query; below it the rail switches from `'full'` to
   `'icon-only'`.
@@ -1897,7 +1941,7 @@ accessor itself, which still takes full priority.
   `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next
   mount. Effective `mode` is breakpoint-derived and never persisted. Unset means no persistence.
 - `persist: string = 'open width'` — whitespace-separated field allowlist used with `storageKey`.
-  Valid `AppRailPersistField` tokens are `open`, `width` (`railWidthPx`), and `preferred-mode`
+  Valid `LyraAppRailPersistField` tokens are `open`, `width` (`railWidthPx`), and `preferred-mode`
   (`preferredMode`). The default preserves the existing open+width behavior. Use
   `persist="width preferred-mode"` when overlay-open state is controlled or should stay
   session-only.
@@ -1905,29 +1949,29 @@ accessor itself, which still takes full priority.
   drag/keyboard resize can reach.
 - `maxRailWidthPx: number = 440` (attribute `max-rail-width-px`) — maximum `railWidthPx` a
   drag/keyboard resize can reach.
-- `dragging: boolean = false` (reflected) — `true` for the duration of an active pointer-driven
-  resize drag (not a keyboard step); reflected so a consumer (or this component's own styles) can
-  suppress `[part='base']`'s `transition: inline-size` during the drag, which otherwise visibly
-  "chases" the pointer instead of tracking it 1:1. Effectively read-only (this component owns the
-  transitions), but a plain reflected property like every other boolean here.
+- `dragging: boolean = false` (reflected, read-only as of 9.0.0) — `true` for the duration of an
+  active pointer-driven resize drag (not a keyboard step); reflected so a consumer (or this
+  component's own styles) can suppress `[part='base']`'s `transition: inline-size` during the drag,
+  which otherwise visibly "chases" the pointer instead of tracking it 1:1. This component always
+  owned every drag transition itself; assigning it now throws (`el.dragging = true` -> TypeError).
 
 Also settable as a plain `aria-label` attribute (not a reactive property): overrides the computed
 `label`/localized-default accessible name on both the navigation landmark and the mobile dialog
 role, matching `<lr-date-input>`'s `accessibleLabel`.
 
-**Events:** `lr-mode-change` (`detail: AppRailModeChangeDetail` = `{ mode: AppRailMode }`; the
-effective mode changed, whether from a breakpoint crossing or an explicit `mode` assignment — not
+**Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
+effective mode changed, whether from a breakpoint crossing or a `forceMode` assignment — not
 fired for a redundant reassignment to the mode already in effect), `lr-toggle`
-(`detail: AppRailToggleDetail` = `{ open: boolean }`; the mobile overlay is opening or closing — via
+(`detail: LyraAppRailToggleDetail` = `{ open: boolean }`; the mobile overlay is opening or closing — via
 the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a
 breakpoint/forced mode change leaving `'mobile'` while open — not fired when a consumer sets `open`
 directly. Cancelable for every trigger except the forced mode-change close, which always applies —
 vetoing that one would leave `open` stuck `true` in a mode where it's meaningless; call
 `preventDefault()` to keep the overlay as it is for the other triggers),
-`lr-rail-resize-request` (`detail: AppRailResizeDetail` = `{ widthPx: number }`; a cancelable
+`lr-rail-resize-request` (`detail: LyraAppRailResizeDetail` = `{ widthPx: number }`; a cancelable
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidthPx` — call `preventDefault()` to keep the current width. It is not fired when a consumer
-sets `railWidthPx` directly), and `lr-rail-resize` (`detail: AppRailResizeDetail` =
+sets `railWidthPx` directly), and `lr-rail-resize` (`detail: LyraAppRailResizeDetail` =
 `{ widthPx: number }`; non-cancelable committed width, emitted immediately for a genuine keyboard
 step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/lost gestures, and
 consumer property writes emit no committed event).
@@ -2595,7 +2639,8 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   for a quiet brand-tinted background; `'filled-outlined'` keeps the border and adds that same tinted
   background; `'accent'` drops the border for a single colored accent stripe on the leading edge;
   `'plain'` has no border or background at all.
-- `orientation: 'horizontal' | 'vertical' = 'vertical'` (reflected) — vertical renders media,
+- `orientation: LyraOrientation = 'vertical'` (reflected; the shared
+  `'horizontal' | 'vertical'` layout axis) — vertical renders media,
   header/actions, body, and footer/footer-actions as sections. Horizontal arranges media/image,
   body, and `actions` in logical order and stacks them when the card's own container drops below
   30rem.
@@ -2745,8 +2790,10 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
   by group yourself.
 - `hotkey: string = 'mod+k'` — exact global activation chord parsed as `+`-separated parts; `mod`
-  resolves to Cmd on Mac and Ctrl elsewhere. Repeats, composition keys, and extra modifiers do not
-  match. If several connected palettes use the same chord, the last connected palette owns it;
+  resolves to Cmd on Mac and Ctrl elsewhere. Detection prefers Client Hints, then falls back to
+  the legacy platform string and reduced user-agent string rather than trusting
+  `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. If
+  several connected palettes use the same chord, the last connected palette owns it;
   activation is idempotently open rather than a toggle.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
 
@@ -2834,7 +2881,9 @@ authority: migrate `multiple` to `mode="multiple"`, and `multiple="false"` to th
 `mode="single"` or `mode="single-collapsible"` behavior.
 
 **Details properties:** `open: boolean = false` (reflected), `disabled: boolean = false`
-(reflected), `summary: string = ''`, `name: string = ''` (reflected — disclosures with the same
+(reflected — blocks activation and sets `aria-disabled="true"`; its native summary uses
+`tabindex="-1"` while disabled so sequential navigation matches a disabled accordion-item
+trigger), `summary: string = ''`, `name: string = ''` (reflected — disclosures with the same
 non-empty name in one document or shadow root are mutually exclusive),
 `appearance: 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'` (reflected),
 `iconPlacement: 'start' | 'end' = 'end'` (attribute `icon-placement`, reflected and logical), and
@@ -3013,7 +3062,7 @@ explicitly empty `aria-label=""`, which stays empty rather than falling back).
 
 **`lr-breadcrumb-item` properties:** `href: string = ''` (URL-sanitized; an unsafe scheme renders the
 non-link form; assigning `undefined` clears it and reads back as the canonical `''`),
-`target?: string`, and `current: boolean = false` (reflected — renders a
+`target?: LyraBreadcrumbItemTarget`, and `current: boolean = false` (reflected — renders a
 `<span aria-current="page">` instead of an `<a>`, even when `href` is set). A target derives
 the mandatory `noopener noreferrer` floor. `rel: string = 'noreferrer noopener'` is independently
 settable: author tokens are preserved, `opener` is stripped, and any target force-adds the floor. Each item
@@ -3077,8 +3126,13 @@ false` (reflected — disables every gesture grid-wide), `accessibleLabel: strin
 (`detail: { cellId, size, previous }`), `lr-collision`
 (`detail: { cellId, collidedCellIds, policy, accepted }`),
 `lr-layout-change` (`detail: { layout }`, the full proposed layout after an accepted change).
-Move, resize, and collision feedback is appended to the shared light-DOM polite announcement
-sink only while the grid and its composed ancestors remain exposed to the accessibility tree.
+The collection-bearing collision and layout-change details are detached and recursively frozen;
+listeners apply changes by creating and assigning a new layout.
+Rejected-collision feedback is appended immediately to the shared light-DOM polite announcement
+sink. Accepted move/resize success is appended only after a later controlled `layout` assignment
+contains the requested target geometry; ignoring a request never announces a change that did not
+happen. All feedback remains silent while the grid or a composed ancestor is excluded from the
+accessibility tree.
 **Slots:** `cell-{cellId}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
 
@@ -3202,12 +3256,19 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 
 - `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in
   render order. Every definition carries a nonempty, whitespace-stable, unique `filterId`; invalid
-  definitions and later duplicate filter IDs are ignored deterministically. Writing
-  `null` or `undefined` clears the schema; reads remain the canonical non-null empty array.
+  definitions and later duplicate filter IDs are ignored deterministically. The first 10,000
+  definitions and nested collection entries are detached and deeply frozen at assignment; the
+  optional Lit `icon` payload retains its rendering identity. Create and reassign a new array after
+  changes. Writing `null` or `undefined` clears the schema; reads remain the canonical non-null
+  empty array.
 - `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by `filterId`.
   Cleared fields are omitted. Reads, writes, event details, and string-array fields are immutable
-  snapshots rather than references to caller-owned data. Writing `null` or `undefined` clears the
-  value; reads remain the canonical non-null empty record.
+  snapshots rather than references to caller-owned data, capped at 10,000 record keys and 10,000
+  entries per string-array field. Create and reassign a new record after changes. Writing `null` or
+  `undefined` clears the value; reads remain the canonical non-null empty record. Built-in controls
+  use strings/string arrays; if an untyped boundary supplies a boolean, `false` is canonical empty
+  and omitted while `true` remains set. Custom controls instead use their adapter's `isEmpty` or
+  `clearValue` contract, so either boolean can be meaningful in a custom domain.
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`. A host
   `aria-label` wins by attribute presence, including an explicitly empty value.
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
@@ -3225,7 +3286,8 @@ auto minima and cap themselves to the allocated inline size. A single unbroken l
 value therefore stays inside a 320px LTR or RTL bar, with the chip's own label ellipsis retaining
 overflow ownership rather than widening the page.
 
-Each edit exposes one filter-bar `lr-input` carrying the complete value object. A built-in or
+Each edit exposes one filter-bar `lr-input` carrying a detached, deeply frozen snapshot of the
+complete value object. A built-in or
 custom control's own `lr-input`/`lr-change` aliases stay inside the wrapper so their incompatible
 detail shapes cannot escape as duplicate bar events; native-style `input`/`change` events from the
 composed controls continue bubbling normally.
@@ -3490,13 +3552,13 @@ import "@aceshooting/lyra-ui/components/layout/page/page.js";
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
 
 - **`components-layout-app-rail-app-rail-contracts`** — Supporting data types and helpers for this component family.
-  `AppRailModeChangeDetail {
+  `LyraAppRailModeChangeDetail {
   mode: unknown;
 }`
-  `AppRailResizeDetail {
+  `LyraAppRailResizeDetail {
   widthPx: unknown;
 }`
-  `AppRailToggleDetail {
+  `LyraAppRailToggleDetail {
   open: unknown;
 }`
   `computeAppRailMode(/* public names: iconOnlyMatches, mobileMatches, preferredMode */): unknown`
@@ -3822,12 +3884,12 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-layout-split-panel-split-panel-contracts`** — Supporting data types and helpers for this component family.
   `SNAP_NONE(/* public names: options, pos, size, snapThreshold */): unknown`
-  `SnapFunctionParams {
+  `LyraSplitPanelSnapFunctionParams {
   pos: unknown;
   size: unknown;
   snapThreshold: unknown;
 }`
-  `SplitPanelRepositionDetail {
+  `LyraSplitPanelRepositionDetail {
   position: unknown;
   positionInPixels: unknown;
 }`
@@ -3846,12 +3908,12 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 - **`components-layout-virtual-list-virtual-list-contracts`** — Supporting data types and helpers for this component family.
-  `VirtualListGroup {
+  `LyraVirtualListGroup {
   key: unknown;
   label: unknown;
   startIndex: unknown;
 }`
-  `VirtualListIndexedSource {
+  `LyraVirtualListIndexedSource {
   count: unknown;
   itemAt: unknown;
   index: unknown;
@@ -3859,11 +3921,11 @@ These named interfaces and helper signatures are available to typed integrations
   indexOfKey: unknown;
   key: unknown;
 }`
-  `VirtualListRange {
+  `LyraVirtualListRange {
   start: unknown;
   end: unknown;
 }`
-  `VirtualListScroll {
+  `LyraVirtualListScroll {
   scrollTop: unknown;
   viewportHeight: unknown;
 }`

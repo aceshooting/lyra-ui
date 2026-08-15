@@ -43,7 +43,8 @@ export const styles = css`
      textarea or the text input places a caret, and pointer-down on the role select hands the whole
      interaction to the UA's own native option list, which paints its own pressed feedback and holds
      it for as long as the popup is open. :focus-visible carries the affordance in all three cases. */
-  :where([part='message-role'], [part='message-content'], [part='variable'] input):hover:where(:not(:disabled)) {
+  :where([part='message-role'], [part='message-content']):hover:where(:not(:disabled)),
+  :where([part='variable']) input:hover:where(:not(:disabled)) {
     border-color: var(--lr-prompt-studio-field-hover-border, var(--lr-color-brand));
   }
   [part='variables'], [part='versions'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
@@ -61,11 +62,17 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  :where([part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):where(:hover:not(:disabled)) { background: var(--lr-color-surface-raised); }
+  /* Keep the state pseudo-class outside :where(): it supplies the same specificity as each
+     resting [part] selector, while the toolbar descendant retains its matching type specificity. */
+  :where([part='toolbar']) button:hover:where(:not(:disabled)),
+  :where([part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):hover:where(:not(:disabled)) {
+    background: var(--lr-color-surface-raised);
+  }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
      --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
      than hover in both light and dark themes rather than repeating it. */
-  :where([part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):where(:active:not(:disabled)) {
+  :where([part='toolbar']) button:active:where(:not(:disabled)),
+  :where([part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):active:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='move-message-up'] { transform: rotate(-90deg); }

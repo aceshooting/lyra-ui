@@ -147,7 +147,7 @@
       "lr-env-list",
       "lr-eval-dataset",
       "lr-eval-result",
-      "lr-evaluation-run",
+      "lr-eval-run",
       "lr-export-button",
       "lr-file-icon",
       "lr-file-input",
@@ -180,6 +180,7 @@
       "lr-ingestion-queue",
       "lr-input",
       "lr-intersection-observer",
+      "lr-json-schema-viewer",
       "lr-json-viewer",
       "lr-kbd",
       "lr-knowledge-base",
@@ -252,7 +253,6 @@
       "lr-retrieval-trace",
       "lr-rubric-form",
       "lr-scatter-chart",
-      "lr-schema-viewer",
       "lr-scroller",
       "lr-segmented",
       "lr-select",
@@ -365,114 +365,6 @@
       "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window."
     },
     {
-      "tag": "lr-box-plot",
-      "kind": "property",
-      "name": "accessibleDescription",
-      "attribute": "accessible-description",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "description",
-        "usage": "description=\"…\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "description follows the mirrored chart vocabulary while accessibleDescription remains a compatibility alias."
-    },
-    {
-      "tag": "lr-box-plot",
-      "kind": "property",
-      "name": "accessibleLabel",
-      "attribute": "accessible-label",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "label",
-        "usage": "label=\"…\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "label follows the mirrored chart vocabulary while accessibleLabel remains a compatibility alias."
-    },
-    {
-      "tag": "lr-box-plot",
-      "kind": "property",
-      "name": "boxes",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "datasets",
-        "usage": ".datasets = […]"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "datasets follows the chart-family vocabulary while boxes remains a compatibility alias over the same immutable data."
-    },
-    {
-      "tag": "lr-chart",
-      "kind": "property",
-      "name": "accessibleDescription",
-      "attribute": "accessible-description",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "description",
-        "usage": "description=\"…\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "description follows the mirrored chart vocabulary while accessibleDescription remains a compatibility alias."
-    },
-    {
-      "tag": "lr-chart",
-      "kind": "property",
-      "name": "accessibleLabel",
-      "attribute": "accessible-label",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "label",
-        "usage": "label=\"…\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "label follows the mirrored chart vocabulary while accessibleLabel remains a compatibility alias."
-    },
-    {
-      "tag": "lr-date-input",
-      "kind": "part",
-      "name": "base",
-      "since": "8.0.0",
-      "replacement": {
-        "kind": "part",
-        "name": "date-input",
-        "usage": "::part(date-input)"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The date-input part names the native date field wrapper explicitly; base remains on that same node during the compatibility window."
-    },
-    {
-      "tag": "lr-date-input",
-      "kind": "part",
-      "name": "label",
-      "since": "8.0.0",
-      "replacement": {
-        "kind": "part",
-        "name": "form-control-label",
-        "usage": "::part(form-control-label)"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window."
-    },
-    {
-      "tag": "lr-date-picker",
-      "kind": "part",
-      "name": "base",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "part",
-        "name": "date-picker",
-        "usage": "::part(date-picker)"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The date-picker part identifies the visible shell explicitly; base remains on that same node during the compatibility window."
-    },
-    {
       "tag": "lr-file-input",
       "kind": "part",
       "name": "base",
@@ -497,19 +389,6 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window."
-    },
-    {
-      "tag": "lr-histogram",
-      "kind": "method",
-      "name": "appendData",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "method",
-        "name": "appendSamples",
-        "usage": ".appendSamples(values, maxSamples)"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "appendSamples describes the histogram's numeric sample stream directly while appendData remains a compatibility adapter."
     },
     {
       "tag": "lr-icon",
@@ -539,47 +418,6 @@
       "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window."
     },
     {
-      "tag": "lr-lite-chart",
-      "kind": "property",
-      "name": "hideAxis",
-      "attribute": "hide-axis",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "withoutValueAxis",
-        "usage": "without-value-axis"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "withoutValueAxis identifies the affected axis precisely while hideAxis remains a compatibility alias."
-    },
-    {
-      "tag": "lr-lite-chart",
-      "kind": "property",
-      "name": "padLeft",
-      "attribute": "pad-left",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "valueAxisGutter",
-        "usage": "value-axis-gutter=\"…\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "valueAxisGutter uses logical purpose-based naming while padLeft remains a compatibility alias for the same allocation."
-    },
-    {
-      "tag": "lr-lite-chart",
-      "kind": "property",
-      "name": "selectedIndex",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "selectedIndices",
-        "usage": ".selectedIndices = […]"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "selectedIndices accurately names the plural controlled selection while selectedIndex remains a compatibility alias."
-    },
-    {
       "tag": "lr-qr-code",
       "kind": "part",
       "name": "base",
@@ -591,34 +429,6 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window."
-    },
-    {
-      "tag": "lr-qr-code",
-      "kind": "property",
-      "name": "background",
-      "attribute": "background",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "host-css-property",
-        "name": "background",
-        "usage": "style=\"background: …\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The standard host background property themes both backing paint and canvas while background remains an attribute compatibility alias."
-    },
-    {
-      "tag": "lr-qr-code",
-      "kind": "property",
-      "name": "fill",
-      "attribute": "fill",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "host-css-property",
-        "name": "color",
-        "usage": "style=\"color: …\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The standard host color property themes foreground modules while fill remains an attribute compatibility alias."
     },
     {
       "tag": "lr-sparkline",
@@ -10685,7 +10495,7 @@
     "current": {
       "version": "8.2.3",
       "sourceCommit": null,
-      "manifestSha256": "8708b5461eedd6d93ecada4618ae81262a2c4be2400af7edab616a87bacc51f6",
+      "manifestSha256": "80826bf58d78271d9417001f350d391eb43f0144fb12c05104105bf1dede05e2",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -10785,7 +10595,7 @@
         "lr-env-list",
         "lr-eval-dataset",
         "lr-eval-result",
-        "lr-evaluation-run",
+        "lr-eval-run",
         "lr-export-button",
         "lr-file-icon",
         "lr-file-input",
@@ -10821,6 +10631,7 @@
         "lr-ingestion-queue",
         "lr-input",
         "lr-intersection-observer",
+        "lr-json-schema-viewer",
         "lr-json-viewer",
         "lr-kbd",
         "lr-knowledge-base",
@@ -10901,7 +10712,6 @@
         "lr-retrieval-trace",
         "lr-rubric-form",
         "lr-scatter-chart",
-        "lr-schema-viewer",
         "lr-scroller",
         "lr-segmented",
         "lr-select",

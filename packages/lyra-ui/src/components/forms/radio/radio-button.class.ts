@@ -3,11 +3,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { LyraRadio } from './radio.class.js';
 import { styles } from './radio-button.styles.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 /**
  * `<lr-radio-button>` — a single-choice control rendered as a button rather than a circle.
  *
@@ -24,7 +19,8 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
  * explicitly empty value remains authoritative rather than restoring a label-text fallback.
  * Standalone button chrome is bounded by its allocation: unbroken labels wrap, while long
  * start/prefix and end/suffix adornments truncate inside their capped portions instead of widening
- * the page.
+ * the page. The leading, label, and trailing wrappers are hidden independently while empty, so a
+ * missing region never contributes a dead `--lr-radio-button-gap`.
  *
  * @customElement lr-radio-button
  * @slot - Label text.
@@ -61,10 +57,10 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
  * @csspart button - Shoelace name for the interactive button.
  * @csspart button--checked - Shoelace state alias on the selected button.
  * @csspart control - Compatibility alias for the interactive control.
- * @csspart start - The leading-content wrapper.
+ * @csspart start - The leading-content wrapper; hidden while both leading slots are empty.
  * @csspart prefix - Shoelace-compatible alias for `start`; both names are on the same wrapper.
- * @csspart label - The default slot wrapper.
- * @csspart end - The trailing-content wrapper.
+ * @csspart label - The default slot wrapper; hidden while it has no real content.
+ * @csspart end - The trailing-content wrapper; hidden while both trailing slots are empty.
  * @csspart suffix - Shoelace-compatible alias for `end`; both names are on the same wrapper.
  * @cssprop [--lr-radio-radius=var(--lr-form-control-radius)] - Corner radius of the outer edges of
  * the button row. Its private default follows the shared control radius and changes to
@@ -94,15 +90,6 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
  * @since 8.0.0
  */
 export class LyraRadioButton extends LyraRadio {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-    };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, sizes, styles];
 
   override render(): TemplateResult {
@@ -131,13 +118,7 @@ export class LyraRadioButton extends LyraRadio {
         @focus=${this.onFocus}
         @blur=${this.onBlur}
       >
-        <span part="start prefix"
-          ><slot name="start"></slot><slot name="prefix"></slot
-        ></span>
-        <span part="label"><slot></slot></span>
-        <span part="end suffix"
-          ><slot name="end"></slot><slot name="suffix"></slot
-        ></span>
+        ${this.renderButtonContent()}
       </span>
     `;
   }

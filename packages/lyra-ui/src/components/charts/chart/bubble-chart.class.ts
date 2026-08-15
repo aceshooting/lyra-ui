@@ -7,7 +7,7 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEF
 
 /**
  * `<lr-bubble-chart>` — `<lr-chart>` with a `"bubble"` default and the mirrored writable type. Feed
- * points via `Series.points`, whose exported `ChartPoint` type carries
+ * points via `LyraChartSeries.points`, whose exported `LyraChartPoint` type carries
  * `x`/`y`, optional bubble `r` (radius), and an optional per-point `label`.
  *
  * @customElement lr-bubble-chart

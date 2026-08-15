@@ -147,7 +147,9 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   /** Grammar definitions this instance can highlight, same shape as `lr-code-block-core`'s own
    *  `languages`. */
-  @property({ attribute: false }) languages?: Record<string, ShikiLanguageInput>;
+  @property({ attribute: false }) languages?: Readonly<
+    Record<string, ShikiLanguageInput>
+  >;
 
   /** How many unchanged lines to keep visible immediately before/after each change. Default
    *  `undefined` renders every line unconditionally, exactly like before this property existed. Set

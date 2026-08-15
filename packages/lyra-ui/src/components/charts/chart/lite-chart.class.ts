@@ -51,8 +51,6 @@ export interface LyraLiteChartSeries {
    *  color keyed by dataset index. */
   readonly color?: string;
 }
-/** @deprecated Use the namespaced, readonly `LyraLiteChartSeries`. */
-export type LiteSeries = LyraLiteChartSeries;
 
 export type LyraLiteChartType = 'bar' | 'line';
 
@@ -228,7 +226,9 @@ export interface LyraLiteChartEventMap {
  * stacked bars, multi-series lines, per-point click, and hover tooltips
  * (native SVG `<title>`, no positioning JS needed) — not a full `lr-chart`
  * replacement (no zoom/pan, no pie/doughnut/radar/scatter/bubble types, no
- * horizontal/dual-y-axis, no raw-config passthrough).
+ * horizontal/dual-y-axis, no raw-config passthrough, no interactive legend
+ * toggle — unlike `lr-chart`/`lr-box-plot`, clicking a `legend-item` here does
+ * not hide its series; the legend is a static color key).
  *
  * Because this renders real DOM (not canvas), it reuses `lr-chart`'s
  * `--lr-chart-*` theme tokens directly via CSS `var()` — no
@@ -333,12 +333,6 @@ export interface LyraLiteChartEventMap {
  * @since 4.0.0
  */
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'labels',
-    'datasets',
-    'selectedIndices',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -354,6 +348,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     liteChartMarkSummary: LYRA_DEFAULT_liteChartMarkSummary,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'labels',
+    'datasets',
+    'selectedIndices',
+  ]);
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
@@ -442,14 +442,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Overrides the internal `PAD_LEFT` (36px) axis-gutter constant. The gutter is on the left in
    *  LTR and the right in RTL, keeping the y axis at logical start. Unset keeps the 36px default. */
   @property({ type: Number, attribute: 'value-axis-gutter' }) valueAxisGutter?: number;
-  /** @deprecated Use the logical, purpose-named `valueAxisGutter`. */
-  @property({ type: Number, attribute: 'pad-left' })
-  get padLeft(): number | undefined {
-    return this.valueAxisGutter;
-  }
-  set padLeft(value: number | undefined) {
-    this.valueAxisGutter = value;
-  }
   /** Overrides the internal `BAR_GROUP_GAP` (0.2) fraction of a category slot left as a gap between
    *  categories. Unset (the default) keeps today's fixed 0.2. */
   @property({ type: Number, attribute: 'bar-gap-ratio' }) barGapRatio?: number;
@@ -463,14 +455,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Suppresses `renderGrid()` entirely — no gridlines, no y-axis tick labels. x-axis category
    *  labels (rendered separately) are unaffected. Default `false` preserves today's behavior. */
   @property({ type: Boolean, attribute: 'without-value-axis' }) withoutValueAxis = false;
-  /** @deprecated Use `withoutValueAxis`, which names the axis actually affected. */
-  @property({ type: Boolean, attribute: 'hide-axis' })
-  get hideAxis(): boolean {
-    return this.withoutValueAxis;
-  }
-  set hideAxis(value: boolean) {
-    this.withoutValueAxis = value;
-  }
   /** A pixel floor for a bar/stacked-segment's rendered height, for a nonzero value that would
    *  otherwise round to sub-pixel and become visually indistinguishable from absent (while still
    *  being focusable/tab-stoppable/announced) — a real accessibility/visibility gap for
@@ -490,17 +474,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  painted inside the shadow root and exposed through that token. This component takes no opinion
    *  on what the highlight looks like, only which marks it applies to. */
   @property({ attribute: false }) selectedIndices: readonly number[] = [];
-  /** @deprecated Use the grammatically plural `selectedIndices`. */
-  get selectedIndex(): readonly number[] {
-    return this.selectedIndices;
-  }
-  set selectedIndex(value: readonly number[]) {
-    this.selectedIndices = value;
-  }
   /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
    *  'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`
    *  takes precedence. Unset (the default) keeps today's auto-derived (English-fallback) label
-   *  exactly. Named `accessible-label` to match the same override on `lr-chart`/`lr-box-plot`. */
+   *  exactly. `lr-lite-chart` keeps this override under its original `accessible-label` name; it
+   *  is unrelated to (and was not renamed alongside) the deprecated `accessible-label` alias that
+   *  `lr-chart`/`lr-box-plot` dropped in favor of their mirrored `label` property. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
   /** Accessible chart name. A host `aria-label` wins. */
   @property() label: string | null = null;
@@ -791,7 +770,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     }
   }
 
-  private colorFor(index: number, series: LiteSeries): string {
+  private colorFor(index: number, series: LyraLiteChartSeries): string {
     return sanitizeCssColor(series.color) ?? DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]!; // safe: modulo a non-empty constant palette
   }
 
@@ -816,7 +795,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   /** The paint a mark of `index` uses: a texture reference under forced colors, else the color. */
-  private markPaint(index: number, series: LiteSeries): string {
+  private markPaint(index: number, series: LyraLiteChartSeries): string {
     const color = this.colorFor(index, series);
     return this.effectiveType === 'bar' && this.forcedColors()
       ? `url(#${this.forcedColorPatternId}-${index})`

@@ -8,7 +8,7 @@
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,18 +19,25 @@ Dependency-free accessible 2D embedding projection viewer. Coordinates are proje
 the component only normalizes them into SVG, colors optional clusters, and emits selection events.
 
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
-y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'` (any CSS length valid for `block-size`,
+y, label?, sourceId?, cluster? }`; `selectedPointId: string = ''` (attribute
+`selected-point-id`); `height: string = '360px'` (any CSS length valid for `block-size`,
 including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host as
 `--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
 `accessibleLabel: string | null = null` (attribute `aria-label`). As a JS-only property with no host
-attribute, it names the plot. Authored host `aria-label` instead names the explorer as a whole and
-is not cloned onto the plot, which retains its localized name. Non-finite coordinates are omitted.
+attribute, it names the plot. An authored host `aria-label` governs the plot name too (including an
+explicitly empty value), so a competing internal generic label is not exposed. Non-finite
+coordinates are omitted.
+Blank point ids and later duplicates are also omitted first-wins before empty state, roving focus,
+selection, rendering, or events.
 Pointer and programmatic focus synchronize the single roving tab stop, and every point keeps at
-least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
+least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker. Optional
+cluster membership is exposed as each option's description and in a visible text legend, so the
+grouping never depends on color alone.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
-**CSS parts:** `base`, `plot`, `point`, `empty`.
+**CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
+`empty`.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`

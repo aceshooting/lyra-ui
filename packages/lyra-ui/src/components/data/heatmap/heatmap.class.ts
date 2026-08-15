@@ -33,19 +33,7 @@ import {
 } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_heatmapCalendarCellLabel,
-  LYRA_DEFAULT_heatmapCalendarLabel,
-  LYRA_DEFAULT_heatmapDecorationLimit,
-  LYRA_DEFAULT_heatmapDefaultColLabel,
-  LYRA_DEFAULT_heatmapDefaultRowLabel,
-  LYRA_DEFAULT_heatmapMatrixCellLabel,
-  LYRA_DEFAULT_heatmapMatrixLabel,
-  LYRA_DEFAULT_heatmapNoDataValue,
-  LYRA_DEFAULT_heatmapProjectionLimit,
-  LYRA_DEFAULT_heatmapSelectedCellLabel,
-  LYRA_DEFAULT_heatmapValueLabel,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_heatmapCalendarCellLabel, LYRA_DEFAULT_heatmapCalendarLabel, LYRA_DEFAULT_heatmapDecorationLimit, LYRA_DEFAULT_heatmapDefaultColLabel, LYRA_DEFAULT_heatmapDefaultRowLabel, LYRA_DEFAULT_heatmapMatrixCellLabel, LYRA_DEFAULT_heatmapMatrixLabel, LYRA_DEFAULT_heatmapNoDataValue, LYRA_DEFAULT_heatmapProjectionLimit, LYRA_DEFAULT_heatmapSelectedCellLabel, LYRA_DEFAULT_heatmapValueLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const PAD_LEFT = 60;
@@ -552,31 +540,30 @@ export interface LyraHeatmapEventMap {
  * @since 4.0.0
  */
 export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    heatmapCalendarCellLabel: LYRA_DEFAULT_heatmapCalendarCellLabel,
+    heatmapCalendarLabel: LYRA_DEFAULT_heatmapCalendarLabel,
+    heatmapDecorationLimit: LYRA_DEFAULT_heatmapDecorationLimit,
+    heatmapDefaultColLabel: LYRA_DEFAULT_heatmapDefaultColLabel,
+    heatmapDefaultRowLabel: LYRA_DEFAULT_heatmapDefaultRowLabel,
+    heatmapMatrixCellLabel: LYRA_DEFAULT_heatmapMatrixCellLabel,
+    heatmapMatrixLabel: LYRA_DEFAULT_heatmapMatrixLabel,
+    heatmapNoDataValue: LYRA_DEFAULT_heatmapNoDataValue,
+    heatmapProjectionLimit: LYRA_DEFAULT_heatmapProjectionLimit,
+    heatmapSelectedCellLabel: LYRA_DEFAULT_heatmapSelectedCellLabel,
+    heatmapValueLabel: LYRA_DEFAULT_heatmapValueLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'data',
     'annotations',
     'legendStops',
     'colorSteps',
   ]);
-
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      heatmapCalendarCellLabel: LYRA_DEFAULT_heatmapCalendarCellLabel,
-      heatmapCalendarLabel: LYRA_DEFAULT_heatmapCalendarLabel,
-      heatmapDecorationLimit: LYRA_DEFAULT_heatmapDecorationLimit,
-      heatmapDefaultColLabel: LYRA_DEFAULT_heatmapDefaultColLabel,
-      heatmapDefaultRowLabel: LYRA_DEFAULT_heatmapDefaultRowLabel,
-      heatmapMatrixCellLabel: LYRA_DEFAULT_heatmapMatrixCellLabel,
-      heatmapMatrixLabel: LYRA_DEFAULT_heatmapMatrixLabel,
-      heatmapNoDataValue: LYRA_DEFAULT_heatmapNoDataValue,
-      heatmapProjectionLimit: LYRA_DEFAULT_heatmapProjectionLimit,
-      heatmapSelectedCellLabel: LYRA_DEFAULT_heatmapSelectedCellLabel,
-      heatmapValueLabel: LYRA_DEFAULT_heatmapValueLabel,
-    };
-  // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
 

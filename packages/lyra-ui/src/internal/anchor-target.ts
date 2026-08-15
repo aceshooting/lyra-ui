@@ -144,6 +144,14 @@ export function DocumentAnchorTarget(
   renderAnchorLiveRegion(): unknown;
 }> {
   class DocumentAnchorTargetElement extends Base implements LyraAnchorTarget {
+    protected static readonly ownedCollectionProperties = Object.freeze([
+      'anchor',
+    ]);
+
+    protected static readonly immutableEventDetails = Object.freeze([
+      'lr-text-select',
+    ]);
+
     private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
     @property({ attribute: false })
     get highlights(): readonly LyraHighlight[] { return this._highlights; }

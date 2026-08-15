@@ -34,6 +34,14 @@ const meta: Meta = {
   title: 'Observability/Rubric Form',
   component: 'lr-rubric-form',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A structured review form. Empty and blank rubric keys are omitted, later duplicates are first-wins, and retained identity spelling is not rewritten.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

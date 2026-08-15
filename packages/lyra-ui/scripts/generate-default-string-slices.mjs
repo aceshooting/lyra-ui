@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
 import { literalLocalizeCalls } from './check-default-strings.mjs';
+import { DEFAULT_STRING_SLICE_EXCLUSIONS } from './default-string-slice-exclusions.mjs';
 
 const defaultPackageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const IMPORT_START = '// GENERATED DEFAULT-STRING SLICE IMPORT: START';
@@ -110,6 +111,12 @@ function collectLocalizeCallKeys(program, catalogKeys, found) {
   });
 }
 
+function literalLocalizeCallKeys(program, catalogKeys) {
+  const found = new Set();
+  collectLocalizeCallKeys(program, catalogKeys, found);
+  return found;
+}
+
 /** Adds every binding name a parameter pattern introduces (plain, defaulted, rest, destructured). */
 function collectParameterNames(pattern, sink) {
   if (!pattern || typeof pattern !== 'object') return;
@@ -211,6 +218,235 @@ function propertyName(property) {
     return property.key.value;
   }
   return undefined;
+}
+
+function unwrapExpression(node) {
+  let current = node;
+  while (
+    current &&
+    [
+      'ChainExpression',
+      'ParenthesizedExpression',
+      'TSAsExpression',
+      'TSInstantiationExpression',
+      'TSNonNullExpression',
+      'TSSatisfiesExpression',
+      'TypeCastExpression',
+    ].includes(current.type)
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
+function parameterIdentifier(pattern) {
+  const current = unwrapExpression(pattern);
+  if (current?.type === 'Identifier') return current.name;
+  if (current?.type === 'AssignmentPattern') return parameterIdentifier(current.left);
+  if (current?.type === 'RestElement') return parameterIdentifier(current.argument);
+  return undefined;
+}
+
+function isFunctionNode(node) {
+  return (
+    node?.type === 'ArrowFunctionExpression' ||
+    node?.type === 'FunctionDeclaration' ||
+    node?.type === 'FunctionExpression'
+  );
+}
+
+function memberName(member) {
+  const property = unwrapExpression(member?.property);
+  if (!member?.computed && property?.type === 'Identifier') return property.name;
+  return literalString(property);
+}
+
+/**
+ * Resolves the closed, module-local key maps that feed a dynamic localize() call. This is narrower
+ * than the conservative whole-graph literal fallback: it follows identifier initializers, computed
+ * object lookups, and named local-function parameters back to their call arguments. It exists so a
+ * configured false-positive exclusion cannot later mask a real key added to time-input's segment
+ * map or kbd's local callback/map chain.
+ */
+function dynamicLocalizeCallKeys(program, catalogKeys) {
+  const parents = new WeakMap();
+  const declarations = new Map();
+  const fields = new Map();
+  const calls = new Map();
+  const index = (node, parent) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const child of node) index(child, parent);
+      return;
+    }
+    if (parent) parents.set(node, parent);
+    if (node.type === 'VariableDeclarator' && node.id?.type === 'Identifier' && node.init) {
+      const values = declarations.get(node.id.name) ?? [];
+      values.push(node.init);
+      declarations.set(node.id.name, values);
+    } else if (node.type === 'PropertyDefinition' && node.value) {
+      const name = propertyName(node);
+      if (name !== undefined) {
+        const values = fields.get(name) ?? [];
+        values.push(node.value);
+        fields.set(name, values);
+      }
+    } else if (node.type === 'AssignmentExpression') {
+      if (node.left?.type === 'Identifier') {
+        const values = declarations.get(node.left.name) ?? [];
+        values.push(node.right);
+        declarations.set(node.left.name, values);
+      } else if (
+        node.left?.type === 'MemberExpression' &&
+        unwrapExpression(node.left.object)?.type === 'ThisExpression'
+      ) {
+        const name = memberName(node.left);
+        if (name !== undefined) {
+          const values = fields.get(name) ?? [];
+          values.push(node.right);
+          fields.set(name, values);
+        }
+      }
+    }
+    if (node.type === 'CallExpression') {
+      const callee = unwrapExpression(node.callee);
+      if (callee?.type === 'Identifier') {
+        const entries = calls.get(callee.name) ?? [];
+        entries.push(node);
+        calls.set(callee.name, entries);
+      }
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if (key === 'start' || key === 'end') continue;
+      if (value && typeof value === 'object') index(value, node);
+    }
+  };
+  index(program, undefined);
+
+  const containingParameter = (identifier) => {
+    let current = parents.get(identifier);
+    while (current) {
+      if (isFunctionNode(current)) {
+        const parameterIndex = (current.params ?? [])
+          .findIndex((parameter) => parameterIdentifier(parameter) === identifier.name);
+        return parameterIndex >= 0 ? { functionNode: current, parameterIndex } : undefined;
+      }
+      current = parents.get(current);
+    }
+    return undefined;
+  };
+  const functionBindingName = (functionNode) => {
+    if (functionNode.id?.type === 'Identifier') return functionNode.id.name;
+    const parent = parents.get(functionNode);
+    if (
+      parent?.type === 'VariableDeclarator' &&
+      parent.init === functionNode &&
+      parent.id?.type === 'Identifier'
+    ) {
+      return parent.id.name;
+    }
+    if (
+      parent?.type === 'AssignmentExpression' &&
+      parent.right === functionNode &&
+      parent.left?.type === 'Identifier'
+    ) {
+      return parent.left.name;
+    }
+    return undefined;
+  };
+
+  const found = new Set();
+  const resolvingValues = new Set();
+  const resolvingObjects = new Set();
+  const memberValueNodes = (member) => {
+    if (unwrapExpression(member.object)?.type === 'ThisExpression') {
+      const requested = memberName(member);
+      return requested === undefined
+        ? [...fields.values()].flat()
+        : fields.get(requested) ?? [];
+    }
+    const objectCandidates = objectNodes(member.object);
+    const requested = memberName(member);
+    const values = [];
+    for (const object of objectCandidates) {
+      for (const entry of object.properties ?? []) {
+        if (entry.type !== 'Property') continue;
+        const name = propertyName(entry);
+        if (requested === undefined || name === requested) values.push(entry.value);
+      }
+    }
+    return values;
+  };
+  const parameterArguments = (identifier) => {
+    const parameter = containingParameter(identifier);
+    if (!parameter) return [];
+    const binding = functionBindingName(parameter.functionNode);
+    if (!binding) return [];
+    return (calls.get(binding) ?? [])
+      .map((call) => call.arguments?.[parameter.parameterIndex])
+      .filter(Boolean);
+  };
+  function objectNodes(expression) {
+    const node = unwrapExpression(expression);
+    if (!node || resolvingObjects.has(node)) return [];
+    resolvingObjects.add(node);
+    let objects = [];
+    if (node.type === 'ObjectExpression') objects = [node];
+    else if (node.type === 'Identifier') {
+      for (const value of declarations.get(node.name) ?? []) objects.push(...objectNodes(value));
+      for (const value of parameterArguments(node)) objects.push(...objectNodes(value));
+    } else if (node.type === 'MemberExpression') {
+      for (const value of memberValueNodes(node)) objects.push(...objectNodes(value));
+    } else if (node.type === 'ConditionalExpression') {
+      objects.push(...objectNodes(node.consequent), ...objectNodes(node.alternate));
+    } else if (node.type === 'LogicalExpression') {
+      objects.push(...objectNodes(node.left), ...objectNodes(node.right));
+    }
+    resolvingObjects.delete(node);
+    return objects;
+  }
+  function resolveExpression(expression) {
+    const node = unwrapExpression(expression);
+    if (!node || resolvingValues.has(node)) return;
+    resolvingValues.add(node);
+    const literal = literalString(node);
+    if (literal !== undefined) {
+      if (catalogKeys.has(literal)) found.add(literal);
+    } else if (node.type === 'Identifier') {
+      for (const value of declarations.get(node.name) ?? []) resolveExpression(value);
+      for (const value of parameterArguments(node)) resolveExpression(value);
+    } else if (node.type === 'MemberExpression') {
+      for (const value of memberValueNodes(node)) resolveExpression(value);
+    } else if (node.type === 'ConditionalExpression') {
+      resolveExpression(node.consequent);
+      resolveExpression(node.alternate);
+    } else if (node.type === 'LogicalExpression') {
+      resolveExpression(node.left);
+      resolveExpression(node.right);
+    } else if (node.type === 'ArrayExpression') {
+      for (const value of node.elements ?? []) resolveExpression(value);
+    } else if (node.type === 'ObjectExpression') {
+      for (const entry of node.properties ?? []) {
+        if (entry.type === 'Property') resolveExpression(entry.value);
+        else if (entry.type === 'SpreadElement') resolveExpression(entry.argument);
+      }
+    }
+    resolvingValues.delete(node);
+  }
+
+  visitAst(program, (node) => {
+    if (node.type !== 'CallExpression') return;
+    let keyArgIndex;
+    if (isLocalizeMethodCallee(node.callee) || isLocalizeIdentifierCallee(node.callee)) keyArgIndex = 0;
+    else if (isResolveLyraStringCallee(node.callee)) keyArgIndex = 1;
+    else return;
+    const argument = node.arguments?.[keyArgIndex];
+    if (!argument) return;
+    const literalKeys = new Set();
+    collectKeyLiterals(argument, literalKeys);
+    if (literalKeys.size === 0) resolveExpression(argument);
+  });
+  return found;
 }
 
 export function catalogEntries(source, file = 'localization.ts') {
@@ -408,6 +644,75 @@ function relativeImport(fromFile, generatedFile) {
   return specifier.replace(/\.ts$/, '.js');
 }
 
+function packageRelativePath(packageDir, file) {
+  return path.relative(packageDir, file).split(path.sep).join('/');
+}
+
+function validateConfiguredExclusions(config, catalogKeys, classFiles) {
+  const configuredPaths = Object.keys(config);
+  const sortedPaths = [...configuredPaths].sort();
+  if (configuredPaths.join('\0') !== sortedPaths.join('\0')) {
+    throw new Error('Default-string slice exclusion paths must be sorted.');
+  }
+  for (const file of configuredPaths) {
+    if (!classFiles.has(file)) {
+      throw new Error(`${file}: default-string slice exclusion target is not a discovered class file`);
+    }
+    const keys = config[file];
+    if (!Array.isArray(keys) || keys.length === 0) {
+      throw new Error(`${file}: default-string slice exclusions must be a non-empty array`);
+    }
+    const sortedKeys = [...new Set(keys)].sort();
+    if (keys.join('\0') !== sortedKeys.join('\0')) {
+      throw new Error(`${file}: default-string slice exclusions must be sorted and unique`);
+    }
+    for (const key of keys) {
+      if (!catalogKeys.has(key)) {
+        throw new Error(`${file}: excluded default-string key ${key} has no DEFAULT_STRINGS entry`);
+      }
+    }
+  }
+}
+
+function applyConfiguredExclusions({
+  packageDir,
+  file,
+  source,
+  keys,
+  catalogKeys,
+  exclusions,
+}) {
+  const relativeFile = packageRelativePath(packageDir, file);
+  const excludedKeys = exclusions[relativeFile] ?? [];
+  if (excludedKeys.length === 0) return keys;
+  const discovered = new Set(keys);
+  const program = parseProgram(file, withoutGeneratedBlocks(source));
+  const direct = literalLocalizeCallKeys(program, catalogKeys);
+  const dynamic = dynamicLocalizeCallKeys(program, catalogKeys);
+  for (const key of excludedKeys) {
+    if (!discovered.has(key)) {
+      throw new Error(
+        `${relativeFile}: excluded default-string key ${key} is no longer discovered; ` +
+          'remove the stale exclusion',
+      );
+    }
+    if (direct.has(key)) {
+      throw new Error(
+        `${relativeFile}: excluded default-string key ${key} is now used by a literal ` +
+          'localize()/resolveLyraString() call',
+      );
+    }
+    if (dynamic.has(key)) {
+      throw new Error(
+        `${relativeFile}: excluded default-string key ${key} is now used by a dynamic ` +
+          'localize() flow',
+      );
+    }
+  }
+  const excluded = new Set(excludedKeys);
+  return keys.filter((key) => !excluded.has(key));
+}
+
 export function rewriteClassSource(source, file, generatedFile, keys) {
   const clean = withoutGeneratedBlocks(source);
   if (keys.length === 0) return clean;
@@ -486,22 +791,60 @@ function generatedCatalogSource(entries, usedKeys) {
   return lines.join('\n');
 }
 
+async function readOptionalFile(file) {
+  try {
+    return await readFile(file, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
+async function assertSourceSnapshotUnchanged(packageDir, file, snapshot) {
+  if (await readOptionalFile(file) === snapshot) return;
+  throw new Error(
+    `${packageRelativePath(packageDir, file)} changed while default-string slices were being ` +
+      'generated; refusing to overwrite it',
+  );
+}
+
 export async function generateDefaultStringSlices({
   packageDir = defaultPackageDir,
   write = false,
+  exclusions = DEFAULT_STRING_SLICE_EXCLUSIONS,
+  beforeWrite,
 } = {}) {
   const catalogFile = path.join(packageDir, 'src', 'internal', 'localization.ts');
   const generatedFile = path.join(packageDir, 'src', 'internal', 'default-strings.generated.ts');
-  const entries = catalogEntries(await readFile(catalogFile, 'utf8'), catalogFile);
-  const files = (await sourceFiles(path.join(packageDir, 'src', 'components'))).sort();
+  const catalogSource = await readFile(catalogFile, 'utf8');
+  const entries = catalogEntries(catalogSource, catalogFile);
+  const catalogKeys = new Set(entries.keys());
+  const componentsDir = path.join(packageDir, 'src', 'components');
+  const files = (await sourceFiles(componentsDir)).sort();
+  validateConfiguredExclusions(
+    exclusions,
+    catalogKeys,
+    new Set(files.map((file) => packageRelativePath(packageDir, file))),
+  );
   const sourceRoot = path.join(packageDir, 'src');
   const sourceCache = new Map();
   const rewrites = [];
   const allUsedKeys = new Set();
   for (const file of files) {
-    const source = await readFile(file, 'utf8');
-    sourceCache.set(file, source);
-    const keys = await reachableCatalogKeys(file, new Set(entries.keys()), sourceRoot, sourceCache);
+    let source = sourceCache.get(file);
+    if (source === undefined) {
+      source = await readFile(file, 'utf8');
+      sourceCache.set(file, source);
+    }
+    const discoveredKeys = await reachableCatalogKeys(file, catalogKeys, sourceRoot, sourceCache);
+    const keys = applyConfiguredExclusions({
+      packageDir,
+      file,
+      source,
+      keys: discoveredKeys,
+      catalogKeys,
+      exclusions,
+    });
     for (const key of keys) {
       if (!entries.has(key)) throw new Error(`${file}: localize key ${key} has no DEFAULT_STRINGS entry`);
       allUsedKeys.add(key);
@@ -512,12 +855,25 @@ export async function generateDefaultStringSlices({
   const usedKeys = [...allUsedKeys].sort();
   const unusedKeys = [...entries.keys()].filter((key) => !allUsedKeys.has(key)).sort();
   const generated = generatedCatalogSource(entries, usedKeys);
-  let actualGenerated = '';
-  try {
-    actualGenerated = await readFile(generatedFile, 'utf8');
-  } catch {}
+  const actualGenerated = await readOptionalFile(generatedFile);
   const generatedChanged = actualGenerated !== generated;
-  if (write) {
+  if (write && (rewrites.length > 0 || generatedChanged)) {
+    await beforeWrite?.();
+    const currentFiles = (await sourceFiles(componentsDir)).sort();
+    if (currentFiles.join('\0') !== files.join('\0')) {
+      throw new Error(
+        'src/components class-file inventory changed while default-string slices were being ' +
+          'generated; refusing to write stale output',
+      );
+    }
+    await Promise.all([
+      assertSourceSnapshotUnchanged(packageDir, catalogFile, catalogSource),
+      ...[...sourceCache].map(([file, snapshot]) =>
+        assertSourceSnapshotUnchanged(packageDir, file, snapshot)),
+      ...(generatedChanged
+        ? [assertSourceSnapshotUnchanged(packageDir, generatedFile, actualGenerated)]
+        : []),
+    ]);
     await Promise.all(rewrites.map(({ file, source }) => writeFile(file, source)));
     if (generatedChanged) await writeFile(generatedFile, generated);
   }

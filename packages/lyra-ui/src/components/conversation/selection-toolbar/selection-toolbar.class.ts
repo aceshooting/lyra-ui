@@ -43,9 +43,9 @@ const SELECTION_ACTIONS: readonly SelectionAction[] = [
 ];
 
 export interface SelectionActionDetail {
-  action: SelectionAction;
-  text: string;
-  anchor: DocumentLocator | null;
+  readonly action: SelectionAction;
+  readonly text: string;
+  readonly anchor: DocumentLocator | null;
 }
 
 export interface LyraSelectionToolbarEventMap {
@@ -110,8 +110,6 @@ interface ActionFocusRepair {
  * @since 7.0.0
  */
 export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['anchor', 'actions']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -124,6 +122,8 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     selectionToolbarLabel: LYRA_DEFAULT_selectionToolbarLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['anchor', 'actions']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -638,7 +638,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   /** Coerces a caller-supplied `rect` to finite geometry before it reaches any style sink --
    *  `rect` is typed `DOMRectReadOnly`, but TS cannot enforce that across the property boundary,
    *  and `coordinates()` feeds a `styleMap()` whose first commit serializes the whole `style`
-   *  value as one string (see `sanitizeSwatchColor`'s doc comment for why that matters). */
+   *  value as one string (see `sanitizeCssColor`'s doc comment for why that matters). */
   private safeRect(rect: DOMRectReadOnly): {
     left: number;
     top: number;

@@ -92,8 +92,6 @@ export interface LyraArtifactPanelEventMap {
  * @since 4.0.0
  */
 export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['versions']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -112,6 +110,8 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     download: LYRA_DEFAULT_download,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['versions']);
 
   static override styles = [LyraElement.styles, styles];
 

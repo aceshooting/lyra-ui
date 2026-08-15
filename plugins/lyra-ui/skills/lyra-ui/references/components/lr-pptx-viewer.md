@@ -30,7 +30,9 @@ and `anchorKinds`
 DOM text.
 
 **Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation using the
-renderer's zero-based index. `renderPageThumbnailToContainer(page, container, options?)` renders a
+renderer's zero-based index. A current renderer rejection is contained, enters the localized error
+state, emits `lr-render-error`, and does not escape as an unhandled promise rejection.
+`renderPageThumbnailToContainer(page, container, options?)` renders a
 one-based, width-bounded DOM/SVG slide preview and resolves to a caller-owned disposable handle (or
 `false` when unavailable/invalid); it generation-checks asynchronous preview resources after they
 settle.
@@ -48,15 +50,16 @@ results. `scrollToAnchor()` remains available for renderer output that exposes D
   `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of
   every load so a rail can discard same-count replacement thumbnails without inferring identity
   from `src`.
-- `lr-render-error` with `detail.error` only when fetching/opening fails or a post-load peer event is
-  explicitly classified fatal.
+- `lr-render-error` with `detail.error` when fetching/opening fails, public slide navigation rejects,
+  or a post-load peer event is explicitly classified fatal.
 - `lr-viewer-diagnostic` — `detail.diagnostic` is a readonly structured slide/node/search
   diagnostic with stable `code`, `severity`, `fatal`, `source`, `cause`, and correlated `page` or
   `nodeId` when valid. Recoverable events keep the mounted deck usable and do not also emit
   `lr-render-error`; fatal events enter the localized error state, destroy the adapter, and emit the
   terminal event once.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
-  whenever rendered-presentation search state changes.
+  whenever rendered-presentation search state changes, including canonical source reset and
+  effective-locale re-evaluation.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
@@ -72,6 +75,7 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 `next-icon`, and `container`. While loading, the decorative skeleton is paired with an ordinary
 visually-hidden localized label; later loading and error transitions use the shared document-level
 polite and assertive sinks, respectively, without adding live semantics inside the viewer shadow.
+The previous/next chevrons mirror under effective RTL direction, including inherited `dir` changes.
 
 **Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
 size of `[part="container"]` before it scrolls internally; also settable via the `max-height`

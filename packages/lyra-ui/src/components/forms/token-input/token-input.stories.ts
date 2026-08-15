@@ -78,6 +78,38 @@ export const Editable: Story = {
   ></lr-token-input>`,
 };
 
+/** Removing a focused token never strands DOM focus. The controlled button prevents pointer focus
+ * from leaving the token first so the same repair used by an external value shrink is visible. */
+export const FocusRepairAfterShrink: Story = {
+  name: 'Focused-token removal and controlled shrink',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Focus a token label or remove action. Removing that token, or shrinking the controlled value while it owns focus, moves focus to the nearest surviving token; an empty list falls back to the draft input.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-s);max-inline-size:24rem">
+      <lr-token-input
+        editable
+        label="Recipients"
+        .value=${['Ada', 'Grace', 'Linus']}
+      ></lr-token-input>
+      <button
+        type="button"
+        @pointerdown=${(event: PointerEvent) => event.preventDefault()}
+        @click=${(event: Event) => {
+          const field = (event.currentTarget as HTMLElement)
+            .previousElementSibling as LyraTokenInput;
+          field.value = field.value.slice(0, -1);
+        }}
+      >Shrink controlled value</button>
+    </div>
+  `,
+};
+
 /** The inline editor relays native focus/blur and their prefixed aliases like the draft input. */
 export const EditableLifecycleEvents: Story = {
   render: () => {

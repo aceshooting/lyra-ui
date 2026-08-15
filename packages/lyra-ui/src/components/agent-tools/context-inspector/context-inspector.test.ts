@@ -166,6 +166,24 @@ it('lr-copy-button value is the assembled label+text of every segment, in order,
   }
 });
 
+it('surfaces one lr-toolbar-actions-change event from the embedded copy button unchanged', async () => {
+  const el = await fixture<LyraContextInspector>(html`
+    <lr-context-inspector .segments=${segments}></lr-context-inspector>
+  `);
+  const copyButton = el.shadowRoot!.querySelector('lr-copy-button') as LyraCopyButton;
+  let count = 0;
+  el.addEventListener('lr-toolbar-actions-change', () => count++);
+  const changed = oneEvent(el, 'lr-toolbar-actions-change');
+
+  copyButton.disabled = true;
+  const event = await changed;
+  await copyButton.updateComplete;
+
+  expect(event.bubbles).to.equal(true);
+  expect(event.composed).to.equal(true);
+  expect(count).to.equal(1);
+});
+
 it('builds one export row per segment and bubbles lr-export / lr-export-complete from the embedded lr-export-button', async () => {
   const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
   el.segments = [

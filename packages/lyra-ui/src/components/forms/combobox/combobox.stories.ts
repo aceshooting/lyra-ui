@@ -41,6 +41,30 @@ export const Default: Story = {
   `,
 };
 
+export const SpellcheckDefaultRestoration: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The filter starts with an explicit spellcheck override. Removing that attribute restores the component default (`false`) rather than the native HTML default (`true`).',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-s);max-inline-size:20rem">
+      <lr-combobox spellcheck="true" label="Exact identifier">
+        <lr-option value="release-v1">release-v1</lr-option>
+      </lr-combobox>
+      <button
+        type="button"
+        @click=${(event: Event) =>
+          (event.currentTarget as HTMLElement)
+            .previousElementSibling?.removeAttribute('spellcheck')}
+      >Restore spellcheck default</button>
+    </div>
+  `,
+};
+
 export const VetoedClosePreservesFilter: Story = {
   name: "Cancelable close preserves live filter state",
   render: () => {

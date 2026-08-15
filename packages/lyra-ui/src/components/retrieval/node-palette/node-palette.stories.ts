@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import '../../data/flow-canvas/flow-canvas.js';
 import './node-palette.js';
-import type { PaletteItem } from './node-palette.js';
+import type { LyraPaletteItem } from './node-palette.js';
 import type { FlowNode } from '../../data/flow-canvas/flow-canvas.js';
 
-const items: PaletteItem[] = [
+const items: LyraPaletteItem[] = [
   { type: 'http-request', label: 'HTTP Request', category: 'Data', description: 'Call an external API', keywords: ['fetch', 'api'] },
   { type: 'transform', label: 'Transform', category: 'Data', description: 'Reshape the payload' },
   { type: 'email', label: 'Send Email', category: 'Actions', disabled: true, description: 'Coming soon' },
@@ -38,7 +38,7 @@ export const Reorderable: Story = {
       const [moved] = next.splice(fromIndex, 1);
       if (moved) next.splice(toIndex, 0, moved);
       ordered = next;
-      (event.currentTarget as HTMLElement & { items: PaletteItem[] }).items = ordered;
+      (event.currentTarget as HTMLElement & { items: LyraPaletteItem[] }).items = ordered;
     };
     return html`
       <div style="inline-size:16rem">

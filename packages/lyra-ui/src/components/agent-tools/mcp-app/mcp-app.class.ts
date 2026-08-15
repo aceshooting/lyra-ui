@@ -4,7 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeLinkHref } from '../../../internal/safe-url.js';
+import { safeFrameSrc, safeLinkHref } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './mcp-app.styles.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -97,20 +97,6 @@ function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
-}
-
-const FRAME_URL_BASE = 'https://lyra.invalid/';
-
-function safeFrameSrc(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  try {
-    const protocol = new URL(trimmed, FRAME_URL_BASE).protocol;
-    return protocol === 'https:' || protocol === 'http:' ? trimmed : null;
-  } catch {
-    return null;
-  }
 }
 
 function resolveResource(resource: McpAppResource | null | undefined): ResolvedMcpAppResource | null {
@@ -210,8 +196,6 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * @since 7.0.0
  */
 export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['resource']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -221,6 +205,8 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     mcpAppUnavailable: LYRA_DEFAULT_mcpAppUnavailable,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['resource']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -421,8 +407,21 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   private post(message: HostMessage): void {
     const target = this.frame?.contentWindow;
     if (!target) return;
-    const origin = this.expectedOrigin();
-    target.postMessage(message, origin === 'null' ? '*' : origin ?? '*');
+    // The sandbox never grants `allow-same-origin`, so a resolved resource's frame always carries
+    // a forced-opaque origin, whether it came from `html` or `src`; `expectedOrigin()` above can
+    // only ever return `'null' | null`, never a real origin. A strict outbound targetOrigin check
+    // is therefore unreachable as long as the sandbox omits `allow-same-origin` -- there is no
+    // known origin to restrict to, and the platform rejects the literal string `"null"` as a
+    // *outbound* postMessage() targetOrigin (only `'*'` or a value that parses as an absolute URL
+    // is accepted; `new URL('null')` throws), so passing `expectedOrigin()`'s result straight
+    // through would throw a `SyntaxError` on every real send. `target.postMessage(message, '*')`
+    // below is therefore not a strict-origin fix -- closing this down for real would mean granting
+    // `allow-same-origin` (a materially larger sandbox-escape tradeoff, out of scope here) so the
+    // frame's origin becomes a real, checkable value instead of always-opaque. What this line does
+    // keep as the actual security boundary is `target` itself, re-resolved from the live DOM on
+    // every call, so a stale or foreign window can never receive a message meant for the current
+    // frame generation.
+    target.postMessage(message, '*');
   }
 
   postHostContext(context: unknown): void {

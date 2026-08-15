@@ -50,14 +50,27 @@ class FakeTextLayer {
   constructor(
     private options: {
       container: HTMLElement;
-      textContentSource?: { pageNumber: number };
+      textContentSource?: unknown;
     }
   ) {
     FakeTextLayer.lastContainer = options.container;
   }
-  render(): Promise<void> {
-    const text =
-      PAGE_TEXTS[this.options.textContentSource?.pageNumber ?? 0] ?? "";
+  async render(): Promise<void> {
+    const chunks: string[] = [];
+    const source = this.options.textContentSource;
+    if (source && typeof source === 'object' && 'getReader' in source && typeof source.getReader === 'function') {
+      const reader = (source as ReadableStream<unknown>).getReader();
+      for (;;) {
+        const result = await reader.read();
+        if (result.done) break;
+        const value = result.value as { items?: Array<{ str?: unknown; hasEOL?: unknown }> };
+        for (const item of value.items ?? []) {
+          if (typeof item.str === 'string') chunks.push(item.str);
+          chunks.push(item.hasEOL === true ? '\n' : ' ');
+        }
+      }
+    }
+    const text = chunks.join('').trim();
     const doc = this.options.container.ownerDocument;
     for (const word of text.split(" ")) {
       const span = doc.createElement("span");
@@ -65,12 +78,25 @@ class FakeTextLayer {
       this.options.container.appendChild(span);
       this.options.container.appendChild(doc.createTextNode(" "));
     }
-    return Promise.resolve();
   }
   cancel(): void {}
 }
 
+function fakeTextContentStream(
+  items: readonly { str?: string; hasEOL?: boolean; fontName?: string }[],
+): ReadableStream<unknown> {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue({ items, styles: {}, lang: 'en' });
+      controller.close();
+    },
+  });
+}
+
 function fakePage(pageNumber: number) {
+  const items = (PAGE_TEXTS[pageNumber] ?? '')
+    .split(' ')
+    .map((str) => ({ str, hasEOL: false }));
   return {
     pageNumber,
     getViewport: ({ scale = 1 }: { scale?: number } = {}) => ({
@@ -79,12 +105,10 @@ function fakePage(pageNumber: number) {
       scale,
     }),
     render: () => ({ promise: Promise.resolve(), cancel: () => {} }),
-    streamTextContent: () => ({ pageNumber }),
+    streamTextContent: () => fakeTextContentStream(items),
     getTextContent: () =>
       Promise.resolve({
-        items: (PAGE_TEXTS[pageNumber] ?? "")
-          .split(" ")
-          .map((str) => ({ str, hasEOL: false })),
+        items,
       }),
   };
 }
@@ -690,6 +714,40 @@ describe("lr-pdf-viewer", () => {
     }
   });
 
+  it('contains a synchronous TextLayer.render failure and emits lr-render-error', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const boom = new Error('synchronous text layer boom');
+    class ThrowingTextLayer {
+      render(): Promise<void> {
+        throw boom;
+      }
+      cancel(): void {}
+    }
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = async () => ({
+      getDocument: () => ({ promise: Promise.resolve(fakeDocument(1)) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: ThrowingTextLayer,
+    });
+    const restore = stubFetch();
+    const unhandled: unknown[] = [];
+    const onUnhandled = (event: PromiseRejectionEvent): void => {
+      unhandled.push(event.reason);
+      event.preventDefault();
+    };
+    window.addEventListener('unhandledrejection', onUnhandled);
+    try {
+      const errors: unknown[] = [];
+      el.addEventListener('lr-render-error', (event) => errors.push(event.detail.error));
+      el.src = 'https://example.test/synchronous-text-layer.pdf';
+      await waitUntil(() => errors.length > 0 || unhandled.length > 0);
+      expect(errors).to.deep.equal([boom]);
+      expect(unhandled).to.deep.equal([]);
+    } finally {
+      window.removeEventListener('unhandledrejection', onUnhandled);
+      restore();
+    }
+  });
+
   it("setting highlights before any page has mounted is a no-op (empty pageCanvases)", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer></lr-pdf-viewer>`
@@ -1094,8 +1152,8 @@ it("filters invalid public region rectangles before forwarding them to a page la
       resolveHighlightRectsForPage(
         anchor: unknown,
         page: number,
-        scope: undefined,
-        pageRect: DOMRect
+        pageRect: DOMRect,
+        budget: { remainingRects: number },
       ): Array<{ x: number; y: number; width: number; height: number }>;
     }
   ).resolveHighlightRectsForPage.bind(el);
@@ -1107,8 +1165,8 @@ it("filters invalid public region rectangles before forwarding them to a page la
         rect: { x: 0, y: Infinity, width: 10, height: 10 },
       },
       1,
-      undefined,
-      new DOMRect(0, 0, 100, 100)
+      new DOMRect(0, 0, 100, 100),
+      { remainingRects: 1 }
     )
   ).to.deep.equal([]);
   expect(
@@ -1119,8 +1177,8 @@ it("filters invalid public region rectangles before forwarding them to a page la
         rect: { x: 10, y: 20, width: 30, height: 40 },
       },
       1,
-      undefined,
-      new DOMRect(0, 0, 100, 100)
+      new DOMRect(0, 0, 100, 100),
+      { remainingRects: 1 }
     )
   ).to.deep.equal([{ x: 10, y: 20, width: 30, height: 40 }]);
 });
@@ -1587,6 +1645,11 @@ describe("anchor-target adoption", () => {
         getPage: (pageNumber: number) =>
           Promise.resolve({
             ...fakePage(pageNumber),
+            streamTextContent: () => fakeTextContentStream([
+              { str: 'Completely', hasEOL: false },
+              { str: 'different', hasEOL: false },
+              { str: 'content.', hasEOL: false },
+            ]),
             getTextContent: () =>
               Promise.resolve({
                 items: [
@@ -2636,7 +2699,7 @@ describe("goToPage", () => {
         '[part="base"]'
       ) as HTMLElement;
       const originalScrollTo = base.scrollTo.bind(base);
-      // Setting `page` also flips `activeId`, which the list would otherwise answer with its own
+      // Setting `page` also flips `activeItemId`, which the list would otherwise answer with its own
       // real (asynchronous, physics-driven) scrollActiveIntoView() -- neutralize that so nothing else
       // ever brings page 20 into view or re-fires lr-visible-range-changed during this test, leaving
       // waitForPageMount()'s internal 500ms timeout as the only way this can resolve.
@@ -2914,6 +2977,7 @@ describe("search", () => {
     }
     const page = {
       ...fakePage(1),
+      streamTextContent: () => fakeTextContentStream([{ str: 'ΟΣ', hasEOL: false }]),
       getTextContent: () =>
         Promise.resolve({ items: [{ str: "ΟΣ", hasEOL: false }] }),
     };
@@ -2955,6 +3019,7 @@ describe("search", () => {
     }
     const page = {
       ...fakePage(1),
+      streamTextContent: () => fakeTextContentStream([{ str: 'İX', hasEOL: false }]),
       getTextContent: () =>
         Promise.resolve({ items: [{ str: "İX", hasEOL: false }] }),
     };
@@ -3063,6 +3128,7 @@ describe("search", () => {
     }
     const page = {
       ...fakePage(1),
+      streamTextContent: () => fakeTextContentStream([{ str: 'Íz', hasEOL: false }]),
       getTextContent: () =>
         Promise.resolve({ items: [{ str: "Íz", hasEOL: false }] }),
     };
@@ -3246,6 +3312,7 @@ describe("search", () => {
     }
     const page = {
       ...fakePage(1),
+      streamTextContent: () => fakeTextContentStream([{ str: 'café', hasEOL: false }]),
       getTextContent: () =>
         Promise.resolve({ items: [{ str: "cafe\u0301", hasEOL: false }] }),
     };
@@ -3471,6 +3538,7 @@ describe("search", () => {
       getPage: (pageNumber: number) =>
         Promise.resolve({
           ...fakePage(pageNumber),
+          streamTextContent: () => fakeTextContentStream([{ str: 'aabaab', hasEOL: false }]),
           getTextContent: () =>
             Promise.resolve({ items: [{ str: "aabaab", hasEOL: false }] }),
         }),
@@ -3549,6 +3617,512 @@ describe("search", () => {
     } finally {
       restore();
     }
+  });
+
+  it('bounds streamed peer text before both extraction and TextLayer rendering', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const oversizedItems = new Array(20_001).fill({
+      str: 'x',
+      hasEOL: false,
+      fontName: 'f1',
+    });
+    let sourceCancels = 0;
+    const stream = (): ReadableStream<unknown> => new ReadableStream({
+      start(controller) {
+        controller.enqueue({
+          items: oversizedItems,
+          styles: { f1: { fontFamily: 'sans-serif', ascent: 1 } },
+          lang: 'en',
+        });
+        controller.enqueue({ items: [{ str: 'must-not-pass' }], styles: {} });
+      },
+      cancel() {
+        sourceCancels++;
+      },
+    });
+    class ConsumingTextLayer {
+      static renderedItems = 0;
+      constructor(private options: { textContentSource: ReadableStream<unknown> }) {}
+      async render(): Promise<void> {
+        const reader = this.options.textContentSource.getReader();
+        for (;;) {
+          const result = await reader.read();
+          if (result.done) break;
+          const value = result.value as { items?: unknown[] };
+          ConsumingTextLayer.renderedItems += value.items?.length ?? 0;
+        }
+      }
+      cancel(): void {}
+    }
+    const page = {
+      ...fakePage(1),
+      streamTextContent: stream,
+      getTextContent: () => Promise.reject(new Error('stream path should be used')),
+    };
+    const doc = { numPages: 1, getPage: () => Promise.resolve(page) };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+      Promise.resolve({
+        getDocument: () => ({ promise: Promise.resolve(doc) }),
+        GlobalWorkerOptions: { workerSrc: '' },
+        TextLayer: ConsumingTextLayer,
+      });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/bounded.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await waitUntil(() => ConsumingTextLayer.renderedItems > 0);
+      const text = await el.getPageText(1);
+      expect(ConsumingTextLayer.renderedItems).to.equal(20_000);
+      expect(text.length).to.equal(40_000);
+      expect(sourceCancels).to.be.greaterThan(1);
+      expect(
+        (el as unknown as { pageTextTruncated: Set<number> }).pageTextTruncated.has(1)
+      ).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('fails closed instead of materializing the unbounded getTextContent fallback', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const doc = fakeDocument(1);
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    let fallbackCalls = 0;
+    try {
+      el.src = 'https://example.test/no-stream.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(20);
+      doc.getPage = () => Promise.resolve({
+        ...fakePage(1),
+        streamTextContent: () => ({ not: 'a stream' }),
+        getTextContent: () => {
+          fallbackCalls++;
+          return Promise.resolve({ items: [{ str: 'unbounded' }] });
+        },
+      });
+      let rejected = false;
+      try {
+        await el.getPageText(1);
+      } catch {
+        rejected = true;
+      }
+      expect(rejected).to.be.true;
+      expect(fallbackCalls).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('converts an opaque non-stream TextLayer source into a bounded empty stream', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    let receivedReadableStream = false;
+    let amplifiedOpaqueSource = false;
+    class InspectingTextLayer {
+      constructor(private options: { textContentSource: unknown; container: HTMLElement }) {}
+      async render(): Promise<void> {
+        const source = this.options.textContentSource;
+        if (!source || typeof source !== 'object' || !('getReader' in source)) {
+          amplifiedOpaqueSource = true;
+          for (let index = 0; index < 20_001; index++) {
+            this.options.container.append(document.createElement('span'));
+          }
+          return;
+        }
+        receivedReadableStream = true;
+        const reader = (source as ReadableStream<unknown>).getReader();
+        expect((await reader.read()).done).to.be.true;
+      }
+      cancel(): void {}
+    }
+    const page = {
+      ...fakePage(1),
+      streamTextContent: () => ({ opaque: true }),
+    };
+    const doc = { numPages: 1, getPage: () => Promise.resolve(page) };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+      Promise.resolve({
+        getDocument: () => ({ promise: Promise.resolve(doc) }),
+        GlobalWorkerOptions: { workerSrc: '' },
+        TextLayer: InspectingTextLayer,
+      });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/opaque-text-layer.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await waitUntil(() => receivedReadableStream);
+      expect(amplifiedOpaqueSource).to.be.false;
+      expect(listShadowRoot(el).querySelectorAll('[part="text-layer"] span').length).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('admits at most 64 concurrent page-text streams and cancels them on disconnect', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const doc = fakeDocument(65);
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    let activeStreams = 0;
+    let peakStreams = 0;
+    let cancelledStreams = 0;
+    try {
+      el.src = 'https://example.test/concurrent-text.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(20);
+      doc.getPage = (pageNumber: number) => Promise.resolve({
+        ...fakePage(pageNumber),
+        streamTextContent: () => new ReadableStream({
+          start() {
+            activeStreams++;
+            peakStreams = Math.max(peakStreams, activeStreams);
+          },
+          cancel() {
+            activeStreams--;
+            cancelledStreams++;
+          },
+        }),
+      });
+      const reads: Promise<unknown>[] = [];
+      for (let page = 1; page <= 65; page++) reads.push(el.getPageText(page).catch((error) => error));
+      await aTimeout(0);
+      expect(peakStreams).to.be.at.most(64);
+      expect(activeStreams).to.equal(64);
+      expect((el as unknown as { pageTextCache: Map<number, unknown> }).pageTextCache.size).to.equal(64);
+      el.remove();
+      await Promise.all(reads);
+      expect(activeStreams).to.equal(0);
+      expect(cancelledStreams).to.equal(64);
+    } finally {
+      if (document.body.contains(el)) el.remove();
+      restore();
+    }
+  });
+
+  it('keeps a replacement page-text promise when an evicted predecessor rejects late', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const doc = fakeDocument(1);
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    const firstPage = deferred<ReturnType<typeof fakePage>>();
+    const secondPage = deferred<ReturnType<typeof fakePage>>();
+    let getPageCalls = 0;
+    const internals = el as unknown as {
+      pageTextCache: Map<number, unknown>;
+    };
+    try {
+      el.src = 'https://example.test/cache-aba.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(20);
+      doc.getPage = () => ++getPageCalls === 1 ? firstPage.promise : secondPage.promise;
+      const stale = el.getPageText(1);
+      await Promise.resolve();
+      internals.pageTextCache.delete(1);
+      const current = el.getPageText(1);
+      secondPage.resolve({
+        ...fakePage(1),
+        streamTextContent: () => fakeTextContentStream([{ str: 'current' }]),
+        getTextContent: () => Promise.resolve({ items: [{ str: 'current' }] }),
+      });
+      expect(await current).to.equal('current ');
+      firstPage.reject(new Error('stale'));
+      try {
+        await stale;
+      } catch {
+        // Expected: only the stale predecessor rejects.
+      }
+      await Promise.resolve();
+      expect(internals.pageTextCache.has(1)).to.be.true;
+      expect(await el.getPageText(1)).to.equal('current ');
+      expect(getPageCalls).to.equal(2);
+    } finally {
+      restore();
+    }
+  });
+
+  it('evicts truncated-page metadata with the 64-page text cache', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const oversizedItems = new Array(20_001).fill({ str: 'x', hasEOL: false });
+    const doc = {
+      numPages: 65,
+      getPage: (pageNumber: number) => Promise.resolve({
+        ...fakePage(pageNumber),
+        streamTextContent: () => fakeTextContentStream(oversizedItems),
+        getTextContent: () => Promise.resolve({ items: oversizedItems }),
+      }),
+    };
+    class NoopTextLayer {
+      render(): Promise<void> { return Promise.resolve(); }
+      cancel(): void {}
+    }
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+      Promise.resolve({
+        getDocument: () => ({ promise: Promise.resolve(doc) }),
+        GlobalWorkerOptions: { workerSrc: '' },
+        TextLayer: NoopTextLayer,
+      });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/truncated-pages.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      for (let page = 1; page <= 65; page++) await el.getPageText(page);
+      const internals = el as unknown as {
+        pageTextCache: Map<number, unknown>;
+        pageTextTruncated: Set<number>;
+      };
+      expect(internals.pageTextCache.size).to.equal(64);
+      expect(internals.pageTextTruncated.size).to.equal(64);
+      expect(internals.pageTextTruncated.has(1)).to.be.false;
+      expect(internals.pageTextTruncated.has(65)).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('evicts completed caller-owned thumbnail canvases from render-version tracking', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/thumbnails.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      for (let index = 0; index < 25; index++) {
+        expect(await el.renderPageThumbnail(1, document.createElement('canvas'))).to.be.true;
+      }
+      const internals = el as unknown as {
+        thumbnailRenderTasks: Map<HTMLCanvasElement, unknown>;
+        thumbnailRenderVersions: Map<HTMLCanvasElement, number>;
+      };
+      expect(internals.thumbnailRenderTasks.size).to.equal(0);
+      expect(internals.thumbnailRenderVersions.size).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('deletes unmounted page generations without allowing an old render to win after remount', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const doc = fakeDocument(1);
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/remount.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(20);
+      const firstPage = deferred<ReturnType<typeof fakePage>>();
+      const secondPage = deferred<ReturnType<typeof fakePage>>();
+      let calls = 0;
+      doc.getPage = () => ++calls === 1 ? firstPage.promise : secondPage.promise;
+      const internals = el as unknown as {
+        pageCanvasRef(page: number): (element: Element | undefined) => void;
+        pageRenderVersions: Map<number, number>;
+      };
+      const firstCanvas = document.createElement('canvas');
+      const firstRef = internals.pageCanvasRef(42);
+      firstRef(firstCanvas);
+      firstRef(undefined);
+      expect(internals.pageRenderVersions.has(42)).to.be.false;
+
+      let oldRenders = 0;
+      let currentRenders = 0;
+      const secondCanvas = document.createElement('canvas');
+      const secondRef = internals.pageCanvasRef(42);
+      secondRef(secondCanvas);
+      secondPage.resolve({
+        ...fakePage(42),
+        render: () => {
+          currentRenders++;
+          return { promise: Promise.resolve(), cancel: () => {} };
+        },
+      });
+      await aTimeout(0);
+      firstPage.resolve({
+        ...fakePage(42),
+        render: () => {
+          oldRenders++;
+          return { promise: Promise.resolve(), cancel: () => {} };
+        },
+      });
+      await aTimeout(0);
+      expect({ oldRenders, currentRenders }).to.deep.equal({ oldRenders: 0, currentRenders: 1 });
+      secondRef(undefined);
+      expect(internals.pageRenderVersions.has(42)).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('does not let a stale successful page render hide the latest page error', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/render-race.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(20);
+      const canvas = listShadowRoot(el).querySelector('[part="page-canvas"]') as HTMLCanvasElement;
+      const fallback = canvas.parentElement!.querySelector('[part~="page-error"]') as HTMLElement;
+      const firstDone = deferred<void>();
+      const secondDone = deferred<void>();
+      let pageCalls = 0;
+      const doc = (el as unknown as {
+        loadState: { kind: 'ready'; doc: ReturnType<typeof fakeDocument> };
+      }).loadState.doc;
+      doc.getPage = () => Promise.resolve({
+        ...fakePage(1),
+        render: () => ({
+          promise: ++pageCalls === 1 ? firstDone.promise : secondDone.promise,
+          cancel: () => {},
+        }),
+      });
+      const renderPage = (el as unknown as {
+        renderPage(page: number, target: HTMLCanvasElement): Promise<void>;
+      }).renderPage.bind(el);
+      const stale = renderPage(1, canvas);
+      await aTimeout(0);
+      const current = renderPage(1, canvas);
+      await aTimeout(0);
+      secondDone.reject(new Error('latest failed'));
+      await current;
+      expect(fallback.hidden).to.be.false;
+      firstDone.resolve();
+      await stale;
+      expect(fallback.hidden).to.be.false;
+      expect(fallback.getAttribute('part')).to.contain('page-error-visible');
+    } finally {
+      restore();
+    }
+  });
+
+  it('resets search coordinates on disconnect before reloading the same src', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/reconnect-search.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      (el as unknown as { getPageText(page: number): Promise<string> }).getPageText = () =>
+        Promise.resolve('cat');
+      expect(await el.search('cat')).to.equal(1);
+      el.remove();
+      expect(await el.searchNext()).to.be.false;
+      const detached = el as unknown as {
+        searchQuery: string;
+        searchMatches: unknown[];
+        searchActiveIndex: number;
+      };
+      expect(detached.searchQuery).to.equal('');
+      expect(detached.searchMatches).to.deep.equal([]);
+      expect(detached.searchActiveIndex).to.equal(-1);
+      document.body.appendChild(el);
+      await waitUntil(() => el.pageViewerSnapshot.status === 'ready');
+      expect(await el.searchNext()).to.be.false;
+    } finally {
+      if (document.body.contains(el)) el.remove();
+      restore();
+    }
+  });
+
+  it('builds one exact mounted-page scope from nested text nodes without textContent duplication', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const container = document.createElement('div');
+    const firstRun = document.createElement('span');
+    firstRun.append('hel');
+    const emphasis = document.createElement('em');
+    emphasis.append('lo');
+    firstRun.append(emphasis);
+    const nestedRun = document.createElement('span');
+    nestedRun.append('!');
+    firstRun.append(nestedRun);
+    const secondRun = document.createElement('span');
+    secondRun.append('world');
+    container.append(firstRun, secondRun);
+    const scope = (el as unknown as {
+      buildMountedPageScope(target: HTMLElement): { text: string; segments: unknown[]; truncated: boolean };
+    }).buildMountedPageScope(container);
+    expect(scope.text).to.equal('hello! world');
+    expect(scope.segments.length).to.equal(4);
+    expect(scope.truncated).to.be.false;
+  });
+
+  it('applies the candidate and 100-item budgets globally without page-one starvation', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const canvasOne = document.createElement('canvas');
+    const canvasTwo = document.createElement('canvas');
+    const internals = el as unknown as {
+      loadState: unknown;
+      pageCanvases: Map<number, HTMLCanvasElement>;
+      textLayerContainers: Map<number, HTMLElement>;
+      pageHighlightItems: Map<number, Array<{ id: string }>>;
+      resolveMountedPageHighlights(): void;
+    };
+    internals.loadState = { kind: 'ready', doc: fakeDocument(2), pageCount: 2 };
+    internals.pageCanvases.set(1, canvasOne);
+    internals.pageCanvases.set(2, canvasTwo);
+    internals.textLayerContainers.set(1, document.createElement('div'));
+    internals.textLayerContainers.set(2, document.createElement('div'));
+    el.highlights = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `page-two-${index}`,
+      anchor: { kind: 'page' as const, page: 2 },
+    }));
+    el.activeHighlightId = 'page-two-999';
+    internals.resolveMountedPageHighlights();
+    expect(internals.pageHighlightItems.get(1)).to.deep.equal([]);
+    expect(internals.pageHighlightItems.get(2)!.length).to.equal(100);
+    expect(internals.pageHighlightItems.get(2)!.some(({ id }) => id === 'page-two-999')).to.be.true;
+  });
+
+  it('caps one cross-node search match at 200 marks and clears it without recursive normalize', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const container = document.createElement('div');
+    const span = document.createElement('span');
+    for (let index = 0; index < 200; index++) span.appendChild(document.createTextNode('x'));
+    container.append(span);
+    let normalizeCalls = 0;
+    span.normalize = () => { normalizeCalls++; };
+    const internals = el as unknown as {
+      textLayerContainers: Map<number, HTMLElement>;
+      searchMatches: Array<{ page: number; start: number; length: number }>;
+      searchActiveIndex: number;
+      paintSearchMatches(page: number): void;
+      clearSearchPaint(container?: HTMLElement): void;
+    };
+    internals.textLayerContainers.set(1, container);
+    internals.searchMatches = [{ page: 1, start: 0, length: 200 }];
+    internals.searchActiveIndex = 0;
+    internals.paintSearchMatches(1);
+    expect(container.querySelectorAll('mark[part~="search-match"]').length).to.equal(200);
+    internals.clearSearchPaint(container);
+    expect(normalizeCalls).to.equal(0);
+    expect(span.textContent).to.equal('x'.repeat(200));
+    expect(span.childNodes.length).to.equal(1);
+
+    span.replaceChildren(...new Array(201).fill(undefined).map(() => document.createTextNode('x')));
+    internals.searchMatches = [{ page: 1, start: 0, length: 201 }];
+    internals.paintSearchMatches(1);
+    expect(container.querySelectorAll('mark[part~="search-match"]').length).to.equal(0);
+  });
+
+  it('refuses a tiny search match when splitting its full Text node exceeds the work budget', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const container = document.createElement('div');
+    const span = document.createElement('span');
+    const source = document.createTextNode(`x${'y'.repeat(1_000_000)}`);
+    span.append(source);
+    container.append(span);
+    const internals = el as unknown as {
+      textLayerContainers: Map<number, HTMLElement>;
+      searchMatches: Array<{ page: number; start: number; length: number }>;
+      searchActiveIndex: number;
+      paintSearchMatches(page: number): void;
+    };
+    internals.textLayerContainers.set(1, container);
+    internals.searchMatches = [{ page: 1, start: 0, length: 1 }];
+    internals.searchActiveIndex = 0;
+    internals.paintSearchMatches(1);
+    expect(container.querySelectorAll('mark[part~="search-match"]').length).to.equal(0);
+    expect(span.childNodes.length).to.equal(1);
+    expect(source.data.length).to.equal(1_000_001);
   });
 });
 
@@ -3878,6 +4452,7 @@ describe("virtualized page part styling", () => {
       getPage: (pageNumber: number) =>
         Promise.resolve({
           ...fakePage(pageNumber),
+          streamTextContent: () => fakeTextContentStream([{ str: 'aabaab', hasEOL: false }]),
           getTextContent: () =>
             Promise.resolve({ items: [{ str: "aabaab", hasEOL: false }] }),
         }),
@@ -3939,6 +4514,7 @@ describe("virtualized page part styling", () => {
       getPage: (pageNumber: number) =>
         Promise.resolve({
           ...fakePage(pageNumber),
+          streamTextContent: () => fakeTextContentStream([{ str: 'aabaab', hasEOL: false }]),
           getTextContent: () =>
             Promise.resolve({ items: [{ str: "aabaab", hasEOL: false }] }),
         }),

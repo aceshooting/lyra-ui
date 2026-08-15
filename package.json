@@ -35,10 +35,7 @@
     "check:release-qualification": "node --test scripts/generate-release-qualification.test.mjs scripts/release-workflow-contract.test.mjs && node scripts/generate-release-qualification.mjs --check",
     "release-qualification": "node scripts/generate-release-qualification.mjs --write",
     "migrate-wa": "pnpm --filter @aceshooting/lyra-ui run migrate-wa",
-    "provenance:check": "pnpm --filter @aceshooting/lyra-ui provenance-policy",
-    "test:migrate-wa": "pnpm --filter @aceshooting/lyra-ui run test:migrate-wa",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "test:migrate-wa": "pnpm --filter @aceshooting/lyra-ui run test:migrate-wa"
   },
   "devDependencies": {
     "@aceshooting/lyra-flags": "workspace:*",

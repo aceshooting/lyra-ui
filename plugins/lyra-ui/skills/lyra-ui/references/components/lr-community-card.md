@@ -36,8 +36,8 @@ string; summary?: string; memberCount?: number }`; `memberCount` is a non-negati
   doesn't double it. The exported alias `CommunityCardAppearance` is retained as a name for the same
   union.
 
-**Events:** `lr-drill` (`detail: { id }`, the drill button, header, or overflow chip — all three
-mean "show me this whole community"), `lr-entity-activate` (`detail: { id }`, a member chip was
+**Events:** `lr-drill` (`detail: { communityId }`, the drill button, header, or overflow chip — all three
+mean "show me this whole community"), `lr-entity-activate` (`detail: { entityId }`, a member chip was
 activated).
 
 **Slots:** `actions` — extra header actions alongside the built-in drill button.
@@ -67,5 +67,7 @@ activated).
 
 - `memberCount` (not `members.length`) is the authoritative displayed count whenever it's larger —
   useful when the host sends only a preview slice of members alongside the real total.
+- A blank community id renders the empty state. Members with blank ids and later duplicates are
+  omitted first-wins before count fallback, overflow, rendering, or events.
 
 ---

@@ -19,9 +19,9 @@ Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML me
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
 remain available without DOMPurify. Attachments are listed as filename and size only (the parsed
 `mimeType` never reaches the DOM) and their content is never rendered by this component. Each
-attachment row is a real `<button>` that emits `lr-attachment-open` with the decoded bytes; opening,
-downloading, or object-URL'ing them is the host's job (e.g.
-`URL.createObjectURL(new Blob([content], { type: mimeType }))` → `<lr-document-viewer>` → revoke on
+attachment row is a real `<button>` that emits `lr-attachment-open` with an immutable Blob snapshot
+of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
+`URL.createObjectURL(content)` → `<lr-document-viewer>` → revoke on
 `lr-close`).
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
@@ -43,8 +43,9 @@ localized label. `highlights`, `activeHighlightId`, `anchor`, and
 **Events:**
 
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
-- `lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
-  `Uint8Array` of the decoded attachment — an attachment button was activated.
+- `lr-attachment-open` — recursively frozen `detail: { attachment: { filename, mimeType,
+  content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This
+  replaces the mutable `Uint8Array` event field.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-message search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or

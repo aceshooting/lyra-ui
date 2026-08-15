@@ -74,10 +74,11 @@ export interface LyraEvalDatasetEventMap {
  * configured format rather than one format silently downloading locally while every other format
  * does nothing.
  *
- * Row sorting is *not* re-implemented here: `<lr-table>`'s own `lr-sort` bubbles through
- * (composed events cross a shadow boundary automatically) for a host that wants to reorder
- * `examples` and hand back a resorted array -- the same "the host owns the actual data" contract
- * as every other mutation this component surfaces.
+ * Row sorting is *not* re-implemented here: all three built-in text columns opt into
+ * `<lr-table>` sorting, and its own `lr-sort` bubbles through (composed events cross a shadow
+ * boundary automatically) for a host that wants to reorder `examples` and hand back a resorted
+ * array -- the same "the host owns the actual data" contract as every other mutation this
+ * component surfaces.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -96,7 +97,8 @@ export interface LyraEvalDatasetEventMap {
  *   (CSV/JSON/etc. into `EvalExample` rows) is left to the host, mirroring `<lr-file-input>`'s own
  *   "parsing is a host concern" scope.
  * @event lr-export-request - An export format was chosen. `detail: { format }`.
- * @event lr-sort - Deliberate pass-through from the internal table. `detail: { key }`.
+ * @event lr-sort - Deliberate pass-through from the internal table.
+ *   `detail: { phase: 'commit', sortKey, sortDir }`.
  * @event focus - Re-dispatched when the internal search field (only rendered while `searchable`)
  *   receives focus, since native focus neither bubbles nor crosses the shadow boundary.
  * @event blur - Re-dispatched when the internal search field loses focus.
@@ -115,8 +117,6 @@ export interface LyraEvalDatasetEventMap {
  * @since 4.1.0
  */
 export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['examples', 'exportFormats']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -134,6 +134,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     evalDatasetTagFilterLabel: LYRA_DEFAULT_evalDatasetTagFilterLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['examples', 'exportFormats']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -268,13 +270,27 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   private buildColumns(): TableColumn<EvalExample>[] {
     return [
-      { key: 'input', label: this.localize('evalDatasetColumnInput'), cell: (row) => row.input },
+      {
+        key: 'input',
+        label: this.localize('evalDatasetColumnInput'),
+        sortable: true,
+        sortValue: (row) => row.input,
+        cell: (row) => row.input,
+      },
       {
         key: 'expectedOutput',
         label: this.localize('evalDatasetColumnExpectedOutput'),
+        sortable: true,
+        sortValue: (row) => row.expectedOutput ?? '',
         cell: (row) => row.expectedOutput ?? '',
       },
-      { key: 'tags', label: this.localize('evalDatasetColumnTags'), cell: (row) => (row.tags ?? []).join(', ') },
+      {
+        key: 'tags',
+        label: this.localize('evalDatasetColumnTags'),
+        sortable: true,
+        sortValue: (row) => (row.tags ?? []).join(', '),
+        cell: (row) => (row.tags ?? []).join(', '),
+      },
     ];
   }
 
@@ -455,7 +471,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           .rows=${visible}
           .pageSize=${MAX_RENDERED_EXAMPLES}
           .rowKey=${(row: EvalExample) => row.id}
-          .selectedKeys=${this.selectedId === null ? new Set() : new Set([this.selectedId])}
+          .selectedRowKeys=${this.selectedId === null ? new Set() : new Set([this.selectedId])}
           .emptyHeading=${emptyText}
           @input=${this.stopOwnedEvent}
           @change=${this.stopOwnedEvent}

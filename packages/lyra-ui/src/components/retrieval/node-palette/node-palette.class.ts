@@ -18,7 +18,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_nodePaletteDragHint, LYRA_DEFAULT_nodePaletteEmpty, LYRA_DEFAULT_nodePaletteLabel, LYRA_DEFAULT_nodePalettePlaceholder, LYRA_DEFAULT_nodePaletteResultCount, LYRA_DEFAULT_reorderItemMoved, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export interface PaletteItem {
+export interface LyraPaletteItem {
   /** The `FlowNode.type` a placement/drop creates. */
   type: string;
   label: string;
@@ -34,7 +34,7 @@ export interface PaletteItem {
 
 export interface LyraNodePaletteEventMap {
   'lr-palette-place': CustomEvent<{ type: string }>;
-  'lr-select': CustomEvent<LyraEventDetailSnapshot<{ item: PaletteItem }>>;
+  'lr-select': CustomEvent<LyraEventDetailSnapshot<{ item: LyraPaletteItem }>>;
   /** A keyboard reorder *request*, only while `reorderable`. `fromIndex`/`toIndex` index into the
    *  host's own `items` array, so applying it is a plain splice; `category` names the group the
    *  move stayed inside (`null` for the ungrouped bucket). This component never reorders `items`
@@ -97,8 +97,6 @@ export interface LyraNodePaletteEventMap {
  * @since 4.0.0
  */
 export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -113,13 +111,15 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
+
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-select',
   ]);
 
   /** Node templates available for filtering, activation, dragging, and optional reordering. */
-  @property({ attribute: false }) items: readonly PaletteItem[] = [];
+  @property({ attribute: false }) items: readonly LyraPaletteItem[] = [];
   /** Accessible name for the palette; empty uses the localized default. */
   @property() label = '';
   /**
@@ -158,21 +158,21 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   // `lastRenderedRovingList` below for the keydown-handler side of this (no per-keystroke
   // recomputation at all).
   private filteredCache: {
-    items: readonly PaletteItem[];
+    items: readonly LyraPaletteItem[];
     query: string;
     locale: string;
-    result: readonly PaletteItem[];
+    result: readonly LyraPaletteItem[];
   } | null = null;
   private categorizedCache: {
-    filtered: readonly PaletteItem[];
-    result: { category: string | null; items: PaletteItem[] }[];
+    filtered: readonly LyraPaletteItem[];
+    result: { category: string | null; items: LyraPaletteItem[] }[];
   } | null = null;
   private rovingListCache: {
-    filtered: readonly PaletteItem[];
-    result: PaletteItem[];
+    filtered: readonly LyraPaletteItem[];
+    result: LyraPaletteItem[];
   } | null = null;
 
-  private get filtered(): readonly PaletteItem[] {
+  private get filtered(): readonly LyraPaletteItem[] {
     const locale = this.effectiveLocale;
     const q = this.queryText.trim().toLocaleLowerCase(locale);
     const cache = this.filteredCache;
@@ -197,11 +197,11 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   private categorized(
-    filtered: readonly PaletteItem[]
-  ): { category: string | null; items: PaletteItem[] }[] {
+    filtered: readonly LyraPaletteItem[]
+  ): { category: string | null; items: LyraPaletteItem[] }[] {
     const cache = this.categorizedCache;
     if (cache && cache.filtered === filtered) return cache.result;
-    const groups = new Map<string | null, PaletteItem[]>();
+    const groups = new Map<string | null, LyraPaletteItem[]>();
     for (const item of filtered) {
       const key = item.category ?? null;
       if (!groups.has(key)) groups.set(key, []);
@@ -215,7 +215,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     return result;
   }
 
-  private rovingList(filtered = this.filtered): PaletteItem[] {
+  private rovingList(filtered = this.filtered): LyraPaletteItem[] {
     const cache = this.rovingListCache;
     if (cache && cache.filtered === filtered) return cache.result;
     const result = this.categorized(filtered)
@@ -226,7 +226,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   /** Enabled items in the order represented by the currently committed item elements. */
-  private lastRenderedRovingList: PaletteItem[] = [];
+  private lastRenderedRovingList: LyraPaletteItem[] = [];
   private pendingFocusIndex: number | null = null;
 
   private itemElements(): HTMLElement[] {
@@ -237,7 +237,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     ) as HTMLElement[];
   }
 
-  private occurrenceAt(items: PaletteItem[], index: number): number {
+  private occurrenceAt(items: LyraPaletteItem[], index: number): number {
     const item = items[index];
     let occurrence = 0;
     for (let i = 0; i < index; i++) {
@@ -247,8 +247,8 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   private indexOfOccurrence(
-    items: PaletteItem[],
-    item: PaletteItem,
+    items: LyraPaletteItem[],
+    item: LyraPaletteItem,
     occurrence: number
   ): number {
     let seen = 0;
@@ -408,7 +408,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   private onItemKeyDown(
     e: KeyboardEvent,
     rovingIndex: number,
-    item: PaletteItem
+    item: LyraPaletteItem
   ): void {
     // Same rationale as onFieldKeyDown above: reuse the list already built for the last render
     // instead of recomputing it on every arrow-key press.
@@ -456,7 +456,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   /** The rendered items of one category group, disabled entries included: a reorder moves the
    *  focused item past the neighbour a user can actually see, which is not the same list the
    *  roving-tabindex order walks. */
-  private groupItemsFor(category: string | null): PaletteItem[] {
+  private groupItemsFor(category: string | null): LyraPaletteItem[] {
     return (
       this.categorized(this.filtered).find(
         (group) => group.category === category
@@ -465,13 +465,13 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   private pendingReorder?: {
-    item: PaletteItem;
+    item: LyraPaletteItem;
     category: string | null;
-    neighbor: PaletteItem;
+    neighbor: LyraPaletteItem;
     wasBefore: boolean;
   };
 
-  private requestReorder(item: PaletteItem, delta: 1 | -1): void {
+  private requestReorder(item: LyraPaletteItem, delta: 1 | -1): void {
     const category = item.category ?? null;
     const group = this.groupItemsFor(category);
     const position = group.indexOf(item);
@@ -515,13 +515,13 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     );
   }
 
-  private place(item: PaletteItem): void {
+  private place(item: LyraPaletteItem): void {
     if (item.disabled) return;
     this.emit('lr-palette-place', { type: item.type });
     this.emit('lr-select', { item });
   }
 
-  private onItemDragStart(e: DragEvent, item: PaletteItem): void {
+  private onItemDragStart(e: DragEvent, item: LyraPaletteItem): void {
     if (item.disabled || !e.dataTransfer) return;
     e.dataTransfer.setData(
       FLOW_PALETTE_MIME_TYPE,
@@ -531,7 +531,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     e.dataTransfer.effectAllowed = 'copy';
   }
 
-  private itemTemplate(item: PaletteItem, rovingIndex: number): TemplateResult {
+  private itemTemplate(item: LyraPaletteItem, rovingIndex: number): TemplateResult {
     return html`<div
       part="item"
       role="option"

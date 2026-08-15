@@ -1,17 +1,21 @@
-// Manual, occasional regeneration tool -- not wired into any package.json
-// script or CI step. Run it directly with `node scripts/generate-docx-fixture.mjs`
-// (from `packages/lyra-ui/`) whenever `docx-viewer/fixtures/minimal-docx-fixture.ts`
-// needs to be regenerated (e.g. its tiny hand-built DOCX structure needs a new
-// field/style for a test). `jszip` is already a devDependency of this package,
-// so no extra install is normally needed; if it's ever removed from
-// devDependencies, reinstall it temporarily (`pnpm add -D jszip`) to run this.
+// Manual, occasional regeneration tool. Run it from packages/lyra-ui whenever the tiny fixture
+// needs a new field or style. The fixed archive timestamp keeps repeated runs byte-identical.
 import { writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import JSZip from 'jszip';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const outDir = join(scriptDir, '..', 'src', 'components', 'docx-viewer', 'fixtures');
+export const DOCX_FIXTURE_DIRECTORY = join(
+  scriptDir,
+  '..',
+  'src',
+  'components',
+  'viewers',
+  'docx-viewer',
+  'fixtures',
+);
+const FIXTURE_DATE = new Date(Date.UTC(1980, 0, 1, 0, 0, 0));
 
 const CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -44,16 +48,34 @@ const DOCUMENT_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   </w:body>
 </w:document>`;
 
-const zip = new JSZip();
-zip.file('[Content_Types].xml', CONTENT_TYPES);
-zip.file('_rels/.rels', ROOT_RELS);
-zip.file('word/document.xml', DOCUMENT_XML);
-zip.file('word/_rels/document.xml.rels', DOCUMENT_RELS);
-zip.file('word/styles.xml', STYLES_XML);
+export async function generateDocxFixture(
+  outputDirectory = DOCX_FIXTURE_DIRECTORY,
+) {
+  const zip = new JSZip();
+  const options = { createFolders: false, date: FIXTURE_DATE };
+  zip.file('[Content_Types].xml', CONTENT_TYPES, options);
+  zip.file('_rels/.rels', ROOT_RELS, options);
+  zip.file('word/document.xml', DOCUMENT_XML, options);
+  zip.file('word/_rels/document.xml.rels', DOCUMENT_RELS, options);
+  zip.file('word/styles.xml', STYLES_XML, options);
 
-const buffer = await zip.generateAsync({ type: 'nodebuffer' });
-writeFileSync(
-  join(outDir, 'minimal-docx-fixture.ts'),
-  `// Auto-generated fixture.\nexport const MINIMAL_DOCX_BASE64 = '${buffer.toString('base64')}';\n`,
-);
-console.log(`Wrote ${buffer.length}-byte DOCX fixture`);
+  const buffer = await zip.generateAsync({
+    compression: 'STORE',
+    platform: 'DOS',
+    type: 'nodebuffer',
+  });
+  writeFileSync(
+    join(outputDirectory, 'minimal-docx-fixture.ts'),
+    `// Auto-generated fixture.\nexport const MINIMAL_DOCX_BASE64 = '${buffer.toString('base64')}';\n`,
+  );
+  return buffer.length;
+}
+
+const invokedPath = process.argv[1];
+if (
+  invokedPath &&
+  pathToFileURL(resolve(invokedPath)).href === import.meta.url
+) {
+  const byteLength = await generateDocxFixture();
+  console.log(`Wrote ${byteLength}-byte DOCX fixture`);
+}

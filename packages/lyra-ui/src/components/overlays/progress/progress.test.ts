@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './progress-bar.js';
 import './progress-ring.js';
-import type { LyraProgressBar } from './progress-bar.js';
+import type { LyraProgressBar, LyraProgressVariant } from './progress-bar.js';
 import type { LyraProgressRing } from './progress-ring.js';
 
 class ProgressBarLabelForwardWrapper extends HTMLElement {
@@ -205,6 +205,43 @@ it('recolors the bar indicator per variant instead of always rendering brand reg
   expect(indicatorColor(danger)).to.not.equal(indicatorColor(success));
   expect(indicatorColor(neutral)).to.not.equal(indicatorColor(brand));
   expect(indicatorColor(brand)).to.not.equal(indicatorColor(success));
+});
+
+it('recolors the ring indicator per variant instead of always rendering brand regardless of the attribute', async () => {
+  const brand = (await fixture(html`<lr-progress-ring value="50"></lr-progress-ring>`)) as LyraProgressRing;
+  const neutral = (await fixture(
+    html`<lr-progress-ring variant="neutral" value="50"></lr-progress-ring>`,
+  )) as LyraProgressRing;
+  const success = (await fixture(
+    html`<lr-progress-ring variant="success" value="50"></lr-progress-ring>`,
+  )) as LyraProgressRing;
+  const danger = (await fixture(
+    html`<lr-progress-ring variant="danger" value="50"></lr-progress-ring>`,
+  )) as LyraProgressRing;
+
+  // 'brand' is the property default and must reflect even though no attribute was authored,
+  // matching the sibling lr-progress-bar contract.
+  expect(brand.getAttribute('variant')).to.equal('brand');
+
+  const indicatorColor = (el: LyraProgressRing): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="indicator"]')!).stroke;
+
+  expect(indicatorColor(danger)).to.not.equal(indicatorColor(success));
+  expect(indicatorColor(neutral)).to.not.equal(indicatorColor(brand));
+  expect(indicatorColor(brand)).to.not.equal(indicatorColor(success));
+});
+
+it('accepts every LyraProgressVariant literal via the JS property on both lr-progress-bar and lr-progress-ring', async () => {
+  const bar = (await fixture(html`<lr-progress-bar></lr-progress-bar>`)) as LyraProgressBar;
+  const ring = (await fixture(html`<lr-progress-ring></lr-progress-ring>`)) as LyraProgressRing;
+  const variants: readonly LyraProgressVariant[] = ['neutral', 'brand', 'success', 'warning', 'danger'];
+  for (const variant of variants) {
+    bar.variant = variant;
+    ring.variant = variant;
+    await Promise.all([bar.updateComplete, ring.updateComplete]);
+    expect(bar.getAttribute('variant')).to.equal(variant);
+    expect(ring.getAttribute('variant')).to.equal(variant);
+  }
 });
 
 it('locale-formats visible percentage output and forwards live host naming to both progress roles', async () => {

@@ -45,6 +45,15 @@ describe('lr-agent-trace', () => {
     expect(tree.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(SPANS.length);
   });
 
+  it('leaves its own label unset by default so the composed tree falls back to its localized name', async () => {
+    const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
+    await el.updateComplete;
+    expect(el.label).to.be.undefined;
+    const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
+    expect(tree.label).to.be.undefined;
+    expect(tree.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Trace tree');
+  });
+
   it('renders one filter legend item per span kind present in spans, labeled via the shared spanKind* strings', async () => {
     const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
     await el.updateComplete;
@@ -241,11 +250,20 @@ describe('lr-agent-trace', () => {
     expect(ev.detail).to.deep.equal({ spanId: 'root', expanded: false });
   });
 
-  it('forwards show-tokens/show-cost/hide-bars to the composed lr-trace-tree', async () => {
+  it('defaults showBars to true and forwards the inverse to the composed lr-trace-tree', async () => {
+    const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
+    await el.updateComplete;
+    expect(el.showBars).to.be.true;
+    const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
+    expect(tree.hideBars).to.be.false;
+  });
+
+  it('parses the literal show-bars="false" attribute and forwards hide-bars to the composed lr-trace-tree', async () => {
     const el = (await fixture(
-      html`<lr-agent-trace .spans=${SPANS} show-tokens show-cost hide-bars></lr-agent-trace>`,
+      html`<lr-agent-trace .spans=${SPANS} show-tokens show-cost show-bars="false"></lr-agent-trace>`,
     )) as LyraAgentTrace;
     await el.updateComplete;
+    expect(el.showBars).to.be.false;
     const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
     expect(tree.showTokens).to.be.true;
     expect(tree.showCost).to.be.true;

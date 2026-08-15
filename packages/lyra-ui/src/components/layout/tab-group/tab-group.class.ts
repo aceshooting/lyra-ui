@@ -81,14 +81,14 @@ function isTabLabelSubtreeExcludedWithoutInert(element: Element): boolean {
 }
 
 /** Which edge the tab strip sits on. `start`/`end` are logical, so they mirror under RTL. */
-export type TabGroupPlacement = 'top' | 'bottom' | 'start' | 'end';
+export type LyraTabGroupPlacement = 'top' | 'bottom' | 'start' | 'end';
 
 /**
  * `auto` moves selection with focus (the APG's automatic activation). `manual` moves focus only,
  * and the user commits with Enter or Space — required by the APG whenever revealing a panel is
  * expensive, since automatic activation would load every panel the user arrows past.
  */
-export type TabGroupActivation = 'auto' | 'manual';
+export type LyraTabGroupActivation = 'auto' | 'manual';
 
 /** Fallback panel name for an `<lr-tab>` with no `panel` attribute -- keyed by position so it is
  *  stable across re-syncs, and prefixed so it cannot collide with an author-chosen name. */
@@ -228,11 +228,11 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   /** Which edge the tab strip sits on. `start`/`end` are logical and mirror under RTL; both make
    *  the tablist vertical, which swaps the navigation keys to Up/Down per the APG. */
-  @property({ reflect: true }) placement: TabGroupPlacement = 'top';
+  @property({ reflect: true }) placement: LyraTabGroupPlacement = 'top';
 
   /** `auto` (the default) moves selection with focus. `manual` moves focus only and waits for
    *  Enter or Space — the APG requirement for panels that are expensive to reveal. */
-  @property({ reflect: true }) activation: TabGroupActivation = 'auto';
+  @property({ reflect: true }) activation: LyraTabGroupActivation = 'auto';
 
   /** Suppresses the overflow scroll controls, leaving an overflowing tab row natively scrollable
    *  with the edge fade as its only affordance. Web Awesome's spelling of the flag. */

@@ -219,8 +219,8 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * than the mixin's default selection lookup resolves.
  *
  * The transcript virtualizes through `<lr-virtual-list>` the same way `pdf-viewer.class.ts`
- * virtualizes pages: `items`/`renderItem`/`keyFunction`/`activeId` props. Playback follows its
- * active cue through `activeId`; search navigation reveals its active match through the list's
+ * virtualizes pages: `items`/`renderItem`/`keyFunction`/`activeItemId` props. Playback follows its
+ * active cue through `activeItemId`; search navigation reveals its active match through the list's
  * `scrollToIndex()` API without seeking the media.
  * An authored host `aria-label` remains the aggregate name on the host. Otherwise a nonempty
  * `name` labels `[part="base"]` as a region. The native media element keeps the distinct localized
@@ -1417,7 +1417,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             .items=${this.cues}
             .renderItem=${this.transcriptRenderItem}
             .keyFunction=${this.cueKey}
-            .activeId=${this.activeCueIndex >= 0 && this.cues[this.activeCueIndex]
+            .activeItemId=${this.activeCueIndex >= 0 && this.cues[this.activeCueIndex]
               ? this.cueKey(this.cues[this.activeCueIndex], this.activeCueIndex)
               : ''}
           ></lr-virtual-list>`

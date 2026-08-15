@@ -401,9 +401,9 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: ['shiki'],
     load: () => import('../components/agent-tools/eval-result/eval-result.class.js').then((module) => module.LyraEvalResult),
   },
-  'lr-evaluation-run': {
+  'lr-eval-run': {
     optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
-    load: () => import('../components/agent-tools/evaluation-run/evaluation-run.class.js').then((module) => module.LyraEvaluationRun),
+    load: () => import('../components/agent-tools/evaluation-run/evaluation-run.class.js').then((module) => module.LyraEvalRun),
   },
   'lr-export-button': {
     optionalPeers: [],
@@ -544,6 +544,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-intersection-observer': {
     optionalPeers: [],
     load: () => import('../components/utility/intersection-observer/intersection-observer.class.js').then((module) => module.LyraIntersectionObserver),
+  },
+  'lr-json-schema-viewer': {
+    optionalPeers: [],
+    load: () => import('../components/agent-tools/schema-viewer/schema-viewer.class.js').then((module) => module.LyraJsonSchemaViewer),
   },
   'lr-json-viewer': {
     optionalPeers: [],
@@ -864,10 +868,6 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-scatter-chart': {
     optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/scatter-chart.class.js').then((module) => module.LyraScatterChart),
-  },
-  'lr-schema-viewer': {
-    optionalPeers: [],
-    load: () => import('../components/agent-tools/schema-viewer/schema-viewer.class.js').then((module) => module.LyraSchemaViewer),
   },
   'lr-scroller': {
     optionalPeers: [],

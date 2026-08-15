@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,7 +18,9 @@
 A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
-(reflected), `label: string = ''` (the mapped accessible-name property), and
+(reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
+`lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`),
+`label: string = ''` (the mapped accessible-name property), and
 `accessibleLabel: string = ''` (attribute `accessible-label`; a Lyra compatibility
 accessible-name spelling retained by this progress component, while several sibling components use
 `aria-label` directly). Host
@@ -41,6 +43,9 @@ ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--
 `--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-ring-indicator-width` (defaulting to the track width),
 `--lr-progress-ring-indicator-color` (default `var(--lr-color-brand)`),
+`--lr-progress-ring-indicator-variant-color` (added in 9.0.0, same override precedence as
+`lr-progress-bar`'s `--lr-progress-indicator-variant-color` — the palette slot `variant` resolves
+into),
 `--lr-progress-ring-indicator-transition-duration` (default `var(--lr-transition-base)`), and
 `--lr-progress-duration` (default
 `var(--lr-transition-ambient)` — the indeterminate spin period, the same token and the same default

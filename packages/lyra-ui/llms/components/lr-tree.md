@@ -43,8 +43,8 @@ owner context maintained by `<lr-tree>`.
   library's own original shape and is where per-row icons, secondary descriptions and badges live —
   the declarative model has none of those. `<lr-tree>` creates and reconciles the
   `<lr-tree-item>` children by `id`, and each item renders its own subtree into its own shadow root.
-  Every reachable `LyraTreeNodeData.id` must be globally unique. For invalid duplicate input, the first
-  depth-first occurrence owns the public id; later occurrences remain visible but render disabled
+  Every reachable `LyraTreeNodeData.id` must be nonblank and globally unique. Malformed rows and
+  later duplicates are omitted before rendering; the first valid depth-first occurrence wins
   and cannot receive focus, selection, expansion, or reorder requests. Supplying unique refreshed
   data releases that fail-closed state.
 
@@ -86,7 +86,7 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
   author-supplied host `aria-label` takes precedence by presence and is never overwritten or
   removed by later object refreshes; removing the author attribute restores the current data name.
   `id` is the event, roving-focus, reconciliation, and reorder identity and must be unique across
-  the complete reachable hierarchy; later duplicate occurrences fail closed as described above
+  the complete reachable hierarchy; malformed/blank rows and later duplicates are omitted as described above
 - `selection: 'single'|'multiple'|'leaf'|'leaf-multiple' = 'single'` — self-managed selection for
   both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
   checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
@@ -134,12 +134,12 @@ roving stop to the next reachable row instead of stranding it, and the state is 
 and resolved only after the affected rendered item cascade settles).
 
 **Events:** `lr-selection-change` (`detail: { selection }`, where both the detail and selection
-snapshot are frozen) and `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
+snapshot are frozen) and `lr-reorder` (`detail: { nodeId, parentNodeId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
 component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
 moved node. The live region likewise announces a completed move only after the rendered sibling
 order confirms the exact requested swap. Ignored or rejected requests stay silent, and unrelated
-updates do not prematurely discard an asynchronously persisted request. `parentId` is `null` for a
+updates do not prematurely discard an asynchronously persisted request. `parentNodeId` is `null` for a
 top-level item, and `fromIndex`/`toIndex` are **sibling-scoped
 indices**, not positions in the flattened visible list. The move is constrained to one sibling list
 and never fires at a subtree boundary, so a reorder can never become a reparent: Ctrl+ArrowDown on
@@ -205,7 +205,7 @@ when assigned):
 `<lr-tree>` drive both with one implementation:
 
 - `nodeId: string` — this item's identity: `item.id` in the data model, or a generated per-element
-  id in the declarative one (where the markup carries no id of its own). It is the `id` every
+  id in the declarative one (where the markup carries no id of its own). It is the `nodeId` every
   `lr-node-toggle` / `lr-node-select` / `lr-reorder` detail carries, and what the tree tracks its
   roving tabindex by
 - `isDisabled: boolean` — `item.disabled` in the data model, the `disabled` property in the
@@ -228,8 +228,8 @@ from its own light-DOM children in the declarative one. A grandchild is not incl
 its own parent. `getChildrenItems({ includeDisabled = true } = {})` is the upstream-compatible
 public spelling over the same direct-child list.
 
-**Events:** `lr-node-toggle` (`detail: { id, expanded }`, fired by `expand()`/`collapse()` — via
-the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { id }`, fired by `select()`
+**Events:** `lr-node-toggle` (`detail: { nodeId, expanded }`, fired by `expand()`/`collapse()` — via
+the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { nodeId }`, fired by `select()`
 — via clicking anywhere in the row or Enter/Space) — dispatched from `lr-tree-item`,
 bubble/compose up through `lr-tree`'s light DOM. `lr-expand`/`lr-collapse` fire when a transition
 begins; `lr-after-expand`/`lr-after-collapse` fire after the matching themeable duration. Rapid
@@ -267,8 +267,13 @@ same names, so one selector on the outer item, such as `lr-tree-item::part(row)`
 parts at every rendered depth. Declarative children remain light-DOM hosts and can be matched
 directly as `<lr-tree-item>` elements.
 
-**Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
-`--show-duration`/`--hide-duration` (both default through `--lr-duration-base`);
+**Themeable custom properties:** `--indent-size` (default `var(--lr-space-l)`, applied once per
+nesting depth), `--indent-guide-color` (default `var(--lr-color-border)`),
+`--indent-guide-offset` (default `0`, the guide's block-axis inset at both ends),
+`--indent-guide-style` (default `solid`), and `--indent-guide-width` (default `0`); these mirrored
+properties are consumed directly by every `<lr-tree-item>` and may be set on an item or inherited
+from `<lr-tree>`. `--lr-tree-depth` is internal and set inline per row for indentation;
+`--show-duration`/`--hide-duration` both default through `--lr-duration-base`;
 `--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
 `--lr-tree-checkbox-checked-border-color`, `--lr-tree-checkbox-checked-bg`,
 `--lr-tree-checkbox-checked-color`, `--lr-tree-checkbox-indeterminate-border-color`,

@@ -1,11 +1,11 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './evaluation-run.js';
-import type { LyraEvaluationRun, EvaluationExampleResult } from './evaluation-run.js';
+import type { LyraEvalRun, EvalExampleResult } from './evaluation-run.js';
 import type { Citation, GroundingAssessment } from '../../../ai/types.js';
 import type { LyraToolTimeline, ToolTimelineEntry } from '../tool-timeline/tool-timeline.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 
-const examples: EvaluationExampleResult[] = [
+const examples: EvalExampleResult[] = [
   {
     id: 'ex-1',
     label: 'Refund policy question',
@@ -32,7 +32,7 @@ const toolTrace: ToolTimelineEntry[] = [
   { id: 'call-1', name: 'search', args: { query: 'refund policy' }, status: 'success', result: { hits: 2 } },
 ];
 
-async function expandExample(el: LyraEvaluationRun, index = 0): Promise<HTMLElement> {
+async function expandExample(el: LyraEvalRun, index = 0): Promise<HTMLElement> {
   const row = el.shadowRoot!.querySelectorAll('[part="example"]')[index] as HTMLElement;
   row.dispatchEvent(new CustomEvent('lr-toggle', {
     bubbles: true,
@@ -43,8 +43,14 @@ async function expandExample(el: LyraEvaluationRun, index = 0): Promise<HTMLElem
   return el.shadowRoot!.querySelectorAll('[part="example"]')[index] as HTMLElement;
 }
 
+it('registers as lr-eval-run (renamed to match eval-dataset/eval-result siblings)', async () => {
+  const el = (await fixture(html`<lr-eval-run></lr-eval-run>`)) as LyraEvalRun;
+  expect(el.tagName.toLowerCase()).to.equal('lr-eval-run');
+  expect(customElements.get('lr-eval-run')).to.exist;
+});
+
 it('defaults to examples=[], total=null, label=""', async () => {
-  const el = (await fixture(html`<lr-evaluation-run></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run></lr-eval-run>`)) as LyraEvalRun;
   expect(el.examples).to.deep.equal([]);
   expect(el.total).to.equal(null);
   expect(el.label).to.equal('');
@@ -52,8 +58,8 @@ it('defaults to examples=[], total=null, label=""', async () => {
 
 it('renders a batch progress bar reflecting completed/total and a completed-of-total summary', async () => {
   const el = (await fixture(
-    html`<lr-evaluation-run .examples=${examples} total="4"></lr-evaluation-run>`,
-  )) as LyraEvaluationRun;
+    html`<lr-eval-run .examples=${examples} total="4"></lr-eval-run>`,
+  )) as LyraEvalRun;
   const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
   // ex-1 (done) and ex-3 (error) are terminal; ex-2 (running) is not.
   expect(progress.getAttribute('value')).to.equal('2');
@@ -65,8 +71,8 @@ it('renders a batch progress bar reflecting completed/total and a completed-of-t
 
 it('never reports an explicit total below the observed example count', async () => {
   const el = (await fixture(
-    html`<lr-evaluation-run .examples=${examples} total="1"></lr-evaluation-run>`,
-  )) as LyraEvaluationRun;
+    html`<lr-eval-run .examples=${examples} total="1"></lr-eval-run>`,
+  )) as LyraEvalRun;
   const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
   expect(progress.getAttribute('max')).to.equal('3');
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
@@ -76,8 +82,8 @@ it('never reports an explicit total below the observed example count', async () 
 
 it('formats generated example, progress, and status counts with the effective locale', async () => {
   const el = (await fixture(
-    html`<lr-evaluation-run lang="ar-EG" .examples=${examples} total="4"></lr-evaluation-run>`,
-  )) as LyraEvaluationRun;
+    html`<lr-eval-run lang="ar-EG" .examples=${examples} total="4"></lr-eval-run>`,
+  )) as LyraEvalRun;
   const number = new Intl.NumberFormat('ar-EG');
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.include(number.format(2));
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.include(number.format(4));
@@ -87,38 +93,38 @@ it('formats generated example, progress, and status counts with the effective lo
 });
 
 it('falls back to examples.length when total is unset', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('max')).to.equal('3');
 });
 
 it('shows a running/failed count badge only when that count is nonzero', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const counts = [...el.shadowRoot!.querySelectorAll('[part="count"]')] as HTMLElement[];
   expect(counts.map((c) => c.dataset.kind)).to.deep.equal(['running', 'error']);
 });
 
 it('renders an empty state when examples is []', async () => {
-  const el = (await fixture(html`<lr-evaluation-run></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run></lr-eval-run>`)) as LyraEvalRun;
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
   expect((el.shadowRoot!.querySelector('[part="example"]')) == null).to.be.true;
 });
 
 it('renders one lr-details[part="example"] per example, carrying data-status', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
   expect(rows.length).to.equal(3);
   expect(rows[1]!.dataset.status).to.equal('running');
 });
 
 it('uses the example label when provided, and a localized "Example N" fallback otherwise', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
   expect(rows[0]!.querySelector('[part="example-label"]')!.textContent!.trim()).to.equal('Refund policy question');
   expect(rows[1]!.querySelector('[part="example-label"]')!.textContent!.trim()).to.equal('Example 2');
 });
 
 it('renders a per-example status badge with the right text', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
   expect(rows[0]!.querySelector('[part="example-status"]')!.textContent!.trim()).to.equal('Success');
   expect(rows[1]!.querySelector('[part="example-status"]')!.textContent!.trim()).to.equal('Running');
@@ -126,7 +132,7 @@ it('renders a per-example status badge with the right text', async () => {
 });
 
 it('renders caller status presentation and counts a custom terminal kind as complete', async () => {
-  const custom: EvaluationExampleResult[] = [{
+  const custom: EvalExampleResult[] = [{
     id: 'custom',
     status: {
       kind: 'provider-complete',
@@ -138,7 +144,7 @@ it('renders caller status presentation and counts a custom terminal kind as comp
     input: { text: 'input' },
     output: { text: 'output' },
   }];
-  const el = await fixture<LyraEvaluationRun>(html`<lr-evaluation-run .examples=${custom}></lr-evaluation-run>`);
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${custom}></lr-eval-run>`);
   const badge = el.shadowRoot!.querySelector('lr-badge[part="example-status"]') as HTMLElement & { variant: string };
   expect(badge.textContent!.trim()).to.equal('Archived');
   expect(badge.variant).to.equal('success');
@@ -147,7 +153,7 @@ it('renders caller status presentation and counts a custom terminal kind as comp
 });
 
 it('renders plain-text input/output via lr-markdown by default', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el);
   const input = row.querySelector('[part="input"]') as HTMLElement;
   expect(input.tagName.toLowerCase()).to.equal('lr-markdown');
@@ -155,7 +161,7 @@ it('renders plain-text input/output via lr-markdown by default', async () => {
 });
 
 it('renders code input/output via lr-code-block when the example requests it, with its language', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el, 1);
   const input = row.querySelector('[part="input"]') as HTMLElement;
   expect(input.tagName.toLowerCase()).to.equal('lr-code-block');
@@ -163,15 +169,15 @@ it('renders code input/output via lr-code-block when the example requests it, wi
 });
 
 it('renders no grounding section when the example carries no grounding assessment', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el, 1);
   expect((row.querySelector('[part="grounding-section"]')) == null).to.be.true;
 });
 
 it('composes lr-grounding-summary with the example assessment and citations when grounding is present', async () => {
   const citations: Citation[] = [{ id: 'cite-1', sourceId: 'doc-1', label: 'Refund policy doc' }];
-  const withCitations: EvaluationExampleResult[] = [{ ...examples[0]!, citations }];
-  const el = (await fixture(html`<lr-evaluation-run .examples=${withCitations}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const withCitations: EvalExampleResult[] = [{ ...examples[0]!, citations }];
+  const el = (await fixture(html`<lr-eval-run .examples=${withCitations}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el);
   const section = row.querySelector('[part="grounding-section"]') as HTMLElement;
   expect((section) != null).to.equal(true);
@@ -182,14 +188,14 @@ it('composes lr-grounding-summary with the example assessment and citations when
 });
 
 it('renders every non-primary status label, including a title-cased fallback for an unrecognized kind', async () => {
-  const statusExamples: EvaluationExampleResult[] = [
+  const statusExamples: EvalExampleResult[] = [
     { id: 's-idle', status: { kind: 'idle' }, input: { text: 'a' }, output: { text: '' } },
     { id: 's-wi', status: { kind: 'waiting-input' }, input: { text: 'b' }, output: { text: '' } },
     { id: 's-wa', status: { kind: 'waiting-approval' }, input: { text: 'c' }, output: { text: '' } },
     { id: 's-cancel', status: { kind: 'cancelled' }, input: { text: 'd' }, output: { text: '' } },
     { id: 's-unknown', status: { kind: 'custom_state-x' }, input: { text: 'e' }, output: { text: '' } },
   ];
-  const el = (await fixture(html`<lr-evaluation-run .examples=${statusExamples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${statusExamples}></lr-eval-run>`)) as LyraEvalRun;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
   const texts = rows.map((row) => row.querySelector('[part="example-status"]')!.textContent!.trim());
   expect(texts).to.deep.equal([
@@ -202,10 +208,10 @@ it('renders every non-primary status label, including a title-cased fallback for
 });
 
 it('falls back to an empty language attribute when a code-formatted example omits its language', async () => {
-  const noLanguage: EvaluationExampleResult[] = [
+  const noLanguage: EvalExampleResult[] = [
     { id: 'ex-nolang', status: { kind: 'done' }, input: { text: 'x = 1', format: 'code' }, output: { text: '' } },
   ];
-  const el = (await fixture(html`<lr-evaluation-run .examples=${noLanguage}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${noLanguage}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el);
   const input = row.querySelector('[part="input"]') as HTMLElement;
   expect(input.tagName.toLowerCase()).to.equal('lr-code-block');
@@ -213,7 +219,7 @@ it('falls back to an empty language attribute when a code-formatted example omit
 });
 
 it('deletes the id from expandedIds (and reports expanded: false) when an example is collapsed', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const details = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
   details.open = true;
   await el.updateComplete;
@@ -226,7 +232,7 @@ it('deletes the id from expandedIds (and reports expanded: false) when an exampl
 });
 
 it('forgets an expanded example id once that example is removed', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   await expandExample(el);
   el.examples = examples.slice(1);
   await el.updateComplete;
@@ -237,14 +243,14 @@ it('forgets an expanded example id once that example is removed', async () => {
 });
 
 it('renders no tool-trace section when the example has no toolTrace', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el);
   expect((row.querySelector('[part="tool-trace-section"]')) == null).to.be.true;
 });
 
 it('composes lr-tool-timeline with the example entries for the tool-trace section', async () => {
-  const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace }];
-  const el = (await fixture(html`<lr-evaluation-run .examples=${withTrace}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const withTrace: EvalExampleResult[] = [{ ...examples[0]!, toolTrace }];
+  const el = (await fixture(html`<lr-eval-run .examples=${withTrace}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el);
   const timeline = row.querySelector('[part="tool-trace"]') as HTMLElement;
   expect(timeline.tagName.toLowerCase()).to.equal('lr-tool-timeline');
@@ -252,7 +258,7 @@ it('composes lr-tool-timeline with the example entries for the tool-trace sectio
 });
 
 it('fires lr-example-toggle (not a raw lr-toggle) when an example is expanded', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const details = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement;
   const summary = details.shadowRoot!.querySelector('summary') as HTMLElement;
 
@@ -263,7 +269,7 @@ it('fires lr-example-toggle (not a raw lr-toggle) when an example is expanded', 
 });
 
 it('correlates a nested grounding-summary citation selection with its example id via lr-example-citation-select', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el);
   const summary = row.querySelector('[part="grounding-summary"]') as HTMLElement;
   const citation: Citation = { id: 'cite-1', sourceId: 'doc-1', label: 'Refund policy doc' };
@@ -275,8 +281,8 @@ it('correlates a nested grounding-summary citation selection with its example id
 });
 
 it('correlates a nested tool-approval decision with its example id via lr-example-tool-approval-decide', async () => {
-  const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace }];
-  const el = (await fixture(html`<lr-evaluation-run .examples=${withTrace}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const withTrace: EvalExampleResult[] = [{ ...examples[0]!, toolTrace }];
+  const el = (await fixture(html`<lr-eval-run .examples=${withTrace}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el);
   const timeline = row.querySelector('[part="tool-trace"]') as HTMLElement;
 
@@ -298,12 +304,12 @@ it('correlates a nested tool-approval decision with its example id via lr-exampl
 });
 
 it('contains nested lifecycle/tool events and correlates the second example at its boundary', async () => {
-  const withTwoTraces: EvaluationExampleResult[] = [
+  const withTwoTraces: EvalExampleResult[] = [
     { ...examples[0]!, toolTrace },
     { ...examples[1]!, toolTrace: [{ ...toolTrace[0]!, id: 'call-2', sourceKey: 'run-b' }] },
   ];
-  const el = await fixture<LyraEvaluationRun>(html`
-    <lr-evaluation-run .examples=${withTwoTraces}></lr-evaluation-run>
+  const el = await fixture<LyraEvalRun>(html`
+    <lr-eval-run .examples=${withTwoTraces}></lr-eval-run>
   `);
   let rawShows = 0;
   let rawActivations = 0;
@@ -353,8 +359,8 @@ it('keeps the real nested approval pending when the correlated wrapper decision 
       needsApproval: true,
     },
   ];
-  const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace: pendingTrace }];
-  const el = (await fixture(html`<lr-evaluation-run .examples=${withTrace}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const withTrace: EvalExampleResult[] = [{ ...examples[0]!, toolTrace: pendingTrace }];
+  const el = (await fixture(html`<lr-eval-run .examples=${withTrace}></lr-eval-run>`)) as LyraEvalRun;
   const row = await expandExample(el);
   const timeline = row.querySelector<LyraToolTimeline>('[part="tool-trace"]')!;
   const chip = timeline.shadowRoot!.querySelector('lr-tool-call-chip')!;
@@ -378,26 +384,26 @@ it('keeps the real nested approval pending when the correlated wrapper decision 
 });
 
 describe('status-change announcements', () => {
-  async function getLiveRegionText(el: LyraEvaluationRun): Promise<string> {
+  async function getLiveRegionText(el: LyraEvalRun): Promise<string> {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     return el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!
       .textContent!;
   }
 
   it('never announces on first sight (mount)', async () => {
-    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
     expect(await getLiveRegionText(el)).to.equal('');
   });
 
   it('announces an example completing (running -> done), politely', async () => {
-    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
     el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'done' as const } } : ex));
     await el.updateComplete;
     expect(await getLiveRegionText(el)).to.equal('Example 2 completed');
   });
 
   it('announces an example failing (running -> error), assertively', async () => {
-    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
     el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'error' as const } } : ex));
     await el.updateComplete;
     const region = el.shadowRoot!.querySelector('lr-live-region')!;
@@ -407,7 +413,7 @@ describe('status-change announcements', () => {
 
   it('announces an example starting (idle -> running), politely', async () => {
     const startingExamples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'idle' as const } } : ex));
-    const el = (await fixture(html`<lr-evaluation-run .examples=${startingExamples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    const el = (await fixture(html`<lr-eval-run .examples=${startingExamples}></lr-eval-run>`)) as LyraEvalRun;
     el.examples = examples; // ex-2 idle -> running
     await el.updateComplete;
     const region = el.shadowRoot!.querySelector('lr-live-region')!;
@@ -416,28 +422,28 @@ describe('status-change announcements', () => {
   });
 
   it('announces an example being cancelled (running -> cancelled), politely', async () => {
-    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
     el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'cancelled' as const } } : ex));
     await el.updateComplete;
     expect(await getLiveRegionText(el)).to.equal('Example 2 cancelled');
   });
 
   it('announces an example needing input (running -> waiting-input), politely', async () => {
-    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
     el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'waiting-input' as const } } : ex));
     await el.updateComplete;
     expect(await getLiveRegionText(el)).to.equal('Example 2 needs input');
   });
 
   it('announces an example needing approval (running -> waiting-approval), politely', async () => {
-    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
     el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'waiting-approval' as const } } : ex));
     await el.updateComplete;
     expect(await getLiveRegionText(el)).to.equal('Example 2 needs approval');
   });
 
   it('does not announce a transition to idle (a no-op status, unlike the other terminal/waiting kinds)', async () => {
-    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
     el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'idle' as const } } : ex));
     await el.updateComplete;
     expect(await getLiveRegionText(el)).to.equal('');
@@ -446,8 +452,8 @@ describe('status-change announcements', () => {
 
 it('localizes built-in strings via .strings while an unregistered key still renders its English default', async () => {
   const el = (await fixture(
-    html`<lr-evaluation-run .examples=${examples} .strings=${{ evaluationRunGroundingHeading: 'Ancrage' }}></lr-evaluation-run>`,
-  )) as LyraEvaluationRun;
+    html`<lr-eval-run .examples=${examples} .strings=${{ evaluationRunGroundingHeading: 'Ancrage' }}></lr-eval-run>`,
+  )) as LyraEvalRun;
   const details = await expandExample(el);
   const heading = details.querySelector('[part="grounding-section"] [part="section-heading"]');
   expect(heading!.textContent!.trim()).to.equal('Ancrage');
@@ -458,9 +464,9 @@ it('mirrors correctly and stays within a 320px allocation (RTL + narrow-containe
   container.setAttribute('dir', 'rtl');
   container.style.inlineSize = '320px';
   const el = (await fixture(
-    html`<lr-evaluation-run .examples=${examples} total="4"></lr-evaluation-run>`,
+    html`<lr-eval-run .examples=${examples} total="4"></lr-eval-run>`,
     { parentNode: container },
-  )) as LyraEvaluationRun;
+  )) as LyraEvalRun;
   await el.updateComplete;
   expect((el as unknown as HTMLElement).getBoundingClientRect().width).to.be.at.most(320);
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal(
@@ -469,12 +475,12 @@ it('mirrors correctly and stays within a 320px allocation (RTL + narrow-containe
 });
 
 it('is accessible with no examples', async () => {
-  const el = await fixture(html`<lr-evaluation-run></lr-evaluation-run>`);
+  const el = await fixture(html`<lr-eval-run></lr-eval-run>`);
   await expect(el).to.be.accessible();
 });
 
 it('is accessible with populated, expanded examples including grounding and a tool trace', async () => {
-  const populated: EvaluationExampleResult[] = [
+  const populated: EvalExampleResult[] = [
     {
       ...examples[0]!,
       toolTrace,
@@ -484,7 +490,7 @@ it('is accessible with populated, expanded examples including grounding and a to
     examples[1]!,
     examples[2]!,
   ];
-  const el = (await fixture(html`<lr-evaluation-run .examples=${populated}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${populated}></lr-eval-run>`)) as LyraEvalRun;
   await expandExample(el);
   expect(el.shadowRoot!.querySelector('[part="grounding-summary"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="tool-trace"]')).to.exist;
@@ -493,7 +499,7 @@ it('is accessible with populated, expanded examples including grounding and a to
 
 it('localizes queued and collecting statuses with the existing agent status keys', async () => {
   const el = (await fixture(html`
-    <lr-evaluation-run
+    <lr-eval-run
       .strings=${{
         agentRunStatusQueued: 'Dans la file',
         agentRunStatusCollecting: 'Collecte',
@@ -502,14 +508,14 @@ it('localizes queued and collecting statuses with the existing agent status keys
         { ...examples[0], status: { kind: 'queued' } },
         { ...examples[1], status: { kind: 'collecting' } },
       ]}
-    ></lr-evaluation-run>
-  `)) as LyraEvaluationRun;
+    ></lr-eval-run>
+  `)) as LyraEvalRun;
   const labels = [...el.shadowRoot!.querySelectorAll('[part="example-status"]')].map((node) => node.textContent!.trim());
   expect(labels).to.deep.equal(['Dans la file', 'Collecte']);
 });
 
 it('does not mount heavy example bodies until their disclosure opens', async () => {
-  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   expect(el.shadowRoot!.querySelectorAll('lr-markdown').length).to.equal(0);
   const first = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
   first.open = true;
@@ -519,11 +525,11 @@ it('does not mount heavy example bodies until their disclosure opens', async () 
 });
 
 it('normalizes duplicate example ids first-wins before progress and disclosures', async () => {
-  const el = await fixture<LyraEvaluationRun>(html`
-    <lr-evaluation-run .examples=${[
+  const el = await fixture<LyraEvalRun>(html`
+    <lr-eval-run .examples=${[
       { id: 'same', label: 'First example', status: { kind: 'done' }, input: { text: 'first' }, output: { text: 'first' } },
       { id: 'same', label: 'Later example', status: { kind: 'error' }, input: { text: 'later' }, output: { text: 'later' } },
-    ]}></lr-evaluation-run>
+    ]}></lr-eval-run>
   `);
   const rows = el.shadowRoot!.querySelectorAll('[part="example"]');
   expect(rows).to.have.length(1);

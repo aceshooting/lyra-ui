@@ -48,10 +48,12 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
 **Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
 `lr-example-add-request` (`detail: undefined`), `lr-example-remove-request` (`detail: { exampleId:
 string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {
-format: string }`), and the deliberate nested-table pass-through `lr-sort` (`detail: { key:
-string }`). `focus`/`blur` —
+format: string }`), and the deliberate nested-table pass-through `lr-sort` (`detail: { phase:
+'commit'; sortKey: string; sortDir: 'asc' | 'desc' }`). `focus`/`blur` —
 re-dispatched (no detail) when the internal search field (only rendered while `searchable`) gains or
 loses focus, since native focus neither bubbles nor crosses the shadow boundary.
+All three built-in columns are sortable; activating one of their headers produces that commit for
+the host to apply to its controlled `examples` array.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `tag-filter`, `grid`,
 `add-button`, `remove-button`, `import`, `export`.

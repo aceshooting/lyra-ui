@@ -1428,6 +1428,30 @@ it('fires lr-map-click with the lngLat and no feature when there is no choroplet
   expect(detail!.feature).to.be.undefined;
 });
 
+it('detaches and freezes lr-map-click coordinates while retaining the feature identity', () => {
+  type MapClickDetail = {
+    readonly lngLat: readonly [number, number];
+    readonly feature: object | undefined;
+  };
+  type MapClickEmitter = {
+    emit(name: 'lr-map-click', detail: MapClickDetail): CustomEvent<MapClickDetail>;
+  };
+
+  const el = document.createElement('lr-map') as LyraMap;
+  const lngLat: [number, number] = [7, 8];
+  const feature = { id: 'station' };
+  const source = { lngLat, feature };
+  const event = (el as unknown as MapClickEmitter).emit('lr-map-click', source);
+
+  lngLat[0] = 99;
+  expect(event.detail === source).to.equal(false);
+  expect(event.detail.lngLat === lngLat).to.equal(false);
+  expect(event.detail.lngLat).to.deep.equal([7, 8]);
+  expect(event.detail.feature === feature).to.equal(true);
+  expect(Object.isFrozen(event.detail)).to.equal(true);
+  expect(Object.isFrozen(event.detail.lngLat)).to.equal(true);
+});
+
 it('attaches the clicked choropleth feature to lr-map-click when one exists at the point', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -1570,7 +1594,12 @@ it('calls setStyle when mapStyle changes after the map has mounted', async funct
   el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
   await el.updateComplete;
 
-  expect(calledWith).to.equal(NEXT_STYLE);
+  expect(calledWith).to.deep.equal(NEXT_STYLE);
+  expect(calledWith).not.to.equal(NEXT_STYLE);
+  expect(Object.isFrozen(calledWith)).to.be.true;
+  expect(
+    Object.isFrozen((calledWith as typeof NEXT_STYLE).sources)
+  ).to.be.true;
 });
 
 it('accepts the string style-URL form of mapStyle and passes it through to setStyle, not just the StyleSpecification object form', async function () {

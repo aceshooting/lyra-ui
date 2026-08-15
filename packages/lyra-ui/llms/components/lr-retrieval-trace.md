@@ -31,6 +31,8 @@ RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: 'pe
   timeline sorts by `startMs`. Each stage projects to one `LyraSpan` with `kind` mapped
   `query-rewrite → 'llm'`, `embed → 'embedding'`, `retrieve → 'retriever'`,
   `rerank`/`filter` → `'tool'`
+  . Stage ids must be nonempty, nonblank, and unique: invalid records and later duplicates are
+  omitted first-wins before timeline, evidence, controlled state, counts, or event paths
 - `RetrievalStageEvidence { text?: string; chunks?: RetrievalChunk[]; metadata?: Record<string,
 unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** verbatim, rendered
   through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`, `locator → anchor`;
@@ -47,7 +49,7 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
 Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, an evidence panel was
 toggled, either by its own button or implicitly by selecting that stage in the timeline for the
 first time), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
-discriminated `{ stageId, action: 'open', id, sourceId, anchor? } | { stageId, action: 'expand', id,
+discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
 expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
 explicit stage identity.
 

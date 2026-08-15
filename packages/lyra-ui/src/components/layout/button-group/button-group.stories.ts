@@ -3,7 +3,18 @@ import type { Meta, StoryObj } from '@storybook/web-components';
 import './button-group.js';
 import '../../forms/button/button.js';
 
-const meta: Meta = { title: 'Primitives/Button Group', component: 'lr-button-group' };
+const meta: Meta = {
+  title: 'Primitives/Button Group',
+  component: 'lr-button-group',
+  parameters: {
+    docs: {
+      description: {
+        component:
+          '`orientation` uses the package-wide `LyraOrientation` type; the former identical component-local alias is not retained.',
+      },
+    },
+  },
+};
 export default meta;
 type Story = StoryObj;
 

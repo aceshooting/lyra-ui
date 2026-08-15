@@ -16,13 +16,15 @@
 ## `lr-chunk-inspector`
 
 A ranked retrieved-chunks list: relevance score bars with tier tones, expandable chunk text, and the
-deep-link event that lands a chunk in `lr-document-viewer`. Never fetches, ranks, or dedupes; never
-opens documents itself.
+deep-link event that lands a chunk in `lr-document-viewer`. Never fetches or ranks and never opens
+documents itself. Blank chunk ids and later duplicates are omitted first-wins before sorting,
+rendering, state, or events.
 
 **Properties:**
 
 - `chunks: LyraChunk[] = []` (attribute: false) — `LyraChunk { id: string; text: string; score:
 number; sourceId: string; title?: string; page?: string | number; anchor?: LyraChunkAnchor }`;
+  blank ids and later duplicate ids are omitted first-wins before any derived path;
   `score` is 0–1, `title` falls back to a localized "untitled source", `anchor` (the same
   discriminated union `lr-document-viewer.anchor` accepts — page/text-quote/fragment/line-range/
   cell-range/cfi/time-range/region/node-path) is carried through `lr-chunk-open` verbatim; finite
@@ -32,24 +34,24 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   score-bar tier cutoffs
 - `sort: ChunkInspectorSort = 'score'` — `ChunkInspectorSort = 'score' | 'none'`, exported by this
   module. The sorted view is memoized on the `chunks`/`sort` pair, so an unrelated update (a new
-  `activeId`, toggling `compact`) hands the internal `lr-virtual-list` the same array reference it
+  `activeChunkId`, toggling `compact`) hands the internal `lr-virtual-list` the same array reference it
   already holds instead of forcing a full offset/identity rebuild
-- `activeId: string = ''` (attribute `active-id`)
+- `activeChunkId: string = ''` (attribute `active-chunk-id`)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `compact: boolean = false` (reflected) — hides the text preview/toggle, title/score row only
 - `label: string = ''` — fallback name for the populated result group. A non-empty host
   `aria-label` makes the host the sole overall owner; an explicitly empty host label stays empty
 
-**Events:** `lr-chunk-open` (`detail: { id, sourceId, anchor? }`, a chunk's title/open button was
+**Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
-`anchor` from the chunk's own), `lr-expand` (`detail: { id, expanded }`, a chunk's text toggle was
+`anchor` from the chunk's own), `lr-expand` (`detail: { chunkId, expanded }`, a chunk's text toggle was
 activated).
 
 **Slots:** none.
 
 **CSS parts:** `base` (`role="group"`), `chunk` (one chunk row; carries `role="listitem"` only
 below `virtualize-at` — while virtualized the surrounding `lr-virtual-list` row supplies that role
-instead), `chunk-current` (additional part on the row matching `activeId`), `score` (visible
+instead), `chunk-current` (additional part on the row matching `activeChunkId`), `score` (visible
 percent text), `score-current` (additional part on the current row's score line), `score-bar`
 (`aria-hidden` track), `score-fill` (tone-mapped fill), `score-fill-success` /
 `score-fill-warning` / `score-fill-danger` (additional part on the fill, one per scoring tier),
@@ -68,7 +70,7 @@ second token in the same `part` attribute, so a `[part~="…"]` (not `[part="…
 one that matches inside a tree.
 
 **Themeable custom properties:** `--lr-chunk-inspector-current-bg` (default
-`var(--lr-color-brand-quiet)`) — the background of the chunk matching `activeId`.
+`var(--lr-color-brand-quiet)`) — the background of the chunk matching `activeChunkId`.
 `--lr-chunk-inspector-current-color` (default `var(--lr-color-text)`) — the text color of that
 chunk's `score` line (`::part(score-current)`). Both are inline `var()` fallbacks at the point of
 use rather than `:host` declarations, so either can be set on the element _or on any ancestor_:

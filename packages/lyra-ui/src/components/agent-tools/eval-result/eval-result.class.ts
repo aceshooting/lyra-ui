@@ -101,8 +101,6 @@ export interface LyraEvalResultEventMap {
  * @since 4.1.0
  */
 export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['runs', 'columns', 'rubricKeys']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -123,6 +121,8 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['runs', 'columns', 'rubricKeys']);
+
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-run-activate',
@@ -137,8 +137,8 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
    *  events. */
   @property({ attribute: false }) runs: readonly EvalRunResult[] = EMPTY_RUNS;
 
-  /** Column definitions for the comparison grid -- forwarded to `<lr-table>` after empty keys are
-   *  omitted and duplicate keys normalize first-wins.
+  /** Column definitions for the comparison grid -- forwarded to `<lr-table>` after malformed and
+   *  empty keys are omitted and duplicate keys normalize first-wins.
    *  Each column now needs a `cell(row)` accessor (`<lr-table>`'s `TableColumn` shape), not the old
    *  `<lr-data-grid>` `DataGridColumn`'s optional `value(row)`. */
   @property({ attribute: false }) columns: readonly TableColumn<EvalRunResult>[] = EMPTY_COLUMNS;
@@ -151,7 +151,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
     return firstByIdentity(Array.isArray(this.runs) ? this.runs : [], (run) => run.id);
   }
   private get normalizedColumns(): TableColumn<EvalRunResult>[] {
-    return firstByIdentity(Array.isArray(this.columns) ? this.columns : [], (column) => String(column.key));
+    return firstByIdentity(Array.isArray(this.columns) ? this.columns : [], (column) => column.key);
   }
   private get normalizedRubricKeys(): RubricKey[] {
     return firstByIdentity(Array.isArray(this.rubricKeys) ? this.rubricKeys : [], (key) => key.key);
@@ -260,7 +260,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
           .rows=${runs}
           .rowKey=${(row: EvalRunResult) => row.id}
           .selectionMode=${'single'}
-          .selectedKeys=${new Set([this.effectiveSelectedRunId])}
+          .selectedRowKeys=${new Set([this.effectiveSelectedRunId])}
           aria-label=${this.localize('evaluationDashboardRunsLabel')}
           @input=${this.stopOwnedEvent}
           @change=${this.stopOwnedEvent}

@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Items and categories are copied into frozen canonical snapshots bounded to 10,000 entries, with at most 200 mounted at once. Reassign either collection after changing it.',
+          'Items and categories are copied into frozen canonical snapshots bounded to 10,000 entries, with at most 200 mounted at once. Empty and blank IDs are omitted and later duplicates are first-wins. Unnamed categories use a localized fallback, and hover/focus tooltips track their active cell. Reassign either collection after changing it.',
       },
     },
   },
@@ -36,6 +36,25 @@ const items: SequenceStripItem[] = [
 
 export const Default: Story = {
   render: () => html`<lr-sequence-strip .items=${items} .categories=${categories()}></lr-sequence-strip>`,
+};
+
+/** Neither an internal category id nor a blank label becomes user-facing text. Hover the first
+ * cell or focus either cell to see the localized fallback tooltip positioned from that cell. */
+export const LocalizedUnnamedCategory: Story = {
+  render: () => html`
+    <div style="inline-size: var(--lr-size-30rem); max-inline-size: 100%">
+      <lr-sequence-strip
+        .items=${[
+          { id: 'first', categoryId: 'internal-unnamed' },
+          { id: 'second', categoryId: 'internal-unnamed' },
+        ] satisfies SequenceStripItem[]}
+        .categories=${[
+          { id: 'internal-unnamed', color: storyColor('chart1'), label: '   ' },
+        ] satisfies SequenceStripCategory[]}
+        .strings=${{ sequenceStripUnnamedCategory: 'Uncategorized' }}
+      ></lr-sequence-strip>
+    </div>
+  `,
 };
 
 export const Empty: Story = {

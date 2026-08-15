@@ -1,5 +1,12 @@
 import { expect } from '@open-wc/testing';
-import { safeDownloadHref, safeFetchUrl, safeLinkHref, safeMediaSrc } from './safe-url.js';
+import {
+  safeDocumentNavigationUrl,
+  safeDownloadHref,
+  safeFetchUrl,
+  safeFrameSrc,
+  safeLinkHref,
+  safeMediaSrc,
+} from './safe-url.js';
 
 describe('sink-specific safe URL helpers', () => {
   it('allows web, blob, relative, and scheme-relative resource URLs', () => {
@@ -108,5 +115,43 @@ describe('sink-specific safe URL helpers', () => {
   it('trims a safe value without resolving relative URLs against the parser base', () => {
     expect(safeLinkHref('  ../report.pdf  ')).to.equal('../report.pdf');
     expect(safeFetchUrl('  data:text/plain,hello  ')).to.equal('data:text/plain,hello');
+  });
+
+  it('allows only http(s) and relative URLs for a document-navigation sink, rejecting data/blob/mailto', () => {
+    for (const url of ['http://example.test/app', 'HTTPS://example.test/app', '/relative/app', '?query=1']) {
+      expect(safeDocumentNavigationUrl(url), url).to.equal(url);
+      expect(safeFrameSrc(url), url).to.equal(url);
+    }
+    for (const url of [
+      'data:text/html,<script>alert(1)</script>',
+      'blob:https://example.test/id',
+      'mailto:hello@example.com',
+      'javascript:alert(1)',
+      'file:///tmp/secret',
+    ]) {
+      expect(safeDocumentNavigationUrl(url), url).to.be.null;
+      expect(safeFrameSrc(url), url).to.be.null;
+    }
+  });
+
+  it('keeps safeFrameSrc and safeDocumentNavigationUrl behaviorally identical', () => {
+    for (const url of [
+      'https://example.test/app',
+      'data:text/html,<p>hi</p>',
+      'mailto:hello@example.com',
+      '',
+      '   ',
+      null,
+      undefined,
+    ]) {
+      expect(safeFrameSrc(url as string)).to.equal(safeDocumentNavigationUrl(url as string));
+    }
+  });
+
+  it('fails closed for non-string runtime values on the document-navigation sink', () => {
+    for (const value of [null, undefined, 0, {}, []]) {
+      expect(safeDocumentNavigationUrl(value as string)).to.be.null;
+      expect(safeFrameSrc(value as string)).to.be.null;
+    }
   });
 });

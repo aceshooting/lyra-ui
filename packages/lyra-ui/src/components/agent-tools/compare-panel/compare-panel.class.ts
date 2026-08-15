@@ -53,8 +53,6 @@ export interface LyraComparePanelEventMap {
  * @since 4.0.0
  */
 export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['allowedVotes']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -69,6 +67,8 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     compareVoteTie: LYRA_DEFAULT_compareVoteTie,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['allowedVotes']);
 
   static override styles = [LyraElement.styles, styles];
 

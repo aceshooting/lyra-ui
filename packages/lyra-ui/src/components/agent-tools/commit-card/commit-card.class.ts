@@ -60,7 +60,7 @@ const GIT_STATUS_KEY: Record<GitStatus, string> = {
 };
 
 export interface LyraCommitCardEventMap {
-  'lr-file-select': CustomEvent<{ path: string }>;
+  'lr-file-select': CustomEvent<{ filePath: string }>;
   'lr-toggle': CustomEvent<{ collapsed: boolean }>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<null>;
@@ -81,7 +81,7 @@ export interface LyraCommitCardEventMap {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-commit-card
- * @event lr-file-select - `detail: { path }` — a file row was activated.
+ * @event lr-file-select - `detail: { filePath }` — a file row was activated.
  * @event lr-toggle - `detail: { collapsed }` — the file-list fold changed.
  * @event lr-copy - `detail: { ok: true, text }` — the full-hash clipboard write completed.
  * @event lr-error - The clipboard write failed; generic no-detail notification.
@@ -113,8 +113,6 @@ export interface LyraCommitCardEventMap {
  * @since 4.0.0
  */
 export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['files']);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -145,6 +143,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override readonly ownedCollectionProperties = Object.freeze(['files']);
+
   static override styles = [LyraElement.styles, styles];
 
   @property() hash = '';
@@ -154,8 +154,9 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   /** File changes keyed by path. Empty/blank paths are omitted and duplicates normalize
    *  first-wins before diffstat and events. */
   @property({ attribute: false }) files: readonly CommitFileChange[] = [];
-  @property({ type: Boolean, attribute: 'files-collapsed', reflect: true, converter: trueDefaultBooleanConverter })
-  filesCollapsed = true;
+  /** Whether the per-file list is shown. Defaults to `false` (collapsed), matching the
+   *  positive-polarity `expanded` convention every sibling component uses. */
+  @property({ type: Boolean, attribute: 'files-expanded', reflect: true }) filesExpanded = false;
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
 
   /** Tighter root padding for dense contexts (a commit rendered as a row in a list or PR
@@ -285,8 +286,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   }
 
   private toggleFiles = (): void => {
-    this.filesCollapsed = !this.filesCollapsed;
-    this.emit('lr-toggle', { collapsed: this.filesCollapsed });
+    this.filesExpanded = !this.filesExpanded;
+    this.emit('lr-toggle', { collapsed: !this.filesExpanded });
   };
 
   override render(): TemplateResult {
@@ -352,14 +353,14 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
               <button
                 part="files-toggle"
                 type="button"
-                aria-expanded=${this.filesCollapsed ? 'false' : 'true'}
+                aria-expanded=${this.filesExpanded ? 'true' : 'false'}
                 @click=${this.toggleFiles}
               >
-                ${this.filesCollapsed
-                  ? this.localize('commitCardShowFiles', undefined, { count: this.formatCount(files.length) })
-                  : this.localize('commitCardHideFiles', undefined, { count: this.formatCount(files.length) })}
+                ${this.filesExpanded
+                  ? this.localize('commitCardHideFiles', undefined, { count: this.formatCount(files.length) })
+                  : this.localize('commitCardShowFiles', undefined, { count: this.formatCount(files.length) })}
               </button>
-              ${!this.filesCollapsed
+              ${this.filesExpanded
                 ? files.map((f) => {
                     const additions = finiteCount(f.additions);
                     const deletions = finiteCount(f.deletions);
@@ -368,7 +369,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                         part="file"
                         type="button"
                         data-status=${f.status ?? nothing}
-                        @click=${() => this.emit('lr-file-select', { path: f.path })}
+                        @click=${() => this.emit('lr-file-select', { filePath: f.path })}
                       >
                         <span part="file-path" dir="ltr"
                           >${f.status

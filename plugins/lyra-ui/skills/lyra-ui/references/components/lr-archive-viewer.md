@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,9 +22,11 @@ bounds, supported compression methods, entry names, and the 10,000-entry/100 MB 
 ceilings, then returns the immutable metadata used directly by the listing. The list composes
 `<lr-virtual-list>` for large archives.
 
-**Properties:** `src: string = ''` and `name: string = ''` — a host-level `aria-label` takes
-precedence over `name` by attribute presence, including an explicitly empty value, when naming the
-`role="region"` listing. The viewer also exposes the shared text-viewer
+**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
+`max-height`) — a host-level `aria-label` takes precedence over `name` by attribute presence,
+including an explicitly empty value, when naming the `role="region"` listing. `maxHeight` caps the
+scrollable archive body; invalid CSS `max-height` values, declaration breaks, and `url()` are
+ignored. The viewer also exposes the shared text-viewer
 contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide
@@ -38,8 +40,9 @@ reassignment mid-flight, or whose row cannot be located after the wait, reports 
 rather than a phantom success.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
-`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search, navigation, and
-clear; `lr-text-select` (`detail: { text, anchor, rects }`) for a selection contained within one
+`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
+navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-text-select`
+(`detail: { text, anchor, rects }`) for a selection contained within one
 entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution.
 `lr-highlight-activate` is not part of this viewer's event contract: archive entry-path highlights
 are passive and cannot be activated.
@@ -53,7 +56,9 @@ directory row's name element carries both `entry-name` and
 `lr-archive-viewer::part(entry)` (and every other row part above) reaches them from a consuming
 stylesheet.
 
-**Themeable custom properties:** `--lr-archive-viewer-highlight-accent-background`,
+**Themeable custom properties:** `--lr-archive-viewer-max-height` (default `none`) caps the
+scrollable `[part="body"]` and is also settable through `maxHeight`/`max-height`.
+`--lr-archive-viewer-highlight-accent-background`,
 `--lr-archive-viewer-highlight-success-background`,
 `--lr-archive-viewer-highlight-warning-background`,
 `--lr-archive-viewer-highlight-danger-background`, and

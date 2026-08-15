@@ -1,7 +1,9 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { fileIcon, folderIcon } from '../../../internal/icons.js';
 import { isAbortError, isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
@@ -10,8 +12,10 @@ import {
   boundedSelectionRects,
   boundedSelectionText,
   buildQuoteAnchor,
-  resolveTextQuote,
+  createTextQuoteIndex,
   scopeFromElement,
+  TEXT_QUOTE_LIMITS,
+  type TextQuoteWorkBudget,
 } from '../../../internal/text-quote.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
@@ -84,7 +88,8 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  *
  * @customElement lr-archive-viewer
  * @event lr-render-error - Fired when fetching or parsing the archive fails.
- * @event lr-search-change - Fired when archive-path search state or its active match changes.
+ * @event lr-search-change - Fired when archive-path search state or its active match changes,
+ *   including source-reset and effective-locale re-evaluation.
  *   Search accepts at most 4,096 query code units and scans at most 4,000,000 path code units;
  *   `detail.matchCountExact=false` identifies a ceiling-truncated lower bound.
  * @event lr-text-select - Fired after a selection within one entry path. `detail: { text, anchor,
@@ -101,6 +106,8 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  * @csspart highlight - A painted entry-path highlight (`<mark>` fallback path only).
  * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error region.
+ * @cssprop [--lr-archive-viewer-max-height=none] - Maximum block size of the scrollable body.
+ *   Also settable via the `max-height` property.
  * @cssprop --lr-archive-viewer-highlight-accent-background - Accent highlight background.
  * @cssprop --lr-archive-viewer-highlight-success-background - Success highlight background.
  * @cssprop --lr-archive-viewer-highlight-warning-background - Warning highlight background.
@@ -151,12 +158,15 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   /** Display name used on the shadow listing owner when host `aria-label` is absent. A non-empty
    *  host label remains on the host; an explicitly empty one is preserved on the shadow owner. */
   @property() name = '';
+  /** A CSS `max-height` for the scrollable archive body; invalid values are ignored. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Case-insensitive search over loaded entry paths, with next/previous navigation that scrolls
    * the active virtualized row into view. Queries are capped at 4,096 code units and one pass scans
    * at most 4,000,000 path code units; `matchCountExact=false` identifies a truncated lower bound. */
   override async search(query: string): Promise<number> {
     this.archiveSearchQuery = query;
+    this.lastSearchLocale = this.effectiveLocale;
     this.recomputeArchiveSearch();
     await this.updateComplete;
     this.scrollActiveArchiveMatch();
@@ -198,12 +208,29 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   private archiveSearchMatchCountExact = true;
   private generation = 0;
   private archiveSearchQuery = '';
+  private lastSearchLocale = '';
+  private pendingSearchResetEvent = false;
   private archiveSelectionRoot: Element | null = null;
   private archiveSelectionCleanup?: () => void;
   private styledVirtualListRoot: ShadowRoot | null = null;
   private archiveNestedUpdatePending = false;
   private readonly archiveEntryKey = (item: unknown): string => (item as ArchiveEntry).name;
   private readonly announcements = new ViewerAnnouncementController(this);
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('src')) {
+      this.pendingSearchResetEvent ||= this.archiveSearchQuery !== ''
+        || this.archiveSearchMatches.length > 0
+        || !this.archiveSearchMatchCountExact
+        || this.archiveSearchActiveIndex !== -1;
+      this.archiveSearchQuery = '';
+      this.archiveSearchMatches = [];
+      this.archiveSearchMatchCountExact = true;
+      this.archiveSearchActiveIndex = -1;
+      this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
+    }
+  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -214,6 +241,20 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     );
     this.syncArchiveNestedRoot();
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (changed.has('src') && this.pendingSearchResetEvent) {
+      this.pendingSearchResetEvent = false;
+      this.emitArchiveSearchChange();
+    }
+    const locale = this.effectiveLocale;
+    if (locale !== this.lastSearchLocale) {
+      const shouldRecompute = this.archiveSearchQuery !== '';
+      this.lastSearchLocale = locale;
+      if (shouldRecompute) {
+        this.scheduleAfterUpdate(() => {
+          void this.search(this.archiveSearchQuery);
+        }, 'search');
+      }
+    }
   }
 
   override connectedCallback(): void {
@@ -253,10 +294,22 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
       resolvedName = this.fetchState.entries[index]?.name;
     } else if (anchor.kind === 'text-quote') {
       const probe = this.ownerDocument.createElement('span');
-      index = this.fetchState.entries.findIndex((entry) => {
+      const workBudget: TextQuoteWorkBudget = {
+        remainingCodeUnits: TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits,
+      };
+      for (let candidateIndex = 0; candidateIndex < this.fetchState.entries.length; candidateIndex++) {
+        const entry = this.fetchState.entries[candidateIndex]!;
+        const buildCost = Math.max(1, entry.name.length);
+        if (buildCost > workBudget.remainingCodeUnits) break;
+        workBudget.remainingCodeUnits -= buildCost;
         probe.textContent = entry.name;
-        return resolveTextQuote(scopeFromElement(probe), anchor, this.effectiveLocale) !== null;
-      });
+        const match = createTextQuoteIndex(scopeFromElement(probe), this.effectiveLocale)
+          .resolve(anchor, workBudget);
+        if (match) {
+          index = candidateIndex;
+          break;
+        }
+      }
     }
     if (index < 0) return false;
     const list = this.archiveVirtualList();
@@ -487,7 +540,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeId=${this.archiveSearchMatches[this.archiveSearchActiveIndex]?.name ?? ''} @lr-visible-range-changed=${this.stopVirtualListEvent} @lr-virtual-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
+      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeItemId=${this.archiveSearchMatches[this.archiveSearchActiveIndex]?.name ?? ''} @lr-visible-range-changed=${this.stopVirtualListEvent} @lr-virtual-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
@@ -499,7 +552,8 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     // itself; with neither source there is nothing meaningful to announce, so no region is added.
     const label = viewerSemanticLabel(this, this.name || null);
     const role = label === null ? null : viewerSemanticRole(this, 'region');
-    return html`<div part="base" role=${role ?? nothing} aria-label=${label ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    const maxHeight = sanitizeCssLength(this.maxHeight);
+    return html`<div part="base" role=${role ?? nothing} aria-label=${label ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'} style=${maxHeight ? styleMap({ '--lr-archive-viewer-max-height': maxHeight }) : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

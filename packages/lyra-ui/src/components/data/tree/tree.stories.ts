@@ -348,8 +348,8 @@ export const Reorderable: Story = {
     ];
     const onReorder = (event: Event): void => {
       const tree = event.currentTarget as HTMLElement & { data: LyraTreeNodeData[] };
-      const { parentId, fromIndex, toIndex } = (
-        event as CustomEvent<{ parentId: string | null; fromIndex: number; toIndex: number }>
+      const { parentNodeId, fromIndex, toIndex } = (
+        event as CustomEvent<{ parentNodeId: string | null; fromIndex: number; toIndex: number }>
       ).detail;
       const move = (list: LyraTreeNodeData[]): LyraTreeNodeData[] => {
         const next = [...list];
@@ -359,13 +359,13 @@ export const Reorderable: Story = {
       };
       const apply = (list: LyraTreeNodeData[]): LyraTreeNodeData[] =>
         list.map((item) =>
-          item.id === parentId && item.children
+          item.id === parentNodeId && item.children
             ? { ...item, children: move(item.children) }
             : item.children
             ? { ...item, children: apply(item.children) }
             : item
         );
-      tree.data = parentId === null ? move(tree.data) : apply(tree.data);
+      tree.data = parentNodeId === null ? move(tree.data) : apply(tree.data);
     };
     return html`
       <lr-tree
@@ -401,4 +401,29 @@ export const DeeplyNested: Story = {
     const tree = canvasElement.querySelector('lr-tree') as HTMLElement & { expandAll: () => void };
     tree.expandAll();
   },
+};
+
+/** All five mirrored indentation properties are consumed by each item; this example sets them on
+ * the root item so its generated descendants inherit the same guide treatment. */
+export const CustomIndentGuides: Story = {
+  render: () => html`
+    <lr-tree style="max-inline-size: var(--lr-size-20rem)" label="Custom indentation guides">
+      <lr-tree-item
+        expanded
+        style="
+          --indent-size: var(--lr-space-2xl);
+          --indent-guide-color: var(--lr-color-brand);
+          --indent-guide-offset: var(--lr-space-2xs);
+          --indent-guide-style: dashed;
+          --indent-guide-width: var(--lr-border-width-medium);
+        "
+      >
+        Guides
+        <lr-tree-item expanded>
+          Components
+          <lr-tree-item>Tree item</lr-tree-item>
+        </lr-tree-item>
+      </lr-tree-item>
+    </lr-tree>
+  `,
 };

@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A generic content surface that mirrors the public card contracts under the `lr-` prefix. `orientation` switches between vertical sections and horizontal media/body/actions, `image` aliases `media`, dedicated header/footer action slots preserve native controls even on linked cards, and `with-*` hints make those wrappers available during SSR. `appearance`, `actionable`, and `href` retain Lyra\'s stronger surface and activation APIs.',
+          'A generic content surface that mirrors the public card contracts under the `lr-` prefix. `orientation` uses the shared `LyraOrientation` type and switches between vertical sections and horizontal media/body/actions; no redundant card-only orientation alias is exported. `image` aliases `media`, dedicated header/footer action slots preserve native controls even on linked cards, and `with-*` hints make those wrappers available during SSR. `appearance`, `actionable`, and `href` retain Lyra\'s stronger surface and activation APIs.',
       },
     },
   },

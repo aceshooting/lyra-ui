@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'File Tree',
   component: 'lr-file-tree',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A path-keyed file explorer. Each assignment creates a frozen, clone-owned model from at most the first 10,000 inspected source positions across 64 descendant levels; reassign after changes. Empty and blank paths are omitted and later duplicates are first-wins before rendering, selection, focus, and events.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;
@@ -62,11 +70,11 @@ export const LazyLoading: Story = {
     };
     el.style.maxWidth = '20rem';
     el.nodes = [{ path: 'lazy-dir', kind: 'directory', hasChildren: true }];
-    el.addEventListener('lr-load-children', ((e: CustomEvent<{ path: string }>) => {
+    el.addEventListener('lr-load-children', ((e: CustomEvent<{ filePath: string }>) => {
       setTimeout(() => {
-        el.setChildren(e.detail.path, [
-          { path: `${e.detail.path}/loaded-a.ts` },
-          { path: `${e.detail.path}/loaded-b.ts`, gitStatus: 'added' },
+        el.setChildren(e.detail.filePath, [
+          { path: `${e.detail.filePath}/loaded-a.ts` },
+          { path: `${e.detail.filePath}/loaded-b.ts`, gitStatus: 'added' },
         ]);
       }, 500);
     }) as EventListener);

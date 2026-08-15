@@ -34,10 +34,7 @@ import {
 } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_calloutAnnouncementWithContext,
-  LYRA_DEFAULT_close,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_calloutAnnouncementWithContext, LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The library's one semantic-tone vocabulary. */
@@ -183,13 +180,11 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
 export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      calloutAnnouncementWithContext:
-        LYRA_DEFAULT_calloutAnnouncementWithContext,
-      close: LYRA_DEFAULT_close,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    calloutAnnouncementWithContext: LYRA_DEFAULT_calloutAnnouncementWithContext,
+    close: LYRA_DEFAULT_close,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [

@@ -2,11 +2,11 @@ import type {
   AnchorResultDetail,
   AnchorTargetCapabilities,
   CalendarView,
-  GraphCommunity,
-  GraphLayout,
-  GraphPickKind,
-  GraphRenderer,
-  GraphSelectionMode,
+  LyraGraphCommunity,
+  LyraGraphLayout,
+  LyraGraphPickKind,
+  LyraGraphRenderer,
+  LyraGraphSelectionMode,
   GaugeShape,
   HeatmapCalendarData,
   HeatmapData,
@@ -37,8 +37,8 @@ import type {
   LyraMultiSplitOrientationChangeDetail,
   LyraStepperOrientationChangeDetail,
   TextSelectDetail,
-  VirtualListItemRole,
-  VirtualListScroll,
+  LyraVirtualListItemRole,
+  LyraVirtualListScroll,
 } from '../src/lyra.js';
 
 // Public classes expose these names in properties, callbacks, methods, and events. The tuple keeps
@@ -47,11 +47,11 @@ declare const rootGovernanceTypes: [
   AnchorResultDetail,
   AnchorTargetCapabilities,
   CalendarView,
-  GraphCommunity,
-  GraphLayout,
-  GraphPickKind,
-  GraphRenderer,
-  GraphSelectionMode,
+  LyraGraphCommunity,
+  LyraGraphLayout,
+  LyraGraphPickKind,
+  LyraGraphRenderer,
+  LyraGraphSelectionMode,
   GaugeShape,
   HeatmapCalendarData,
   HeatmapData,
@@ -82,7 +82,7 @@ declare const rootGovernanceTypes: [
   LyraMultiSplitOrientationChangeDetail,
   LyraStepperOrientationChangeDetail,
   TextSelectDetail,
-  VirtualListItemRole,
-  VirtualListScroll
+  LyraVirtualListItemRole,
+  LyraVirtualListScroll
 ];
 void rootGovernanceTypes;

@@ -19,7 +19,7 @@ Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and v
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
 header row included whenever `has-header-row` is set; `scrollToAnchor()` scrolls the addressed
-row/column into view via the virtualized list's `active-id`. `highlights` paint as a focusable
+row/column into view via the virtualized list's `active-item-id`. `highlights` paint as a focusable
 `part="cell-highlight"`. A jump whose document is replaced by a concurrent `src` reassignment
 mid-flight reports `found: false` rather than a phantom success.
 
@@ -45,7 +45,7 @@ resource-limit error instead.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
-`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
+search/navigation/clear, canonical source reset, and effective-locale re-evaluation. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
 **CSS parts:** `base`, `body` (the capped scroll surface), `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural

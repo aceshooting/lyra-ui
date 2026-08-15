@@ -49,8 +49,9 @@ clears the query, matches, and painted search annotation.
 
 **Events:** `lr-render-error` with `detail.error` when fetching, opening, or rendering fails;
 `lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
-`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from `search()`/`searchNext()`/
-`searchPrevious()`/`clearSearch()`; `lr-anchor-result` (`detail: { found }`) after an anchor is
+`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
+navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-anchor-result`
+(`detail: { found }`) after an anchor is
 applied; `lr-highlight-activate` (`detail: { highlightId }`) when a painted CFI highlight is clicked; and
 `lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
 Selection text is capped at 4,096 code units and selection rectangles at 1,000.

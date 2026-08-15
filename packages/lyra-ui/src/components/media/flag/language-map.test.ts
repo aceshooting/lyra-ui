@@ -74,6 +74,10 @@ describe('localeNativeName', () => {
     expect(languageToCountry('en-..-ca')).to.equal('gb');
   });
 
+  it('never resolves inherited Object.prototype names as mapping entries', () => {
+    expect(typeof languageToCountry('constructor')).to.equal('undefined');
+  });
+
   it('maps Persian and Hebrew base/regional tags to Iran and Israel with native endonyms', () => {
     expect(languageToCountry('fa')).to.equal('ir');
     expect(languageToCountry('fa-IR')).to.equal('ir');

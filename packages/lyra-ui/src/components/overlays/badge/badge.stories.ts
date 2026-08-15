@@ -62,10 +62,23 @@ export const Attention: StoryObj = {
 
 export const PulseAlias: StoryObj = {
   name: 'pulse shorthand and --pulse-color',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The upstream `pulse` shorthand applies only while `attention` is omitted. An explicit `attention="none"` suppresses it, while `pulse` and `bounce` select their respective explicit animations.',
+      },
+    },
+  },
   render: () => html`
-    <lr-badge pulse appearance="accent" variant="danger" style="--pulse-color:var(--lr-color-warning)">
-      Live
-    </lr-badge>
+    <div style=${row}>
+      <lr-badge pulse appearance="accent" variant="danger" style="--pulse-color:var(--lr-color-warning)">
+        Live
+      </lr-badge>
+      <lr-badge pulse attention="none" appearance="accent" variant="neutral">
+        Pulse suppressed
+      </lr-badge>
+    </div>
   `,
 };
 

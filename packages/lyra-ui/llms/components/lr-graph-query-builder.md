@@ -34,9 +34,11 @@ focused control never move external focus.
 `nodeTypeOptions: readonly GraphQueryTypeOption[]`, `relationshipTypeOptions: readonly
 GraphQueryTypeOption[]`, and `savedQueries: readonly GraphQuerySavedItem[]`; `hopLimit`, frozen
 `errors`, `form`, `validity`, `validationMessage`, and `willValidate`. Type-option values and saved
-query ids are unique first-wins identities; malformed/hostile records are skipped, nested queries
+query ids are nonblank unique first-wins identities; malformed/hostile records are skipped, nested queries
 are normalized snapshots, collections are capped at 500 options / 200 saved queries, and strings
-at 256 characters.
+at 256 characters. `value.relationshipTypes` and `value.nodeTypes` are each capped at 500 entries.
+Create and reassign a new value, options array, or saved-query array after changes; mutating a
+previous caller-owned object cannot change the builder's assigned snapshots.
 
 **Methods and form callbacks:** `getForm()`, `focus(options?)`, `blur()`, `click()`,
 `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, `formDisabledCallback(disabled)`,
@@ -67,9 +69,9 @@ default. Run, save, load, and delete share one two-phase contract: cancelable
 `lr-before-query-delete` requests precede any local effect; non-cancelable `lr-query-run`,
 `lr-query-save`, `lr-query-load`, and `lr-query-delete` notifications follow only when accepted.
 The matching before/accepted pair reuses one frozen payload: `{ query }` for run,
-`{ name, query }` for save, `{ id, query }` for load, and `{ id }` for delete.
+`{ name, query }` for save, `{ queryId, query }` for load, and `{ queryId }` for delete.
 Run validates before its request. Save veto preserves the draft name. Load requests frozen
-`{ id, query }` before changing `value`, so veto preserves the current query; its accepted event
+`{ queryId, query }` before changing `value`, so veto preserves the current query; its accepted event
 fires after the new value is applied. Delete remains controlled, so the host removes the accepted
 id from `savedQueries`. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and those
 eight phased action events.

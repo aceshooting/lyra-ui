@@ -529,8 +529,8 @@ test('a documented unaliasedEvents reason is the only way an unmirrored upstream
 test('the checked-in inventory is executable and carries its explicit event-prefix rewrite', () => {
   const checkedContract = buildMigrationContract(checkedInventory);
   const input = [
-    "import '@shoelace-style/shoelace/dist/components/resize-observer/resize-observer.js';",
-    '<sl-resize-observer @sl-resize="onResize"></sl-resize-observer>',
+    `import '@shoelace-style/shoelace/dist/components/animation/animation.js';`,
+    '<sl-animation @sl-start="onStart"></sl-animation>',
     '',
   ].join('\n');
   const result = migrateText(input, checkedContract, {
@@ -540,8 +540,8 @@ test('the checked-in inventory is executable and carries its explicit event-pref
   assert.equal(
     result.content,
     [
-      "import '@aceshooting/lyra-ui/components/utility/resize-observer/resize-observer.js';",
-      '<lr-resize-observer @lr-resize="onResize"></lr-resize-observer>',
+      `import '@aceshooting/lyra-ui/components/media/animation/animation.js';`,
+      '<lr-animation @lr-start="onStart"></lr-animation>',
       '',
     ].join('\n'),
   );
@@ -1699,17 +1699,21 @@ test('directory targets include standalone CSS in the default scan set', () => {
   }
 });
 
-test('C-567 accordion migrates automatically after the legacy-details exception becomes stale', () => {
+test('accordion migration stays manual when event details require an immutable snapshot review', () => {
+  const input = '<wa-accordion></wa-accordion>\n';
   const result = migrateText(
-    '<wa-accordion></wa-accordion>\n',
+    input,
     buildMigrationContract(checkedInventory),
     { file: 'accordion.html' },
   );
-  assert.equal(result.content, '<lr-accordion></lr-accordion>\n');
-  assert.deepEqual(result.warnings, []);
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.equal(result.warnings.length, 1);
+  assert.equal(result.warnings[0].warningCode, 'WARNING_REQUIRED');
+  assert.match(result.warnings[0].message, /frozen readonly value/u);
 });
 
-test('C-576 page stays unchanged with its method-edge divergence in the migration report', () => {
+test('page stays unchanged with its method-edge divergence in the migration report', () => {
   const input = '<wa-page></wa-page>\n';
   const result = migrateText(input, buildMigrationContract(checkedInventory), {
     file: 'page.html',
@@ -2305,8 +2309,8 @@ test('CLI --check is non-mutating and exits nonzero until the migration is clean
   try {
     const source = path.join(scratch, 'component.ts');
     const input = [
-      "import '@shoelace-style/shoelace/dist/components/resize-observer/resize-observer.js';",
-      "document.body.innerHTML = '<sl-resize-observer></sl-resize-observer>';",
+      `import '@shoelace-style/shoelace/dist/components/animation/animation.js';`,
+      `document.body.innerHTML = '<sl-animation></sl-animation>';`,
       '',
     ].join('\n');
     fs.writeFileSync(source, input);
@@ -2409,13 +2413,13 @@ test('the public CLI dry-runs, reports, applies, and remains idempotent', () => 
     const source = path.join(scratch, 'component.ts');
     const reportPath = path.join(scratch, 'report.json');
     const input = [
-      "import '@shoelace-style/shoelace/dist/components/resize-observer/resize-observer.js';",
-      "document.body.innerHTML = '<sl-resize-observer></sl-resize-observer>';",
+      `import '@shoelace-style/shoelace/dist/components/animation/animation.js';`,
+      `document.body.innerHTML = '<sl-animation></sl-animation>';`,
       '',
     ].join('\n');
     const expected = [
-      "import '@aceshooting/lyra-ui/components/utility/resize-observer/resize-observer.js';",
-      "document.body.innerHTML = '<lr-resize-observer></lr-resize-observer>';",
+      `import '@aceshooting/lyra-ui/components/media/animation/animation.js';`,
+      `document.body.innerHTML = '<lr-animation></lr-animation>';`,
       '',
     ].join('\n');
     fs.writeFileSync(source, input);

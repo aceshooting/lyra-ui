@@ -132,8 +132,6 @@ export interface LyraVoicePickerEventMap {
   change: Event;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 
 /**
@@ -190,8 +188,6 @@ export interface LyraVoicePickerEventMap {
  *   picker or emit this event.
  * @event {FocusEvent} focus - Owner-realm native focus relayed when focus enters that complete
  *   picker boundary, retaining `relatedTarget`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-preview-request - `detail: { voiceId: string; previewUrl?: string }`. Cancelable.
  * @event lr-preview-change - `detail: { voiceId: string | null }` — internal playback started
  *   (`voiceId`) or stopped (`null`).
@@ -367,7 +363,10 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
       entry.description ?? '',
     ],
     emitChange: (detail) => this.emit('lr-change', detail),
-    emitFocusAlias: (type) => this.emit(type),
+    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- native focus/blur (already
+    // relayed by the controller itself) are the only focus notifications this control emits now.
+    // The controller still requires this hook, so it's a no-op rather than an omitted property.
+    emitFocusAlias: () => {},
     beforeValueChange: (value) => {
       const previewTarget = this.internalPreviewTargetId;
       if (previewTarget !== null && previewTarget !== value) this.stopInternalPreview();

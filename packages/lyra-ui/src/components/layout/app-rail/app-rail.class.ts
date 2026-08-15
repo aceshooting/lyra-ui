@@ -17,34 +17,36 @@ import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_ope
 
 
 /** The rail's effective presentation -- see the class doc for what each renders. */
-export type AppRailMode = 'full' | 'icon-only' | 'mobile';
+export type LyraAppRailMode = 'full' | 'icon-only' | 'mobile';
 
-/** What can be *assigned* to `mode` -- `'auto'` is a write-only sentinel; see the `mode` accessor doc. */
-export type AppRailModeInput = AppRailMode | 'auto';
+/** {@link LyraAppRailMode} plus the `'auto'` release sentinel -- broader than `forceMode`'s own
+ *  `LyraAppRailPreferredMode | 'auto'` type, since `forceMode` excludes `'mobile'` (the mobile
+ *  breakpoint is always tracked automatically and can never be pinned; see its own doc). */
+export type LyraAppRailModeInput = LyraAppRailMode | 'auto';
 
-/** The non-mobile axis of {@link AppRailMode} -- what `preferred-mode` can manually prefer between,
- *  since the `mobile-breakpoint` continues to be tracked automatically regardless (see
- *  `preferredMode`'s own doc). */
-export type AppRailPreferredMode = Exclude<AppRailMode, 'mobile'>;
+/** The non-mobile axis of {@link LyraAppRailMode} -- what `preferred-mode`/`forceMode` can
+ *  manually prefer between, since the `mobile-breakpoint` continues to be tracked automatically
+ *  regardless (see `preferredMode`'s own doc). */
+export type LyraAppRailPreferredMode = Exclude<LyraAppRailMode, 'mobile'>;
 
 /** Whitespace-separated tokens accepted by the `persist` attribute. */
-export type AppRailPersistField = 'open' | 'width' | 'preferred-mode';
+export type LyraAppRailPersistField = 'open' | 'width' | 'preferred-mode';
 
-const APP_RAIL_PERSIST_FIELDS = new Set<AppRailPersistField>([
+const APP_RAIL_PERSIST_FIELDS = new Set<LyraAppRailPersistField>([
   'open',
   'width',
   'preferred-mode',
 ]);
 
-export interface AppRailModeChangeDetail {
-  mode: AppRailMode;
+export interface LyraAppRailModeChangeDetail {
+  mode: LyraAppRailMode;
 }
 
-export interface AppRailToggleDetail {
+export interface LyraAppRailToggleDetail {
   open: boolean;
 }
 
-export interface AppRailResizeDetail {
+export interface LyraAppRailResizeDetail {
   widthPx: number;
 }
 
@@ -85,8 +87,8 @@ function menuIcon(): SVGTemplateResult {
 export function computeAppRailMode(
   iconOnlyMatches: boolean,
   mobileMatches: boolean,
-  preferredMode?: AppRailPreferredMode | null,
-): AppRailMode {
+  preferredMode?: LyraAppRailPreferredMode | null,
+): LyraAppRailMode {
   if (mobileMatches) return 'mobile';
   if (preferredMode) return preferredMode;
   if (iconOnlyMatches) return 'icon-only';
@@ -94,15 +96,15 @@ export function computeAppRailMode(
 }
 
 export interface LyraAppRailEventMap {
-  'lr-mode-change': CustomEvent<AppRailModeChangeDetail>;
-  'lr-toggle': CustomEvent<AppRailToggleDetail>;
-  'lr-rail-resize-request': CustomEvent<AppRailResizeDetail>;
-  'lr-rail-resize': CustomEvent<AppRailResizeDetail>;
+  'lr-mode-change': CustomEvent<LyraAppRailModeChangeDetail>;
+  'lr-toggle': CustomEvent<LyraAppRailToggleDetail>;
+  'lr-rail-resize-request': CustomEvent<LyraAppRailResizeDetail>;
+  'lr-rail-resize': CustomEvent<LyraAppRailResizeDetail>;
 }
 /**
  * `<lr-app-rail>` — a responsive navigation rail that adapts across three
  * presentations as the *viewport* narrows (not this element's own inline
- * size — see the `mode` accessor doc for why): `'full'` (nav items show
+ * size — see the `mode` getter doc for why): `'full'` (nav items show
  * icon + label, inline), `'icon-only'` (a narrower inline rail, icons only),
  * and `'mobile'` (hidden behind a toggle button; opening it shows a
  * focus-trapped floating overlay over the page).
@@ -137,24 +139,24 @@ export interface LyraAppRailEventMap {
  * @slot header - Logo/brand content, shown above the nav items in every mode.
  * @slot footer - A trailing user/settings trigger, shown below the nav items.
  * @event lr-mode-change - The effective mode changed, whether from a
- *   breakpoint crossing or an explicit `mode` assignment. Not fired for a
+ *   breakpoint crossing or an explicit `forceMode` assignment. Not fired for a
  *   redundant reassignment to the mode already in effect.
- *   `detail: AppRailModeChangeDetail`.
+ *   `detail: LyraAppRailModeChangeDetail`.
  * @event lr-toggle - The mobile overlay is opening or closing — via the
  *   built-in toggle button, Escape, a backdrop click, a nav-item click while
  *   open, or a breakpoint/forced mode change leaving `'mobile'` while open.
  *   Not fired when a consumer sets `open` directly (mirrors `<lr-dialog>`'s
- *   `open`/`close()` split). `detail: AppRailToggleDetail`. Conditionally cancelable: every
+ *   `open`/`close()` split). `detail: LyraAppRailToggleDetail`. Conditionally cancelable: every
  *   interactive trigger can be vetoed, but the forced mode-change close always applies
  *   (vetoing it would leave `open` stuck `true` in a mode where it's
  *   meaningless) -- call `preventDefault()` to keep the overlay as it is.
  * @event lr-rail-resize-request - A cancelable request to change the `resizable` rail's width via
  *   drag or keyboard stepping. Call `preventDefault()` to keep `railWidthPx` unchanged. Not fired
- *   when a consumer sets `railWidthPx` directly. `detail: AppRailResizeDetail`.
+ *   when a consumer sets `railWidthPx` directly. `detail: LyraAppRailResizeDetail`.
  * @event lr-rail-resize - The `resizable` rail's width was committed: immediately after a genuine
  *   keyboard step, or once on pointerup after a genuine drag. Non-cancelable; no event is emitted
  *   for clamped no-ops, canceled/lost gestures, or direct `railWidthPx` writes.
- *   `detail: AppRailResizeDetail`.
+ *   `detail: LyraAppRailResizeDetail`.
  * @csspart base - The rail root while inline (`'full'`/`'icon-only'` modes).
  * @csspart header - The wrapper around the `header` slot.
  * @csspart nav - The wrapper around the default (nav items) slot.
@@ -215,17 +217,6 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  // `mode` needs a custom accessor (force/auto semantics below) rather than
-  // the usual @property()-generated one -- registered here, alongside the
-  // decorator-declared properties below, the same way lr-model-select's
-  // form-associated `value` accessor is. `reflect: true` still applies:
-  // LitElement's update loop reflects any `reflect`-flagged property to its
-  // attribute generically by reading `this[name]` after render, regardless
-  // of whether that property has a custom or auto-generated accessor.
-  static override properties = {
-    mode: { reflect: true, noAccessor: true },
-  };
-
   /** Below this viewport width, the rail switches from `'full'` to
    *  `'icon-only'`. Any valid CSS length, used directly in a `max-width`
    *  media query. */
@@ -257,10 +248,47 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the
    *  `mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual
    *  collapse toggle that should still yield to a genuinely too-narrow-for-any-inline-rail
-   *  viewport. Only consulted while `mode` isn't force-pinned via its own accessor (see the class
-   *  doc) — that continues to take full priority, unchanged. Unset (the default, `null`)
-   *  reproduces today's exact breakpoint-only behavior. */
-  @property({ attribute: 'preferred-mode' }) preferredMode?: AppRailPreferredMode | null;
+   *  viewport. Only consulted while `mode` isn't pinned via `forceMode` — that continues to take
+   *  full priority, unchanged. Unset (the default, `null`) reproduces today's exact
+   *  breakpoint-only behavior. */
+  @property({ attribute: 'preferred-mode' }) preferredMode?: LyraAppRailPreferredMode | null;
+
+  /** Pins the rail's effective `mode` to `'full'` or `'icon-only'`, bypassing the live
+   *  `icon-only-breakpoint`/`mobile-breakpoint` match entirely. The sentinel `'auto'` (and the
+   *  unset default, `undefined`) release the pin and resume automatic breakpoint tracking --
+   *  whether the rail is currently pinned or auto-tracking is itself observable this way:
+   *  `forceMode === 'auto'` (or unset) means auto-tracking, any other value means pinned.
+   *  `'mobile'` cannot be pinned here -- the mobile breakpoint is always tracked automatically
+   *  regardless, mirroring `preferredMode`'s own scope. An unrecognized value is ignored, leaving
+   *  the current pinned/auto-tracking state unchanged. Applies synchronously -- mirrors the
+   *  pre-9.0 `mode` setter this replaced, including for code (a resize gesture's own pointermove
+   *  handler, e.g.) that reads `mode`-derived state immediately after assigning this property,
+   *  with no intervening render. `mode` itself is a read-only resolved accessor; assign
+   *  `forceMode` to change what it reports. */
+  @property({ attribute: 'force-mode' })
+  get forceMode(): LyraAppRailPreferredMode | 'auto' | undefined {
+    return this._forceMode;
+  }
+  set forceMode(next: LyraAppRailPreferredMode | 'auto' | null | undefined) {
+    // Validated BEFORE writing `_forceMode` -- an unrecognized value must leave the current
+    // pinned/auto-tracking state (and its own readback) untouched, per the doc above. Writing the
+    // raw value first would corrupt `forceMode`'s readback with the rejected string while `mode`
+    // stayed unaffected, silently breaking the `forceMode === 'auto'`-means-auto-tracking
+    // invariant this accessor exists to guarantee.
+    if (next != null && next !== 'auto' && next !== 'full' && next !== 'icon-only') return;
+    const old = this._forceMode;
+    this._forceMode = next ?? undefined;
+    this.requestUpdate('forceMode', old);
+    if (next == null || next === 'auto') {
+      if (!this.forced) return;
+      this.forced = false;
+      this.applyComputedMode();
+      return;
+    }
+    this.forced = true;
+    this.setEffectiveMode(next);
+  }
+  private _forceMode?: LyraAppRailPreferredMode | 'auto';
 
   /** Suppresses the built-in mobile `[part='toggle']` hamburger/close button entirely -- for a
    *  consumer that already owns an external mobile-menu toggle wired to this rail's own `open`
@@ -304,9 +332,22 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** `true` for the duration of an active pointer-driven resize drag (not a keyboard step) --
    *  reflected so a consumer (or this component's own styles) can suppress `[part='base']`'s
    *  `transition: inline-size` during the drag, which otherwise visibly "chases" the pointer
-   *  instead of tracking it 1:1. Read-only in practice (this component owns the transitions), but
-   *  a plain reactive property like every other reflected boolean here. */
-  @property({ type: Boolean, reflect: true }) dragging = false;
+   *  instead of tracking it 1:1. Read-only -- this component owns the transitions entirely; there
+   *  is no public setter. */
+  get dragging(): boolean {
+    return this._dragging;
+  }
+  private _dragging = false;
+
+  /** Sets `_dragging` and its reflected `[dragging]` attribute together. `dragging` has no
+   *  template binding of its own (only the CSS selectors in `app-rail.styles.ts` key off the
+   *  attribute), so this bypasses Lit's reactive-property machinery entirely rather than routing
+   *  through `requestUpdate()` -- see the `dragging` getter doc for why there is no public
+   *  setter. */
+  private setDragging(next: boolean): void {
+    this._dragging = next;
+    this.toggleAttribute('dragging', next);
+  }
 
   @state() private hasHeaderSlot = false;
   @state() private hasFooterSlot = false;
@@ -314,9 +355,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** False until after the first `updated()`, so persistence never fires on the load pass. */
   private persistReady = false;
 
-  private _mode: AppRailMode = 'full';
+  private _mode: LyraAppRailMode = 'full';
+  // The `mode` value last written to the reflected attribute -- lets `updated()` gate the
+  // manual `setAttribute('mode', ...)` call on an actual change instead of firing it
+  // unconditionally on every update pass (see `updated()`'s own comment for why unconditional
+  // was wrong: it rewrote the same value once per unrelated reactive-property update, including
+  // once per pointermove tick throughout an entire resize drag). `undefined` until the first
+  // `updated()` runs, which always differs from a real `LyraAppRailMode` and so always reflects
+  // the constructor-default `_mode` on that first pass.
+  private _lastReflectedMode?: LyraAppRailMode;
   // Whether matchMedia changes are currently ignored because a consumer
-  // forced a specific mode -- see the `mode` accessor doc.
+  // pinned a specific mode via `forceMode` -- see the `mode` getter doc.
   private forced = false;
   private iconOnlyMatches = false;
   private mobileMatches = false;
@@ -374,29 +423,20 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /**
    * The rail's current effective presentation. Always one of the three real
    * modes — never `'auto'` — reflecting either the live breakpoint match or,
-   * once forced, whatever was last assigned.
+   * once pinned via `forceMode`, whatever mode is currently pinned.
    *
-   * Assigning `'full'`/`'icon-only'`/`'mobile'` forces that mode and stops
-   * this element from responding to `icon-only-breakpoint`/
-   * `mobile-breakpoint` matches. Assigning the sentinel `'auto'` releases
-   * the force and immediately re-syncs to the current viewport width,
-   * resuming automatic tracking. `'auto'` is a write-only instruction, not a
-   * value this getter ever returns — there is no way to observe "currently
-   * forced" from the property itself.
+   * Read-only: this getter never accepts an assignment. Set `forceMode` to
+   * pin `'full'`/`'icon-only'`, or to `'auto'`/unset to release the pin and
+   * resume automatic breakpoint tracking -- unlike the pre-9.0 `mode`
+   * setter this replaced, whether the rail is currently pinned is itself
+   * observable via `forceMode === 'auto'` (or unset).
+   *
+   * Reflected to the `mode` attribute for `:host([mode="..."])` styling --
+   * manually, via `updated()`, since this property has no Lit-managed
+   * accessor to reflect through (see `setEffectiveMode()`).
    */
-  get mode(): AppRailMode {
+  get mode(): LyraAppRailMode {
     return this._mode;
-  }
-  set mode(next: AppRailModeInput | null | undefined) {
-    if (next == null || next === 'auto') {
-      if (!this.forced) return;
-      this.forced = false;
-      this.applyComputedMode();
-      return;
-    }
-    if (next !== 'full' && next !== 'icon-only' && next !== 'mobile') return;
-    this.forced = true;
-    this.setEffectiveMode(next);
   }
 
   /** `minRailWidthPx` normalized to a finite, non-negative px floor -- an invalid attribute value
@@ -431,13 +471,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     return this.storageKey ? `lr-app-rail:${this.storageKey}` : undefined;
   }
 
-  private get persistFields(): Set<AppRailPersistField> {
+  private get persistFields(): Set<LyraAppRailPersistField> {
     const persist = typeof this.persist === 'string' ? this.persist : '';
     return new Set(
       persist
         .split(/\s+/)
-        .filter((field): field is AppRailPersistField =>
-          APP_RAIL_PERSIST_FIELDS.has(field as AppRailPersistField),
+        .filter((field): field is LyraAppRailPersistField =>
+          APP_RAIL_PERSIST_FIELDS.has(field as LyraAppRailPersistField),
         ),
     );
   }
@@ -477,7 +517,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     const state: {
       open?: boolean;
       railWidthPx?: number;
-      preferredMode?: AppRailPreferredMode | null;
+      preferredMode?: LyraAppRailPreferredMode | null;
     } = {};
     if (fields.has('open')) state.open = this.open;
     if (fields.has('width')) state.railWidthPx = this.railWidthPx;
@@ -534,6 +574,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // `mode` has no Lit-managed accessor (see its getter doc), so its attribute reflection is
+    // manual -- gated on `_lastReflectedMode` (not `changed.has('mode')`, since `mode` is never a
+    // real reactive property `changed` could name) so a same-value update pass doesn't rewrite an
+    // unchanged attribute. `_lastReflectedMode` starts `undefined`, which never equals a real
+    // `LyraAppRailMode`, so the very first update still reflects `_mode`'s constructor-default
+    // value even though `setEffectiveMode()` never "changes" from that default.
+    if (this._lastReflectedMode !== this._mode) {
+      this._lastReflectedMode = this._mode;
+      this.setAttribute('mode', this._mode);
+    }
     this.syncSlottedItems();
     if (this.recoverInlineFocusAfterResponsiveClose) {
       this.recoverInlineFocusAfterResponsiveClose = false;
@@ -571,6 +621,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // `forceMode`'s own setter applies synchronously (see its doc) -- including for an initial
+    // `force-mode` attribute, whose attributeChangedCallback reaction runs during upgrade, before
+    // connectedCallback -- so `forced`/`_mode` are already correct by the time setupMediaQueries()
+    // below decides whether `forced` should suppress its breakpoint read. No explicit sync needed
+    // here, unlike the mode-getter's other, purely-computed state.
     this.setupMediaQueries();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
@@ -691,7 +746,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.setEffectiveMode(computeAppRailMode(this.iconOnlyMatches, this.mobileMatches, this.preferredMode));
   }
 
-  private setEffectiveMode(next: AppRailMode): void {
+  private setEffectiveMode(next: LyraAppRailMode): void {
     if (this._mode === next) return;
     const old = this._mode;
     if (old === 'mobile' && next !== 'mobile' && this.open) {
@@ -775,7 +830,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     ownerWindow.addEventListener('pointerup', this.onResizerPointerUp);
     ownerWindow.addEventListener('pointercancel', this.onResizerPointerUp);
     ownerWindow.addEventListener('lostpointercapture', this.onResizerPointerUp);
-    this.dragging = true;
+    this.setDragging(true);
   };
 
   private onResizerPointerMove = (e: PointerEvent): void => {
@@ -802,7 +857,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.resizePointerId = undefined;
     this.resizeOwnerWindow = undefined;
     this.resizeGestureChanged = false;
-    this.dragging = false;
+    this.setDragging(false);
     ownerWindow?.removeEventListener('pointermove', this.onResizerPointerMove);
     ownerWindow?.removeEventListener('pointerup', this.onResizerPointerUp);
     ownerWindow?.removeEventListener('pointercancel', this.onResizerPointerUp);

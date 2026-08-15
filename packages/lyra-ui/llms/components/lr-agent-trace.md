@@ -33,7 +33,10 @@ hierarchical trace tree from one shared `spans` array.
   `lr-span-visibility-change`
 - `label: string = ''` — forwarded to the composed `lr-trace-tree`
 - `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
-  `show-cost`), `hideBars: boolean = false` (attribute `hide-bars`) — all forwarded verbatim
+  `show-cost`), `showBars: boolean = true` (attribute `show-bars`, renamed from `hideBars` in
+  9.0.0 to match the positive polarity of its two siblings above — default inverted so the
+  rendered starting state is unchanged: `el.hideBars = true` becomes `el.showBars = false`) — all
+  forwarded verbatim
 
 **Events:** `lr-span-select` (`detail: { spanId: string }`), `lr-span-toggle` (`detail: { spanId: string;
 expanded: boolean }`), and `lr-span-visibility-change` (`detail: { hiddenKinds:

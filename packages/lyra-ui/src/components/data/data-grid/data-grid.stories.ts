@@ -74,7 +74,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "Data grid with client and server processing. Collection inputs and event/state collections are readonly snapshots; `selectedRows` remains writable and maps current source-row objects onto `selectedKeys`.",
+          'Data grid with client and server processing. Collection inputs and event/state collections are readonly snapshots; `selectedRows` remains writable and maps current source-row objects onto `selectedRowKeys`. The mirrored `selectedKeys` and `expandedKeys` spellings remain compatibility aliases.',
       },
     },
   },
@@ -166,7 +166,7 @@ export const BoundedTreeProjection: Story = {
         label="Bounded nested rows"
         row-key="id"
         child-rows="children"
-        .expandedKeys=${Array.from({ length: 70 }, (_value, id) => id)}
+        .expandedRowKeys=${Array.from({ length: 70 }, (_value, id) => id)}
         .columns=${columns.slice(0, 1)}
         .data=${[root]}
       ></lr-data-grid>
@@ -227,7 +227,7 @@ export const ExplicitCopyDelimiter: Story = {
           label="Semicolon copy example"
           row-key="id"
           selectable="multiple"
-          .selectedKeys=${[1, 2]}
+          .selectedRowKeys=${[1, 2]}
           .columns=${columns}
           .data=${rows.slice(0, 2)}
         ></lr-data-grid>
@@ -341,7 +341,7 @@ export const Grouped: Story = {
       group-by="team"
       row-key="id"
       selectable="multiple"
-      .expandedKeys=${[
+      .expandedRowKeys=${[
         "group:root:team:string:Compiler",
         "group:root:team:string:Runtime",
       ]}
@@ -379,7 +379,7 @@ export const TreeAndDetails: Story = {
         label="Compiler work tree"
         child-rows="children"
         row-key="id"
-        .expandedKeys=${[1]}
+        .expandedRowKeys=${[1]}
         .rowDetail=${(row: DemoRow) =>
           html`<strong>${row.name}</strong> scored ${row.score}.`}
         .columns=${columns}

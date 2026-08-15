@@ -1,3 +1,22 @@
+## Breaking changes in 9.0.0
+
+**Breaking (type-only, v9):** `lr-toast`'s exported `ToastPlacement`, `ToastCreateOptions`, and
+`ToastOverflowDetail` are renamed to `LyraToastPlacement`, `LyraToastCreateOptions`, and
+`LyraToastOverflowDetail`; `lr-toast-item`'s exported `ToastVariant` and `ToastSize` are renamed to
+`LyraToastVariant` and `LyraToastSize`. Update any `import type { ToastPlacement, ... }` to the
+`Lyra*`-prefixed names — no runtime/markup change, TypeScript imports only. **Breaking (type-only,
+v9):** `lr-progress-bar`'s exported `ProgressVariant` is renamed to `LyraProgressVariant`. **Breaking
+(removal, v9):** the deprecated `ToastOptions` alias of `LyraToastOptions`, exported from the
+`toast()` helper module, is removed — it was Lyra's own convenience-API type, not a `wa-toast` DOM
+member, so no upstream mirror is affected; use `LyraToastOptions` (unchanged, was already the
+canonical name). **Breaking (type-only, v9):** `lr-skeleton`'s exported `SkeletonEffect` is renamed to
+`LyraSkeletonEffect`. **Breaking (type-only, v9):** `lr-spinner`'s exported `SpinnerLabelPlacement` is
+renamed to `LyraSpinnerLabelPlacement`. **New, additive, non-breaking:** `lr-progress-ring` gains a
+`variant` property/attribute (`LyraProgressVariant`, default `'brand'`, reflected), matching sibling
+`lr-progress-bar`'s semantic-palette vocabulary (`neutral`/`brand`/`success`/`warning`/`danger`), plus
+a new `--lr-progress-ring-indicator-variant-color` CSS custom property (palette slot, same override
+precedence as `lr-progress-bar`'s `--lr-progress-indicator-variant-color`).
+
 ## The shared overlay lifecycle
 
 `lr-dialog`, `lr-drawer`, `lr-popover`, `lr-dropdown` and `lr-tooltip` all open and close over the
@@ -1785,7 +1804,9 @@ tone while leaving the rest of the grid alone.
 A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
-(reflected), `label: string = ''` (the mapped accessible-name property), and
+(reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
+`lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`),
+`label: string = ''` (the mapped accessible-name property), and
 `accessibleLabel: string = ''` (attribute `accessible-label`; a Lyra compatibility
 accessible-name spelling retained by this progress component, while several sibling components use
 `aria-label` directly). Host
@@ -1808,6 +1829,9 @@ ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--
 `--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-ring-indicator-width` (defaulting to the track width),
 `--lr-progress-ring-indicator-color` (default `var(--lr-color-brand)`),
+`--lr-progress-ring-indicator-variant-color` (added in 9.0.0, same override precedence as
+`lr-progress-bar`'s `--lr-progress-indicator-variant-color` — the palette slot `variant` resolves
+into),
 `--lr-progress-ring-indicator-transition-duration` (default `var(--lr-transition-base)`), and
 `--lr-progress-duration` (default
 `var(--lr-transition-ambient)` — the indeterminate spin period, the same token and the same default
@@ -1854,9 +1878,12 @@ the app level.
   infinitely-looping attention animation for a badge that has to be noticed: `pulse` draws an
   expanding ring, `bounce` hops the surface vertically (block-direction, so it needs no RTL
   mirroring). Both stop outright — not merely shorten — under `prefers-reduced-motion: reduce`.
+  The default does not materialize an attribute; an explicit `attention="none"` is authoritative
+  and suppresses the `pulse` shorthand.
 - `pulse: boolean = false` (reflected) — upstream-compatible shorthand for the pulse attention
-  treatment. Lyra's intentional `variant="neutral"` and `appearance="filled-outlined"` defaults
-  remain unchanged because the two pinned upstreams disagree on both defaults.
+  treatment while the `attention` attribute is omitted. Any explicit attention value wins. Lyra's
+  intentional `variant="neutral"` and `appearance="filled-outlined"` defaults remain unchanged
+  because the two pinned upstreams disagree on both defaults.
 - `withRemove: boolean = false` (attribute `with-remove`, reflected) — **`lr-tag` only, new in
   8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
   present on the markup.
@@ -1879,9 +1906,12 @@ removes its action, focus moves to the nearest available composed action. Focus 
 the listener is preserved.
 
 For a removable tag, `focus(options?)`, `blur()`, and `click()` delegate to its native remove
-button. Setting `withRemove` / `removable` false revokes `focus()` and `click()` synchronously,
-before the outgoing button is rerendered. `blur()` remains available during that same-task window
-so it can release the stale focused button; after render there is no owner to blur.
+button. A plain tag's `click()` retains native `HTMLElement.click()` behavior and dispatches one
+host `click`; its `focus()` has no delegated target. Setting `withRemove` / `removable` false
+revokes remove-button focus and activation synchronously before the outgoing button is rerendered,
+so same-task `click()` uses the plain host behavior instead of firing `lr-remove`. `blur()` remains
+available during that same-task window so it can release the stale focused button; after render
+there is no owner to blur.
 
 **Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
 (content after it) — both new in 8.0.0. Each wrapper collapses entirely (`display: none`, so no
@@ -2408,7 +2438,7 @@ These named interfaces and helper signatures are available to typed integrations
   onClick: unknown;
   item: unknown;
 }`
-  `ToastOverflowDetail {
+  `LyraToastOverflowDetail {
   count: unknown;
 }`
 

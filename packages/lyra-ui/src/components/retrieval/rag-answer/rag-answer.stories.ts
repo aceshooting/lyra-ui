@@ -1,7 +1,19 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './rag-answer.js';
-const meta: Meta = { title: 'RagAnswer', component: 'lr-rag-answer', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'RagAnswer',
+  component: 'lr-rag-answer',
+  tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A grounded answer surface that canonicalizes citations, sources, and nested assessment claims independently by nonblank id before composition, counts, rendering, lookup, and actions. Both nested citation activation/open signals are contained and translated to one section-qualified `lr-citation-select` event.',
+      },
+    },
+  },
+};
 export default meta;
 type Story = StoryObj;
 export const Default: Story = { render: () => html`<lr-rag-answer answer="The retrieval pipeline found a grounded answer." .citations=${[{ id: 'c1', sourceId: 'd1' }]} .sources=${[{ id: 'd1', name: 'runbook.md', mimeType: 'text/markdown' }]} .assessment=${{ supportedClaims: 1, unsupportedClaims: 0, coverage: 1 }} @lr-citation-select=${(event: CustomEvent) => console.log('lr-citation-select', event.detail)}></lr-rag-answer>` };

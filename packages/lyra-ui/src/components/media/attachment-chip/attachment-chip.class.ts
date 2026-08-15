@@ -22,30 +22,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_attachmentPreviewFile,
-  LYRA_DEFAULT_attachmentPreviewName,
-  LYRA_DEFAULT_attachmentRetryWithContext,
-  LYRA_DEFAULT_attachmentUntitledFile,
-  LYRA_DEFAULT_attachmentUploadFailed,
-  LYRA_DEFAULT_attachmentUploadingIndeterminate,
-  LYRA_DEFAULT_attachmentUploadingProgress,
-  LYRA_DEFAULT_attachmentUploadingWithContext,
-  LYRA_DEFAULT_collapse,
-  LYRA_DEFAULT_details,
-  LYRA_DEFAULT_fileSizeUnitB,
-  LYRA_DEFAULT_fileSizeUnitGb,
-  LYRA_DEFAULT_fileSizeUnitKb,
-  LYRA_DEFAULT_fileSizeUnitMb,
-  LYRA_DEFAULT_fileSizeUnitTb,
-  LYRA_DEFAULT_map,
-  LYRA_DEFAULT_navigation,
-  LYRA_DEFAULT_open,
-  LYRA_DEFAULT_progress,
-  LYRA_DEFAULT_removeWithContext,
-  LYRA_DEFAULT_search,
-  LYRA_DEFAULT_select,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
@@ -166,8 +143,8 @@ export interface LyraAttachmentChipEventMap {
  * @csspart retry-button - The retry affordance, only rendered while `status="error"`.
  * @csspart preview-button - The preview affordance, rendered when a file or `preview-src` is available.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
- * @cssprop [--lr-attachment-chip-spinner-duration=0.8s] - Duration of one indeterminate
- * upload-spinner rotation. The ambient loop stops under reduced motion.
+ * @cssprop [--lr-attachment-chip-spinner-duration=var(--lr-transition-ambient)] - Duration and
+ * easing of one indeterminate upload-spinner rotation. The ambient loop stops under reduced motion.
  * @cssprop [--lr-attachment-chip-accent=var(--lr-color-text-quiet)] - Accent color used for the
  * status text, spinner, and progress fill. Its private default changes per `status`
  * (`uploading`/`error`/`success`); the public value remains authoritative.
@@ -188,34 +165,31 @@ export interface LyraAttachmentChipEventMap {
 export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      attachmentPreviewFile: LYRA_DEFAULT_attachmentPreviewFile,
-      attachmentPreviewName: LYRA_DEFAULT_attachmentPreviewName,
-      attachmentRetryWithContext: LYRA_DEFAULT_attachmentRetryWithContext,
-      attachmentUntitledFile: LYRA_DEFAULT_attachmentUntitledFile,
-      attachmentUploadFailed: LYRA_DEFAULT_attachmentUploadFailed,
-      attachmentUploadingIndeterminate:
-        LYRA_DEFAULT_attachmentUploadingIndeterminate,
-      attachmentUploadingProgress: LYRA_DEFAULT_attachmentUploadingProgress,
-      attachmentUploadingWithContext:
-        LYRA_DEFAULT_attachmentUploadingWithContext,
-      collapse: LYRA_DEFAULT_collapse,
-      details: LYRA_DEFAULT_details,
-      fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
-      fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
-      fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
-      fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
-      fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
-      map: LYRA_DEFAULT_map,
-      navigation: LYRA_DEFAULT_navigation,
-      open: LYRA_DEFAULT_open,
-      progress: LYRA_DEFAULT_progress,
-      removeWithContext: LYRA_DEFAULT_removeWithContext,
-      search: LYRA_DEFAULT_search,
-      select: LYRA_DEFAULT_select,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    attachmentPreviewFile: LYRA_DEFAULT_attachmentPreviewFile,
+    attachmentPreviewName: LYRA_DEFAULT_attachmentPreviewName,
+    attachmentRetryWithContext: LYRA_DEFAULT_attachmentRetryWithContext,
+    attachmentUntitledFile: LYRA_DEFAULT_attachmentUntitledFile,
+    attachmentUploadFailed: LYRA_DEFAULT_attachmentUploadFailed,
+    attachmentUploadingIndeterminate: LYRA_DEFAULT_attachmentUploadingIndeterminate,
+    attachmentUploadingProgress: LYRA_DEFAULT_attachmentUploadingProgress,
+    attachmentUploadingWithContext: LYRA_DEFAULT_attachmentUploadingWithContext,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
+    fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
+    fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
+    fileSizeUnitMb: LYRA_DEFAULT_fileSizeUnitMb,
+    fileSizeUnitTb: LYRA_DEFAULT_fileSizeUnitTb,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

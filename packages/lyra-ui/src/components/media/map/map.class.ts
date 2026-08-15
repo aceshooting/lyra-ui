@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { sanitizeCssColor, sanitizeSwatchColor } from '../../../internal/safe-css.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
@@ -389,14 +389,6 @@ export interface LyraMapEventMap {
  * @since 4.0.0
  */
 export class LyraMap extends LyraElement<LyraMapEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze([
-    'center',
-    'mapStyle',
-    'choropleth',
-    'markers',
-    'dataLayers',
-  ]);
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -413,6 +405,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     paginationSummary: LYRA_DEFAULT_paginationSummary,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'center',
+    'mapStyle',
+    'choropleth',
+    'markers',
+    'dataLayers',
+  ]);
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
@@ -1409,7 +1409,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             >
               <div class="legend-list" role="list">
                 ${this.legend.map((entry, index) => {
-                  const bg = sanitizeSwatchColor(entry.color);
+                  const bg = sanitizeCssColor(entry.color);
                   return html`<div
                     class="legend-row"
                     role="listitem"

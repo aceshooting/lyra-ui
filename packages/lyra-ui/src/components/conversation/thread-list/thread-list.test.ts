@@ -453,22 +453,47 @@ describe("data mode", () => {
     expect(renderedThreadIds(el)).to.deep.equal(["p1", "t1", "y1", "a1"]);
   });
 
-  it("requires non-empty, nonblank unique identities and keeps the first duplicate thread", async () => {
+  it('requires non-empty, nonblank unique identities and keeps the first duplicate thread', async () => {
     const el = (await fixture(html`
       <lr-thread-list
         grouping="none"
         .threads=${[
-          { id: "same", title: "First" },
-          { id: "same", title: "Second" },
-          { id: "", title: "Missing identity" },
-          { id: "   ", title: "Blank identity" },
-        ]}
+          null,
+          7,
+          { id: 'same', title: 'First' },
+          { id: 'same', title: 'Second' },
+          { id: '', title: 'Missing identity' },
+          { id: '   ', title: 'Blank identity' },
+        ] as unknown as Array<{ id: string; title: string }>}
       ></lr-thread-list>
     `)) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    expect(renderedThreadIds(el)).to.deep.equal(["same"]);
-    expect(dataRow(el, "same").label).to.equal("First");
+    expect(renderedThreadIds(el)).to.deep.equal(['same']);
+    expect(dataRow(el, 'same').label).to.equal('First');
+  });
+
+  it('omits custom groups with malformed or blank identities before rendering and events', async () => {
+    const groupedThreads = [
+      { id: 'missing', title: 'Missing group', group: '' },
+      { id: 'blank', title: 'Blank group', group: '   ' },
+      { id: 'valid', title: 'Valid group', group: 'project' },
+    ];
+    const el = (await fixture(html`<lr-thread-list style="block-size:400px"></lr-thread-list>`)) as LyraThreadList;
+    el.threads = groupedThreads;
+    el.grouping = 'custom';
+    el.groupBy = (thread) => groupedThreads.find((candidate) => candidate.id === thread.id)!.group;
+    await el.updateComplete;
+    await nextFrame();
+
+    expect(renderedGroupLabels(el)).to.deep.equal(['project']);
+    expect(renderedThreadIds(el)).to.deep.equal(['valid']);
+    const toggle = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector<HTMLButtonElement>(
+      'button[part~="group-toggle"]',
+    )!;
+    const pending = oneEvent(el, 'lr-group-toggle');
+    toggle.click();
+    expect((await pending).detail).to.deep.equal({ groupId: 'project', collapsed: true });
   });
 
   it("uses one string group-label contract and renders rich adornments outside the toggle", async () => {
@@ -629,7 +654,7 @@ describe("data mode", () => {
     const list = el.shadowRoot!.querySelector(
       "lr-virtual-list"
     ) as LyraVirtualList;
-    expect(list.activeId).to.equal("thread:group:today");
+    expect(list.activeItemId).to.equal('thread:group:today');
     const targetIndex = (
       list.items as Array<{ kind: string; thread?: { id: string } }>
     ).findIndex(

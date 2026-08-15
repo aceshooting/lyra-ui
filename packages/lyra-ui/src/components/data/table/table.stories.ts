@@ -28,7 +28,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A bounded sort/select-aware grid. Columns, rows, selected keys, and expanded keys are detached at assignment and capped at 10,000 entries; key reads expose immutable ReadonlySet facades, and consumers reassign collections after changes. Unique nonempty column and row keys are first-wins before render, counts, focus, actions, and events. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted. Built-in filter/loading/empty/more/column-toggle copy localizes only while its optional override is omitted; supplied strings, including empty strings, render verbatim.',
+          'A bounded sort/select-aware grid. Column inspection stops after the first 10,000 source positions; columns, rows, selected keys, and expanded keys are detached at assignment and capped at 10,000 retained entries. Malformed and whitespace-only controlled keys are omitted while valid off-page keys remain available for server pagination. Key reads expose immutable ReadonlySet facades, and consumers reassign collections after changes. Unique nonempty column and row keys are first-wins before render, counts, focus, actions, and events. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted. Built-in filter/loading/empty/more/column-toggle copy localizes only while its optional override is omitted; supplied strings, including empty strings, render verbatim.',
       },
     },
   },
@@ -155,7 +155,7 @@ export const SelectedRowColor: Story = {
       .columns=${columns}
       .rows=${rows}
       .rowKey=${(r: DemoRow) => r.id}
-      .selectedKeys=${new Set(['b'])}
+      .selectedRowKeys=${new Set(['b'])}
     ></lr-table>
   `,
 };
@@ -199,7 +199,7 @@ export const SelectedRow: Story = {
       selection-mode="single"
       .columns=${columns}
       .rows=${rows}
-      .selectedKeys=${new Set(['b'])}
+      .selectedRowKeys=${new Set(['b'])}
     ></lr-table>
   `,
 };
@@ -543,7 +543,7 @@ export const NarrowPriorityActions: Story = {
     ),
 };
 
-// expandedKeys is consumer-owned, unlike self-managed selection/client sorting. This story
+// expandedRowKeys is consumer-owned, unlike self-managed selection/client sorting. This story
 // uses a plain module-level Set + a manual re-render to demonstrate the
 // wiring a real consumer would do with their own framework's state.
 const expandableExpandedKeys = new Set<string | number>();
@@ -555,9 +555,9 @@ function renderExpandableRows(): unknown {
     .rowKey=${(r: DetailRow) => r.id}
     .expandedContent=${(r: DetailRow) =>
       html`<div style="padding: 4px 8px;"><strong>${r.name}</strong> — region ${r.region}, updated ${r.updated}</div>`}
-    .expandedKeys=${expandableExpandedKeys}
-    @lr-row-expand-toggle=${(e: CustomEvent<{ key: string | number }>) => {
-      const key = e.detail.key;
+    .expandedRowKeys=${expandableExpandedKeys}
+    @lr-row-expand-toggle=${(e: CustomEvent<{ rowKey: string | number }>) => {
+      const key = e.detail.rowKey;
       if (expandableExpandedKeys.has(key)) expandableExpandedKeys.delete(key);
       else expandableExpandedKeys.add(key);
       // Re-render this story's own root -- Storybook's `render()` return
@@ -580,7 +580,7 @@ export const ExpandableRows: Story = {
 
 // canExpand opts a specific row out of the toggle entirely (e.g. an
 // unconfigured provider with nothing to show) -- its leading cell renders
-// empty instead of a button, and its key being in expandedKeys (it isn't,
+// empty instead of a button, and its key being in expandedRowKeys (it isn't,
 // here) would still not render a panel for it.
 export const ExpandableRowsWithOptOut: Story = {
   render: () =>
@@ -590,7 +590,7 @@ export const ExpandableRowsWithOptOut: Story = {
       .rowKey=${(r: DetailRow) => r.id}
       .expandedContent=${(r: DetailRow) => html`<div style="padding: 4px 8px;">${r.name} details</div>`}
       .canExpand=${(r: DetailRow) => r.id !== 'c'}
-      .expandedKeys=${new Set(['a'])}
+      .expandedRowKeys=${new Set(['a'])}
     ></lr-table>`,
 };
 

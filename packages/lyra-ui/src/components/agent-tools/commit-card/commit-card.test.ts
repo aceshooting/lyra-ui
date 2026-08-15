@@ -11,20 +11,20 @@ async function settleClipboard(el: LyraCommitCard): Promise<void> {
 }
 
 describe('lr-commit-card', () => {
-  it('defaults to filesCollapsed=true and copyable=true', async () => {
+  it('defaults to filesExpanded=false (files start collapsed) and copyable=true', async () => {
     const el = (await fixture(html`<lr-commit-card></lr-commit-card>`)) as LyraCommitCard;
-    expect(el.filesCollapsed).to.be.true;
+    expect(el.filesExpanded).to.be.false;
     expect(el.copyable).to.be.true;
   });
 
-  it('parses the literal files-collapsed="false" and copyable="false" attributes (not just property bindings)', async () => {
+  it('parses the literal files-expanded="true" and copyable="false" attributes (not just property bindings)', async () => {
     const el = (await fixture(html`
-      <lr-commit-card files-collapsed="false" copyable="false" hash="abcdef1"
+      <lr-commit-card files-expanded="true" copyable="false" hash="abcdef1"
         .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}
       ></lr-commit-card>
     `)) as LyraCommitCard;
     await el.updateComplete;
-    expect(el.filesCollapsed).to.be.false;
+    expect(el.filesExpanded).to.be.true;
     expect(el.copyable).to.be.false;
     expect(el.shadowRoot!.querySelectorAll('[part="file"]').length).to.equal(1);
     expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]').length).to.equal(0);
@@ -318,7 +318,7 @@ describe('lr-commit-card', () => {
     const el = (await fixture(html`
       <lr-commit-card
         lang="ar-EG"
-        files-collapsed="false"
+        files-expanded="true"
         .files=${[{ path: 'src/file.ts', additions, deletions }]}
       ></lr-commit-card>
     `)) as LyraCommitCard;
@@ -338,7 +338,7 @@ describe('lr-commit-card', () => {
   it('normalizes malformed diff counts before totals, visible text, and accessible text', async () => {
     const el = await fixture<LyraCommitCard>(html`
       <lr-commit-card
-        files-collapsed="false"
+        files-expanded="true"
         .files=${[
           { path: 'invalid.ts', additions: Number.NaN, deletions: Number.POSITIVE_INFINITY },
           { path: 'fractional.ts', additions: 2.9, deletions: -4 },
@@ -377,16 +377,16 @@ describe('lr-commit-card', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="file"]').length).to.equal(1);
   });
 
-  it('emits lr-file-select with the path when a file row is activated', async () => {
+  it('emits lr-file-select with the file path when a file row is activated', async () => {
     const el = (await fixture(html`
-      <lr-commit-card .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]} .filesCollapsed=${false}></lr-commit-card>
+      <lr-commit-card .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]} .filesExpanded=${true}></lr-commit-card>
     `)) as LyraCommitCard;
     await el.updateComplete;
     const row = el.shadowRoot!.querySelector('[part="file"]') as HTMLButtonElement;
     const listener = oneEvent(el, 'lr-file-select');
     row.click();
-    const event = (await listener) as CustomEvent<{ path: string }>;
-    expect(event.detail.path).to.equal('a.ts');
+    const event = (await listener) as CustomEvent<{ filePath: string }>;
+    expect(event.detail.filePath).to.equal('a.ts');
   });
 
   it('renders a timestamp inside a <time datetime> element', async () => {
@@ -463,7 +463,7 @@ describe('lr-commit-card', () => {
   it('expands a bare git-status letter into a localized accessible name, reusing the shared gitStatus* keys', async () => {
     const el = (await fixture(html`
       <lr-commit-card
-        files-collapsed="false"
+        files-expanded="true"
         .files=${[{ path: 'a.ts', additions: 1, deletions: 0, status: 'modified' }]}
       ></lr-commit-card>
     `)) as LyraCommitCard;
@@ -477,7 +477,7 @@ describe('lr-commit-card', () => {
   it('routes the git-status expansion through .strings, so registerLyraLocale() can translate it', async () => {
     const el = (await fixture(html`
       <lr-commit-card
-        files-collapsed="false"
+        files-expanded="true"
         .files=${[
           { path: 'a.ts', additions: 1, deletions: 0, status: 'modified' },
           { path: 'b.ts', additions: 2, deletions: 0, status: 'added' },
@@ -549,7 +549,7 @@ describe('lr-commit-card', () => {
     const el = await fixture<LyraCommitCard>(html`
       <lr-commit-card
         hash="abcdef1"
-        files-collapsed="false"
+        files-expanded="true"
         style="--lr-color-brand-quiet: rgb(1, 2, 3)"
         .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}
       ></lr-commit-card>
@@ -571,7 +571,7 @@ describe('lr-commit-card', () => {
     const el = (await fixture(html`
       <lr-commit-card
         hash="abcdef1"
-        files-collapsed="false"
+        files-expanded="true"
         .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}
       ></lr-commit-card>
     `)) as LyraCommitCard;
@@ -595,7 +595,7 @@ describe('lr-commit-card', () => {
     const wrapper = (await fixture(html`
       <div style="inline-size:320px; max-inline-size:320px;">
         <lr-commit-card
-          files-collapsed="false"
+          files-expanded="true"
           .files=${[{ path, additions: 123, deletions: 45 }]}
         ></lr-commit-card>
       </div>
@@ -637,7 +637,7 @@ describe('lr-commit-card', () => {
 it('normalizes duplicate file paths first-wins before diffstat and row events', async () => {
   const el = await fixture<LyraCommitCard>(html`
     <lr-commit-card
-      files-collapsed="false"
+      files-expanded="true"
       .files=${[
         { path: 'same.ts', additions: 2, deletions: 1 },
         { path: 'same.ts', additions: 90, deletions: 80 },
