@@ -199,13 +199,21 @@ function parseTestConcurrency(value) {
 const testServerPort = parseTestServerPort(process.env.WTR_PORT);
 const testConcurrency = parseTestConcurrency(process.env.WTR_CONCURRENCY);
 const browserProduct = (process.env.WTR_BROWSER ?? 'chromium').toLowerCase();
+// Headless Linux CI/dev runners expose no GPU. Recent WebKit (WPE) builds probe Vulkan-backed
+// Zink for GL before falling back to software rendering, and on a driverless host that probe
+// itself fails hard (`MESA: error: ZINK: vkCreateInstance failed (VK_ERROR_INCOMPATIBLE_DRIVER)`),
+// wedging the browser so every subsequent test in the session times out waiting for a page.
+// Forcing classic softpipe/llvmpipe via LIBGL_ALWAYS_SOFTWARE skips the Zink/Vulkan probe
+// entirely. Chromium/Firefox are unaffected by this env var and already run software-rendered
+// here regardless.
+const webkitLaunchOptions = { env: { ...process.env, LIBGL_ALWAYS_SOFTWARE: '1' } };
 const browserLaunchers = {
   chromium: { product: 'chromium' },
   chrome: { product: 'chromium', launchOptions: { channel: 'chrome' } },
   edge: { product: 'chromium', launchOptions: { channel: 'msedge' } },
-  safari: { product: 'webkit' },
+  safari: { product: 'webkit', launchOptions: webkitLaunchOptions },
   firefox: { product: 'firefox' },
-  webkit: { product: 'webkit' },
+  webkit: { product: 'webkit', launchOptions: webkitLaunchOptions },
 };
 const launcherConfig = browserLaunchers[browserProduct];
 if (!launcherConfig) {
