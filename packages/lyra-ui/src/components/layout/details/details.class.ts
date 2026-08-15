@@ -52,6 +52,9 @@ export interface LyraDetailsEventMap {
  * @slot summary - Summary content. Takes priority over `summary` when any light-DOM child
  *   carries `slot="summary"` — the fallback localized "Details" text only appears when neither
  *   is set.
+ * @slot header-actions - Extra controls rendered as a peer of the summary row (e.g. a trailing
+ *   "add" button), never a descendant of the native `<summary>` toggle target — nesting an
+ *   interactive control inside `summary` would make every press on it also toggle the panel.
  * @slot expand-icon - Icon shown while the panel is closed.
  * @slot collapse-icon - Icon shown while the panel is open.
  * @slot - Panel content.
@@ -70,6 +73,7 @@ export interface LyraDetailsEventMap {
  * @csspart summary - The summary control.
  * @csspart icon - The expand/collapse icon wrapper.
  * @csspart summary-icon - Shoelace-compatible alias for `icon`; both names are on the same node.
+ * @csspart header-actions - The wrapper around the `header-actions` slot.
  * @csspart content - The panel content.
  * @cssprop [--lr-details-font-size=var(--lr-form-control-font-size)] - Text size of the summary
  *   and the panel. Its private default follows the library's shared size ladder; an inherited or
@@ -169,11 +173,19 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   // even with a `slot="summary"` child present).
   @state() private hasSummarySlot = false;
 
+  /** Same `:empty`-can't-match reasoning as `hasSummarySlot` above -- the `header-actions` wrapper
+   *  always contains a literal `<slot>` child, so its own emptiness has to be tracked in JS instead
+   *  to keep an unused wrapper from claiming layout space. */
+  @state() private hasHeaderActionsSlot = false;
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (!this.hasUpdated) {
       this.hasSummarySlot = Array.from(this.children).some(
         (el) => el.getAttribute('slot') === 'summary'
+      );
+      this.hasHeaderActionsSlot = Array.from(this.children).some(
+        (el) => el.getAttribute('slot') === 'header-actions'
       );
     }
     if (
@@ -358,6 +370,12 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
       0;
   };
+
+  private onHeaderActionsSlotChange = (e: Event): void => {
+    this.hasHeaderActionsSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
+  };
   override render(): TemplateResult {
     return html`<details
       part="base details"
@@ -390,6 +408,9 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
           </span>
         </span>
       </summary>
+      <span part="header-actions" ?hidden=${!this.hasHeaderActionsSlot}>
+        <slot name="header-actions" @slotchange=${this.onHeaderActionsSlotChange}></slot>
+      </span>
       <div part="content"><slot></slot></div>
     </details>`;
   }

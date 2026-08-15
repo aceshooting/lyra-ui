@@ -186,6 +186,43 @@ it('suppresses the localized "Details" fallback once rich content is slotted int
   expect(el.textContent?.trim()).to.equal("Custom LabelContent");
 });
 
+it("renders a header-actions slot as a peer of the summary, not nested inside its toggle target (bug)", async () => {
+  const el = (await fixture(html`
+    <lr-details summary="Projects"
+      ><button slot="header-actions" id="add">+</button>Content</lr-details
+    >`)) as LyraDetails;
+  const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+  const slot = el.shadowRoot!.querySelector('slot[name="header-actions"]');
+  expect(slot, "a header-actions slot must exist as a peer of the summary").to.exist;
+  expect(
+    summary.contains(slot),
+    "the header-actions slot must not be nested inside the native <summary> toggle target",
+  ).to.be.false;
+});
+
+it("does not toggle the panel when a header-actions control is activated (bug)", async () => {
+  const el = (await fixture(html`
+    <lr-details summary="Projects"
+      ><button slot="header-actions" id="add">+</button>Content</lr-details
+    >`)) as LyraDetails;
+  const button = el.querySelector("#add") as HTMLButtonElement;
+  let clicked = 0;
+  button.addEventListener("click", () => { clicked += 1; });
+
+  button.click();
+
+  expect(clicked, "the header-actions button must still receive its own click").to.equal(1);
+  expect(el.open, "activating a header-actions control must not also toggle the panel").to.be.false;
+});
+
+it("hides the header-actions wrapper and reclaims its layout space when the slot is empty", async () => {
+  const el = (await fixture(
+    html`<lr-details summary="Projects">Content</lr-details>`
+  )) as LyraDetails;
+  const actions = el.shadowRoot!.querySelector('[part~="header-actions"]') as HTMLElement;
+  expect(actions.hidden, "an unused header-actions wrapper must not claim visible layout space").to.be.true;
+});
+
 it("exposes disabled to assistive tech via aria-disabled on the summary, rendered in both states", async () => {
   const el = (await fixture(
     html`<lr-details summary="More" disabled>Content</lr-details>`

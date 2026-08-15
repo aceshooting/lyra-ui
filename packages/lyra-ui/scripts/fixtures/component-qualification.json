@@ -13049,14 +13049,14 @@
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 977,
+              "line": 1014,
               "test": "is accessible with custom icons, grouping, and a populated open panel",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 756,
+              "line": 793,
               "test": "stays accessible and keyboard-operable at the smallest tier",
               "target": "el",
               "state": "populated"
@@ -43077,69 +43077,6 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/data/table/table.bisectA1.test.ts",
-              "line": 1016,
-              "test": "mirrors resize ArrowLeft/ArrowRight under RTL and passes axe populated",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/table/table.bisectA1.test.ts",
-              "line": 1582,
-              "test": "renders a localized busy state before rows while loading",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/table/table.bisectA2.test.ts",
-              "line": 147,
-              "test": "is accessible",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/table/table.bisectA2.test.ts",
-              "line": 1658,
-              "test": "is accessible with expandedContent and an open row",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/table/table.bisectB.test.ts",
-              "line": 1039,
-              "test": "is accessible with cell titles rendered",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/table/table.bisectB.test.ts",
-              "line": 1487,
-              "test": "is accessible in skeleton mode",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/table/table.bisectB.test.ts",
-              "line": 1936,
-              "test": "is accessible with a column of persistent editors rendered",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/table/table.bisectB.test.ts",
-              "line": 2367,
-              "test": "is accessible while client-sorted",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/data/table/table.bisectB.test.ts",
-              "line": 2480,
-              "test": "is accessible while client-sorted inside groups",
-              "target": "el",
-              "state": "populated"
-            },
-            {
               "file": "src/components/data/table/table.test.ts",
               "line": 1016,
               "test": "mirrors resize ArrowLeft/ArrowRight under RTL and passes axe populated",
@@ -43210,7 +43147,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/table/table.bisectA1.test.ts",
+              "file": "src/components/data/table/table.test.ts",
               "line": 919,
               "kind": "component keyboard assertion signal"
             }
@@ -43221,7 +43158,7 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/table/table.bisectA1.test.ts",
+              "file": "src/components/data/table/table.test.ts",
               "line": 1017,
               "kind": "rendered RTL test signal"
             }
@@ -43338,9 +43275,6 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
-          "src/components/data/table/table.bisectA1.test.ts",
-          "src/components/data/table/table.bisectA2.test.ts",
-          "src/components/data/table/table.bisectB.test.ts",
           "src/components/data/table/table.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

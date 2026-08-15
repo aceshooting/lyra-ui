@@ -14,6 +14,15 @@ export const styles = css`
     --_lr-details-spacing: var(--lr-form-control-padding-inline);
   }
   [part~="base"] {
+    /* flex-wrap, not grid: the header-actions part must render as a peer of the summary row
+       instead of nested inside it (nesting an interactive control inside <summary> would make
+       every press on it also toggle the panel), while [part="content"] still needs its own full
+       width on the row below. A CSS Grid column spanned by both a "row 1" item and content's own
+       "row 2" span couples their track sizing -- content's long-text max-content demand starves
+       the row-1 columns. flex-basis: 100% on content instead forces its own wrapped line with no
+       such coupling: line 1 (summary + header-actions) sizes independently of line 2 (content). */
+    display: flex;
+    flex-wrap: wrap;
     border: var(--lr-border-width-thin) solid
       var(--lr-details-outlined-border-color, var(--lr-color-border));
     border-radius: var(--lr-details-radius, var(--lr-radius));
@@ -43,6 +52,7 @@ export const styles = css`
   }
   [part="summary"] {
     display: block;
+    flex: 1 1 auto;
     padding-block: var(
       --spacing,
       var(--lr-details-spacing, var(--_lr-details-spacing))
@@ -118,7 +128,20 @@ export const styles = css`
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
+  [part~="header-actions"] {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    padding-inline-end: var(
+      --spacing,
+      var(--lr-details-spacing, var(--_lr-details-spacing))
+    );
+  }
+  [part~="header-actions"][hidden] {
+    display: none;
+  }
   [part="content"] {
+    flex: 1 1 100%;
     padding-block-end: var(
       --spacing,
       var(--lr-details-spacing, var(--_lr-details-spacing))

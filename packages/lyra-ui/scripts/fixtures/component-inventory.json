@@ -36595,6 +36595,10 @@
             "deprecated": null
           },
           {
+            "name": "header-actions",
+            "deprecated": null
+          },
+          {
             "name": "summary",
             "deprecated": null
           }
@@ -36646,6 +36650,10 @@
           },
           {
             "name": "header",
+            "deprecated": null
+          },
+          {
+            "name": "header-actions",
             "deprecated": null
           },
           {

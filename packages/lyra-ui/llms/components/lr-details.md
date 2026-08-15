@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-accordion`, `lr-accordion-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -130,14 +130,18 @@ order. The label slot accepts rich visible markup, but its flattened subtree is 
 from assistive technology: do not place independent links, buttons, inputs, form state, or focus
 targets there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden
 visual contract, while the trigger button remains the sole action. Details has `summary`,
-`expand-icon`, `collapse-icon`, plus default content.
+`header-actions`, `expand-icon`, `collapse-icon`, plus default content. `header-actions` renders
+extra controls (e.g. a trailing "add" button) as a peer of the summary row, never a descendant of
+the native `<summary>` toggle target — nesting an interactive control inside `summary` would make
+every press on it also toggle the panel. Its wrapper is hidden and reclaims layout space whenever
+the slot is empty.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
 same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
 exposes `base` and `details` on the same native `<details>` wrapper, plus `header`, `summary`,
-`icon`, and `content`.
+`icon`, `header-actions`, and `content`.
 The Details icon wrapper also carries Shoelace's `summary-icon` alias, so either part name styles
-the same node.
+the same node. `header-actions` is the wrapper around the `header-actions` slot.
 
 **Themeable custom properties:** accordion item exposes `--lr-accordion-item-spacing` (default
 `var(--lr-form-control-padding-inline)`), `--lr-accordion-item-show-duration` and

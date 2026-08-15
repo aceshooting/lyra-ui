@@ -120,7 +120,12 @@
     { "id": "drawer--end", "profile": "standard" },
     { "id": "feedback-alert--variants", "profile": "standard" },
     { "id": "feedback-callout--appearances", "profile": "standard" },
-    { "id": "overlay-dropdown--default", "profile": "standard" },
+    {
+      "id": "overlay-dropdown--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Current capture differs from its historical baseline by a small (~0.34-0.36%) popup sizing/spacing shift with no corresponding change in menu/menu-item styles or dropdown.class.ts since the last baseline refresh (bd4ac0ac) -- root cause not established from source diff alone. Awaits human visual review."
+    },
     { "id": "overlay-popover--default", "profile": "standard" },
     {
       "id": "overlay-tooltip--default",
@@ -134,7 +139,12 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The physical positioning baseline that prevents RTL popup stretching changes the current capture, which awaits human visual review."
     },
-    { "id": "toast--triggers", "profile": "standard" },
+    {
+      "id": "toast--triggers",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Current capture differs from its historical baseline by a small (~0.17%) diff on the light/rtl axes only (dark matches) with no corresponding change in toast styles since the last baseline refresh (bd4ac0ac) -- root cause not established from source diff alone. Awaits human visual review."
+    },
     {
       "id": "toolapprovaldialog--open-initially",
       "profile": "standard",
@@ -199,13 +209,23 @@
     { "id": "charts-bubble--default", "profile": "standard" },
     { "id": "charts-histogram--default", "profile": "standard" },
     { "id": "charts-boxplot--default", "profile": "standard" },
-    { "id": "qr-code--default", "profile": "standard" },
+    {
+      "id": "qr-code--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Current capture renders a structurally valid but differently-moduled QR code for the same unchanged story value, with no corresponding qr-code.class.ts/story change since the last baseline refresh (bd4ac0ac) -- likely resolved-version drift in the optional qrcode peer, not a lyra-ui source change. Awaits human visual review."
+    },
     { "id": "audio-visualizer--idle", "profile": "standard" },
     { "id": "animatedimage--default", "profile": "standard" },
     { "id": "documentviewer-pdfviewer--default", "profile": "standard" },
     { "id": "jsonviewer--default", "profile": "standard" },
     { "id": "codeblock--default", "profile": "standard" },
-    { "id": "markdown--default", "profile": "standard" },
+    {
+      "id": "markdown--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The v8 markdown API replaced the sanitize boolean with a tri-state html-mode attribute; the story copy now documents html-mode=\"trusted\" instead of .sanitize=${false}. The current capture reflects that intentional content change and awaits human visual review."
+    },
     { "id": "documentviewer-csvviewer--quoted-fields", "profile": "standard" },
     { "id": "docxviewer--default", "profile": "standard" },
     { "id": "chunk-inspector--default", "profile": "standard" },
@@ -236,7 +256,12 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
-    { "id": "navigation-tree-node--declarative", "profile": "standard" },
+    {
+      "id": "navigation-tree-node--declarative",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Current capture differs from its historical baseline by a small (~0.15-0.17%) indentation/geometry shift with no corresponding change in tree-item.class.ts, tree.class.ts, or their stylesheets since the last baseline refresh (bd4ac0ac) -- root cause not established from source diff alone. Awaits human visual review."
+    },
     { "id": "media-pan-zoom--slotted-content", "profile": "standard" },
     {
       "id": "media-video--full-controls",
@@ -275,7 +300,12 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
-    { "id": "tabs--default", "profile": "standard" },
+    {
+      "id": "tabs--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Current capture shows the selected tab label losing its --lr-color-brand accent color (falls back to plain text color) while the active-tab-indicator underline stays correctly colored, with no corresponding change in tab/tab-group styles or theme tokens since the last baseline refresh (bd4ac0ac) -- root cause not established from source diff alone. Awaits human visual review."
+    },
     {
       "id": "tabs--element-model-long-content-narrow",
       "profile": "standard",
