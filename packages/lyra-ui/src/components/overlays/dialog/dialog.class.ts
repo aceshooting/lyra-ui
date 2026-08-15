@@ -292,6 +292,10 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   @state() private headingText?: string;
 
   private overlay?: OverlayHandle;
+  /** Set by `deactivateOverlay()` when a close defers releasing the scroll lock. Flushed once the
+   *  exit animation actually finishes (`settleTransition()`'s `'lr-after-hide'` branch), or right
+   *  away on disconnect/reopen, since nothing is left to visually protect in either case. */
+  private pendingScrollLockRelease?: () => void;
   private headingObserver?: MutationObserver;
   private headingObserverDocument?: Document;
   private headingObserverGeneration = 0;
@@ -337,12 +341,22 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       this.detectLightDomChrome();
     }
     if (changed.has('open')) {
+      this.flushPendingScrollLockRelease();
       if (this.open) {
         if (this.isConnected && this.modalSurface) this.activateOverlay();
       } else {
-        this.deactivateOverlay();
+        this.pendingScrollLockRelease = this.deactivateOverlay({ deferScrollLockRelease: true });
       }
     }
+  }
+
+  /** Releases a scroll lock held past its close so a component's own exit animation can finish
+   *  first. Safe to call unconditionally -- a no-op once already flushed or when nothing is
+   *  pending. */
+  private flushPendingScrollLockRelease(): void {
+    const release = this.pendingScrollLockRelease;
+    this.pendingScrollLockRelease = undefined;
+    release?.();
   }
 
   // Runs after render so the manager can resolve the panel and its composed

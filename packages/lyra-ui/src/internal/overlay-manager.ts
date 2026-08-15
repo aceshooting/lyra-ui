@@ -54,6 +54,11 @@ export interface OverlayActivationOptions {
 export interface OverlayDeactivateOptions {
   /** Defaults to true. Explicit outside-pointer paths can suppress restoration. */
   restoreFocus?: boolean;
+  /** Defaults to false. Skips releasing this entry's scroll lock as part of deactivation and
+   *  returns the release function instead, so a component with a visible exit animation can hold
+   *  the lock until that animation actually finishes rather than the instant it starts closing.
+   *  Ignored (returns `undefined`) when this entry never requested `lockScroll`. */
+  deferScrollLockRelease?: boolean;
 }
 
 export interface OverlayHandle {
@@ -65,8 +70,9 @@ export interface OverlayHandle {
   focusAutofocus(): boolean;
   /** Replaces the eventual focus-return target without unregistering or reordering the overlay. */
   updateRestoreFocusTo(target: OverlayRestoreFocusTarget): void;
-  /** Removes the overlay permanently. Safe to call repeatedly. */
-  deactivate(options?: OverlayDeactivateOptions): void;
+  /** Removes the overlay permanently. Safe to call repeatedly. Returns the deferred scroll-lock
+   *  release function when `deferScrollLockRelease` was requested and a lock was actually held. */
+  deactivate(options?: OverlayDeactivateOptions): (() => void) | undefined;
   /** Temporarily unregisters during disconnect, preserving the original return target. */
   suspend(): void;
   /** Re-registers a suspended overlay in its current `ownerDocument`. */
@@ -93,6 +99,9 @@ interface OverlayEntry {
   state: OverlayDocumentState;
   stackStyleLease?: InlineStylePropertyLease;
   releaseScrollLock?: () => void;
+  /** Set by `unregisterEntry()` when a deferred release was requested, so `deactivateEntry()` can
+   *  hand it back to the caller instead of it firing immediately. */
+  deferredScrollLockRelease?: () => void;
   renderedState?: RenderedStateController;
   handle: OverlayHandle;
 }
@@ -512,7 +521,7 @@ function registerEntry(entry: OverlayEntry, state: OverlayDocumentState, preserv
   applyTopmostInert(state);
 }
 
-function unregisterEntry(entry: OverlayEntry): boolean {
+function unregisterEntry(entry: OverlayEntry, deferScrollLockRelease = false): boolean {
   if (!entry.registered) {
     const hasHigherEntry = entry.state.stack.some((candidate) => candidate.stackOrder > entry.stackOrder);
     return entry.state.externalModalSuspensions.size === 0 && entry.wasTopmostOnSuspend && !hasHigherEntry;
@@ -523,7 +532,8 @@ function unregisterEntry(entry: OverlayEntry): boolean {
   if (index !== -1) state.stack.splice(index, 1);
   entry.registered = false;
   entry.wasTopmostOnSuspend = wasTopmost;
-  entry.releaseScrollLock?.();
+  if (deferScrollLockRelease) entry.deferredScrollLockRelease = entry.releaseScrollLock;
+  else entry.releaseScrollLock?.();
   entry.releaseScrollLock = undefined;
   restoreStackStyle(entry);
   updateStackStyles(state);
@@ -577,22 +587,29 @@ function restoreEntryFocus(entry: OverlayEntry): void {
   if (next) focusEntry(next, false);
 }
 
-function deactivateEntry(entry: OverlayEntry, restoreFocus: boolean): void {
-  if (!entry.active) return;
+function deactivateEntry(
+  entry: OverlayEntry,
+  restoreFocus: boolean,
+  deferScrollLockRelease = false,
+): (() => void) | undefined {
+  if (!entry.active) return undefined;
   entry.renderedState?.stop();
   rebaseReturnTargets(entry);
-  const wasTopmost = unregisterEntry(entry);
+  const wasTopmost = unregisterEntry(entry, deferScrollLockRelease);
+  const deferredScrollLockRelease = entry.deferredScrollLockRelease;
+  entry.deferredScrollLockRelease = undefined;
   entry.active = false;
   entry.manuallySuspended = false;
   entry.suspendGeneration++;
   if (hostEntries.get(entry.options.host) === entry) hostEntries.delete(entry.options.host);
-  if (!wasTopmost) return;
+  if (!wasTopmost) return deferredScrollLockRelease;
   if (restoreFocus) {
     restoreEntryFocus(entry);
-    return;
+    return deferredScrollLockRelease;
   }
   const next = entry.state.stack[entry.state.stack.length - 1];
   if (next) focusEntry(next);
+  return deferredScrollLockRelease;
 }
 
 /**
@@ -649,9 +666,12 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
     updateRestoreFocusTo: (target) => {
       if (entry.active) entry.restoreFocusTo = target;
     },
-    deactivate: (deactivateOptions = {}) => {
-      deactivateEntry(entry, deactivateOptions.restoreFocus !== false);
-    },
+    deactivate: (deactivateOptions = {}) =>
+      deactivateEntry(
+        entry,
+        deactivateOptions.restoreFocus !== false,
+        deactivateOptions.deferScrollLockRelease === true,
+      ),
     suspend: () => {
       if (!entry.active || entry.manuallySuspended) return;
       entry.manuallySuspended = true;

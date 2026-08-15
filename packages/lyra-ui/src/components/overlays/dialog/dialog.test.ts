@@ -253,8 +253,24 @@ it('locks document scroll while open and releases it on close', async () => {
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
 
+  await el.close('api');
+  expect(document.documentElement.style.overflow).to.equal('');
+});
+
+it('keeps the scroll lock engaged until the close exit animation finishes', async () => {
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+
+  const afterHide = oneEvent(el, 'lr-after-hide');
   el.close('api');
   await el.updateComplete;
+  expect(
+    document.documentElement.style.overflow,
+    'the scroll lock must not release while the panel is still visibly animating out',
+  ).to.equal('hidden');
+
+  await afterHide;
   expect(document.documentElement.style.overflow).to.equal('');
 });
 
@@ -283,8 +299,9 @@ it('does not acquire scroll lock or Escape ownership when opened while detached'
   parent.append(el);
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal('hidden');
+  const afterHide = oneEvent(el, 'lr-after-hide');
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-  await el.updateComplete;
+  await afterHide;
   expect(el.open).to.be.false;
   expect(document.documentElement.style.overflow).to.equal('');
 });
@@ -300,8 +317,9 @@ it('restores the scroll lock and keydown trap when reparented while still open',
   expect(el.open).to.be.true;
   expect(document.documentElement.style.overflow).to.equal('hidden');
 
+  const afterHide = oneEvent(el, 'lr-after-hide');
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-  await el.updateComplete;
+  await afterHide;
 
   expect(el.open).to.be.false;
   expect(document.documentElement.style.overflow).to.equal('');

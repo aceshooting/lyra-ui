@@ -13228,56 +13228,56 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 452,
+              "line": 470,
               "test": "gives mapped property and rich-slot titles the configured heading level with a none opt-out",
               "target": "richTitle",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 669,
+              "line": 687,
               "test": "is accessible with only a host aria-label attribute set (no label/heading props)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 768,
+              "line": 786,
               "test": "is accessible while open with a label prop and footer actions",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 779,
+              "line": 797,
               "test": "is accessible while open with a slotted heading",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 787,
+              "line": 805,
               "test": "is accessible while open with a heading, closable close button, and footer actions",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1442,
+              "line": 1460,
               "test": "is accessible with the label and header-actions slots populated",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 1457,
+              "line": 1475,
               "test": "keeps accessible-only naming separate from the visible label",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 763,
+              "line": 781,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -13302,7 +13302,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 993,
+              "line": 1011,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -13319,7 +13319,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/dialog/dialog.test.ts",
-              "line": 990,
+              "line": 1008,
               "kind": "320px allocation test signal"
             }
           ]
