@@ -74,7 +74,7 @@ jobs:
           WORKFLOW_SHA: ${{ inputs.workflow_sha }}
         run: |
           set -euo pipefail
-          SHA="$(git rev-parse HEAD^{commit})"
+          SHA="$(git rev-parse 'HEAD^{commit}')"
           TAG_OBJECT_TYPE="$(git cat-file -t "refs/tags/$TAG")"
           TAG_SHA="$(git rev-parse --verify "refs/tags/$TAG^{commit}")"
           node scripts/release-integrity.mjs validate-git-tag \
