@@ -472,7 +472,7 @@ toolSelect.addEventListener('lr-close', (event) => {
   void reason;
 });
 toolSelect.addEventListener('lr-change', (event) => {
-  const selected: string[] = event.detail.selected;
+  const selected: readonly string[] = event.detail.selected;
   void selected;
 });
 

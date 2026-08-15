@@ -457,14 +457,14 @@ describe('lr-document-compare', () => {
       expect(called).to.be.false;
     });
 
-    it('bubbles lr-highlight-activate unchanged (detail: {id}) up through lr-document-compare', async () => {
+    it('bubbles lr-highlight-activate unchanged (detail: {highlightId}) up through lr-document-compare', async () => {
       const el = await highlightsFixture();
       await el.updateComplete;
       const previewOld = el.shadowRoot!.querySelector('[part="pane-old"] lr-document-preview') as LyraDocumentPreview;
       const target = previewOld.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLButtonElement;
       setTimeout(() => target.click());
       const ev = await oneEvent(el, 'lr-highlight-activate');
-      expect(ev.detail).to.deep.equal({ id: 'h1' });
+      expect(ev.detail).to.deep.equal({ highlightId: 'h1' });
     });
   });
 

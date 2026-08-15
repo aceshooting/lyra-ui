@@ -6,22 +6,39 @@ import {
   type TemplateResult,
   type SVGTemplateResult,
   type PropertyValues,
-} from 'lit';
-import { property, query, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraToolStatus } from '../../../internal/shared-unions.js';
-import { place } from '../../../internal/positioner.js';
-import { nextId } from '../../../internal/a11y.js';
-import { finiteRange } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { durationMessageValue } from '../../../internal/duration.js';
+} from "lit";
+import { property, query, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import type { LyraToolStatus } from "../../../internal/shared-unions.js";
+import { place } from "../../../internal/positioner.js";
+import { nextId } from "../../../internal/a11y.js";
+import { finiteRange } from "../../../internal/numbers.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
+import { durationMessageValue } from "../../../internal/duration.js";
 
-import { styles } from './tool-call-chip.styles.js';
+import { styles } from "./tool-call-chip.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_accessibleLabelSeparator,
+  LYRA_DEFAULT_collapse,
+  LYRA_DEFAULT_details,
+  LYRA_DEFAULT_durationMilliseconds,
+  LYRA_DEFAULT_durationSeconds,
+  LYRA_DEFAULT_map,
+  LYRA_DEFAULT_navigation,
+  LYRA_DEFAULT_open,
+  LYRA_DEFAULT_progress,
+  LYRA_DEFAULT_search,
+  LYRA_DEFAULT_select,
+  LYRA_DEFAULT_statusDenied,
+  LYRA_DEFAULT_statusError,
+  LYRA_DEFAULT_statusPending,
+  LYRA_DEFAULT_statusRunning,
+  LYRA_DEFAULT_statusSuccess,
+  LYRA_DEFAULT_toolCall,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Same status vocabulary as `<lr-tool-result-dialog>`, so a call's chip
  *  and its detail dialog always agree on icon/label/tone. */
@@ -33,7 +50,7 @@ export interface ToolChipSelectDetail {
 }
 
 export interface LyraToolCallChipEventMap {
-  'lr-tool-call-chip-select': CustomEvent<ToolChipSelectDetail>;
+  "lr-tool-call-chip-select": CustomEvent<ToolChipSelectDetail>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -44,8 +61,8 @@ export interface LyraToolCallChipEventMap {
 // own local glyphs take for the identical reason, and deliberately the same
 // shapes lr-tool-result-dialog's own local glyphs use, so a call reads
 // identically whether it's shown as this inline chip or in that dialog.
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
+const ICON_VIEW_BOX = "0 0 24 24";
+const ICON_STROKE_WIDTH = "1.75";
 
 function icon(paths: SVGTemplateResult): SVGTemplateResult {
   return svg`
@@ -65,7 +82,9 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
 }
 
 function pendingIcon(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline>`);
+  return icon(
+    svg`<circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline>`
+  );
 }
 
 /** A three-quarter arc, spun by the `:host([status="running"]) [part="icon"] svg`
@@ -75,7 +94,9 @@ function runningIcon(): SVGTemplateResult {
 }
 
 function successIcon(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="9"></circle><polyline points="8 12.5 11 15.5 16 9.5"></polyline>`);
+  return icon(
+    svg`<circle cx="12" cy="12" r="9"></circle><polyline points="8 12.5 11 15.5 16 9.5"></polyline>`
+  );
 }
 
 function errorIcon(): SVGTemplateResult {
@@ -89,7 +110,9 @@ function errorIcon(): SVGTemplateResult {
 /** A "blocked" glyph (circle + diagonal slash) -- distinct from `errorIcon()`
  *  since a denial is a policy rejection, not a runtime failure. */
 function deniedIcon(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="9"></circle><line x1="6" y1="18" x2="18" y2="6"></line>`);
+  return icon(
+    svg`<circle cx="12" cy="12" r="9"></circle><line x1="6" y1="18" x2="18" y2="6"></line>`
+  );
 }
 
 const STATUS_ICON: Record<ToolCallStatus, () => SVGTemplateResult> = {
@@ -106,28 +129,30 @@ const STATUS_ICON: Record<ToolCallStatus, () => SVGTemplateResult> = {
  *  this object's keys, unaffected by localization. Mirrors
  *  `<lr-tool-result-dialog>`'s identical STATUS_LABEL/STATUS_LABEL_KEY split. */
 const STATUS_LABEL: Record<ToolCallStatus, string> = {
-  pending: 'Pending',
-  running: 'Running',
-  success: 'Success',
-  error: 'Error',
-  denied: 'Denied',
+  pending: "Pending",
+  running: "Running",
+  success: "Success",
+  error: "Error",
+  denied: "Denied",
 };
 
 /** localize() key for each status's visible label -- see STATUS_LABEL for
  *  the English fallback text. */
 const STATUS_LABEL_KEY: Record<ToolCallStatus, string> = {
-  pending: 'statusPending',
-  running: 'statusRunning',
-  success: 'statusSuccess',
-  error: 'statusError',
-  denied: 'statusDenied',
+  pending: "statusPending",
+  running: "statusRunning",
+  success: "statusSuccess",
+  error: "statusError",
+  denied: "statusDenied",
 };
 
 const STATUS_VALUES = new Set<string>(Object.keys(STATUS_LABEL));
 
 const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
   fromAttribute(value): ToolCallStatus {
-    return value !== null && STATUS_VALUES.has(value) ? (value as ToolCallStatus) : 'pending';
+    return value !== null && STATUS_VALUES.has(value)
+      ? (value as ToolCallStatus)
+      : "pending";
   },
   toAttribute(value): string {
     return value;
@@ -189,63 +214,70 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  * @cssprop [--lr-tool-call-chip-spin=var(--lr-transition-ambient)] - Running-icon animation
  *   duration and timing.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Pending-icon pulse duration and timing.
- * @cssprop [--lr-tool-call-chip-accent=var(--lr-color-text-quiet)] - Per-status accent color for the status glyph and status text. Reassigned by this component's own `:host([status="…"])` rules (`running` → brand, `success` → success, `error` → danger, `denied` → warning), so a page-level override only wins for the default/`pending` tone.
- * @cssprop [--lr-tool-call-chip-bg=var(--lr-color-surface)] - Per-status chip background. Reassigned by the same `:host([status="…"])` rules (each status's `-quiet` tint).
- * @cssprop [--lr-tool-call-chip-border=var(--lr-color-border)] - Per-status chip border color. Reassigned by the same `:host([status="…"])` rules (`transparent` for every non-`pending` status).
+ * @cssprop [--lr-tool-call-chip-accent=var(--lr-color-text-quiet)] - Accent color for the status
+ * glyph and text. Its private default follows `status` (`running` → brand, `success` → success,
+ * `error` → danger, `denied` → warning); an inherited or direct public override always wins.
+ * @cssprop [--lr-tool-call-chip-bg=var(--lr-color-surface)] - Chip background. Its private default
+ * follows the same `status` rules using each status's `-quiet` tint; a public override wins.
+ * @cssprop [--lr-tool-call-chip-border=var(--lr-color-border)] - Chip border color. Its private
+ * default becomes transparent for every non-`pending` status; a public override wins.
  * @status stable
  * @since 4.0.0
  */
 export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
-    durationSeconds: LYRA_DEFAULT_durationSeconds,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
-    statusDenied: LYRA_DEFAULT_statusDenied,
-    statusError: LYRA_DEFAULT_statusError,
-    statusPending: LYRA_DEFAULT_statusPending,
-    statusRunning: LYRA_DEFAULT_statusRunning,
-    statusSuccess: LYRA_DEFAULT_statusSuccess,
-    toolCall: LYRA_DEFAULT_toolCall,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
+      collapse: LYRA_DEFAULT_collapse,
+      details: LYRA_DEFAULT_details,
+      durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+      durationSeconds: LYRA_DEFAULT_durationSeconds,
+      map: LYRA_DEFAULT_map,
+      navigation: LYRA_DEFAULT_navigation,
+      open: LYRA_DEFAULT_open,
+      progress: LYRA_DEFAULT_progress,
+      search: LYRA_DEFAULT_search,
+      select: LYRA_DEFAULT_select,
+      statusDenied: LYRA_DEFAULT_statusDenied,
+      statusError: LYRA_DEFAULT_statusError,
+      statusPending: LYRA_DEFAULT_statusPending,
+      statusRunning: LYRA_DEFAULT_statusRunning,
+      statusSuccess: LYRA_DEFAULT_statusSuccess,
+      toolCall: LYRA_DEFAULT_toolCall,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
   /** The tool/function name, e.g. `web_search`. */
-  @property() name = '';
+  @property() name = "";
 
   /** Optional grouping label, e.g. `research`. */
-  @property() category = '';
+  @property() category = "";
 
   /**
    * The call's current lifecycle state — drives the glyph, color, and
    * `status-text`. Invalid runtime values use the pending presentation.
    */
-  @property({ reflect: true, converter: statusConverter }) status: ToolCallStatus = 'pending';
+  @property({ reflect: true, converter: statusConverter })
+  status: ToolCallStatus = "pending";
 
   /** Short human-readable status text, e.g. `Searching web…`. */
-  @property() summary = '';
+  @property() summary = "";
 
   /** How long the call took, in milliseconds. Omitted from the chip entirely when unset. */
-  @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
+  @property({ type: Number, attribute: "duration-ms" }) durationMs?: number;
 
   /** Literal icon hint (e.g. an emoji) used when the `icon` slot is empty — see the class doc's
    *  icon-precedence note. Ignored once anything is assigned to `slot="icon"`. */
-  @property() icon = '';
+  @property() icon = "";
 
   /** Unique identifier for this specific invocation — echoed back in `lr-tool-call-chip-select`'s
    *  detail so a listener can correlate the click with the call it fired for. */
-  @property({ attribute: 'call-id' }) callId = '';
+  @property({ attribute: "call-id" }) callId = "";
 
   // Same fix lr-stat's hasIcon/lr-combobox's hasHintSlot etc. already
   // establish: a `[part]` always contains a literal `<slot>` child regardless
@@ -256,7 +288,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   @state() private hasDetailSlot = false;
   @state() private tooltipOpen = false;
 
-  private readonly tooltipId = nextId('tool-call-chip-tooltip');
+  private readonly tooltipId = nextId("tool-call-chip-tooltip");
   private cleanupPositioner?: () => void;
   // Hover and focus are tracked as independent "keep it open" reasons --
   // mirrors lr-citation-badge's identical hovering/focused pair for the
@@ -269,7 +301,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   private hasPreviewNodes(nodes: readonly Node[]): boolean {
     return nodes.some((node) => {
       if (node.nodeType === 3) return Boolean(node.textContent?.trim());
-      return node.nodeType === 1 && !(node as Element).hasAttribute('slot');
+      return node.nodeType === 1 && !(node as Element).hasAttribute("slot");
     });
   }
 
@@ -282,13 +314,20 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('tooltipOpen')) {
+    if (changed.has("tooltipOpen")) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
       if (this.tooltipOpen) {
-        const anchor = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
-        const tooltip = this.renderRoot.querySelector('[part="tooltip"]') as HTMLElement | null;
-        if (anchor && tooltip) this.cleanupPositioner = place(anchor, tooltip, { placement: 'top-start' });
+        const anchor = this.renderRoot.querySelector(
+          '[part="base"]'
+        ) as HTMLElement | null;
+        const tooltip = this.renderRoot.querySelector(
+          '[part="tooltip"]'
+        ) as HTMLElement | null;
+        if (anchor && tooltip)
+          this.cleanupPositioner = place(anchor, tooltip, {
+            placement: "top-start",
+          });
       }
     }
   }
@@ -309,7 +348,9 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   }
 
   private onDetailSlotChange = (e: Event): void => {
-    this.hasDetailSlot = this.hasPreviewNodes((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
+    this.hasDetailSlot = this.hasPreviewNodes(
+      (e.target as HTMLSlotElement).assignedNodes({ flatten: true })
+    );
     // The slot can be emptied out from under an already-open tooltip (e.g. a
     // consumer clearing streamed/async preview content) -- nothing left to
     // show, so don't leave an empty tooltip floating open regardless of
@@ -364,14 +405,17 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     // follows (see lr-combobox's onKeyDown). Unconditional close (not
     // gated on hovering/focused) since Escape is a deliberate dismissal, not
     // transient pointer/focus travel.
-    if (e.key === 'Escape' && this.tooltipOpen) {
+    if (e.key === "Escape" && this.tooltipOpen) {
       e.stopPropagation();
       this.hideTooltip();
     }
   };
 
   private onClick = (): void => {
-    this.emit('lr-tool-call-chip-select', { name: this.name, callId: this.callId });
+    this.emit("lr-tool-call-chip-select", {
+      name: this.name,
+      callId: this.callId,
+    });
   };
 
   @query('[part="base"]') private baseEl?: HTMLButtonElement;
@@ -393,7 +437,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   }
 
   private get effectiveStatus(): ToolCallStatus {
-    return STATUS_VALUES.has(this.status) ? this.status : 'pending';
+    return STATUS_VALUES.has(this.status) ? this.status : "pending";
   }
 
   /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`
@@ -402,25 +446,27 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
    *  than rendering a literal "NaN ms". A finite negative value clamps to `0` instead of
    *  rendering a nonsensical negative duration. */
   private get safeDurationMs(): number | null {
-    return this.durationMs != null && Number.isFinite(this.durationMs) ? finiteRange(this.durationMs, 0, 0) : null;
+    return this.durationMs != null && Number.isFinite(this.durationMs)
+      ? finiteRange(this.durationMs, 0, 0)
+      : null;
   }
 
   private get accessibleLabel(): string {
-    const parts = [this.name || this.localize('toolCall')];
+    const parts = [this.name || this.localize("toolCall")];
     if (this.summary) parts.push(this.summary);
     parts.push(this.localize(STATUS_LABEL_KEY[this.effectiveStatus]));
     const durationMs = this.safeDurationMs;
     if (durationMs != null) {
       parts.push(this.localizedDuration(durationMs));
     }
-    return parts.join(this.localize('accessibleLabelSeparator'));
+    return parts.join(this.localize("accessibleLabelSeparator"));
   }
 
   private localizedDuration(ms: number): string {
     const duration = durationMessageValue(ms);
     return this.localize(duration.key, undefined, {
       value: getNumberFormat(this.effectiveLocale, {
-        maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
+        maximumFractionDigits: duration.key === "durationSeconds" ? 1 : 0,
       }).format(duration.value),
     });
   }
@@ -437,7 +483,9 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         part="base"
         type="button"
         aria-label=${this.accessibleLabel}
-        aria-describedby=${this.hasDetailSlot && this.tooltipOpen ? this.tooltipId : nothing}
+        aria-describedby=${this.hasDetailSlot && this.tooltipOpen
+          ? this.tooltipId
+          : nothing}
         @click=${this.onClick}
         @mouseenter=${this.onMouseEnter}
         @mouseleave=${this.onMouseLeave}
@@ -446,30 +494,41 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         @keydown=${this.onKeyDown}
       >
         <span part="icon" aria-hidden="true" inert>
-          <slot name="icon">${this.icon ? this.icon : STATUS_ICON[status]()}</slot>
+          <slot name="icon"
+            >${this.icon ? this.icon : STATUS_ICON[status]()}</slot
+          >
         </span>
         <span part="label">
           <span part="category" ?hidden=${!hasCategory}>${this.category}</span>
-          <span part="name">${this.name || this.localize('toolCall')}</span>
+          <span part="name">${this.name || this.localize("toolCall")}</span>
           <span part="summary" ?hidden=${!hasSummary}>${this.summary}</span>
         </span>
         <span part="meta">
-          <span part="status-text">${this.localize(STATUS_LABEL_KEY[status])}</span>
+          <span part="status-text"
+            >${this.localize(STATUS_LABEL_KEY[status])}</span
+          >
           <span part="duration" ?hidden=${!hasDuration}
-            >${durationMs != null ? this.localizedDuration(durationMs) : nothing}</span
+            >${durationMs != null
+              ? this.localizedDuration(durationMs)
+              : nothing}</span
           >
         </span>
       </button>
-      <div part="tooltip" id=${this.tooltipId} role="tooltip" inert ?hidden=${!this.tooltipOpen}>
+      <div
+        part="tooltip"
+        id=${this.tooltipId}
+        role="tooltip"
+        inert
+        ?hidden=${!this.tooltipOpen}
+      >
         <slot @slotchange=${this.onDetailSlotChange}></slot>
       </div>
     `;
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-tool-call-chip': LyraToolCallChip;
+    "lr-tool-call-chip": LyraToolCallChip;
   }
 }

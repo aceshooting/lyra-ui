@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'Charts/LiteChart',
   component: 'lr-lite-chart',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Labels, datasets, nested series data, and selected indices are bounded clone-owned frozen snapshots; create and reassign a new collection after changes.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

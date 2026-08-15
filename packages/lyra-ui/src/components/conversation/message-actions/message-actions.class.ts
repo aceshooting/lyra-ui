@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import {
   html,
   nothing,
@@ -7,6 +8,7 @@ import {
   type TemplateResult,
 } from "lit";
 import { property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import "../../utility/copy-button/copy-button.class.js";
 import "../message-feedback/message-feedback.class.js";
@@ -40,6 +42,13 @@ import { LYRA_DEFAULT_editMessage, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_mess
 
 export type MessageActionControl = "copy" | "regenerate" | "edit" | "feedback";
 
+const MESSAGE_ACTION_CONTROLS: readonly MessageActionControl[] = [
+  "copy",
+  "regenerate",
+  "edit",
+  "feedback",
+];
+
 interface ManagedToolbarAction {
   owner: Element;
   action: LyraToolbarAction;
@@ -52,7 +61,7 @@ export interface LyraMessageActionsEventMap {
   "lr-error": CustomEvent<null>;
   "lr-copy-error": CustomEvent<LyraClipboardWriteFailure>;
   "lr-feedback-change": CustomEvent<{ rating: MessageFeedbackValue }>;
-  "lr-feedback-submit": CustomEvent<MessageFeedbackSubmitDetail>;
+  "lr-feedback-submit": CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts's
@@ -96,6 +105,11 @@ function editIcon(): SVGTemplateResult {
  * actions are observed in light DOM. A former stop is cleared, and if it held focus, focus moves to
  * the nearest survivor or the stable toolbar without overriding a newer external focus move.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Built-in control names normalize first-wins before rendering, focus navigation, or intent
+ * events, so each built-in can occur at most once.
+ *
  * @customElement lr-message-actions
  * @slot - Additional controls (e.g. `lr-copy-button`, `lr-icon-button`, `lr-branch-picker`)
  *   appended after the built-ins; they participate in the toolbar's arrow-key navigation.
@@ -123,6 +137,8 @@ function editIcon(): SVGTemplateResult {
  * @since 4.0.0
  */
 export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["controls"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -136,8 +152,26 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Which built-ins render, in display order. */
-  @property({ attribute: false }) controls: MessageActionControl[] = [];
+  /** Which built-ins render, in display order. Duplicate names normalize first-wins. */
+  @property({ attribute: false }) controls: readonly MessageActionControl[] = [];
+
+  private get effectiveControls(): readonly MessageActionControl[] {
+    const seen = new Set<MessageActionControl>();
+    const controls: MessageActionControl[] = [];
+    for (const value of this.controls as readonly unknown[]) {
+      if (
+        typeof value !== "string" ||
+        !MESSAGE_ACTION_CONTROLS.includes(value as MessageActionControl) ||
+        seen.has(value as MessageActionControl)
+      ) {
+        continue;
+      }
+      const control = value as MessageActionControl;
+      seen.add(control);
+      controls.push(control);
+    }
+    return controls;
+  }
 
   /** What the `copy` built-in copies. Required for it to render at all -- this component never
    *  interprets the slotted message body itself. */
@@ -618,7 +652,11 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         tabindex="-1"
         @keydown=${this.onToolbarKeyDown}
       >
-        ${this.controls.map((type) => this.renderControl(type))}
+        ${repeat(
+          this.effectiveControls,
+          (type) => type,
+          (type) => this.renderControl(type)
+        )}
         <slot
           @slotchange=${this.onSlotChange}
           @lr-toolbar-actions-change=${this.onToolbarActionsChange}

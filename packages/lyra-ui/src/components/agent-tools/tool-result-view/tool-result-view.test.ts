@@ -140,6 +140,31 @@ it('accepts a custom registry prop instead of dispatching against the module-lev
   expect((base(el).querySelector('.default-registry')) == null).to.be.true;
 });
 
+it('takes a frozen readonly registry snapshot while retaining renderer identity', async () => {
+  const definition: ToolRendererDefinition = {
+    render: () => litHtml`<span class="snapshotted-registry">yes</span>`,
+  };
+  const source = new Map<string, ToolRendererDefinition>([
+    ['snapshotted', definition],
+  ]);
+  const el = (await fixture(html`
+    <lr-tool-result-view
+      tool-name="snapshotted"
+      .result=${{}}
+      .registry=${source}
+    ></lr-tool-result-view>
+  `)) as LyraToolResultView;
+
+  source.clear();
+  source.set('later', { render: () => litHtml`later` });
+
+  expect(base(el).querySelector('.snapshotted-registry')).to.exist;
+  expect(el.registry!.get('snapshotted') === definition).to.be.true;
+  expect(el.registry!.has('later')).to.be.false;
+  expect(Object.isFrozen(el.registry)).to.be.true;
+  expect('set' in el.registry!).to.be.false;
+});
+
 it('emits lr-render-error and falls back when a matched renderer throws synchronously', async () => {
   registerToolRenderer('boom_tool', {
     render: () => {

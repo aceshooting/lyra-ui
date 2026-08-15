@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -98,10 +99,10 @@ export interface LyraConditionBuilderEventMap {
   /** Fired whenever `value` changes as a result of user interaction (picking a field/operator,
    *  editing a value, changing the combinator, or adding/removing a row) — never for a
    *  programmatic `value`/`fields` assignment. `detail.value` is the full current value. */
-  'lr-input': CustomEvent<{ readonly value: ConditionBuilderValue }>;
+  'lr-input': CustomEvent<LyraEventDetailSnapshot<{ readonly value: ConditionBuilderValue }>>;
   /** Fired after a new condition row seeded with the first available field is appended, whether
    *  triggered by the button or a public `addCondition()` call. */
-  'lr-add-condition': CustomEvent<{ readonly condition: ConditionBuilderCondition }>;
+  'lr-add-condition': CustomEvent<LyraEventDetailSnapshot<{ readonly condition: ConditionBuilderCondition }>>;
   /** Fired after a condition row is removed. */
   'lr-remove-condition': CustomEvent<{ readonly id: string }>;
 }

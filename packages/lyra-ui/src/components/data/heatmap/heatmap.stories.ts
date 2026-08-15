@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'Heatmap',
   component: 'lr-heatmap',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Annotations, legend stops, and color steps are bounded clone-owned frozen snapshots; calendar days use unique valid ISO-date identity with the first occurrence winning before every count, scale, paint, focus, selection, and event path. Create and reassign a new array after changes.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

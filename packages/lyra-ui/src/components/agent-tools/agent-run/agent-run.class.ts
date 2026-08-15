@@ -17,7 +17,7 @@ import { firstByIdentity } from '../collection-identity.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunCurrentStepLabel, LYRA_DEFAULT_agentRunStatusAnnounce, LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentRunCurrentStepLabel, LYRA_DEFAULT_agentRunStatusAnnounce, LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -165,6 +165,10 @@ export interface LyraAgentRunEventMap {
  * silent, and whatever status a freshly-assigned `run` (a new `run.id`) happens to already carry
  * is never itself treated as an eventful transition, only a later in-place change is.
  *
+ * Public collection and status-map properties take bounded, clone-owned readonly snapshots.
+ * Create and reassign a new array or record after changes; mutating the assigned value does not
+ * update the view.
+ *
  * @customElement lr-agent-run
  * @slot tasks - Task/plan content. Falls back to a `<lr-task-list>` built from `run.steps` when
  *   nothing is slotted and `run.steps` is non-empty.
@@ -222,6 +226,13 @@ export interface LyraAgentRunEventMap {
  * @since 4.1.0
  */
 export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "run",
+    "statusLabels",
+    "statusVariants",
+    "metrics",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -244,6 +255,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
@@ -263,15 +275,17 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
    *  library never assumes on a host's behalf. */
   @property({ attribute: false }) formatCost?: (cost: number) => string;
 
-  /** Labels for application-defined lifecycle kinds. Built-in kinds remain localized by Lyra. */
-  @property({ attribute: false }) statusLabels: Record<string, string> = {};
+  /** Clone-owned labels for application-defined lifecycle kinds. Built-in kinds remain localized
+   *  by Lyra. Reassign a new record after changes. */
+  @property({ attribute: false }) statusLabels: Readonly<Record<string, string>> = {};
 
-  /** Badge variants for application-defined lifecycle kinds. Unknown kinds default to `neutral`. */
-  @property({ attribute: false }) statusVariants: Record<string, BadgeVariant> = {};
+  /** Clone-owned badge variants for application-defined lifecycle kinds. Unknown kinds default to
+   *  `neutral`. Reassign a new record after changes. */
+  @property({ attribute: false }) statusVariants: Readonly<Record<string, BadgeVariant>> = {};
 
-  /** Additional run metrics such as prompt/completion token counts. Duplicate ids normalize
-   *  first-wins before summary visibility and rendering. */
-  @property({ attribute: false }) metrics: AgentRunMetric[] = [];
+  /** Additional run metrics such as prompt/completion token counts. Empty/blank ids are omitted
+   *  and duplicates normalize first-wins before summary visibility and rendering. */
+  @property({ attribute: false }) metrics: readonly AgentRunMetric[] = [];
 
   private get normalizedMetrics(): AgentRunMetric[] {
     return firstByIdentity(Array.isArray(this.metrics) ? this.metrics : [], (metric) => metric.id);

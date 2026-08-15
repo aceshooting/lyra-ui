@@ -10,7 +10,8 @@ export interface LyraCatalogEntry {
 
 /**
  * A homogeneous, readonly catalog. String shorthand uses the same string for the row id and
- * label; object catalogs retain the caller's extended row type.
+ * label; object catalogs retain the caller's extended row type. Ids are stable occurrence
+ * identities: empty ids are omitted and later duplicates lose to the first occurrence.
  */
 export type LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> =
   | readonly string[]
@@ -19,9 +20,16 @@ export type LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> =
 export type DisplayCatalogEntry<T extends LyraCatalogEntry> = T & { synthetic: boolean };
 
 export function normalizeCatalog<T extends LyraCatalogEntry>(catalog: LyraCatalog<T> | undefined): T[] {
-  return (catalog ?? []).map((entry) =>
-    typeof entry === 'string' ? ({ id: entry, label: entry } as T) : entry,
-  );
+  const normalized: T[] = [];
+  const seen = new Set<string>();
+  for (const entry of catalog ?? []) {
+    const record = typeof entry === 'string' ? ({ id: entry, label: entry } as T) : entry;
+    const id = record?.id;
+    if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
+    seen.add(id);
+    normalized.push(record);
+  }
+  return normalized;
 }
 
 export function withSyntheticCatalogValue<T extends LyraCatalogEntry>(
@@ -29,7 +37,7 @@ export function withSyntheticCatalogValue<T extends LyraCatalogEntry>(
   value: string,
 ): DisplayCatalogEntry<T>[] {
   const entries = catalog.map((entry) => ({ ...entry, synthetic: false }));
-  if (catalog.length && value && !catalog.some((entry) => entry.id === value)) {
+  if (catalog.length && value.trim() !== '' && !catalog.some((entry) => entry.id === value)) {
     entries.push({ id: value, label: value, synthetic: true } as DisplayCatalogEntry<T>);
   }
   return entries;

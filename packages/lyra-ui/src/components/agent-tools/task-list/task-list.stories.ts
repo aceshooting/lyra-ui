@@ -102,10 +102,10 @@ export const Reorderable: Story = {
     ];
     const onReorder = (event: Event): void => {
       const list = event.currentTarget as HTMLElement & { items: TaskItem[] };
-      const { parentId, fromIndex, toIndex } = (
-        event as CustomEvent<{ parentId: string | null; fromIndex: number; toIndex: number }>
+      const { parentTaskId, fromIndex, toIndex } = (
+        event as CustomEvent<{ taskId: string; parentTaskId: string | null; fromIndex: number; toIndex: number }>
       ).detail;
-      list.items = reorderTasks(list.items, parentId, fromIndex, toIndex);
+      list.items = reorderTasks(list.items, parentTaskId, fromIndex, toIndex);
     };
     return html`
       <lr-task-list

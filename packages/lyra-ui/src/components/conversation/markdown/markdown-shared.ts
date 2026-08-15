@@ -14,7 +14,13 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { scopeFromElement, resolveTextQuote } from '../../../internal/text-quote.js';
+import {
+  createTextQuoteIndex,
+  rangeFromTextQuoteMatch,
+  scopeFromElement,
+  type TextQuoteIndex,
+} from '../../../internal/text-quote.js';
+import { prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
 import { supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraHighlight, LyraHighlightTone } from '../../viewers/document-viewer/anchors.js';
 import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighter } from '../code-block/shiki-types.js';
@@ -963,8 +969,10 @@ export function applyMarkdownTextQuoteAnchor(
   /** The component's resolved locale. Text-quote matching case-folds, and casing is
    *  locale-sensitive -- under `lang="tr"` an unlocalized fold never matches "İSTANBUL". */
   locale?: string,
+  index: TextQuoteIndex = createTextQuoteIndex(scopeFromElement(root), locale),
 ): boolean {
-  const range = resolveTextQuote(scopeFromElement(root), anchor, locale);
+  const match = index.resolve(anchor);
+  const range = match ? rangeFromTextQuoteMatch(index.scope, match) : null;
   if (!range) return false;
   const target =
     range.startContainer.nodeType === 1 ? (range.startContainer as Element) : range.startContainer.parentElement;
@@ -982,6 +990,7 @@ export function applyMarkdownTextQuoteAnchor(
  *  wholesale per call, so a tone this pass has nothing for still needs an explicit empty call to
  *  clear whatever it painted last pass. */
 const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
+export const MARKDOWN_PAINTED_HIGHLIGHT_LIMIT = 100;
 
 /** One `text-quote` highlight resolved against the currently rendered content. */
 export interface ResolvedHighlightRange {
@@ -1002,16 +1011,19 @@ export function repaintMarkdownHighlights(options: {
   handle: HighlightHandle;
   highlights: readonly LyraHighlight[];
   activeHighlightId: string | null;
+  index: TextQuoteIndex;
   /** The component's resolved locale; see applyMarkdownTextQuoteAnchor. */
   locale?: string;
 }): ResolvedHighlightRange[] {
   const resolved: ResolvedHighlightRange[] = [];
-  const scope = scopeFromElement(options.root);
   const rangesByTone = new Map<LyraHighlightTone, Range[]>(HIGHLIGHT_TONES.map((tone) => [tone, []]));
   let activeRange: Range | null = null;
-  for (const highlight of options.highlights) {
+  const workBudget = options.index.createWorkBudget();
+  for (const highlight of prioritizedHighlightCandidates(options.highlights, options.activeHighlightId)) {
+    if (resolved.length >= MARKDOWN_PAINTED_HIGHLIGHT_LIMIT) break;
     if (highlight.anchor.kind !== 'text-quote') continue;
-    const range = resolveTextQuote(scope, highlight.anchor, options.locale);
+    const match = options.index.resolve(highlight.anchor, workBudget);
+    const range = match ? rangeFromTextQuoteMatch(options.index.scope, match) : null;
     if (!range) continue;
     rangesByTone.get(highlight.tone ?? 'accent')!.push(range);
     resolved.push({ id: highlight.id, range });

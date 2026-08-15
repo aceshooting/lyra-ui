@@ -76,7 +76,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A windowed/virtualized list host -- only the rows within the viewport (plus `overscan` padding) are ever real DOM, regardless of how large `items` is.',
+          'A windowed/virtualized list host -- only the rows within the viewport (plus `overscan` padding) are ever real DOM, regardless of how large `items` is. Array-valued items/source sequences are copied, bounded, and frozen while retaining generic row identity; reassign a new array after sequence changes.',
       },
     },
   },

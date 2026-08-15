@@ -582,3 +582,22 @@ it("preserves an explicitly empty aria-label override by presence", async () => 
     el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
   ).to.equal("");
 });
+
+it("uses one nonempty first-wins part projection for rendering and error announcements", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts .parts=${[{ id: "baseline", type: "text", text: "ready" }]}></lr-message-parts>`
+  )) as LyraMessageParts;
+
+  el.parts = [
+    { id: "", type: "error", message: "Empty failure" },
+    { id: "duplicate", type: "error", message: "First failure" },
+    { id: "duplicate", type: "error", message: "Later failure" },
+    { id: "   ", type: "text", text: "Whitespace" },
+  ];
+  await el.updateComplete;
+
+  const rendered = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="part"]')];
+  expect(rendered).to.have.lengthOf(1);
+  expect(rendered[0]!.textContent).to.contain("First failure");
+  expect(assertiveSinkTexts()).to.deep.equal(["First failure"]);
+});

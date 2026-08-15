@@ -17,12 +17,39 @@ import { LYRA_DEFAULT_highlightLayerLabel, LYRA_DEFAULT_highlightOfTotal, LYRA_D
 
 
 export interface HighlightLayerItem {
-  id: string;
+  readonly id: string;
   /** Finite percent-of-box coordinates (the `region` anchor convention). One item may span
    * multiple rects (a quote wrapping lines); invalid coordinates and negative sizes are omitted. */
-  rects: { x: number; y: number; width: number; height: number }[];
-  label?: string;
-  tone?: LyraHighlightTone;
+  readonly rects: readonly Readonly<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }>[];
+  readonly label?: string;
+  readonly tone?: LyraHighlightTone;
+}
+
+function snapshotItems(value: unknown): readonly HighlightLayerItem[] {
+  if (!Array.isArray(value)) return Object.freeze([]);
+  const output: HighlightLayerItem[] = [];
+  const seenIds = new Set<string>();
+  const length = Math.min(value.length, 10_000);
+  for (let index = 0; index < length; index += 1) {
+    try {
+      const candidate: unknown = value[index];
+      if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
+      const rawId = (candidate as { id?: unknown }).id;
+      if (typeof rawId !== 'string') continue;
+      const id = rawId.trim();
+      if (id.length === 0 || seenIds.has(id)) continue;
+      seenIds.add(id);
+      output.push(rawId === id ? candidate as HighlightLayerItem : { ...candidate, id } as HighlightLayerItem);
+    } catch {
+      // A malformed record must not prevent later valid highlights from rendering.
+    }
+  }
+  return Object.freeze(output);
 }
 
 export interface LyraHighlightLayerEventMap {
@@ -39,7 +66,7 @@ export interface LyraHighlightLayerEventMap {
  *
  * @customElement lr-highlight-layer
  * @event lr-highlight-activate - A rect was activated (click, or Enter/Space while focused).
- *   `detail: { id }`.
+ *   `detail: { highlightId }`.
  * @csspart base - The absolutely-positioned overlay (inset 0).
  * @csspart rect - One highlight rectangle (`data-tone`/`data-active`/`data-flash` state attributes).
  * @csspart rect-target - Transparent activation geometry around a rectangle, with a minimum
@@ -62,6 +89,10 @@ export interface LyraHighlightLayerEventMap {
  * @since 4.0.0
  */
 export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'items',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -74,7 +105,16 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ attribute: false }) items: HighlightLayerItem[] = [];
+  private _items: readonly HighlightLayerItem[] = Object.freeze([]);
+  /** Highlight records in caller reading order. IDs are trimmed and must be nonempty; the first
+   * record for an ID is retained and blank or later duplicate records are ignored. */
+  @property({ attribute: false })
+  get items(): readonly HighlightLayerItem[] { return this._items; }
+  set items(value: readonly HighlightLayerItem[]) {
+    const previous = this._items;
+    this._items = snapshotItems(value);
+    this.requestUpdate('items', previous);
+  }
   @property({ attribute: 'active-id' }) activeId: string | null = null;
   /** `false` = pure paint: `pointer-events: none`, no tab stop, no role. Default-true, matching
    *  markdown's `sanitize` stance. */
@@ -91,7 +131,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     super.willUpdate(changed);
     if (changed.has('items')) {
       if (this.focusedItem && !this.items.includes(this.focusedItem)) {
-        const previousItems = changed.get('items') as HighlightLayerItem[] | undefined;
+        const previousItems = changed.get('items') as readonly HighlightLayerItem[] | undefined;
         const previousIndex = previousItems?.indexOf(this.focusedItem) ?? -1;
         const renderedIndexes = this.itemIndexesWithRects();
         const nextIndex = renderedIndexes.reduce<number | null>((nearest, index) => {
@@ -210,7 +250,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   }
 
   private onRectClick(id: string): void {
-    this.emit('lr-highlight-activate', { id });
+    this.emit('lr-highlight-activate', { highlightId: id });
   }
 
   private onRectFocus(item: HighlightLayerItem): void {

@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -8,11 +8,11 @@ export const styles = css`
        chat bubble -- same naming/contract as lr-document-preview's
        identical --lr-document-preview-max-height. Width already caps at
        100% of whatever the host message body allows. */
-    --lr-media-card-max-height: var(--lr-size-20rem);
+    --_lr-media-card-max-height: var(--lr-size-20rem);
   }
 
   /* -- base: shared chrome for every kind's root element (button/div/a/span) */
-  [part='base'] {
+  [part="base"] {
     display: block;
     box-sizing: border-box;
     max-inline-size: 100%;
@@ -27,35 +27,42 @@ export const styles = css`
   /* Reset native button/anchor chrome only where "base" is actually one of
      those (image and file-with-a-safe-link cases) -- a plain div/span never
      had any to begin with, so this is harmless there too. */
-  button[part='base'],
-  a[part='base'] {
+  button[part="base"],
+  a[part="base"] {
     cursor: pointer;
     padding: 0;
     -webkit-tap-highlight-color: transparent;
-    transition:
-      border-color var(--lr-transition-fast),
+    transition: border-color var(--lr-transition-fast),
       background-color var(--lr-transition-fast);
   }
-  button[part='base']:hover,
-  a[part='base']:hover {
+  button[part="base"]:hover,
+  a[part="base"]:hover {
     border-color: var(--lr-color-brand);
   }
   /* Pressed deepens both the border the hover rule tints and the card's own fill, so the whole-card
      button reads as depressed rather than merely pointed at. Under frame="plain" the later,
      higher-specificity chrome reset still wins -- that mode is opting out of card chrome entirely,
      pressed included. */
-  button[part='base']:active,
-  a[part='base']:active {
+  button[part="base"]:active,
+  a[part="base"]:active {
     border-color: var(
       --lr-media-card-active-border-color,
-      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      color-mix(
+        in oklab,
+        var(--lr-color-brand),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
     background: var(
       --lr-media-card-active-bg,
-      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      color-mix(
+        in oklab,
+        var(--lr-color-surface),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
-  [part='base']:focus-visible {
+  [part="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -63,7 +70,7 @@ export const styles = css`
      :host([frame='plain']) [part='base'] reset. Image/video kinds already render [part='base']
      with zero padding (see the button[part='base'] rule above), so this only visibly changes
      padding for the file-chip fallback's span/a[part='base']. */
-  :host([frame='plain']) [part='base'] {
+  :host([frame="plain"]) [part="base"] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -71,26 +78,32 @@ export const styles = css`
   }
 
   /* -- image / video media ------------------------------------------- */
-  img[part='media'] {
+  img[part="media"] {
     display: block;
     max-inline-size: 100%;
-    max-block-size: var(--lr-media-card-max-height);
+    max-block-size: var(
+      --lr-media-card-max-height,
+      var(--_lr-media-card-max-height)
+    );
     object-fit: contain;
   }
-  video[part='media'] {
+  video[part="media"] {
     display: block;
     max-inline-size: 100%;
-    max-block-size: var(--lr-media-card-max-height);
+    max-block-size: var(
+      --lr-media-card-max-height,
+      var(--_lr-media-card-max-height)
+    );
   }
 
   /* -- video: base is a plain non-interactive wrapper around the video
      plus its own separate open-button -- see the class doc for why video
      doesn't reuse the whole-card-button pattern image/file use. */
-  div[part='base'] {
+  div[part="base"] {
     position: relative;
     display: inline-block;
   }
-  [part='open-button'] {
+  [part="open-button"] {
     position: absolute;
     inset-block-start: var(--lr-space-s);
     inset-inline-end: var(--lr-space-s);
@@ -112,32 +125,36 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  [part='open-button']:hover {
+  [part="open-button"]:hover {
     background: var(--lr-color-surface);
   }
   /* Hover only finishes opacifying the translucent scrim, which leaves it with nowhere further to
      go; pressed mixes that now-solid surface toward --lr-color-mix-partner instead. */
-  [part='open-button']:active {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="open-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='open-button']:focus-visible {
+  [part="open-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='open-button'] svg {
+  [part="open-button"] svg {
     display: block;
   }
 
   /* -- file-chip fallback (kind="file", or an image/video src that failed
      the safe-URL check) ------------------------------------------------ */
-  span[part='base'],
-  a[part='base'] {
+  span[part="base"],
+  a[part="base"] {
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
   }
-  [part='file-icon'] {
+  [part="file-icon"] {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
@@ -145,10 +162,10 @@ export const styles = css`
     font-size: var(--lr-font-size-xl);
     color: var(--lr-color-text-quiet);
   }
-  [part='file-icon'] svg {
+  [part="file-icon"] svg {
     display: block;
   }
-  [part='filename'] {
+  [part="filename"] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -158,9 +175,9 @@ export const styles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    button[part='base'],
-    a[part='base'],
-    [part='open-button'] {
+    button[part="base"],
+    a[part="base"],
+    [part="open-button"] {
       transition: none !important;
     }
   }

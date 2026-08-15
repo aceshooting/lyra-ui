@@ -1,9 +1,9 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import './drawer.js';
-import type { LyraDrawer } from './drawer.js';
-import { setAnimation } from '../../../utilities/animation-registry.js';
+import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import "./drawer.js";
+import type { LyraDrawer } from "./drawer.js";
+import { setAnimation } from "../../../utilities/animation-registry.js";
 
-it('renders an open drawer with the requested placement and accessible panel', async () => {
+it("renders an open drawer with the requested placement and accessible panel", async () => {
   const el = (await fixture(html`
     <lr-drawer open placement="end" heading="Filters">
       <p>Filter controls</p>
@@ -12,56 +12,66 @@ it('renders an open drawer with the requested placement and accessible panel', a
   await el.updateComplete;
 
   const panel = el.shadowRoot!.querySelector('[part~="panel"]')!;
-  expect(el.getAttribute('placement')).to.equal('end');
-  expect(panel.getAttribute('role')).to.equal('dialog');
-  expect(panel.getAttribute('aria-modal')).to.equal('true');
-  expect(panel.getAttribute('aria-labelledby')).to.match(/^lr-dialog-heading-/);
+  expect(el.getAttribute("placement")).to.equal("end");
+  expect(panel.getAttribute("role")).to.equal("dialog");
+  expect(panel.getAttribute("aria-modal")).to.equal("true");
+  expect(panel.getAttribute("aria-labelledby")).to.match(/^lr-dialog-heading-/);
 });
 
-it('reflects the inherited pinned Web Awesome label property', async () => {
+it("reflects the inherited pinned Web Awesome label property", async () => {
   const el = (await fixture(html`<lr-drawer></lr-drawer>`)) as LyraDrawer;
-  el.label = 'Filters';
+  el.label = "Filters";
   await el.updateComplete;
-  expect(el.getAttribute('label')).to.equal('Filters');
+  expect(el.getAttribute("label")).to.equal("Filters");
 });
 
-it('inherits guarded reentrant preflight so an opposite close supersedes show', async () => {
-  const el = (await fixture(html`<lr-drawer label="Filters"></lr-drawer>`)) as LyraDrawer;
+it("inherits guarded reentrant preflight so an opposite close supersedes show", async () => {
+  const el = (await fixture(
+    html`<lr-drawer label="Filters"></lr-drawer>`
+  )) as LyraDrawer;
   let shows = 0;
-  el.addEventListener('lr-show', () => {
-    shows++;
-    void el.hide();
-  }, { once: true });
+  el.addEventListener(
+    "lr-show",
+    () => {
+      shows++;
+      void el.hide();
+    },
+    { once: true }
+  );
   await el.show();
   expect(shows).to.equal(1);
   expect(el.open).to.equal(false);
 });
 
-it('closes through the inherited cancelable close contract', async () => {
+it("closes through the inherited cancelable close contract", async () => {
   const el = (await fixture(html`
     <lr-drawer open heading="Details" closable></lr-drawer>
   `)) as LyraDrawer;
   await el.updateComplete;
 
-  const button = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLButtonElement;
-  const eventPromise = oneEvent(el, 'lr-dialog-close');
+  const button = el.shadowRoot!.querySelector(
+    '[part~="close-button"]'
+  ) as HTMLButtonElement;
+  const eventPromise = oneEvent(el, "lr-dialog-close");
   button.click();
   const event = await eventPromise;
 
-  expect(event.detail).to.equal('close-button');
+  expect(event.detail).to.equal("close-button");
   await el.updateComplete;
   expect(el.open).to.be.false;
 });
 
-it('keeps lr-hide cancelable when an open drawer is externally removed', async () => {
-  const el = (await fixture(html`<lr-drawer open heading="Details"></lr-drawer>`)) as LyraDrawer;
+it("keeps lr-hide cancelable when an open drawer is externally removed", async () => {
+  const el = (await fixture(
+    html`<lr-drawer open heading="Details"></lr-drawer>`
+  )) as LyraDrawer;
   let hideCancelable: boolean | undefined;
   let closeCount = 0;
-  el.addEventListener('lr-hide', (event) => {
+  el.addEventListener("lr-hide", (event) => {
     hideCancelable = event.cancelable;
     event.preventDefault();
   });
-  el.addEventListener('lr-dialog-close', () => closeCount++);
+  el.addEventListener("lr-dialog-close", () => closeCount++);
 
   el.remove();
   await Promise.resolve();
@@ -69,31 +79,37 @@ it('keeps lr-hide cancelable when an open drawer is externally removed', async (
 
   expect(hideCancelable).to.equal(true);
   expect(closeCount).to.equal(0);
-  expect(el.open, 'a veto preserves state for a later reconnect').to.equal(true);
-  expect(el.hasAttribute('open')).to.equal(true);
+  expect(el.open, "a veto preserves state for a later reconnect").to.equal(
+    true
+  );
+  expect(el.hasAttribute("open")).to.equal(true);
 });
 
-it('does not activate inherited modal infrastructure when opened while detached', async () => {
-  const el = (await fixture(html`<lr-drawer heading="Details"></lr-drawer>`)) as LyraDrawer;
+it("does not activate inherited modal infrastructure when opened while detached", async () => {
+  const el = (await fixture(
+    html`<lr-drawer heading="Details"></lr-drawer>`
+  )) as LyraDrawer;
   const parent = el.parentElement!;
   el.remove();
   el.open = true;
   await el.updateComplete;
 
-  expect(document.documentElement.style.overflow).to.equal('');
-  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(document.documentElement.style.overflow).to.equal("");
+  document.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+  );
   await el.updateComplete;
   expect(el.open).to.be.true;
 
   parent.append(el);
   await el.updateComplete;
-  expect(document.documentElement.style.overflow).to.equal('hidden');
+  expect(document.documentElement.style.overflow).to.equal("hidden");
   el.close();
   await el.updateComplete;
-  expect(document.documentElement.style.overflow).to.equal('');
+  expect(document.documentElement.style.overflow).to.equal("");
 });
 
-it('is accessible while open', async () => {
+it("is accessible while open", async () => {
   const el = (await fixture(html`
     <lr-drawer open aria-label="Navigation drawer"><p>Navigation</p></lr-drawer>
   `)) as LyraDrawer;
@@ -101,40 +117,87 @@ it('is accessible while open', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('defaults placement to end, matching wa-drawer', async () => {
+it("defaults placement to end, matching wa-drawer", async () => {
   // It used to default to `start`, so a mechanical `wa-drawer` -> `lr-drawer` rename silently
   // moved every migrated drawer to the other edge.
-  const el = (await fixture(html`<lr-drawer open heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
+  const el = (await fixture(
+    html`<lr-drawer open heading="Filters"><p>Body</p></lr-drawer>`
+  )) as LyraDrawer;
   await el.updateComplete;
-  expect(el.placement).to.equal('end');
-  expect(el.getAttribute('placement')).to.equal('end');
+  expect(el.placement).to.equal("end");
+  expect(el.getAttribute("placement")).to.equal("end");
 });
 
-it('flips the enter-animation offset under RTL to match the mirrored resting edge', async () => {
+it("flips the private enter-animation default under RTL without declaring the public hook", async () => {
   const rtlStartWrapper = (await fixture(html`
-    <div dir="rtl"><lr-drawer open placement="start" heading="Filters"><p>Filter controls</p></lr-drawer></div>
+    <div dir="rtl">
+      <lr-drawer open placement="start" heading="Filters"
+        ><p>Filter controls</p></lr-drawer
+      >
+    </div>
   `)) as HTMLElement;
-  const startDrawer = rtlStartWrapper.querySelector('lr-drawer') as LyraDrawer;
+  const startDrawer = rtlStartWrapper.querySelector("lr-drawer") as LyraDrawer;
   await startDrawer.updateComplete;
-  const startPanel = startDrawer.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  const startPanel = startDrawer.shadowRoot!.querySelector(
+    '[part~="panel"]'
+  ) as HTMLElement;
   // A 'start' drawer rests at the physical right edge under RTL, so it must enter
   // from further right -- the same positive offset an LTR 'end' drawer uses.
-  expect(getComputedStyle(startPanel).getPropertyValue('--lr-drawer-enter-x').trim()).to.equal('1rem');
+  expect(
+    getComputedStyle(startPanel).getPropertyValue("--lr-drawer-enter-x").trim()
+  ).to.equal("");
+  expect(
+    getComputedStyle(startPanel).getPropertyValue("--_lr-drawer-enter-x").trim()
+  ).to.equal("1rem");
 
   const rtlEndWrapper = (await fixture(html`
-    <div dir="rtl"><lr-drawer open placement="end" heading="Filters"><p>Filter controls</p></lr-drawer></div>
+    <div dir="rtl">
+      <lr-drawer open placement="end" heading="Filters"
+        ><p>Filter controls</p></lr-drawer
+      >
+    </div>
   `)) as HTMLElement;
-  const endDrawer = rtlEndWrapper.querySelector('lr-drawer') as LyraDrawer;
+  const endDrawer = rtlEndWrapper.querySelector("lr-drawer") as LyraDrawer;
   await endDrawer.updateComplete;
-  const endPanel = endDrawer.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  const endPanel = endDrawer.shadowRoot!.querySelector(
+    '[part~="panel"]'
+  ) as HTMLElement;
   // An 'end' drawer rests at the physical left edge under RTL -- the mirror image,
   // so it must enter from further left, same as an LTR 'start' (default) drawer.
-  expect(getComputedStyle(endPanel).getPropertyValue('--lr-drawer-enter-x').trim()).to.equal('calc(-1 * 1rem)');
+  expect(
+    getComputedStyle(endPanel).getPropertyValue("--lr-drawer-enter-x").trim()
+  ).to.equal("");
+  expect(
+    getComputedStyle(endPanel).getPropertyValue("--_lr-drawer-enter-x").trim()
+  ).to.equal("calc(-1 * 1rem)");
 });
 
-it('contains RTL unbroken body and footer content in a 320px viewport-bound drawer allocation', async () => {
-  const longContent = 'محتوىدرججانبيمحليطويلجداًبدونأيفرصةللفصلالتلقائي';
-  const paragraphs = Array.from({ length: 20 }, () => html`<p>${longContent}</p>`);
+it("keeps an inherited enter offset authoritative while a direct host value wins normally", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-drawer-enter-x: 23px">
+      <lr-drawer contained placement="start" heading="Filters"
+        ><p>Body</p></lr-drawer
+      >
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-drawer") as LyraDrawer;
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+  expect(
+    getComputedStyle(panel).getPropertyValue("--lr-drawer-enter-x").trim()
+  ).to.equal("23px");
+
+  el.style.setProperty("--lr-drawer-enter-x", "17px");
+  expect(
+    getComputedStyle(panel).getPropertyValue("--lr-drawer-enter-x").trim()
+  ).to.equal("17px");
+});
+
+it("contains RTL unbroken body and footer content in a 320px viewport-bound drawer allocation", async () => {
+  const longContent = "محتوىدرججانبيمحليطويلجداًبدونأيفرصةللفصلالتلقائي";
+  const paragraphs = Array.from(
+    { length: 20 },
+    () => html`<p>${longContent}</p>`
+  );
   const el = (await fixture(html`
     <lr-drawer
       open
@@ -156,27 +219,54 @@ it('contains RTL unbroken body and footer content in a 320px viewport-bound draw
   const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
 
-  expect(getComputedStyle(panel).direction).to.equal('rtl');
-  expect(panel.clientWidth, 'the drawer panel must fit its 320px host allocation').to.be.at.most(320);
-  expect(panel.scrollWidth, 'the drawer panel must not overflow its 320px allocation').to.be.at.most(panel.clientWidth);
-  expect(body.scrollWidth, 'unbroken body text must wrap inside the drawer body').to.be.at.most(body.clientWidth);
-  expect(footer.scrollWidth, 'long footer actions must remain inside the drawer footer').to.be.at.most(footer.clientWidth);
-  expect(body.scrollHeight, 'long body content must remain independently scrollable').to.be.greaterThan(body.clientHeight);
+  expect(getComputedStyle(panel).direction).to.equal("rtl");
+  expect(
+    panel.clientWidth,
+    "the drawer panel must fit its 320px host allocation"
+  ).to.be.at.most(320);
+  expect(
+    panel.scrollWidth,
+    "the drawer panel must not overflow its 320px allocation"
+  ).to.be.at.most(panel.clientWidth);
+  expect(
+    body.scrollWidth,
+    "unbroken body text must wrap inside the drawer body"
+  ).to.be.at.most(body.clientWidth);
+  expect(
+    footer.scrollWidth,
+    "long footer actions must remain inside the drawer footer"
+  ).to.be.at.most(footer.clientWidth);
+  expect(
+    body.scrollHeight,
+    "long body content must remain independently scrollable"
+  ).to.be.greaterThan(body.clientHeight);
   body.scrollTop = 1;
-  expect(body.scrollTop, 'the body scrolling surface must accept a keyboard/mouse scroll position').to.be.greaterThan(0);
+  expect(
+    body.scrollTop,
+    "the body scrolling surface must accept a keyboard/mouse scroll position"
+  ).to.be.greaterThan(0);
 });
 
-it('keeps a long header-actions projection and the close target inside a 319px drawer', async () => {
+it("keeps a long header-actions projection and the close target inside a 319px drawer", async () => {
   const el = (await fixture(html`
-    <lr-drawer open closable heading="Settings" style="inline-size:319px;block-size:16rem;inset-inline-end:auto;inset-block-end:auto">
-      <button slot="header-actions">${'LocalizedAction'.repeat(120)}</button>
+    <lr-drawer
+      open
+      closable
+      heading="Settings"
+      style="inline-size:319px;block-size:16rem;inset-inline-end:auto;inset-block-end:auto"
+    >
+      <button slot="header-actions">${"LocalizedAction".repeat(120)}</button>
       Body
     </lr-drawer>
   `)) as LyraDrawer;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
-  const actions = el.shadowRoot!.querySelector('[part="header-actions"]') as HTMLElement;
-  const close = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector(
+    '[part="header-actions"]'
+  ) as HTMLElement;
+  const close = el.shadowRoot!.querySelector(
+    '[part~="close-button"]'
+  ) as HTMLElement;
   const panelRect = panel.getBoundingClientRect();
   for (const target of [actions, close]) {
     const rect = target.getBoundingClientRect();
@@ -185,111 +275,169 @@ it('keeps a long header-actions projection and the close target inside a 319px d
   }
 });
 
-describe('inherited show/hide lifecycle', () => {
-  it('runs the same four-event lifecycle as lr-dialog', async () => {
-    const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
+describe("inherited show/hide lifecycle", () => {
+  it("runs the same four-event lifecycle as lr-dialog", async () => {
+    const el = (await fixture(
+      html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`
+    )) as LyraDrawer;
     const order: string[] = [];
-    for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+    for (const name of [
+      "lr-show",
+      "lr-after-show",
+      "lr-hide",
+      "lr-after-hide",
+    ]) {
       el.addEventListener(name, () => order.push(name));
     }
 
-    const afterShow = oneEvent(el, 'lr-after-show');
+    const afterShow = oneEvent(el, "lr-after-show");
     el.show();
     expect(el.open).to.be.true;
     await afterShow;
 
-    const afterHide = oneEvent(el, 'lr-after-hide');
+    const afterHide = oneEvent(el, "lr-after-hide");
     el.hide();
     expect(el.open).to.be.false;
     await afterHide;
 
-    expect(order).to.deep.equal(['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
+    expect(order).to.deep.equal([
+      "lr-show",
+      "lr-after-show",
+      "lr-hide",
+      "lr-after-hide",
+    ]);
   });
 
-  it('vetoing lr-show keeps the drawer closed', async () => {
-    const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
-    el.addEventListener('lr-show', (event) => (event as Event).preventDefault());
+  it("vetoing lr-show keeps the drawer closed", async () => {
+    const el = (await fixture(
+      html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`
+    )) as LyraDrawer;
+    el.addEventListener("lr-show", (event) =>
+      (event as Event).preventDefault()
+    );
     el.show();
     await el.updateComplete;
     expect(el.open).to.be.false;
   });
 
-  it('promotes an open drawer into the top layer', async () => {
-    const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
-    const afterShow = oneEvent(el, 'lr-after-show');
+  it("promotes an open drawer into the top layer", async () => {
+    const el = (await fixture(
+      html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`
+    )) as LyraDrawer;
+    const afterShow = oneEvent(el, "lr-after-show");
     el.show();
     await el.updateComplete;
-    expect(el.matches(':popover-open')).to.be.true;
+    expect(el.matches(":popover-open")).to.be.true;
     await afterShow;
-    const afterHide = oneEvent(el, 'lr-after-hide');
+    const afterHide = oneEvent(el, "lr-after-hide");
     el.hide();
     await afterHide;
-    expect(el.matches(':popover-open')).to.be.false;
+    expect(el.matches(":popover-open")).to.be.false;
   });
 });
 
-describe('slide animation', () => {
-  it('slides out with the drawer exit keyframes, not the dialog panel ones', async () => {
-    const el = (await fixture(html`<lr-drawer heading="Filters" open><p>Body</p></lr-drawer>`)) as LyraDrawer;
-    await el.updateComplete;
-    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
-    const afterHide = oneEvent(el, 'lr-after-hide');
-    el.hide();
-    await el.updateComplete;
-    expect(panel.getAnimations().some((animation) => animation.id === 'drawer.hideEnd')).to.be.true;
-    await afterHide;
-    const afterShow = oneEvent(el, 'lr-after-show');
-    el.show();
-    await el.updateComplete;
-    expect(panel.getAnimations().some((animation) => animation.id === 'drawer.showEnd')).to.be.true;
-    await afterShow;
-  });
-
-  it('slides out along the block axis for top/bottom placements', async () => {
+describe("slide animation", () => {
+  it("slides out with the drawer exit keyframes, not the dialog panel ones", async () => {
     const el = (await fixture(
-      html`<lr-drawer heading="Filters" placement="bottom" open><p>Body</p></lr-drawer>`,
+      html`<lr-drawer heading="Filters" open><p>Body</p></lr-drawer>`
     )) as LyraDrawer;
     await el.updateComplete;
-    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
-    const afterHide = oneEvent(el, 'lr-after-hide');
+    const panel = el.shadowRoot!.querySelector(
+      '[part~="panel"]'
+    ) as HTMLElement;
+    const afterHide = oneEvent(el, "lr-after-hide");
     el.hide();
     await el.updateComplete;
-    expect(panel.getAnimations().some((animation) => animation.id === 'drawer.hideBottom')).to.be.true;
+    expect(
+      panel
+        .getAnimations()
+        .some((animation) => animation.id === "drawer.hideEnd")
+    ).to.be.true;
+    await afterHide;
+    const afterShow = oneEvent(el, "lr-after-show");
+    el.show();
+    await el.updateComplete;
+    expect(
+      panel
+        .getAnimations()
+        .some((animation) => animation.id === "drawer.showEnd")
+    ).to.be.true;
+    await afterShow;
+  });
+
+  it("slides out along the block axis for top/bottom placements", async () => {
+    const el = (await fixture(
+      html`<lr-drawer heading="Filters" placement="bottom" open
+        ><p>Body</p></lr-drawer
+      >`
+    )) as LyraDrawer;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector(
+      '[part~="panel"]'
+    ) as HTMLElement;
+    const afterHide = oneEvent(el, "lr-after-hide");
+    el.hide();
+    await el.updateComplete;
+    expect(
+      panel
+        .getAnimations()
+        .some((animation) => animation.id === "drawer.hideBottom")
+    ).to.be.true;
     await afterHide;
   });
 
-  it('reads its duration from the shared panel-duration knob, so reduced motion still settles', async () => {
-    const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
-    el.style.setProperty('--lr-duration-base', '0.001ms');
-    const afterShow = oneEvent(el, 'lr-after-show');
+  it("reads its duration from the shared panel-duration knob, so reduced motion still settles", async () => {
+    const el = (await fixture(
+      html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`
+    )) as LyraDrawer;
+    el.style.setProperty("--lr-duration-base", "0.001ms");
+    const afterShow = oneEvent(el, "lr-after-show");
     el.show();
     await afterShow;
-    const afterHide = oneEvent(el, 'lr-after-hide');
+    const afterHide = oneEvent(el, "lr-after-hide");
     el.hide();
     await afterHide;
     expect(el.open).to.be.false;
   });
 
-  it('selects an RTL keyframe override from the placement-specific drawer namespace', async () => {
+  it("selects an RTL keyframe override from the placement-specific drawer namespace", async () => {
     const el = (await fixture(
-      html`<lr-drawer dir="rtl" placement="start" heading="Filters"><p>Body</p></lr-drawer>`,
+      html`<lr-drawer dir="rtl" placement="start" heading="Filters"
+        ><p>Body</p></lr-drawer
+      >`
     )) as LyraDrawer;
-    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
-    const releasePanel = setAnimation(el, 'drawer.showStart', {
-      keyframes: [{ transform: 'translateX(-14px)' }, { transform: 'translateX(0)' }],
-      rtlKeyframes: [{ transform: 'translateX(14px)' }, { transform: 'translateX(0)' }],
+    const panel = el.shadowRoot!.querySelector(
+      '[part~="panel"]'
+    ) as HTMLElement;
+    const releasePanel = setAnimation(el, "drawer.showStart", {
+      keyframes: [
+        { transform: "translateX(-14px)" },
+        { transform: "translateX(0)" },
+      ],
+      rtlKeyframes: [
+        { transform: "translateX(14px)" },
+        { transform: "translateX(0)" },
+      ],
       options: { duration: 10_000 },
     });
-    const releaseBackdrop = setAnimation(el, 'drawer.overlay.show', null);
-    const releasePanelHide = setAnimation(el, 'drawer.hideStart', null);
-    const releaseBackdropHide = setAnimation(el, 'drawer.overlay.hide', null);
+    const releaseBackdrop = setAnimation(el, "drawer.overlay.show", null);
+    const releasePanelHide = setAnimation(el, "drawer.hideStart", null);
+    const releaseBackdropHide = setAnimation(el, "drawer.overlay.hide", null);
     try {
       const shown = el.show();
       await el.updateComplete;
-      const animation = panel.getAnimations().find((candidate) => candidate.id === 'drawer.showStart');
-      expect(animation?.id).to.equal('drawer.showStart');
-      expect(String(animation?.effect?.getKeyframes()[0]?.transform)).to.include('14px');
-      expect(String(animation?.effect?.getKeyframes()[0]?.transform).includes('-14px')).to.equal(false);
+      const animation = panel
+        .getAnimations()
+        .find((candidate) => candidate.id === "drawer.showStart");
+      expect(animation?.id).to.equal("drawer.showStart");
+      expect(
+        String(animation?.effect?.getKeyframes()[0]?.transform)
+      ).to.include("14px");
+      expect(
+        String(animation?.effect?.getKeyframes()[0]?.transform).includes(
+          "-14px"
+        )
+      ).to.equal(false);
       animation?.finish();
       await shown;
       await el.hide();
@@ -313,7 +461,9 @@ describe('slide animation', () => {
 let darkThemeSheetPromise: Promise<CSSStyleSheet> | undefined;
 
 function loadThemeSheet(): Promise<CSSStyleSheet> {
-  darkThemeSheetPromise ??= fetch(new URL('../../../theme.css', import.meta.url))
+  darkThemeSheetPromise ??= fetch(
+    new URL("../../../theme.css", import.meta.url)
+  )
     .then((response) => response.text())
     .then((text) => {
       const sheet = new CSSStyleSheet();
@@ -329,7 +479,9 @@ async function withThemeCss<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run();
   } finally {
-    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((adopted) => adopted !== sheet);
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+      (adopted) => adopted !== sheet
+    );
   }
 }
 
@@ -337,7 +489,7 @@ async function withThemeCss<T>(run: () => Promise<T>): Promise<T> {
 // rgb(). Round-tripping the token value through a real element normalizes both into the same space
 // so the two colour STRINGS are actually comparable.
 function toComputedColor(rawTokenValue: string): string {
-  const probe = document.createElement('div');
+  const probe = document.createElement("div");
   probe.style.backgroundColor = rawTokenValue;
   document.body.append(probe);
   try {
@@ -347,37 +499,46 @@ function toComputedColor(rawTokenValue: string): string {
   }
 }
 
-it('paints its panel a surface distinct from the page surface in dark mode', async () => {
+it("paints its panel a surface distinct from the page surface in dark mode", async () => {
   await withThemeCss(async () => {
     const wrapper = (await fixture(
-      html`<div class="lr-dark"><lr-drawer heading="Filters" open><p>Body</p></lr-drawer></div>`,
+      html`<div class="lr-dark">
+        <lr-drawer heading="Filters" open><p>Body</p></lr-drawer>
+      </div>`
     )) as HTMLElement;
-    const el = wrapper.querySelector('lr-drawer') as LyraDrawer;
+    const el = wrapper.querySelector("lr-drawer") as LyraDrawer;
     await el.updateComplete;
-    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
+    const panel = el.shadowRoot!.querySelector(
+      '[part~="panel"]'
+    ) as HTMLElement;
 
-    const pageSurface = toComputedColor(getComputedStyle(el).getPropertyValue('--lr-color-surface').trim());
+    const pageSurface = toComputedColor(
+      getComputedStyle(el).getPropertyValue("--lr-color-surface").trim()
+    );
     const overlaySurface = toComputedColor(
-      getComputedStyle(el).getPropertyValue('--lr-color-surface-overlay').trim(),
+      getComputedStyle(el).getPropertyValue("--lr-color-surface-overlay").trim()
     );
     const panelBackground = getComputedStyle(panel).backgroundColor;
 
     // Guards a mistyped token name resolving to the empty string, which would make every
     // comparison below vacuous.
-    expect(pageSurface, 'page surface resolved').to.match(/^rgba?\(/);
-    expect(overlaySurface, 'overlay surface resolved').to.match(/^rgba?\(/);
-    expect(overlaySurface, 'dark mode moves the overlay surface off the page surface').to.not.equal(pageSurface);
+    expect(pageSurface, "page surface resolved").to.match(/^rgba?\(/);
+    expect(overlaySurface, "overlay surface resolved").to.match(/^rgba?\(/);
+    expect(
+      overlaySurface,
+      "dark mode moves the overlay surface off the page surface"
+    ).to.not.equal(pageSurface);
 
     expect(panelBackground).to.equal(overlaySurface);
     expect(panelBackground).to.not.equal(pageSurface);
-    el.close('api');
+    el.close("api");
   });
 });
 
 // Same normalization trick as toComputedColor, for the elevation scale: a shadow token expands to
 // a length triple plus an rgb(), while computed boxShadow reorders it and resolves the colour.
 function toComputedShadow(rawTokenValue: string): string {
-  const probe = document.createElement('div');
+  const probe = document.createElement("div");
   probe.style.boxShadow = rawTokenValue;
   document.body.append(probe);
   try {
@@ -387,64 +548,86 @@ function toComputedShadow(rawTokenValue: string): string {
   }
 }
 
-it('steps its edge-anchored panel back to the lower modal tier, overriding the dialog rule', async () => {
-  const el = (await fixture(html`<lr-drawer heading="Filters" open><p>Body</p></lr-drawer>`)) as LyraDrawer;
+it("steps its edge-anchored panel back to the lower modal tier, overriding the dialog rule", async () => {
+  const el = (await fixture(
+    html`<lr-drawer heading="Filters" open><p>Body</p></lr-drawer>`
+  )) as LyraDrawer;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
   const scope = getComputedStyle(el);
 
-  const drawerTier = toComputedShadow(scope.getPropertyValue('--lr-shadow-l').trim());
-  const dialogTier = toComputedShadow(scope.getPropertyValue('--lr-shadow-xl').trim());
+  const drawerTier = toComputedShadow(
+    scope.getPropertyValue("--lr-shadow-l").trim()
+  );
+  const dialogTier = toComputedShadow(
+    scope.getPropertyValue("--lr-shadow-xl").trim()
+  );
 
-  expect(drawerTier, 'the l step resolved').to.not.equal('none');
+  expect(drawerTier, "the l step resolved").to.not.equal("none");
   // Proves the drawer sheet really lands after the inherited dialog panel rule -- if the override
   // silently lost the cascade, the panel would still carry lr-dialog's xl step.
-  expect(drawerTier, 'l and xl are distinct steps').to.not.equal(dialogTier);
+  expect(drawerTier, "l and xl are distinct steps").to.not.equal(dialogTier);
   expect(getComputedStyle(panel).boxShadow).to.equal(drawerTier);
-  el.close('api');
+  el.close("api");
 });
 
-describe('contained drawer compatibility', () => {
-  it('renders in its containing block without modal ownership, overlay, or Escape dismissal', async () => {
+describe("contained drawer compatibility", () => {
+  it("renders in its containing block without modal ownership, overlay, or Escape dismissal", async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="position: relative; inline-size: 500px; block-size: 300px;">
-        <lr-drawer contained open label="Filters"><button>Inside</button></lr-drawer>
+        <lr-drawer contained open label="Filters"
+          ><button>Inside</button></lr-drawer
+        >
       </div>
     `);
-    const el = wrapper.querySelector('lr-drawer') as LyraDrawer;
+    const el = wrapper.querySelector("lr-drawer") as LyraDrawer;
     await el.updateComplete;
-    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
-    const backdrop = el.shadowRoot!.querySelector('[part~="backdrop"]') as HTMLElement;
-    expect(getComputedStyle(el).position).to.equal('absolute');
-    expect(panel.hasAttribute('aria-modal')).to.equal(false);
-    expect(getComputedStyle(backdrop).display).to.equal('none');
-    expect(document.documentElement.style.overflow).to.equal('');
-    expect(el.matches(':popover-open')).to.equal(false);
+    const panel = el.shadowRoot!.querySelector(
+      '[part~="panel"]'
+    ) as HTMLElement;
+    const backdrop = el.shadowRoot!.querySelector(
+      '[part~="backdrop"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(el).position).to.equal("absolute");
+    expect(panel.hasAttribute("aria-modal")).to.equal(false);
+    expect(getComputedStyle(backdrop).display).to.equal("none");
+    expect(document.documentElement.style.overflow).to.equal("");
+    expect(el.matches(":popover-open")).to.equal(false);
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
     await el.updateComplete;
     expect(el.open).to.equal(true);
   });
 
-  it('restores modal behavior when contained is unset while open', async () => {
+  it("restores modal behavior when contained is unset while open", async () => {
     const el = (await fixture(
-      html`<lr-drawer contained open label="Filters"><button>Inside</button></lr-drawer>`,
+      html`<lr-drawer contained open label="Filters"
+        ><button>Inside</button></lr-drawer
+      >`
     )) as LyraDrawer;
     el.contained = false;
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement).getAttribute('aria-modal')).to.equal(
-      'true',
-    );
-    expect(document.documentElement.style.overflow).to.equal('hidden');
+    expect(
+      (
+        el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement
+      ).getAttribute("aria-modal")
+    ).to.equal("true");
+    expect(document.documentElement.style.overflow).to.equal("hidden");
     await el.hide();
   });
 
-  it('maps --size to the active drawer axis', async () => {
+  it("maps --size to the active drawer axis", async () => {
     const el = (await fixture(
-      html`<lr-drawer contained open label="Filters" style="--size: 320px"><p>Body</p></lr-drawer>`,
+      html`<lr-drawer contained open label="Filters" style="--size: 320px"
+        ><p>Body</p></lr-drawer
+      >`
     )) as LyraDrawer;
-    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
-    expect(getComputedStyle(panel).inlineSize).to.equal('320px');
+    const panel = el.shadowRoot!.querySelector(
+      '[part~="panel"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(panel).inlineSize).to.equal("320px");
   });
 
   it("keeps inherited dialog width hooks effective for side drawers", async () => {

@@ -1,30 +1,36 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { keyed } from 'lit/directives/keyed.js';
-import { composedParentElement } from '../../../internal/a11y.js';
-import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { closeIcon } from '../../../internal/icons.js';
-import { getSegmenter } from '../../../internal/intl-cache.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteDuration } from '../../../internal/numbers.js';
-import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
+import { html, type TemplateResult, type PropertyValues } from "lit";
+import { property, state } from "lit/decorators.js";
+import { keyed } from "lit/directives/keyed.js";
+import { composedParentElement } from "../../../internal/a11y.js";
+import { composedAccessibilityTextResult } from "../../../internal/accessibility-visibility.js";
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from "../../../internal/announcer.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { closeIcon } from "../../../internal/icons.js";
+import { getSegmenter } from "../../../internal/intl-cache.js";
+import { prefersReducedMotion } from "../../../internal/motion.js";
+import { finiteDuration } from "../../../internal/numbers.js";
+import {
+  composedContains,
+  deepActiveElement,
+} from "../../../internal/overlay-manager.js";
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
   isActionableElement,
   type ComposedFocusRepairSnapshot,
-} from '../../../internal/focus-navigation.js';
-import { tag } from '../../../internal/prefix.js';
+} from "../../../internal/focus-navigation.js";
+import { tag } from "../../../internal/prefix.js";
 import {
   normalizeSize,
   type LyraSize,
   type LyraSizeStep,
   type LyraVariant,
-} from '../../../internal/variants.js';
-import { variants } from '../../../internal/variants.styles.js';
-import { styles } from './toast-item.styles.js';
+} from "../../../internal/variants.js";
+import { variants } from "../../../internal/variants.styles.js";
+import { styles } from "./toast-item.styles.js";
 import {
   TOAST_REGION_ENQUEUE,
   TOAST_REGION_EVICT,
@@ -32,12 +38,16 @@ import {
   TOAST_REGION_SET_ACTIVE,
   toastRegionControllerFor,
   type ToastRegionController,
-} from './toast-region-protocol.js';
+} from "./toast-region-protocol.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWithTruncatedContext, LYRA_DEFAULT_toastContentIncomplete } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_close,
+  LYRA_DEFAULT_closeWithContext,
+  LYRA_DEFAULT_closeWithTruncatedContext,
+  LYRA_DEFAULT_toastContentIncomplete,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** The library's one semantic-tone vocabulary. */
 export type ToastVariant = LyraVariant;
@@ -46,50 +56,54 @@ export type ToastSize = LyraSize;
 
 function parseTime(value: string): number {
   const trimmed = value.trim();
-  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
-  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
+  if (trimmed.endsWith("ms")) return Number.parseFloat(trimmed);
+  if (trimmed.endsWith("s")) return Number.parseFloat(trimmed) * 1000;
   return 0;
 }
 
 function maxCssTime(value: string): number {
-  return Math.max(0, ...value.split(',').map(parseTime).filter(Number.isFinite));
+  return Math.max(
+    0,
+    ...value.split(",").map(parseTime).filter(Number.isFinite)
+  );
 }
 
 const CLOSE_LABEL_GRAPHEME_LIMIT = 40;
 
 function isAssertiveVariant(variant: ToastVariant): boolean {
-  return variant === 'danger' || variant === 'warning';
+  return variant === "danger" || variant === "warning";
 }
 
 function truncateGraphemes(
   value: string,
   limit: number,
-  locale: string,
+  locale: string
 ): { snippet: string; truncated: boolean } {
   // A code-point fallback would split combining and ZWJ graphemes. Keep the complete label on
   // legacy engines instead of manufacturing a broken close-name context.
-  if (typeof Intl.Segmenter !== 'function') return { snippet: value, truncated: false };
+  if (typeof Intl.Segmenter !== "function")
+    return { snippet: value, truncated: false };
   let graphemes: string[];
   try {
-    graphemes = [...getSegmenter(locale, { granularity: 'grapheme' }).segment(value)].map(
-      ({ segment }) => segment,
-    );
+    graphemes = [
+      ...getSegmenter(locale, { granularity: "grapheme" }).segment(value),
+    ].map(({ segment }) => segment);
   } catch (error) {
     if (!(error instanceof RangeError)) throw error;
-    graphemes = [...getSegmenter(undefined, { granularity: 'grapheme' }).segment(value)].map(
-      ({ segment }) => segment,
-    );
+    graphemes = [
+      ...getSegmenter(undefined, { granularity: "grapheme" }).segment(value),
+    ].map(({ segment }) => segment);
   }
   return graphemes.length > limit
-    ? { snippet: graphemes.slice(0, limit).join(''), truncated: true }
+    ? { snippet: graphemes.slice(0, limit).join(""), truncated: true }
     : { snippet: value, truncated: false };
 }
 
 export interface LyraToastItemEventMap {
-  'lr-show': CustomEvent<null>;
-  'lr-after-show': CustomEvent<null>;
-  'lr-hide': CustomEvent<null>;
-  'lr-after-hide': CustomEvent<null>;
+  "lr-show": CustomEvent<null>;
+  "lr-after-show": CustomEvent<null>;
+  "lr-hide": CustomEvent<null>;
+  "lr-after-hide": CustomEvent<null>;
 }
 /**
  * `<lr-toast-item>` — a single toast notification. Its normalized message is announced through a
@@ -137,10 +151,10 @@ export interface LyraToastItemEventMap {
  * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Color of the accent bar and the icon.
  *   Each non-neutral `variant` sets it to that variant's loud fill from the shared semantic grid;
  *   `neutral` keeps the plain border color, so an informational toast reads as unaccented.
- * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of the item, auto-swapped per `size`
- *   across the shared six-step ladder.
- * @cssprop [--lr-toast-font-size=var(--lr-font-size-m)] - Font size of the item, auto-swapped per
- *   `size` across the shared six-step ladder.
+ * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of the item. Its private default follows
+ *   `size` across the shared six-step ladder; an inherited or direct public value wins.
+ * @cssprop [--lr-toast-font-size=var(--lr-font-size-m)] - Font size of the item. Its private default
+ *   follows `size` across the shared six-step ladder; an inherited or direct public value wins.
  * @cssprop [--lr-toast-item-gap=var(--lr-space-s)] - Gap between the item icon, message, and close
  *   button. Unlike `--lr-toast-gap`, this does not affect spacing between stacked items.
  * @cssprop [--lr-toast-item-radius=var(--lr-radius)] - Corner radius of the item surface and its
@@ -165,13 +179,14 @@ export interface LyraToastItemEventMap {
 export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    close: LYRA_DEFAULT_close,
-    closeWithContext: LYRA_DEFAULT_closeWithContext,
-    closeWithTruncatedContext: LYRA_DEFAULT_closeWithTruncatedContext,
-    toastContentIncomplete: LYRA_DEFAULT_toastContentIncomplete,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      close: LYRA_DEFAULT_close,
+      closeWithContext: LYRA_DEFAULT_closeWithContext,
+      closeWithTruncatedContext: LYRA_DEFAULT_closeWithTruncatedContext,
+      toastContentIncomplete: LYRA_DEFAULT_toastContentIncomplete,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, variants, styles];
@@ -186,18 +201,23 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   /** Visual size. Valid upstream `small`/`medium`/`large` values round-trip verbatim while the CSS
    * maps both spellings onto the same rendered ladder. */
-  @property({ reflect: true }) size: ToastSize = 'm';
+  @property({ reflect: true }) size: ToastSize = "m";
   private get effectiveSize(): LyraSizeStep {
     const value = this.size as string;
-    if (!['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'].includes(value)) return 'm';
+    if (
+      !["2xs", "xs", "s", "m", "l", "xl", "small", "medium", "large"].includes(
+        value
+      )
+    )
+      return "m";
     return normalizeSize(value as LyraSize);
   }
 
   /** Severity/variant. */
-  @property({ reflect: true }) variant: ToastVariant = 'neutral';
+  @property({ reflect: true }) variant: ToastVariant = "neutral";
 
   /** Show the icon slot. */
-  @property({ type: Boolean, attribute: 'with-icon' }) withIcon = false;
+  @property({ type: Boolean, attribute: "with-icon" }) withIcon = false;
 
   private timer?: number;
   private timerOwner?: Window;
@@ -223,10 +243,10 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   private messageObserver?: MutationObserver;
   private politeSink?: AnnouncementSink;
   private assertiveSink?: AnnouncementSink;
-  private lastAnnouncedMessage = '';
+  private lastAnnouncedMessage = "";
   private readonly onMessageSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
-    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
+    if (target?.nodeType !== 1 || target.localName !== "slot") return;
     this.bindMessageObserverTargets();
     this.recomputeMessageText();
   };
@@ -234,7 +254,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   private hideGeneration = 0;
   private afterHideEmitted = false;
   private hideRequest?: Promise<void>;
-  @state() private messageText = '';
+  @state() private messageText = "";
   @state() private messageTextTruncated = false;
   @state() private hiding = false;
   @state() private progressRun = 0;
@@ -249,12 +269,14 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
    *  "disable" per this property's own contract (see `resumeTimer()` below), so that's not a
    *  behavior change either. */
   private get safeDuration(): number {
-    return this.duration === Infinity ? Infinity : finiteDuration(this.duration, 5000, 0);
+    return this.duration === Infinity
+      ? Infinity
+      : finiteDuration(this.duration, 5000, 0);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    this.setAttribute('data-effective-size', this.effectiveSize);
+    this.setAttribute("data-effective-size", this.effectiveSize);
     // `elapsedMs`/`duration` are re-read fresh every time the timer is
     // (re)scheduled, so a `duration` change while paused (hovering/focused)
     // or before the timer has ever started needs no action here -- the next
@@ -272,10 +294,10 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     // willUpdate() runs before that cycle is considered complete, so the same
     // set just folds into the render already in progress.
     if (
-      changed.has('duration') &&
+      changed.has("duration") &&
       this.timerStarted &&
       this.admitted &&
-      this.hasAttribute('data-visible') &&
+      this.hasAttribute("data-visible") &&
       !this.hovering &&
       !this.focused
     ) {
@@ -286,22 +308,29 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.hasAttribute('data-visible')) {
-      const previousVariant = changed.get('variant') as ToastVariant | undefined;
-      const urgencyChanged = changed.has('variant') &&
-        isAssertiveVariant(this.variant) !== isAssertiveVariant(previousVariant ?? 'neutral');
+    if (this.hasAttribute("data-visible")) {
+      const previousVariant = changed.get("variant") as
+        | ToastVariant
+        | undefined;
+      const urgencyChanged =
+        changed.has("variant") &&
+        isAssertiveVariant(this.variant) !==
+          isAssertiveVariant(previousVariant ?? "neutral");
       if (urgencyChanged) {
         // Preserve the prior urgency contract when a displayed toast changes
         // severity, but announce only the normalized message rather than the
         // visible controls that share this host.
         this.announceMessage(true);
-      } else if (changed.has('messageText') || changed.has('messageTextTruncated')) {
+      } else if (
+        changed.has("messageText") ||
+        changed.has("messageTextTruncated")
+      ) {
         this.announceMessage();
       }
     }
     this.shadowRoot
       ?.querySelector<SVGElement>('[part~="close-icon"] svg')
-      ?.setAttribute('part', 'close-icon__svg');
+      ?.setAttribute("part", "close-icon__svg");
   }
 
   override firstUpdated(changed: PropertyValues): void {
@@ -312,22 +341,23 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.politeSink ??= acquireAnnouncementSink('polite', {
+    this.politeSink ??= acquireAnnouncementSink("polite", {
       document: this.ownerDocument,
       source: this,
     });
-    this.assertiveSink ??= acquireAnnouncementSink('assertive', {
+    this.assertiveSink ??= acquireAnnouncementSink("assertive", {
       document: this.ownerDocument,
       source: this,
     });
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    const MutationObserverCtor =
+      this.ownerDocument.defaultView?.MutationObserver;
     this.messageObserver = MutationObserverCtor
       ? new MutationObserverCtor(() => {
           this.bindMessageObserverTargets();
           this.recomputeMessageText();
         })
       : undefined;
-    this.addEventListener('slotchange', this.onMessageSlotChange);
+    this.addEventListener("slotchange", this.onMessageSlotChange);
     this.bindMessageObserverTargets();
     if (this.hasUpdated) this.recomputeMessageText();
     else this.seedFirstRenderState(() => this.recomputeMessageText());
@@ -337,9 +367,14 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       void this.completeHide();
       return;
     }
-    if (!this.hasAttribute('data-visible') && this.admitted) {
+    if (!this.hasAttribute("data-visible") && this.admitted) {
       this.scheduleShow();
-    } else if (this.admitted && this.timerStarted && !this.hovering && !this.focused) {
+    } else if (
+      this.admitted &&
+      this.timerStarted &&
+      !this.hovering &&
+      !this.focused
+    ) {
       void this.completeShow();
       this.resumeTimer();
     }
@@ -357,15 +392,16 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       return;
     }
     const parent = this.parentElement;
-    if (parent?.localName === tag('toast')) {
+    if (parent?.localName === tag("toast")) {
       this.regionOwner = undefined;
       this.admitted = false;
-      this.setAttribute('data-toast-queued', '');
+      this.setAttribute("data-toast-queued", "");
       this.cancelPendingShow();
       this.pauseTimer();
       this.setSurfaceAvailability(false);
       const releaseUnavailableOwner = (): void => {
-        if (this.parentElement === parent && !toastRegionControllerFor(this)) this.remove();
+        if (this.parentElement === parent && !toastRegionControllerFor(this))
+          this.remove();
       };
       const view = this.ownerDocument.defaultView;
       if (view) view.queueMicrotask(releaseUnavailableOwner);
@@ -374,8 +410,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     }
     this.regionOwner = undefined;
     this.admitted = true;
-    this.removeAttribute('data-toast-queued');
-    if (this.hasAttribute('data-visible')) {
+    this.removeAttribute("data-toast-queued");
+    if (this.hasAttribute("data-visible")) {
       this.setSurfaceAvailability(true);
       if (this.pendingFocusRepair) {
         applyComposedFocusRepair(this.pendingFocusRepair);
@@ -389,15 +425,16 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     if (this.parentElement !== owner) return;
     this.regionOwner = owner as ToastRegionController;
     this.admitted = active;
-    this.toggleAttribute('data-toast-queued', !active);
+    this.toggleAttribute("data-toast-queued", !active);
     if (!active) {
       const focusTarget = this.adjacentToastOrReturnTarget();
       const activeElement = deepActiveElement(this.ownerDocument);
-      const repair = this.pendingFocusRepair ?? (
-        activeElement && typeof (activeElement as HTMLElement).focus === 'function'
+      const repair =
+        this.pendingFocusRepair ??
+        (activeElement &&
+        typeof (activeElement as HTMLElement).focus === "function"
           ? captureComposedFocusRepair(this, focusTarget)
-          : null
-      );
+          : null);
       this.cancelPendingShow();
       this.pauseTimer();
       this.setSurfaceAvailability(false);
@@ -405,7 +442,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       this.pendingFocusRepair = undefined;
       return;
     }
-    if (this.hasAttribute('data-visible') && !this.hiding) {
+    if (this.hasAttribute("data-visible") && !this.hiding) {
       this.setSurfaceAvailability(true);
       if (this.pendingFocusRepair) {
         applyComposedFocusRepair(this.pendingFocusRepair);
@@ -422,13 +459,21 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       void this.completeShow();
       return;
     }
-    if (this.isConnected && this.hasUpdated && !this.hiding && !this.hasAttribute('data-visible')) {
+    if (
+      this.isConnected &&
+      this.hasUpdated &&
+      !this.hiding &&
+      !this.hasAttribute("data-visible")
+    ) {
       this.scheduleShow();
     }
   }
 
   /** @internal */
-  [TOAST_REGION_EVICT](owner: HTMLElement, _reason: 'overflow' | 'rejected'): void {
+  [TOAST_REGION_EVICT](
+    owner: HTMLElement,
+    _reason: "overflow" | "rejected"
+  ): void {
     if (this.regionOwner !== owner) return;
     this.regionOwner = undefined;
     this.admitted = false;
@@ -442,7 +487,9 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   private setSurfaceAvailability(available: boolean): void {
     this.surfaceMounted = available;
     this.interactionReady = available;
-    const surface = this.shadowRoot?.querySelector<HTMLElement>('[part="toast-item"]');
+    const surface = this.shadowRoot?.querySelector<HTMLElement>(
+      '[part="toast-item"]'
+    );
     if (!surface) return;
     surface.hidden = !available;
     surface.inert = !available;
@@ -450,7 +497,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   private cancelPendingShow(): void {
     this.showGeneration += 1;
-    if (this.showAccepted && !this.afterShowEmitted) this.showCompletionGeneration += 1;
+    if (this.showAccepted && !this.afterShowEmitted)
+      this.showCompletionGeneration += 1;
     if (this.showRafId !== undefined) {
       this.showRafOwner?.cancelAnimationFrame(this.showRafId);
       this.showRafId = undefined;
@@ -472,7 +520,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       // hide() may have already run synchronously before this frame fired
       // (e.g. a caller creates the toast and immediately dismisses it) --
       // don't resurrect the show sequence on top of an already-hiding item.
-      if (this.hiding || !this.admitted || generation !== this.showGeneration) return;
+      if (this.hiding || !this.admitted || generation !== this.showGeneration)
+        return;
       void this.prepareShow(generation);
     });
   }
@@ -490,23 +539,31 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     // Keep the surface hidden as well as inert throughout the veto point. Mounting it before event
     // dispatch would expose an opacity-zero box to hit testing, accessibility inspection, and
     // authored layout observers even when the request is rejected.
-    if (this.emit('lr-show', null, { cancelable: true }).defaultPrevented) {
+    if (this.emit("lr-show", null, { cancelable: true }).defaultPrevented) {
       if (generation !== this.showGeneration) return;
       const owner = this.regionOwner;
       if (owner) owner[TOAST_REGION_REJECT](this);
       else this.remove();
       return;
     }
-    if (generation !== this.showGeneration || !this.isConnected || !this.admitted || this.hiding) return;
+    if (
+      generation !== this.showGeneration ||
+      !this.isConnected ||
+      !this.admitted ||
+      this.hiding
+    )
+      return;
     this.surfaceMounted = true;
-    const surface = this.shadowRoot?.querySelector<HTMLElement>('[part="toast-item"]');
+    const surface = this.shadowRoot?.querySelector<HTMLElement>(
+      '[part="toast-item"]'
+    );
     if (surface) {
       // Reactive rendering follows on the next microtask; synchronously release the already-
       // rendered surface after the event so lifecycle listeners observe an atomic commit.
       surface.hidden = false;
       void surface.offsetWidth;
     }
-    this.setAttribute('data-visible', '');
+    this.setAttribute("data-visible", "");
     this.interactionReady = true;
     if (surface) surface.inert = false;
     this.announceMessage(true);
@@ -524,26 +581,28 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       this.afterShowEmitted ||
       this.hiding ||
       !this.admitted ||
-      !this.hasAttribute('data-visible')
-    ) return;
+      !this.hasAttribute("data-visible")
+    )
+      return;
     this.showCompletionRunning = true;
     const generation = this.showCompletionGeneration;
-    await this.waitForVisualCompletion('show');
+    await this.waitForVisualCompletion("show");
     this.showCompletionRunning = false;
     if (
       generation !== this.showCompletionGeneration ||
       !this.isConnected ||
       !this.admitted ||
       this.hiding ||
-      !this.hasAttribute('data-visible')
+      !this.hasAttribute("data-visible")
     ) {
-      if (this.isConnected && this.admitted && !this.hiding) void this.completeShow();
+      if (this.isConnected && this.admitted && !this.hiding)
+        void this.completeShow();
       return;
     }
     if (this.afterShowEmitted || !this.showAccepted) return;
     this.afterShowEmitted = true;
     this.showAccepted = false;
-    this.emit('lr-after-show');
+    this.emit("lr-after-show");
   }
 
   override disconnectedCallback(): void {
@@ -551,14 +610,16 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     if (
       !this.pendingFocusRepair &&
       !this.hiding &&
-      this.hasAttribute('data-visible') &&
+      this.hasAttribute("data-visible") &&
       activeElement &&
-      typeof (activeElement as HTMLElement).focus === 'function'
+      typeof (activeElement as HTMLElement).focus === "function"
     ) {
-      this.pendingFocusRepair = captureComposedFocusRepair(this, activeElement as HTMLElement) ?? undefined;
+      this.pendingFocusRepair =
+        captureComposedFocusRepair(this, activeElement as HTMLElement) ??
+        undefined;
     }
     super.disconnectedCallback();
-    this.removeEventListener('slotchange', this.onMessageSlotChange);
+    this.removeEventListener("slotchange", this.onMessageSlotChange);
     this.messageObserver?.disconnect();
     this.messageObserver = undefined;
     this.politeSink?.release();
@@ -572,7 +633,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.pauseTimer();
     this.hovering = false;
     this.focused = false;
-    if (!this.hasAttribute('data-visible') && !this.hiding) {
+    if (!this.hasAttribute("data-visible") && !this.hiding) {
       this.surfaceMounted = false;
       this.interactionReady = false;
     }
@@ -600,7 +661,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       !this.isConnected ||
       !this.admitted ||
       this.hiding ||
-      !this.hasAttribute('data-visible') ||
+      !this.hasAttribute("data-visible") ||
       this.hovering ||
       this.focused
     ) {
@@ -613,7 +674,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     // not silently never schedule anything. It is still a countdown-driven
     // request, so a veto restarts a full duration just like a timeout expiry.
     if (remaining <= 0) {
-      void this.requestHide('timer');
+      void this.requestHide("timer");
       return;
     }
     const view = this.ownerDocument.defaultView;
@@ -626,7 +687,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       if (this.timer !== timer || this.timerOwner !== view) return;
       this.timer = undefined;
       this.timerOwner = undefined;
-      void this.requestHide('timer');
+      void this.requestHide("timer");
     }, remaining);
     this.timer = timer;
   };
@@ -655,29 +716,38 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
    * timeout remains as a safety net for zero-duration transitions, disabled
    * animation, and browsers that do not dispatch an end event.
    */
-  private waitForVisualCompletion(kind: 'show' | 'hide'): Promise<void> {
-    const previous = kind === 'show' ? this.cancelShowAnimation : this.cancelHideAnimation;
+  private waitForVisualCompletion(kind: "show" | "hide"): Promise<void> {
+    const previous =
+      kind === "show" ? this.cancelShowAnimation : this.cancelHideAnimation;
     previous?.();
-    const surface = this.shadowRoot?.querySelector<HTMLElement>('[part="toast-item"]');
+    const surface = this.shadowRoot?.querySelector<HTMLElement>(
+      '[part="toast-item"]'
+    );
     const view = this.ownerDocument.defaultView;
-    if (!surface || !view || prefersReducedMotion(view)) return Promise.resolve();
+    if (!surface || !view || prefersReducedMotion(view))
+      return Promise.resolve();
 
     const computed = view.getComputedStyle(surface);
-    const transitionMs = maxCssTime(computed.transitionDuration) + maxCssTime(computed.transitionDelay);
-    const animationMs = maxCssTime(computed.animationDuration) + maxCssTime(computed.animationDelay);
+    const transitionMs =
+      maxCssTime(computed.transitionDuration) +
+      maxCssTime(computed.transitionDelay);
+    const animationMs =
+      maxCssTime(computed.animationDuration) +
+      maxCssTime(computed.animationDelay);
     const fallbackMs = Math.max(transitionMs, animationMs);
     if (fallbackMs <= 0) return Promise.resolve();
 
     return new Promise<void>((resolve) => {
       let settled = false;
       let timeout: number | undefined;
-      const cancelKey = kind === 'show' ? 'cancelShowAnimation' : 'cancelHideAnimation';
+      const cancelKey =
+        kind === "show" ? "cancelShowAnimation" : "cancelHideAnimation";
       const finish = (): void => {
         if (settled) return;
         settled = true;
         if (timeout !== undefined) view.clearTimeout(timeout);
-        surface.removeEventListener('transitionend', onEnd);
-        surface.removeEventListener('animationend', onEnd);
+        surface.removeEventListener("transitionend", onEnd);
+        surface.removeEventListener("animationend", onEnd);
         if (this[cancelKey] === cancel) this[cancelKey] = undefined;
         resolve();
       };
@@ -685,8 +755,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
         if (event.target === surface) finish();
       };
       const cancel = (): void => finish();
-      surface.addEventListener('transitionend', onEnd);
-      surface.addEventListener('animationend', onEnd);
+      surface.addEventListener("transitionend", onEnd);
+      surface.addEventListener("animationend", onEnd);
       timeout = view.setTimeout(finish, fallbackMs + 50);
       this[cancelKey] = cancel;
     });
@@ -718,18 +788,21 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     }
     const activeElement = deepActiveElement(this.ownerDocument);
     this.pendingFocusRepair =
-      activeElement && typeof (activeElement as HTMLElement).focus === 'function'
-        ? captureComposedFocusRepair(this, activeElement as HTMLElement) ?? undefined
+      activeElement &&
+      typeof (activeElement as HTMLElement).focus === "function"
+        ? captureComposedFocusRepair(this, activeElement as HTMLElement) ??
+          undefined
         : undefined;
     this.focused = true;
     this.pauseTimer();
   };
 
   private onFocusOut = (event: FocusEvent): void => {
-    if (event.relatedTarget === null && this.hasAttribute('data-visible')) {
+    if (event.relatedTarget === null && this.hasAttribute("data-visible")) {
       const parent = this.parentElement;
       const clearIfStillOwned = (): void => {
-        if (this.isConnected && this.parentElement === parent) this.pendingFocusRepair = undefined;
+        if (this.isConnected && this.parentElement === parent)
+          this.pendingFocusRepair = undefined;
       };
       const view = this.ownerDocument.defaultView;
       if (view) view.queueMicrotask(clearIfStillOwned);
@@ -737,7 +810,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     } else if (
       (event.relatedTarget as Node | null)?.nodeType === 1 &&
       !composedContains(this, event.relatedTarget as Element)
-    ) this.pendingFocusRepair = undefined;
+    )
+      this.pendingFocusRepair = undefined;
     this.focused = false;
     if (!this.hovering && !this.hiding) this.resumeTimer();
   };
@@ -761,20 +835,20 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.messageObserver.observe(node, {
       attributes: true,
       attributeFilter: [
-        'alt',
-        'aria-hidden',
-        'aria-label',
-        'aria-labelledby',
-        'class',
-        'contenteditable',
-        'hidden',
-        'href',
-        'inert',
-        'id',
-        'role',
-        'slot',
-        'style',
-        'tabindex',
+        "alt",
+        "aria-hidden",
+        "aria-label",
+        "aria-labelledby",
+        "class",
+        "contenteditable",
+        "hidden",
+        "href",
+        "inert",
+        "id",
+        "role",
+        "slot",
+        "style",
+        "tabindex",
       ],
       childList: true,
       characterData: true,
@@ -790,50 +864,59 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     while (ancestor) {
       this.messageObserver.observe(ancestor, {
         attributes: true,
-        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
+        attributeFilter: ["aria-hidden", "class", "hidden", "inert", "style"],
       });
       ancestor = composedParentElement(ancestor);
     }
-    for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
-      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeMessageNode(assigned);
+    for (const slot of this.querySelectorAll<HTMLSlotElement>("slot")) {
+      for (const assigned of slot.assignedNodes({ flatten: true }))
+        this.observeMessageNode(assigned);
     }
   }
 
   private observeLabelReferenceRoot(root: Document | ShadowRoot): void {
     this.messageObserver?.observe(root, {
       attributes: true,
-      attributeFilter: ['id'],
+      attributeFilter: ["id"],
       childList: true,
       subtree: true,
     });
   }
 
   private recomputeMessageText(): void {
-    const renderRoot = (this as unknown as { renderRoot?: ParentNode }).renderRoot;
-    const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-    const lightDomNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
+    const renderRoot = (this as unknown as { renderRoot?: ParentNode })
+      .renderRoot;
+    const slot = renderRoot?.querySelector<HTMLSlotElement>("slot:not([name])");
+    const lightDomNodes = (
+      this as unknown as { childNodes?: NodeListOf<ChildNode> }
+    ).childNodes;
     const messageNodes = slot
       ? slot.assignedNodes({ flatten: true })
       : Array.from(lightDomNodes ?? []).filter(
-          (node) => node.nodeType !== 1 || !(node as Element).getAttribute('slot'),
+          (node) =>
+            node.nodeType !== 1 || !(node as Element).getAttribute("slot")
         );
     const result = composedAccessibilityTextResult(messageNodes, {
       requireRendered: false,
       shouldPrune: (element) => {
-        const slotName = element.getAttribute('slot');
-        if (slotName !== null && slotName !== '') return true;
+        const slotName = element.getAttribute("slot");
+        if (slotName !== null && slotName !== "") return true;
         if (isActionableElement(element)) return true;
-        return element.hasAttribute('tabindex') && element.getAttribute('tabindex') !== '-1';
+        return (
+          element.hasAttribute("tabindex") &&
+          element.getAttribute("tabindex") !== "-1"
+        );
       },
       skipRootAncestorValidation: true,
     });
-    this.messageText = result.text
-      .trim()
-      .replace(/\s+/g, ' ');
+    this.messageText = result.text.trim().replace(/\s+/g, " ");
     this.messageTextTruncated = result.truncated;
-    for (const root of result.labelReferenceRoots) this.observeLabelReferenceRoot(root);
-    for (const reference of result.referencedElements) this.observeMessageNode(reference);
-    for (const root of result.traversedShadowRoots) this.observeMessageNode(root);
+    for (const root of result.labelReferenceRoots)
+      this.observeLabelReferenceRoot(root);
+    for (const reference of result.referencedElements)
+      this.observeMessageNode(reference);
+    for (const root of result.traversedShadowRoots)
+      this.observeMessageNode(root);
   }
 
   private announceMessage(force = false): void {
@@ -841,57 +924,67 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     const announcement = this.messageTextTruncated
       ? message
         ? `${message}…`
-        : this.localize('toastContentIncomplete')
+        : this.localize("toastContentIncomplete")
       : message;
     if (!force && announcement === this.lastAnnouncedMessage) return;
     this.lastAnnouncedMessage = announcement;
-    (isAssertiveVariant(this.variant) ? this.assertiveSink : this.politeSink)?.announce(announcement);
+    (isAssertiveVariant(this.variant)
+      ? this.assertiveSink
+      : this.politeSink
+    )?.announce(announcement);
   }
 
   private get closeLabel(): string {
     const text = this.messageText;
     if (!text && this.messageTextTruncated) {
-      return this.localize('closeWithContext', undefined, {
-        snippet: this.localize('toastContentIncomplete'),
+      return this.localize("closeWithContext", undefined, {
+        snippet: this.localize("toastContentIncomplete"),
       });
     }
-    if (!text) return this.localize('close');
-    const { snippet, truncated } = truncateGraphemes(text, CLOSE_LABEL_GRAPHEME_LIMIT, this.effectiveLocale);
+    if (!text) return this.localize("close");
+    const { snippet, truncated } = truncateGraphemes(
+      text,
+      CLOSE_LABEL_GRAPHEME_LIMIT,
+      this.effectiveLocale
+    );
     if (this.messageTextTruncated || truncated) {
-      return this.localize('closeWithTruncatedContext', undefined, { snippet });
+      return this.localize("closeWithTruncatedContext", undefined, { snippet });
     }
-    return this.localize('closeWithContext', undefined, { snippet });
+    return this.localize("closeWithContext", undefined, { snippet });
   }
 
   /** Hide with animation, then remove from the DOM. A vetoed manual request leaves the current
    * countdown untouched; a vetoed auto-dismiss request restarts the full normalized duration. */
   async hide(): Promise<void> {
-    await this.requestHide('manual');
+    await this.requestHide("manual");
   }
 
-  private requestHide(source: 'manual' | 'timer'): Promise<void> {
+  private requestHide(source: "manual" | "timer"): Promise<void> {
     if (this.hideRequest) return this.hideRequest;
     if (this.hiding) return Promise.resolve();
     let resolve!: () => void;
     let reject!: (reason?: unknown) => void;
-    const completion = new Promise<void>((resolveCompletion, rejectCompletion) => {
-      resolve = resolveCompletion;
-      reject = rejectCompletion;
-    });
+    const completion = new Promise<void>(
+      (resolveCompletion, rejectCompletion) => {
+        resolve = resolveCompletion;
+        reject = rejectCompletion;
+      }
+    );
     this.hideRequest = completion;
     // Emitted before any teardown so a veto leaves the item exactly as it was -- still visible,
     // instead of half-dismissed. A timeout has no remaining countdown once its callback runs, so
     // restart it from the full current duration after a veto; repeated vetoes therefore retry at
     // deterministic intervals instead of making the toast immortal.
-    if (this.emit('lr-hide', null, { cancelable: true }).defaultPrevented) {
-      if (source === 'timer') {
+    if (this.emit("lr-hide", null, { cancelable: true }).defaultPrevented) {
+      if (source === "timer") {
         this.elapsedMs = 0;
         this.startedAt = 0;
         // Recreate the SVG animation in the same transaction as the timer reset. Merely changing
         // elapsedMs leaves the finished CSS animation attached to its existing DOM node, making
         // the ring look expired for the entire retry interval.
         this.progressRun += 1;
-        if (this.isConnected && !this.hovering && !this.focused) this.resumeTimer();
+        if (this.isConnected && !this.hovering && !this.focused)
+          this.resumeTimer();
       }
       if (this.hideRequest === completion) this.hideRequest = undefined;
       resolve();
@@ -906,12 +999,12 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     // Keep this after the veto point so a blocked dismissal leaves the close control operable.
     this.shadowRoot
       ?.querySelector<HTMLElement>('[part="close-button"]')
-      ?.setAttribute('aria-disabled', 'true');
+      ?.setAttribute("aria-disabled", "true");
     this.cancelShowAnimation?.();
     this.cancelShowAnimation = undefined;
     this.clearTimer();
-    this.removeAttribute('data-visible');
-    this.setAttribute('data-hiding', '');
+    this.removeAttribute("data-visible");
+    this.setAttribute("data-hiding", "");
     void this.completeHide().then(
       () => {
         if (this.hideRequest === completion) this.hideRequest = undefined;
@@ -920,7 +1013,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       (reason: unknown) => {
         if (this.hideRequest === completion) this.hideRequest = undefined;
         reject(reason);
-      },
+      }
     );
     return completion;
   }
@@ -929,7 +1022,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     if (this.hideCompletionRunning || this.afterHideEmitted) return;
     this.hideCompletionRunning = true;
     const generation = this.hideGeneration;
-    await this.waitForVisualCompletion('hide');
+    await this.waitForVisualCompletion("hide");
     this.hideCompletionRunning = false;
     // Disconnect cancels the visual wait. A reconnect must start a fresh wait against the newly
     // rendered surface rather than treating that cancellation as successful completion.
@@ -940,7 +1033,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     if (this.afterHideEmitted) return;
     this.repairFocusBeforeRemoval();
     this.afterHideEmitted = true;
-    this.emit('lr-after-hide');
+    this.emit("lr-after-hide");
     this.remove();
   }
 
@@ -952,32 +1045,43 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   }
 
   private adjacentToastOrReturnTarget(): HTMLElement | null {
-    const findAdjacent = (direction: 'nextElementSibling' | 'previousElementSibling') => {
+    const findAdjacent = (
+      direction: "nextElementSibling" | "previousElementSibling"
+    ) => {
       let element = this[direction];
       while (element) {
-        if (element.localName === tag('toast-item')) {
+        if (element.localName === tag("toast-item")) {
           const item = element as LyraToastItem;
-          const surface = item.shadowRoot?.querySelector<HTMLElement>('[part="toast-item"]');
+          const surface = item.shadowRoot?.querySelector<HTMLElement>(
+            '[part="toast-item"]'
+          );
           if (
-            !item.hasAttribute('data-hiding') &&
-            !item.hasAttribute('data-toast-queued') &&
-            item.hasAttribute('data-visible') &&
+            !item.hasAttribute("data-hiding") &&
+            !item.hasAttribute("data-toast-queued") &&
+            item.hasAttribute("data-visible") &&
             item.isConnected &&
             surface &&
             !surface.hidden &&
             !surface.inert
           ) {
-            return item.shadowRoot?.querySelector<HTMLButtonElement>('[part="close-button"]') ?? null;
+            return (
+              item.shadowRoot?.querySelector<HTMLButtonElement>(
+                '[part="close-button"]'
+              ) ?? null
+            );
           }
         }
         element = element[direction];
       }
       return null;
     };
-    return findAdjacent('nextElementSibling') ?? findAdjacent('previousElementSibling') ?? (
-      this.focusReturnTarget?.isConnected && !composedContains(this, this.focusReturnTarget)
+    return (
+      findAdjacent("nextElementSibling") ??
+      findAdjacent("previousElementSibling") ??
+      (this.focusReturnTarget?.isConnected &&
+      !composedContains(this, this.focusReturnTarget)
         ? this.focusReturnTarget
-        : null
+        : null)
     );
   }
 
@@ -992,19 +1096,35 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
     return html`
       <span part="progress-ring" aria-hidden="true">
-        ${keyed(this.progressRun, html`
-          <svg part="progress-ring__base" viewBox="0 0 20 20" focusable="false">
-            <circle part="progress-ring__track" cx="10" cy="10" r="8" pathLength="1"></circle>
-            <circle
-              part="progress-ring__indicator"
-              cx="10"
-              cy="10"
-              r="8"
-              pathLength="1"
-              style=${`animation-duration: ${duration}ms; animation-delay: -${Math.min(this.elapsedMs, duration)}ms`}
-            ></circle>
-          </svg>
-        `)}
+        ${keyed(
+          this.progressRun,
+          html`
+            <svg
+              part="progress-ring__base"
+              viewBox="0 0 20 20"
+              focusable="false"
+            >
+              <circle
+                part="progress-ring__track"
+                cx="10"
+                cy="10"
+                r="8"
+                pathLength="1"
+              ></circle>
+              <circle
+                part="progress-ring__indicator"
+                cx="10"
+                cy="10"
+                r="8"
+                pathLength="1"
+                style=${`animation-duration: ${duration}ms; animation-delay: -${Math.min(
+                  this.elapsedMs,
+                  duration
+                )}ms`}
+              ></circle>
+            </svg>
+          `
+        )}
         <span part="progress-ring__label">${close}</span>
       </span>
     `;
@@ -1022,13 +1142,17 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
         @focusout=${this.onFocusOut}
       >
         <span part="accent" aria-hidden="true"></span>
-        ${this.withIcon ? html`<span part="icon"><slot name="icon"></slot></span>` : ''}
-        <div part="content"><slot @slotchange=${this.onMessageSlotChange}></slot></div>
+        ${this.withIcon
+          ? html`<span part="icon"><slot name="icon"></slot></span>`
+          : ""}
+        <div part="content">
+          <slot @slotchange=${this.onMessageSlotChange}></slot>
+        </div>
         <button
           part="close-button"
           type="button"
           aria-label=${this.closeLabel}
-          aria-disabled=${this.hiding ? 'true' : 'false'}
+          aria-disabled=${this.hiding ? "true" : "false"}
           @click=${() => void this.hide()}
         >
           ${this.renderCloseControl()}
@@ -1038,9 +1162,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-toast-item': LyraToastItem;
+    "lr-toast-item": LyraToastItem;
   }
 }

@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -33,7 +34,7 @@ export interface PaletteItem {
 
 export interface LyraNodePaletteEventMap {
   "lr-palette-place": CustomEvent<{ type: string }>;
-  "lr-select": CustomEvent<{ item: PaletteItem }>;
+  "lr-select": CustomEvent<LyraEventDetailSnapshot<{ item: PaletteItem }>>;
   /** A keyboard reorder *request*, only while `reorderable`. `fromIndex`/`toIndex` index into the
    *  host's own `items` array, so applying it is a plain splice; `category` names the group the
    *  move stayed inside (`null` for the ungrouped bucket). This component never reorders `items`
@@ -61,6 +62,9 @@ export interface LyraNodePaletteEventMap {
  * here. `items` stays host-owned; nothing moves until the host applies the reported indices and
  * reassigns it. The move is scoped to the item's own category group, matching the group-first
  * rendering order, and mirrors `<lr-tree>`'s already-shipped `reorderable`/`lr-reorder` contract.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-node-palette
  * @slot header - Content above the search field (e.g. a heading or tabs).
@@ -93,6 +97,8 @@ export interface LyraNodePaletteEventMap {
  * @since 4.0.0
  */
 export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["items"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -110,7 +116,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Node templates available for filtering, activation, dragging, and optional reordering. */
-  @property({ attribute: false }) items: PaletteItem[] = [];
+  @property({ attribute: false }) items: readonly PaletteItem[] = [];
   /** Accessible name for the palette; empty uses the localized default. */
   @property() label = "";
   /**
@@ -149,21 +155,21 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   // `lastRenderedRovingList` below for the keydown-handler side of this (no per-keystroke
   // recomputation at all).
   private filteredCache: {
-    items: PaletteItem[];
+    items: readonly PaletteItem[];
     query: string;
     locale: string;
-    result: PaletteItem[];
+    result: readonly PaletteItem[];
   } | null = null;
   private categorizedCache: {
-    filtered: PaletteItem[];
+    filtered: readonly PaletteItem[];
     result: { category: string | null; items: PaletteItem[] }[];
   } | null = null;
   private rovingListCache: {
-    filtered: PaletteItem[];
+    filtered: readonly PaletteItem[];
     result: PaletteItem[];
   } | null = null;
 
-  private get filtered(): PaletteItem[] {
+  private get filtered(): readonly PaletteItem[] {
     const locale = this.effectiveLocale;
     const q = this.queryText.trim().toLocaleLowerCase(locale);
     const cache = this.filteredCache;
@@ -188,7 +194,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   private categorized(
-    filtered: PaletteItem[]
+    filtered: readonly PaletteItem[]
   ): { category: string | null; items: PaletteItem[] }[] {
     const cache = this.categorizedCache;
     if (cache && cache.filtered === filtered) return cache.result;

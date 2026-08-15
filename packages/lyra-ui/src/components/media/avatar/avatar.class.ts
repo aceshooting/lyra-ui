@@ -41,15 +41,15 @@ export interface LyraAvatarEventMap {
  *   in the priority order have been ruled out.
  * @cssprop [--size=var(--lr-avatar-size)] - Upstream-compatible avatar diameter.
  * @cssprop [--lr-avatar-size=var(--lr-size-3rem)] - Inline and block size of the container. `size`
- *   steps it across the shared six-step ladder, from `var(--lr-size-1-5rem)` (`2xs`) to
- *   `var(--lr-size-5rem)` (`xl`); the default `medium`/`m` tier is `var(--lr-size-3rem)`.
+ *   steps its private default across the shared six-step ladder, from `var(--lr-size-1-5rem)`
+ *   (`2xs`) to `var(--lr-size-5rem)` (`xl`); an inherited or direct public value still wins.
  * @cssprop [--lr-avatar-bg=var(--lr-color-border)] - Container background. Each non-neutral
- *   `variant` sets it to that variant's `-quiet` tint.
+ *   `variant` changes its private default to that variant's `-quiet` tint.
  * @cssprop [--lr-avatar-color=var(--lr-color-text)] - Initials/glyph color. Each non-neutral
- *   `variant` sets it to that variant's loud color.
+ *   `variant` changes its private default to that variant's loud color.
  * @cssprop [--lr-avatar-font-size=var(--lr-font-size-sm)] - Font size of the initials fallback (and
- *   of any `em`-sized slotted glyph). `size` steps it alongside the diameter, so the initials track
- *   the circle instead of staying at one fixed size across every tier.
+ *   of any `em`-sized slotted glyph). `size` steps its private default alongside the diameter, so
+ *   the initials track the circle instead of staying at one fixed size across every tier.
  * @status stable
  * @since 4.0.0
  */

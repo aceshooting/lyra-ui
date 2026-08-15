@@ -20,7 +20,9 @@ export interface LyraStepperOrientationChangeDetail {
 }
 
 export interface LyraStepItem {
-  id: string;
+  /** Stable business identity for this step. Duplicate IDs are valid occurrences and are
+   * disambiguated by their zero-based collection index. */
+  stepId: string;
   label: string;
   /** Progress state. Availability is independent so a disabled step retains its progress. */
   state: LyraStepState;
@@ -39,7 +41,7 @@ export interface LyraStepItem {
 }
 
 export interface LyraStepperEventMap {
-  "lr-step-select": CustomEvent<{ index: number; id: string }>;
+  "lr-step-select": CustomEvent<{ stepId: string; index: number }>;
   "lr-stepper-orientation-change": CustomEvent<LyraStepperOrientationChangeDetail>;
 }
 
@@ -52,7 +54,8 @@ const STEP_STATES = new Set<LyraStepState>([
 const MAX_STEPS = 256;
 
 /** Creates the bounded, realm-neutral snapshot used by rendering, focus, and event correlation.
- * Duplicate ids remain valid occurrences because `lr-step-select` also publishes their index. */
+ * Duplicate step IDs remain valid occurrences because `lr-step-select` also publishes their
+ * zero-based index. */
 function snapshotSteps(value: unknown): readonly Readonly<LyraStepItem>[] {
   try {
     if (!Array.isArray(value)) return Object.freeze([]);
@@ -72,16 +75,16 @@ function snapshotSteps(value: unknown): readonly Readonly<LyraStepItem>[] {
       const candidate: unknown = value[index];
       if (!candidate || typeof candidate !== "object") continue;
       const record = candidate as Record<string, unknown>;
-      const id = record["id"];
+      const stepId = record["stepId"];
       const label = record["label"];
       const state = record["state"];
       const disabled = record["disabled"];
       const title = record["title"];
       const icon = record["icon"];
       if (
-        typeof id !== "string" ||
-        id.length === 0 ||
-        id !== id.trim() ||
+        typeof stepId !== "string" ||
+        stepId.length === 0 ||
+        stepId !== stepId.trim() ||
         typeof label !== "string" ||
         typeof state !== "string" ||
         !STEP_STATES.has(state as LyraStepState) ||
@@ -92,7 +95,7 @@ function snapshotSteps(value: unknown): readonly Readonly<LyraStepItem>[] {
       }
       normalized.push(
         Object.freeze({
-          id,
+          stepId,
           label,
           state: state as LyraStepState,
           ...(disabled !== undefined ? { disabled } : {}),
@@ -150,7 +153,8 @@ function checkmarkGlyph() {
  *
  * @customElement lr-stepper
  * @event lr-step-select - Fired on click, or Enter/Space while focused, on a non-`disabled`
- *   step. `detail: { index, id }`. Not cancelable: this component is fully controlled (mirrors
+ *   step. `detail: { stepId, index }`; the index disambiguates legitimate duplicate step IDs.
+ *   Not cancelable: this component is fully controlled (mirrors
  *   `lr-table`'s `columns`/`rows` contract) and takes no default action of its own on selection
  *   (it never mutates `steps`), so there is no real veto point for `preventDefault()` to gate.
  * @event lr-stepper-orientation-change - `detail: { orientation }`, fired when an enabled
@@ -269,7 +273,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   private resizeObservedElement?: HTMLElement;
   private resizeObserverOwnerDocument?: Document;
   private resizeObserverGeneration = 0;
-  private pendingStepFocusId?: string;
+  private pendingStepFocus?: { stepId: string; index: number };
   @query('[part="base"]') private baseEl?: HTMLElement;
   /** Best-known inline size before `baseEl` exists (or as a fallback while it's momentarily
    *  unmeasured) -- seeded from a real reading of the host's own box in `connectedCallback()`
@@ -338,7 +342,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
         this.renderRoot as ShadowRoot
       ) as HTMLElement | null;
       if (focusedStep?.getAttribute("part") === "step") {
-        this.pendingStepFocusId = focusedStep.dataset["id"] ?? "";
+        this.pendingStepFocus = {
+          stepId: focusedStep.dataset["stepId"] ?? "",
+          index: Number(focusedStep.dataset["index"]),
+        };
       }
     }
     if (
@@ -377,16 +384,26 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.pendingStepFocusId !== undefined) {
-      const focusedId = this.pendingStepFocusId;
-      this.pendingStepFocusId = undefined;
-      const retainedStep = [
+    if (this.pendingStepFocus !== undefined) {
+      const focusedOccurrence = this.pendingStepFocus;
+      this.pendingStepFocus = undefined;
+      const enabledIdentityMatches = [
         ...this.renderRoot.querySelectorAll<HTMLElement>('[part="step"]'),
-      ].find(
+      ].filter(
         (step) =>
-          step.dataset["id"] === focusedId &&
+          step.dataset["stepId"] === focusedOccurrence.stepId &&
           step.getAttribute("aria-disabled") !== "true"
       );
+      const retainedStep =
+        enabledIdentityMatches.find(
+          (step) => Number(step.dataset["index"]) === focusedOccurrence.index
+        ) ??
+        // A unique business identity may move when the collection is reordered. Duplicate IDs
+        // deliberately do not take this fallback: picking the first match would collapse two
+        // legitimate occurrences and move focus to the wrong step on a data refresh.
+        (enabledIdentityMatches.length === 1
+          ? enabledIdentityMatches[0]
+          : undefined);
       (
         retainedStep ??
         this.renderRoot.querySelector<HTMLElement>(
@@ -488,8 +505,8 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     // fully controlled, data-driven component like `lr-table`) has no default action of its own
     // to gate behind `.defaultPrevented`.
     this.emit("lr-step-select", {
+      stepId: step.stepId,
       index,
-      id: step.id,
     });
   }
 
@@ -575,12 +592,12 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       >
         ${repeat(
           this.steps,
-          (step, index) => `${step.id}\u0000${index}`,
+          (step, index) => `${step.stepId}\u0000${index}`,
           (step, index) => html`<div role="listitem" part="step-item">
             <button
               type="button"
               part="step"
-              data-id=${step.id}
+              data-step-id=${step.stepId}
               data-index=${index}
               data-state=${step.state}
               aria-current=${index === currentIndex ? "step" : "false"}

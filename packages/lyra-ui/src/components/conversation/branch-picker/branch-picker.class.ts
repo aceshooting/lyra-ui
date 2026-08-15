@@ -33,6 +33,8 @@ export interface LyraBranchPickerEventMap {
  * @event lr-branch-change - A branch navigation was requested. `detail: { index }` — always a
  *   valid target (never past either bound); the consumer applies `index` after switching the
  *   displayed branch content.
+ * @event lr-toolbar-actions-change - No-detail coordination event emitted when the logical
+ *   toolbar actions exposed by this provider change availability or order.
  * @csspart base - The group wrapper (`role="group"`).
  * @csspart previous-button - The previous-branch chevron button.
  * @csspart previous-glyph - The chevron glyph wrapper inside `previous-button`.

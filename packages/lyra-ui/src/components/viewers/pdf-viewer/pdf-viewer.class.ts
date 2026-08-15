@@ -13,15 +13,24 @@ import {
 } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
-import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import {
+  DocumentAnchorTarget,
+  prioritizedHighlightCandidates,
+  type LyraAnchorTargetEventMap,
+} from '../../../internal/anchor-target.js';
+import {
+  boundedSelectionRects,
+  boundedSelectionText,
   normalizeQuoteText,
   scopeFromItems,
-  resolveTextQuote,
   buildQuoteAnchor,
+  createTextQuoteIndex,
+  rangeFromTextQuoteMatch,
+  TEXT_QUOTE_LIMITS,
+  type TextQuoteIndex,
   type TextQuoteScope,
+  type TextQuoteWorkBudget,
 } from '../../../internal/text-quote.js';
 import type { LyraHighlightLayer, HighlightLayerItem, LyraHighlightLayerEventMap } from '../highlight-layer/highlight-layer.class.js';
 import type { LyraAnchor } from '../document-viewer/anchors.js';
@@ -41,7 +50,7 @@ import {
   type PdfViewportApi,
 } from './pdf-loader.js';
 import { styles } from './pdf-viewer.styles.js';
-import { getNumberFormat, getSegmenter } from '../../../internal/intl-cache.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -53,10 +62,15 @@ const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.25;
 const PAGE_TEXT_CACHE_LIMIT = 64;
+const PAGE_SEARCH_INDEX_CACHE_LIMIT = 8;
 const DEFAULT_THUMBNAIL_WIDTH = 96;
 const MAX_THUMBNAIL_WIDTH = 2048;
 const MAX_PAGE_COUNT = 100_000;
 const MAX_SEARCH_MATCHES = 10_000;
+const MAX_PAINTED_SEARCH_MATCHES = 200;
+const MAX_PAINTED_HIGHLIGHTS = 100;
+const MAX_HIGHLIGHT_RECTS = 1_000;
+const MAX_SEARCH_PAGES = 1_000;
 const MAX_OUTLINE_ITEMS = 10_000;
 const MAX_OUTLINE_DEPTH = 100;
 
@@ -83,6 +97,80 @@ function containsAcrossShadowBoundaries(ancestor: Node, node: Node): boolean {
   return false;
 }
 
+interface PdfPaintWorkBudget {
+  traversalNodes: number;
+  codeUnits: number;
+}
+
+function nextPdfPaintNode(node: Node, root: Node): Node | null {
+  if (node.firstChild) return node.firstChild;
+  let cursor: Node | null = node;
+  while (cursor && cursor !== root) {
+    if (cursor.nextSibling) return cursor.nextSibling;
+    cursor = cursor.parentNode;
+  }
+  return null;
+}
+
+/** Wraps only the text portions of a range, with shared traversal/code-unit ceilings. */
+function wrapPdfSearchRange(
+  range: Range,
+  part: string,
+  budget: PdfPaintWorkBudget,
+): HTMLElement[] {
+  const doc = range.startContainer.ownerDocument;
+  if (!doc) return [];
+  const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
+  if (range.startContainer === range.endContainer && range.startContainer.nodeType === textNodeType) {
+    const textNode = range.startContainer as Text;
+    const selectedLength = Math.max(0, range.endOffset - range.startOffset);
+    if (budget.traversalNodes <= 0 || selectedLength > budget.codeUnits) return [];
+    budget.traversalNodes--;
+    budget.codeUnits -= selectedLength;
+    let target = textNode;
+    if (range.endOffset < target.data.length) target.splitText(range.endOffset);
+    if (range.startOffset > 0) target = target.splitText(range.startOffset);
+    if (!target.data) return [];
+    const mark = doc.createElement('mark');
+    mark.setAttribute('part', part);
+    target.parentNode?.insertBefore(mark, target);
+    mark.appendChild(target);
+    return [mark];
+  }
+  const ancestor = range.commonAncestorContainer;
+  const covered: Text[] = [];
+  let node: Node | null = ancestor;
+  while (node && budget.traversalNodes > 0 && budget.codeUnits > 0) {
+    budget.traversalNodes--;
+    if (node.nodeType === textNodeType) {
+      const textNode = node as Text;
+      if (textNode.data.length > budget.codeUnits) break;
+      budget.codeUnits -= textNode.data.length;
+      try {
+        if (textNode.data.length > 0 && range.intersectsNode(textNode)) covered.push(textNode);
+      } catch {
+        return [];
+      }
+    }
+    node = nextPdfPaintNode(node, ancestor);
+  }
+  const marks: HTMLElement[] = [];
+  for (const textNode of covered) {
+    const start = textNode === range.startContainer ? range.startOffset : 0;
+    const end = textNode === range.endContainer ? range.endOffset : textNode.data.length;
+    let target = textNode;
+    if (end < target.data.length) target.splitText(end);
+    if (start > 0) target = target.splitText(start);
+    if (!target.data) continue;
+    const mark = doc.createElement('mark');
+    mark.setAttribute('part', part);
+    target.parentNode?.insertBefore(mark, target);
+    mark.appendChild(target);
+    marks.push(mark);
+  }
+  return marks;
+}
+
 type PdfLoadState =
   | { kind: 'idle' }
   | { kind: 'loading' }
@@ -97,126 +185,21 @@ export interface PdfOutlineItem {
   children?: PdfOutlineItem[];
 }
 
-/** One `search()` match, in `getPageText()`'s own raw coordinate space -- what lets a match be
- *  located back inside the real per-page text layer for painting. */
+/** One `search()` match in the shared normalized text-quote coordinate space. */
 interface PdfSearchMatch {
   page: number;
   start: number;
   length: number;
 }
 
-interface NormalizedSearchText {
-  text: string;
-  /** Inclusive raw start for each UTF-16 unit in `text`. */
-  rawStarts: number[];
-  /** Exclusive raw end for each UTF-16 unit in `text`. */
-  rawEnds: number[];
-}
-
-interface SearchCaseSegment {
-  text: string;
-  start: number;
-  end: number;
-}
-
-function searchCaseFold(value: string, locale: string): string {
-  const lowered = value.toLocaleLowerCase(resolveIntlLocale(locale));
-  // Unicode caseless matching treats the medial and final lowercase sigma forms as equivalent.
-  return lowered.replaceAll('ς', 'σ');
-}
-
-function searchCaseSegments(value: string, locale: string): SearchCaseSegment[] {
-  if (typeof Intl.Segmenter === 'function') {
-    let segments: Intl.Segments;
-    try {
-      segments = getSegmenter(locale, { granularity: 'grapheme' }).segment(value);
-    } catch (error) {
-      if (!(error instanceof RangeError)) throw error;
-      segments = getSegmenter(undefined, { granularity: 'grapheme' }).segment(value);
-    }
-    return [...segments].map(({ segment, index }) => ({
-      text: segment,
-      start: index,
-      end: index + segment.length,
-    }));
-  }
-
-  const segments: SearchCaseSegment[] = [];
-  let start = 0;
-  for (const text of value) {
-    segments.push({ text, start, end: start + text.length });
-    start += text.length;
-  }
-  return segments;
-}
-
-/** Collapses whitespace runs to single spaces and locale-folds the complete string so contextual
- *  Unicode casing is preserved. Start/end maps retain the raw range behind each folded UTF-16 unit;
- *  an expanded grapheme maps every expansion unit to the complete raw grapheme so painted matches
- *  never split or overrun the original PDF text layer. */
-function normalizeForSearch(raw: string, locale: string): NormalizedSearchText {
-  let text = '';
-  const rawStarts: number[] = [];
-  const rawEnds: number[] = [];
-  let lastWasSpace = false;
-  for (let i = 0; i < raw.length; i++) {
-    const ch = raw[i]!;
-    if (/\s/.test(ch)) {
-      if (!lastWasSpace && text.length > 0) {
-        text += ' ';
-        rawStarts.push(i);
-        rawEnds.push(i + 1);
-        lastWasSpace = true;
-      }
-      continue;
-    }
-    text += ch;
-    rawStarts.push(i);
-    rawEnds.push(i + 1);
-    lastWasSpace = false;
-  }
-  if (text.endsWith(' ')) {
-    text = text.slice(0, -1);
-    rawStarts.pop();
-    rawEnds.pop();
-  }
-
-  const folded = searchCaseFold(text, locale);
-  if (folded.length === text.length) return { text: folded, rawStarts, rawEnds };
-
-  const segments = searchCaseSegments(text, locale);
-  const isolatedLength = segments.reduce(
-    (length, segment) => length + searchCaseFold(segment.text, locale).length,
-    0,
-  );
-  const foldedStarts: number[] = [];
-  const foldedEnds: number[] = [];
-  let foldedStart = 0;
-  for (const segment of segments) {
-    const foldedEnd =
-      segment.end === text.length
-        ? folded.length
-        : isolatedLength === folded.length
-          ? foldedStart + searchCaseFold(segment.text, locale).length
-          : searchCaseFold(text.slice(0, segment.end), locale).length;
-    const foldedLength = foldedEnd - foldedStart;
-    const rawLength = segment.end - segment.start;
-    if (foldedLength === rawLength) {
-      for (let offset = 0; offset < foldedLength; offset++) {
-        foldedStarts.push(rawStarts[segment.start + offset]!);
-        foldedEnds.push(rawEnds[segment.start + offset]!);
-      }
-    } else {
-      const rawStart = rawStarts[segment.start]!;
-      const rawEnd = rawEnds[segment.end - 1]!;
-      for (let offset = 0; offset < foldedLength; offset++) {
-        foldedStarts.push(rawStart);
-        foldedEnds.push(rawEnd);
-      }
-    }
-    foldedStart = foldedEnd;
-  }
-  return { text: folded, rawStarts: foldedStarts, rawEnds: foldedEnds };
+interface PdfPageTextIndex {
+  scope: TextQuoteScope;
+  index: TextQuoteIndex;
+  locale: string;
+  sourceText?: string;
+  sourceWorkCodeUnits: number;
+  container?: HTMLElement;
+  mappingDirty?: boolean;
 }
 
 export interface LyraPdfViewerEventMap extends LyraAnchorTargetEventMap {
@@ -248,7 +231,7 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @event lr-page-change - Fired when the current page changes.
  * @event lr-zoom-change - Fired when the zoom multiplier changes.
  * @event lr-load - Fired once the document reaches `ready`. `detail: { pageCount }`.
- * @event lr-highlight-activate - A highlight was activated. `detail: { id }`.
+ * @event lr-highlight-activate - A highlight was activated. `detail: { highlightId }`.
  * @event lr-text-select - A text selection ended inside a page's text layer. `detail: { text,
  *   anchor, rects }`.
  * @event lr-anchor-result - Fired after an `anchor` (or `scrollToAnchor()` call) is applied.
@@ -365,6 +348,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private readonly textLayers = new Map<number, { cancel(): void }>();
   private readonly textLayerReadyPromises = new Map<number, Promise<void>>();
   private readonly pageTextCache = new Map<number, Promise<string>>();
+  private readonly pageTextTruncated = new Set<number>();
+  private readonly pageSearchIndexes = new Map<number, PdfPageTextIndex>();
+  private readonly mountedPageTextIndexes = new Map<number, PdfPageTextIndex>();
+  private pdfTextScopeBuilds = 0;
   private readonly thumbnailRenderTasks = new Map<HTMLCanvasElement, { cancel(): void }>();
   private readonly thumbnailRenderVersions = new Map<HTMLCanvasElement, number>();
   private readonly pageHighlightItems = new Map<number, HighlightLayerItem[]>();
@@ -431,13 +418,16 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       // from the previous document would still resolve to a cache hit, silently returning stale
       // text (and misdirecting any in-flight text-quote anchor scan) once the new document loads.
       this.pageTextCache.clear();
+      this.pageTextTruncated.clear();
+      this.pageSearchIndexes.clear();
+      this.mountedPageTextIndexes.clear();
     }
     if (changed.has('page') && this.loadState.kind === 'ready') {
       this.emit('lr-page-change', { page: this.page, pageCount: this.loadState.pageCount });
       this.publishPageViewerSnapshot('ready', this.loadState.pageCount);
     }
     if (changed.has('zoom') && changed.get('zoom') !== undefined) this.emit('lr-zoom-change', { zoom: this.zoom });
-    if (changed.has('highlights')) {
+    if (changed.has('highlights') || changed.has('activeHighlightId')) {
       for (const pageNumber of this.pageCanvases.keys()) void this.resolvePageHighlights(pageNumber);
     }
     if (changed.has('activeHighlightId')) {
@@ -479,6 +469,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.textLayerContainers.clear();
     this.textLayerReadyPromises.clear();
     this.pageTextCache.clear();
+    this.pageTextTruncated.clear();
+    this.pageSearchIndexes.clear();
+    this.mountedPageTextIndexes.clear();
     this.thumbnailRenderTasks.clear();
     this.thumbnailRenderVersions.clear();
     this.destroyLoadedDoc();
@@ -737,17 +730,48 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     doc: PdfDocumentApi,
   ): Promise<boolean> {
     if (!this.isCurrentAnchorOperation(operation, doc) || this.loadState.kind !== 'ready') return false;
+    if (
+      anchor.quote.length > TEXT_QUOTE_LIMITS.maxQueryCodeUnits
+      || (anchor.prefix?.length ?? 0) > TEXT_QUOTE_LIMITS.maxQueryCodeUnits
+      || (anchor.suffix?.length ?? 0) > TEXT_QUOTE_LIMITS.maxQueryCodeUnits
+    ) return false;
     const quote = normalizeQuoteText(anchor.quote);
     if (!quote) return false;
     const order = this.pageSearchOrder(anchor.page, this.loadState.pageCount);
     let matchedPage: number | undefined;
+    let inspectedPages = 0;
+    let remainingCorpus = TEXT_QUOTE_LIMITS.maxCorpusCodeUnits;
+    let remainingNormalizationWork = TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits;
+    const workBudget: TextQuoteWorkBudget = {
+      remainingCodeUnits: TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits,
+    };
     for (const pageNumber of order) {
-      const text = await this.getPageText(pageNumber);
+      if (
+        inspectedPages++ >= MAX_SEARCH_PAGES
+        || remainingCorpus <= 0
+        || remainingNormalizationWork <= 0
+        || workBudget.remainingCodeUnits <= 0
+      ) break;
+      let text: string;
+      try {
+        text = await this.getPageText(pageNumber);
+      } catch {
+        continue;
+      }
       if (!this.isCurrentAnchorOperation(operation, doc)) return false;
-      if (normalizeQuoteText(text).includes(quote)) {
+      const pageIndex = this.rawPageTextIndex(
+        pageNumber,
+        text,
+        Math.min(remainingCorpus, TEXT_QUOTE_LIMITS.maxCorpusCodeUnits),
+        Math.min(remainingNormalizationWork, TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits),
+      );
+      remainingCorpus -= pageIndex.scope.text.length;
+      remainingNormalizationWork -= pageIndex.sourceWorkCodeUnits;
+      if (pageIndex.index.resolve(anchor, workBudget)) {
         matchedPage = pageNumber;
         break;
       }
+      if (pageIndex.scope.truncated) break;
     }
     if (matchedPage == null) return false;
 
@@ -771,12 +795,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private resolveQuoteRangeOnPage(pageNumber: number, anchor: { quote: string; prefix?: string; suffix?: string }): Range | null {
     const container = this.textLayerContainers.get(pageNumber);
     if (!container) return null;
-    const items = Array.from(container.querySelectorAll<HTMLElement>('span')).map((element) => ({
-      text: element.textContent ?? '',
-      element,
-    }));
-    if (items.length === 0) return null;
-    return resolveTextQuote(scopeFromItems(items), anchor, this.effectiveLocale);
+    if (container.querySelector('mark[part~="search-match"]')) this.clearSearchPaint(container);
+    const mounted = this.mountedPageTextIndex(pageNumber);
+    if (!mounted) return null;
+    const match = mounted.index.resolve(anchor);
+    return match ? rangeFromTextQuoteMatch(mounted.scope, match) : null;
   }
 
   private async applyRegionAnchor(
@@ -846,12 +869,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (pageNumber == null) return null;
     const container = this.textLayerContainers.get(pageNumber);
     if (!container) return null;
-    const items = Array.from(container.querySelectorAll<HTMLElement>('span')).map((element) => ({
-      text: element.textContent ?? '',
-      element,
-    }));
-    const scope = scopeFromItems(items);
-    const anchor = buildQuoteAnchor(range, scope);
+    if (container.querySelector('mark[part~="search-match"]')) this.clearSearchPaint(container);
+    const mounted = this.mountedPageTextIndex(pageNumber);
+    if (!mounted) return null;
+    const anchor = buildQuoteAnchor(range, mounted.scope);
     return anchor.kind === 'text-quote' ? { ...anchor, page: pageNumber } : anchor;
   }
 
@@ -911,10 +932,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       const range = resolveSelectionRange();
       if (!range) return;
       if (!containsAcrossShadowBoundaries(contentRoot, range.commonAncestorContainer) && range.commonAncestorContainer !== contentRoot) return;
-      const text = normalizeQuoteText(range.toString());
+      const text = boundedSelectionText(range);
       if (!text) return;
       const anchor = this.computeSelectionAnchor(range);
-      const rects = Array.from(range.getClientRects());
+      const rects = boundedSelectionRects(range);
       this.emit('lr-text-select', { text, anchor, rects });
     };
 
@@ -974,12 +995,42 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (this.loadState.kind !== 'ready' || this.loadState.doc !== doc) throw new DOMExceptionCtor('Superseded', 'AbortError');
     const content = await pdfPage.getTextContent();
     if (this.loadState.kind !== 'ready' || this.loadState.doc !== doc) throw new DOMExceptionCtor('Superseded', 'AbortError');
-    let text = '';
-    for (const item of content.items as { str?: string; hasEOL?: boolean }[]) {
-      text += item.str ?? '';
-      text += item.hasEOL ? '\n' : ' ';
+    const items = Array.isArray(content.items)
+      ? content.items as { str?: string; hasEOL?: boolean }[]
+      : [];
+    const chunks: string[] = [];
+    let length = 0;
+    let inspected = 0;
+    let truncated = false;
+    for (const item of items) {
+      if (inspected++ >= TEXT_QUOTE_LIMITS.maxNodes) {
+        truncated = true;
+        break;
+      }
+      const value = typeof item?.str === 'string' ? item.str : '';
+      const remaining = TEXT_QUOTE_LIMITS.maxNodeCodeUnits - length;
+      if (remaining <= 0) {
+        truncated = true;
+        break;
+      }
+      const retained = value.slice(0, remaining);
+      chunks.push(retained);
+      length += retained.length;
+      if (retained.length !== value.length) {
+        truncated = true;
+        break;
+      }
+      if (length >= TEXT_QUOTE_LIMITS.maxNodeCodeUnits) {
+        truncated = true;
+        break;
+      }
+      chunks.push(item?.hasEOL ? '\n' : ' ');
+      length++;
     }
-    return text;
+    if (inspected < items.length) truncated = true;
+    if (truncated) this.pageTextTruncated.add(page);
+    else this.pageTextTruncated.delete(page);
+    return chunks.join('');
   }
 
   /** Renders `page` into `canvas` at `width` CSS px (default 96), devicePixelRatio-aware. Cancels a
@@ -1106,9 +1157,143 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   // -- search ----------------------------------------------------------------------------------------
 
-  /** Case-insensitive substring search over every page's text (via `getPageText()`). Matches are
-   *  stored in `getPageText()`'s own raw coordinate space via a normalized/raw offset table (see
-   *  `normalizeForSearch()`), never touching `highlights` -- painting is a self-contained overlay
+  private createRawPageTextIndex(
+    raw: string,
+    maxCorpusCodeUnits = TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
+    maxNormalizationWorkCodeUnits = TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits,
+  ): PdfPageTextIndex {
+    const inspectedRaw = raw.slice(0, Math.min(
+      raw.length,
+      TEXT_QUOTE_LIMITS.maxNodeCodeUnits,
+      maxNormalizationWorkCodeUnits,
+    ));
+    const element = this.ownerDocument.createElement('span');
+    element.textContent = inspectedRaw;
+    const scope = scopeFromItems([{ text: inspectedRaw, element }], {
+      maxCorpusCodeUnits,
+      maxNormalizationWorkCodeUnits,
+    });
+    if (inspectedRaw.length !== raw.length) scope.truncated = true;
+    this.pdfTextScopeBuilds++;
+    return {
+      scope,
+      index: createTextQuoteIndex(scope, this.effectiveLocale, { maxMatches: MAX_SEARCH_MATCHES }),
+      locale: this.effectiveLocale,
+      sourceText: raw.length <= TEXT_QUOTE_LIMITS.maxNodeCodeUnits ? raw : undefined,
+      sourceWorkCodeUnits: Math.min(
+        raw.length,
+        TEXT_QUOTE_LIMITS.maxNodeCodeUnits,
+        maxNormalizationWorkCodeUnits,
+      ),
+    };
+  }
+
+  private rawPageTextIndex(
+    pageNumber: number,
+    raw: string,
+    maxCorpusCodeUnits = TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
+    maxNormalizationWorkCodeUnits = TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits,
+  ): PdfPageTextIndex {
+    const fullLimits = maxCorpusCodeUnits === TEXT_QUOTE_LIMITS.maxCorpusCodeUnits
+      && maxNormalizationWorkCodeUnits === TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits;
+    const cacheable = fullLimits && raw.length <= TEXT_QUOTE_LIMITS.maxNodeCodeUnits;
+    const cached = this.pageSearchIndexes.get(pageNumber);
+    if (
+      cacheable
+      && cached
+      && cached.locale === this.effectiveLocale
+      && cached.sourceText === raw
+    ) {
+      this.pageSearchIndexes.delete(pageNumber);
+      this.pageSearchIndexes.set(pageNumber, cached);
+      return cached;
+    }
+    const created = this.createRawPageTextIndex(raw, maxCorpusCodeUnits, maxNormalizationWorkCodeUnits);
+    if (this.pageTextTruncated.has(pageNumber)) created.scope.truncated = true;
+    if (cacheable) {
+      this.pageSearchIndexes.set(pageNumber, created);
+      if (this.pageSearchIndexes.size > PAGE_SEARCH_INDEX_CACHE_LIMIT) {
+        const oldest = this.pageSearchIndexes.keys().next().value;
+        if (oldest !== undefined) this.pageSearchIndexes.delete(oldest);
+      }
+    }
+    return created;
+  }
+
+  private buildMountedPageScope(container: HTMLElement): TextQuoteScope {
+    const items: Array<{ text: string; element: HTMLElement }> = [];
+    const doc = container.ownerDocument;
+    const walker = doc.createTreeWalker(container, doc.defaultView?.NodeFilter.SHOW_ELEMENT ?? 1);
+    let traversed = 0;
+    let traversalTruncated = false;
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      traversed++;
+      if (traversed > TEXT_QUOTE_LIMITS.maxTraversalNodes) {
+        traversalTruncated = true;
+        break;
+      }
+      const element = node as HTMLElement;
+      if (element.localName !== 'span') continue;
+      items.push({ text: element.textContent ?? '', element });
+      if (items.length > TEXT_QUOTE_LIMITS.maxNodes) {
+        traversalTruncated = true;
+        break;
+      }
+    }
+    const scope = scopeFromItems(items);
+    if (traversalTruncated) scope.truncated = true;
+    this.pdfTextScopeBuilds++;
+    return scope;
+  }
+
+  private mountedPageTextIndex(pageNumber: number, forceMappingRefresh = false): PdfPageTextIndex | null {
+    const container = this.textLayerContainers.get(pageNumber);
+    if (!container) return null;
+    const cached = this.mountedPageTextIndexes.get(pageNumber);
+    if (
+      cached
+      && cached.container === container
+      && cached.locale === this.effectiveLocale
+      && !cached.mappingDirty
+      && !forceMappingRefresh
+    ) return cached;
+    const scope = this.buildMountedPageScope(container);
+    if (
+      cached
+      && cached.container === container
+      && cached.locale === this.effectiveLocale
+      && cached.index.rebindScope(scope)
+    ) {
+      cached.scope = scope;
+      cached.mappingDirty = false;
+      return cached;
+    }
+    const created: PdfPageTextIndex = {
+      scope,
+      index: createTextQuoteIndex(scope, this.effectiveLocale, { maxMatches: MAX_SEARCH_MATCHES }),
+      locale: this.effectiveLocale,
+      sourceWorkCodeUnits: scope.text.length,
+      container,
+      mappingDirty: false,
+    };
+    this.mountedPageTextIndexes.set(pageNumber, created);
+    return created;
+  }
+
+  /** @internal Focused-test seam for one-scope-per-content-generation verification. */
+  protected pdfTextScopeBuildCount(): number {
+    return this.pdfTextScopeBuilds;
+  }
+
+  /** @internal Focused-test seam for occurrence-index reuse on one mounted page. */
+  protected pdfTextQuoteScanCount(pageNumber: number): number {
+    return this.mountedPageTextIndexes.get(pageNumber)?.index.scanCount ?? 0;
+  }
+
+  /** Case-insensitive substring search over every page's text (via `getPageText()`). Matches use
+   *  the shared bounded text-quote index's normalized coordinate space, never touching
+   *  `highlights` -- painting is a self-contained overlay
    *  scoped to search only (see `paintSearchMatches()`). An empty/whitespace-only query behaves like
    *  `clearSearch()` and resolves `0`. Returns at most 10,000 retained matches;
    *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
@@ -1116,7 +1301,22 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const generation = ++this.searchGeneration;
     this.searchQuery = query;
     this.clearSearchPaint();
-    if (this.loadState.kind !== 'ready' || !query.trim()) {
+    if (this.loadState.kind !== 'ready') {
+      this.searchMatches = [];
+      this.searchMatchCountExact = true;
+      this.searchActiveIndex = -1;
+      this.emitSearchChange();
+      return 0;
+    }
+    if (query.length > TEXT_QUOTE_LIMITS.maxQueryCodeUnits) {
+      this.searchMatches = [];
+      this.searchMatchCountExact = false;
+      this.searchActiveIndex = -1;
+      this.emitSearchChange();
+      return 0;
+    }
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
       this.searchMatches = [];
       this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
@@ -1124,12 +1324,21 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       return 0;
     }
     const { pageCount } = this.loadState;
-    const normalizedQuery = normalizeForSearch(query.trim(), this.effectiveLocale).text;
     const matches: PdfSearchMatch[] = [];
     let matchCountExact = true;
-    let matchCeilingExceeded = false;
-    for (let page = 1; page <= pageCount; page++) {
+    let remainingCorpus = TEXT_QUOTE_LIMITS.maxCorpusCodeUnits;
+    let remainingNormalizationWork = TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits;
+    const searchBudget: TextQuoteWorkBudget = {
+      remainingCodeUnits: TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits,
+    };
+    const inspectedPages = Math.min(pageCount, MAX_SEARCH_PAGES);
+    if (pageCount > inspectedPages) matchCountExact = false;
+    for (let page = 1; page <= inspectedPages; page++) {
       if (generation !== this.searchGeneration) return this.searchMatches.length;
+      if (remainingCorpus <= 0 || remainingNormalizationWork <= 0 || searchBudget.remainingCodeUnits <= 0) {
+        matchCountExact = false;
+        break;
+      }
       let raw: string;
       try {
         raw = await this.getPageText(page);
@@ -1138,21 +1347,38 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         continue;
       }
       if (generation !== this.searchGeneration) return this.searchMatches.length;
-      const { text, rawStarts, rawEnds } = normalizeForSearch(raw, this.effectiveLocale);
-      let from = 0;
-      let idx: number;
-      while ((idx = text.indexOf(normalizedQuery, from)) !== -1) {
-        const rawStart = rawStarts[idx] ?? 0;
-        const rawEndExclusive = rawEnds[idx + normalizedQuery.length - 1] ?? rawStart;
-        if (matches.length === MAX_SEARCH_MATCHES) {
+      const fullPageFits = raw.length <= remainingNormalizationWork;
+      const pageIndex = this.rawPageTextIndex(
+        page,
+        raw,
+        Math.min(remainingCorpus, TEXT_QUOTE_LIMITS.maxCorpusCodeUnits),
+        Math.min(remainingNormalizationWork, TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits),
+      );
+      remainingCorpus -= pageIndex.scope.text.length;
+      remainingNormalizationWork -= pageIndex.sourceWorkCodeUnits;
+      const pageMatches = pageIndex.index.search(trimmedQuery, searchBudget);
+      if (!pageMatches.matchCountExact) matchCountExact = false;
+      const retainedBeforePage = matches.length;
+      for (const match of pageMatches) {
+        if (matches.length >= MAX_SEARCH_MATCHES) {
           matchCountExact = false;
-          matchCeilingExceeded = true;
           break;
         }
-        matches.push({ page, start: rawStart, length: rawEndExclusive - rawStart });
-        from = idx + Math.max(1, normalizedQuery.length);
+        matches.push({ page, start: match.start, length: match.end - match.start });
       }
-      if (matchCeilingExceeded) break;
+      if (matches.length >= MAX_SEARCH_MATCHES && pageMatches.length > 0) {
+        // Keep scanning only while the exact boundary remains plausible. A retained match beyond
+        // the global cap proves the public count is a lower bound immediately.
+        const retainedOnPage = matches.length - retainedBeforePage;
+        if (pageMatches.length > retainedOnPage) {
+          matchCountExact = false;
+          break;
+        }
+      }
+      if (!fullPageFits || pageIndex.scope.truncated || !pageMatches.scanComplete) {
+        matchCountExact = false;
+        break;
+      }
     }
     if (generation !== this.searchGeneration) return this.searchMatches.length;
     this.searchMatches = matches;
@@ -1218,7 +1444,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   /** Unwraps every painted `<mark part="search-match">` back into plain text, across every mounted
    *  page's text-layer container (or just `container` when given, for a single-page repaint). */
   private clearSearchPaint(container?: HTMLElement): void {
-    const containers = container ? [container] : Array.from(this.textLayerContainers.values());
+    const containers: Iterable<HTMLElement> = container ? [container] : this.textLayerContainers.values();
     for (const target of containers) {
       target.querySelectorAll('mark[part~="search-match"]').forEach((mark) => {
         const parent = mark.parentNode;
@@ -1227,11 +1453,14 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         parent.removeChild(mark);
         parent.normalize();
       });
+      for (const cached of this.mountedPageTextIndexes.values()) {
+        if (cached.container === target) cached.mappingDirty = true;
+      }
     }
   }
 
-  /** Walks the given page's mounted text-layer container in the same order `getPageText()` reads
-   *  it (raw text-node concatenation) and wraps each search match's raw-offset range in a
+  /** Resolves a bounded active-centred window against the mounted page's shared text scope and
+   *  wraps each search match's normalized-offset range in a
    *  `<mark part="search-match">` (`search-match-active` added for the current match). A page whose
    *  text layer hasn't mounted yet (out of the virtualized render window) is silently skipped --
    *  painting resumes the next time that page's text layer finishes rendering, via the hook in
@@ -1240,73 +1469,49 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const container = this.textLayerContainers.get(page);
     if (!container) return;
     this.clearSearchPaint(container);
-    const pageMatches = this.searchMatches
-      .map((match, matchIndex) => ({ ...match, matchIndex }))
-      .filter((match) => match.page === page);
+    const count = Math.min(this.searchMatches.length, MAX_PAINTED_SEARCH_MATCHES);
+    const half = MAX_PAINTED_SEARCH_MATCHES >> 1;
+    const centre = this.searchActiveIndex < 0 ? 0 : this.searchActiveIndex;
+    const start = Math.max(0, Math.min(centre - half, this.searchMatches.length - count));
+    const pageMatches: Array<{ match: PdfSearchMatch; matchIndex: number }> = [];
+    for (let matchIndex = start; matchIndex < start + count; matchIndex++) {
+      const match = this.searchMatches[matchIndex];
+      if (match?.page === page) pageMatches.push({ match, matchIndex });
+    }
     if (pageMatches.length === 0) return;
-    const doc = container.ownerDocument;
-    const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
-    const walker = doc.createTreeWalker(container, doc.defaultView?.NodeFilter.SHOW_TEXT ?? 4);
-    const ranges: { node: Text; start: number; end: number }[] = [];
-    let cursor = 0;
-    let node: Text | null;
-    while ((node = walker.nextNode() as Text | null)) {
-      const len = node.data.length;
-      ranges.push({ node, start: cursor, end: cursor + len });
-      cursor += len + 1;
+    const active = pageMatches.find(({ matchIndex }) => matchIndex === this.searchActiveIndex);
+    const nonOverlapping: typeof pageMatches = [];
+    for (const candidate of active
+      ? [active, ...pageMatches.filter((entry) => entry !== active)]
+      : pageMatches) {
+      const candidateEnd = candidate.match.start + candidate.match.length;
+      if (nonOverlapping.some(({ match }) =>
+        candidate.match.start < match.start + match.length && match.start < candidateEnd)) continue;
+      nonOverlapping.push(candidate);
     }
-    for (const r of ranges) {
-      // Every match intersecting this one physical text node, left-to-right. Two matches can land in
-      // the same node when the search term repeats within one text-layer span (e.g. "aab" inside
-      // "aabaab") -- surroundContents() below extracts/splits the node as each one is wrapped, so a
-      // later match's offset must be computed against the node it *actually* lives in post-split, not
-      // the pristine reference `ranges` captured before any painting started (that stale reference is
-      // what used to throw an uncaught IndexSizeError from setStart()/setEnd()).
-      const intersecting = pageMatches
-        .map((match) => ({
-          matchIndex: match.matchIndex,
-          start: Math.max(match.start, r.start),
-          end: Math.min(match.start + match.length, r.end),
-        }))
-        .filter((m) => m.start < m.end)
-        .sort((a, b) => a.start - b.start);
-      let currentNode: Text = r.node;
-      let currentNodeRawStart = r.start;
-      for (const m of intersecting) {
-        const range = doc.createRange();
-        try {
-          range.setStart(currentNode, m.start - currentNodeRawStart);
-          range.setEnd(currentNode, m.end - currentNodeRawStart);
-        } catch {
-          // Defensive only -- the running currentNode/currentNodeRawStart bookkeeping above is meant
-          // to keep this offset always valid; one bad match still shouldn't take down the rest of the
-          // page's painting.
-          continue;
-        }
-        const mark = doc.createElement('mark');
-        const parts = ['search-match'];
-        if (m.matchIndex === this.searchActiveIndex) parts.push('search-match-active');
-        mark.setAttribute('part', parts.join(' '));
-        try {
-          range.surroundContents(mark);
-        } catch {
-          // A range spanning a text-layer span boundary in a way surroundContents can't wrap --
-          // best-effort painting, the match is still reachable via goToPage()/searchNext().
-          continue;
-        }
-        // surroundContents() extracts the matched text out of currentNode, leaving whatever came
-        // after it in a new sibling Text node right after the inserted <mark> -- that's where a
-        // further match in this same original node now lives, starting at this match's raw end.
-        const remainder = mark.nextSibling;
-        if (remainder?.nodeType === textNodeType) {
-          const remainderText = remainder as Text;
-          currentNode = remainderText;
-          currentNodeRawStart = m.end;
-        } else {
-          break; // nothing left in this node for a further match to land in
-        }
-      }
+    const mounted = this.mountedPageTextIndex(page);
+    if (!mounted) return;
+    const ranges: Array<{ matchIndex: number; match: PdfSearchMatch; range: Range }> = [];
+    for (const { match, matchIndex } of nonOverlapping) {
+      const range = rangeFromTextQuoteMatch(mounted.scope, {
+        start: match.start,
+        end: match.start + match.length,
+      });
+      if (range) ranges.push({ matchIndex, match, range });
     }
+    ranges.sort((a, b) => b.match.start - a.match.start);
+    const budget: PdfPaintWorkBudget = {
+      traversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes,
+      codeUnits: TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
+    };
+    let painted = false;
+    for (const { matchIndex, range } of ranges) {
+      const part = matchIndex === this.searchActiveIndex
+        ? 'search-match search-match-active'
+        : 'search-match';
+      if (wrapPdfSearchRange(range, part, budget).length > 0) painted = true;
+    }
+    if (painted) mounted.mappingDirty = true;
   }
 
   // -- highlight painting --------------------------------------------------------------------------------
@@ -1315,42 +1520,74 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const container = this.textLayerContainers.get(pageNumber);
     const canvas = this.pageCanvases.get(pageNumber);
     if (!container || !canvas || this.loadState.kind !== 'ready') return;
-    const items = Array.from(container.querySelectorAll<HTMLElement>('span')).map((element) => ({
-      text: element.textContent ?? '',
-      element,
-    }));
-    const scope = items.length ? scopeFromItems(items) : undefined;
+    const candidates = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId);
+    const needsTextIndex = candidates.some((highlight) =>
+      highlight.anchor.kind === 'text-quote'
+      && (highlight.anchor.page == null || highlight.anchor.page === pageNumber));
+    const hadSearchPaint = needsTextIndex
+      && container.querySelector('mark[part~="search-match"]') !== null;
+    if (hadSearchPaint) this.clearSearchPaint(container);
+    const textIndex = needsTextIndex ? this.mountedPageTextIndex(pageNumber) ?? undefined : undefined;
+    const workBudget = textIndex?.index.createWorkBudget();
     const pageRect = canvas.getBoundingClientRect();
     const results: HighlightLayerItem[] = [];
-    for (const highlight of this.highlights) {
-      const rects = this.resolveHighlightRectsForPage(highlight.anchor, pageNumber, scope, pageRect);
+    const seen = new Set<string>();
+    const rectBudget = { remaining: MAX_HIGHLIGHT_RECTS };
+    for (const highlight of candidates) {
+      if (results.length >= MAX_PAINTED_HIGHLIGHTS || rectBudget.remaining <= 0) break;
+      if (seen.has(highlight.id)) continue;
+      seen.add(highlight.id);
+      const rects = this.resolveHighlightRectsForPage(
+        highlight.anchor,
+        pageNumber,
+        textIndex,
+        workBudget,
+        pageRect,
+        rectBudget,
+      );
       if (rects.length) results.push({ id: highlight.id, rects, label: highlight.label, tone: highlight.tone });
     }
     this.pageHighlightItems.set(pageNumber, results);
     const layer = this.pageHighlightLayerElements.get(pageNumber);
     if (layer) layer.items = results;
+    if (hadSearchPaint) this.paintSearchMatches(pageNumber);
   }
 
   private resolveHighlightRectsForPage(
     anchor: LyraAnchor,
     pageNumber: number,
-    scope: TextQuoteScope | undefined,
+    textIndex: PdfPageTextIndex | undefined,
+    workBudget: TextQuoteWorkBudget | undefined,
     pageRect: DOMRect,
+    rectBudget: { remaining: number },
   ): { x: number; y: number; width: number; height: number }[] {
     if (anchor.kind === 'page' && anchor.page === pageNumber) return [{ x: 0, y: 0, width: 100, height: 100 }];
     if (anchor.kind === 'region' && (anchor.page ?? pageNumber) === pageNumber) {
       const rect = sanitizePercentRect(anchor.rect);
       return rect ? [rect] : [];
     }
-    if (anchor.kind === 'text-quote' && scope && (anchor.page == null || anchor.page === pageNumber)) {
-      const range = resolveTextQuote(scope, anchor, this.effectiveLocale);
+    if (
+      anchor.kind === 'text-quote'
+      && textIndex
+      && workBudget
+      && (anchor.page == null || anchor.page === pageNumber)
+    ) {
+      const match = textIndex.index.resolve(anchor, workBudget);
+      const range = match ? rangeFromTextQuoteMatch(textIndex.scope, match) : null;
       if (!range) return [];
-      return Array.from(range.getClientRects()).map((rect) => ({
-        x: ((rect.left - pageRect.left) / pageRect.width) * 100,
-        y: ((rect.top - pageRect.top) / pageRect.height) * 100,
-        width: (rect.width / pageRect.width) * 100,
-        height: (rect.height / pageRect.height) * 100,
-      }));
+      if (!(pageRect.width > 0) || !(pageRect.height > 0)) return [];
+      const rects: { x: number; y: number; width: number; height: number }[] = [];
+      for (const rect of range.getClientRects()) {
+        if (rectBudget.remaining <= 0) break;
+        rectBudget.remaining--;
+        rects.push({
+          x: ((rect.left - pageRect.left) / pageRect.width) * 100,
+          y: ((rect.top - pageRect.top) / pageRect.height) * 100,
+          width: (rect.width / pageRect.width) * 100,
+          height: (rect.height / pageRect.height) * 100,
+        });
+      }
+      return rects;
     }
     return [];
   }
@@ -1396,7 +1633,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         (rect) => xPct >= rect.x && xPct <= rect.x + rect.width && yPct >= rect.y && yPct <= rect.y + rect.height,
       );
       if (hit) {
-        this.emit('lr-highlight-activate', { id: item.id });
+        this.emit('lr-highlight-activate', { highlightId: item.id });
         return;
       }
     }
@@ -1524,6 +1761,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.pageRenderVersions.get(pageNumber) !== version ||
       this.textLayerContainers.get(pageNumber) !== container
     ) return;
+    this.mountedPageTextIndexes.delete(pageNumber);
     container.replaceChildren();
     const textLayer = new pdfjsLib.TextLayer({ textContentSource: page.streamTextContent(), container, viewport });
     this.textLayers.set(pageNumber, textLayer);
@@ -1552,7 +1790,14 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  `text-layer` part. Naming them also makes each run reachable from a consumer's own
    *  `lr-pdf-viewer::part(text-span)` rule. */
   private markTextRunParts(container: HTMLElement): void {
-    container.querySelectorAll('span, br').forEach((run) => run.setAttribute('part', 'text-span'));
+    const doc = container.ownerDocument;
+    const walker = doc.createTreeWalker(container, doc.defaultView?.NodeFilter.SHOW_ELEMENT ?? 1);
+    let visited = 0;
+    let node: Node | null;
+    while (visited++ < TEXT_QUOTE_LIMITS.maxTraversalNodes && (node = walker.nextNode())) {
+      const run = node as HTMLElement;
+      if (run.localName === 'span' || run.localName === 'br') run.setAttribute('part', 'text-span');
+    }
   }
 
   private pageCanvasRef(pageNumber: number): (element: Element | undefined) => void {
@@ -1580,6 +1825,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       callback = (element: Element | undefined): void => {
         if (!element) {
           this.textLayerContainers.delete(pageNumber);
+          this.mountedPageTextIndexes.delete(pageNumber);
           this.textLayers.get(pageNumber)?.cancel();
           this.textLayers.delete(pageNumber);
           this.textLayerReadyPromises.delete(pageNumber);

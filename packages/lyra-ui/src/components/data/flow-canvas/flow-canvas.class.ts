@@ -78,13 +78,13 @@ interface DragEdgeRef {
 }
 
 export interface LyraFlowCanvasEventMap {
-  'lr-node-activate': CustomEvent<Readonly<{ id: string }>>;
-  'lr-edge-activate': CustomEvent<Readonly<{ id: string; source: string; target: string }>>;
+  'lr-node-activate': CustomEvent<Readonly<{ nodeId: string }>>;
+  'lr-edge-activate': CustomEvent<Readonly<{ edgeId: string; source: string; target: string }>>;
   'lr-selection-change': CustomEvent<
     Readonly<{ nodeIds: readonly string[]; edgeIds: readonly string[] }>
   >;
   'lr-node-move': CustomEvent<Readonly<{
-    readonly id: string;
+    readonly nodeId: string;
     readonly position: Readonly<{ x: number; y: number }>;
     readonly previous: Readonly<{ x: number; y: number }>;
   }>>;
@@ -147,7 +147,9 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * previews are canceled and their window listeners are retired before later pointer events can
  * commit. Viewport-mutating imperative methods, including `focusNode()`, are inert while locked.
  * Replacing the controlled `nodes` model similarly retires node-drag and connect gestures before
- * their captured ids can outlive that model; background pan remains independent.
+ * their captured ids can outlive that model; background pan remains independent. Node and edge
+ * collections reject blank ids and later duplicates at assignment, so the first valid occurrence
+ * owns layout, focus, selection, gestures, companion snapshots, and emitted identity.
  *
  * @customElement lr-flow-canvas
  * @slot - Consumer-authored node cards matched by `node-id`. Each matching card is assigned to the
@@ -157,10 +159,10 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * @slot top-end - Floating end-side content in the wrapping top overlay rail.
  * @slot bottom-start - Floating start-side content in the wrapping bottom overlay rail (e.g. `lr-flow-controls`).
  * @slot bottom-end - Floating end-side content in the wrapping bottom overlay rail (e.g. `lr-flow-minimap`).
- * @event lr-node-activate - `detail: { id }`.
- * @event lr-edge-activate - `detail: { id, source, target }`.
+ * @event lr-node-activate - `detail: { nodeId }`.
+ * @event lr-edge-activate - `detail: { edgeId, source, target }`.
  * @event lr-selection-change - `detail: { nodeIds, edgeIds }`.
- * @event lr-node-move - `detail: { id, position, previous }`.
+ * @event lr-node-move - `detail: { nodeId, position, previous }`.
  * @event lr-connect - `detail: { source, target, sourceHandle, targetHandle }`.
  * @event lr-node-add - `detail: { type, position }`.
  * @event lr-selection-delete - `detail: { nodeIds, edgeIds }`.
@@ -254,8 +256,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   private _nodes: readonly FlowNode[] = Object.freeze([]);
-  /** Controlled node model, snapshotted at assignment. Replacing it cancels active node-drag and
-   * pointer/keyboard connect gestures and prunes selected ids that no longer exist. */
+  /** Controlled node model, snapshotted at assignment. Blank ids and later duplicates are omitted
+   * first-wins. Replacing it cancels active node-drag and pointer/keyboard connect gestures and
+   * prunes selected ids that no longer exist. */
   @property({ attribute: false })
   get nodes(): readonly FlowNode[] {
     return this._nodes;
@@ -267,7 +270,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private _edges: readonly FlowEdge[] = Object.freeze([]);
-  /** Controlled edge model, snapshotted at assignment. */
+  /** Controlled edge model, snapshotted at assignment. Blank ids and later duplicates are omitted
+   * first-wins before every render, action, focus, selection, snapshot, and event path. */
   @property({ attribute: false })
   get edges(): readonly FlowEdge[] {
     return this._edges;
@@ -1522,14 +1526,14 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private onNodeActivate(node: FlowNode, additive: boolean): void {
-    this.emit('lr-node-activate', Object.freeze({ id: node.id }));
+    this.emit('lr-node-activate', Object.freeze({ nodeId: node.id }));
     this.applySelection('node', node.id, additive);
   }
 
   private onEdgeActivate(edge: FlowEdge, additive: boolean): void {
     this.emit(
       'lr-edge-activate',
-      Object.freeze({ id: edge.id, source: edge.source, target: edge.target }),
+      Object.freeze({ edgeId: edge.id, source: edge.source, target: edge.target }),
     );
     this.applySelection('edge', edge.id, additive);
   }
@@ -1766,7 +1770,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.emit(
         'lr-node-move',
         Object.freeze({
-          id: drag.nodeId,
+          nodeId: drag.nodeId,
           position: Object.freeze(position),
           previous: Object.freeze(previous),
         }),
@@ -1804,7 +1808,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.emit(
       'lr-node-move',
       Object.freeze({
-        id: nodeId,
+        nodeId,
         position: Object.freeze(position),
         previous: Object.freeze(current),
       }),

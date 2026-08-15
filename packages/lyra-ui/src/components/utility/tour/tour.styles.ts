@@ -1,14 +1,14 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     /* Backdrop scrim color -- component-specific so a host can retheme it without a raw literal
        leaking into the public API, same rationale as lr-dialog's own --lr-dialog-overlay-color. */
-    --lr-tour-backdrop-color: var(--lr-color-overlay);
-    --lr-tour-spotlight-radius: var(--lr-radius);
-    --lr-tour-spotlight-ring-color: var(--lr-color-brand);
-    --lr-tour-spotlight-ring-width: var(--lr-border-width-medium);
-    --lr-tour-popover-max-width: var(--lr-size-22rem);
+    --_lr-tour-backdrop-color: var(--lr-color-overlay);
+    --_lr-tour-spotlight-radius: var(--lr-radius);
+    --_lr-tour-spotlight-ring-color: var(--lr-color-brand);
+    --_lr-tour-spotlight-ring-width: var(--lr-border-width-medium);
+    --_lr-tour-popover-max-width: var(--lr-size-22rem);
     position: fixed;
     inset: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
@@ -18,37 +18,49 @@ export const styles = css`
   :host([open]) {
     display: block;
   }
-  [part='backdrop'] {
+  [part="backdrop"] {
     position: fixed;
     inset: 0;
     width: 100%;
     height: 100%;
     pointer-events: auto;
   }
-  [part='backdrop'] .scrim {
-    fill: var(--lr-tour-backdrop-color);
+  [part="backdrop"] .scrim {
+    fill: var(--lr-tour-backdrop-color, var(--_lr-tour-backdrop-color));
   }
-  [part='backdrop'] .cutout {
-    rx: var(--lr-tour-spotlight-radius);
+  [part="backdrop"] .cutout {
+    rx: var(--lr-tour-spotlight-radius, var(--_lr-tour-spotlight-radius));
   }
-  [part='spotlight'] {
+  [part="spotlight"] {
     position: fixed;
     box-sizing: border-box;
     pointer-events: none;
-    border: var(--lr-tour-spotlight-ring-width) solid var(--lr-tour-spotlight-ring-color);
-    border-radius: var(--lr-tour-spotlight-radius);
+    border: var(
+        --lr-tour-spotlight-ring-width,
+        var(--_lr-tour-spotlight-ring-width)
+      )
+      solid
+      var(--lr-tour-spotlight-ring-color, var(--_lr-tour-spotlight-ring-color));
+    border-radius: var(
+      --lr-tour-spotlight-radius,
+      var(--_lr-tour-spotlight-radius)
+    );
   }
-  [part='spotlight'][hidden] {
+  [part="spotlight"][hidden] {
     display: none;
   }
-  [part='popover'] {
+  [part="popover"] {
     position: fixed;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-m);
     min-inline-size: 0;
-    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-tour-popover-max-width), var(--lr-positioner-available-inline-size, 100vw));
+    max-inline-size: min(
+      var(--lr-popover-viewport-clamp),
+      var(--lr-tour-popover-max-width, var(--_lr-tour-popover-max-width)),
+      var(--lr-positioner-available-inline-size, 100vw)
+    );
     max-block-size: var(--lr-positioner-available-block-size, 90vh);
     padding: var(--lr-space-l);
     background: var(--lr-color-surface);
@@ -62,30 +74,33 @@ export const styles = css`
     pointer-events: auto;
     overflow: auto;
   }
-  [part='popover'][data-unanchored] {
+  [part="popover"][data-unanchored] {
     inset: 0;
     margin: auto;
     inline-size: fit-content;
     block-size: fit-content;
-    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-tour-popover-max-width));
+    max-inline-size: min(
+      var(--lr-popover-viewport-clamp),
+      var(--lr-tour-popover-max-width, var(--_lr-tour-popover-max-width))
+    );
   }
-  [part='heading'] {
+  [part="heading"] {
     font-weight: var(--lr-font-weight-semibold);
     font-size: var(--lr-font-size-lg);
     overflow-wrap: anywhere;
   }
-  [part='body'] {
+  [part="body"] {
     color: var(--lr-color-text);
     overflow-wrap: anywhere;
   }
-  [part='progress'] {
+  [part="progress"] {
     display: flex;
     align-items: center;
     gap: var(--lr-space-s);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
-  [part='progress-text'] {
+  [part="progress-text"] {
     white-space: nowrap;
   }
   .dots {
@@ -93,25 +108,25 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
   }
-  [part='progress-dot'] {
+  [part="progress-dot"] {
     inline-size: var(--lr-size-0-5rem);
     block-size: var(--lr-size-0-5rem);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-border);
   }
-  [part='progress-dot'][data-current] {
+  [part="progress-dot"][data-current] {
     background: var(--lr-tour-progress-dot-current-bg, var(--lr-color-brand));
   }
-  [part='footer'] {
+  [part="footer"] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
     gap: var(--lr-space-s);
   }
-  [part='previous-button'],
-  [part='skip-button'],
-  [part='next-button'] {
+  [part="previous-button"],
+  [part="skip-button"],
+  [part="next-button"] {
     font: inherit;
     font-size: var(--lr-font-size-md-sm);
     padding: var(--lr-space-xs) var(--lr-space-m);
@@ -121,20 +136,20 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
-  [part='previous-button'],
-  [part='skip-button'],
-  [part='next-button'] {
+  [part="previous-button"],
+  [part="skip-button"],
+  [part="next-button"] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }
-  [part='previous-button'] {
+  [part="previous-button"] {
     margin-inline-end: auto;
   }
-  [part='previous-button']:disabled {
+  [part="previous-button"]:disabled {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
-  [part='next-button'] {
+  [part="next-button"] {
     background: var(--lr-color-brand);
     color: var(--lr-color-on-brand);
     border-color: var(--lr-color-brand);
@@ -142,38 +157,50 @@ export const styles = css`
   /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
      so a consumer's ::part(previous-button):hover / ::part(skip-button):hover override
      ((0,1,1)) wins without needing !important. */
-  :where([part='previous-button']):hover:where(:not(:disabled)),
-  :where([part='skip-button']):hover {
+  :where([part="previous-button"]):hover:where(:not(:disabled)),
+  :where([part="skip-button"]):hover {
     background: var(--lr-color-brand-quiet);
   }
-  :where([part='previous-button']):active:where(:not(:disabled)),
-  :where([part='skip-button']):active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  :where([part="previous-button"]):active:where(:not(:disabled)),
+  :where([part="skip-button"]):active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   /* A background mix, not filter: brightness(): a filter multiplies every channel of the subtree,
      so it dragged this button's own --lr-color-on-brand label along with the fill, and moved
      neither at all once the brand token was themed to pure white or pure black. Mixing the fill
      toward --lr-color-mix-partner (which tracks the text color) always moves, and only the fill
      moves. */
-  [part='next-button']:hover {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  [part="next-button"]:hover {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
   }
-  [part='next-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="next-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='previous-button']:focus-visible,
-  [part='skip-button']:focus-visible,
-  [part='next-button']:focus-visible {
+  [part="previous-button"]:focus-visible,
+  [part="skip-button"]:focus-visible,
+  [part="next-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
   @media (prefers-reduced-motion: no-preference) {
-    [part='popover'] {
+    [part="popover"] {
       animation: lr-tour-popover-in var(--lr-transition-base) both;
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='popover'] {
+    [part="popover"] {
       animation: none;
     }
   }

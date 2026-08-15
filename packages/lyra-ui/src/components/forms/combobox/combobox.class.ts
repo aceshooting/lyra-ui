@@ -56,21 +56,8 @@ import {
 import { isHtmlElement } from "../../../internal/dom-guards.js";
 import { relayNativeEvent } from "../../../internal/native-event-relay.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from "../../../internal/localization.js";
-import {
-  LYRA_DEFAULT_clear,
-  LYRA_DEFAULT_comboboxCreate,
-  LYRA_DEFAULT_comboboxLabel,
-  LYRA_DEFAULT_comboboxLoadError,
-  LYRA_DEFAULT_comboboxOverflow,
-  LYRA_DEFAULT_comboboxRequired,
-  LYRA_DEFAULT_comboboxSelectedOverflow,
-  LYRA_DEFAULT_fieldRequired,
-  LYRA_DEFAULT_loading,
-  LYRA_DEFAULT_noMatches,
-  LYRA_DEFAULT_removeWithContext,
-  LYRA_DEFAULT_valueInvalid,
-} from "../../../internal/default-strings.generated.js";
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
@@ -459,22 +446,31 @@ export interface LyraComboboxEventMap {
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      clear: LYRA_DEFAULT_clear,
-      comboboxCreate: LYRA_DEFAULT_comboboxCreate,
-      comboboxLabel: LYRA_DEFAULT_comboboxLabel,
-      comboboxLoadError: LYRA_DEFAULT_comboboxLoadError,
-      comboboxOverflow: LYRA_DEFAULT_comboboxOverflow,
-      comboboxRequired: LYRA_DEFAULT_comboboxRequired,
-      comboboxSelectedOverflow: LYRA_DEFAULT_comboboxSelectedOverflow,
-      fieldRequired: LYRA_DEFAULT_fieldRequired,
-      loading: LYRA_DEFAULT_loading,
-      noMatches: LYRA_DEFAULT_noMatches,
-      removeWithContext: LYRA_DEFAULT_removeWithContext,
-      valueInvalid: LYRA_DEFAULT_valueInvalid,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    clear: LYRA_DEFAULT_clear,
+    collapse: LYRA_DEFAULT_collapse,
+    comboboxCreate: LYRA_DEFAULT_comboboxCreate,
+    comboboxLabel: LYRA_DEFAULT_comboboxLabel,
+    comboboxLoadError: LYRA_DEFAULT_comboboxLoadError,
+    comboboxOverflow: LYRA_DEFAULT_comboboxOverflow,
+    comboboxRequired: LYRA_DEFAULT_comboboxRequired,
+    comboboxSelectedOverflow: LYRA_DEFAULT_comboboxSelectedOverflow,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    noMatches: LYRA_DEFAULT_noMatches,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+    removeWithContext: LYRA_DEFAULT_removeWithContext,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static formAssociated = true;

@@ -21,7 +21,11 @@ export type LyraAnchorKind = LyraAnchor['kind'];
 /** Token-mapped highlight color; `accent` is the default when a `LyraHighlight` omits `tone`. */
 export type LyraHighlightTone = 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
 
-/** One host-supplied highlight: an anchor plus optional display metadata. */
+/** One host-supplied highlight: an anchor plus optional display metadata.
+ *
+ * Highlight collections use a nonempty `id` as their business identity. Consumers trim IDs,
+ * retain the first occurrence, and ignore blank or later duplicate records.
+ */
 export interface LyraHighlight {
   readonly id: string;
   readonly anchor: LyraAnchor;
@@ -50,7 +54,7 @@ export interface AnchorTargetCapabilities {
 
 /** `lr-highlight-activate` event detail. */
 export interface HighlightActivateDetail {
-  id: string;
+  highlightId: string;
 }
 
 /** `lr-text-select` event detail. `anchor` is `null` when the selection couldn't be anchored. */

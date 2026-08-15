@@ -191,7 +191,12 @@ are point-of-use fallbacks, so values inherit from a theme ancestor and a value 
 **Optional peer deps:** none.
 
 ```html
-<lr-stat label="Active users" value="1,204" delta-percent="4.2" variant="success">
+<lr-stat
+  label="Active users"
+  value="1,204"
+  delta-percent="4.2"
+  variant="success"
+>
   <svg slot="start">...</svg>
 </lr-stat>
 <lr-stat label="Memories" value="128" href="/memories"></lr-stat>
@@ -472,11 +477,12 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 
 **Properties:**
 
-- `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection,
-  column identities preserved) — `{ key, label, headerCell?, width?, minWidth?, maxWidth?,
-  resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
-  sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
-  cell: (row) => unknown }` —
+- `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection;
+  blank keys and later duplicates are omitted first-wins before header, cell, sort, focus, and
+  event paths) — `{ key, label, headerCell?, width?, minWidth?, maxWidth?,
+resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
+sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
+cell: (row) => unknown }` —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
   client-mode sorting for that column: a finite number sorts numerically, a string sorts through an
   `Intl.Collator` built from the component's effective locale with `numeric: true` (so `item2`
@@ -555,8 +561,9 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
   `waitUntil()`) rather than assuming a single `updateComplete` covers it. Setting it directly has no
   lasting effect; it is recomputed on the next render or resize. The toggle remains available while
   a narrow table is revealed, even though this property truthfully reports false
-- `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection, row identities
-  preserved)
+- `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection). Records are retained
+  here; one canonical `rowKey` projection omits blank and later-duplicate identities first-wins
+  before filtering, counts, pagination, focus, actions, and events
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
   column shares the available width evenly and long cell content is clipped/wrapped instead of
@@ -583,7 +590,8 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 - `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
-  sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong row
+  sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong
+  row. Empty string identities and later duplicates are omitted; the first valid occurrence wins
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
 - `selectedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
@@ -1241,7 +1249,7 @@ SVG surface; the potentially tiny text glyphs are not independent hit targets.
 **Properties:**
 
 - `words: readonly WordCloudWord[] = []` (attribute: false) — readonly `{ text: string, weight:
-  number, color?: string, group?: string }` snapshots; malformed/hostile records are skipped while
+number, color?: string, group?: string }` snapshots; malformed/hostile records are skipped while
   later valid records survive. `weight` is normalized once to a finite nonnegative value used by
   font sizing, announcements, and `lr-word-activate` detail. A valid CSS `color` overrides the
   palette for that word (invalid values,
@@ -1380,15 +1388,16 @@ base when no cell exists. A newer external focus destination is never reclaimed.
 - `data: HeatmapData = { kind: 'matrix', rowLabels: [], colLabels: [], values: [] }` (attribute:
   false), where `HeatmapData` is the readonly discriminated union:
   - `HeatmapMatrixData { kind: 'matrix'; rowLabels: readonly string[]; colLabels: readonly
-    string[]; values: readonly (readonly number[])[] }`
+string[]; values: readonly (readonly number[])[] }`
   - `HeatmapCalendarData { kind: 'calendar'; days: readonly CalendarDay[]; firstDayOfWeek?:
-    number; columnX?: (index:number)=>number; rowY?: (weekday:number)=>number;
-    weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
-    (jsMonth:number,year:number)=>string|undefined }`
-  Matrix `-1` or non-finite values are no-data. Calendar identity is ISO date and duplicates use one
-  deterministic **last-wins** entry before count, scale, paint, selection, focus and event paths.
-  Collections are snapshotted into a bounded canonical projection; reassign `data` after changing
-  caller-owned input.
+  number; columnX?: (index:number)=>number; rowY?: (weekday:number)=>number;
+  weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
+  (jsMonth:number,year:number)=>string|undefined }`
+    Matrix `-1` or non-finite values are no-data. Calendar identity is ISO date; invalid dates are
+    omitted and duplicates use one deterministic **first-valid-wins** entry before count, scale,
+    paint, selection, focus and event paths.
+    Collections are snapshotted into a bounded canonical projection; reassign `data` after changing
+    caller-owned input.
 - `cellSize: number = 22` (attribute `cell-size` — default `22` in matrix mode, `11` in calendar
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)
@@ -1419,7 +1428,8 @@ base when no cell exists. A newer external focus destination is never reclaimed.
 col?: number; date?: string; label?: string }`: matrix mode matches by `row`/`col`, calendar mode
   by `date` (whichever pair matches the active `mode`; the other fields are ignored). Draws a
   stroked ring over the matching cell; an annotation with a `label` also gets its own
-  `[part="legend-annotation"]` entry in the legend.
+  `[part="legend-annotation"]` entry in the legend. The collection is clone-owned, bounded, and
+  frozen; reassign a new array after changes.
 - `selectedCell: HeatmapSelectedCell | null = null` (attribute: false) — `HeatmapSelectedCell {
 row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
   persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."
@@ -1483,13 +1493,13 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   locale-derived output. Lets month labels track the same locale signal (e.g. an app's own i18n
   store) as `weekdayLabelText` and the component's other localizable strings, instead of always
   following the browser/OS-language default.
-- `colorSteps?: readonly string[]` (attribute: false) — a discrete array (≥2 entries) of CSS colors used as
+- `colorSteps?: readonly string[]` (attribute: false) — a clone-owned, bounded, frozen discrete array (≥2 entries) of CSS colors used as
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
   than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
   fallback color and prevent the custom legend gradient from being assigned.
-- `legendStops?: readonly HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
+- `legendStops?: readonly HeatmapLegendStop[]` (attribute: false) — clone-owned, bounded, frozen `HeatmapLegendStop { value: number;
 color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
@@ -1533,8 +1543,8 @@ closes the legend row, present in both the gradient and the `legendStops` branch
 `--lr-heatmap-scale-hi` (default `var(--lr-color-brand)`) — the sequential color-ramp endpoints
 (matrix mode) or quartile-bucket ramp endpoints (calendar mode), resolved via `getComputedStyle` each
 draw (any valid CSS color syntax — hex/rgb/hsl/oklch/named — works, resolved through a scratch
-canvas). These defaults are declared on `:host`, so they follow the theme (including dark mode)
-rather than being pinned to a literal color; the hard-coded `#cde2fb`/`#0969da` pair in the source is
+canvas). Private defaults follow the theme (including dark mode), while inherited or direct public
+values remain authoritative; the hard-coded `#cde2fb`/`#0969da` pair in the source is
 only a last-resort constant for the case where the custom property resolves to an empty string (no
 stylesheet applied at all), not the shipped default.
 `--lr-heatmap-no-data-fill` (default `var(--lr-color-no-data)` — the no-data cell fill, same
@@ -1570,7 +1580,11 @@ same color as `--lr-heatmap-focus-ring-color`).
     kind: "matrix",
     rowLabels: ["Mon", "Tue", "Wed"],
     colLabels: ["00h", "06h", "12h", "18h"],
-    values: [[3, 8, 12, 4], [1, 2, 9, 5], [0, 4, 6, 2]],
+    values: [
+      [3, 8, 12, 4],
+      [1, 2, 9, 5],
+      [0, 4, 6, 2],
+    ],
   };
 </script>
 ```
@@ -1603,7 +1617,7 @@ is now literal.
   records and 530 weeks, and the color-step/legend-stop/annotation projections are each capped at
   256 entries. `[part="projection-limit"]` and the generated accessible summary disclose every
   truncation. The semantic grid mounts at most 400 cell buttons while preserving full navigation.
-- Calendar duplicates use a last-wins ISO-date identity. Invalid dates are dropped. `data.columnX`
+- Calendar duplicates use a first-valid-wins ISO-date identity. Invalid dates are dropped. `data.columnX`
   and `data.rowY` results must be finite, nonnegative, monotonic and non-overlapping; an invalid,
   throwing or hostile result safely falls back to the normal coordinate for that position.
 - Annotation, controlled selection and keyboard focus use independent concentric canvas rings;
@@ -1681,14 +1695,14 @@ categories and exposes `[part="legend-limit"]` as a rendered/total numeric discl
 **Properties:**
 
 - `items: readonly SequenceStripItem[] = []` (attribute: false) — `{ readonly id, readonly
-  categoryId, readonly marker?, readonly label? }`;
+categoryId, readonly marker?, readonly label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
   subagent-dispatched turn); `label` is per-item hover/focus tooltip text _and_ that cell's own
   `role="listitem"` accessible name, falling back to the matching category's own `label` (or its
   `id`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
 - `categories: readonly SequenceStripCategory[] = []` (attribute: false) — `{ readonly id,
-  readonly color, readonly label? }`; `color`
+readonly color, readonly label? }`; `color`
   is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,
   declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
   used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
@@ -1837,10 +1851,10 @@ deeply-nested node's own shadow root still reaches it).
   omitted. Collapsed branches do not instantiate descendants; disclosure projects only normalized
   children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
   `{ readonly id: string; readonly label: string; readonly children?: readonly LyraTreeNodeData[];
-  readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
-  badges?: readonly TreeBadge[]; readonly icon?: unknown; readonly description?: string; readonly
-  accessibleLabel?: string }`. `TreeBadge` is `{ readonly text: string; readonly tone?:
-  LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in order and each
+readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
+badges?: readonly TreeBadge[]; readonly icon?: unknown; readonly description?: string; readonly
+accessibleLabel?: string }`. `TreeBadge` is `{ readonly text: string; readonly tone?:
+LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in order and each
   chip's accessible name uses `label ?? text`.
   `icon` renders as a decorative leading visual, `description` as secondary visible row text, and
   `accessibleLabel` names the `role="treeitem"` host without changing its visible label. An
@@ -2127,7 +2141,7 @@ import type {
   FlowRunDecoration,
   FlowRunDecorations,
   FlowStructureSnapshot,
-} from '@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js';
+} from "@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js";
 ```
 
 **Properties:**
@@ -2135,12 +2149,16 @@ import type {
 - `nodes: readonly FlowNode[] = []` (attribute: false) — each record has readonly `id`, optional
   `type`, `position`, `data`, `accessibleLabel`, `inputs`, and `outputs`. A missing `position` opts
   into layered layout. String `data.label` and `data.description` feed the declarative fallback
-  card. Assignment takes a detached, deeply frozen snapshot of plain arrays/records. Replacing the
-  model cancels node-drag and connect gestures whose ids belonged to the old model and silently
-  prunes selected ids that no longer exist.
+  card. Assignment takes a detached, deeply frozen snapshot of plain arrays/records, omitting blank
+  ids and later duplicates first-wins before layout, focus, selection, gestures, companion
+  snapshots, and events. Replacing the model cancels node-drag and connect gestures whose ids
+  belonged to the old model and silently prunes selected ids that no longer exist.
 - `edges: readonly FlowEdge[] = []` (attribute: false) — readonly `id`, `source`, `target`, optional
   handle ids, optional drawn `label`, and optional `tone: LyraVariant`. The canonical brand value is
-  `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract.
+  `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract. Blank
+  ids and later duplicates are omitted first-wins before render, focus, selection, gestures,
+  companion snapshots, and events; dangling endpoint references remain visible through the
+  component's documented fail-closed edge-list/stub paths.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — downstream layout/handle axis
 - `nodesDraggable: boolean = false` (attribute `nodes-draggable`)
 - `connectable: boolean = false`
@@ -2181,8 +2199,8 @@ edge geometry/status arrays, viewport `{ x, y, zoom, width, height, minZoom, max
 effective `locked`, `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
 sorted even when public inputs are invalid or reversed.
 
-**Events:** `lr-node-activate` (`detail: { id }`), `lr-edge-activate` (`detail: { id, source, target
-}`), `lr-selection-change` (`detail: { nodeIds, edgeIds }`), `lr-node-move` (`detail: { id,
+**Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId, source, target
+}`), `lr-selection-change` (`detail: { nodeIds, edgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
 (`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),
@@ -2258,7 +2276,7 @@ four above. Set it to `transparent` to opt out of the hover treatment.
   canvas.edges = [{ id: "a-b", source: "a", target: "b" }];
   canvas.addEventListener("lr-node-move", (e) => {
     canvas.nodes = canvas.nodes.map((n) =>
-      n.id === e.detail.id ? { ...n, position: e.detail.position } : n
+      n.id === e.detail.nodeId ? { ...n, position: e.detail.position } : n
     );
   });
 </script>
@@ -2315,7 +2333,7 @@ owns none of that.
 - `compact: boolean = false` (reflected) — tighter card padding for dense canvases and palette
   previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
-  }]` (attribute: false) — detached, frozen snapshots of readonly `{ id, label? }` handles
+}]` (attribute: false) — detached, frozen snapshots of readonly `{ id, label? }` handles
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`
 
@@ -2695,7 +2713,7 @@ Responsive month calendar with event markers and an agenda view.
 **Properties:**
 
 - `events: CalendarEvent[] = []` (attribute: false) — `{ readonly id?, readonly date, readonly
-  title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is
+title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is
   sanitized before being used as the marker background. The former ignored `start`/`end` fields
   are not part of the contract; use one event per displayed date
 - `value: string = ''` — the selected ISO date
@@ -2790,7 +2808,8 @@ scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border)`), `--lr-timeline-marker-color` (default
-`var(--lr-color-text-quiet)`, swapped per `variant`), and `--lr-timeline-active-ring-color`
+`var(--lr-color-text-quiet)`, with a private default that changes per `variant`), and
+`--lr-timeline-active-ring-color`
 (defaults to the effective marker color). All five item hooks inherit from theme
 ancestors; setting one directly on an item wins over both the inherited value and variant default.
 
@@ -2829,11 +2848,12 @@ Masking is presentational, not a security boundary: the real value sits in a DOM
 regardless of mask state. Names, revealed values, and localized action text wrap within narrow
 allocations; the name track uses at most 40% of the available inline size.
 
-**Properties:** `entries: readonly EnvEntry[] = []` (attribute: false; clone-owned/frozen snapshots,
-malformed records skipped), `revealable: boolean = true` (reflected), `copyable: boolean = true`
+**Properties:** `entries: readonly EnvEntry[] = []` (attribute: false; clone-owned/frozen snapshots;
+malformed records, blank names, and later duplicate names are skipped first-wins before render,
+reveal state, copy actions, and events), `revealable: boolean = true` (reflected), `copyable: boolean = true`
 (reflected), and `label: string = ''`.
 
-**Events:** `lr-reveal-change` (frozen readonly `detail: { name, revealed }`); `lr-copy` (frozen
+**Events:** `lr-reveal-change` (frozen readonly `detail: { envName, revealed }`); `lr-copy` (frozen
 readonly `detail: { ok: true, text }`, emitted only after clipboard fulfillment, with `text` equal
 to the real unmasked value); `lr-copy-error` (frozen readonly
 `detail: { ok: false, text, reason, error }`); and `lr-error` (compatibility failure notification
@@ -2865,8 +2885,9 @@ collection stays reachable through pagination without mounting an unbounded grid
 by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary as `lr-table`.
 
 **Properties:** clone-owned frozen `documents: readonly LibraryDocument[] = []` (document records,
-nested tags, and dates are snapshotted on assignment; reads are detached so `Date` mutators cannot
-reach retained state), `filter`, `label`, `loading`, clone-owned
+nested tags, and dates are snapshotted on assignment; malformed records, blank ids, and later
+duplicate ids are omitted first-wins before filters, counts, selection, rows, and events; reads are
+detached so `Date` mutators cannot reach retained state), `filter`, `label`, `loading`, clone-owned
 frozen `selectedIds: readonly string[] = []`, public controlled `searchTerm: string = ''`
 (`search-term`), `sortKey: LibraryDocumentSortKey = 'name'` (`sort-key`), canonical
 `sortDir: 'asc'|'desc' = 'asc'` (`sort-dir`), and clone-owned frozen
@@ -2875,8 +2896,8 @@ frozen `selectedIds: readonly string[] = []`, public controlled `searchTerm: str
 **Events:** `lr-filter-change` emits a fresh frozen readonly
 `{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly
 `{ phase: 'request', sortKey, sortDir }`; accepted `lr-sort` commits the same canonical vocabulary
-with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ ids }`; and `lr-open`
-emits frozen readonly `{ id }`.
+with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`; and
+`lr-open` emits frozen readonly `{ documentId }`.
 
 **CSS parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
 `clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
@@ -3032,370 +3053,370 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-data-calendar-calendar-contracts`** — Supporting data types and helpers for this component family.
   `CalendarEvent {
-    id: unknown;
-    date: unknown;
-    title: unknown;
-    color: unknown;
-    data: unknown;
-  }`
+  id: unknown;
+  date: unknown;
+  title: unknown;
+  color: unknown;
+  data: unknown;
+}`
 
 - **`components-data-condition-builder-condition-builder-contracts`** — Supporting data types and helpers for this component family.
   `ConditionBuilderCondition {
-    id: unknown;
-    field: unknown;
-    operator: unknown;
-    value: unknown;
-  }`
+  id: unknown;
+  field: unknown;
+  operator: unknown;
+  value: unknown;
+}`
   `ConditionBuilderField {
-    name: unknown;
-    label: unknown;
-    type: unknown;
-    options: unknown;
-    operators: unknown;
-    placeholder: unknown;
-  }`
+  name: unknown;
+  label: unknown;
+  type: unknown;
+  options: unknown;
+  operators: unknown;
+  placeholder: unknown;
+}`
   `ConditionBuilderFieldOption {
-    value: unknown;
-    label: unknown;
-  }`
+  value: unknown;
+  label: unknown;
+}`
   `ConditionBuilderValue {
-    combinator: unknown;
-    conditions: unknown;
-  }`
+  combinator: unknown;
+  conditions: unknown;
+}`
 
 - **`components-data-context-meter-context-meter-contracts`** — Supporting data types and helpers for this component family.
   `ContextMeterSegment {
-    label: unknown;
-    value: unknown;
-    tone: unknown;
-    color: unknown;
-  }`
+  label: unknown;
+  value: unknown;
+  tone: unknown;
+  color: unknown;
+}`
 
 - **`components-data-data-grid-data-grid-types-contracts`** — Supporting data types and helpers for this component family.
   `DataGridCellContextMenuDetail {
-    originalEvent: unknown;
-    column: unknown;
-    value: unknown;
-    row: unknown;
-    index: unknown;
-  }`
+  originalEvent: unknown;
+  column: unknown;
+  value: unknown;
+  row: unknown;
+  index: unknown;
+}`
   `DataGridCellDetail {
-    column: unknown;
-    value: unknown;
-    row: unknown;
-    index: unknown;
-  }`
+  column: unknown;
+  value: unknown;
+  row: unknown;
+  index: unknown;
+}`
   `DataGridColumn {
-    id: unknown;
-    field: unknown;
-    label: unknown;
-    align: unknown;
-    width: unknown;
-    minWidth: unknown;
-    maxWidth: unknown;
-    flex: unknown;
-    formatter: unknown;
-    value: unknown;
-    row: unknown;
-    sortable: unknown;
-    sortFn: unknown;
-    comparator: unknown;
-    left: unknown;
-    right: unknown;
-    leftRow: unknown;
-    rightRow: unknown;
-    sortDescFirst: unknown;
-    sortUndefined: unknown;
-    searchable: unknown;
-    filterable: unknown;
-    filterType: unknown;
-    filterFn: unknown;
-    filter: unknown;
-    hidden: unknown;
-    hideable: unknown;
-    resizable: unknown;
-    movable: unknown;
-    pinnable: unknown;
-    pinned: unknown;
-    footer: unknown;
-    rows: unknown;
-    aggregation: unknown;
-    aggregatedFormatter: unknown;
-  }`
+  id: unknown;
+  field: unknown;
+  label: unknown;
+  align: unknown;
+  width: unknown;
+  minWidth: unknown;
+  maxWidth: unknown;
+  flex: unknown;
+  formatter: unknown;
+  value: unknown;
+  row: unknown;
+  sortable: unknown;
+  sortFn: unknown;
+  comparator: unknown;
+  left: unknown;
+  right: unknown;
+  leftRow: unknown;
+  rightRow: unknown;
+  sortDescFirst: unknown;
+  sortUndefined: unknown;
+  searchable: unknown;
+  filterable: unknown;
+  filterType: unknown;
+  filterFn: unknown;
+  filter: unknown;
+  hidden: unknown;
+  hideable: unknown;
+  resizable: unknown;
+  movable: unknown;
+  pinnable: unknown;
+  pinned: unknown;
+  footer: unknown;
+  rows: unknown;
+  aggregation: unknown;
+  aggregatedFormatter: unknown;
+}`
   `DataGridColumnMoveDetail {
-    columnOrder: unknown;
-    columnId: unknown;
-    finished: unknown;
-  }`
+  columnOrder: unknown;
+  columnId: unknown;
+  finished: unknown;
+}`
   `DataGridColumnPinDetail {
-    columnId: unknown;
-    side: unknown;
-  }`
+  columnId: unknown;
+  side: unknown;
+}`
   `DataGridColumnResizeDetail {
-    columnId: unknown;
-    width: unknown;
-    finished: unknown;
-  }`
+  columnId: unknown;
+  width: unknown;
+  finished: unknown;
+}`
   `DataGridColumnState {
-    order: unknown;
-    widths: unknown;
-    visibility: unknown;
-    pinning: unknown;
-  }`
+  order: unknown;
+  widths: unknown;
+  visibility: unknown;
+  pinning: unknown;
+}`
   `DataGridColumnVisibilityDetail {
-    columnId: unknown;
-    visible: unknown;
-  }`
+  columnId: unknown;
+  visible: unknown;
+}`
   `DataGridCopyOptions {
-    columnIds: unknown;
-    includeHeaders: unknown;
-    format: unknown;
-    escapeFormulas: unknown;
-    delimiter: unknown;
-  }`
+  columnIds: unknown;
+  includeHeaders: unknown;
+  format: unknown;
+  escapeFormulas: unknown;
+  delimiter: unknown;
+}`
   `DataGridCsvOptions {
-    delimiter: unknown;
-    includeHeaders: unknown;
-    columnIds: unknown;
-    escapeFormulas: unknown;
-  }`
+  delimiter: unknown;
+  includeHeaders: unknown;
+  columnIds: unknown;
+  escapeFormulas: unknown;
+}`
   `DataGridDataErrorDetail {
-    error: unknown;
-    request: unknown;
-  }`
+  error: unknown;
+  request: unknown;
+}`
   `DataGridExportOptions {
-    fileName: unknown;
-    delimiter: unknown;
-    includeHeaders: unknown;
-    columnIds: unknown;
-    escapeFormulas: unknown;
-  }`
+  fileName: unknown;
+  delimiter: unknown;
+  includeHeaders: unknown;
+  columnIds: unknown;
+  escapeFormulas: unknown;
+}`
   `DataGridFacets {
-    uniqueValues: unknown;
-    minMax: unknown;
-  }`
+  uniqueValues: unknown;
+  minMax: unknown;
+}`
   `DataGridFilter {
-    id: unknown;
-    value: unknown;
-  }`
+  id: unknown;
+  value: unknown;
+}`
   `DataGridGroupDetail {
-    key: unknown;
-    columnId: unknown;
-    value: unknown;
-    rows: unknown;
-  }`
+  key: unknown;
+  columnId: unknown;
+  value: unknown;
+  rows: unknown;
+}`
   `DataGridPageDetail {
-    page: unknown;
-    pageSize: unknown;
-  }`
+  page: unknown;
+  pageSize: unknown;
+}`
   `DataGridRequest {
-    sort: unknown;
-    filters: unknown;
-    search: unknown;
-    page: unknown;
-    pageSize: unknown;
-    signal: unknown;
-  }`
+  sort: unknown;
+  filters: unknown;
+  search: unknown;
+  page: unknown;
+  pageSize: unknown;
+  signal: unknown;
+}`
   `DataGridResponse {
-    rows: unknown;
-    total: unknown;
-  }`
+  rows: unknown;
+  total: unknown;
+}`
   `DataGridRowDetail {
-    key: unknown;
-    row: unknown;
-  }`
+  key: unknown;
+  row: unknown;
+}`
   `DataGridScrollOptions {
-    align: unknown;
-  }`
+  align: unknown;
+}`
   `DataGridSelectionDetail {
-    selectedKeys: unknown;
-    selectedRows: unknown;
-  }`
+  selectedKeys: unknown;
+  selectedRows: unknown;
+}`
   `DataGridSort {
-    id: unknown;
-    desc: unknown;
-  }`
+  id: unknown;
+  desc: unknown;
+}`
   `DataGridStateFilter {
-    id: unknown;
-    value: unknown;
-  }`
+  id: unknown;
+  value: unknown;
+}`
   `DataGridState {
-    sort: unknown;
-    filters: unknown;
-    search: unknown;
-    selectedKeys: unknown;
-    expandedKeys: unknown;
-    page: unknown;
-    pageSize: unknown;
-    order: unknown;
-    widths: unknown;
-    visibility: unknown;
-    pinning: unknown;
-  }`
+  sort: unknown;
+  filters: unknown;
+  search: unknown;
+  selectedKeys: unknown;
+  expandedKeys: unknown;
+  page: unknown;
+  pageSize: unknown;
+  order: unknown;
+  widths: unknown;
+  visibility: unknown;
+  pinning: unknown;
+}`
 
 - **`components-data-document-library-document-library-contracts`** — Supporting data types and helpers for this component family.
   `DocumentLibraryFilterChangeDetail {
-    searchTerm: unknown;
-    tags: unknown;
-    matchCount: unknown;
-  }`
+  searchTerm: unknown;
+  tags: unknown;
+  matchCount: unknown;
+}`
   `DocumentLibraryOpenDetail {
-    id: unknown;
-  }`
+  documentId: unknown;
+}`
   `DocumentLibrarySelectionChangeDetail {
-    ids: unknown;
-  }`
+  documentIds: unknown;
+}`
   `DocumentLibrarySortCommitDetail {
-    phase: unknown;
-    sortKey: unknown;
-    sortDir: unknown;
-  }`
+  phase: unknown;
+  sortKey: unknown;
+  sortDir: unknown;
+}`
   `DocumentLibrarySortRequestDetail {
-    phase: unknown;
-    sortKey: unknown;
-    sortDir: unknown;
-  }`
+  phase: unknown;
+  sortKey: unknown;
+  sortDir: unknown;
+}`
   `LibraryDocument {
-    tags: unknown;
-    owner: unknown;
-    updatedAt: unknown;
-    freshness: unknown;
-    id: unknown;
-    name: unknown;
-    mimeType: unknown;
-    uri: unknown;
-    version: unknown;
-  }`
+  tags: unknown;
+  owner: unknown;
+  updatedAt: unknown;
+  freshness: unknown;
+  id: unknown;
+  name: unknown;
+  mimeType: unknown;
+  uri: unknown;
+  version: unknown;
+}`
 
 - **`components-data-env-list-env-list-contracts`** — Supporting data types and helpers for this component family.
   `EnvEntry {
-    name: unknown;
-    value: unknown;
-    secret: unknown;
-  }`
+  name: unknown;
+  value: unknown;
+  secret: unknown;
+}`
 
 - **`components-data-file-tree-file-tree-contracts`** — Supporting data types and helpers for this component family.
   `FileTreeNode {
-    path: unknown;
-    name: unknown;
-    kind: unknown;
-    mimeType: unknown;
-    gitStatus: unknown;
-    additions: unknown;
-    deletions: unknown;
-    children: unknown;
-    hasChildren: unknown;
-  }`
+  path: unknown;
+  name: unknown;
+  kind: unknown;
+  mimeType: unknown;
+  gitStatus: unknown;
+  additions: unknown;
+  deletions: unknown;
+  children: unknown;
+  hasChildren: unknown;
+}`
 
 - **`components-data-flow-canvas-flow-types-contracts`** — Supporting data types and helpers for this component family.
   `FlowEdge {
-    id: unknown;
-    source: unknown;
-    target: unknown;
-    sourceHandle: unknown;
-    targetHandle: unknown;
-    label: unknown;
-    tone: unknown;
-  }`
+  id: unknown;
+  source: unknown;
+  target: unknown;
+  sourceHandle: unknown;
+  targetHandle: unknown;
+  label: unknown;
+  tone: unknown;
+}`
   `FlowHandle {
-    id: unknown;
-    label: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+}`
   `FlowLayoutChangeDetail {
-    positions: unknown;
-    x: unknown;
-    y: unknown;
-    truncated: unknown;
-  }`
+  positions: unknown;
+  x: unknown;
+  y: unknown;
+  truncated: unknown;
+}`
   `FlowNode {
-    id: unknown;
-    type: unknown;
-    position: unknown;
-    x: unknown;
-    y: unknown;
-    data: unknown;
-    accessibleLabel: unknown;
-    inputs: unknown;
-    outputs: unknown;
-  }`
+  id: unknown;
+  type: unknown;
+  position: unknown;
+  x: unknown;
+  y: unknown;
+  data: unknown;
+  accessibleLabel: unknown;
+  inputs: unknown;
+  outputs: unknown;
+}`
   `FlowRunDecoration {
-    status: unknown;
-    progress: unknown;
-    durationMs: unknown;
-    detail: unknown;
-  }`
+  status: unknown;
+  progress: unknown;
+  durationMs: unknown;
+  detail: unknown;
+}`
   `FlowStructureEdgeSnapshot {
-    id: unknown;
-    source: unknown;
-    target: unknown;
-    status: unknown;
-  }`
+  id: unknown;
+  source: unknown;
+  target: unknown;
+  status: unknown;
+}`
   `FlowStructureNodeSnapshot {
-    id: unknown;
-    x: unknown;
-    y: unknown;
-    width: unknown;
-    height: unknown;
-    status: unknown;
-  }`
+  id: unknown;
+  x: unknown;
+  y: unknown;
+  width: unknown;
+  height: unknown;
+  status: unknown;
+}`
   `FlowStructureSnapshot {
-    nodes: unknown;
-    edges: unknown;
-    viewport: unknown;
-    locked: unknown;
-    orientation: unknown;
-    layerGap: unknown;
-    nodeGap: unknown;
-  }`
+  nodes: unknown;
+  edges: unknown;
+  viewport: unknown;
+  locked: unknown;
+  orientation: unknown;
+  layerGap: unknown;
+  nodeGap: unknown;
+}`
   `FlowViewportSnapshot {
-    x: unknown;
-    y: unknown;
-    zoom: unknown;
-    width: unknown;
-    height: unknown;
-    minZoom: unknown;
-    maxZoom: unknown;
-  }`
+  x: unknown;
+  y: unknown;
+  zoom: unknown;
+  width: unknown;
+  height: unknown;
+  minZoom: unknown;
+  maxZoom: unknown;
+}`
 
 - **`components-data-graph-query-builder-graph-query-builder-contracts`** — Supporting data types and helpers for this component family.
   `GraphQueryDeleteDetail {
-    id: unknown;
-  }`
+  id: unknown;
+}`
   `GraphQuery {
-    startId: unknown;
-    endId: unknown;
-    relationshipTypes: unknown;
-    nodeTypes: unknown;
-    direction: unknown;
-    minHops: unknown;
-    maxHops: unknown;
-  }`
+  startId: unknown;
+  endId: unknown;
+  relationshipTypes: unknown;
+  nodeTypes: unknown;
+  direction: unknown;
+  minHops: unknown;
+  maxHops: unknown;
+}`
   `GraphQueryLoadDetail {
-    id: unknown;
-    query: unknown;
-  }`
+  id: unknown;
+  query: unknown;
+}`
   `GraphQueryRunDetail {
-    query: unknown;
-  }`
+  query: unknown;
+}`
   `GraphQuerySaveDetail {
-    name: unknown;
-    query: unknown;
-  }`
+  name: unknown;
+  query: unknown;
+}`
   `GraphQuerySavedItem {
-    id: unknown;
-    name: unknown;
-    query: unknown;
-  }`
+  id: unknown;
+  name: unknown;
+  query: unknown;
+}`
   `GraphQueryTypeOption {
-    value: unknown;
-    label: unknown;
-  }`
+  value: unknown;
+  label: unknown;
+}`
 
 - **`components-data-heatmap-calendar-grid-contracts`** — Supporting data types and helpers for this component family.
   `CalendarDay {
-    date: unknown;
-    value: unknown;
-  }`
+  date: unknown;
+  value: unknown;
+}`
 
 - **`components-data-heatmap-heatmap-scale-contracts`** — Supporting data types and helpers for this component family.
   `linearAlpha(/* public names: value, lo, hi */): unknown`
@@ -3403,146 +3424,146 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-data-heatmap-heatmap-contracts`** — Supporting data types and helpers for this component family.
   `CalendarCellPos {
-    week: unknown;
-    weekday: unknown;
-    date: unknown;
-  }`
+  week: unknown;
+  weekday: unknown;
+  date: unknown;
+}`
   `HeatmapAnnotation {
-    row: unknown;
-    col: unknown;
-    date: unknown;
-    label: unknown;
-  }`
+  row: unknown;
+  col: unknown;
+  date: unknown;
+  label: unknown;
+}`
   `HeatmapCalendarData {
-    kind: unknown;
-    days: unknown;
-    firstDayOfWeek: unknown;
-    columnX: unknown;
-    index: unknown;
-    rowY: unknown;
-    weekday: unknown;
-    weekdayLabelText: unknown;
-    jsWeekday: unknown;
-    monthLabelText: unknown;
-    jsMonth: unknown;
-    year: unknown;
-  }`
+  kind: unknown;
+  days: unknown;
+  firstDayOfWeek: unknown;
+  columnX: unknown;
+  index: unknown;
+  rowY: unknown;
+  weekday: unknown;
+  weekdayLabelText: unknown;
+  jsWeekday: unknown;
+  monthLabelText: unknown;
+  jsMonth: unknown;
+  year: unknown;
+}`
   `HeatmapLegendStop {
-    value: unknown;
-    color: unknown;
-    label: unknown;
-  }`
+  value: unknown;
+  color: unknown;
+  label: unknown;
+}`
   `HeatmapMatrixData {
-    kind: unknown;
-    rowLabels: unknown;
-    colLabels: unknown;
-    values: unknown;
-  }`
+  kind: unknown;
+  rowLabels: unknown;
+  colLabels: unknown;
+  values: unknown;
+}`
   `HeatmapSelectedCell {
-    row: unknown;
-    col: unknown;
-    date: unknown;
-  }`
+  row: unknown;
+  col: unknown;
+  date: unknown;
+}`
   `hexToRgb(/* public names: hex */): unknown`
   `MatrixCellPos {
-    row: unknown;
-    col: unknown;
-  }`
+  row: unknown;
+  col: unknown;
+}`
   `normalizeBucketCount(/* public names: bucketCount */): unknown`
   `resolveRgb(/* public names: color, fallbackHex, ownerDocument */): unknown`
 
 - **`components-data-pagination-pagination-contracts`** — Supporting data types and helpers for this component family.
   `LyraPaginationChangeDetail {
-    page: unknown;
-    pageSize: unknown;
-  }`
+  page: unknown;
+  pageSize: unknown;
+}`
 
 - **`components-data-sequence-strip-sequence-strip-contracts`** — Supporting data types and helpers for this component family.
   `SequenceStripCategory {
-    id: unknown;
-    color: unknown;
-    label: unknown;
-  }`
+  id: unknown;
+  color: unknown;
+  label: unknown;
+}`
   `SequenceStripItem {
-    id: unknown;
-    categoryId: unknown;
-    marker: unknown;
-    label: unknown;
-  }`
+  id: unknown;
+  categoryId: unknown;
+  marker: unknown;
+  label: unknown;
+}`
 
 - **`components-data-stat-stat-contracts`** — Supporting data types and helpers for this component family.
   `StatRow {
-    label: unknown;
-    value: unknown;
-    exactValue: unknown;
-  }`
+  label: unknown;
+  value: unknown;
+  exactValue: unknown;
+}`
 
 - **`components-data-table-table-contracts`** — Supporting data types and helpers for this component family.
   `TableColumn {
-    key: unknown;
-    label: unknown;
-    headerCell: unknown;
-    column: unknown;
-    width: unknown;
-    minWidth: unknown;
-    maxWidth: unknown;
-    resizable: unknown;
-    sortable: unknown;
-    sortValue: unknown;
-    row: unknown;
-    align: unknown;
-    priority: unknown;
-    sticky: unknown;
-    footer: unknown;
-    rows: unknown;
-    cellStyle: unknown;
-    cellTitle: unknown;
-    heatValue: unknown;
-    editTrigger: unknown;
-    editValue: unknown;
-    editType: unknown;
-    cell: unknown;
-  }`
+  key: unknown;
+  label: unknown;
+  headerCell: unknown;
+  column: unknown;
+  width: unknown;
+  minWidth: unknown;
+  maxWidth: unknown;
+  resizable: unknown;
+  sortable: unknown;
+  sortValue: unknown;
+  row: unknown;
+  align: unknown;
+  priority: unknown;
+  sticky: unknown;
+  footer: unknown;
+  rows: unknown;
+  cellStyle: unknown;
+  cellTitle: unknown;
+  heatValue: unknown;
+  editTrigger: unknown;
+  editValue: unknown;
+  editType: unknown;
+  cell: unknown;
+}`
   `TableSortCommitDetail {
-    phase: unknown;
-    sortKey: unknown;
-    sortDir: unknown;
-  }`
+  phase: unknown;
+  sortKey: unknown;
+  sortDir: unknown;
+}`
   `TableSortRequestDetail {
-    phase: unknown;
-    sortKey: unknown;
-    sortDir: unknown;
-  }`
+  phase: unknown;
+  sortKey: unknown;
+  sortDir: unknown;
+}`
 
 - **`components-data-tree-tree-types-contracts`** — Supporting data types and helpers for this component family.
   `LyraTreeNodeData {
-    id: unknown;
-    label: unknown;
-    selected: unknown;
-    disabled: unknown;
-    lazy: unknown;
-    children: unknown;
-    badges: unknown;
-    icon: unknown;
-    description: unknown;
-    accessibleLabel: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  selected: unknown;
+  disabled: unknown;
+  lazy: unknown;
+  children: unknown;
+  badges: unknown;
+  icon: unknown;
+  description: unknown;
+  accessibleLabel: unknown;
+}`
   `TreeBadge {
-    text: unknown;
-    tone: unknown;
-    label: unknown;
-  }`
+  text: unknown;
+  tone: unknown;
+  label: unknown;
+}`
 
 - **`components-data-word-cloud-word-cloud-layout-contracts`** — Supporting data types and helpers for this component family.
   `WordCloudWord {
-    text: unknown;
-    weight: unknown;
-    color: unknown;
-    group: unknown;
-  }`
+  text: unknown;
+  weight: unknown;
+  color: unknown;
+  group: unknown;
+}`
 
 - **`components-data-word-cloud-word-cloud-contracts`** — Supporting data types and helpers for this component family.
   `WordCloudLegendItem {
-    label: unknown;
-    color: unknown;
-  }`
+  label: unknown;
+  color: unknown;
+}`

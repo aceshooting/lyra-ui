@@ -201,8 +201,33 @@ it('requests an opt-in controlled sibling reorder with Ctrl+ArrowDown', async ()
   await el.updateComplete;
 
   expect(events.length).to.equal(1);
-  expect(events[0]!.detail).to.deep.equal({ id: 'step-1', parentId: null, fromIndex: 0, toIndex: 1 });
+  expect(events[0]!.detail).to.deep.equal({
+    taskId: 'step-1',
+    parentTaskId: null,
+    fromIndex: 0,
+    toIndex: 1,
+  });
   expect(el.items.map((item) => item.id)).to.deep.equal(['step-1', 'step-2', 'step-3']);
+});
+
+it('fails reorder closed when any task identity is empty or blank', async () => {
+  const el = await fixture<LyraTaskList>(html`
+    <lr-task-list reorderable .items=${[
+      { id: '', label: 'Empty', status: 'pending' },
+      { id: 'valid', label: 'Valid', status: 'pending' },
+    ]}></lr-task-list>
+  `);
+  let reorders = 0;
+  el.addEventListener('lr-reorder', () => reorders++);
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part="item"][data-id="valid"]')!;
+  row.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowUp',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+    ctrlKey: true,
+  }));
+  expect(reorders).to.equal(0);
 });
 
 it('renders a dynamic detail-<id> slot per item for rich detail content', async () => {

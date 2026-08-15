@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'Prompt Input',
   component: 'lr-prompt-input',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Attachment chips use unique nonempty attachmentId values; malformed and later duplicate rows are omitted first-wins. Every array-valued input, including nested source children and queue attachments, is a bounded clone-owned frozen snapshot; reassign a new collection after changes.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

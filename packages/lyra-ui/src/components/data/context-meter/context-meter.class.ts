@@ -62,6 +62,9 @@ function formatCount(n: number, locale: string): string {
  * itself — the one exception is the plain arithmetic sum of the segment
  * values used to build the accessible "X of Y used" summary below.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-context-meter
  * @csspart base - The component's root wrapper (a `<div>` for `bar`, an `<svg>` for `ring`).
  * @csspart track - The unfilled/empty capacity track.
@@ -83,6 +86,8 @@ function formatCount(n: number, locale: string): string {
  * @since 4.0.0
  */
 export class LyraContextMeter extends LyraElement {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["segments"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -97,7 +102,7 @@ export class LyraContextMeter extends LyraElement {
   static override styles = [LyraElement.styles, srOnly, styles];
 
   /** Occupied segments, each an absolute quantity against `total` — never a percentage. */
-  @property({ attribute: false }) segments: ContextMeterSegment[] = [];
+  @property({ attribute: false }) segments: readonly ContextMeterSegment[] = [];
 
   /** The full capacity segments are measured against (e.g. a model's context window size). */
   @property({ type: Number }) total = 0;

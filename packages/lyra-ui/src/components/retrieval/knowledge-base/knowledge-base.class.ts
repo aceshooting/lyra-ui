@@ -147,6 +147,9 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * propagating further (this component doesn't expose row-click/selection semantics -- only the
  * per-row action menu is interactive).
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-knowledge-base
  * @event lr-source-create - The toolbar "Add source" affordance was activated. No detail.
  * @event lr-source-sync - A row's "Sync now" action was activated. `detail: { sourceId }`.
@@ -176,6 +179,8 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * @since 4.1.0
  */
 export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["sources"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -218,7 +223,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** The sources to list, in display order. */
-  @property({ attribute: false }) sources: KnowledgeSource[] = [];
+  @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
 
   /** Heading text and the nested table's accessible name. A host `aria-label` independently
    *  names the complete component. Falls back to a localized default. */

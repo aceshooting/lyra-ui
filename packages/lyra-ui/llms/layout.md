@@ -180,7 +180,8 @@ the `'floating'` drawer's `[part='backdrop']` scrim; scoped to `[part='base']`, 
 `max(var(--lr-icon-button-size), var(--lr-size-3px))`) — the real flex track/gutter reserved for the
 divider along the resize axis. The 3px visual rule is painted in its center; no pseudo-element
 extends into either adjacent panel, so slotted controls retain pointer ownership up to their edge.
-It is declared on `:host`, so an override targets the component itself.
+Set it on an ancestor to retune a split subtree or directly on one component; either public value
+remains authoritative.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.
@@ -397,14 +398,14 @@ position) survives the transition.
   CSS `inset`; when empty or invalid, the backdrop remains viewport-filling (`0`) independently of
   `fullscreenInset`
 - `views: readonly LyraWidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
-  chart/table toggle inside the same card chrome; `LyraWidgetView { id: string; label?: string; icon?:
+  chart/table toggle inside the same card chrome; `LyraWidgetView { viewId: string; label?: string; icon?:
 TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
-  (`[part='view-toggle']`) and a `<slot name="view-${id}">`. An icon-only view should set
-  `ariaLabel`; if both labels are omitted, the button uses `id` as a last-resort accessible name.
+  (`[part='view-toggle']`) and a `<slot name="view-${viewId}">`. An icon-only view should set
+  `ariaLabel`; if both labels are omitted, the button uses `viewId` as a last-resort accessible name.
   Empty (the default) renders today's single unnamed default slot as the sole view, unchanged.
   Up to 256 valid records are snapshotted; IDs must be unique, nonempty, and whitespace-stable.
   Malformed/hostile entries are ignored without rejecting the component update.
-- `activeView: string = ''` (attribute: false) — the currently active view's `id`; defaults to the
+- `activeViewId: string = ''` (attribute: false) — the currently active view's `viewId`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
@@ -426,9 +427,9 @@ fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backd
 accepted state — also fired when fullscreen is exited via Escape or a backdrop click, not just the
 toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-view-request`
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
-`preventDefault()` to leave `activeView` unchanged. Not emitted when a consumer assigns
-`activeView` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
-active view's `id`. Not emitted when a consumer sets `activeView` directly)
+`preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
+`activeViewId` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
+active view's `viewId`. Not emitted when a consumer sets `activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
 icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,
@@ -441,7 +442,7 @@ collapsed/right-facing baseline for a directional override; only meaningful whil
 `fullscreen-icon` (replaces the built-in glyph in the fullscreen toggle — the override replaces
 _both_ the "expand" and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by
 reading the `fullscreen` attribute; its assigned content is decorative, inert, and aria-hidden so
-the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{id}`
+the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{viewId}`
 slot per `views` entry, used instead of the default slot
 
 **CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
@@ -1030,7 +1031,7 @@ decides whether/how `steps` changes in response.
 
 **Properties:**
 
-- `steps: readonly LyraStepItem[] = []` (attribute: false) — `LyraStepItem { id: string; label:
+- `steps: readonly LyraStepItem[] = []` (attribute: false) — `LyraStepItem { stepId: string; label:
 string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown }`, where
   `LyraStepState` is `'pending' | 'current' | 'completed' | 'error'`. `disabled` independently gates
   activation and roving focus, so locking a current/completed/error step does not erase its progress.
@@ -1041,8 +1042,10 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   instead of — the state-driven `step-index`/`step-check` glyph. It provides no independent action
   or accessible name. Input is read through a realm-neutral bounded schema snapshot (at most 256
   positions); malformed/hostile entries are skipped while valid neighbors survive, and the frozen
-  returned array/records never alias caller-owned objects. Duplicate ids are supported as ordered
-  occurrences because selection detail always includes `index`. Empty (the default) renders nothing.
+  returned array/records never alias caller-owned objects. Duplicate step IDs are supported as
+  ordered occurrences because selection detail always includes `index`; keyed rendering and focus
+  restoration correlate `{ stepId, index }` so a refresh retains the focused duplicate occurrence.
+  Empty (the default) renders nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
@@ -1086,7 +1089,7 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   renders without an `aria-label` (there is no localized default name); an explicitly empty
   attribute remains empty rather than being treated as absent.
 
-**Events:** `lr-step-select` (`detail: { index, id }`) — fired on click, or Enter/Space while
+**Events:** `lr-step-select` (`detail: { stepId, index }`) — fired on click, or Enter/Space while
 focused, on a non-`disabled` step. It is non-cancelable because the component takes no default
 action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
@@ -1137,12 +1140,12 @@ disabled under forced-colors while the native scroll owner remains available. Ot
 <script type="module">
   const stepper = document.querySelector("lr-stepper");
   stepper.steps = [
-    { id: "account", label: "Account", state: "completed" },
-    { id: "billing", label: "Billing", state: "current" },
-    { id: "review", label: "Review", state: "pending" },
+    { stepId: "account", label: "Account", state: "completed" },
+    { stepId: "billing", label: "Billing", state: "current" },
+    { stepId: "review", label: "Review", state: "pending" },
   ];
   stepper.addEventListener("lr-step-select", (e) =>
-    console.log(e.detail.index, e.detail.id)
+    console.log(e.detail.stepId, e.detail.index)
   );
 </script>
 ```
@@ -1452,9 +1455,9 @@ native horizontal scroll owner. `--lr-segmented-track-min-height` (default
 `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`), and
 `--lr-segmented-font-size` (default `var(--lr-form-control-font-size)`) are the three knobs the
 `size` tier moves — each points at the shared ladder rather than carrying a per-tier value of its
-own, so retuning one tier for this component alone is a one-line override instead of a fork. All
-three are declared on `:host`, so set them on the element itself for a density the ladder doesn't
-cover; an ancestor rule is shadowed.
+own, so retuning one tier for this component alone is a one-line override instead of a fork. Their
+private defaults follow the tier; a public value inherited from an ancestor or set directly on the
+element remains authoritative in every tier.
 
 `--lr-segmented-track-height` pins the `base` track's exact height at every `size` tier (it sets
 both `block-size` and `min-block-size`), for a row that has to sit flush beside a hard-sized toolbar
@@ -1545,9 +1548,10 @@ contract.
 
 **Properties:**
 
-- `items: unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
+- `items: readonly unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
   a property/lit-html binding (`.items=`), not an HTML attribute. This remains the compatibility
-  source whenever `source` is unset.
+  source whenever `source` is unset. Its sequence is copied, bounded, and frozen while generic row
+  identities are retained; reassign a new array after sequence changes.
 - `source?: VirtualListSource` (attribute: false) — a readonly array or a count/index-backed
   `{ readonly count: number; itemAt(index): unknown; keyAt?(index): string | number;
 indexOfKey?(key): number }`. When set it takes precedence over `items`. The indexed form performs
@@ -1555,7 +1559,8 @@ indexOfKey?(key): number }`. When set it takes precedence over `items`. The inde
   normalize to zero. Prefer a stable object identity and stable `keyAt`/`indexOfKey` implementations
   for synthetic, paged, or remote collections. `indexOfKey` is required when `active-id` should
   target an indexed source: the list never performs a count-sized fallback scan; invalid or
-  out-of-range results mean no match.
+  out-of-range results mean no match. An array source receives the same clone-owned frozen sequence
+  and row-identity contract as `items`; an indexed-source object passes through by identity.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
   one row's content, typically returning a `lit-html` `TemplateResult`. JS-only.
 
@@ -2413,6 +2418,9 @@ properties, slots, parts, methods, checkbox/state events, roving focus, and cano
 `lr-select` behavior. Its host also exposes native, non-bubbling, composed `focus` and `blur`
 events.
 
+**Events:** native, non-bubbling, composed, non-cancelable `focus` and `blur` (`FocusEvent`) when
+the focusable host gains or loses focus, plus the shared menu-item events above.
+
 `submenuOpen` reflects to canonical `submenu-open`. HTML normalizes Web Awesome's documented
 mixed-case spelling to `submenuopen`, so that lowercase token is a permanent compatibility alias.
 Adding either spelling opens the submenu and synchronizes the other; removing either closes it and
@@ -2723,10 +2731,12 @@ dismissal, ref-counted document scroll lock).
 - `open: boolean = false` (reflected) — after the initial silent render, property and attribute
   writes use the same synchronous cancelable transaction as `openPalette()`/`close()`; a veto
   restores reflection and prevents query/active-row opening side effects
-- `commands: LyraCommand[] = []` (attribute: false) — `{ commandId, label, description?, group?,
-shortcut?, keywords?, disabled?, icon?, onSelect? }`. `commandId` is a stable business identity and
-must be nonempty and unique; invalid rows are omitted and the first duplicate wins. Replacing or
-reordering the array preserves the active command by `commandId`. `icon` is an optional leading glyph (a `TemplateResult`,
+- `commands: readonly LyraCommand[] = []` (attribute: false) — `{ commandId, label, description?, group?,
+shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The sequence is copied,
+  bounded, and frozen while each command object's identity is retained for `onSelect`; create and
+  reassign a new command array after sequence or row changes. `commandId` is a stable business identity and
+  must be nonempty and unique; invalid rows are omitted and the first duplicate wins. Replacing or
+  reordering the array preserves the active command by `commandId`. `icon` is an optional leading glyph (a `TemplateResult`,
   an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
   label; a command with no `icon` renders no `icon` part at all. Filtering is case-insensitive
   substring matching over `label` + `description` + `group` + `keywords` joined together (not
@@ -2930,8 +2940,8 @@ Details exposes `--lr-details-font-size` (default
 `var(--lr-form-control-font-size)`) — the text size of both the summary and the panel.
 `--lr-details-spacing` (default `var(--lr-form-control-padding-inline)`) — the block rhythm: the
 summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads
-evenly. Each `size` tier sets both from the shared ladder, and both are declared on `:host`, so an
-override has to target the element itself — an ancestor rule is shadowed. Note that the spacing knob
+evenly. Each `size` tier changes both private defaults from the shared ladder; a public value on an
+ancestor or the element remains authoritative. Note that the spacing knob
 deliberately reads the ladder's _inline_-padding value: a stacked panel wants generous block rhythm,
 whereas the ladder's own block padding exists to fit text inside a fixed control height and would
 collapse the summary row. `--spacing` aliases the Details rhythm, while `--show-duration` and
@@ -3062,25 +3072,26 @@ move, resize, collision, and layout-change requests; the host owns persistence a
 false` (reflected — disables every gesture grid-wide), `accessibleLabel: string | null = null`
 (attribute `aria-label`, falls back to a localized grid name).
 
-**Events:** `lr-cell-move` (`detail: { id, position, previous }`), `lr-cell-resize`
-(`detail: { id, size, previous }`), `lr-collision` (`detail: { id, collidedWith, policy, accepted }`),
+**Events:** `lr-cell-move` (`detail: { cellId, position, previous }`), `lr-cell-resize`
+(`detail: { cellId, size, previous }`), `lr-collision`
+(`detail: { cellId, collidedCellIds, policy, accepted }`),
 `lr-layout-change` (`detail: { layout }`, the full proposed layout after an accepted change).
 Move, resize, and collision feedback is appended to the shared light-DOM polite announcement
 sink only while the grid and its composed ancestors remain exposed to the accessibility tree.
-**Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
+**Slots:** `cell-{cellId}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
 
 `layout` is normalized into an immutable snapshot before rendering. Reads are bounded to the first
 1,000 positions; foreign-realm arrays are accepted; malformed records, hostile accessors, and later
-duplicate ids are skipped without discarding valid neighbors. Geometry and min/max constraints are
-finite and consistent, and neither the returned array nor its cells alias caller-owned objects.
+duplicate cell IDs are skipped without discarding valid neighbors. Geometry and min/max constraints
+are finite and consistent, and neither the returned array nor its cells alias caller-owned objects.
 Each admitted `cell.widget` is also copied immediately through the canonical bounded widget-document
 factory: its node records, child arrays, and prop records are frozen without cloning opaque prop or
 payload leaves. A hostile or malformed widget is omitted while its otherwise-valid cell remains.
 Direct light-DOM children with `cell-id` remain the authored source of truth across insertion,
-removal, id retargeting, reconnect, and document adoption. The first authored child for an id wins;
-when it disappears, the default cell is restored without mistaking a forged marker attribute for a
-library-owned node.
+removal, cell-ID retargeting, reconnect, and document adoption. The first authored child for a cell
+ID wins; when it disappears, the default cell is restored without mistaking a forged marker
+attribute for a library-owned node.
 
 The default content assigns a version-two document created from `cell.widget` to
 `<lr-widget-renderer>.document`; it never uses the legacy `tree` input. Pointer gestures admit only
@@ -3110,7 +3121,7 @@ draggable/resizable target; set it to `transparent` to opt out of the hover trea
 
 - `LyraDashboardCell`, `LyraDashboardCollisionPolicy`, and
   `LyraDashboardPlacementResult` — readonly public authoring/result types.
-- `resolveLyraDashboardPlacement(layout, candidateId, requested, columns, policy)` — the only public
+- `resolveLyraDashboardPlacement(layout, candidateCellId, requested, columns, policy)` — the only public
   runtime layout utility. It returns an immutable normalized result; collision indexing,
   clamping, sorting, and push-cascade helpers are intentionally implementation-private.
 - `LyraDashboardCellMoveDetail`, `LyraDashboardCellResizeDetail`,
@@ -3167,7 +3178,9 @@ arrowing across tabs does not request expensive categories until Enter/Space com
   `lr-drilldown-document-download`, `lr-drilldown-document-render-error`,
   `lr-drilldown-document-highlight-activate`, and `lr-drilldown-entity-activate` — correlated
   wrapper events carrying the current `nodeId` and the relevant `evidenceId`, `documentId`, or
-  `entityId`. Raw events from owned source cards, previews, entity cards, and tabs are contained;
+  `entityId`. The document-highlight wrapper carries `{ nodeId, documentId, highlightId }`,
+  preserving the preview event's domain-specific highlight identity. Raw events from owned source
+  cards, previews, entity cards, and tabs are contained;
   events from consumer-owned `runs` slot content continue bubbling normally.
 
 **Slots:** `runs`. **CSS parts:** `base`, `breadcrumb`, `breadcrumb-item`, `breadcrumb-button`,
@@ -3187,9 +3200,10 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 **Properties:**
 
 - `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in
-  render order. Invalid definitions and later duplicate ids are ignored deterministically. Writing
+  render order. Every definition carries a nonempty, whitespace-stable, unique `filterId`; invalid
+  definitions and later duplicate filter IDs are ignored deterministically. Writing
   `null` or `undefined` clears the schema; reads remain the canonical non-null empty array.
-- `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by filter id.
+- `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by `filterId`.
   Cleared fields are omitted. Reads, writes, event details, and string-array fields are immutable
   snapshots rather than references to caller-owned data. Writing `null` or `undefined` clears the
   value; reads remain the canonical non-null empty record.
@@ -3289,9 +3303,9 @@ markup and should bind the context's `value`, `disabled`, `required`, and `error
 `context.onValueChange` (or its `onInput`/`onChange` aliases) reads the event through
 `adapter.valueFromEvent` and commits it to the filter bar. `context.setValue(value)` is available for
 controls that expose a value without an event payload, and `context.onFocusout` marks the filter
-touched for required validation. Every context also carries a monotonic `generation` and an
-`AbortSignal`; replacement/removal of the schema, disconnection, and reconnect abort stale
-contexts, whose callbacks become inert.
+touched for required validation. Every context also carries its `filterId`, a monotonic
+`generation`, and an `AbortSignal`; replacement/removal of the schema, disconnection, and reconnect
+abort stale contexts, whose callbacks become inert.
 
 The adapter's required `clearValue` is used when the active chip is removed. Its optional
 `isEmpty(value)` defines domain emptiness; without one, the bar compares against `clearValue`
@@ -3304,7 +3318,7 @@ controlled value, active-chip, reset, disabled, and validation contract:
 ```ts
 const filters: LyraFilterBarFilterDefinition[] = [
   {
-    id: "archived",
+    filterId: "archived",
     label: "Include archived",
     type: "custom",
     custom: {
@@ -3476,387 +3490,387 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-layout-app-rail-app-rail-contracts`** — Supporting data types and helpers for this component family.
   `AppRailModeChangeDetail {
-    mode: unknown;
-  }`
+  mode: unknown;
+}`
   `AppRailResizeDetail {
-    widthPx: unknown;
-  }`
+  widthPx: unknown;
+}`
   `AppRailToggleDetail {
-    open: unknown;
-  }`
+  open: unknown;
+}`
   `computeAppRailMode(/* public names: iconOnlyMatches, mobileMatches, preferredMode */): unknown`
 
 - **`components-layout-command-palette-command-palette-contracts`** — Supporting data types and helpers for this component family.
   `LyraCommand {
-    commandId: unknown;
-    label: unknown;
-    description: unknown;
-    group: unknown;
-    shortcut: unknown;
-    keywords: unknown;
-    disabled: unknown;
-    icon: unknown;
-    onSelect: unknown;
-  }`
+  commandId: unknown;
+  label: unknown;
+  description: unknown;
+  group: unknown;
+  shortcut: unknown;
+  keywords: unknown;
+  disabled: unknown;
+  icon: unknown;
+  onSelect: unknown;
+}`
 
 - **`components-layout-dashboard-grid-dashboard-grid-contracts`** — Supporting data types and helpers for this component family.
   `LyraDashboardCellMoveDetail {
-    id: unknown;
-    position: unknown;
-    x: unknown;
-    y: unknown;
-    previous: unknown;
-  }`
+  cellId: unknown;
+  position: unknown;
+  x: unknown;
+  y: unknown;
+  previous: unknown;
+}`
   `LyraDashboardCellResizeDetail {
-    id: unknown;
-    size: unknown;
-    w: unknown;
-    h: unknown;
-    previous: unknown;
-  }`
+  cellId: unknown;
+  size: unknown;
+  w: unknown;
+  h: unknown;
+  previous: unknown;
+}`
   `LyraDashboardCollisionDetail {
-    id: unknown;
-    collidedWith: unknown;
-    policy: unknown;
-    accepted: unknown;
-  }`
+  cellId: unknown;
+  collidedCellIds: unknown;
+  policy: unknown;
+  accepted: unknown;
+}`
   `LyraDashboardLayoutChangeDetail {
-    layout: unknown;
-  }`
+  layout: unknown;
+}`
 
 - **`components-layout-dashboard-grid-layout-types-contracts`** — Supporting data types and helpers for this component family.
   `LyraDashboardCell {
-    id: unknown;
-    x: unknown;
-    y: unknown;
-    w: unknown;
-    h: unknown;
-    minW: unknown;
-    minH: unknown;
-    maxW: unknown;
-    maxH: unknown;
-    locked: unknown;
-    widget: unknown;
-    label: unknown;
-  }`
+  cellId: unknown;
+  x: unknown;
+  y: unknown;
+  w: unknown;
+  h: unknown;
+  minW: unknown;
+  minH: unknown;
+  maxW: unknown;
+  maxH: unknown;
+  locked: unknown;
+  widget: unknown;
+  label: unknown;
+}`
   `LyraDashboardPlacementResult {
-    accepted: unknown;
-    layout: unknown;
-    collidedWith: unknown;
-  }`
+  accepted: unknown;
+  layout: unknown;
+  collidedCellIds: unknown;
+}`
 
 - **`components-layout-dashboard-grid-layout-contracts`** — Supporting data types and helpers for this component family.
-  `resolveLyraDashboardPlacement(/* public names: layout, candidateId, requested, x, y, w, h, columns, policy */): unknown`
+  `resolveLyraDashboardPlacement(/* public names: layout, candidateCellId, requested, x, y, w, h, columns, policy */): unknown`
 
 - **`components-layout-details-accordion-contracts`** — Supporting data types and helpers for this component family.
   `LyraAccordionEventDetail {
-    item: unknown;
-  }`
+  item: unknown;
+}`
 
 - **`components-layout-details-details-contracts`** — Supporting data types and helpers for this component family.
   `LyraDetailsToggleDetail {
-    open: unknown;
-    source: unknown;
-  }`
+  open: unknown;
+  source: unknown;
+}`
 
 - **`components-layout-dock-panel-dock-panel-contracts`** — Supporting data types and helpers for this component family.
   `LyraDockPanelCollapseChangeDetail {
-    collapsed: unknown;
-  }`
+  collapsed: unknown;
+}`
   `LyraDockPanelResizeDetail {
-    extent: unknown;
-  }`
+  extent: unknown;
+}`
 
 - **`components-layout-drilldown-panel-drilldown-panel-contracts`** — Supporting data types and helpers for this component family.
   `LyraDrilldownCategoryChangeDetail {
-    nodeId: unknown;
-    category: unknown;
-    previousCategory: unknown;
-  }`
+  nodeId: unknown;
+  category: unknown;
+  previousCategory: unknown;
+}`
   `LyraDrilldownDocumentDownloadDetail {
-    nodeId: unknown;
-    documentId: unknown;
-    src: unknown;
-    filename: unknown;
-  }`
+  nodeId: unknown;
+  documentId: unknown;
+  src: unknown;
+  filename: unknown;
+}`
   `LyraDrilldownDocumentHighlightActivateDetail {
-    nodeId: unknown;
-    documentId: unknown;
-    highlightId: unknown;
-  }`
+  nodeId: unknown;
+  documentId: unknown;
+  highlightId: unknown;
+}`
   `LyraDrilldownDocument {
-    documentId: unknown;
-    name: unknown;
-    mimeType: unknown;
-    uri: unknown;
-    version: unknown;
-  }`
+  documentId: unknown;
+  name: unknown;
+  mimeType: unknown;
+  uri: unknown;
+  version: unknown;
+}`
   `LyraDrilldownDocumentRenderErrorDetail {
-    nodeId: unknown;
-    documentId: unknown;
-    error: unknown;
-  }`
+  nodeId: unknown;
+  documentId: unknown;
+  error: unknown;
+}`
   `LyraDrilldownEntityActivateDetail {
-    nodeId: unknown;
-    entityId: unknown;
-  }`
+  nodeId: unknown;
+  entityId: unknown;
+}`
   `LyraDrilldownEntity {
-    entityId: unknown;
-    label: unknown;
-    type: unknown;
-    description: unknown;
-    properties: unknown;
-    degree: unknown;
-    communityId: unknown;
-  }`
+  entityId: unknown;
+  label: unknown;
+  type: unknown;
+  description: unknown;
+  properties: unknown;
+  degree: unknown;
+  communityId: unknown;
+}`
   `LyraDrilldownEvidenceExpandDetail {
-    nodeId: unknown;
-    evidenceId: unknown;
-    expanded: unknown;
-  }`
+  nodeId: unknown;
+  evidenceId: unknown;
+  expanded: unknown;
+}`
   `LyraDrilldownEvidenceItem {
-    evidenceId: unknown;
-    title: unknown;
-    page: unknown;
-    href: unknown;
-    excerpt: unknown;
-    full: unknown;
-  }`
+  evidenceId: unknown;
+  title: unknown;
+  page: unknown;
+  href: unknown;
+  excerpt: unknown;
+  full: unknown;
+}`
   `LyraDrilldownEvidenceOpenDetail {
-    nodeId: unknown;
-    evidenceId: unknown;
-    href: unknown;
-  }`
+  nodeId: unknown;
+  evidenceId: unknown;
+  href: unknown;
+}`
   `LyraDrilldownNavigateDetail {
-    nodeId: unknown;
-    index: unknown;
-  }`
+  nodeId: unknown;
+  index: unknown;
+}`
   `LyraDrilldownNode {
-    nodeId: unknown;
-    label: unknown;
-    evidence: unknown;
-    documents: unknown;
-    entities: unknown;
-  }`
+  nodeId: unknown;
+  label: unknown;
+  evidence: unknown;
+  documents: unknown;
+  entities: unknown;
+}`
 
 - **`components-layout-filter-bar-filter-bar-contracts`** — Supporting data types and helpers for this component family.
   `LyraFilterBarComboboxDefinition {
-    type: unknown;
-    options: unknown;
-    multiple: unknown;
-    id: unknown;
-    label: unknown;
-    placeholder: unknown;
-    required: unknown;
-    defaultValue: unknown;
-  }`
+  type: unknown;
+  options: unknown;
+  multiple: unknown;
+  filterId: unknown;
+  label: unknown;
+  placeholder: unknown;
+  required: unknown;
+  defaultValue: unknown;
+}`
   `LyraFilterBarCustomControlAdapter {
-    valueFromEvent: unknown;
-    event: unknown;
-    clearValue: unknown;
-    isEmpty: unknown;
-    value: unknown;
-    formatValue: unknown;
-  }`
+  valueFromEvent: unknown;
+  event: unknown;
+  clearValue: unknown;
+  isEmpty: unknown;
+  value: unknown;
+  formatValue: unknown;
+}`
   `LyraFilterBarCustomControlContext {
-    id: unknown;
-    label: unknown;
-    definition: unknown;
-    value: unknown;
-    disabled: unknown;
-    required: unknown;
-    errorText: unknown;
-    signal: unknown;
-    generation: unknown;
-    setValue: unknown;
-    onValueChange: unknown;
-    event: unknown;
-    onInput: unknown;
-    onChange: unknown;
-    onFocusout: unknown;
-  }`
+  filterId: unknown;
+  label: unknown;
+  definition: unknown;
+  value: unknown;
+  disabled: unknown;
+  required: unknown;
+  errorText: unknown;
+  signal: unknown;
+  generation: unknown;
+  setValue: unknown;
+  onValueChange: unknown;
+  event: unknown;
+  onInput: unknown;
+  onChange: unknown;
+  onFocusout: unknown;
+}`
   `LyraFilterBarCustomControl {
-    render: unknown;
-    context: unknown;
-    adapter: unknown;
-  }`
+  render: unknown;
+  context: unknown;
+  adapter: unknown;
+}`
   `LyraFilterBarCustomDefinition {
-    type: unknown;
-    custom: unknown;
-    id: unknown;
-    label: unknown;
-    placeholder: unknown;
-    required: unknown;
-    defaultValue: unknown;
-  }`
+  type: unknown;
+  custom: unknown;
+  filterId: unknown;
+  label: unknown;
+  placeholder: unknown;
+  required: unknown;
+  defaultValue: unknown;
+}`
   `LyraFilterBarDateDefinition {
-    type: unknown;
-    min: unknown;
-    max: unknown;
-    id: unknown;
-    label: unknown;
-    placeholder: unknown;
-    required: unknown;
-    defaultValue: unknown;
-  }`
+  type: unknown;
+  min: unknown;
+  max: unknown;
+  filterId: unknown;
+  label: unknown;
+  placeholder: unknown;
+  required: unknown;
+  defaultValue: unknown;
+}`
   `LyraFilterBarDateRangeDefinition {
-    type: unknown;
-    min: unknown;
-    max: unknown;
-    id: unknown;
-    label: unknown;
-    placeholder: unknown;
-    required: unknown;
-    defaultValue: unknown;
-  }`
+  type: unknown;
+  min: unknown;
+  max: unknown;
+  filterId: unknown;
+  label: unknown;
+  placeholder: unknown;
+  required: unknown;
+  defaultValue: unknown;
+}`
   `LyraFilterBarInputDetail {
-    value: unknown;
-    filterId: unknown;
-  }`
+  value: unknown;
+  filterId: unknown;
+}`
   `LyraFilterBarOption {
-    value: unknown;
-    label: unknown;
-    icon: unknown;
-  }`
+  value: unknown;
+  label: unknown;
+  icon: unknown;
+}`
   `LyraFilterBarResetDetail {
-    value: unknown;
-  }`
+  value: unknown;
+}`
   `LyraFilterBarSelectDefinition {
-    type: unknown;
-    options: unknown;
-    id: unknown;
-    label: unknown;
-    placeholder: unknown;
-    required: unknown;
-    defaultValue: unknown;
-  }`
+  type: unknown;
+  options: unknown;
+  filterId: unknown;
+  label: unknown;
+  placeholder: unknown;
+  required: unknown;
+  defaultValue: unknown;
+}`
   `LyraFilterBarTextDefinition {
-    type: unknown;
-    debounce: unknown;
-    id: unknown;
-    label: unknown;
-    placeholder: unknown;
-    required: unknown;
-    defaultValue: unknown;
-  }`
+  type: unknown;
+  debounce: unknown;
+  filterId: unknown;
+  label: unknown;
+  placeholder: unknown;
+  required: unknown;
+  defaultValue: unknown;
+}`
   `LyraFilterBarValidityDetail {
-    valid: unknown;
-    invalidFilterIds: unknown;
-  }`
+  valid: unknown;
+  invalidFilterIds: unknown;
+}`
 
 - **`components-layout-menu-menu-item-contracts`** — Supporting data types and helpers for this component family.
   `MenuItemChangeDetail {
-    value: unknown;
-    checked: unknown;
-  }`
+  value: unknown;
+  checked: unknown;
+}`
   `MenuItemStateChangeDetail {
-    disabled: unknown;
-    hidden: unknown;
-    inert: unknown;
-  }`
+  disabled: unknown;
+  hidden: unknown;
+  inert: unknown;
+}`
 
 - **`components-layout-menu-menu-contracts`** — Supporting data types and helpers for this component family.
   `MenuItemSelectDetail {
-    item: unknown;
-  }`
+  item: unknown;
+}`
 
 - **`components-layout-multi-split-multi-split-contracts`** — Supporting data types and helpers for this component family.
   `LyraMultiSplitCollapseChangeDetail {
-    state: unknown;
-  }`
+  state: unknown;
+}`
   `LyraMultiSplitConstraintIssueDetail {
-    reason: unknown;
-    panelCount: unknown;
-    minimumTotal: unknown;
-    maximumTotal: unknown;
-    containerSize: unknown;
-  }`
+  reason: unknown;
+  panelCount: unknown;
+  minimumTotal: unknown;
+  maximumTotal: unknown;
+  containerSize: unknown;
+}`
   `LyraMultiSplitOrientationChangeDetail {
-    orientation: unknown;
-  }`
+  orientation: unknown;
+}`
   `LyraMultiSplitPanelConstraint {
-    minPx: unknown;
-    maxPx: unknown;
-    minPercent: unknown;
-    maxPercent: unknown;
-  }`
+  minPx: unknown;
+  maxPx: unknown;
+  minPercent: unknown;
+  maxPercent: unknown;
+}`
   `LyraMultiSplitResizeDetail {
-    sizes: unknown;
-  }`
+  sizes: unknown;
+}`
 
 - **`components-layout-reorder-list-reorder-list-contracts`** — Supporting data types and helpers for this component family.
   `LyraReorderDetail {
-    order: unknown;
-    fromIndex: unknown;
-    toIndex: unknown;
-  }`
+  order: unknown;
+  fromIndex: unknown;
+  toIndex: unknown;
+}`
 
 - **`components-layout-responsive-panel-responsive-panel-contracts`** — Supporting data types and helpers for this component family.
   `LyraResponsivePanelModeChangeDetail {
-    mode: unknown;
-  }`
+  mode: unknown;
+}`
   `resolveResponsivePanelEffectiveMode(/* public names: mode, belowBreakpoint */): unknown`
 
 - **`components-layout-segmented-segmented-contracts`** — Supporting data types and helpers for this component family.
   `LyraSegmentedItem {
-    value: unknown;
-    label: unknown;
-    icon: unknown;
-    disabled: unknown;
-  }`
+  value: unknown;
+  label: unknown;
+  icon: unknown;
+  disabled: unknown;
+}`
 
 - **`components-layout-split-panel-split-panel-contracts`** — Supporting data types and helpers for this component family.
   `SNAP_NONE(/* public names: options, pos, size, snapThreshold */): unknown`
   `SnapFunctionParams {
-    pos: unknown;
-    size: unknown;
-    snapThreshold: unknown;
-  }`
+  pos: unknown;
+  size: unknown;
+  snapThreshold: unknown;
+}`
   `SplitPanelRepositionDetail {
-    position: unknown;
-    positionInPixels: unknown;
-  }`
+  position: unknown;
+  positionInPixels: unknown;
+}`
 
 - **`components-layout-stepper-stepper-contracts`** — Supporting data types and helpers for this component family.
   `LyraStepItem {
-    id: unknown;
-    label: unknown;
-    state: unknown;
-    disabled: unknown;
-    title: unknown;
-    icon: unknown;
-  }`
+  stepId: unknown;
+  label: unknown;
+  state: unknown;
+  disabled: unknown;
+  title: unknown;
+  icon: unknown;
+}`
   `LyraStepperOrientationChangeDetail {
-    orientation: unknown;
-  }`
+  orientation: unknown;
+}`
 
 - **`components-layout-virtual-list-virtual-list-contracts`** — Supporting data types and helpers for this component family.
   `VirtualListGroup {
-    key: unknown;
-    label: unknown;
-    startIndex: unknown;
-  }`
+  key: unknown;
+  label: unknown;
+  startIndex: unknown;
+}`
   `VirtualListIndexedSource {
-    count: unknown;
-    itemAt: unknown;
-    index: unknown;
-    keyAt: unknown;
-    indexOfKey: unknown;
-    key: unknown;
-  }`
+  count: unknown;
+  itemAt: unknown;
+  index: unknown;
+  keyAt: unknown;
+  indexOfKey: unknown;
+  key: unknown;
+}`
   `VirtualListRange {
-    start: unknown;
-    end: unknown;
-  }`
+  start: unknown;
+  end: unknown;
+}`
   `VirtualListScroll {
-    scrollTop: unknown;
-    viewportHeight: unknown;
-  }`
+  scrollTop: unknown;
+  viewportHeight: unknown;
+}`
 
 - **`components-layout-widget-widget-contracts`** — Supporting data types and helpers for this component family.
   `LyraWidgetView {
-    id: unknown;
-    label: unknown;
-    icon: unknown;
-    ariaLabel: unknown;
-  }`
+  viewId: unknown;
+  label: unknown;
+  icon: unknown;
+  ariaLabel: unknown;
+}`

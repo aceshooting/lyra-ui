@@ -13,7 +13,7 @@ import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const BROWSER_FRAME_PHASE = literalSetConverter<LyraStreamPhase>(
@@ -79,6 +79,9 @@ export interface LyraBrowserFrameEventMap {
  * No automation transport, no input relay — take-over is an event; the host swaps in its own
  * interactive element.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-browser-frame
  * @event lr-take-over - `detail: { controller }` — the *requested* controller.
  * @event lr-stop - Stop the agent's browser session.
@@ -111,6 +114,8 @@ export interface LyraBrowserFrameEventMap {
  * @since 4.0.0
  */
 export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["pings"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -132,6 +137,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -169,8 +175,9 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this.requestUpdate('phase', old);
   }
   @property({ reflect: true }) controller: BrowserFrameController = 'agent';
-  /** Pointer markers keyed by stable id. Duplicate ids normalize first-wins before rendering. */
-  @property({ attribute: false }) pings: BrowserPing[] = [];
+  /** Pointer markers keyed by stable id. Empty/blank ids are omitted and duplicates normalize
+   *  first-wins before rendering. */
+  @property({ attribute: false }) pings: readonly BrowserPing[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) controls = true;
 
   private hasDefaultSlotContent = false;

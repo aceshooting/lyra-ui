@@ -195,19 +195,20 @@ function addCompatibilityDetail<T extends Event>(event: T, detail: LyraKnownDate
  * @csspart hint - The hint message.
  * @csspart error - The validation message.
  * @cssprop [--lr-known-date-field-padding-block=var(--lr-form-control-padding-block)] - Block
- *   padding of each `field-input`, auto-swapped per `size` by the shared ladder.
+ *   padding of each `field-input`; its private default follows `size` through the shared ladder.
  * @cssprop [--lr-known-date-field-padding-inline=var(--lr-form-control-padding-inline)] - Inline
- *   padding of each `field-input`, auto-swapped per `size` by the shared ladder.
+ *   padding of each `field-input`; its private default follows `size` through the shared ladder.
  * @cssprop [--lr-known-date-field-font-size=var(--lr-form-control-font-size)] - Font size of each
- *   `field-input`, auto-swapped per `size` by the shared ladder.
+ *   `field-input`; its private default follows `size` through the shared ladder.
  * @cssprop [--lr-known-date-field-min-height=max(var(--lr-form-control-height),var(--lr-size-24px))]
- *   - Minimum block size of each `field-input`, auto-swapped per `size` (`2xs`/`xs`→`24px`,
+ *   - Minimum block size of each `field-input`; its private default follows `size`
+ *   (`2xs`/`xs`→`24px`,
  *   `s`→`1.875rem`, `m`→`2.5rem`, `l`→`3rem`, `xl`→`3.5rem`) -- the same shared control-height
  *   ladder `lr-input`/`lr-date-input` sit on, so a birthdate field in a form row beside those
  *   controls renders at the same height. The `max()` floors the two smallest tiers at WCAG 2.2
  *   SC 2.5.8's 24px pointer-target minimum. At the small tiers the floor exceeds the field's own
  *   content height and actively pins the rendered box; at `l`/`xl` the content height stays under
- *   it, so those two tiers are unaffected.
+ *   it, so those two tiers are unaffected. An inherited or direct public value wins in every tier.
  * @cssprop --lr-known-date-field-height - Exact block size of each `field-input`. Undeclared by
  *   default, so the field grows to fit its content, floored by `--lr-known-date-field-min-height`.
  *   Set it to pin a fixed height.

@@ -51,13 +51,21 @@ it("names the semantic group that owns the prompt option controls", async () => 
   const el = (await fixture(html`
     <lr-prompt-input
       .modelCatalog=${[
-        { group: "Models", models: [{ value: "fast", label: "Fast" }] },
+        { id: "fast", label: "Fast" },
       ]}
     ></lr-prompt-input>
   `)) as LyraPromptInput;
   const controls = el.shadowRoot!.querySelector('[part="controls"]')!;
   expect(controls.getAttribute("role")).to.equal("group");
   expect(controls.getAttribute("aria-label")).to.equal("Prompt options");
+});
+
+it("does not count invalid-only model or voice catalogs as prompt option controls", async () => {
+  const el = (await fixture(html`<lr-prompt-input
+    .modelCatalog=${["", "   "]}
+    .voiceCatalog=${[{ id: "", label: "Empty" }]}
+  ></lr-prompt-input>`)) as LyraPromptInput;
+  expect(Boolean(el.shadowRoot!.querySelector('[part="controls"]'))).to.equal(false);
 });
 
 it("is deliberately event-submitted rather than a native successful form control", async () => {
@@ -1529,4 +1537,29 @@ it("gates Enter-to-submit on the forwarded status, so a busy prompt cannot submi
     })
   );
   expect(submits, "an idle composer submits on Enter").to.equal(1);
+});
+
+it("normalizes attachment identity before rendering and keys surviving chips by attachmentId", async () => {
+  const first = { attachmentId: "first", name: "First.pdf" };
+  const second = { attachmentId: "second", name: "Second.pdf" };
+  const el = (await fixture(html`<lr-prompt-input
+    .attachments=${[
+      { attachmentId: "", name: "Empty.pdf" },
+      first,
+      { attachmentId: "first", name: "Ignored.pdf" },
+      { attachmentId: "   ", name: "Whitespace.pdf" },
+      second,
+    ]}
+  ></lr-prompt-input>`)) as LyraPromptInput;
+
+  let chips = [...el.shadowRoot!.querySelectorAll<LyraAttachmentChip>("lr-attachment-chip")];
+  expect(chips.map((chip) => chip.attachmentId)).to.deep.equal(["first", "second"]);
+  expect(chips.map((chip) => chip.name)).to.deep.equal(["First.pdf", "Second.pdf"]);
+  const retainedSecond = chips[1]!;
+
+  el.attachments = [second, first];
+  await el.updateComplete;
+  chips = [...el.shadowRoot!.querySelectorAll<LyraAttachmentChip>("lr-attachment-chip")];
+  expect(chips.map((chip) => chip.attachmentId)).to.deep.equal(["second", "first"]);
+  expect(chips[0] === retainedSecond, "the same attachment keeps its rendered chip").to.equal(true);
 });

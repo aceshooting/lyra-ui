@@ -1,13 +1,13 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import { html } from 'lit';
-import './app-rail.js';
-import type { LyraAppRail } from './app-rail.js';
-import { storyColor } from '../../../../../../.storybook/theme-contract.js';
+import type { Meta, StoryObj } from "@storybook/web-components-vite";
+import { html } from "lit";
+import "./app-rail.js";
+import type { LyraAppRail } from "./app-rail.js";
+import { storyColor } from "../../../../../../.storybook/theme-contract.js";
 
 const meta: Meta = {
-  title: 'AppRail',
-  component: 'lr-app-rail',
-  tags: ['autodocs'],
+  title: "AppRail",
+  component: "lr-app-rail",
+  tags: ["autodocs"],
   parameters: {
     docs: {
       description: {
@@ -21,40 +21,60 @@ export default meta;
 type Story = StoryObj;
 
 const navItems = html`
-  <lr-app-rail-item href="#inbox" aria-label="Inbox" current><span slot="icon">📥</span>Inbox</lr-app-rail-item>
-  <lr-app-rail-item href="#chats" aria-label="Chats"><span slot="icon">💬</span>Chats</lr-app-rail-item>
-  <lr-app-rail-item href="#settings" aria-label="Settings"><span slot="icon">⚙️</span>Settings</lr-app-rail-item>
+  <lr-app-rail-item href="#inbox" aria-label="Inbox" current
+    ><span slot="icon">📥</span>Inbox</lr-app-rail-item
+  >
+  <lr-app-rail-item href="#chats" aria-label="Chats"
+    ><span slot="icon">💬</span>Chats</lr-app-rail-item
+  >
+  <lr-app-rail-item href="#settings" aria-label="Settings"
+    ><span slot="icon">⚙️</span>Settings</lr-app-rail-item
+  >
 `;
 
 const page = (rail: ReturnType<typeof html>) => html`
-  <div style="display:flex; block-size: 24rem; border: 1px solid var(--lr-color-border); border-radius: 0.5rem; overflow: hidden;">
+  <div
+    style="display:flex; block-size: 24rem; border: 1px solid var(--lr-color-border); border-radius: 0.5rem; overflow: hidden;"
+  >
     ${rail}
     <div style="flex:1; padding: 1.5rem; overflow: auto;">
       <h2 style="margin-top:0;">Page content</h2>
-      <p>Resize this preview's frame narrower to watch the rail switch from full -> icon-only -> mobile.</p>
+      <p>
+        Resize this preview's frame narrower to watch the rail switch from full
+        -> icon-only -> mobile.
+      </p>
     </div>
   </div>
 `;
 
 function openExternalRail(event: Event): void {
   const trigger = event.currentTarget as HTMLElement;
-  const rail = trigger.parentElement!.querySelector('lr-app-rail') as LyraAppRail;
+  const rail = trigger.parentElement!.querySelector(
+    "lr-app-rail"
+  ) as LyraAppRail;
   rail.open = true;
 }
 
 function capRailResizeRequest(event: Event): void {
-  if ((event as CustomEvent<{ widthPx: number }>).detail.widthPx > 320) event.preventDefault();
+  if ((event as CustomEvent<{ widthPx: number }>).detail.widthPx > 320)
+    event.preventDefault();
 }
 
 export const Default: Story = {
   render: () =>
     page(html`
       <lr-app-rail label="Primary" style="block-size:100%;">
-        <span slot="header" style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem; font-weight:600;">
+        <span
+          slot="header"
+          style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem; font-weight:600;"
+        >
           <span aria-hidden="true">🌟</span><span>Acme</span>
         </span>
         ${navItems}
-        <span slot="footer" style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem;">
+        <span
+          slot="footer"
+          style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem;"
+        >
           <span aria-hidden="true">👤</span><span>Jordan Lee</span>
         </span>
       </lr-app-rail>
@@ -62,7 +82,7 @@ export const Default: Story = {
 };
 
 export const ForcedFull: Story = {
-  name: 'Forced: full',
+  name: "Forced: full",
   render: () =>
     page(html`
       <lr-app-rail label="Primary" mode="full" style="block-size:100%;">
@@ -73,7 +93,7 @@ export const ForcedFull: Story = {
 };
 
 export const ForcedIconOnly: Story = {
-  name: 'Forced: icon-only',
+  name: "Forced: icon-only",
   render: () =>
     page(html`
       <lr-app-rail label="Primary" mode="icon-only" style="block-size:100%;">
@@ -84,7 +104,7 @@ export const ForcedIconOnly: Story = {
 };
 
 export const ForcedMobile: Story = {
-  name: 'Forced: mobile (click the toggle)',
+  name: "Forced: mobile (click the toggle)",
   render: () =>
     page(html`
       <lr-app-rail label="Primary" mode="mobile" style="block-size:100%;">
@@ -96,7 +116,7 @@ export const ForcedMobile: Story = {
 };
 
 export const ExternalMobileControl: Story = {
-  name: 'External mobile control (hide-toggle)',
+  name: "External mobile control (hide-toggle)",
   parameters: {
     docs: {
       description: {
@@ -109,8 +129,15 @@ export const ExternalMobileControl: Story = {
     <div>
       <button type="button" @click=${openExternalRail}>Open navigation</button>
       ${page(html`
-        <lr-app-rail hide-toggle label="Primary" mode="mobile" style="block-size:100%;">
-          <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
+        <lr-app-rail
+          hide-toggle
+          label="Primary"
+          mode="mobile"
+          style="block-size:100%;"
+        >
+          <span slot="header" style="padding:0.5rem; font-weight:600;"
+            >Acme</span
+          >
           ${navItems}
           <span slot="footer" style="padding:0.5rem;">Jordan Lee</span>
         </lr-app-rail>
@@ -120,12 +147,12 @@ export const ExternalMobileControl: Story = {
 };
 
 export const NarrowRtlLongContent: Story = {
-  name: 'Narrow RTL long content (320px)',
+  name: "Narrow RTL long content (320px)",
   parameters: {
     docs: {
       description: {
         story:
-          'An exact 320px allocation exercises the open mobile panel with RTL direction and long localized header, navigation, and footer content. The preview opens the drawer automatically; use its toggle in docs view.',
+          "An exact 320px allocation exercises the open mobile panel with RTL direction and long localized header, navigation, and footer content. The preview opens the drawer automatically; use its toggle in docs view.",
       },
     },
   },
@@ -137,10 +164,12 @@ export const NarrowRtlLongContent: Story = {
       <lr-app-rail
         label="التنقل الرئيسي"
         mode="mobile"
-        .open=${context.viewMode !== 'docs'}
+        .open=${context.viewMode !== "docs"}
         style="block-size: 100%; --lr-app-rail-mobile-width: 320px;"
       >
-        <span slot="header">عنوان-تطبيق-طويل-جداً-غير-قابل-للفصل-ويجب-أن-يلتف-داخل-اللوحة</span>
+        <span slot="header"
+          >عنوان-تطبيق-طويل-جداً-غير-قابل-للفصل-ويجب-أن-يلتف-داخل-اللوحة</span
+        >
         <lr-app-rail-item href="#reports">
           <span slot="icon" aria-hidden="true">📊</span>
           تقرير-تحليلي-طويل-جداً-غير-قابل-للفصل
@@ -156,36 +185,42 @@ export const NarrowRtlLongContent: Story = {
 };
 
 export const ThemedInteractionStates: Story = {
-  name: 'Themed interaction states',
+  name: "Themed interaction states",
   parameters: {
     docs: {
       description: {
         story:
-          'Hover/press the mobile toggle and full-mode resizer. Their scoped state hooks inherit from these wrappers without changing unrelated brand-colored components.',
+          "Hover/press the mobile toggle and full-mode resizer. Their scoped state hooks inherit from these wrappers without changing unrelated brand-colored components.",
       },
     },
   },
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-l);">
-      <lr-app-rail
-        mode="mobile"
+      <div
         style="
-          --lr-app-rail-toggle-hover-bg: ${storyColor('successQuiet')};
-          --lr-app-rail-toggle-hover-color: ${storyColor('success')};
-          --lr-app-rail-toggle-active-bg: ${storyColor('warningQuiet')};
-          --lr-app-rail-toggle-active-color: ${storyColor('warning')};
+          --lr-app-rail-mobile-width: var(--lr-size-15rem);
+          --lr-app-rail-overlay-color: ${storyColor("successQuiet")};
+          --lr-app-rail-toggle-hover-bg: ${storyColor("successQuiet")};
+          --lr-app-rail-toggle-hover-color: ${storyColor("success")};
+          --lr-app-rail-toggle-active-bg: ${storyColor("warningQuiet")};
+          --lr-app-rail-toggle-active-color: ${storyColor("warning")};
         "
-      ></lr-app-rail>
-      <lr-app-rail
-        mode="full"
-        resizable
+      >
+        <lr-app-rail mode="mobile"></lr-app-rail>
+      </div>
+      <div
         style="
-          inline-size: var(--lr-app-rail-width);
-          block-size: var(--lr-size-10rem);
-          --lr-app-rail-resizer-hover-bg: ${storyColor('success')};
-          --lr-app-rail-resizer-active-bg: ${storyColor('warning')};
+          --lr-app-rail-width: var(--lr-size-18rem);
+          --lr-app-rail-resizer-hover-bg: ${storyColor("success")};
+          --lr-app-rail-resizer-active-bg: ${storyColor("warning")};
         "
-      ></lr-app-rail>
+      >
+        <lr-app-rail
+          mode="full"
+          resizable
+          style="inline-size: var(--lr-app-rail-width); block-size: var(--lr-size-10rem);"
+        ></lr-app-rail>
+      </div>
     </div>
   `,
 };
@@ -193,7 +228,12 @@ export const ThemedInteractionStates: Story = {
 export const MobileOpenInitially: Story = {
   render: (_args, context) =>
     page(html`
-      <lr-app-rail label="Primary" mode="mobile" .open=${context.viewMode !== 'docs'} style="block-size:100%;">
+      <lr-app-rail
+        label="Primary"
+        mode="mobile"
+        .open=${context.viewMode !== "docs"}
+        style="block-size:100%;"
+      >
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
         ${navItems}
       </lr-app-rail>
@@ -216,7 +256,7 @@ export const CustomBreakpoints: Story = {
 };
 
 export const LayoutOnlyPersistence: Story = {
-  name: 'Layout-only persistence',
+  name: "Layout-only persistence",
   parameters: {
     docs: {
       description: {
@@ -242,12 +282,12 @@ export const LayoutOnlyPersistence: Story = {
 };
 
 export const CancelableResize: Story = {
-  name: 'Cancelable resize',
+  name: "Cancelable resize",
   parameters: {
     docs: {
       description: {
         story:
-          'The `lr-rail-resize-request` event proposes each drag or keyboard width before the rail commits it. This example vetoes widths above 320px, so dragging past that limit leaves the current width in place.',
+          "The `lr-rail-resize-request` event proposes each drag or keyboard width before the rail commits it. This example vetoes widths above 320px, so dragging past that limit leaves the current width in place.",
       },
     },
   },

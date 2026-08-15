@@ -31,8 +31,8 @@ describe("overlapsDashboardCells", () => {
   it("is true for two rectangles that share area", () => {
     expect(
       overlapsDashboardCells(
-        { id: "a", x: 0, y: 0, w: 2, h: 2 },
-        { id: "b", x: 1, y: 1, w: 2, h: 2 }
+        { cellId: "a", x: 0, y: 0, w: 2, h: 2 },
+        { cellId: "b", x: 1, y: 1, w: 2, h: 2 }
       )
     ).to.be.true;
   });
@@ -40,8 +40,8 @@ describe("overlapsDashboardCells", () => {
   it("is false for rectangles that only touch edges", () => {
     expect(
       overlapsDashboardCells(
-        { id: "a", x: 0, y: 0, w: 2, h: 2 },
-        { id: "b", x: 2, y: 0, w: 2, h: 2 }
+        { cellId: "a", x: 0, y: 0, w: 2, h: 2 },
+        { cellId: "b", x: 2, y: 0, w: 2, h: 2 }
       )
     ).to.be.false;
   });
@@ -49,8 +49,8 @@ describe("overlapsDashboardCells", () => {
   it("is false for rectangles with a gap between them", () => {
     expect(
       overlapsDashboardCells(
-        { id: "a", x: 0, y: 0, w: 1, h: 1 },
-        { id: "b", x: 5, y: 5, w: 1, h: 1 }
+        { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+        { cellId: "b", x: 5, y: 5, w: 1, h: 1 }
       )
     ).to.be.false;
   });
@@ -58,19 +58,19 @@ describe("overlapsDashboardCells", () => {
 
 describe("findDashboardCollisions", () => {
   const layout: LyraDashboardCell[] = [
-    { id: "a", x: 0, y: 0, w: 2, h: 2 },
-    { id: "b", x: 4, y: 0, w: 2, h: 2 },
+    { cellId: "a", x: 0, y: 0, w: 2, h: 2 },
+    { cellId: "b", x: 4, y: 0, w: 2, h: 2 },
   ];
 
   it("excludes the candidate itself even when its id matches a layout entry", () => {
     expect(
-      collisions(layout, { id: "a", x: 0, y: 0, w: 2, h: 2 })
+      collisions(layout, { cellId: "a", x: 0, y: 0, w: 2, h: 2 })
     ).to.deep.equal([]);
   });
 
   it("lists every other cell the candidate rectangle overlapsDashboardCells", () => {
     expect(
-      collisions(layout, { id: "new", x: 1, y: 0, w: 1, h: 1 })
+      collisions(layout, { cellId: "new", x: 1, y: 0, w: 1, h: 1 })
     ).to.deep.equal(["a"]);
   });
 });
@@ -134,11 +134,11 @@ describe("clampDashboardCandidate", () => {
 describe("sortDashboardSpatial", () => {
   it("orders row-major: top-to-bottom, then leading-to-trailing within a row", () => {
     const layout: LyraDashboardCell[] = [
-      { id: "c", x: 0, y: 1, w: 1, h: 1 },
-      { id: "a", x: 2, y: 0, w: 1, h: 1 },
-      { id: "b", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "c", x: 0, y: 1, w: 1, h: 1 },
+      { cellId: "a", x: 2, y: 0, w: 1, h: 1 },
+      { cellId: "b", x: 0, y: 0, w: 1, h: 1 },
     ];
-    expect(sortDashboardSpatial(layout).map((c) => c.id)).to.deep.equal([
+    expect(sortDashboardSpatial(layout).map((c) => c.cellId)).to.deep.equal([
       "b",
       "a",
       "c",
@@ -147,8 +147,8 @@ describe("sortDashboardSpatial", () => {
 
   it("does not mutate the input array", () => {
     const layout: LyraDashboardCell[] = [
-      { id: "b", x: 1, y: 0, w: 1, h: 1 },
-      { id: "a", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
     ];
     const original = [...layout];
     sortDashboardSpatial(layout);
@@ -158,7 +158,7 @@ describe("sortDashboardSpatial", () => {
 
 describe("resolveDashboardPlacement", () => {
   it("returns accepted=false unchanged for an unknown candidateId", () => {
-    const layout: LyraDashboardCell[] = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    const layout: LyraDashboardCell[] = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     const result = resolveDashboardPlacement(
       layout,
       "ghost",
@@ -173,8 +173,8 @@ describe("resolveDashboardPlacement", () => {
   describe("policy: reject", () => {
     it("applies a non-colliding move", () => {
       const layout: LyraDashboardCell[] = [
-        { id: "a", x: 0, y: 0, w: 1, h: 1 },
-        { id: "b", x: 3, y: 0, w: 1, h: 1 },
+        { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+        { cellId: "b", x: 3, y: 0, w: 1, h: 1 },
       ];
       const result = resolveDashboardPlacement(
         layout,
@@ -184,17 +184,17 @@ describe("resolveDashboardPlacement", () => {
         "reject"
       );
       expect(result.accepted).to.be.true;
-      expect(result.layout.find((c) => c.id === "a")).to.deep.include({
+      expect(result.layout.find((c) => c.cellId === "a")).to.deep.include({
         x: 1,
         y: 0,
       });
-      expect(result.collidedWith).to.deep.equal([]);
+      expect(result.collidedCellIds).to.deep.equal([]);
     });
 
     it("rejects a colliding move and leaves the layout reference unchanged", () => {
       const layout: LyraDashboardCell[] = [
-        { id: "a", x: 0, y: 0, w: 1, h: 1 },
-        { id: "b", x: 1, y: 0, w: 1, h: 1 },
+        { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+        { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
       ];
       const result = resolveDashboardPlacement(
         layout,
@@ -205,15 +205,15 @@ describe("resolveDashboardPlacement", () => {
       );
       expect(result.accepted).to.be.false;
       expect(result.layout).to.equal(layout);
-      expect(result.collidedWith).to.deep.equal(["b"]);
+      expect(result.collidedCellIds).to.deep.equal(["b"]);
     });
   });
 
   describe("policy: overlap", () => {
     it("applies a colliding move anyway, still reporting the collision", () => {
       const layout: LyraDashboardCell[] = [
-        { id: "a", x: 0, y: 0, w: 1, h: 1 },
-        { id: "b", x: 1, y: 0, w: 1, h: 1 },
+        { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+        { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
       ];
       const result = resolveDashboardPlacement(
         layout,
@@ -223,19 +223,19 @@ describe("resolveDashboardPlacement", () => {
         "overlap"
       );
       expect(result.accepted).to.be.true;
-      expect(result.layout.find((c) => c.id === "a")).to.deep.include({
+      expect(result.layout.find((c) => c.cellId === "a")).to.deep.include({
         x: 1,
         y: 0,
       });
-      expect(result.collidedWith).to.deep.equal(["b"]);
+      expect(result.collidedCellIds).to.deep.equal(["b"]);
     });
   });
 
   describe("policy: push", () => {
     it("pushes a single colliding cell straight down out of the candidate’s way", () => {
       const layout: LyraDashboardCell[] = [
-        { id: "a", x: 0, y: 0, w: 1, h: 1 },
-        { id: "b", x: 1, y: 0, w: 1, h: 1 },
+        { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+        { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
       ];
       const result = resolveDashboardPlacement(
         layout,
@@ -245,8 +245,8 @@ describe("resolveDashboardPlacement", () => {
         "push"
       );
       expect(result.accepted).to.be.true;
-      const a = result.layout.find((c) => c.id === "a")!;
-      const b = result.layout.find((c) => c.id === "b")!;
+      const a = result.layout.find((c) => c.cellId === "a")!;
+      const b = result.layout.find((c) => c.cellId === "b")!;
       expect(a).to.deep.include({ x: 1, y: 0 });
       expect(b).to.deep.include({ x: 1, y: 1 });
       expect(overlapsDashboardCells(a, b)).to.be.false;
@@ -254,9 +254,9 @@ describe("resolveDashboardPlacement", () => {
 
     it("cascades a push through a chain of stacked cells", () => {
       const layout: LyraDashboardCell[] = [
-        { id: "a", x: 0, y: 0, w: 1, h: 1 },
-        { id: "b", x: 1, y: 0, w: 1, h: 1 },
-        { id: "c", x: 1, y: 1, w: 1, h: 1 },
+        { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+        { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
+        { cellId: "c", x: 1, y: 1, w: 1, h: 1 },
       ];
       const result = resolveDashboardPlacement(
         layout,
@@ -269,8 +269,8 @@ describe("resolveDashboardPlacement", () => {
       // No two cells may overlap after resolution.
       for (const x of cells) {
         for (const y of cells) {
-          if (x.id !== y.id)
-            expect(overlapsDashboardCells(x, y), `${x.id} vs ${y.id}`).to.be
+          if (x.cellId !== y.cellId)
+            expect(overlapsDashboardCells(x, y), `${x.cellId} vs ${y.cellId}`).to.be
               .false;
         }
       }
@@ -278,9 +278,9 @@ describe("resolveDashboardPlacement", () => {
 
     it("never moves a locked cell, and settles an unlocked cell underneath it instead", () => {
       const layout: LyraDashboardCell[] = [
-        { id: "a", x: 0, y: 0, w: 1, h: 1 },
-        { id: "locked", x: 1, y: 1, w: 1, h: 1, locked: true },
-        { id: "b", x: 1, y: 0, w: 1, h: 1 },
+        { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+        { cellId: "locked", x: 1, y: 1, w: 1, h: 1, locked: true },
+        { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
       ];
       const result = resolveDashboardPlacement(
         layout,
@@ -290,16 +290,16 @@ describe("resolveDashboardPlacement", () => {
         "push"
       );
       expect(result.accepted).to.be.true;
-      const locked = result.layout.find((c) => c.id === "locked")!;
-      const b = result.layout.find((c) => c.id === "b")!;
+      const locked = result.layout.find((c) => c.cellId === "locked")!;
+      const b = result.layout.find((c) => c.cellId === "b")!;
       expect(locked).to.deep.include({ x: 1, y: 1 });
       expect(overlapsDashboardCells(locked, b)).to.be.false;
     });
 
     it("rejects (does not push through) a direct collision with a locked cell", () => {
       const layout: LyraDashboardCell[] = [
-        { id: "a", x: 0, y: 0, w: 1, h: 1 },
-        { id: "locked", x: 1, y: 0, w: 1, h: 1, locked: true },
+        { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+        { cellId: "locked", x: 1, y: 0, w: 1, h: 1, locked: true },
       ];
       const result = resolveDashboardPlacement(
         layout,
@@ -314,7 +314,7 @@ describe("resolveDashboardPlacement", () => {
   });
 
   it("clamps the requested placement to bounds before evaluating collisions", () => {
-    const layout: LyraDashboardCell[] = [{ id: "a", x: 0, y: 0, w: 2, h: 1 }];
+    const layout: LyraDashboardCell[] = [{ cellId: "a", x: 0, y: 0, w: 2, h: 1 }];
     const result = resolveDashboardPlacement(
       layout,
       "a",
@@ -323,7 +323,7 @@ describe("resolveDashboardPlacement", () => {
       "reject"
     );
     expect(result.accepted).to.be.true;
-    expect(result.layout.find((c) => c.id === "a")).to.deep.include({
+    expect(result.layout.find((c) => c.cellId === "a")).to.deep.include({
       x: 4,
       y: 0,
     });
@@ -339,17 +339,17 @@ describe("dashboard layout admission and public resolver", () => {
 
   it("keeps valid records, skips malformed records, and uses first-valid duplicate ids", () => {
     const input: unknown[] = [
-      { id: "first", x: 1, y: 2, w: 2, h: 3, label: "First" },
+      { cellId: "first", x: 1, y: 2, w: 2, h: 3, label: "First" },
       null,
-      { id: "", x: 0, y: 0, w: 1, h: 1 },
-      { id: "first", x: 9, y: 9, w: 1, h: 1 },
-      { id: "last", x: Number.NaN, y: -4, w: 999, h: 0 },
-      Object.create({ id: "inherited", x: 0, y: 0, w: 1, h: 1 }),
+      { cellId: "", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "first", x: 9, y: 9, w: 1, h: 1 },
+      { cellId: "last", x: Number.NaN, y: -4, w: 999, h: 0 },
+      Object.create({ cellId: "inherited", x: 0, y: 0, w: 1, h: 1 }),
     ];
 
     const snapshot = snapshotDashboardLayout(input);
 
-    expect(snapshot.map((cell) => cell.id)).to.deep.equal(["first", "last"]);
+    expect(snapshot.map((cell) => cell.cellId)).to.deep.equal(["first", "last"]);
     expect(snapshot[0]).to.deep.include({ x: 1, y: 2, w: 2, h: 3 });
     expect(snapshot[1]).to.deep.include({ x: 0, y: 0, w: 48, h: 1 });
   });
@@ -357,7 +357,7 @@ describe("dashboard layout admission and public resolver", () => {
   it("normalizes contradictory constraints against the live column bound", () => {
     const snapshot = snapshotDashboardLayout([
       {
-        id: "bounded",
+        cellId: "bounded",
         x: 0,
         y: 0,
         w: 1,
@@ -382,7 +382,7 @@ describe("dashboard layout admission and public resolver", () => {
   it("reads only the bounded prefix and survives hostile array and record getters", () => {
     let beyondBoundRead = false;
     const input = Array.from({ length: 1_002 }, (_, index) => ({
-      id: `cell-${index}`,
+      cellId: `cell-${index}`,
       x: 0,
       y: index,
       w: 1,
@@ -401,7 +401,7 @@ describe("dashboard layout admission and public resolver", () => {
         throw new Error("outside bound");
       },
     });
-    const hostileRecord = { id: "hostile", y: 0, w: 1, h: 1 };
+    const hostileRecord = { cellId: "hostile", y: 0, w: 1, h: 1 };
     Object.defineProperty(hostileRecord, "x", {
       get: () => {
         throw new Error("hostile field");
@@ -412,7 +412,7 @@ describe("dashboard layout admission and public resolver", () => {
     const snapshot = snapshotDashboardLayout(input);
 
     expect(snapshot).to.have.length(998);
-    expect(snapshot.some((cell) => cell.id === "hostile")).to.be.false;
+    expect(snapshot.some((cell) => cell.cellId === "hostile")).to.be.false;
     expect(beyondBoundRead).to.be.false;
 
     const hostileLength = new Proxy([], {
@@ -425,7 +425,7 @@ describe("dashboard layout admission and public resolver", () => {
   });
 
   it("returns fresh frozen arrays and records that do not alias caller mutation", () => {
-    const source = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    const source = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     const result = resolveLyraDashboardPlacement(
       source,
       "a",
@@ -435,13 +435,13 @@ describe("dashboard layout admission and public resolver", () => {
     );
 
     source[0]!.x = 5;
-    source.push({ id: "later", x: 0, y: 0, w: 1, h: 1 });
+    source.push({ cellId: "later", x: 0, y: 0, w: 1, h: 1 });
     expect(result.layout).to.have.length(1);
-    expect(result.layout[0]).to.deep.include({ id: "a", x: 2, y: 1 });
+    expect(result.layout[0]).to.deep.include({ cellId: "a", x: 2, y: 1 });
     expect(Object.isFrozen(result)).to.be.true;
     expect(Object.isFrozen(result.layout)).to.be.true;
     expect(Object.isFrozen(result.layout[0])).to.be.true;
-    expect(Object.isFrozen(result.collidedWith)).to.be.true;
+    expect(Object.isFrozen(result.collidedCellIds)).to.be.true;
   });
 
   it("snapshots widget structure at admission while preserving opaque prop leaves", () => {
@@ -450,7 +450,7 @@ describe("dashboard layout admission and public resolver", () => {
       type: "row",
       children: [{ type: "stat", props: { data: leaf } }],
     };
-    const source = [{ id: "a", x: 0, y: 0, w: 1, h: 1, widget }];
+    const source = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1, widget }];
 
     const snapshot = snapshotDashboardLayout(source);
     widget.children[0]!.type = "mutated";
@@ -473,9 +473,9 @@ describe("dashboard layout admission and public resolver", () => {
       },
     };
     const snapshot = snapshotDashboardLayout([
-      { id: "hostile", x: 0, y: 0, w: 1, h: 1, widget: hostile as never },
+      { cellId: "hostile", x: 0, y: 0, w: 1, h: 1, widget: hostile as never },
       {
-        id: "malformed",
+        cellId: "malformed",
         x: 1,
         y: 0,
         w: 1,
@@ -484,7 +484,7 @@ describe("dashboard layout admission and public resolver", () => {
       },
     ]);
 
-    expect(snapshot.map((cell) => cell.id)).to.deep.equal([
+    expect(snapshot.map((cell) => cell.cellId)).to.deep.equal([
       "hostile",
       "malformed",
     ]);
@@ -494,8 +494,8 @@ describe("dashboard layout admission and public resolver", () => {
   it("normalizes a foreign collision policy to reject at the runtime boundary", () => {
     const result = resolveLyraDashboardPlacement(
       [
-        { id: "a", x: 0, y: 0, w: 1, h: 1 },
-        { id: "b", x: 1, y: 0, w: 1, h: 1 },
+        { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+        { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
       ],
       "a",
       { x: 1, y: 0, w: 1, h: 1 },
@@ -504,14 +504,14 @@ describe("dashboard layout admission and public resolver", () => {
     );
 
     expect(result.accepted).to.be.false;
-    expect(result.collidedWith).to.deep.equal(["b"]);
+    expect(result.collidedCellIds).to.deep.equal(["b"]);
   });
 
   it("uses indexed push placement for the maximum admitted dashboard", () => {
     const layout: LyraDashboardCell[] = Array.from(
       { length: 1_000 },
       (_, index) => ({
-        id: `cell-${index}`,
+        cellId: `cell-${index}`,
         x: index === 0 ? 1 : 0,
         y: 0,
         w: 1,

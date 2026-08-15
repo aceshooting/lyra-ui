@@ -559,7 +559,7 @@ it("translates every owned evidence/document event with authoritative node and i
     new CustomEvent("lr-highlight-activate", {
       bubbles: true,
       composed: true,
-      detail: { id: "highlight-second" },
+      detail: { highlightId: "highlight-second" },
     })
   );
   expect((await highlight).detail).to.deep.equal({

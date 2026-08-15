@@ -2124,6 +2124,74 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     }
   });
 
+  it("bounds quote painting while reserving an active highlight in the lookahead slot", async () => {
+    const words = Array.from({ length: 1_001 }, (_, index) => `word${index}`);
+    const el = (await fixture(
+      html`<lr-markdown content=${words.join(" ")}></lr-markdown>`
+    )) as LyraMarkdown;
+    el.highlights = words.map((word, index) => ({
+      id: `h${index}`,
+      anchor: { kind: "text-quote" as const, quote: word },
+    }));
+    el.activeHighlightId = "h1000";
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="paragraph"]') !== null
+    );
+    await el.updateComplete;
+
+    if (supportsCustomHighlights()) {
+      const registry = (
+        globalThis as unknown as {
+          CSS: { highlights: Map<string, { size: number }> };
+        }
+      ).CSS.highlights;
+      expect(registry.get("lr-highlight-accent")?.size ?? 0).to.be.at.most(100);
+      expect(registry.get("lr-highlight-active")?.size ?? 0).to.equal(1);
+    } else {
+      expect(
+        el.shadowRoot!.querySelectorAll(
+          '[part="content"] mark[data-lr-highlight-tone]'
+        ).length
+      ).to.be.at.most(100);
+      expect(
+        el.shadowRoot!.querySelector(
+          '[part="content"] mark[data-lr-highlight-name="lr-highlight-active"]'
+        )
+      ).to.exist;
+    }
+  });
+
+  it("reuses one content scope and occurrence scan across repeated quote highlights", async () => {
+    const el = (await fixture(
+      html`<lr-markdown content=${"The quick brown fox jumps."}></lr-markdown>`
+    )) as LyraMarkdown;
+    el.highlights = Array.from({ length: 100 }, (_, index) => ({
+      id: `same-${index}`,
+      anchor: { kind: "text-quote" as const, quote: "brown fox" },
+    }));
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="paragraph"]') !== null
+    );
+    await el.updateComplete;
+    const internals = el as unknown as {
+      markdownTextScopeBuildCount(): number;
+      markdownTextQuoteScanCount(): number;
+    };
+    const scopes = internals.markdownTextScopeBuildCount();
+    const scans = internals.markdownTextQuoteScanCount();
+    expect(scopes).to.be.at.most(1);
+    expect(scans).to.equal(1);
+
+    el.activeHighlightId = "same-99";
+    await el.updateComplete;
+    if (supportsCustomHighlights()) {
+      expect(internals.markdownTextScopeBuildCount()).to.equal(scopes);
+    } else {
+      expect(internals.markdownTextScopeBuildCount()).to.be.at.most(scopes + 1);
+    }
+    expect(internals.markdownTextQuoteScanCount()).to.equal(scans);
+  });
+
   it("repaintHighlights no-ops when the content root is not yet in the DOM", () => {
     const el = fixtureSync(html`<lr-markdown></lr-markdown>`) as LyraMarkdown;
     // Precondition: fixtureSync() connects but does not await the first Lit update, so the
@@ -2203,7 +2271,7 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
       })
     );
     const event = await listener;
-    expect((event as CustomEvent).detail).to.deep.equal({ id: "h1" });
+    expect((event as CustomEvent).detail).to.deep.equal({ highlightId: "h1" });
   });
 
   it("does not activate a highlight, and falls through to normal link handling, on a click elsewhere in the content", async () => {

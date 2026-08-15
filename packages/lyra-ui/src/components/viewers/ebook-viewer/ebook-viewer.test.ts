@@ -6,6 +6,7 @@ import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js
 import { styles } from './ebook-viewer.styles.js';
 import { MINIMAL_EPUB_BASE64 } from './fixtures/minimal-epub-fixture.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { VIEWER_SEARCH_QUERY_LIMIT } from '../viewer-search-limits.js';
 
 function response(ok = true): Response {
   const binary = atob(MINIMAL_EPUB_BASE64);
@@ -91,6 +92,7 @@ function fakeBookWithFeatures(spineTexts: Record<string, string>) {
   const relocatedHandlers: ((loc: unknown) => void)[] = [];
   const selectedHandlers: ((cfiRange: string, contents: unknown) => void)[] = [];
   const highlightCalls: { cfi: string; className: string; styles: Record<string, string> }[] = [];
+  const highlightCallbacks = new Map<string, () => void>();
   const removeCalls: string[] = [];
   const displayedCfis: string[] = [];
   const spineItems = Object.entries(spineTexts).map(([href, text]) => ({
@@ -114,8 +116,9 @@ function fakeBookWithFeatures(spineTexts: Record<string, string>) {
       if (event === 'selected') selectedHandlers.push(handler as (cfiRange: string, contents: unknown) => void);
     },
     annotations: {
-      highlight: (cfi: string, _data: unknown, _cb: unknown, className: string, styles: Record<string, string> = {}) => {
+      highlight: (cfi: string, _data: unknown, callback: unknown, className: string, styles: Record<string, string> = {}) => {
         highlightCalls.push({ cfi, className, styles });
+        if (typeof callback === 'function') highlightCallbacks.set(cfi, callback as () => void);
       },
       remove: (cfi: string) => { removeCalls.push(cfi); },
     },
@@ -139,6 +142,7 @@ function fakeBookWithFeatures(spineTexts: Record<string, string>) {
     relocate: (loc: { start: { cfi: string; href: string } }) => relocatedHandlers.forEach((h) => h(loc)),
     select: (cfiRange: string, contents: unknown) => selectedHandlers.forEach((h) => h(cfiRange, contents)),
     highlightCalls,
+    highlightCallbacks,
     removeCalls,
     displayedCfis,
   };
@@ -819,6 +823,34 @@ describe('lr-ebook-viewer search', () => {
     }
   });
 
+  it('rejects an oversized query before loading or searching a spine section', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'needle' });
+    let findCalls = 0;
+    fake.book.spine.spineItems[0].find = () => {
+      findCalls++;
+      return [];
+    };
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      const changed = oneEvent(el, 'lr-search-change');
+      const query = 'x'.repeat(VIEWER_SEARCH_QUERY_LIMIT + 1);
+
+      expect(await el.search(query)).to.equal(0);
+      expect(findCalls).to.equal(0);
+      expect((await changed).detail).to.deep.equal({
+        query,
+        matchCount: 0,
+        matchCountExact: false,
+        activeIndex: -1,
+      });
+    } finally {
+      restore();
+    }
+  });
+
   it('always unloads a spine section when find rejects', async () => {
     let unloads = 0;
     const rendition = {
@@ -1391,6 +1423,25 @@ describe('scrollToAnchor (ebook)', () => {
     }
   });
 
+  it('emits the activated cfi business identity as { highlightId }', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      el.highlights = [{ id: ' citation-1 ', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/6!)' } }];
+      await el.updateComplete;
+
+      const activation = oneEvent(el, 'lr-highlight-activate');
+      fake.highlightCallbacks.get('epubcfi(/6/6!)')?.();
+
+      expect((await activation).detail).to.deep.equal({ highlightId: 'citation-1' });
+    } finally {
+      restore();
+    }
+  });
+
   it('passes a resolved fill color as the 5th styles arg so tone actually differentiates highlight color', async () => {
     const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
     __setEpubJsForTesting(fake.factory as never);
@@ -1440,6 +1491,29 @@ describe('scrollToAnchor (ebook)', () => {
       const repainted = fake.highlightCalls.filter((call) => call.cfi === 'epubcfi(/6/8!)').at(-1)!;
       expect(repainted.className).not.to.contain('lr-ebook-highlight-active');
       expect(repainted.styles).not.to.have.property('stroke-width');
+    } finally {
+      restore();
+    }
+  });
+
+  it('bounds cfi painting while retaining the active highlight in the candidate lookahead', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      fake.highlightCalls.length = 0;
+      el.highlights = Array.from({ length: 1_001 }, (_unused, index) => ({
+        id: `h${index}`,
+        anchor: { kind: 'cfi' as const, cfi: `epubcfi(/6/${index}!)` },
+      }));
+      el.activeHighlightId = 'h1000';
+      await el.updateComplete;
+
+      expect(fake.highlightCalls).to.have.lengthOf(100);
+      expect(fake.highlightCalls[0]?.cfi).to.equal('epubcfi(/6/1000!)');
+      expect(fake.highlightCalls[0]?.className).to.contain('lr-ebook-highlight-active');
     } finally {
       restore();
     }

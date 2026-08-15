@@ -288,7 +288,9 @@ operations. Its runtime value is the underlying MapLibre map.
   `[value, color]` pair — an empty array is ignored, leaving whatever fill layer already exists, if
   any, untouched, rather than being applied)
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
-  [number, number]; color?: string; label?: string; unsafeHtml?: string }`; reconciled by `id` (falling back
+  [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
+  trimmed and must be nonempty, and the first marker for an explicit ID wins. Markers are reconciled
+  by that explicit ID (falling back
   to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
   when `id` is omitted) so an unchanged marker isn't torn down and recreated on every `markers`
   reassignment — its `lngLat` **and** its popup content (`unsafeHtml`/`label`, in that precedence)
@@ -306,7 +308,9 @@ operations. Its runtime value is the underlying MapLibre map.
 - `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
   `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
   GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
-  'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three geometry-filtered layers
+  'danger' | 'neutral' }`. `sourceId` is trimmed and must be nonempty; the first layer for a
+  `sourceId` wins and blank or later duplicate records are ignored. Each retained entry adds one
+  GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
   matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`). The component
   assigns collision-free private MapLibre ids for those resources: `sourceId` is the stable
@@ -1018,9 +1022,10 @@ already focused on the chip still hears an upload failure — goes to the librar
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
-`--lr-attachment-chip-border` (default `var(--lr-color-border)`) — this trio is swapped per
-`status` (`uploading` → brand/brand-quiet/transparent, `error` → danger/danger-quiet/transparent,
-`success` → success/success-quiet/transparent); `--lr-attachment-chip-compact-thumbnail-size` (default
+`--lr-attachment-chip-border` (default `var(--lr-color-border)`) — the trio's private defaults
+change per `status` (`uploading` → brand/brand-quiet/transparent, `error` →
+danger/danger-quiet/transparent, `success` → success/success-quiet/transparent), while an inherited
+or direct public value remains authoritative; `--lr-attachment-chip-compact-thumbnail-size` (default
 `1.75rem`), `--lr-attachment-chip-compact-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
 size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-duration` (default
@@ -1048,8 +1053,8 @@ an unknown size renders nothing instead of `"NaN B"`.
 
   const chip = document.createElement('lr-attachment-chip');
   chip.file = pickedFile; // name/bytes/mime-type/thumbnail all derived from the File
-  chip.addEventListener('lr-remove', (e) => removeAttachment(e.detail.id));
-  chip.addEventListener('lr-retry', (e) => retryUpload(e.detail.id));
+  chip.addEventListener('lr-remove', (e) => removeAttachment(e.detail.attachmentId));
+  chip.addEventListener('lr-retry', (e) => retryUpload(e.detail.attachmentId));
   chip.addEventListener('lr-preview-request', (e) => openPreview(e.detail));
   console.log(formatFileSize(pickedFile.size));
 </script>
@@ -1385,18 +1390,19 @@ fallback slot while it is the winning tier), `image` (the `<img>`, only while a 
 `image` is usable), and `initials` (only once the image and icon tiers are unavailable).
 
 **Themeable custom properties:** `--size` is the upstream-compatible diameter and falls back to
-`--lr-avatar-size` (default `var(--lr-size-3rem)`, stepped across
-the ladder from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl` — every spelling of
-a tier selects the same declarations), `--lr-avatar-bg` (default `var(--lr-color-border)`, swapped
-per non-neutral `variant` to that variant's `-quiet` fill; there is no `--lr-color-surface-alt`
-token in this library, despite what older copies of this page claimed), `--lr-avatar-color`
-(default `var(--lr-color-text)`, swapped per non-neutral `variant` to that variant's loud color),
+`--lr-avatar-size` (default `var(--lr-size-3rem)`, with a private default stepped across the ladder
+from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl`), `--lr-avatar-bg` (default
+`var(--lr-color-border)`, whose private default changes for a non-neutral `variant` to that
+variant's `-quiet` fill; there is no `--lr-color-surface-alt` token in this library, despite what
+older copies of this page claimed), `--lr-avatar-color` (default `var(--lr-color-text)`, whose
+private default changes for a non-neutral `variant` to that variant's loud color),
 `--lr-avatar-font-size` (default `var(--lr-font-size-sm)`) — the font size of the initials fallback,
-and of any `em`-sized slotted glyph. `size` steps it alongside the diameter (`--lr-font-size-2xs` at
-`2xs`/`xs`, `--lr-font-size-xs` at `s`, `--lr-font-size-m` at `l`, `--lr-font-size-lg` at `xl`), so
-the initials track the circle instead of staying one fixed size across every tier; override it on
-the element for a size the built-in scale doesn't cover. Plus shared tokens `--lr-radius`/`-pill`,
-`--lr-font-weight-semibold`.
+and of any `em`-sized slotted glyph. Its private default follows `size` alongside the diameter
+(`--lr-font-size-2xs` at `2xs`/`xs`, `--lr-font-size-xs` at `s`, `--lr-font-size-m` at `l`,
+`--lr-font-size-lg` at `xl`), so the initials track the circle instead of staying one fixed size
+across every tier. Every public value above can be inherited from an ancestor or set directly on
+the avatar and remains authoritative across size/variant states. Plus shared tokens
+`--lr-radius`/`-pill`, `--lr-font-weight-semibold`.
 
 The variant colors are deliberately **not** the library's generic quiet-fill/on-quiet-text pairing:
 an avatar's initials *are* the accent, so they read in the variant's own loud color on that
@@ -1641,18 +1647,20 @@ avatars are hidden through reversible component-owned state.
 overflowing), and `overflow-badge-visual` (the avatar-tier-sized painted disc inside it).
 
 **Themeable custom properties:** `--lr-avatar-group-avatar-size` (default `var(--lr-size-2rem)`,
-stepped across the same six tiers as `<lr-avatar>`'s `--lr-avatar-size`, from `var(--lr-size-1rem)`
-at `2xs` to `var(--lr-size-3rem)` at `xl`), `--lr-avatar-group-overlap` (default
-`var(--lr-size-neg-6px)`, swapped per `size`; a logical `margin-inline-start`, so it auto-mirrors
+with a private default stepped across the same six tiers as `<lr-avatar>`'s `--lr-avatar-size`,
+from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl`),
+`--lr-avatar-group-overlap` (default `var(--lr-size-neg-6px)`, whose private default follows `size`;
+a logical `margin-inline-start`, so it auto-mirrors
 under `dir="rtl"` — setting `0` or a positive length turns the stack into normal spacing),
 `--lr-avatar-group-ring-color` (default `var(--lr-color-surface)`),
 `--lr-avatar-group-ring-width` (default `var(--lr-border-width-medium)`),
-`--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, swapped per `variant`),
-`--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, swapped per `variant`),
+`--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, with a private default that follows
+`variant`), `--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, with a private default
+that follows `variant`),
 `--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-sm)`) — the font size of the "+N"
-badge label. `size` steps it per tier alongside the badge diameter, matching `<lr-avatar>`'s own
-`--lr-avatar-font-size` scale so the badge and the avatars it caps read at the same optical weight;
-override it alongside `--lr-avatar-font-size` on the avatars themselves when tuning a custom tier.
+badge label. Its private default follows `size` alongside the badge diameter, matching
+`<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars it caps read at the
+same optical weight. An inherited or direct public value remains authoritative for every hook.
 
 The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier while
 the nested visual disc stays exactly avatar-sized, so small tiers do not paint as oversized 40px
@@ -1841,7 +1849,7 @@ report false.
 
 **Events:** `lr-load` (`detail: { naturalWidth, naturalHeight }`), `lr-zoom-change` (`detail: {
 zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detail: { fit }`),
-`lr-highlight-activate` (`detail: { id }`), `lr-annotation-create` (`detail: { anchor }`, kind
+`lr-highlight-activate` (`detail: { highlightId }`), `lr-annotation-create` (`detail: { anchor }`, kind
 `'region'`), `lr-anchor-result` (`detail: { found }`), and `lr-render-error` (`detail: { error
 }`).
 
@@ -1940,10 +1948,11 @@ anchor-target surface is `highlights: readonly LyraHighlight[] = []` (property o
 collection to update), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
 `anchorKinds: readonly LyraAnchorKind[] = ['time-range']`.
-`LyraAvCue = { readonly id, readonly start, readonly end?, readonly text, readonly speaker? }`;
+`LyraAvCue = { readonly cueId, readonly start, readonly end?, readonly text, readonly speaker? }`;
 `LyraAvTrack = { readonly src, readonly kind: 'subtitles' | 'captions' | 'descriptions', readonly
 srclang, readonly label, readonly default? }`. Their retained records are frozen as well as the
-outer arrays.
+outer arrays. Cue IDs are trimmed and must be nonempty; the first cue for a `cueId` is retained and
+blank or later duplicate records are ignored.
 
 Only exact `kind="audio"` and `kind="video"` values override MIME auto-detection. An unrecognized
 runtime or attribute value falls back to `mimeType` (`audio/*` renders audio; every other value
@@ -1978,7 +1987,7 @@ unsupported or unresolved targets report `false` through the return value and `l
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
 `lr-rate-change` (`detail: { rate }`), `lr-cue-change`
 (`detail: { readonly cueId, readonly index }`; `cueId` is `null` and `index` is `-1` when no cue is active),
-`lr-highlight-activate` (`detail: { id }`), `lr-anchor-result` (`detail: {
+`lr-highlight-activate` (`detail: { highlightId }`), `lr-anchor-result` (`detail: {
 found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
 `lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
 `play`, `timeupdate`, and `volumechange`
@@ -2284,7 +2293,7 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-media-av-player-av-metadata-contracts`** — Supporting data types and helpers for this component family.
   `LyraAvCue {
-    id: unknown;
+    cueId: unknown;
     start: unknown;
     end: unknown;
     text: unknown;

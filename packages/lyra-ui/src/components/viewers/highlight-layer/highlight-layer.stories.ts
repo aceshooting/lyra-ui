@@ -10,7 +10,7 @@ const meta: Meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Paints highlight rectangles over positioned content; noninteractive mode is an aria-hidden pure-paint overlay.',
+        component: 'Paints highlight rectangles over positioned content; item IDs are trimmed, nonempty, and first-wins, activation emits `{ highlightId }`, and noninteractive mode is an aria-hidden pure-paint overlay.',
       },
     },
   },

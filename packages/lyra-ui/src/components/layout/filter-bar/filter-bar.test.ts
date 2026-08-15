@@ -10,7 +10,7 @@ import type {
 
 const basicFilters: LyraFilterBarFilterDefinition[] = [
   {
-    id: "status",
+    filterId: "status",
     label: "Status",
     type: "select",
     options: [
@@ -20,7 +20,7 @@ const basicFilters: LyraFilterBarFilterDefinition[] = [
     required: true,
   },
   {
-    id: "tags",
+    filterId: "tags",
     label: "Tags",
     type: "combobox",
     multiple: true,
@@ -29,22 +29,38 @@ const basicFilters: LyraFilterBarFilterDefinition[] = [
       { value: "billing", label: "Billing" },
     ],
   },
-  { id: "created", label: "Created", type: "date" },
-  { id: "range", label: "Active period", type: "date-range" },
+  { filterId: "created", label: "Created", type: "date" },
+  { filterId: "range", label: "Active period", type: "date-range" },
 ];
 
-function control(el: LyraFilterBar, id: string): HTMLElement {
+it("uses filterId as the public filter-definition identity", async () => {
+  const filters = [
+    {
+      filterId: "status",
+      label: "Status",
+      type: "select",
+      options: [{ value: "open", label: "Open" }],
+    },
+  ] as unknown as LyraFilterBarFilterDefinition[];
+  const el = await fixture<LyraFilterBar>(html`
+    <lr-filter-bar .filters=${filters}></lr-filter-bar>
+  `);
+
+  expect(control(el, "status").localName).to.equal("lr-select");
+});
+
+function control(el: LyraFilterBar, filterId: string): HTMLElement {
   return el.shadowRoot!.querySelector(
-    `[data-filter-id="${id}"]`
+    `[data-filter-id="${filterId}"]`
   ) as HTMLElement;
 }
 
 /** The native `<input>` inside a `'text'` filter's composed `<lr-input>`. */
 async function nativeInput(
   el: LyraFilterBar,
-  id: string
+  filterId: string
 ): Promise<HTMLInputElement> {
-  const composed = control(el, id) as HTMLElement & {
+  const composed = control(el, filterId) as HTMLElement & {
     updateComplete: Promise<unknown>;
   };
   await composed.updateComplete;
@@ -54,10 +70,10 @@ async function nativeInput(
 /** Simulates a user keystroke in a `'text'` filter, driving the real `<lr-input>` input path. */
 async function typeInto(
   el: LyraFilterBar,
-  id: string,
+  filterId: string,
   text: string
 ): Promise<HTMLInputElement> {
-  const native = await nativeInput(el, id);
+  const native = await nativeInput(el, filterId);
   native.value = text;
   native.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
   return native;
@@ -87,7 +103,7 @@ it("renders one composed control per filter, matched to its declared type", asyn
 it("forwards common field and input parts from every built-in composed control", async () => {
   const filters: LyraFilterBarFilterDefinition[] = [
     ...basicFilters.slice(0, 3),
-    { id: "query", label: "Query", type: "text" },
+    { filterId: "query", label: "Query", type: "text" },
   ];
   const wrapper = (await fixture(html`
     <div>
@@ -135,9 +151,10 @@ it("forwards common field and input parts from every built-in composed control",
 
 describe("custom filters", () => {
   it("renders an existing control with controlled value, disabled, required, and error state", async () => {
+    let renderedFilterId = "";
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: "archived",
+        filterId: "archived",
         label: "Include archived",
         type: "custom",
         required: true,
@@ -148,17 +165,20 @@ describe("custom filters", () => {
             clearValue: false,
             formatValue: (value) => (value === true ? "Enabled" : "Disabled"),
           },
-          render: (context) => html`
-            <lr-checkbox
-              aria-label=${context.label}
-              .checked=${context.value === true}
-              ?disabled=${context.disabled}
-              ?required=${context.required}
-              .errorText=${context.errorText}
-              @lr-change=${context.onValueChange}
-              @focusout=${context.onFocusout}
-            ></lr-checkbox>
-          `,
+          render: (context) => {
+            renderedFilterId = context.filterId;
+            return html`
+              <lr-checkbox
+                aria-label=${context.label}
+                .checked=${context.value === true}
+                ?disabled=${context.disabled}
+                ?required=${context.required}
+                .errorText=${context.errorText}
+                @lr-change=${context.onValueChange}
+                @focusout=${context.onFocusout}
+              ></lr-checkbox>
+            `;
+          },
         },
       },
     ];
@@ -171,6 +191,7 @@ describe("custom filters", () => {
       errorText: string;
     };
 
+    expect(renderedFilterId).to.equal("archived");
     expect(checkbox.checked).to.be.false;
     expect(checkbox.errorText).to.equal("");
     expect(el.invalidFilterIds).to.deep.equal(["archived"]);
@@ -207,7 +228,7 @@ describe("custom filters", () => {
   it("adapts a two-handle lr-time-range and clears it through its active chip", async () => {
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: "window",
+        filterId: "window",
         label: "Time window",
         type: "custom",
         custom: {
@@ -272,7 +293,7 @@ describe("custom filters", () => {
   it("lets an eventless custom control set a string array and uses the default list chip label", async () => {
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: "reviewers",
+        filterId: "reviewers",
         label: "Reviewers",
         type: "custom",
         custom: {
@@ -335,6 +356,28 @@ it("treats a null/undefined filters or value as empty rather than throwing", asy
   expect(el.value).to.deep.equal({});
 });
 
+it("keeps the first unique, nonempty, whitespace-stable filterId", async () => {
+  const el = await fixture<LyraFilterBar>(html`
+    <lr-filter-bar
+      .filters=${[
+        { filterId: "", label: "Empty", type: "select", options: [] },
+        { filterId: " spaced ", label: "Spaced", type: "select", options: [] },
+        { filterId: "status", label: "First", type: "select", options: [] },
+        { filterId: "status", label: "Duplicate", type: "select", options: [] },
+      ] as LyraFilterBarFilterDefinition[]}
+    ></lr-filter-bar>
+  `);
+
+  expect(el.filters.map((definition) => definition.filterId)).to.deep.equal([
+    "status",
+  ]);
+  expect(
+    Array.from(el.shadowRoot!.querySelectorAll("[data-filter-id]"), (field) =>
+      field.getAttribute("data-filter-id")
+    )
+  ).to.deep.equal(["status"]);
+});
+
 describe("value getter/setter (URL/state serialization contract)", () => {
   it("round-trips a plain object through value, independent of any prior state", async () => {
     const el = (await fixture(
@@ -356,7 +399,7 @@ describe("value getter/setter (URL/state serialization contract)", () => {
 
   it("passes a scalar controlled value through a single-value combobox with an explicit empty catalog", async () => {
     const filters: LyraFilterBarFilterDefinition[] = [
-      { id: "assignee", label: "Assignee", type: "combobox", options: [] },
+      { filterId: "assignee", label: "Assignee", type: "combobox", options: [] },
     ];
     const el = (await fixture(
       html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
@@ -728,19 +771,19 @@ describe("active-filter chips", () => {
   it("keeps focus on the nearest remaining chip, or its originating filter control, after focused removal", async () => {
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: "first",
+        filterId: "first",
         label: "First",
         type: "select",
         options: [{ value: "yes", label: "Yes" }],
       },
       {
-        id: "middle",
+        filterId: "middle",
         label: "Middle",
         type: "select",
         options: [{ value: "yes", label: "Yes" }],
       },
       {
-        id: "last",
+        filterId: "last",
         label: "Last",
         type: "select",
         options: [{ value: "yes", label: "Yes" }],
@@ -750,9 +793,9 @@ describe("active-filter chips", () => {
       html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
     )) as LyraFilterBar;
 
-    const removeFocusedChip = async (id: string): Promise<void> => {
+    const removeFocusedChip = async (filterId: string): Promise<void> => {
       const chip = el.shadowRoot!.querySelector(
-        `[part="chip"][value="${id}"]`
+        `[part="chip"][value="${filterId}"]`
       ) as HTMLElement & { updateComplete: Promise<unknown> };
       await chip.updateComplete;
       chip.focus();
@@ -806,7 +849,7 @@ describe("active-filter chips", () => {
   it("moves a sole custom-filter chip's focus to its rendered control after removal", async () => {
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: "custom",
+        filterId: "custom",
         label: "Custom",
         type: "custom",
         custom: {
@@ -847,7 +890,7 @@ describe("active-filter chips", () => {
   it("preserves a consumer focus move made by an lr-input listener after focused removal", async () => {
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: "status",
+        filterId: "status",
         label: "Status",
         type: "select",
         options: [{ value: "open", label: "Open" }],
@@ -1051,7 +1094,7 @@ describe("disabled", () => {
     for (const type of builtInTypes) {
       const filters: LyraFilterBarFilterDefinition[] = [
         {
-          id: "required",
+          filterId: "required",
           label: "Required",
           type,
           required: true,
@@ -1099,7 +1142,7 @@ describe("disabled", () => {
   it("applies the disabled focusout guard to custom controls too", async () => {
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: "required",
+        filterId: "required",
         label: "Required",
         type: "custom",
         required: true,
@@ -1343,7 +1386,7 @@ describe("RTL and narrow-allocation layout", () => {
       const longLabel = "LocalizedFilterValueWithoutBreakOpportunity".repeat(100);
       const filters: LyraFilterBarFilterDefinition[] = [
         {
-          id: "status",
+          filterId: "status",
           label: "Status",
           type: "select",
           options: [{ value: "active", label: longLabel }],
@@ -1382,9 +1425,9 @@ describe("RTL and narrow-allocation layout", () => {
 
 describe("'text' free-text filters", () => {
   const textFilters: LyraFilterBarFilterDefinition[] = [
-    { id: "q", label: "Search", type: "text", placeholder: "Search logs" },
+    { filterId: "q", label: "Search", type: "text", placeholder: "Search logs" },
     {
-      id: "severity",
+      filterId: "severity",
       label: "Severity",
       type: "select",
       options: [
@@ -1395,7 +1438,7 @@ describe("'text' free-text filters", () => {
   ];
   const debouncedFilters: LyraFilterBarFilterDefinition[] = [
     {
-      id: "q",
+      filterId: "q",
       label: "Search",
       type: "text",
       placeholder: "Search logs",
@@ -1616,7 +1659,7 @@ describe("'text' free-text filters", () => {
     await typeInto(el, "q", "stale draft");
 
     el.filters = [
-      { id: "q", label: "Replacement", type: "select", options: [] },
+      { filterId: "q", label: "Replacement", type: "select", options: [] },
     ];
     await el.updateComplete;
     await aTimeout(300);
@@ -1677,7 +1720,7 @@ describe("'text' free-text filters", () => {
 
   it("reveals a required text filter's error on blur, not per keystroke, and flushes first", async () => {
     const requiredText: LyraFilterBarFilterDefinition[] = [
-      { id: "q", label: "Search", type: "text", required: true, debounce: 400 },
+      { filterId: "q", label: "Search", type: "text", required: true, debounce: 400 },
     ];
     const el = (await fixture(
       html`<lr-filter-bar .filters=${requiredText}></lr-filter-bar>`
@@ -1707,7 +1750,7 @@ describe("'text' free-text filters", () => {
 
   it("still reveals the required error on blur when the text filter is genuinely empty", async () => {
     const requiredText: LyraFilterBarFilterDefinition[] = [
-      { id: "q", label: "Search", type: "text", required: true, debounce: 60 },
+      { filterId: "q", label: "Search", type: "text", required: true, debounce: 60 },
     ];
     const el = (await fixture(
       html`<lr-filter-bar .filters=${requiredText}></lr-filter-bar>`
@@ -1739,7 +1782,7 @@ describe("'text' free-text filters", () => {
   it("is accessible with a text filter populated, its chip shown, and a revealed required error", async () => {
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: "q",
+        filterId: "q",
         label: "Search",
         type: "text",
         placeholder: "Search logs",
@@ -1791,7 +1834,7 @@ it("renders an option's optional icon into lr-option's leading start slot for se
   const el = (await fixture(html`<lr-filter-bar
     .filters=${[
       {
-        id: "status",
+        filterId: "status",
         label: "Status",
         type: "select",
         options: [
@@ -1800,7 +1843,7 @@ it("renders an option's optional icon into lr-option's leading start slot for se
         ],
       },
       {
-        id: "owner",
+        filterId: "owner",
         label: "Owner",
         type: "combobox",
         options: [{ value: "ada", label: "Ada", icon: dot("ada") }],

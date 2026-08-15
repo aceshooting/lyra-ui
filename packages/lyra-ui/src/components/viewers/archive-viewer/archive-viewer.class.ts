@@ -7,8 +7,9 @@ import { fileIcon, folderIcon } from '../../../internal/icons.js';
 import { isAbortError, isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
+  boundedSelectionRects,
+  boundedSelectionText,
   buildQuoteAnchor,
-  normalizeQuoteText,
   resolveTextQuote,
   scopeFromElement,
 } from '../../../internal/text-quote.js';
@@ -20,9 +21,10 @@ import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_archiveViewerEmpty, LYRA_DEFAULT_archiveViewerFile, LYRA_DEFAULT_archiveViewerFolder, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_archiveViewerEmpty, LYRA_DEFAULT_archiveViewerFile, LYRA_DEFAULT_archiveViewerFolder, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -136,6 +138,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -183,6 +186,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   override clearSearch(): void {
     this.archiveSearchQuery = '';
     this.archiveSearchMatches = [];
+    this.archiveSearchMatchCountExact = true;
     this.archiveSearchActiveIndex = -1;
     this.emitArchiveSearchChange();
   }
@@ -190,6 +194,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   @state() private fetchState: ArchiveState = { kind: 'idle' };
   @state() private archiveSearchMatches: ArchiveEntry[] = [];
   @state() private archiveSearchActiveIndex = -1;
+  private archiveSearchMatchCountExact = true;
   private generation = 0;
   private archiveSearchQuery = '';
   private archiveSelectionRoot: Element | null = null;
@@ -406,10 +411,10 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
         const emitSelection = (): void => {
           const range = archiveSelectionRange(this, root);
           if (!range || !root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
-          const text = normalizeQuoteText(range.toString());
+          const text = boundedSelectionText(range);
           if (!text) return;
           const anchor = this.computeSelectionAnchor(range);
-          const rects = Array.from(range.getClientRects());
+          const rects = boundedSelectionRects(range);
           this.emit('lr-text-select', { text, anchor, rects });
         };
         root.addEventListener('pointerup', emitSelection);
@@ -443,10 +448,18 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
 
   private recomputeArchiveSearch(): void {
     const entries = this.fetchState.kind === 'loaded' ? this.fetchState.entries : [];
-    const query = this.archiveSearchQuery.trim().toLocaleLowerCase(this.effectiveLocale);
-    this.archiveSearchMatches = query
-      ? entries.filter((entry) => entry.name.toLocaleLowerCase(this.effectiveLocale).includes(query))
-      : [];
+    const boundedQuery = boundedViewerSearchQuery(this.archiveSearchQuery, this.effectiveLocale);
+    const query = boundedQuery.needle;
+    const matches: ArchiveEntry[] = [];
+    const budget = new ViewerSearchWorkBudget();
+    if (boundedQuery.accepted && query) {
+      for (const entry of entries) {
+        if (budget.includes(entry.name, query, this.effectiveLocale)) matches.push(entry);
+        if (!budget.complete) break;
+      }
+    }
+    this.archiveSearchMatches = matches;
+    this.archiveSearchMatchCountExact = boundedQuery.accepted && budget.complete;
     this.archiveSearchActiveIndex = this.archiveSearchMatches.length > 0 ? 0 : -1;
     this.emitArchiveSearchChange();
   }
@@ -455,7 +468,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     this.emit('lr-search-change', {
       query: this.archiveSearchQuery,
       matchCount: this.archiveSearchMatches.length,
-      matchCountExact: true,
+      matchCountExact: this.archiveSearchMatchCountExact,
       activeIndex: this.archiveSearchActiveIndex,
     });
   }

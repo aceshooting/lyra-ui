@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import type {
@@ -21,12 +22,12 @@ import {
 } from "../retrieval-semantic-owner.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraClaimEvidenceEventMap {
-  "lr-claim-select": CustomEvent<{ claim: GroundedClaim }>;
-  "lr-citation-select": CustomEvent<CitationSelectEventDetail>;
+  "lr-claim-select": CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
+  "lr-citation-select": CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
 }
 
 const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
@@ -40,6 +41,9 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
  * `<lr-claim-evidence>` — a controlled claim-by-claim grounding audit. It relates generated
  * claims to complete citation records, exposes assessment status/confidence, and tolerates
  * missing citation ids without fabricating evidence.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-claim-evidence
  * @event lr-claim-select - A claim was activated. `detail: { claim }`.
@@ -63,6 +67,8 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
  * @since 7.0.0
  */
 export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["claims", "citations"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -79,6 +85,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -87,9 +94,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Grounded claims rendered as the selectable evidence index. */
-  @property({ attribute: false }) claims: GroundedClaim[] = [];
+  @property({ attribute: false }) claims: readonly GroundedClaim[] = [];
   /** Citation records resolved by each claim's citation indexes. */
-  @property({ attribute: false }) citations: Citation[] = [];
+  @property({ attribute: false }) citations: readonly Citation[] = [];
   /** Controlled id of the claim whose evidence is expanded. */
   @property({ attribute: "selected-claim-id" }) selectedClaimId = "";
   /** Fallback name for the claim-and-evidence region. A non-empty host `aria-label` makes the host

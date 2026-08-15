@@ -19,6 +19,13 @@ const meta: Meta = {
   title: 'ExportButton',
   component: 'lr-export-button',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'Format options use unique nonempty formatId values; malformed and later duplicate options are omitted first-wins.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

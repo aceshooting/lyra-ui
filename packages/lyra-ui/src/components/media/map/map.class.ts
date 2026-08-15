@@ -170,34 +170,38 @@ function addPartToken(element: Element, token: string): void {
  * across `stops`.
  */
 export interface LyraMapChoroplethLayer {
-  sourceId: string;
-  geojson: FeatureCollection;
-  field: string;
+  readonly sourceId: string;
+  readonly geojson: FeatureCollection;
+  readonly field: string;
   /**
    * `[value, color]` pairs, ascending by `value`, fed to a maplibre-gl
    * `interpolate` expression. Must contain at least one pair -- an empty
    * array can't build a valid expression, so it's ignored (the existing fill
    * layer, if any, is left as-is) rather than applied.
    */
-  stops: [number, string][];
+  readonly stops: readonly (readonly [number, string])[];
 }
 
 /** One GeoJSON source rendered as three layers (`${sourceId}-fill` for polygons, `${sourceId}-line`
  *  for lines/outlines, `${sourceId}-circle` for points). Colors resolve from `--lr-*` tokens at
  *  apply time, defaulting to `accent`. */
 export interface LyraMapGeoJsonDataLayer {
-  sourceId: string;
-  geojson: Feature | FeatureCollection;
-  tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
+  /** Trimmed nonempty business identity. A collection retains the first occurrence and ignores
+   * blank or later duplicate `sourceId` records. */
+  readonly sourceId: string;
+  readonly geojson: Feature | FeatureCollection;
+  readonly tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
 }
 
 export interface LyraMapMarker {
-  id?: string;
-  lngLat: [number, number];
+  /** Optional explicit business identity. Explicit IDs are trimmed and must be nonempty; the
+   * first occurrence is retained. Markers with no `id` remain distinct by coordinate occurrence. */
+  readonly id?: string;
+  readonly lngLat: readonly [number, number];
   /** A CSS color. Invalid values and `url()` paint servers use maplibre-gl's default marker color. */
-  color?: string;
+  readonly color?: string;
   /** Visible popup text and the marker button's accessible name. */
-  label?: string;
+  readonly label?: string;
   /**
    * Rendered as the marker's popup content via maplibre-gl's
    * `Popup.setHTML()` -- parsed as raw markup, inline event handlers
@@ -206,7 +210,7 @@ export interface LyraMapMarker {
    * input before assigning it here. Prefer `label` (rendered via the safe
    * `Popup.setText()`) whenever the content is plain text.
    */
-  unsafeHtml?: string;
+  readonly unsafeHtml?: string;
 }
 
 /** Extracts a marker name from trusted popup markup without attaching or executing it. Elements
@@ -220,14 +224,38 @@ function popupText(host: Element, markup: string): string {
   return (template.content.textContent ?? '').replace(/\s+/gu, ' ').trim();
 }
 
+function normalizedDataLayers(value: unknown): LyraMapGeoJsonDataLayer[] {
+  if (!Array.isArray(value)) return [];
+  const output: LyraMapGeoJsonDataLayer[] = [];
+  const seenSourceIds = new Set<string>();
+  for (const candidate of value) {
+    try {
+      if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
+      const rawSourceId = (candidate as { sourceId?: unknown }).sourceId;
+      if (typeof rawSourceId !== 'string') continue;
+      const sourceId = rawSourceId.trim();
+      if (sourceId.length === 0 || seenSourceIds.has(sourceId)) continue;
+      seenSourceIds.add(sourceId);
+      output.push(
+        rawSourceId === sourceId
+          ? candidate as LyraMapGeoJsonDataLayer
+          : { ...candidate, sourceId } as LyraMapGeoJsonDataLayer,
+      );
+    } catch {
+      // A malformed entry must not prevent later valid data layers from being applied.
+    }
+  }
+  return output;
+}
+
 /** Peer-neutral subset of a MapLibre style accepted by `mapStyle`. */
 export interface LyraMapStyleSpecification {
-  version: 8;
-  sources: Record<string, unknown>;
-  layers: unknown[];
-  name?: string;
-  sprite?: string | { id: string; url: string }[];
-  glyphs?: string;
+  readonly version: 8;
+  readonly sources: Readonly<Record<string, unknown>>;
+  readonly layers: readonly unknown[];
+  readonly name?: string;
+  readonly sprite?: string | readonly Readonly<{ id: string; url: string }>[];
+  readonly glyphs?: string;
 }
 
 /**
@@ -291,8 +319,8 @@ function dataLayerColor(host: Element, tone: LyraMapGeoJsonDataLayer['tone']): s
 export interface LyraMapEventMap {
   'lr-map-load': CustomEvent<null>;
   'lr-map-click': CustomEvent<{
-    lngLat: [number, number];
-    feature: Feature | undefined;
+    readonly lngLat: readonly [number, number];
+    readonly feature: Feature | undefined;
   }>;
 }
 /**
@@ -316,9 +344,13 @@ export interface LyraMapEventMap {
  * doesn't fire) until construction actually happens.
  *
  * Call `LyraMap.preload()` before connecting an element to start the optional
- * peer import early. `dataLayers[].sourceId` is declarative component input;
+ * peer import early. `dataLayers[].sourceId` is a trimmed nonempty business identity; the first
+ * occurrence is retained and blanks or later duplicates are ignored. It is declarative component input;
  * its backing MapLibre source and layers use collision-free component-owned
  * ids and must not be accessed through `map`.
+ *
+ * Collection-bearing inputs take bounded, recursively frozen snapshots synchronously. Mutate a
+ * copy and reassign it to update the map; later changes to the assigned source are not observed.
  *
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
@@ -357,6 +389,14 @@ export interface LyraMapEventMap {
  * @since 4.0.0
  */
 export class LyraMap extends LyraElement<LyraMapEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'center',
+    'mapStyle',
+    'choropleth',
+    'markers',
+    'dataLayers',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -389,12 +429,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   /** Initial and controlled map center as `[longitude, latitude]`. */
-  @property({ type: Array }) center: [number, number] = [0, 0];
+  @property({ type: Array }) center: readonly [number, number] = [0, 0];
   /** Initial and controlled map zoom level. */
   @property({ type: Number }) zoom = 2;
   /** Required MapLibre style URL or peer-neutral style specification. No provider is contacted
    * unless a consumer assigns this property. */
-  @property({ attribute: false }) mapStyle?: LyraMapStyleSpecification | string;
+  @property({ attribute: false }) mapStyle?: Readonly<LyraMapStyleSpecification> | string;
   private _legend = EMPTY_MAP_LEGEND;
   private _legendProjection = EMPTY_MAP_LEGEND_PROJECTION;
   /** Immutable, bounded entries rendered in the optional map legend. A required pattern keeps
@@ -417,12 +457,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._legendProjection;
   }
   /** Optional GeoJSON choropleth layer and value-to-color configuration. */
-  @property({ attribute: false }) choropleth?: LyraMapChoroplethLayer;
-  /** Point markers rendered over the map. */
-  @property({ attribute: false }) markers: LyraMapMarker[] = [];
+  @property({ attribute: false }) choropleth?: Readonly<LyraMapChoroplethLayer>;
+  /** Point markers rendered over the map. Explicit IDs are unique-nonempty first-wins. An idless
+   * marker is instead identified by its coordinate occurrence, so colocated idless markers remain
+   * separate. */
+  @property({ attribute: false }) markers: readonly LyraMapMarker[] = [];
   /** Additive GeoJSON layers rendered alongside the choropleth/markers -- each entry becomes a
-   *  source plus fill/line/circle layers. Defaults empty (zero behavior change). */
-  @property({ attribute: false }) dataLayers: LyraMapGeoJsonDataLayer[] = [];
+   * source plus fill/line/circle layers. `sourceId` values are trimmed, must be nonempty, and retain
+   * only their first occurrence. Defaults empty (zero behavior change). */
+  @property({ attribute: false }) dataLayers: readonly LyraMapGeoJsonDataLayer[] = [];
 
   /** Accessible name for MapLibre's focusable canvas. A nonempty host `aria-label` remains the
    *  overall component name and is not cloned onto the nested focus owner; the canvas uses this
@@ -857,7 +900,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (this._appliedFillLayerId) {
       this._map.setPaintProperty(this._appliedFillLayerId, 'fill-opacity', fillOpacity);
     }
-    const dataLayersBySourceId = new Map(this.dataLayers.map((layer) => [layer.sourceId, layer]));
+    const dataLayersBySourceId = new Map(
+      normalizedDataLayers(this.dataLayers).map((layer) => [layer.sourceId, layer]),
+    );
     for (const [publicSourceId, sourceId] of this._appliedDataLayerIds) {
       const dataLayer = dataLayersBySourceId.get(publicSourceId);
       if (!dataLayer) continue;
@@ -936,7 +981,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * `lr-choropleth-shared`, so a single conditional prefix is not sufficient.
    */
   private resolveChoroplethSourceId(sourceId: string): string {
-    const dataSourceIds = new Set(this.dataLayers.map((layer) => layer.sourceId));
+    const dataSourceIds = new Set(normalizedDataLayers(this.dataLayers).map((layer) => layer.sourceId));
     let resolved = sourceId;
     while (dataSourceIds.has(resolved)) resolved = `lr-choropleth-${resolved}`;
     return resolved;
@@ -964,11 +1009,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   private applyDataLayers(): void {
     if (!this._map) return;
-    const nextIds = new Set(this.dataLayers.map((l) => l.sourceId));
+    const layers = normalizedDataLayers(this.dataLayers);
+    const nextIds = new Set(layers.map((layer) => layer.sourceId));
     for (const publicSourceId of this._appliedDataLayerIds.keys()) {
       if (!nextIds.has(publicSourceId)) this.removeDataLayer(publicSourceId);
     }
-    for (const layer of this.dataLayers) {
+    for (const layer of layers) {
       const { sourceId: publicSourceId, geojson, tone } = layer;
       const sourceId = this.resolveDataLayerSourceId(publicSourceId);
       const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
@@ -1067,13 +1113,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // staying stable/consistent across re-renders as long as their relative
     // order in `this.markers` doesn't change.
     const coordCounts = new Map<string, number>();
+    const explicitIds = new Set<string>();
     for (const candidate of Array.isArray(this.markers) ? this.markers : []) {
       const lngLat = this.validMarkerLngLat(candidate);
       if (!lngLat) continue;
       const m = candidate as LyraMapMarker;
+      const rawId: unknown = m.id;
       let key: string;
-      if (m.id != null) {
-        key = `id:${m.id}`;
+      if (rawId !== undefined) {
+        if (typeof rawId !== 'string') continue;
+        const id = rawId.trim();
+        if (id.length === 0 || explicitIds.has(id)) continue;
+        explicitIds.add(id);
+        key = `id:${id}`;
       } else {
         const coordKey = `${lngLat[0]},${lngLat[1]}`;
         const occurrence = coordCounts.get(coordKey) ?? 0;

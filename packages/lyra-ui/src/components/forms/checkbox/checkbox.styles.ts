@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -8,21 +8,20 @@ export const styles = css`
        1.75rem the control shipped with before it had a size at all, and the
        --lr-icon-button-size cap is kept so a consumer compacting that theme token still compacts
        this control with it. */
-    --lr-checkbox-box-size: min(
+    --_lr-checkbox-box-size: min(
       var(--lr-icon-button-size),
       calc(var(--lr-form-control-height) * 0.7)
     );
     display: inline-block;
-    /* Published (not an override hook, so it is declared rather than read with an inline
-       var() fallback) so a consumer composing their own per-option hint text under the label
-       can align it without re-deriving the geometry by reading these shadow styles. Same two
-       terms the layout below actually uses: the box's floor plus the label gap.
-       A :host declaration is still overridable from the consumer's own tree -- a document-tree
-       rule on the host (lr-checkbox { --lr-checkbox-label-indent: ... }) beats any :host rule --
-       but it does NOT reach a *sibling* node in the consumer's tree, because custom properties
-       inherit down, not sideways. A consumer aligning a sibling <p> computes the same formula
-       themselves from --lr-theme-icon-button-size and --lr-theme-space-s. */
-    --lr-checkbox-label-indent: calc(var(--lr-checkbox-box-size) + var(--lr-space-s));
+    /* Private default for the public label-indent hook. It uses the same two terms as the layout
+       below: the box's floor plus the label gap. A consumer can override the public hook on an
+       ancestor or directly on the checkbox. It does not reach a sibling node in the consumer's
+       tree, because custom properties inherit down, not sideways; a sibling <p> can compute the
+       same formula from --lr-theme-icon-button-size and --lr-theme-space-s. */
+    --_lr-checkbox-label-indent: calc(
+      var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size)) +
+        var(--lr-space-s)
+    );
   }
   .checkbox-layout {
     display: inline-flex;
@@ -50,7 +49,7 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
 
-  [part~='box'] {
+  [part~="box"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -61,8 +60,8 @@ export const styles = css`
        (--lr-icon-button-size capped at the tier's own share of the control
        height) — a real touch target without ballooning to the full 2.5rem
        meant for standalone icon-only buttons. */
-    min-inline-size: var(--lr-checkbox-box-size);
-    min-block-size: var(--lr-checkbox-box-size);
+    min-inline-size: var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size));
+    min-block-size: var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size));
     /* The glyph is drawn at 1em, so the box owns the font size that scales it. Pinning it to the
        ladder rather than letting it inherit keeps the checkmark proportional to the box at every
        tier; at "m" it resolves to the same 1rem the surrounding text carries by default. */
@@ -71,11 +70,10 @@ export const styles = css`
     border-radius: calc(var(--lr-form-control-radius) * 0.6);
     background: var(--lr-color-surface);
     color: var(--lr-color-on-brand);
-    transition:
-      background-color var(--lr-transition-fast),
+    transition: background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
-  :host(:not(:disabled)) .checkbox-layout:hover [part~='box'] {
+  :host(:not(:disabled)) .checkbox-layout:hover [part~="box"] {
     border-color: var(--lr-checkbox-hover-border, var(--lr-color-brand));
   }
   /* Pressed. Expressed as a ring around the box rather than as a fill, because the box's own fill
@@ -83,12 +81,13 @@ export const styles = css`
      tinting it under the thumb would either wash out the checkmark or read as a half-toggled box.
      A ring is unambiguous in both states, and is visibly more than the hover's border-colour step
      -- same soft-ring pressed vocabulary <lr-slider>'s thumb uses. */
-  :host(:not(:disabled)) .checkbox-layout:active [part~='box'] {
+  :host(:not(:disabled)) .checkbox-layout:active [part~="box"] {
     border-color: var(--lr-checkbox-active-border, var(--lr-color-brand));
-    box-shadow: 0 0 0 var(--lr-border-width-medium) var(--lr-checkbox-active-ring, var(--lr-color-brand-quiet));
+    box-shadow: 0 0 0 var(--lr-border-width-medium)
+      var(--lr-checkbox-active-ring, var(--lr-color-brand-quiet));
   }
-  [part~='checked'],
-  [part~='indeterminate'] {
+  [part~="checked"],
+  [part~="indeterminate"] {
     /* Component-scoped indirection (mirrors lr-source-picker's identical
        --lr-source-picker-checked-bg/-border pair) so a consumer can retint just this control's
        checked/indeterminate fill without hijacking the shared --lr-color-brand token used across
@@ -100,11 +99,11 @@ export const styles = css`
      matching lr-combobox/lr-select's data-invalid styling hook --
      beyond the transient native validation-bubble popup, which only shows
      momentarily around reportValidity()/form submission. */
-  :host([data-invalid]) [part~='box'] {
+  :host([data-invalid]) [part~="box"] {
     border-color: var(--lr-checkbox-invalid-border, var(--lr-color-danger));
   }
 
-  [part~='checkmark'] {
+  [part~="checkmark"] {
     display: block;
     color: var(--checked-icon-color, currentColor);
     transform: scale(var(--checked-icon-scale, 1));
@@ -114,41 +113,55 @@ export const styles = css`
      [part='form-control-label']), so the UA stylesheet's default
      "[hidden] { display: none }" rule needs no author-side override to
      take effect when hasLabelSlot is false. */
-  [part='label'] {
+  [part="label"] {
     margin-inline-start: calc(
-      var(--lr-checkbox-label-indent) - max(var(--lr-icon-button-size), var(--lr-checkbox-box-size))
+      var(--lr-checkbox-label-indent, var(--_lr-checkbox-label-indent)) -
+        max(
+          var(--lr-icon-button-size),
+          var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size))
+        )
     );
     font-size: var(--lr-font-size-md-sm);
     color: var(--lr-color-text);
   }
 
-  [part~='hint'] {
+  [part~="hint"] {
     margin-block-start: var(--lr-space-xs);
-    margin-inline-start: var(--lr-checkbox-label-indent);
+    margin-inline-start: var(
+      --lr-checkbox-label-indent,
+      var(--_lr-checkbox-label-indent)
+    );
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
-  [part~='hint'][hidden] { display: none; }
+  [part~="hint"][hidden] {
+    display: none;
+  }
 
-  [part='error'] {
+  [part="error"] {
     margin-block-start: var(--lr-space-xs);
-    margin-inline-start: var(--lr-checkbox-label-indent);
+    margin-inline-start: var(
+      --lr-checkbox-label-indent,
+      var(--_lr-checkbox-label-indent)
+    );
     color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);
   }
-  [part='error'][hidden] { display: none; }
+  [part="error"][hidden] {
+    display: none;
+  }
 
-  [part='form-control'],
-  [part='label'],
-  [part~='hint'],
-  [part='error'] {
+  [part="form-control"],
+  [part="label"],
+  [part~="hint"],
+  [part="error"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    [part~='box'] {
+    [part~="box"] {
       transition: none !important;
     }
   }

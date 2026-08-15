@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -9,9 +9,9 @@ export const styles = css`
        then takes over scrolling within whatever allocation it actually gets. */
     min-inline-size: 0;
     max-inline-size: 100%;
-    --lr-svg-viewer-max-height: none;
+    --_lr-svg-viewer-max-height: none;
   }
-  [part='base'] {
+  [part="base"] {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -20,58 +20,62 @@ export const styles = css`
     background: var(--lr-color-surface);
     overflow: hidden;
   }
-  [part='body'] {
+  [part="body"] {
     display: flex;
     align-items: center;
     justify-content: center;
     min-block-size: var(--lr-size-10rem);
-    max-block-size: var(--lr-svg-viewer-max-height);
+    max-block-size: var(
+      --lr-svg-viewer-max-height,
+      var(--_lr-svg-viewer-max-height)
+    );
     box-sizing: border-box;
     overflow: auto;
     padding: var(--lr-space-m);
   }
-  [part='svg'],
-  [part='svg'] svg {
+  [part="svg"],
+  [part="svg"] svg {
     display: flex;
     max-inline-size: 100%;
     max-block-size: 100%;
   }
-  [part='svg'] svg {
+  [part="svg"] svg {
     display: block;
   }
   .empty-note,
-  [part='error'] {
+  [part="error"] {
     margin: 0;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
     text-align: center;
   }
-  [part='error'] {
+  [part="error"] {
     color: var(--lr-color-danger);
   }
-  [part='spinner'] {
+  [part="spinner"] {
     display: flex;
     justify-content: center;
   }
   .zoom-content {
     position: relative;
   }
-  [part='highlight-layer'] {
+  [part="highlight-layer"] {
     position: absolute;
     inset: 0;
     pointer-events: none;
   }
-  [part='region-highlight'] {
+  [part="region-highlight"] {
     --_lr-svg-viewer-highlight-color: var(
       --lr-svg-viewer-highlight-accent-color,
       var(--lr-color-brand)
     );
     position: absolute;
     pointer-events: none;
-    border: var(--lr-border-width-thick) solid var(--_lr-svg-viewer-highlight-color);
+    border: var(--lr-border-width-thick) solid
+      var(--_lr-svg-viewer-highlight-color);
     border-radius: var(--lr-radius-xs);
   }
-  [part='region-highlight-target'] {
+  [part="region-highlight-target"] {
     position: absolute;
     z-index: var(--lr-layer-content);
     box-sizing: border-box;
@@ -83,56 +87,67 @@ export const styles = css`
     border: 0;
     background: transparent;
   }
-  [part='region-highlight']:where([data-tone='success']) {
+  [part="region-highlight"]:where([data-tone="success"]) {
     --_lr-svg-viewer-highlight-color: var(
       --lr-svg-viewer-highlight-success-color,
       var(--lr-color-success)
     );
   }
-  [part='region-highlight']:where([data-tone='warning']) {
+  [part="region-highlight"]:where([data-tone="warning"]) {
     --_lr-svg-viewer-highlight-color: var(
       --lr-svg-viewer-highlight-warning-color,
       var(--lr-color-warning)
     );
   }
-  [part='region-highlight']:where([data-tone='danger']) {
+  [part="region-highlight"]:where([data-tone="danger"]) {
     --_lr-svg-viewer-highlight-color: var(
       --lr-svg-viewer-highlight-danger-color,
       var(--lr-color-danger)
     );
   }
-  [part='region-highlight']:where([data-tone='neutral']) {
+  [part="region-highlight"]:where([data-tone="neutral"]) {
     --_lr-svg-viewer-highlight-color: var(
       --lr-svg-viewer-highlight-neutral-color,
       var(--lr-color-neutral)
     );
   }
-  [part='region-highlight-target']:hover + [part='region-highlight'] {
-    background: color-mix(in srgb, var(--_lr-svg-viewer-highlight-color) 20%, transparent);
+  [part="region-highlight-target"]:hover + [part="region-highlight"] {
+    background: color-mix(
+      in srgb,
+      var(--_lr-svg-viewer-highlight-color) 20%,
+      transparent
+    );
   }
   /* Pressed, matching <lr-document-preview>'s identical region overlay: the hovered tint pushed
      toward the text colour, which both deepens the hue and (the partner being opaque) raises the
      tint's alpha, so a mousedown on the transparent target button reads as firmer than hovering. */
-  [part='region-highlight-target']:active + [part='region-highlight'] {
+  [part="region-highlight-target"]:active + [part="region-highlight"] {
     background: color-mix(
       in oklab,
-      color-mix(in srgb, var(--_lr-svg-viewer-highlight-color) 20%, transparent),
+      color-mix(
+        in srgb,
+        var(--_lr-svg-viewer-highlight-color) 20%,
+        transparent
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part='region-highlight-target']:focus-visible {
+  [part="region-highlight-target"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='region-highlight']:where([data-active]) {
-    border-color: var(--lr-svg-viewer-active-border, var(--lr-color-warning, var(--lr-color-brand)));
+  [part="region-highlight"]:where([data-active]) {
+    border-color: var(
+      --lr-svg-viewer-active-border,
+      var(--lr-color-warning, var(--lr-color-brand))
+    );
   }
-  [part='highlight-actions'] {
+  [part="highlight-actions"] {
     display: grid;
     gap: var(--lr-space-xs);
     inline-size: 100%;
   }
-  [part='region-highlight-action'] {
+  [part="region-highlight-action"] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -141,13 +156,17 @@ export const styles = css`
     background: var(--lr-color-surface);
     cursor: pointer;
   }
-  [part='region-highlight-action']:hover {
+  [part="region-highlight-action"]:hover {
     background: var(--lr-color-surface-raised);
   }
-  [part='region-highlight-action']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="region-highlight-action"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-raised),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='region-highlight-action']:focus-visible {
+  [part="region-highlight-action"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

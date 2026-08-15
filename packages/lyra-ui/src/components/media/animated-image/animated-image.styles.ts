@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -9,18 +9,21 @@ export const styles = css`
        both chain through the existing icon-button-size token rather than a
        new bespoke literal, so the toggle reads at the same scale as
        lr-sequence-playback's own play/pause button. */
-    --lr-animated-image-control-box-size: var(--control-box-size, var(--lr-icon-button-size));
-    --lr-animated-image-icon-size: var(
+    --_lr-animated-image-control-box-size: var(
+      --control-box-size,
+      var(--lr-icon-button-size)
+    );
+    --_lr-animated-image-icon-size: var(
       --icon-size,
       calc(var(--lr-icon-button-size) * 0.35)
     );
     /* Same purpose/default as --lr-media-card-max-height -- caps the
        rendered media's block-size so one oversized animated image can't blow
        out a layout. */
-    --lr-animated-image-max-height: var(--lr-size-20rem);
+    --_lr-animated-image-max-height: var(--lr-size-20rem);
   }
 
-  [part='base'] {
+  [part="base"] {
     position: relative;
     display: grid;
     max-inline-size: 100%;
@@ -28,20 +31,23 @@ export const styles = css`
 
   /* image/canvas overlap in the same grid cell so the crossfade below is a
      pure opacity swap with no layout shift. */
-  [part='image'],
-  [part='canvas'] {
+  [part="image"],
+  [part="canvas"] {
     grid-area: 1 / 1;
     inline-size: 100%;
     block-size: 100%;
-    max-block-size: var(--lr-animated-image-max-height);
+    max-block-size: var(
+      --lr-animated-image-max-height,
+      var(--_lr-animated-image-max-height)
+    );
     object-fit: contain;
   }
 
-  [part='image'] {
+  [part="image"] {
     opacity: 1;
     transition: opacity var(--lr-transition-fast);
   }
-  [part='canvas'] {
+  [part="canvas"] {
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--lr-transition-fast);
@@ -53,33 +59,39 @@ export const styles = css`
      never hidden behind an undrawn canvas. Only once a frame has actually
      been captured does the reflected [playing] host attribute get to decide
      which of the two is shown. */
-  :host([data-loaded]:not([playing])) [part='image'] {
+  :host([data-loaded]:not([playing])) [part="image"] {
     opacity: 0;
     pointer-events: none;
   }
-  :host([data-loaded]:not([playing])) [part='canvas'] {
+  :host([data-loaded]:not([playing])) [part="canvas"] {
     opacity: 1;
     pointer-events: auto;
   }
 
-  [part='control-box'] {
+  [part="control-box"] {
     position: absolute;
     inset-block-start: var(--lr-space-s);
     inset-inline-end: var(--lr-space-s);
-    inline-size: var(--lr-animated-image-control-box-size);
-    block-size: var(--lr-animated-image-control-box-size);
+    inline-size: var(
+      --lr-animated-image-control-box-size,
+      var(--_lr-animated-image-control-box-size)
+    );
+    block-size: var(
+      --lr-animated-image-control-box-size,
+      var(--_lr-animated-image-control-box-size)
+    );
     display: inline-grid;
     place-items: center;
     border-radius: 50%;
     background: color-mix(in srgb, var(--lr-color-surface) 78%, transparent);
   }
 
-  [part='control-box'] > [part='play-button'],
-  [part='control-box'] > .icon {
+  [part="control-box"] > [part="play-button"],
+  [part="control-box"] > .icon {
     grid-area: 1 / 1;
   }
 
-  [part='play-button'] {
+  [part="play-button"] {
     inline-size: 100%;
     block-size: 100%;
     min-inline-size: var(--lr-icon-button-size);
@@ -92,35 +104,42 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--lr-animated-image-icon-size);
+    font-size: var(
+      --lr-animated-image-icon-size,
+      var(--_lr-animated-image-icon-size)
+    );
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
   /* Keep internal state qualifiers low-specificity so sibling rules in this sheet remain easy to
      compose. Consumer ::part() authority follows the shadow cascade, independently of this
      selector's specificity. */
-  :where([part='play-button']):hover:where(:not(:disabled)) {
+  :where([part="play-button"]):hover:where(:not(:disabled)) {
     background: color-mix(in srgb, var(--lr-color-surface) 100%, transparent);
   }
   /* Pressed goes one step past hover: hover only finishes opacifying the translucent scrim, so on
      its own it cannot register a click at all once the button is already fully opaque. Mixing the
      opaque surface toward --lr-color-mix-partner moves in whichever direction the theme's own
      surface needs. */
-  :where([part='play-button']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  :where([part="play-button"]):active:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='play-button']:disabled {
+  [part="play-button"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='play-button']:disabled ~ .icon {
+  [part="play-button"]:disabled ~ .icon {
     opacity: var(--lr-opacity-disabled);
   }
-  [part='play-button']:focus-visible {
+  [part="play-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='play-button'] svg {
+  [part="play-button"] svg {
     display: block;
   }
 
@@ -129,7 +148,10 @@ export const styles = css`
     display: inline-grid;
     place-items: center;
     color: var(--lr-color-text);
-    font-size: var(--lr-animated-image-icon-size);
+    font-size: var(
+      --lr-animated-image-icon-size,
+      var(--_lr-animated-image-icon-size)
+    );
     line-height: var(--lr-line-height-none);
     pointer-events: none;
   }

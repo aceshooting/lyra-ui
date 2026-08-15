@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import {
   html,
   nothing,
@@ -274,7 +275,7 @@ export interface LyraGraphEventMap {
   "lr-link-enter": CustomEvent<{ source: string; target: string; id?: string }>;
   "lr-link-leave": CustomEvent<{ source: string; target: string; id?: string }>;
   "lr-node-expand": CustomEvent<{ id: string }>;
-  "lr-selection-change": CustomEvent<{ nodeIds: string[]; linkIds: string[] }>;
+  "lr-selection-change": CustomEvent<LyraEventDetailSnapshot<{ nodeIds: string[]; linkIds: string[] }>>;
   "lr-community-click": CustomEvent<{ id: string }>;
   /** Frame-coalesced pan/zoom/layout signal — see the class doc's `lr-viewport-change` event entry. */
   "lr-viewport-change": CustomEvent<{ k: number; x: number; y: number }>;
@@ -315,6 +316,9 @@ export interface LyraGraphEventMap {
  * drawn focus ring instead of a CSS one. Keyboard roving/announcements are preserved through an
  * offscreen `part="cursor-item"` button per node/link/hull, driving the identical roving-tabindex
  * logic as `renderer="svg"`.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-graph
  * @event lr-node-click - `detail: { id, x, y }`, where `x` and `y` are the
@@ -392,6 +396,8 @@ export interface LyraGraphEventMap {
  * @since 4.0.0
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["nodes", "links", "nodeTypes", "hiddenTypes", "communities", "selectedNodeIds", "selectedLinkIds", "dimmedNodeIds", "dimmedLinkIds"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -425,22 +431,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   ];
 
   /** Readonly nodes in the controlled graph model. Node ids provide stable render and interaction identity. */
-  @property({ attribute: false }) nodes: LyraGraphNode[] = [];
+  @property({ attribute: false }) nodes: readonly LyraGraphNode[] = [];
   /** Directed or undirected connections between node ids in `nodes`. */
-  @property({ attribute: false }) links: LyraGraphLink[] = [];
+  @property({ attribute: false }) links: readonly LyraGraphLink[] = [];
   /** Declares each `LyraGraphNode.type` value's legend label, fill color, and shape. A typed node with
    *  no matching entry here renders as untyped (default circle, token fill) but still participates
    *  in `hiddenTypes` filtering by its raw `type` string. */
-  @property({ attribute: false }) nodeTypes: LyraNodeTypeStyle[] = [];
+  @property({ attribute: false }) nodeTypes: readonly LyraNodeTypeStyle[] = [];
   /** Hides every node whose raw `type` value is listed here (no matching `nodeTypes` entry
    *  required), plus every link incident to a hidden node -- removed from the render, the
    *  simulation input, the keyboard roving ring, the sr-only data list, and the accessible
    *  diagram counts, as if absent. Positions round-trip via `lastPositionById`: toggling a type
    *  off and back on restores each node where it was. */
-  @property({ attribute: false }) hiddenTypes: string[] = [];
+  @property({ attribute: false }) hiddenTypes: readonly string[] = [];
   /** Renders one translucent hull per entry, behind links/nodes. Membership is the union of
    *  `memberIds` and every node whose `communityId` matches this entry's `id`. */
-  @property({ attribute: false }) communities: GraphCommunity[] = [];
+  @property({ attribute: false }) communities: readonly GraphCommunity[] = [];
   private _layout: GraphLayout = "force";
 
   /** `'force'` (default) runs the existing d3-force simulation, untouched. `'layered'` computes a
@@ -515,19 +521,19 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   @property({ attribute: "selection-mode" }) selectionMode: GraphSelectionMode =
     "none";
   /** Controlled ids of selected nodes. Selection gestures emit intent without mutating this array. */
-  @property({ attribute: false }) selectedNodeIds: string[] = [];
+  @property({ attribute: false }) selectedNodeIds: readonly string[] = [];
   /** Controlled ids of selected links, using each link's stable effective key. */
-  @property({ attribute: false }) selectedLinkIds: string[] = [];
+  @property({ attribute: false }) selectedLinkIds: readonly string[] = [];
   /** Node ids to render dimmed (`data-dimmed` on the matching `[part="node"]`, themeable via
    *  `--lr-graph-dimmed-opacity`). Controlled, mirroring `selectedNodeIds`/`selectedLinkIds`: the
    *  component never assigns this itself, only renders it -- a host typically computes it from a
    *  `lr-node-enter`/`lr-link-enter` hover (the complement of the hovered id's neighbor set,
    *  computed from the host's own `links` array) and assigns the result back. Empty (the default)
    *  renders every node at full opacity, unchanged from today. */
-  @property({ attribute: false }) dimmedNodeIds: string[] = [];
+  @property({ attribute: false }) dimmedNodeIds: readonly string[] = [];
   /** Same contract as `dimmedNodeIds`, for links. A link's dimming key is the same `linkKey()`
    *  value (`LyraGraphLink.id`, else `` `${source}->${target}` ``) `selectedLinkIds` already uses. */
-  @property({ attribute: false }) dimmedLinkIds: string[] = [];
+  @property({ attribute: false }) dimmedLinkIds: readonly string[] = [];
 
   private readonly arrowMarkerId = nextId("graph-arrow");
 
@@ -1098,7 +1104,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   /** `this.nodes` filtered down to the ids `hiddenTypes` doesn't hide -- an untyped node (`type ==
    *  null`) is never hidden, regardless of `hiddenTypes`' contents. */
-  private visibleNodes(): LyraGraphNode[] {
+  private visibleNodes(): readonly LyraGraphNode[] {
     if (!this.hiddenTypes.length) return this.nodes;
     const hidden = new Set(this.hiddenTypes);
     return this.nodes.filter((n) => n.type == null || !hidden.has(n.type));
@@ -2889,7 +2895,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  drawing in `width` x `height`, and skips forceSimulation() entirely -- no `this.simulation`,
    *  no ticking, no `prevById` carry-over (deterministic input -> output makes it unnecessary; a
    *  structural change simply recomputes wholesale). `lr-graph` never passes `fixedPositions`. */
-  private rebuildLayeredLayout(visible: LyraGraphNode[]): void {
+  private rebuildLayeredLayout(visible: readonly LyraGraphNode[]): void {
     const boxes = visible.map((n) => {
       const r = this.nodeRadius(n);
       return { id: n.id, width: r * 2, height: r * 2 };

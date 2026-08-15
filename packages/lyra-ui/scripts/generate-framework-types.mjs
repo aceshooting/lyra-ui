@@ -24,6 +24,7 @@ const builtInTypeNames = new Set([
   'Event',
   'HTMLElement',
   'HTMLFormElement',
+  'Intl',
   'Map',
   'Node',
   'Number',
@@ -88,9 +89,10 @@ function referencedTypeSymbols(typeText) {
   if (!typeText) return [];
   return [
     ...new Set(
-      (typeText.match(/[A-Za-z_$][A-Za-z0-9_$]*/g) ?? []).filter(
-        (name) => /^[A-Z_$]/.test(name) && !builtInTypeNames.has(name),
-      ),
+      [...typeText.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)]
+        .filter(({ index = 0 }) => typeText[index - 1] !== '.')
+        .map(([name]) => name)
+        .filter((name) => /^[A-Z_$]/.test(name) && !builtInTypeNames.has(name)),
     ),
   ].sort(byName);
 }
@@ -241,7 +243,11 @@ function imports(elements, frameworkImport) {
       eventSymbols.add(element.eventMapName);
       symbolsBySpecifier.set(element.eventMapSpecifier, eventSymbols);
     }
-    for (const alias of element.aliases) {
+    // A field-backed attribute alias is emitted as Class['field'], so its manifest type text is
+    // deliberately not a dependency here. Scanning that redundant text imports private source
+    // aliases, generic parameters, platform namespace members, and the same inherited alias from
+    // every subclass even though none of those names appear in the generated type expression.
+    for (const alias of element.aliases.filter(({ fieldName }) => !fieldName)) {
       for (const symbol of referencedTypeSymbols(alias.typeText)) classSymbols.add(symbol);
     }
     for (const override of element.propertyOverrides) {

@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -13,7 +14,7 @@ import "../chunk-inspector/chunk-inspector.class.js";
 import { styles } from "./retrieval-trace.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEvidenceToggle, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEvidenceToggle, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** One of the five fixed stages a retrieval pipeline moves through, in order. */
@@ -104,9 +105,9 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
 }
 
 export interface LyraRetrievalTraceEventMap {
-  "lr-stage-select": CustomEvent<{ id: string }>;
-  "lr-stage-toggle": CustomEvent<{ id: string; expanded: boolean }>;
-  "lr-stage-chunk-action": CustomEvent<LyraRetrievalTraceChunkActionDetail>;
+  "lr-stage-select": CustomEvent<{ stageId: string }>;
+  "lr-stage-toggle": CustomEvent<{ stageId: string; expanded: boolean }>;
+  "lr-stage-chunk-action": CustomEvent<LyraEventDetailSnapshot<LyraRetrievalTraceChunkActionDetail>>;
 }
 
 /** Stage-correlated replacement for nested chunk-inspector events. */
@@ -127,10 +128,13 @@ export type LyraRetrievalTraceChunkActionDetail =
  * free-form text, retrieved/reranked/filtered chunks via `<lr-chunk-inspector>`, and/or arbitrary
  * stage metadata. Never fetches, ranks, or computes retrieval results itself.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-retrieval-trace
- * @event lr-stage-select - A stage's bar was activated in the timeline (click, Enter, Space). `detail: { id }`.
+ * @event lr-stage-select - A stage's bar was activated in the timeline (click, Enter, Space). `detail: { stageId }`.
  * @event lr-stage-toggle - A stage's evidence panel was expanded or collapsed (via its own toggle,
- * or implicitly by selecting that stage in the timeline for the first time). `detail: { id, expanded }`.
+ * or implicitly by selecting that stage in the timeline for the first time). `detail: { stageId, expanded }`.
  * @event lr-stage-chunk-action - A chunk inside a stage was opened or expanded. The discriminated
  *   detail always includes `stageId` and `action`, so consumers never infer ownership from DOM ancestry.
  * @csspart base - The root wrapper.
@@ -153,6 +157,8 @@ export type LyraRetrievalTraceChunkActionDetail =
  * @since 4.1.0
  */
 export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["stages"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -163,6 +169,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     retrievalStageEmbed: LYRA_DEFAULT_retrievalStageEmbed,
     retrievalStageFilter: LYRA_DEFAULT_retrievalStageFilter,
     retrievalStageQueryRewrite: LYRA_DEFAULT_retrievalStageQueryRewrite,
@@ -177,7 +184,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   static override styles = [LyraElement.styles, styles];
 
   /** The pipeline's stages, in any order -- the internal timeline sorts them by `startMs`. */
-  @property({ attribute: false }) stages: RetrievalStage[] = [];
+  @property({ attribute: false }) stages: readonly RetrievalStage[] = [];
   /** Controlled selection, forwarded verbatim to the internal `<lr-span-waterfall>`'s `activeSpanId`. */
   @property({ attribute: "active-stage-id" }) activeStageId: string | null =
     null;
@@ -209,33 +216,33 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     );
   }
 
-  private toggleEvidence(id: string): void {
-    const expanded = !this.expandedStageIds.has(id);
+  private toggleEvidence(stageId: string): void {
+    const expanded = !this.expandedStageIds.has(stageId);
     const next = new Set(this.expandedStageIds);
-    if (expanded) next.add(id);
-    else next.delete(id);
+    if (expanded) next.add(stageId);
+    else next.delete(stageId);
     this.expandedStageIds = next;
-    this.emit("lr-stage-toggle", { id, expanded });
+    this.emit("lr-stage-toggle", { stageId, expanded });
   }
 
-  private onStageSelect = (e: CustomEvent<{ id: string }>): void => {
+  private onStageSelect = (e: CustomEvent<{ spanId: string }>): void => {
     e.stopPropagation();
-    const { id } = e.detail;
-    this.emit("lr-stage-select", { id });
+    const { spanId: stageId } = e.detail;
+    this.emit("lr-stage-select", { stageId });
     // Selecting a stage in the timeline opens its evidence panel the first time (a "click a
     // stage, see what it did" flow), but never auto-collapses it again on a second click -- the
     // dedicated evidence-toggle button (with its own aria-expanded/aria-controls) is the only
     // control that closes it, so the two affordances stay independently predictable.
-    const stage = this.stages.find((s) => s.id === id);
+    const stage = this.stages.find((s) => s.id === stageId);
     if (
       stage &&
       hasEvidence(stage.evidence) &&
-      !this.expandedStageIds.has(id)
+      !this.expandedStageIds.has(stageId)
     ) {
       const next = new Set(this.expandedStageIds);
-      next.add(id);
+      next.add(stageId);
       this.expandedStageIds = next;
-      this.emit("lr-stage-toggle", { id, expanded: true });
+      this.emit("lr-stage-toggle", { stageId, expanded: true });
     }
   };
 

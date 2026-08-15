@@ -16,7 +16,11 @@ import { srOnly } from '../../../internal/a11y.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { announceSearchResult } from '../../../internal/viewer-search.js';
-import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
+import {
+  DocumentAnchorTarget,
+  prioritizedHighlightCandidates,
+  type LyraAnchorTargetEventMap,
+} from '../../../internal/anchor-target.js';
 import type {
   LyraAnchor,
   LyraHighlightTone,
@@ -36,9 +40,10 @@ import { styles } from './ebook-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -63,6 +68,8 @@ interface EbookSearchMatch {
 const MAX_TOC_ITEMS = 10_000;
 const MAX_TOC_DEPTH = 100;
 const MAX_SEARCH_MATCHES = 10_000;
+const MAX_SEARCH_SPINE_ITEMS = 1_000;
+const MAX_PAINTED_HIGHLIGHTS = 100;
 
 /** Tone -> the token (and its light-theme fallback) a painted `cfi` highlight resolves its `fill`
  *  from, mirroring `highlight-layer`'s own tone mapping. epub.js's `annotations.highlight()`
@@ -122,7 +129,8 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, matchCountExact, activeIndex }`. At most 10,000 matches are retained; a false
  *   `matchCountExact` makes `matchCount` a lower bound (including when a spine item cannot load).
- * @event lr-highlight-activate - A painted `cfi` highlight was clicked. `detail: { id }`.
+ * @event lr-highlight-activate - A painted `cfi` highlight was clicked.
+ *   `detail: { highlightId }`.
  * @event lr-text-select - Fired on selection end inside a chapter iframe (mirrors epub.js's own
  *   `selected` event). `detail: { text, anchor, rects }`; `anchor` is a `cfi` `LyraAnchor`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -167,6 +175,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     next: LYRA_DEFAULT_next,
     open: LYRA_DEFAULT_open,
     previous: LYRA_DEFAULT_previous,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
@@ -602,9 +611,14 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   private async findTextQuoteCfi(quote: string): Promise<string | null> {
     const book = this.book;
     const generation = this.generation;
-    if (!book) return null;
+    const boundedQuery = boundedViewerSearchQuery(quote, this.effectiveLocale);
+    if (!book || !boundedQuery.accepted || !boundedQuery.needle) return null;
+    const work = new ViewerSearchWorkBudget();
     const spineItems: EpubSpineItem[] = book.spine?.spineItems ?? [];
-    for (const item of spineItems) {
+    const itemCount = Math.min(spineItems.length, MAX_SEARCH_SPINE_ITEMS);
+    for (let itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+      const item = spineItems[itemIndex]!;
+      if (!work.consume('')) return null;
       let loaded = false;
       try {
         await item.load(book.load?.bind(book));
@@ -612,7 +626,12 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         if (!this.isConnected || generation !== this.generation || this.book !== book) return null;
         const results: EpubSearchResult[] = (await item.find(quote)) ?? [];
         if (!this.isConnected || generation !== this.generation || this.book !== book) return null;
-        if (results.length) return results[0]!.cfi;
+        for (const result of results) {
+          if (!work.consume('')) return null;
+          if (!result || typeof result.cfi !== 'string') continue;
+          if (!work.consume(result.cfi)) return null;
+          return result.cfi;
+        }
       } catch {
         continue;
       } finally {
@@ -632,8 +651,10 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     if (!this.rendition) return;
     for (const cfi of this.paintedHighlightCfis) this.rendition.annotations.remove(cfi, 'highlight');
     this.paintedHighlightCfis = [];
-    for (const highlight of this.highlights) {
+    let painted = 0;
+    for (const highlight of prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)) {
       if (highlight.anchor.kind !== 'cfi') continue;
+      if (painted >= MAX_PAINTED_HIGHLIGHTS) break;
       const cfi = highlight.anchor.cfi;
       const tone = highlight.tone ?? 'accent';
       const active = highlight.id === this.activeHighlightId;
@@ -652,11 +673,12 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.rendition.annotations.highlight(
         cfi,
         { id: highlight.id },
-        () => this.emit('lr-highlight-activate', { id: highlight.id }),
+        () => this.emit('lr-highlight-activate', { highlightId: highlight.id }),
         active ? `lr-hl-${tone} lr-ebook-highlight-active` : `lr-hl-${tone}`,
         styles,
       );
       this.paintedHighlightCfis.push(cfi);
+      painted++;
     }
   }
 
@@ -698,9 +720,17 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
   async search(query: string): Promise<number> {
     const generation = ++this.searchGeneration;
+    const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
     this.searchQuery = query;
     this.clearSearchAnnotation();
-    if (!this.book || !query.trim()) {
+    if (!boundedQuery.accepted) {
+      this.searchMatches = [];
+      this.searchMatchCountExact = false;
+      this.searchActiveIndex = -1;
+      this.emitSearchChange();
+      return 0;
+    }
+    if (!this.book || !boundedQuery.needle) {
       this.searchMatches = [];
       this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
@@ -711,23 +741,43 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     let matchCountExact = true;
     let matchCeilingExceeded = false;
     const book = this.book;
+    const work = new ViewerSearchWorkBudget();
     const spineItems: EpubSpineItem[] = book.spine?.spineItems ?? [];
-    for (const item of spineItems) {
+    const itemCount = Math.min(spineItems.length, MAX_SEARCH_SPINE_ITEMS);
+    if (spineItems.length > itemCount) matchCountExact = false;
+    for (let itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+      const item = spineItems[itemIndex]!;
       if (generation !== this.searchGeneration) return this.searchMatches.length;
+      if (!work.consume('')) {
+        matchCountExact = false;
+        break;
+      }
       let loaded = false;
       try {
         await item.load(book.load?.bind(book));
         loaded = true;
         if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
-        const results: EpubSearchResult[] = (await item.find(query)) ?? [];
+        const results: EpubSearchResult[] = (await item.find(query.trim())) ?? [];
         if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
         for (const r of results) {
+          if (!work.consume('')) {
+            matchCountExact = false;
+            matchCeilingExceeded = true;
+            break;
+          }
+          if (!r || typeof r.cfi !== 'string') continue;
+          const excerpt = typeof r.excerpt === 'string' ? r.excerpt : '';
+          if (!work.consume(r.cfi) || !work.consume(excerpt)) {
+            matchCountExact = false;
+            matchCeilingExceeded = true;
+            break;
+          }
           if (matches.length === MAX_SEARCH_MATCHES) {
             matchCountExact = false;
             matchCeilingExceeded = true;
             break;
           }
-          matches.push({ cfi: r.cfi, excerpt: r.excerpt ?? '' });
+          matches.push({ cfi: r.cfi, excerpt });
         }
       } catch {
         matchCountExact = false;

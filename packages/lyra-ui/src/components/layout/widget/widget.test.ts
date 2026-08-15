@@ -20,22 +20,34 @@ class WidgetTestShadowInput extends HTMLElement {
 customElements.define("widget-test-shadow-input", WidgetTestShadowInput);
 
 it("validates fullscreen and backdrop inset values before assigning them", async () => {
-  const el = await fixture<LyraWidget>(html`<lr-widget fullscreen></lr-widget>`);
+  const el = await fixture<LyraWidget>(
+    html`<lr-widget fullscreen></lr-widget>`
+  );
   el.fullscreenInset = "1rem;position:fixed";
   el.backdropInset = 'url("data:image/svg+xml,<svg/>")';
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+  const backdrop = el.shadowRoot!.querySelector(
+    '[part="backdrop"]'
+  ) as HTMLElement;
   expect(base.style.position).to.equal("");
-  expect(base.style.getPropertyValue("--lr-widget-fullscreen-inset")).to.equal("");
+  expect(base.style.getPropertyValue("--lr-widget-fullscreen-inset")).to.equal(
+    ""
+  );
   expect(backdrop.style.backgroundImage).to.equal("");
-  expect(backdrop.style.getPropertyValue("--lr-widget-backdrop-inset")).to.equal("");
+  expect(
+    backdrop.style.getPropertyValue("--lr-widget-backdrop-inset")
+  ).to.equal("");
 
   el.fullscreenInset = "var(--lr-space-l) 0";
   el.backdropInset = "";
   await el.updateComplete;
-  expect(base.style.getPropertyValue("--lr-widget-fullscreen-inset")).to.equal("var(--lr-space-l) 0");
-  expect(backdrop.style.getPropertyValue("--lr-widget-backdrop-inset")).to.equal("");
+  expect(base.style.getPropertyValue("--lr-widget-fullscreen-inset")).to.equal(
+    "var(--lr-space-l) 0"
+  );
+  expect(
+    backdrop.style.getPropertyValue("--lr-widget-backdrop-inset")
+  ).to.equal("");
   expect(getComputedStyle(backdrop).inset).to.equal("0px");
 });
 
@@ -71,19 +83,30 @@ describe("icon slot", () => {
       <div>
         <button id="outside-widget-title-icon" type="button">Outside</button>
         <lr-widget label="Load">
-          <a id="nested-widget-title-icon" slot="icon" href="#nested-widget-title-icon">
+          <a
+            id="nested-widget-title-icon"
+            slot="icon"
+            href="#nested-widget-title-icon"
+          >
             Decorative title icon
           </a>
           content
         </lr-widget>
       </div>
     `);
-    const el = root.querySelector<LyraWidget>('lr-widget')!;
-    const outside = root.querySelector<HTMLButtonElement>('#outside-widget-title-icon')!;
-    const nested = root.querySelector<HTMLAnchorElement>('#nested-widget-title-icon')!;
-    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="icon"]')!;
+    const el = root.querySelector<LyraWidget>("lr-widget")!;
+    const outside = root.querySelector<HTMLButtonElement>(
+      "#outside-widget-title-icon"
+    )!;
+    const nested = root.querySelector<HTMLAnchorElement>(
+      "#nested-widget-title-icon"
+    )!;
+    const slot =
+      el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="icon"]')!;
 
-    expect(slot.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden')).to.equal('true');
+    expect(
+      slot.closest<HTMLElement>("[inert]")?.getAttribute("aria-hidden")
+    ).to.equal("true");
     expect(nested.getBoundingClientRect().width).to.be.greaterThan(0);
     outside.focus();
     nested.focus();
@@ -104,7 +127,7 @@ describe("collapse-icon slot override", () => {
       'slot[name="collapse-icon"]'
     ) as HTMLSlotElement;
     expect(slot.assignedElements().length).to.equal(0);
-    expect((slot.querySelector("svg")) != null).to.equal(true);
+    expect(slot.querySelector("svg") != null).to.equal(true);
   });
 
   it("renders a custom icon slotted into collapse-icon instead of the default chevron", async () => {
@@ -139,7 +162,7 @@ describe("fullscreen-icon slot override", () => {
       'slot[name="fullscreen-icon"]'
     ) as HTMLSlotElement;
     expect(slot.assignedElements().length).to.equal(0);
-    expect((slot.querySelector("svg")) != null).to.equal(true);
+    expect(slot.querySelector("svg") != null).to.equal(true);
   });
 
   it("renders a custom icon slotted into fullscreen-icon instead of the default expand/close glyph", async () => {
@@ -186,7 +209,12 @@ describe("decorative icon slot isolation", () => {
           >
             C
           </button>
-          <a id="fullscreen-widget-glyph" slot="fullscreen-icon" href="#widget-icon">F</a>
+          <a
+            id="fullscreen-widget-glyph"
+            slot="fullscreen-icon"
+            href="#widget-icon"
+            >F</a
+          >
           content
         </lr-widget>
       </div>
@@ -338,7 +366,9 @@ describe("rich label/sublabel", () => {
 
   it("recreates its slotted-label observer in the adopted owner realm", async () => {
     const el = (await fixture(html`
-      <lr-widget expandable><span slot="label">Owner label</span>content</lr-widget>
+      <lr-widget expandable
+        ><span slot="label">Owner label</span>content</lr-widget
+      >
     `)) as LyraWidget;
     await el.updateComplete;
     const label = el.querySelector('[slot="label"]')!;
@@ -363,8 +393,12 @@ describe("rich label/sublabel", () => {
           labelObservations += 1;
         }
       }
-      takeRecords(): MutationRecord[] { return []; }
-      disconnect(): void { if (this.observesLabel) labelDisconnects += 1; }
+      takeRecords(): MutationRecord[] {
+        return [];
+      }
+      disconnect(): void {
+        if (this.observesLabel) labelDisconnects += 1;
+      }
     }
     frameWindow.MutationObserver = OwnerMutationObserver;
 
@@ -372,9 +406,15 @@ describe("rich label/sublabel", () => {
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
       await Promise.resolve();
-      expect(labelObservations, "the destination window observes the assigned label").to.be.greaterThan(0);
+      expect(
+        labelObservations,
+        "the destination window observes the assigned label"
+      ).to.be.greaterThan(0);
       document.adoptNode(el);
-      expect(labelDisconnects, "adoption disconnects the old owner observer").to.be.greaterThan(0);
+      expect(
+        labelDisconnects,
+        "adoption disconnects the old owner observer"
+      ).to.be.greaterThan(0);
     } finally {
       frameWindow.MutationObserver = originalMutationObserver;
       if (el.ownerDocument !== document) document.adoptNode(el);
@@ -385,6 +425,26 @@ describe("rich label/sublabel", () => {
 });
 
 describe("views", () => {
+  it("uses viewId for view identity and activeViewId for the controlled selection", async () => {
+    const el = await fixture<LyraWidget>(html`
+      <lr-widget
+        label="Usage"
+        .views=${[
+          { viewId: "chart", label: "Chart" },
+          { viewId: "table", label: "Table" },
+        ] as unknown as LyraWidget["views"]}
+      ></lr-widget>
+    `);
+    await el.updateComplete;
+
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="view-toggle"]')
+    ).to.have.length(2);
+    expect((el as unknown as { activeViewId: string }).activeViewId).to.equal(
+      "chart"
+    );
+  });
+
   it("defaults to a single unnamed body slot when views is unset (unchanged today)", async () => {
     const el = (await fixture(
       html`<lr-widget label="x">content</lr-widget>`
@@ -392,7 +452,7 @@ describe("views", () => {
     const bodySlot = el.shadowRoot!.querySelector(
       '[part="body"] slot:not([name])'
     ) as HTMLSlotElement;
-    expect((bodySlot) != null).to.equal(true);
+    expect(bodySlot != null).to.equal(true);
     expect(
       bodySlot
         .assignedNodes({ flatten: true })
@@ -406,8 +466,8 @@ describe("views", () => {
       <lr-widget
         label="Usage"
         .views=${[
-          { id: "chart", label: "Chart" },
-          { id: "table", label: "Table" },
+          { viewId: "chart", label: "Chart" },
+          { viewId: "table", label: "Table" },
         ]}
       >
         <div slot="view-chart">chart content</div>
@@ -427,8 +487,8 @@ describe("views", () => {
       <lr-widget
         label="Usage"
         .views=${[
-          { id: "chart", label: "Chart" },
-          { id: "table", label: "Table" },
+          { viewId: "chart", label: "Chart" },
+          { viewId: "table", label: "Table" },
         ]}
       >
         <div slot="view-chart">chart content</div>
@@ -436,14 +496,14 @@ describe("views", () => {
       </lr-widget>
     `)) as LyraWidget;
     await el.updateComplete;
-    expect(el.activeView).to.equal("chart");
+    expect(el.activeViewId).to.equal("chart");
     const toggles = [
       ...el.shadowRoot!.querySelectorAll('[part="view-toggle"]'),
     ] as HTMLButtonElement[];
     setTimeout(() => toggles[1]!.click());
     const ev = await oneEvent(el, "lr-view-change");
     expect(ev.detail).to.deep.equal({ viewId: "table" });
-    expect(el.activeView).to.equal("table");
+    expect(el.activeViewId).to.equal("table");
   });
 
   it("emits a cancelable lr-view-request before lr-view-change, vetoing the switch when prevented", async () => {
@@ -451,8 +511,8 @@ describe("views", () => {
       <lr-widget
         label="Usage"
         .views=${[
-          { id: "chart", label: "Chart" },
-          { id: "table", label: "Table" },
+          { viewId: "chart", label: "Chart" },
+          { viewId: "table", label: "Table" },
         ]}
       >
         <div slot="view-chart">chart content</div>
@@ -465,7 +525,10 @@ describe("views", () => {
       order.push("lr-view-request");
       expect((e as CustomEvent).cancelable).to.equal(true);
       expect((e as CustomEvent).detail).to.deep.equal({ viewId: "table" });
-      expect(el.activeView, "activeView must still be chart while the request is pending").to.equal("chart");
+      expect(
+        el.activeViewId,
+        "activeViewId must still be chart while the request is pending"
+      ).to.equal("chart");
       e.preventDefault();
     });
     el.addEventListener("lr-view-change", () => order.push("lr-view-change"));
@@ -477,7 +540,7 @@ describe("views", () => {
     await el.updateComplete;
 
     expect(order).to.deep.equal(["lr-view-request"]);
-    expect(el.activeView).to.equal("chart");
+    expect(el.activeViewId).to.equal("chart");
   });
 
   it("repairs an invalid controlled active view without emitting a user view change", async () => {
@@ -485,8 +548,8 @@ describe("views", () => {
       <lr-widget
         label="Usage"
         .views=${[
-          { id: "chart", label: "Chart" },
-          { id: "table", label: "Table" },
+          { viewId: "chart", label: "Chart" },
+          { viewId: "table", label: "Table" },
         ]}
       >
         <div slot="view-chart">chart content</div>
@@ -496,7 +559,7 @@ describe("views", () => {
     let viewChanges = 0;
     el.addEventListener("lr-view-change", () => viewChanges++);
 
-    el.activeView = "missing";
+    el.activeViewId = "missing";
     await el.updateComplete;
 
     const toggles = [
@@ -505,18 +568,17 @@ describe("views", () => {
     const bodies = [
       ...el.shadowRoot!.querySelectorAll('[part="body"] > div'),
     ] as HTMLElement[];
-    expect(el.activeView).to.equal("chart");
-    expect(toggles.map((toggle) => toggle.getAttribute("aria-pressed"))).to.deep.equal([
-      "true",
-      "false",
-    ]);
+    expect(el.activeViewId).to.equal("chart");
+    expect(
+      toggles.map((toggle) => toggle.getAttribute("aria-pressed"))
+    ).to.deep.equal(["true", "false"]);
     expect(bodies.map((body) => body.hidden)).to.deep.equal([false, true]);
     expect(viewChanges).to.equal(0);
   });
 
   it("keeps rendering a label-only view toggle with no aria-label (unchanged today)", async () => {
     const el = (await fixture(html`
-      <lr-widget label="Usage" .views=${[{ id: "chart", label: "Chart" }]}>
+      <lr-widget label="Usage" .views=${[{ viewId: "chart", label: "Chart" }]}>
         <div slot="view-chart">chart content</div>
       </lr-widget>
     `)) as LyraWidget;
@@ -532,7 +594,9 @@ describe("views", () => {
     const el = (await fixture(html`
       <lr-widget
         label="Usage"
-        .views=${[{ id: "chart", icon: chartIcon, ariaLabel: "Chart view" }]}
+        .views=${[
+          { viewId: "chart", icon: chartIcon, ariaLabel: "Chart view" },
+        ]}
       >
         <div slot="view-chart">chart content</div>
       </lr-widget>
@@ -559,7 +623,9 @@ describe("views", () => {
     const el = (await fixture(html`
       <lr-widget
         label="Usage"
-        .views=${[{ id: "chart", icon: chartIcon, ariaLabel: "Chart view" }]}
+        .views=${[
+          { viewId: "chart", icon: chartIcon, ariaLabel: "Chart view" },
+        ]}
       >
         <div slot="view-chart">chart content</div>
       </lr-widget>
@@ -567,9 +633,7 @@ describe("views", () => {
     const toggle = el.shadowRoot!.querySelector(
       '[part="view-toggle"]'
     ) as HTMLButtonElement;
-    const icon = toggle.querySelector(
-      '[part="view-icon"]'
-    ) as HTMLElement;
+    const icon = toggle.querySelector('[part="view-icon"]') as HTMLElement;
     const pill = toggle.getBoundingClientRect();
     const glyph = icon.getBoundingClientRect();
     expect(
@@ -579,7 +643,9 @@ describe("views", () => {
     const offset = Math.abs(
       glyph.left + glyph.width / 2 - (pill.left + pill.width / 2)
     );
-    expect(offset, `glyph is ${offset}px off the pill's centre`).to.be.at.most(0.5);
+    expect(offset, `glyph is ${offset}px off the pill's centre`).to.be.at.most(
+      0.5
+    );
   });
 
   it("is accessible with an icon-only view toggle (ariaLabel supplies the accessible name)", async () => {
@@ -587,7 +653,9 @@ describe("views", () => {
     const el = (await fixture(html`
       <lr-widget
         label="Usage"
-        .views=${[{ id: "chart", icon: chartIcon, ariaLabel: "Chart view" }]}
+        .views=${[
+          { viewId: "chart", icon: chartIcon, ariaLabel: "Chart view" },
+        ]}
       >
         <div slot="view-chart">chart content</div>
       </lr-widget>
@@ -595,9 +663,9 @@ describe("views", () => {
     await expect(el).to.be.accessible();
   });
 
-  it("falls back to the view id as a last-resort accessible name when both label and ariaLabel are omitted", async () => {
+  it("falls back to the view ID as a last-resort accessible name when both label and ariaLabel are omitted", async () => {
     const el = (await fixture(html`
-      <lr-widget label="Usage" .views=${[{ id: "chart" }]}>
+      <lr-widget label="Usage" .views=${[{ viewId: "chart" }]}>
         <div slot="view-chart">chart content</div>
       </lr-widget>
     `)) as LyraWidget;
@@ -612,7 +680,7 @@ describe("views", () => {
       <lr-widget
         label="Usage"
         .views=${[
-          { id: "chart", label: "Chart", icon: html`decorative icon text` },
+          { viewId: "chart", label: "Chart", icon: html`decorative icon text` },
         ]}
       ></lr-widget>
     `)) as LyraWidget;
@@ -628,30 +696,32 @@ describe("views", () => {
     const el = await fixture<LyraWidget>(html`
       <lr-widget
         label="Usage"
-        .views=${[{ id: "chart", label: "Chart", icon: nestedIcon }]}
+        .views=${[{ viewId: "chart", label: "Chart", icon: nestedIcon }]}
       ></lr-widget>
     `);
-    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="view-toggle"]')!;
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part="view-toggle"]'
+    )!;
     const icon = toggle.querySelector<HTMLElement>('[part="view-icon"]')!;
-    const custom = icon.querySelector<HTMLElement>('widget-test-shadow-input')!;
-    const nested = custom.shadowRoot!.querySelector<HTMLInputElement>('input')!;
+    const custom = icon.querySelector<HTMLElement>("widget-test-shadow-input")!;
+    const nested = custom.shadowRoot!.querySelector<HTMLInputElement>("input")!;
 
-    expect(icon.getAttribute('aria-hidden')).to.equal('true');
-    expect(icon.hasAttribute('inert')).to.be.true;
+    expect(icon.getAttribute("aria-hidden")).to.equal("true");
+    expect(icon.hasAttribute("inert")).to.be.true;
     toggle.focus();
     nested.focus();
     expect(el.shadowRoot!.activeElement === toggle).to.equal(true);
     await expect(el).to.be.accessible();
   });
 
-  it("applies a first-occurrence policy to duplicate view ids", async () => {
+  it("applies a first-occurrence policy to duplicate view IDs", async () => {
     const el = (await fixture(html`
       <lr-widget
         label="Usage"
         .views=${[
-          { id: "same", label: "First" },
-          { id: "same", label: "Duplicate" },
-          { id: "other", label: "Other" },
+          { viewId: "same", label: "First" },
+          { viewId: "same", label: "Duplicate" },
+          { viewId: "other", label: "Other" },
         ]}
       ></lr-widget>
     `)) as LyraWidget;
@@ -668,18 +738,18 @@ describe("views", () => {
     ).to.have.length(1);
   });
 
-  it("keys view controls and panels by validated id and repairs focus only when that id disappears", async () => {
+  it("keys view controls and panels by validated view ID and repairs focus only when that view ID disappears", async () => {
     const el = await fixture<LyraWidget>(html`
       <lr-widget
         label="Usage"
         .views=${[
-          { id: "a", label: "A" },
-          { id: "b", label: "B" },
-          { id: "c", label: "C" },
+          { viewId: "a", label: "A" },
+          { viewId: "b", label: "B" },
+          { viewId: "c", label: "C" },
         ]}
       ></lr-widget>
     `);
-    el.activeView = "b";
+    el.activeViewId = "b";
     await el.updateComplete;
     const beforeToggle = el.shadowRoot!.querySelector<HTMLButtonElement>(
       '[part="view-toggle"][data-view-id="b"]'
@@ -690,21 +760,23 @@ describe("views", () => {
     beforeToggle.focus();
 
     el.views = [
-      { id: "b", label: "B" },
-      { id: "c", label: "C" },
+      { viewId: "b", label: "B" },
+      { viewId: "c", label: "C" },
     ];
     await el.updateComplete;
     expect(
-      el.shadowRoot!.querySelector('[part="view-toggle"][data-view-id="b"]') === beforeToggle
+      el.shadowRoot!.querySelector('[part="view-toggle"][data-view-id="b"]') ===
+        beforeToggle
     ).to.equal(true);
     expect(
-      el.shadowRoot!.querySelector('[part="body"] > [data-view-id="b"]') === beforePanel
+      el.shadowRoot!.querySelector('[part="body"] > [data-view-id="b"]') ===
+        beforePanel
     ).to.equal(true);
     expect(el.shadowRoot!.activeElement === beforeToggle).to.equal(true);
 
-    el.views = [{ id: "c", label: "C" }];
+    el.views = [{ viewId: "c", label: "C" }];
     await el.updateComplete;
-    expect(el.activeView).to.equal("c");
+    expect(el.activeViewId).to.equal("c");
     expect(
       el.shadowRoot!.activeElement ===
         el.shadowRoot!.querySelector('[part="view-toggle"][data-view-id="c"]')
@@ -712,18 +784,20 @@ describe("views", () => {
   });
 
   it("rejects malformed, empty, whitespace and hostile view records without rejecting updates", async () => {
-    const hostile = Object.defineProperty({}, "id", {
+    const hostile = Object.defineProperty({}, "viewId", {
       get(): never {
-        throw new Error("hostile id");
+        throw new Error("hostile viewId");
       },
     });
-    const el = await fixture<LyraWidget>(html`<lr-widget label="Usage"></lr-widget>`);
+    const el = await fixture<LyraWidget>(
+      html`<lr-widget label="Usage"></lr-widget>`
+    );
     el.views = [
       null,
-      { id: "" },
-      { id: " spaced " },
+      { viewId: "" },
+      { viewId: " spaced " },
       hostile,
-      { id: "valid", label: "Valid" },
+      { viewId: "valid", label: "Valid" },
     ] as unknown as readonly import("./widget.js").LyraWidgetView[];
     await el.updateComplete;
     const toggles = el.shadowRoot!.querySelectorAll('[part="view-toggle"]');
@@ -734,8 +808,13 @@ describe("views", () => {
 
 it("keeps a constrained header fixed while the body owns deep-content scrolling", async () => {
   const el = await fixture<LyraWidget>(html`
-    <lr-widget label="Scrollable" style="display:block; inline-size:320px; block-size:160px;">
-      <button style="display:block; margin-block-start:900px;">Deep action</button>
+    <lr-widget
+      label="Scrollable"
+      style="display:block; inline-size:320px; block-size:160px;"
+    >
+      <button style="display:block; margin-block-start:900px;">
+        Deep action
+      </button>
     </lr-widget>
   `);
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
@@ -757,7 +836,7 @@ it("contains long view labels in a narrow header and floors toggles at the share
       label="Usage"
       .views=${[
         {
-          id: "long",
+          viewId: "long",
           label:
             "AnExtremelyLongUnbrokenLocalizedViewLabelThatMustRemainContained",
         },
@@ -774,11 +853,17 @@ it("contains long view labels in a narrow header and floors toggles at the share
 
 it("contains unbroken title, view-label, and action content at an exact 320px allocation in LTR and RTL", async () => {
   const longTitle =
-    "AnExtremelyLongUnbrokenLocalizedWidgetTitleThatMustRemainContained".repeat(4);
+    "AnExtremelyLongUnbrokenLocalizedWidgetTitleThatMustRemainContained".repeat(
+      4
+    );
   const longView =
-    "AnExtremelyLongUnbrokenLocalizedViewLabelThatMustRemainContained".repeat(4);
+    "AnExtremelyLongUnbrokenLocalizedViewLabelThatMustRemainContained".repeat(
+      4
+    );
   const longAction =
-    "AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable".repeat(4);
+    "AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable".repeat(
+      4
+    );
 
   for (const direction of ["ltr", "rtl"] as const) {
     const wrapper = await fixture<HTMLElement>(html`
@@ -788,41 +873,69 @@ it("contains unbroken title, view-label, and action content at an exact 320px al
           label=${longTitle}
           collapsible
           expandable
-          .views=${[{ id: "long", label: longView }]}
+          .views=${[{ viewId: "long", label: longView }]}
         >
-          <button slot="actions" style="white-space: nowrap;">${longAction}</button>
+          <button slot="actions" style="white-space: nowrap;">
+            ${longAction}
+          </button>
           Panel body.
         </lr-widget>
       </div>
     `);
     const widget = wrapper.querySelector("lr-widget") as LyraWidget;
     await widget.updateComplete;
-    const header = widget.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
-    const label = widget.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
-    const actions = widget.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
-    const viewLabel = widget.shadowRoot!.querySelector('[part="view-label"]') as HTMLElement;
+    const header = widget.shadowRoot!.querySelector(
+      '[part="header"]'
+    ) as HTMLElement;
+    const label = widget.shadowRoot!.querySelector(
+      '[part="label"]'
+    ) as HTMLElement;
+    const actions = widget.shadowRoot!.querySelector(
+      '[part="actions"]'
+    ) as HTMLElement;
+    const viewLabel = widget.shadowRoot!.querySelector(
+      '[part="view-label"]'
+    ) as HTMLElement;
     const headerBounds = header.getBoundingClientRect();
     const controls = [
-      widget.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement,
-      widget.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement,
-      widget.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLButtonElement,
+      widget.shadowRoot!.querySelector(
+        '[part="collapse-button"]'
+      ) as HTMLButtonElement,
+      widget.shadowRoot!.querySelector(
+        '[part="fullscreen-button"]'
+      ) as HTMLButtonElement,
+      widget.shadowRoot!.querySelector(
+        '[part="view-toggle"]'
+      ) as HTMLButtonElement,
     ];
 
-    expect(Math.round(widget.getBoundingClientRect().width), `${direction} widget width`).to.equal(320);
-    expect(header.scrollWidth, `${direction} header horizontal overflow`).to.be.at.most(
-      header.clientWidth + 1
+    expect(
+      Math.round(widget.getBoundingClientRect().width),
+      `${direction} widget width`
+    ).to.equal(320);
+    expect(
+      header.scrollWidth,
+      `${direction} header horizontal overflow`
+    ).to.be.at.most(header.clientWidth + 1);
+    expect(label.scrollWidth, `${direction} title clipping`).to.be.greaterThan(
+      label.clientWidth
     );
-    expect(label.scrollWidth, `${direction} title clipping`).to.be.greaterThan(label.clientWidth);
-    expect(viewLabel.scrollWidth, `${direction} view label clipping`).to.be.greaterThan(
-      viewLabel.clientWidth
-    );
-    expect(actions.scrollWidth, `${direction} action-strip scroll boundary`).to.be.greaterThan(
-      actions.clientWidth
-    );
+    expect(
+      viewLabel.scrollWidth,
+      `${direction} view label clipping`
+    ).to.be.greaterThan(viewLabel.clientWidth);
+    expect(
+      actions.scrollWidth,
+      `${direction} action-strip scroll boundary`
+    ).to.be.greaterThan(actions.clientWidth);
     for (const control of controls) {
       const bounds = control.getBoundingClientRect();
-      expect(bounds.left, `${direction} control start`).to.be.at.least(headerBounds.left - 1);
-      expect(bounds.right, `${direction} control end`).to.be.at.most(headerBounds.right + 1);
+      expect(bounds.left, `${direction} control start`).to.be.at.least(
+        headerBounds.left - 1
+      );
+      expect(bounds.right, `${direction} control end`).to.be.at.most(
+        headerBounds.right + 1
+      );
       expect(bounds.height, `${direction} control hit area`).to.be.at.least(40);
     }
   }
@@ -839,9 +952,7 @@ it("stretches the panel base to each CSS grid allocation", async () => {
       <lr-widget label="Notes">Fourth short body.</lr-widget>
     </div>
   `);
-  const widgets = [
-    ...grid.querySelectorAll<LyraWidget>("lr-widget"),
-  ];
+  const widgets = [...grid.querySelectorAll<LyraWidget>("lr-widget")];
   const hostHeights = widgets.map(
     (widget) => widget.getBoundingClientRect().height
   );
@@ -853,7 +964,8 @@ it("stretches the panel base to each CSS grid allocation", async () => {
     ) as HTMLElement;
     expect(
       Math.abs(
-        base.getBoundingClientRect().height - widget.getBoundingClientRect().height
+        base.getBoundingClientRect().height -
+          widget.getBoundingClientRect().height
       ),
       "the panel base fills its stretched grid item"
     ).to.be.lessThan(1);
@@ -957,7 +1069,7 @@ it("truncates long label/sublabel text instead of wrapping and growing the heade
   expect(sublabel.getBoundingClientRect().height).to.be.lessThanOrEqual(
     parseFloat(getComputedStyle(sublabel).fontSize) * 2
   );
-  expect((header) != null).to.equal(true);
+  expect(header != null).to.equal(true);
 });
 
 it("hides the actions wrapper when no actions content is slotted, shows it once slotted", async () => {
@@ -1095,7 +1207,9 @@ it("lets listeners veto a collapse request without changing or persisting the st
   const fullKey = `lr-widget:${storageKey}`;
   localStorage.removeItem(fullKey);
   const el = (await fixture(
-    html`<lr-widget label="x" collapsible storage-key=${storageKey}>content</lr-widget>`
+    html`<lr-widget label="x" collapsible storage-key=${storageKey}
+      >content</lr-widget
+    >`
   )) as LyraWidget;
   const button = el.shadowRoot!.querySelector(
     '[part="collapse-button"]'
@@ -1242,10 +1356,15 @@ it("emits a cancelable lr-fullscreen-request before lr-fullscreen-change, vetoin
     order.push("lr-fullscreen-request");
     expect((e as CustomEvent).cancelable).to.equal(true);
     expect((e as CustomEvent).detail).to.deep.equal({ fullscreen: true });
-    expect(el.fullscreen, "fullscreen must still be false while the request is pending").to.equal(false);
+    expect(
+      el.fullscreen,
+      "fullscreen must still be false while the request is pending"
+    ).to.equal(false);
     e.preventDefault();
   });
-  el.addEventListener("lr-fullscreen-change", () => order.push("lr-fullscreen-change"));
+  el.addEventListener("lr-fullscreen-change", () =>
+    order.push("lr-fullscreen-change")
+  );
 
   (
     el.shadowRoot!.querySelector(
@@ -1280,7 +1399,7 @@ it("localizes the collapse/fullscreen/view-group aria-labels and the fullscreen 
     <lr-widget
       collapsible
       expandable
-      .views=${[{ id: "chart", ariaLabel: "Chart view" }]}
+      .views=${[{ viewId: "chart", ariaLabel: "Chart view" }]}
       .strings=${{
         widgetCollapse: "Réduire",
         widgetExpand: "Développer",
@@ -1339,7 +1458,10 @@ it("exits fullscreen on Escape and returns focus to the trigger button", async (
   await el.updateComplete;
 
   expect(el.fullscreen).to.be.false;
-  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="fullscreen-button"]'))).to.equal(true);
+  expect(
+    el.shadowRoot!.activeElement ===
+      el.shadowRoot!.querySelector('[part="fullscreen-button"]')
+  ).to.equal(true);
 });
 
 it("exits fullscreen on Escape even when entered by setting the fullscreen property directly (not via the button click)", async () => {
@@ -1503,13 +1625,19 @@ it("names the fullscreen dialog from a slotted label, not just the label attribu
 it("derives a rich slotted dialog name from aria-labelledby and image alternatives", async () => {
   const el = (await fixture(html`
     <lr-widget expandable>
-      <span slot="label" aria-labelledby="widget-semantic-name">Visible fallback</span>
+      <span slot="label" aria-labelledby="widget-semantic-name"
+        >Visible fallback</span
+      >
       <span id="widget-semantic-name" hidden><img alt="Energy diagram" /></span>
       content
     </lr-widget>
   `)) as LyraWidget;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
+  (
+    el.shadowRoot!.querySelector(
+      '[part="fullscreen-button"]'
+    ) as HTMLButtonElement
+  ).click();
   await el.updateComplete;
 
   expect(base.getAttribute("aria-label")).to.equal("Energy diagram");
@@ -1620,7 +1748,7 @@ it("traps Tab focus inside the fullscreen panel, wrapping last->first and first-
   document.dispatchEvent(tabForward);
   await el.updateComplete;
   expect(tabForward.defaultPrevented).to.be.true;
-  expect((el.shadowRoot!.activeElement) === (collapseBtn)).to.equal(true);
+  expect(el.shadowRoot!.activeElement === collapseBtn).to.equal(true);
 
   // Shift+Tab from the first focusable must wrap to the last.
   const tabBackward = new KeyboardEvent("keydown", {
@@ -1632,7 +1760,7 @@ it("traps Tab focus inside the fullscreen panel, wrapping last->first and first-
   document.dispatchEvent(tabBackward);
   await el.updateComplete;
   expect(tabBackward.defaultPrevented).to.be.true;
-  expect((el.shadowRoot!.activeElement) === (fullscreenBtn)).to.equal(true);
+  expect(el.shadowRoot!.activeElement === fullscreenBtn).to.equal(true);
 });
 
 it("traps Tab/Shift+Tab at a slotted element whose focusable target lives in its own shadow root", async () => {
@@ -1667,7 +1795,7 @@ it("traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
   document.dispatchEvent(shiftTab);
   await el.updateComplete;
   expect(shiftTab.defaultPrevented).to.be.true;
-  expect((el.shadowRoot!.activeElement) === (fullscreenBtn)).to.equal(true);
+  expect(el.shadowRoot!.activeElement === fullscreenBtn).to.equal(true);
 
   // Tab from the last focusable (fullscreen button) must wrap back to the
   // shadow input.
@@ -1680,7 +1808,7 @@ it("traps Tab/Shift+Tab at a slotted element whose focusable target lives in its
   document.dispatchEvent(tabForward);
   await el.updateComplete;
   expect(tabForward.defaultPrevented).to.be.true;
-  expect((shadowHost.shadowRoot!.activeElement) === (input)).to.equal(true);
+  expect(shadowHost.shadowRoot!.activeElement === input).to.equal(true);
 });
 
 it("prevents Tab from doing anything when fullscreen has no focusable elements at all", async () => {
@@ -1754,7 +1882,7 @@ it("excludes a collapsed body's slotted focusable content from the fullscreen ta
   document.dispatchEvent(tabForward);
   await el.updateComplete;
   expect(tabForward.defaultPrevented).to.be.true;
-  expect((el.shadowRoot!.activeElement) === (collapseBtn)).to.equal(true);
+  expect(el.shadowRoot!.activeElement === collapseBtn).to.equal(true);
 });
 
 it("reclaims focus inside the fullscreen panel when collapsing hides the currently focused body content", async () => {
@@ -1806,7 +1934,7 @@ it("moves focus into the panel when fullscreen is entered", async () => {
   // collapse-button is the first focusable element (no actions slotted);
   // entering fullscreen must move focus there even though nothing was
   // clicked to trigger it.
-  expect((el.shadowRoot!.activeElement) === (collapseBtn)).to.equal(true);
+  expect(el.shadowRoot!.activeElement === collapseBtn).to.equal(true);
 });
 
 it("focuses the panel base as a fallback when fullscreen has no focusable elements", async () => {
@@ -1817,7 +1945,10 @@ it("focuses the panel base as a fallback when fullscreen has no focusable elemen
   el.fullscreen = true;
   await el.updateComplete;
 
-  expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="base"]'))).to.equal(true);
+  expect(
+    el.shadowRoot!.activeElement ===
+      el.shadowRoot!.querySelector('[part="base"]')
+  ).to.equal(true);
 });
 
 it("links the collapse-button to the body region it controls via aria-controls", async () => {
@@ -1852,10 +1983,34 @@ it("does not intercept Tab when not fullscreen", async () => {
   expect(tab.defaultPrevented).to.be.false;
 });
 
-it("exposes the fullscreen scrim color as a retheme-able custom property", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.include("--lr-widget-overlay-color: var(--lr-color-overlay)");
-  expect(css).to.include("background: var(--lr-widget-overlay-color)");
+it("inherits the fullscreen scrim hook while a direct host value remains authoritative", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-widget-overlay-color: rgb(1, 2, 3)">
+      <lr-widget expandable fullscreen label="Inherited"><p>Body</p></lr-widget>
+      <lr-widget
+        expandable
+        fullscreen
+        label="Direct"
+        style="--lr-widget-overlay-color: rgb(4, 5, 6)"
+        ><p>Body</p></lr-widget
+      >
+    </div>
+  `);
+  const [inherited, direct] = Array.from(
+    wrapper.querySelectorAll("lr-widget")
+  ) as LyraWidget[];
+  const inheritedBackdrop = inherited.shadowRoot!.querySelector(
+    '[part="backdrop"]'
+  ) as HTMLElement;
+  const directBackdrop = direct.shadowRoot!.querySelector(
+    '[part="backdrop"]'
+  ) as HTMLElement;
+  expect(getComputedStyle(inheritedBackdrop).backgroundColor).to.equal(
+    "rgb(1, 2, 3)"
+  );
+  expect(getComputedStyle(directBackdrop).backgroundColor).to.equal(
+    "rgb(4, 5, 6)"
+  );
 });
 
 it("actually paints the rendered fullscreen backdrop with the resolved --lr-widget-overlay-color", async () => {
@@ -1895,14 +2050,14 @@ it("gives view-toggle's resting state a hover, gated via :where() so a consumer 
   expect(css).to.not.include("[part='view-toggle']:hover {");
 });
 
-it('lets a consumer retint the view-toggle hover state via the scoped --lr-widget-view-toggle-hover-* cssprops (regression)', async () => {
+it("lets a consumer retint the view-toggle hover state via the scoped --lr-widget-view-toggle-hover-* cssprops (regression)", async () => {
   const el = (await fixture(html`
     <lr-widget
       label="Usage"
       style="--lr-widget-view-toggle-hover-bg: rgb(0, 51, 102); --lr-widget-view-toggle-hover-color: rgb(255, 255, 255);"
       .views=${[
-        { id: 'chart', label: 'Chart' },
-        { id: 'table', label: 'Table' },
+        { viewId: "chart", label: "Chart" },
+        { viewId: "table", label: "Table" },
       ]}
     >
       <div slot="view-chart">chart</div>
@@ -1912,18 +2067,25 @@ it('lets a consumer retint the view-toggle hover state via the scoped --lr-widge
   await el.updateComplete;
   // The resting (unpressed) toggle -- isolates the hover cssprop from the sibling
   // [aria-pressed='true'] rule's own, differently-scoped cssprops.
-  const toggle = el.shadowRoot!.querySelector('[part="view-toggle"][aria-pressed="false"]') as HTMLElement;
-  expect((toggle) != null, 'expected an unpressed view-toggle').to.equal(true);
+  const toggle = el.shadowRoot!.querySelector(
+    '[part="view-toggle"][aria-pressed="false"]'
+  ) as HTMLElement;
+  expect(toggle != null, "expected an unpressed view-toggle").to.equal(true);
   const before = getComputedStyle(toggle).backgroundColor;
   const rect = toggle.getBoundingClientRect();
   try {
     await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
     });
-    expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(toggle).backgroundColor).to.equal(
+      "rgb(0, 51, 102)"
+    );
     expect(getComputedStyle(toggle).backgroundColor).to.not.equal(before);
-    expect(getComputedStyle(toggle).color).to.equal('rgb(255, 255, 255)');
+    expect(getComputedStyle(toggle).color).to.equal("rgb(255, 255, 255)");
   } finally {
     await resetMouse();
   }
@@ -2105,8 +2267,8 @@ describe("view-toggle active-state cssprops", () => {
         <lr-widget
           label="Usage"
           .views=${[
-            { id: "chart", label: "Chart" },
-            { id: "table", label: "Table" },
+            { viewId: "chart", label: "Chart" },
+            { viewId: "table", label: "Table" },
           ]}
         >
           <div slot="view-chart">chart</div>
@@ -2124,12 +2286,14 @@ describe("view-toggle active-state cssprops", () => {
     const pressed = el.shadowRoot!.querySelector(
       '[part="view-toggle"][aria-pressed="true"]'
     ) as HTMLElement;
-    expect((pressed) != null).to.equal(true);
+    expect(pressed != null).to.equal(true);
     expect(getComputedStyle(pressed).backgroundColor).to.equal(
       "rgb(0, 51, 102)"
     );
     expect(getComputedStyle(pressed).color).to.equal("rgb(255, 255, 255)");
-    expect(getComputedStyle(pressed).borderTopColor).to.equal("rgb(10, 20, 30)");
+    expect(getComputedStyle(pressed).borderTopColor).to.equal(
+      "rgb(10, 20, 30)"
+    );
     // The unpressed toggle keeps its transparent resting treatment -- the props are scoped to
     // [aria-pressed='true'] only.
     const unpressed = el.shadowRoot!.querySelector(
@@ -2139,7 +2303,11 @@ describe("view-toggle active-state cssprops", () => {
       "rgba(0, 0, 0, 0)"
     );
     expect(getComputedStyle(unpressed).borderTopColor).to.equal(
-      resolvedInShadow(el, "border-color: var(--lr-color-border)", "border-top-color")
+      resolvedInShadow(
+        el,
+        "border-color: var(--lr-color-border)",
+        "border-top-color"
+      )
     );
   });
 
@@ -2169,9 +2337,11 @@ describe("view-toggle active-state cssprops", () => {
   });
 });
 
-it('tracks slotted sublabel content through slotchange', async () => {
+it("tracks slotted sublabel content through slotchange", async () => {
   const el = await fixture<LyraWidget>(html`
-    <lr-widget label="Usage"><span slot="sublabel">Last 7 days</span></lr-widget>
+    <lr-widget label="Usage"
+      ><span slot="sublabel">Last 7 days</span></lr-widget
+    >
   `);
   await el.updateComplete;
   const flags = el as unknown as { hasSublabelSlot: boolean };
@@ -2190,39 +2360,51 @@ it("fades the edges of the header action and view-toggle rows only while they ov
     }
   };
   const longAction =
-    "AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable".repeat(4);
+    "AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable".repeat(
+      4
+    );
   const manyViews = Array.from({ length: 12 }, (_unused, index) => ({
-    id: `v${index}`,
+    viewId: `v${index}`,
     label: String.fromCharCode(65 + index),
   }));
 
   const overflowing = await fixture<HTMLElement>(html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lr-widget
-        style="inline-size: 100%;"
-        label="Usage"
-        .views=${manyViews}
-      >
-        <button slot="actions" style="white-space: nowrap;">${longAction}</button>
+      <lr-widget style="inline-size: 100%;" label="Usage" .views=${manyViews}>
+        <button slot="actions" style="white-space: nowrap;">
+          ${longAction}
+        </button>
         Panel body.
       </lr-widget>
     </div>
   `);
   const wide = overflowing.querySelector("lr-widget") as LyraWidget;
   await settle(wide);
-  const actions = wide.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
-  const toggles = wide.shadowRoot!.querySelector('[part="view-toggles"]') as HTMLElement;
+  const actions = wide.shadowRoot!.querySelector(
+    '[part="actions"]'
+  ) as HTMLElement;
+  const toggles = wide.shadowRoot!.querySelector(
+    '[part="view-toggles"]'
+  ) as HTMLElement;
 
-  expect(actions.scrollWidth, "the fixture must actually overflow the action row")
-    .to.be.greaterThan(actions.clientWidth);
-  expect(toggles.scrollWidth, "the fixture must actually overflow the toggle row")
-    .to.be.greaterThan(toggles.clientWidth);
+  expect(
+    actions.scrollWidth,
+    "the fixture must actually overflow the action row"
+  ).to.be.greaterThan(actions.clientWidth);
+  expect(
+    toggles.scrollWidth,
+    "the fixture must actually overflow the toggle row"
+  ).to.be.greaterThan(toggles.clientWidth);
   expect(getComputedStyle(actions).maskImage).to.contain("linear-gradient");
   expect(getComputedStyle(toggles).maskImage).to.contain("linear-gradient");
 
   const fitting = await fixture<HTMLElement>(html`
     <div style="inline-size: 640px;">
-      <lr-widget style="inline-size: 100%;" label="Usage" .views=${[{ id: "a", label: "A" }]}>
+      <lr-widget
+        style="inline-size: 100%;"
+        label="Usage"
+        .views=${[{ viewId: "a", label: "A" }]}
+      >
         <button slot="actions">Go</button>
         Panel body.
       </lr-widget>
@@ -2230,9 +2412,15 @@ it("fades the edges of the header action and view-toggle rows only while they ov
   `);
   const narrow = fitting.querySelector("lr-widget") as LyraWidget;
   await settle(narrow);
-  const fittingActions = narrow.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
-  const fittingToggles = narrow.shadowRoot!.querySelector('[part="view-toggles"]') as HTMLElement;
-  expect(fittingActions.scrollWidth - fittingActions.clientWidth).to.be.at.most(1);
+  const fittingActions = narrow.shadowRoot!.querySelector(
+    '[part="actions"]'
+  ) as HTMLElement;
+  const fittingToggles = narrow.shadowRoot!.querySelector(
+    '[part="view-toggles"]'
+  ) as HTMLElement;
+  expect(fittingActions.scrollWidth - fittingActions.clientWidth).to.be.at.most(
+    1
+  );
   expect(getComputedStyle(fittingActions).maskImage).to.equal("none");
   expect(getComputedStyle(fittingToggles).maskImage).to.equal("none");
 });

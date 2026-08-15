@@ -1636,7 +1636,7 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
       })
     );
     const event = await listener;
-    expect((event as CustomEvent).detail).to.deep.equal({ id: "h1" });
+    expect((event as CustomEvent).detail).to.deep.equal({ highlightId: "h1" });
   });
 
   it("does not activate a highlight, and falls through to normal link handling, on a click elsewhere in the content", async () => {

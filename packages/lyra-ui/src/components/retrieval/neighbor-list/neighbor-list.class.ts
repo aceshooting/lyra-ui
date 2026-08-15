@@ -42,6 +42,9 @@ export interface LyraNeighborListEventMap {
  * per-row navigate and expand-in-graph affordances. Never computes neighbors itself (the host
  * derives rows from its own graph data) and never mutates a graph.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-neighbor-list
  * @event lr-entity-activate - A row's node button was activated. `detail: { id }`.
  * @event lr-node-expand - A row's expand button was activated (only rendered when `expandable`).
@@ -64,6 +67,8 @@ export interface LyraNeighborListEventMap {
  * @since 4.0.0
  */
 export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["rows"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -82,7 +87,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Neighbor relationships to render, including direction, relation, and target node data. */
-  @property({ attribute: false }) rows: LyraNeighborRow[] = [];
+  @property({ attribute: false }) rows: readonly LyraNeighborRow[] = [];
   /** Stable-sorts rows by relation and renders one group header per relation with a count. */
   @property({ type: Boolean, attribute: "group-by-relation" }) groupByRelation =
     false;
@@ -102,7 +107,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     return finiteCount(this.virtualizeAt, 100);
   }
 
-  private sortedRows(): LyraNeighborRow[] {
+  private sortedRows(): readonly LyraNeighborRow[] {
     if (!this.groupByRelation) return this.rows;
     // Array.prototype.sort is spec-guaranteed stable (ES2019+) -- rows sharing a relation keep
     // their original relative order.
@@ -111,7 +116,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     );
   }
 
-  private groups(sorted: LyraNeighborRow[]): VirtualListGroup[] | undefined {
+  private groups(sorted: readonly LyraNeighborRow[]): VirtualListGroup[] | undefined {
     if (!this.groupByRelation) return undefined;
     const groups: VirtualListGroup[] = [];
     const counts = new Map<string, number>();

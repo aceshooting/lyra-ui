@@ -218,7 +218,7 @@ describe("lr-retrieval-trace", () => {
     ) as HTMLElement;
     setTimeout(() => bar.click());
     const ev = await oneEvent(el, "lr-stage-select");
-    expect(ev.detail).to.deep.equal({ id: "rewrite" });
+    expect(ev.detail).to.deep.equal({ stageId: "rewrite" });
   });
 
   it("only stages with evidence grow an evidence row", async () => {
@@ -273,7 +273,7 @@ describe("lr-retrieval-trace", () => {
     const listener = oneEvent(el, "lr-stage-toggle");
     bar.click();
     const ev = await listener;
-    expect(ev.detail).to.deep.equal({ id: "retrieve", expanded: true });
+    expect(ev.detail).to.deep.equal({ stageId: "retrieve", expanded: true });
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector(
       '[data-id="retrieve"] [part="evidence-toggle"]'
@@ -317,7 +317,7 @@ describe("lr-retrieval-trace", () => {
     let listener = oneEvent(el, "lr-stage-toggle");
     toggle.click();
     let ev = await listener;
-    expect(ev.detail).to.deep.equal({ id: "rewrite", expanded: true });
+    expect(ev.detail).to.deep.equal({ stageId: "rewrite", expanded: true });
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("true");
     expect(body.hidden).to.be.false;
@@ -325,7 +325,7 @@ describe("lr-retrieval-trace", () => {
     listener = oneEvent(el, "lr-stage-toggle");
     toggle.click();
     ev = await listener;
-    expect(ev.detail).to.deep.equal({ id: "rewrite", expanded: false });
+    expect(ev.detail).to.deep.equal({ stageId: "rewrite", expanded: false });
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("false");
     expect(body.hidden).to.be.true;
@@ -597,7 +597,7 @@ describe("lr-retrieval-trace", () => {
     el.addEventListener("lr-span-select", () => leaked++);
     el.shadowRoot!.querySelector("lr-span-waterfall")!.dispatchEvent(
       new CustomEvent("lr-span-select", {
-        detail: { id: "rewrite" },
+        detail: { spanId: "rewrite" },
         bubbles: true,
         composed: true,
       })

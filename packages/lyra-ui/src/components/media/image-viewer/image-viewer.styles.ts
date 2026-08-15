@@ -1,18 +1,18 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
   }
-  [part='base'] {
+  [part="base"] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  [part='toolbar'] {
+  [part="toolbar"] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -25,9 +25,9 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  [part='fit-control'],
-  [part='rotate-button'],
-  [part='annotate-toggle'] {
+  [part="fit-control"],
+  [part="rotate-button"],
+  [part="annotate-toggle"] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -37,13 +37,13 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part='fit-control']:disabled,
-  [part='rotate-button']:disabled,
-  [part='annotate-toggle']:disabled {
+  [part="fit-control"]:disabled,
+  [part="rotate-button"]:disabled,
+  [part="annotate-toggle"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='fit-control'] {
+  [part="fit-control"] {
     appearance: none;
     max-inline-size: 100%;
     padding-inline: var(--lr-space-s) var(--lr-space-l);
@@ -51,25 +51,29 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  [part='fit-control'] option {
+  [part="fit-control"] option {
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
-  [part='fit-control']:hover,
-  [part='rotate-button']:hover,
-  [part='annotate-toggle']:hover {
+  [part="fit-control"]:hover,
+  [part="rotate-button"]:hover,
+  [part="annotate-toggle"]:hover {
     background: var(--lr-color-brand-quiet);
   }
   /* Declared here rather than after the [aria-pressed='true'] rule below so the toggle's own "on"
      fill keeps winning the source-order tie, exactly as it already does against :hover. */
-  [part='fit-control']:active,
-  [part='rotate-button']:active,
-  [part='annotate-toggle']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="fit-control"]:active,
+  [part="rotate-button"]:active,
+  [part="annotate-toggle"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='fit-control']:focus-visible,
-  [part='rotate-button']:focus-visible,
-  [part='annotate-toggle']:focus-visible {
+  [part="fit-control"]:focus-visible,
+  [part="rotate-button"]:focus-visible,
+  [part="annotate-toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -84,25 +88,31 @@ export const styles = css`
   .fit-control-chevron svg {
     transform: rotate(90deg);
   }
-  [part='annotate-toggle'][aria-pressed='true'] {
-    background: var(--lr-image-viewer-annotate-active-bg, var(--lr-color-brand-quiet));
-    border-color: var(--lr-image-viewer-annotate-active-border, var(--lr-color-brand));
+  [part="annotate-toggle"][aria-pressed="true"] {
+    background: var(
+      --lr-image-viewer-annotate-active-bg,
+      var(--lr-color-brand-quiet)
+    );
+    border-color: var(
+      --lr-image-viewer-annotate-active-border,
+      var(--lr-color-brand)
+    );
   }
-  [part='rotation-frame'] {
+  [part="rotation-frame"] {
     position: relative;
     display: inline-block;
     max-inline-size: 100%;
   }
-  :host([fit='actual']) [part='rotation-frame'] {
+  :host([fit="actual"]) [part="rotation-frame"] {
     max-inline-size: none;
   }
-  [part='rotation-frame'][data-measured] [part='image-wrapper'] {
+  [part="rotation-frame"][data-measured] [part="image-wrapper"] {
     position: absolute;
     /* policy-allow(physical-css): rotation geometry is a physical raster coordinate system. */
     left: 50%;
     top: 50%;
   }
-  [part='image-wrapper'] {
+  [part="image-wrapper"] {
     position: relative;
     display: inline-block;
     max-inline-size: 100%;
@@ -111,11 +121,11 @@ export const styles = css`
   }
   /* 'actual' size intentionally keeps the image at its natural pixel dimensions -- undo the
      100% cap above (and the 'width'/'contain' image constraints below) for that mode. */
-  :host([fit='actual']) [part='image-wrapper'] {
+  :host([fit="actual"]) [part="image-wrapper"] {
     max-inline-size: none;
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='image-wrapper'] {
+    [part="image-wrapper"] {
       transition: none;
     }
   }
@@ -124,26 +134,26 @@ export const styles = css`
      no definite basis to resolve against. Giving it the viewport's own inline size here is what
      lets 'contain'/'width' scale the image to the available frame instead of its raw natural
      pixel dimensions -- 'actual' leaves the default max-content sizing alone. */
-  :host([fit='contain']) [part='frame']::part(content),
-  :host([fit='width']) [part='frame']::part(content) {
+  :host([fit="contain"]) [part="frame"]::part(content),
+  :host([fit="width"]) [part="frame"]::part(content) {
     inline-size: 100%;
   }
-  [part='image'] {
+  [part="image"] {
     display: block;
   }
-  :host(:not([fit='actual'])) [part='image'] {
+  :host(:not([fit="actual"])) [part="image"] {
     max-inline-size: 100%;
   }
-  :host([fit='width']) [part='image'] {
+  :host([fit="width"]) [part="image"] {
     inline-size: 100%;
     block-size: auto;
   }
-  :host([fit='contain']) [part='image'] {
+  :host([fit="contain"]) [part="image"] {
     max-block-size: var(--lr-pan-zoom-min-block-size, var(--lr-size-10rem));
     block-size: auto;
     object-fit: contain;
   }
-  [part='highlight-layer'] {
+  [part="highlight-layer"] {
     position: absolute;
     inset: 0;
   }
@@ -154,56 +164,111 @@ export const styles = css`
      a per-tone hover/active pair would be ten near-identical rules. The public
      --lr-image-viewer-highlight-*-bg knobs are untouched -- still what each fill falls back
      through. */
-  [part='highlight'] {
+  [part="highlight"] {
     position: absolute;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
-    border: var(--lr-border-width-medium) solid var(--lr-image-viewer-highlight-border, var(--lr-color-brand));
-    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-bg, color-mix(in srgb, var(--lr-color-brand) 20%, transparent));
-    background: var(--lr-image-viewer-highlight-fill);
+    border: var(--lr-border-width-medium) solid
+      var(--lr-image-viewer-highlight-border, var(--lr-color-brand));
+    --_lr-image-viewer-highlight-fill: var(
+      --lr-image-viewer-highlight-bg,
+      color-mix(in srgb, var(--lr-color-brand) 20%, transparent)
+    );
+    background: var(
+      --lr-image-viewer-highlight-fill,
+      var(--_lr-image-viewer-highlight-fill)
+    );
     cursor: pointer;
     padding: 0;
   }
-  [part='highlight']:where([data-tone='success']) {
+  [part="highlight"]:where([data-tone="success"]) {
     border-style: double;
-    border-color: var(--lr-image-viewer-highlight-success-border, var(--lr-color-success));
-    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-success-bg, color-mix(in srgb, var(--lr-color-success) 20%, transparent));
+    border-color: var(
+      --lr-image-viewer-highlight-success-border,
+      var(--lr-color-success)
+    );
+    --_lr-image-viewer-highlight-fill: var(
+      --lr-image-viewer-highlight-success-bg,
+      color-mix(in srgb, var(--lr-color-success) 20%, transparent)
+    );
   }
-  [part='highlight']:where([data-tone='warning']) {
+  [part="highlight"]:where([data-tone="warning"]) {
     border-style: dashed;
-    border-color: var(--lr-image-viewer-highlight-warning-border, var(--lr-color-warning));
-    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-warning-bg, color-mix(in srgb, var(--lr-color-warning) 20%, transparent));
+    border-color: var(
+      --lr-image-viewer-highlight-warning-border,
+      var(--lr-color-warning)
+    );
+    --_lr-image-viewer-highlight-fill: var(
+      --lr-image-viewer-highlight-warning-bg,
+      color-mix(in srgb, var(--lr-color-warning) 20%, transparent)
+    );
   }
-  [part='highlight']:where([data-tone='danger']) {
+  [part="highlight"]:where([data-tone="danger"]) {
     border-style: dotted;
-    border-color: var(--lr-image-viewer-highlight-danger-border, var(--lr-color-danger));
-    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-danger-bg, color-mix(in srgb, var(--lr-color-danger) 20%, transparent));
+    border-color: var(
+      --lr-image-viewer-highlight-danger-border,
+      var(--lr-color-danger)
+    );
+    --_lr-image-viewer-highlight-fill: var(
+      --lr-image-viewer-highlight-danger-bg,
+      color-mix(in srgb, var(--lr-color-danger) 20%, transparent)
+    );
   }
-  [part='highlight']:where([data-tone='neutral']) {
+  [part="highlight"]:where([data-tone="neutral"]) {
     border-style: groove;
-    border-color: var(--lr-image-viewer-highlight-neutral-border, var(--lr-color-border));
-    --lr-image-viewer-highlight-fill: var(--lr-image-viewer-highlight-neutral-bg, color-mix(in srgb, var(--lr-color-text) 12%, transparent));
+    border-color: var(
+      --lr-image-viewer-highlight-neutral-border,
+      var(--lr-color-border)
+    );
+    --_lr-image-viewer-highlight-fill: var(
+      --lr-image-viewer-highlight-neutral-bg,
+      color-mix(in srgb, var(--lr-color-text) 12%, transparent)
+    );
   }
-  [part='highlight']:where([data-active]) {
-    border-width: var(--lr-image-viewer-highlight-active-border-width, var(--lr-border-width-thick));
-    outline: var(--lr-image-viewer-highlight-active-outline-width, var(--lr-focus-ring-width)) solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));
-    outline-offset: var(--lr-image-viewer-highlight-active-outline-offset, var(--lr-focus-ring-offset));
+  [part="highlight"]:where([data-active]) {
+    border-width: var(
+      --lr-image-viewer-highlight-active-border-width,
+      var(--lr-border-width-thick)
+    );
+    outline: var(
+        --lr-image-viewer-highlight-active-outline-width,
+        var(--lr-focus-ring-width)
+      )
+      solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));
+    outline-offset: var(
+      --lr-image-viewer-highlight-active-outline-offset,
+      var(--lr-focus-ring-offset)
+    );
   }
   /* Was filter: brightness(), which multiplies every channel -- so it lightened a dark highlight,
      did nothing at all to a white one, and (filter applying to the whole subtree) dragged
      [part='highlight-label']'s text along with the box. Mixing the fill alone toward
      --lr-color-mix-partner always moves, and only the fill moves. */
-  [part='highlight']:hover {
-    background: color-mix(in oklab, var(--lr-image-viewer-highlight-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  [part="highlight"]:hover {
+    background: color-mix(
+      in oklab,
+      var(
+        --lr-image-viewer-highlight-fill,
+        var(--_lr-image-viewer-highlight-fill)
+      ),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
   }
-  [part='highlight']:active {
-    background: color-mix(in oklab, var(--lr-image-viewer-highlight-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="highlight"]:active {
+    background: color-mix(
+      in oklab,
+      var(
+        --lr-image-viewer-highlight-fill,
+        var(--_lr-image-viewer-highlight-fill)
+      ),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='highlight']:focus-visible {
+  [part="highlight"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='highlight-label'] {
+  [part="highlight-label"] {
     position: absolute;
     inset-block-start: calc(var(--lr-size-1-5em) * -1);
     /* policy-allow(physical-css): the parent [part='highlight'] box is deliberately positioned with
@@ -221,7 +286,7 @@ export const styles = css`
     white-space: normal;
     overflow-wrap: anywhere;
   }
-  [part='annotation-box'] {
+  [part="annotation-box"] {
     position: absolute;
     border: var(--lr-border-width-medium) dashed var(--lr-color-brand);
     background: color-mix(in srgb, var(--lr-color-brand) 15%, transparent);
@@ -232,7 +297,7 @@ export const styles = css`
     pointer-events: none;
   }
   @media (forced-colors: active) {
-    [part='fit-control']:hover:not(:disabled),
+    [part="fit-control"]:hover:not(:disabled),
     [part="rotate-button"]:hover:not(:disabled),
     [part="annotate-toggle"]:hover:not(:disabled) {
       outline: var(--lr-border-width-thin) dashed Highlight;
@@ -248,24 +313,24 @@ export const styles = css`
       border-color: Highlight;
       border-style: double;
     }
-    [part='highlight'] {
+    [part="highlight"] {
       background: transparent;
       border-color: CanvasText;
       forced-color-adjust: none;
     }
-    [part='highlight']:where([data-active]) {
+    [part="highlight"]:where([data-active]) {
       outline-color: Highlight;
     }
   }
   .empty-note,
-  [part='error'] {
+  [part="error"] {
     margin: 0;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
     text-align: center;
     padding: var(--lr-space-l);
   }
-  [part='error'] {
+  [part="error"] {
     color: var(--lr-color-danger);
   }
 `;

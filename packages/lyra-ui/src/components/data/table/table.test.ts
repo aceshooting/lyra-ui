@@ -110,6 +110,49 @@ it('renders header labels and a row per item, keyed by rowKey', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
 });
 
+it('uses the first unique nonempty column and row keys before counts, focus, actions, and events', async () => {
+  const el = (await fixture(html`<lr-table accessible-label="Identity-safe scores" pagination-mode="client" page-size="1"></lr-table>`)) as LyraTable<Row>;
+  const first = { id: 'shared', name: 'First shared row', score: 10 };
+  const duplicate = { id: 'shared', name: 'Later duplicate row', score: 99 };
+  const other = { id: 'other', name: 'Other row', score: 20 };
+  const filterCalls: string[] = [];
+  el.columns = [
+    { key: '', label: 'Blank', cell: (row) => row.name },
+    { key: 'name', label: 'First name', cell: (row) => row.name },
+    { key: 'name', label: 'Duplicate name', cell: (row) => `duplicate ${row.name}` },
+    { key: 'score', label: 'Score', cell: (row) => row.score },
+  ];
+  el.rows = [
+    { id: '', name: 'Blank row', score: 0 },
+    { id: '   ', name: 'Whitespace row', score: 0 },
+    first,
+    duplicate,
+    other,
+  ];
+  el.rowKey = (row) => row.id;
+  el.filter = (row) => {
+    filterCalls.push(row.name);
+    return true;
+  };
+  el.filterText = 'include';
+  await el.updateComplete;
+
+  expect(el.columns.map((column) => column.label)).to.deep.equal(['First name', 'Score']);
+  expect(filterCalls).to.deep.equal(['First shared row', 'Other row']);
+  expect(el.shadowRoot!.querySelectorAll('[part="header-cell"]').length).to.equal(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part="row"][tabindex="0"]').length).to.equal(1);
+  const pagination = el.shadowRoot!.querySelector('lr-pagination') as HTMLElement & { total: number };
+  expect(pagination.total).to.equal(2);
+
+  let clicked: Row | undefined;
+  el.addEventListener('lr-row-click', (event) => {
+    clicked = event.detail.row;
+  });
+  (el.shadowRoot!.querySelector('[part="row"]') as HTMLElement).click();
+  expect(clicked?.name).to.equal('First shared row');
+});
+
 it('resizes a resizable column through its native pointer handle and emits live widths', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [

@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'Charts/BoxPlot',
   component: 'lr-box-plot',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Labels, datasets, nested box summaries, and hidden-series indices are bounded clone-owned frozen snapshots; create and reassign a new collection after changes.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

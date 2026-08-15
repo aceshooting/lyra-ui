@@ -1029,6 +1029,32 @@ it('uses the first tool for a duplicate id across grouping, rendering, counting,
   expect((await pending).detail.selected).to.deep.equal(['same']);
 });
 
+it('omits blank tool and selected identities before grouping, counting, and events', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${[
+        { id: '', name: 'Empty' },
+        { id: '   ', name: 'Blank' },
+        { id: 'kept', name: 'Kept' },
+      ]}
+      .selected=${['', '   ', 'kept']}
+    ></lr-tool-select-dialog>
+  `);
+
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent!.trim()).to.equal('Kept');
+  expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent!.trim()).to.equal('1 of 1 tools enabled');
+
+  const pending = oneEvent(el, 'lr-change');
+  el.shadowRoot!.querySelector('lr-switch')!.dispatchEvent(new CustomEvent('lr-change', {
+    detail: { checked: true },
+    bubbles: true,
+    composed: true,
+  }));
+  expect((await pending).detail.selected).to.deep.equal(['kept']);
+});
+
 it('bounds a large catalog while reserving selected identities and a keyboard-reachable continuation', async () => {
   const tools: ToolSelectDialogTool[] = Array.from({ length: 201 }, (_, index) => ({
     id: `tool-${index}`,

@@ -258,6 +258,21 @@ describe('lr-page-rail', () => {
     expect(buttons[0].getAttribute('aria-label')).to.equal('Page 1');
   });
 
+  it('counts the first unique nonempty highlight id once across page heat summaries', async () => {
+    const highlights: LyraHighlight[] = [
+      { id: '', anchor: { kind: 'page', page: 1 }, tone: 'danger' },
+      { id: ' shared ', anchor: { kind: 'page', page: 1 }, tone: 'warning' },
+      { id: 'shared', anchor: { kind: 'page', page: 2 }, tone: 'success' },
+    ];
+    const el = await fixture<LyraPageRail>(html`
+      <lr-page-rail page-count="2" .highlights=${highlights}></lr-page-rail>
+    `);
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="page"]') != null);
+    const buttons = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelectorAll('[part~="page"]');
+    expect(buttons[0]!.getAttribute('aria-label')).to.equal('Page 1, 1 highlighted passage');
+    expect(buttons[1]!.getAttribute('aria-label')).to.equal('Page 2');
+  });
+
   it('calls viewer.renderPageThumbnail(page, canvas, { width: thumbWidth }) as rows materialize', async () => {
     const viewer = new StubViewer();
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer} thumb-width="64"></lr-page-rail>`);

@@ -177,6 +177,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @event lr-after-show - Fired after a successful `show()` has rendered the open panel.
  * @event lr-hide - Cancelable request fired before `lr-lightbox-close`; `detail: { source }`,
  *   where `source` is the close button, backdrop, panel (for Escape), or host (for API writes).
+ *   On removal while already disconnected, the settled notification is non-cancelable because
+ *   there is no connected state left for a listener to retain.
  * @event lr-after-hide - Fired after a successful `hide()`/`close()` has rendered closed.
  * @event lr-index-change - Fired for `next()`/`previous()`/`goTo()` navigation, including the
  *   built-in button and keyboard paths. Not fired when a consumer sets `index`/`images` directly.

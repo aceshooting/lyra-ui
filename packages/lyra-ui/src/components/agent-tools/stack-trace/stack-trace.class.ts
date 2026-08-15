@@ -55,6 +55,8 @@ export interface LyraStackTraceEventMap {
  * non-activatable trace text rather than becoming an invalid navigation target. Parsing and raw
  * rendering are bounded by the exported `STACK_TRACE_LIMITS`; `[part="limit"]` makes any omitted
  * input explicit. First-party invention (no Web Awesome equivalent).
+ * `internalPatterns` is a clone-owned, bounded readonly snapshot; create and reassign a new array
+ * after changing the matcher sequence.
  *
  * @customElement lr-stack-trace
  * @event lr-frame-select - `detail: { file, line, column?, raw }` — a frame with a safe parsed
@@ -90,6 +92,8 @@ export interface LyraStackTraceEventMap {
  * @since 4.0.0
  */
 export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(['internalPatterns']);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -113,8 +117,9 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   @property({ type: Boolean, attribute: 'collapse-internal', reflect: true, converter: trueDefaultBooleanConverter })
   collapseInternal = true;
 
-  /** File-path substrings/`RegExp`s that mark a frame as internal. Defaults to
-   *  `DEFAULT_INTERNAL_PATTERNS` (common Node/browser/Python framework locations). */
+  /** Clone-owned file-path substrings/`RegExp`s that mark a frame as internal. Defaults to
+   *  `DEFAULT_INTERNAL_PATTERNS` (common Node/browser/Python framework locations). Reassign a new
+   *  array after changes. */
   @property({ attribute: false }) internalPatterns: readonly (string | RegExp)[] = [...DEFAULT_INTERNAL_PATTERNS];
 
   /** Shows a copy-to-clipboard button for the raw trace text. */

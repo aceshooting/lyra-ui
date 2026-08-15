@@ -3,7 +3,11 @@ import { property, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
+import {
+  DocumentAnchorTarget,
+  prioritizedHighlightCandidates,
+  type LyraAnchorTargetEventMap,
+} from '../../../internal/anchor-target.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -63,7 +67,6 @@ type ResolvedRegionHighlight = LyraHighlight & {
 };
 
 const MAX_PAINTED_HIGHLIGHTS = 100;
-const MAX_HIGHLIGHT_CANDIDATES = 1_000;
 
 export interface LyraSvgViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -85,7 +88,7 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  *
  * @customElement lr-svg-viewer
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.
- * @event lr-highlight-activate - A region highlight was activated. `detail: { id }`.
+ * @event lr-highlight-activate - A region highlight was activated. `detail: { highlightId }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
  * @csspart base - The root container.
@@ -271,15 +274,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   }
 
   private regionHighlights(): ResolvedRegionHighlight[] {
-    const active = this.highlights.find((highlight) => highlight.id === this.activeHighlightId);
-    const candidates: LyraHighlight[] = active ? [active] : [];
-    let inspected = candidates.length;
-    for (const highlight of this.highlights) {
-      if (highlight === active) continue;
-      if (inspected >= MAX_HIGHLIGHT_CANDIDATES) break;
-      inspected++;
-      candidates.push(highlight);
-    }
+    const candidates = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId);
     const seen = new Set<string>();
     const resolved: ResolvedRegionHighlight[] = [];
     for (const highlight of candidates) {
@@ -332,7 +327,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
             type="button"
             role="button"
             aria-label=${this.highlightActionLabel(h, index, regionHighlights.length)}
-            @click=${() => this.emit('lr-highlight-activate', { id: h.id })}
+            @click=${() => this.emit('lr-highlight-activate', { highlightId: h.id })}
           ></button>` : nothing}
           <div
             part="region-highlight"
@@ -365,7 +360,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
           type="button"
           data-highlight-id=${highlight.id}
           aria-label=${label}
-          @click=${() => this.emit('lr-highlight-activate', { id: highlight.id })}
+          @click=${() => this.emit('lr-highlight-activate', { highlightId: highlight.id })}
         >
           ${highlight.label || label}
         </button>

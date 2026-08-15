@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import type {
@@ -27,12 +28,15 @@ export interface RetrievalComparisonSet {
 }
 
 export interface LyraRetrievalCompareEventMap {
-  "lr-chunk-select": CustomEvent<{ setId: string; chunk: RetrievalChunk }>;
+  "lr-chunk-select": CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk }>>;
 }
 
 /**
  * `<lr-retrieval-compare>` — a side-by-side retrieval/reranking workbench that makes rank,
  * overlap, and dense/sparse/rerank/final score changes inspectable. It never performs retrieval.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-retrieval-compare
  * @event lr-chunk-select - A result was activated. `detail: { setId, chunk }`.
@@ -56,6 +60,8 @@ export interface LyraRetrievalCompareEventMap {
  * @since 7.0.0
  */
 export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["sets"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -74,7 +80,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   static override styles = [LyraElement.styles, styles];
 
   /** Named retrieval result sets rendered side by side. */
-  @property({ attribute: false }) sets: RetrievalComparisonSet[] = [];
+  @property({ attribute: false }) sets: readonly RetrievalComparisonSet[] = [];
   /** Maximum ranked chunks shown from each set after stable score ordering. */
   @property({ type: Number, attribute: "top-k" }) topK = 10;
   /** Controlled chunk id highlighted across every set that contains it. */

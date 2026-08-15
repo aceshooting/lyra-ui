@@ -7,6 +7,13 @@ const meta: Meta = {
   title: 'Voice Picker',
   component: 'lr-voice-picker',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'Catalog ids must be unique and nonempty; malformed rows and later duplicates are omitted first-wins before selection and preview.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -27,12 +28,12 @@ import {
 } from "../retrieval-semantic-owner.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraGroundingSummaryEventMap {
-  "lr-citation-select": CustomEvent<CitationSelectEventDetail>;
-  "lr-claim-select": CustomEvent<{ claim: GroundedClaim }>;
+  "lr-citation-select": CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
+  "lr-claim-select": CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
 }
 
 /** Document-outline level used by the warnings and evidence section headings. */
@@ -55,6 +56,9 @@ export type GroundingSummaryHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
  * `lr-citation-select` (`detail: { citation }`, `CitationSelectEventDetail` from `src/ai/types.ts`)
  * carrying the full `Citation` -- including its `span` -- since a bare `sourceId`/`index` pair
  * can't by itself tell a host which exact evidence span to jump to.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-grounding-summary
  * @event lr-citation-select - An evidence citation badge was activated. `detail: { citation }`.
@@ -81,6 +85,11 @@ export type GroundingSummaryHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
  * @since 4.1.0
  */
 export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "assessment",
+    "citations",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -99,6 +108,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -107,13 +117,13 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   static override styles = [LyraElement.styles, styles];
 
   /** The assessment to summarize. `null` (the default) renders the empty state. */
-  @property({ attribute: false }) assessment: GroundingAssessment | null = null;
+  @property({ attribute: false }) assessment: Readonly<GroundingAssessment> | null = null;
 
   /** Evidence citations backing the assessment, each rendered as an `<lr-citation-badge>` linking
    *  back to its exact `span`. Independent of `assessment` -- the evidence section is simply
    *  omitted when this is empty, same as the warnings section is omitted when `assessment.warnings`
    *  is empty/unset. */
-  @property({ attribute: false }) citations: Citation[] = [];
+  @property({ attribute: false }) citations: readonly Citation[] = [];
 
   /** Tone thresholds applied to both `coverage` and `confidence` (both 0-1 fractions): at or above
    *  `high` renders `success`, at or above `medium` renders `warning`, below `medium` renders

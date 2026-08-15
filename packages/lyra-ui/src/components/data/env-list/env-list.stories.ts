@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Copy settlement is explicit: `lr-copy` fires only after clipboard fulfillment; failures emit `lr-copy-error` plus `lr-error` and announce localized failure text.',
+          'Unique nonempty environment names are first-wins before rendering and actions; `lr-reveal-change` identifies its row with `envName`. Copy settlement is explicit: `lr-copy` fires only after clipboard fulfillment; failures emit `lr-copy-error` plus `lr-error` and announce localized failure text.',
       },
     },
   },

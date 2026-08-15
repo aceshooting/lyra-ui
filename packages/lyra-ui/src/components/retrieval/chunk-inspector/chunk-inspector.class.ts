@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
@@ -64,11 +65,11 @@ export interface LyraChunk {
 }
 
 export interface LyraChunkInspectorEventMap {
-  "lr-chunk-open": CustomEvent<{
+  "lr-chunk-open": CustomEvent<LyraEventDetailSnapshot<{
     id: string;
     sourceId: string;
     anchor?: LyraChunkAnchor;
-  }>;
+  }>>;
   "lr-expand": CustomEvent<{ id: string; expanded: boolean }>;
 }
 
@@ -90,6 +91,9 @@ export type ChunkInspectorSort = "score" | "none";
  * `::part(chunk)[aria-current='true']` is invalid CSS. The equivalent attributes are still present
  * on the elements. A state part is a second token in the same `part` attribute, so a `[part~="..."]`
  * (not `[part="..."]`) selector is the one that matches inside a tree.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-chunk-inspector
  * @event lr-chunk-open - A chunk's title/open button was activated -- the event a host routes
@@ -129,6 +133,8 @@ export type ChunkInspectorSort = "score" | "none";
  * @since 4.0.0
  */
 export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["chunks"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -149,7 +155,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   static override styles = [LyraElement.styles, styles];
 
   /** Retrieved chunks to inspect. The input order is preserved when `sort="none"`. */
-  @property({ attribute: false }) chunks: LyraChunk[] = [];
+  @property({ attribute: false }) chunks: readonly LyraChunk[] = [];
   /** Score boundaries used to classify each chunk as high, medium, or low relevance. */
   @property({ attribute: false }) thresholds: LyraScoreThresholds = {
     high: 0.75,
@@ -182,12 +188,12 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   // identity of the `items` array it is handed, so returning a freshly-allocated sort on every
   // render made every unrelated update (a new `activeId`, `compact`) rebuild the whole list.
   private sortedChunksCache?: {
-    source: LyraChunk[];
+    source: readonly LyraChunk[];
     sort: ChunkInspectorSort;
-    result: LyraChunk[];
+    result: readonly LyraChunk[];
   };
 
-  private sortedChunks(): LyraChunk[] {
+  private sortedChunks(): readonly LyraChunk[] {
     const cached = this.sortedChunksCache;
     if (cached && cached.source === this.chunks && cached.sort === this.sort)
       return cached.result;

@@ -167,6 +167,9 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  * bound `<lr-chunk-inspector>`/`<lr-retrieval-results>`/`<lr-neighbor-list>` apply to their own
  * `virtualize-at`) -- identical row markup and behavior either way, keyed by `id`.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-ingestion-queue
  * @event lr-retry - A row's retry affordance was activated (only rendered for `stage="failed"`
  *   rows). `detail: { itemId, attempt }` -- `attempt` is the attempt number about to be made.
@@ -210,6 +213,8 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  * @since 4.1.0
  */
 export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["items"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -240,7 +245,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   /** The queue to render, in display order. Controlled and never mutated by this component --
    *  pass a new array (e.g. as ingestion progresses) to update it. */
-  @property({ attribute: false }) items: IngestionQueueItem[] = [];
+  @property({ attribute: false }) items: readonly IngestionQueueItem[] = [];
 
   /** Accessible name for the stable region when the host has no `aria-label`; defaults to
    *  localized `ingestionQueueLabel`. An explicitly empty host label stays empty. */

@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, svg, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -26,7 +27,7 @@ export interface LyraGraphLegendVisibilityDetail {
 }
 
 export interface LyraGraphLegendEventMap {
-  "lr-visibility-change": CustomEvent<LyraGraphLegendVisibilityDetail>;
+  "lr-visibility-change": CustomEvent<LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>>;
 }
 
 const PALETTE_SIZE = 8;
@@ -52,6 +53,9 @@ const FALLBACK_PALETTE = [
  * `graph.hiddenTypes` on `lr-visibility-change`, the same event-decoupled contract every sibling
  * in this family follows.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-graph-legend
  * @event lr-visibility-change - `detail: { hiddenTypes }` — the complete updated array, fired
  * after each toggle.
@@ -70,6 +74,8 @@ const FALLBACK_PALETTE = [
  * @since 4.0.0
  */
 export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["types", "hiddenTypes", "counts"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -88,12 +94,12 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   ];
 
   /** The `lr-graph.nodeTypes` array, passed through verbatim. */
-  @property({ attribute: false }) types: LyraNodeTypeStyle[] = [];
+  @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Optional per-type node counts keyed by type id; a type with no entry renders no count. */
-  @property({ attribute: false }) counts?: Record<string, number>;
+  @property({ attribute: false }) counts?: Readonly<Record<string, number>>;
   /** Currently-hidden type ids. The legend toggles its own copy on activation *then* emits; a host
    *  may also treat this as controlled by reassigning it after each event. */
-  @property({ attribute: false }) hiddenTypes: string[] = [];
+  @property({ attribute: false }) hiddenTypes: readonly string[] = [];
   /** `false` renders a read-only legend (no buttons, no toggling). */
   @property({
     type: Boolean,

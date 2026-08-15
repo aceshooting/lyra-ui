@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -8,38 +8,38 @@ export const styles = css`
        rules below rather than repeating background/color per part per status.
        Defaults to the 'pending' tone so an unset/unknown status still reads
        as neutral instead of unstyled. */
-    --lr-tool-call-chip-accent: var(--lr-color-text-quiet);
-    --lr-tool-call-chip-bg: var(--lr-color-surface);
-    --lr-tool-call-chip-border: var(--lr-color-border);
-    --lr-tool-call-chip-spin: var(--lr-transition-ambient);
+    --_lr-tool-call-chip-accent: var(--lr-color-text-quiet);
+    --_lr-tool-call-chip-bg: var(--lr-color-surface);
+    --_lr-tool-call-chip-border: var(--lr-color-border);
+    --_lr-tool-call-chip-spin: var(--lr-transition-ambient);
   }
 
-  :host([status='running']) {
-    --lr-tool-call-chip-accent: var(--lr-color-brand);
-    --lr-tool-call-chip-bg: var(--lr-color-brand-quiet);
-    --lr-tool-call-chip-border: transparent;
+  :host([status="running"]) {
+    --_lr-tool-call-chip-accent: var(--lr-color-brand);
+    --_lr-tool-call-chip-bg: var(--lr-color-brand-quiet);
+    --_lr-tool-call-chip-border: transparent;
   }
-  :host([status='success']) {
-    --lr-tool-call-chip-accent: var(--lr-color-success);
-    --lr-tool-call-chip-bg: var(--lr-color-success-quiet);
-    --lr-tool-call-chip-border: transparent;
+  :host([status="success"]) {
+    --_lr-tool-call-chip-accent: var(--lr-color-success);
+    --_lr-tool-call-chip-bg: var(--lr-color-success-quiet);
+    --_lr-tool-call-chip-border: transparent;
   }
-  :host([status='error']) {
-    --lr-tool-call-chip-accent: var(--lr-color-danger);
-    --lr-tool-call-chip-bg: var(--lr-color-danger-quiet);
-    --lr-tool-call-chip-border: transparent;
+  :host([status="error"]) {
+    --_lr-tool-call-chip-accent: var(--lr-color-danger);
+    --_lr-tool-call-chip-bg: var(--lr-color-danger-quiet);
+    --_lr-tool-call-chip-border: transparent;
   }
   /* 'denied' reads as a policy rejection, not a runtime failure -- the
      warning (not danger) tint keeps it visually distinct from 'error',
      matching lr-tool-result-dialog's identical status vocabulary/tone so
      the two components agree on what "denied" looks like. */
-  :host([status='denied']) {
-    --lr-tool-call-chip-accent: var(--lr-color-warning);
-    --lr-tool-call-chip-bg: var(--lr-color-warning-quiet);
-    --lr-tool-call-chip-border: transparent;
+  :host([status="denied"]) {
+    --_lr-tool-call-chip-accent: var(--lr-color-warning);
+    --_lr-tool-call-chip-bg: var(--lr-color-warning-quiet);
+    --_lr-tool-call-chip-border: transparent;
   }
 
-  [part='base'] {
+  [part="base"] {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
@@ -47,9 +47,10 @@ export const styles = css`
     max-inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lr-size-0-25rem) var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-tool-call-chip-border);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-tool-call-chip-border, var(--_lr-tool-call-chip-border));
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-tool-call-chip-bg);
+    background: var(--lr-tool-call-chip-bg, var(--_lr-tool-call-chip-bg));
     color: var(--lr-color-text);
     font: inherit;
     font-size: var(--lr-font-size-sm);
@@ -57,49 +58,53 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition:
-      background-color var(--lr-transition-fast),
+    transition: background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
-  [part='base']:hover {
+  [part="base"]:hover {
     border-color: var(--lr-color-brand);
   }
   /* The hover moves the border only, which leaves the pressed step nothing to deepen -- so pressed
      tints the chip's own fill toward --lr-color-mix-partner (which follows the text colour). The
      fill is already a custom property, so this one declaration covers all five status tints without
      restating any of them, and darkens in a light theme while lightening in a dark one. */
-  [part='base']:active {
-    background: color-mix(in oklab, var(--lr-tool-call-chip-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="base"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-tool-call-chip-bg, var(--_lr-tool-call-chip-bg)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='base']:focus-visible {
+  [part="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  [part='icon'] {
+  [part="icon"] {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    color: var(--lr-tool-call-chip-accent);
+    color: var(--lr-tool-call-chip-accent, var(--_lr-tool-call-chip-accent));
   }
-  [part='icon'] svg {
+  [part="icon"] svg {
     display: block;
   }
   /* A three-quarter arc (not a full ring) is what actually reads as
      spinning once rotated -- a full circle looks identical at every
      rotation frame. */
-  :host([status='running']) [part='icon'] svg {
-    animation: lr-tool-call-chip-spin var(--lr-tool-call-chip-spin) infinite;
+  :host([status="running"]) [part="icon"] svg {
+    animation: lr-tool-call-chip-spin
+      var(--lr-tool-call-chip-spin, var(--_lr-tool-call-chip-spin)) infinite;
   }
   /* Subtler than the spin -- a slow opacity breathe, so a list of several
      still-queued chips doesn't compete visually with any 'running' ones
      next to it. */
-  :host([status='pending']) [part='icon'] svg {
+  :host([status="pending"]) [part="icon"] svg {
     animation: lr-tool-call-chip-pulse var(--lr-transition-ambient) infinite;
   }
 
-  [part='label'] {
+  [part="label"] {
     display: inline-flex;
     align-items: baseline;
     gap: var(--lr-size-0-3em);
@@ -107,7 +112,7 @@ export const styles = css`
     min-inline-size: var(--lr-size-6ch);
     overflow: hidden;
   }
-  [part='category'] {
+  [part="category"] {
     flex: 0 1 auto;
     min-inline-size: 0;
     overflow: hidden;
@@ -124,11 +129,11 @@ export const styles = css`
     text-transform: uppercase;
     letter-spacing: var(--lr-size-0-04em);
   }
-  [part='category']::after {
-    content: '·';
+  [part="category"]::after {
+    content: "·";
     margin-inline-start: var(--lr-size-0-3em);
   }
-  [part='name'] {
+  [part="name"] {
     flex: 0 1 auto;
     min-inline-size: 0;
     overflow: hidden;
@@ -136,7 +141,7 @@ export const styles = css`
     white-space: nowrap;
     font-weight: var(--lr-font-weight-semibold);
   }
-  [part='summary'] {
+  [part="summary"] {
     flex: 1 1 auto;
     min-inline-size: var(--lr-size-3ch);
     overflow: hidden;
@@ -145,11 +150,11 @@ export const styles = css`
     /* See [part='category']'s comment above -- same contrast rationale. */
     color: var(--lr-color-text);
   }
-  [part='summary']::before {
-    content: ': ';
+  [part="summary"]::before {
+    content: ": ";
   }
 
-  [part='meta'] {
+  [part="meta"] {
     display: inline-flex;
     flex: 0 1 auto;
     flex-wrap: wrap;
@@ -161,8 +166,8 @@ export const styles = css`
     margin-inline-start: auto;
     font-size: var(--lr-size-0-6875rem);
   }
-  [part='status-text'] {
-    color: var(--lr-tool-call-chip-accent);
+  [part="status-text"] {
+    color: var(--lr-tool-call-chip-accent, var(--_lr-tool-call-chip-accent));
     font-weight: var(--lr-font-weight-semibold);
     text-transform: uppercase;
     letter-spacing: var(--lr-size-0-03em);
@@ -172,7 +177,7 @@ export const styles = css`
     overflow-wrap: anywhere;
     text-align: end;
   }
-  [part='duration'] {
+  [part="duration"] {
     /* See [part='category']'s comment above -- same contrast rationale. */
     color: var(--lr-color-text);
     font-variant-numeric: tabular-nums;
@@ -184,7 +189,7 @@ export const styles = css`
      that popup this one has no open/close transition: a tooltip that
      tracks the pointer/focus target benefits from appearing instantly, not
      chasing a fade. */
-  [part='tooltip'] {
+  [part="tooltip"] {
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
@@ -192,7 +197,10 @@ export const styles = css`
     max-inline-size: min(
       var(--lr-popover-viewport-clamp),
       var(--lr-size-24rem),
-      var(--lr-positioner-available-inline-size, var(--lr-popover-viewport-clamp))
+      var(
+        --lr-positioner-available-inline-size,
+        var(--lr-popover-viewport-clamp)
+      )
     );
     max-block-size: min(
       var(--lr-size-20rem),
@@ -227,13 +235,12 @@ export const styles = css`
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='base'] {
+    [part="base"] {
       transition: none !important;
     }
-    :host([status='running']) [part='icon'] svg,
-    :host([status='pending']) [part='icon'] svg {
+    :host([status="running"]) [part="icon"] svg,
+    :host([status="pending"]) [part="icon"] svg {
       animation: none !important;
     }
   }
-
 `;

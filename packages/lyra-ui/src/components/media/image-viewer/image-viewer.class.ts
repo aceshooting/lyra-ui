@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -110,7 +111,7 @@ export interface LyraImageViewerEventMap {
   'lr-rotation-change': CustomEvent<{ rotation: LyraImageRotation }>;
   'lr-fit-change': CustomEvent<{ fit: LyraImageFit }>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
-  'lr-annotation-create': CustomEvent<{ anchor: LyraAnchor }>;
+  'lr-annotation-create': CustomEvent<LyraEventDetailSnapshot<{ anchor: LyraAnchor }>>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
@@ -147,7 +148,8 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @event lr-zoom-change - `detail: { zoom }`, bubbles from the embedded pan-zoom surface.
  * @event lr-rotation-change - `detail: { rotation }`.
  * @event lr-fit-change - `detail: { fit }`.
- * @event lr-highlight-activate - A highlight box was clicked/keyboard-activated. `detail: { id }`.
+ * @event lr-highlight-activate - A highlight box was clicked/keyboard-activated.
+ *   `detail: { highlightId }`.
  * @event lr-annotation-create - A drawn/keyed region was committed. `detail: { anchor }` (kind
  *   `'region'`). Never stored by the component — the host appends a `LyraHighlight`.
  * @event lr-anchor-result - Fired after `anchor` (or a `scrollToAnchor()` call) is applied.
@@ -481,7 +483,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private onHighlightActivate(id: string): void {
     this.activeHighlightId = id;
-    this.emit('lr-highlight-activate', { id });
+    this.emit('lr-highlight-activate', { highlightId: id });
   }
 
   private toggleAnnotatable = (): void => {

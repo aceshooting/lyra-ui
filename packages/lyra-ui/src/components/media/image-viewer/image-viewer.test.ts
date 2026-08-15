@@ -276,7 +276,7 @@ describe('region highlights', () => {
     expect(boxes[1].hasAttribute('data-active')).to.be.false;
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     boxes[1].click();
-    expect((await eventPromise).detail).to.deep.equal({ id: 'h2' });
+    expect((await eventPromise).detail).to.deep.equal({ highlightId: 'h2' });
     await el.updateComplete;
     expect(el.activeHighlightId).to.equal('h2');
   });

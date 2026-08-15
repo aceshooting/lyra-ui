@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -18,7 +19,7 @@ import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
 import type { LyraScoreThresholds } from "../graph/graph.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -50,7 +51,7 @@ interface ItemPending {
 
 interface ForgetAllPending {
   kind: "forget-all";
-  longTerm: LyraMemoryItem[];
+  longTerm: readonly LyraMemoryItem[];
 }
 
 type PendingAction = ItemPending | ForgetAllPending;
@@ -70,7 +71,7 @@ export interface LyraMemoryExpandDetail {
 }
 
 export interface LyraMemoryPanelEventMap {
-  "lr-add": CustomEvent<LyraMemoryAddDetail>;
+  "lr-add": CustomEvent<LyraEventDetailSnapshot<LyraMemoryAddDetail>>;
   "lr-remove": CustomEvent<LyraMemoryRemoveDetail>;
   "lr-forget": CustomEvent<null>;
   "lr-expand": CustomEvent<LyraMemoryExpandDetail>;
@@ -132,6 +133,9 @@ const TIER_TONE: Record<Tier, "success" | "warning" | "danger"> = {
  * header, only rendered while `longTerm` is non-empty) -- a bulk, more consequential action kept
  * distinct from the per-item `remove`.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-memory-panel
  * @event lr-add - A pending "add to long-term memory" action was approved. `detail: { item }` --
  * the short-term item as-is; the host decides how/whether to persist it.
@@ -172,6 +176,8 @@ const TIER_TONE: Record<Tier, "success" | "warning" | "danger"> = {
  * @since 4.1.0
  */
 export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["shortTerm", "longTerm", "types"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -198,6 +204,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     remove: LYRA_DEFAULT_remove,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     restore: LYRA_DEFAULT_restore,
@@ -211,13 +218,13 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Ephemeral, working-context items. Controlled and never mutated by this component. */
-  @property({ attribute: false }) shortTerm: LyraMemoryItem[] = [];
+  @property({ attribute: false }) shortTerm: readonly LyraMemoryItem[] = [];
 
   /** Persisted memories. Controlled and never mutated by this component. */
-  @property({ attribute: false }) longTerm: LyraMemoryItem[] = [];
+  @property({ attribute: false }) longTerm: readonly LyraMemoryItem[] = [];
 
   /** `lr-provenance-panel` `types` pass-through, forwarded verbatim to every expanded item's panel. */
-  @property({ attribute: false }) types: LyraNodeTypeStyle[] = [];
+  @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
 
   /** Confidence-tier and (forwarded) provenance relevance-tier boundaries. */
   @property({ attribute: false }) thresholds: LyraScoreThresholds = {
@@ -626,7 +633,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private renderSection(
     scope: MemoryScope,
     headingKey: string,
-    items: LyraMemoryItem[]
+    items: readonly LyraMemoryItem[]
   ): TemplateResult {
     const headingId = `${this.idBase}-${scope}-heading`;
     return html`

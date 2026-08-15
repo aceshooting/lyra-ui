@@ -47,6 +47,9 @@ export interface LyraEmbeddingExplorerEventMap {
  * click/keyboard selection. Pointer, script, and assistive-technology focus all synchronize the
  * single roving tab stop. It does not run PCA/UMAP/t-SNE, fetch chunks, or mutate points.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-embedding-explorer
  * @event lr-point-select - A point was activated. `detail: { point }`.
  * @csspart base - The root wrapper.
@@ -72,6 +75,8 @@ export interface LyraEmbeddingExplorerEventMap {
  * @since 6.2.0
  */
 export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["points"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -85,7 +90,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   static override styles = [LyraElement.styles, specialistTokens, styles];
 
   /** Projected points in host order. Non-finite coordinates are omitted. */
-  @property({ attribute: false }) points: EmbeddingPoint[] = [];
+  @property({ attribute: false }) points: readonly EmbeddingPoint[] = [];
   /** The selected point id. Controlled by the host. */
   @property({ attribute: "selected-id" }) selectedId = "";
   /**

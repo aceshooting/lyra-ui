@@ -33,7 +33,7 @@ export interface EnvEntry {
 }
 
 export interface LyraEnvListEventMap {
-  'lr-reveal-change': CustomEvent<Readonly<{ name: string; revealed: boolean }>>;
+  'lr-reveal-change': CustomEvent<Readonly<{ envName: string; revealed: boolean }>>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-error': CustomEvent<null>;
@@ -42,10 +42,12 @@ export interface LyraEnvListEventMap {
 /**
  * `<lr-env-list>` — masked key/value list for environment variables and secrets, with per-row
  * reveal and copy. Masking is presentational, not a security boundary: the real value sits in a DOM
- * property regardless of mask state.
+ * property regardless of mask state. Entry identity is a unique nonempty `name`; malformed,
+ * blank-name, and later duplicate records are omitted first-wins before render, reveal state,
+ * copy actions, and reveal events.
  *
  * @customElement lr-env-list
- * @event lr-reveal-change - `detail: { name, revealed }`.
+ * @event lr-reveal-change - `detail: { envName, revealed }`.
  * @event lr-copy - A clipboard write fulfilled. Frozen detail: `{ ok: true, text }`, where text is
  *   the real (unmasked) value.
  * @event lr-copy-error - A clipboard write failed. Frozen detail:
@@ -87,21 +89,27 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
 
   private _entries: readonly EnvEntry[] = [];
 
-  /** Clone-owned readonly name/value entries to render, in order. Malformed records are skipped. */
+  /** Clone-owned readonly name/value entries to render, in order. Malformed records, blank names,
+   * and later duplicate names are skipped; the first valid occurrence owns render, reveal, copy,
+   * and event identity. */
   @property({ attribute: false })
   get entries(): readonly EnvEntry[] { return this._entries; }
   set entries(value: readonly EnvEntry[]) {
     const previous = this._entries;
     const next: EnvEntry[] = [];
+    const seen = new Set<string>();
     if (Array.isArray(value)) {
       for (const candidate of value) {
         try {
           if (!candidate || typeof candidate.name !== 'string' || typeof candidate.value !== 'string') continue;
+          const name = candidate.name;
+          if (name.trim().length === 0 || seen.has(name)) continue;
           next.push(Object.freeze({
-            name: candidate.name,
+            name,
             value: candidate.value,
             ...(candidate.secret === undefined ? {} : { secret: Boolean(candidate.secret) }),
           }));
+          seen.add(name);
         } catch {
           // Retain later valid entries when a hostile record getter fails.
         }
@@ -173,12 +181,12 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     }
   }
 
-  private toggleReveal(name: string): void {
-    const isRevealed = !(this.revealed.get(name) ?? false);
+  private toggleReveal(envName: string): void {
+    const isRevealed = !(this.revealed.get(envName) ?? false);
     const next = new Map(this.revealed);
-    next.set(name, isRevealed);
+    next.set(envName, isRevealed);
     this.revealed = next;
-    this.emit('lr-reveal-change', Object.freeze({ name, revealed: isRevealed }));
+    this.emit('lr-reveal-change', Object.freeze({ envName, revealed: isRevealed }));
   }
 
   private async copy(entry: EnvEntry): Promise<void> {

@@ -1994,8 +1994,8 @@ it('leaves the closed, unconfigured render free of every opt-in surface', async 
 it('paints the live colour on both slider handles, not just the trigger and preview', async () => {
   // The stylesheet fills `[part~='slider-handle']` from `--lr-color-picker-swatch-color`, but that
   // property is only ever written inline on the trigger, the preview and each parsed palette
-  // swatch. Nothing set it on the handles, so they inherited the `transparent` declared on `:host`
-  // and the documented "live colour painted on ... slider handles" never rendered.
+  // swatch. Nothing set it on the handles, so they fell through to the host's private transparent
+  // default and the documented "live colour painted on ... slider handles" never rendered.
   const el = await opened(html`<lr-color-picker label="Accent" opacity value="#e11d48"></lr-color-picker>`);
   // The preview paints the live colour on its ::after, so that pseudo-element -- not the preview
   // box itself, which stays on the checkerboard -- is the like-for-like baseline.

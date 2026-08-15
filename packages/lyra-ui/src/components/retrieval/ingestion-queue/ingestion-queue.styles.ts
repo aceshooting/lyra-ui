@@ -1,20 +1,23 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
-    --lr-ingestion-queue-max-height: none;
+    --_lr-ingestion-queue-max-height: none;
   }
-  [part='base'] {
+  [part="base"] {
     display: block;
     box-sizing: border-box;
     min-inline-size: 0;
   }
-  [part='list'] {
+  [part="list"] {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    max-block-size: var(--lr-ingestion-queue-max-height);
+    max-block-size: var(
+      --lr-ingestion-queue-max-height,
+      var(--_lr-ingestion-queue-max-height)
+    );
     overflow-y: auto;
     overflow-x: clip;
   }
@@ -41,7 +44,7 @@ export const styles = css`
      to this component's own shadow root, would never match a node living in that different
      shadow tree; lr-virtual-list::part(x) reaches that one shadow boundary in, the same
      technique <lr-dataset-viewer>/<lr-terminal> already use for their own virtualized rows. */
-  [part='item'],
+  [part="item"],
   lr-virtual-list::part(item) {
     display: flex;
     flex-direction: column;
@@ -50,7 +53,7 @@ export const styles = css`
     padding: var(--lr-space-s) var(--lr-space-m);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part='item-header'],
+  [part="item-header"],
   lr-virtual-list::part(item-header) {
     display: flex;
     flex-wrap: wrap;
@@ -58,7 +61,7 @@ export const styles = css`
     justify-content: space-between;
     gap: var(--lr-space-s);
   }
-  [part='item-name'],
+  [part="item-name"],
   lr-virtual-list::part(item-name) {
     min-inline-size: 0;
     overflow: hidden;
@@ -67,11 +70,11 @@ export const styles = css`
     font-weight: var(--lr-font-weight-medium);
     color: var(--lr-color-text);
   }
-  [part='item-progress'],
+  [part="item-progress"],
   lr-virtual-list::part(item-progress) {
     display: block;
   }
-  [part='item-meta'],
+  [part="item-meta"],
   lr-virtual-list::part(item-meta) {
     display: flex;
     flex-wrap: wrap;
@@ -79,22 +82,22 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }
-  [part='item-error'],
+  [part="item-error"],
   lr-virtual-list::part(item-error) {
     margin: 0;
     color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
-  [part='item-actions'],
+  [part="item-actions"],
   lr-virtual-list::part(item-actions) {
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-space-s);
   }
-  [part='retry-button'],
+  [part="retry-button"],
   lr-virtual-list::part(retry-button),
-  [part='cancel-button'],
+  [part="cancel-button"],
   lr-virtual-list::part(cancel-button) {
     display: inline-flex;
     align-items: center;
@@ -110,46 +113,52 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     cursor: pointer;
-    transition:
-      background-color var(--lr-transition-fast),
-      border-color var(--lr-transition-fast),
-      color var(--lr-transition-fast);
+    transition: background-color var(--lr-transition-fast),
+      border-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
-  [part='retry-button']:hover,
+  [part="retry-button"]:hover,
   lr-virtual-list::part(retry-button):hover {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
   /* Pressed keeps the hover's retinted border and label and adds the fill the hover has none of --
      the button's own --lr-color-surface base mixed toward --lr-color-mix-partner. */
-  [part='retry-button']:active,
+  [part="retry-button"]:active,
   lr-virtual-list::part(retry-button):active {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='cancel-button']:hover,
+  [part="cancel-button"]:hover,
   lr-virtual-list::part(cancel-button):hover {
     border-color: var(--lr-color-danger);
     color: var(--lr-color-danger);
   }
-  [part='cancel-button']:active,
+  [part="cancel-button"]:active,
   lr-virtual-list::part(cancel-button):active {
     border-color: var(--lr-color-danger);
     color: var(--lr-color-danger);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='retry-button']:focus-visible,
+  [part="retry-button"]:focus-visible,
   lr-virtual-list::part(retry-button):focus-visible,
-  [part='cancel-button']:focus-visible,
+  [part="cancel-button"]:focus-visible,
   lr-virtual-list::part(cancel-button):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='retry-button'],
+    [part="retry-button"],
     lr-virtual-list::part(retry-button),
-    [part='cancel-button'],
+    [part="cancel-button"],
     lr-virtual-list::part(cancel-button) {
       transition: none !important;
     }

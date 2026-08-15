@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -7,7 +8,7 @@ import { normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 import type { LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -39,14 +40,14 @@ const KIND_LABEL_KEY: Record<LyraSpan['kind'], string> = {
 };
 
 export interface LyraAgentTraceEventMap {
-  /** Bubbles, composed, from the composed `<lr-trace-tree>` (identical `{ id }` detail), or is
+  /** Bubbles, composed, from the composed `<lr-trace-tree>` (identical `{ spanId }` detail), or is
    *  fired directly when a handoff quick-jump entry is activated -- a host handles both origins
    *  through this one event. */
-  'lr-span-select': CustomEvent<{ id: string }>;
+  'lr-span-select': CustomEvent<{ spanId: string }>;
   /** Bubbles, composed, from the composed `<lr-trace-tree>`, unchanged. */
-  'lr-span-toggle': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-span-toggle': CustomEvent<{ spanId: string; expanded: boolean }>;
   /** Timeline-owned translation of the composed graph legend's visibility event. */
-  'lr-span-visibility-change': CustomEvent<{ hiddenKinds: LyraSpan['kind'][] }>;
+  'lr-span-visibility-change': CustomEvent<LyraEventDetailSnapshot<{ hiddenKinds: LyraSpan['kind'][] }>>;
 }
 
 /**
@@ -73,12 +74,16 @@ export interface LyraAgentTraceEventMap {
  *
  * Selection is controlled end-to-end for deep-linking: `activeSpanId` flows down into
  * `<lr-trace-tree>` verbatim, and both activation paths -- a row click inside the tree, or a
- * handoff quick-jump entry -- update it and fire the identical `lr-span-select` `{ id }` shape, so
+ * handoff quick-jump entry -- update it and fire the identical `lr-span-select` `{ spanId }`
+ * shape, so
  * a host can encode the current span id in a URL and feed it straight back in.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-agent-trace
- * @event lr-span-select - `detail: { id }` — a span was activated, from the tree or the handoff list.
- * @event lr-span-toggle - `detail: { id, expanded }` — a tree row was expanded or collapsed.
+ * @event lr-span-select - `detail: { spanId }` — a span was activated, from the tree or the handoff list.
+ * @event lr-span-toggle - `detail: { spanId, expanded }` — a tree row was expanded or collapsed.
  * @event lr-span-visibility-change - `detail: { hiddenKinds }` — the span-kind filter changed.
  * @csspart base - The root wrapper.
  * @csspart filter - The composed `<lr-graph-legend>` filter row, only rendered while `spans` has at least one span.
@@ -93,6 +98,8 @@ export interface LyraAgentTraceEventMap {
  * @since 4.1.0
  */
 export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["spans", "hiddenKinds"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -105,6 +112,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
@@ -121,7 +129,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   /** The full, unfiltered span array -- identical contract to `<lr-trace-tree>.spans`. Controlled
    *  and never mutated by this component; `activeSpanId` and its ancestor path reserve positions
    *  inside the shared 500-row projection before kind filtering. */
-  @property({ attribute: false }) spans: LyraSpan[] = [];
+  @property({ attribute: false }) spans: readonly LyraSpan[] = [];
 
   /** Controlled selection, forwarded verbatim into the composed `<lr-trace-tree>`. Updated
    *  locally (and re-emitted as `lr-span-select`) whenever a span is activated from either the
@@ -131,7 +139,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   /** Span kinds currently hidden from the tree. Empty (the default) shows every kind. Controlled
    *  -- a host may pre-set this (e.g. to hide `retriever`/`embedding` spans by default) or read it
    *  back after `lr-span-visibility-change`. */
-  @property({ attribute: false }) hiddenKinds: LyraSpan['kind'][] = [];
+  @property({ attribute: false }) hiddenKinds: readonly LyraSpan['kind'][] = [];
 
   /** Accessible name forwarded to the composed `<lr-trace-tree>`. See its own `label` property. */
   @property() label = '';
@@ -187,13 +195,13 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
    *  selection originates inside the composed `<lr-trace-tree>` rather than the handoff quick-jump
    *  list. The original event is never stopped here, so it still reaches a host listener on this
    *  element unchanged. */
-  private onTreeSpanSelect = (e: CustomEvent<{ id: string }>): void => {
-    this.activeSpanId = e.detail.id;
+  private onTreeSpanSelect = (e: CustomEvent<{ spanId: string }>): void => {
+    this.activeSpanId = e.detail.spanId;
   };
 
   private selectSpan(id: string): void {
     this.activeSpanId = id;
-    this.emit('lr-span-select', { id });
+    this.emit('lr-span-select', { spanId: id });
   }
 
   private renderFilter(spans: readonly LyraSpan[]): TemplateResult | typeof nothing {

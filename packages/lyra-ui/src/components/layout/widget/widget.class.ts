@@ -30,7 +30,8 @@ import { LYRA_DEFAULT_widgetCollapse, LYRA_DEFAULT_widgetExitFullscreen, LYRA_DE
 
 
 export interface LyraWidgetView {
-  id: string;
+  /** Stable, unique business identity for this view. */
+  viewId: string;
   /** Visible label text. Optional so a toggle can be icon-only (`icon` set, `label` omitted) --
    *  set `ariaLabel` too in that case so the button keeps a real accessible name; see `ariaLabel`'s
    *  own doc for what happens if both are left unset. */
@@ -39,7 +40,7 @@ export interface LyraWidgetView {
   icon?: TemplateResult;
   /** Accessible name for the toggle button, used only when `label` is omitted -- ignored otherwise,
    *  since the visible label text already supplies the accessible name. If both `label` and
-   *  `ariaLabel` are omitted, the button falls back to its own `id` as a last-resort accessible name:
+   *  `ariaLabel` are omitted, the button falls back to its own `viewId` as a last-resort accessible name:
    *  not silently unlabeled, but not a good name either, so set one of the two for any icon-only view. */
   ariaLabel?: string;
 }
@@ -76,7 +77,7 @@ export interface LyraWidgetEventMap {
  *   expand/exit distinction (e.g. by reading the `fullscreen` attribute). Assigned content is
  *   decorative, inert, and aria-hidden so the outer toggle remains the sole action. Only meaningful
  *   while `expandable`.
- * @slot view-{id} - Content for the view whose `LyraWidgetView.id` matches `{id}`, rendered when
+ * @slot view-{viewId} - Content for the view whose `LyraWidgetView.viewId` matches `{viewId}`, rendered when
  *   `views` is non-empty.
  * @event lr-collapse-request - A cancelable proposed `collapsed` state from the built-in collapse
  *   toggle. Call `preventDefault()` to keep `collapsed` and persistence unchanged. Not fired when
@@ -90,12 +91,12 @@ export interface LyraWidgetEventMap {
  * @event lr-fullscreen-change - Non-cancelable post-commit notification, fired after the
  *   fullscreen toggle, Escape, or a backdrop click accepts the change. Not fired when a consumer
  *   sets `fullscreen` directly. `detail: { fullscreen }` (the new `fullscreen` state).
- * @event lr-view-request - A cancelable proposed `activeView` from a header view-toggle click.
- *   Call `preventDefault()` to leave `activeView` unchanged. Not fired when a consumer sets
- *   `activeView` directly. `detail: { viewId }`.
+ * @event lr-view-request - A cancelable proposed `activeViewId` from a header view-toggle click.
+ *   Call `preventDefault()` to leave `activeViewId` unchanged. Not fired when a consumer sets
+ *   `activeViewId` directly. `detail: { viewId }`.
  * @event lr-view-change - Non-cancelable post-commit notification, fired after a header
- *   view-toggle click accepts the change. Not fired when a consumer sets `activeView` directly.
- *   `detail: { viewId }` (the new view's `id`).
+ *   view-toggle click accepts the change. Not fired when a consumer sets `activeViewId` directly.
+ *   `detail: { viewId }`.
  * @csspart base - The panel root (dialog role + backdrop when fullscreen).
  * @csspart header - The header row containing the title, actions, and toggle buttons.
  * @csspart title - The wrapper around the label/sublabel.
@@ -138,6 +139,10 @@ export interface LyraWidgetEventMap {
  * @since 4.0.0
  */
 export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "views",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -186,16 +191,17 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property({ attribute: "backdrop-inset" }) backdropInset = "";
   /** Tighter header/body padding for constrained spaces. */
   @property({ type: Boolean, reflect: true }) compact = false;
-  /** Named alternate views for the panel body -- e.g. a chart/table toggle inside the same card
-   *  chrome. Each entry gets a header toggle button and a `<slot name="view-${id}">`. Empty (the
+  /** Named alternate views for the panel body. Assignment takes a bounded, recursively frozen
+   *  snapshot; mutate a copy and reassign it to update. For example, a chart/table toggle inside the same card
+   *  chrome. Each entry gets a header toggle button and a `<slot name="view-${viewId}">`. Empty (the
    *  default) renders today's single unnamed default slot as the sole view, unchanged. An entry's
    *  `label` is optional -- see `LyraWidgetView`'s own doc for the icon-only (`ariaLabel`) case. */
   @property({ attribute: false }) views: readonly LyraWidgetView[] = [];
 
-  /** The currently active view's `id` -- defaults to the first entry of `views` (or `''` when
+  /** The currently active view's `viewId` -- defaults to the first entry of `views` (or `''` when
    *  `views` is empty). Settable directly by a consumer wanting to control the active view
    *  externally; also updated internally when a view toggle is clicked. */
-  @property({ attribute: false }) activeView = "";
+  @property({ attribute: false }) activeViewId = "";
 
   @state() private hasActionsSlot = false;
   @state() private hasIconSlot = false;
@@ -218,8 +224,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     return this.storageKey ? `lr-widget:${this.storageKey}` : undefined;
   }
 
-  /** Duplicate view ids cannot identify distinct slots or public active states. Keep the first
-   * occurrence so the rendered controls and body expose one deterministic target per id. */
+  /** Duplicate view IDs cannot identify distinct slots or public active states. Keep the first
+   * occurrence so the rendered controls and body expose one deterministic target per view ID. */
   private get normalizedViews(): readonly Readonly<LyraWidgetView>[] {
     if (!Array.isArray(this.views)) return [];
     const seen = new Set<string>();
@@ -227,8 +233,13 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     for (const candidate of this.views.slice(0, 256)) {
       try {
         if (!candidate || typeof candidate !== "object") continue;
-        const id = candidate.id;
-        if (typeof id !== "string" || id.length === 0 || id !== id.trim() || seen.has(id)) {
+        const viewId = candidate.viewId;
+        if (
+          typeof viewId !== "string" ||
+          viewId.length === 0 ||
+          viewId !== viewId.trim() ||
+          seen.has(viewId)
+        ) {
           continue;
         }
         const label = candidate.label;
@@ -236,10 +247,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         const icon = candidate.icon;
         if (label !== undefined && typeof label !== "string") continue;
         if (ariaLabel !== undefined && typeof ariaLabel !== "string") continue;
-        seen.add(id);
+        seen.add(viewId);
         normalized.push(
           Object.freeze({
-            id,
+            viewId,
             ...(label !== undefined ? { label } : {}),
             ...(icon !== undefined ? { icon } : {}),
             ...(ariaLabel !== undefined ? { ariaLabel } : {}),
@@ -294,14 +305,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         this.deactivateFullscreenOverlay();
       }
     }
-    if (changed.has("views") || changed.has("activeView")) {
+    if (changed.has("views") || changed.has("activeViewId")) {
       const focused = this.renderRoot.querySelector<HTMLElement>(
         '[part="view-toggle"]:focus'
       );
       this.focusedViewIdBeforeUpdate = focused?.dataset["viewId"];
       const views = this.normalizedViews;
-      if (!views.some((v) => v.id === this.activeView)) {
-        this.activeView = views[0]?.id ?? "";
+      if (!views.some((view) => view.viewId === this.activeViewId)) {
+        this.activeViewId = views[0]?.viewId ?? "";
       }
     }
   }
@@ -343,17 +354,17 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         this.overlayHandle?.focusInitial();
       }
     }
-    if (changed.has("views") || changed.has("activeView")) {
+    if (changed.has("views") || changed.has("activeViewId")) {
       const focusedId = this.focusedViewIdBeforeUpdate;
       this.focusedViewIdBeforeUpdate = undefined;
       if (
         focusedId &&
-        !this.normalizedViews.some((view) => view.id === focusedId)
+        !this.normalizedViews.some((view) => view.viewId === focusedId)
       ) {
         Array.from(
           this.renderRoot.querySelectorAll<HTMLElement>('[part="view-toggle"]')
         )
-          .find((toggle) => toggle.dataset["viewId"] === this.activeView)
+          .find((toggle) => toggle.dataset["viewId"] === this.activeViewId)
           ?.focus();
       }
     }
@@ -508,12 +519,12 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       0;
   };
 
-  private setActiveView = (id: string): void => {
-    if (id === this.activeView) return;
-    const request = this.emit("lr-view-request", { viewId: id }, { cancelable: true });
+  private setActiveView = (viewId: string): void => {
+    if (viewId === this.activeViewId) return;
+    const request = this.emit("lr-view-request", { viewId }, { cancelable: true });
     if (request.defaultPrevented) return;
-    this.activeView = id;
-    this.emit("lr-view-change", { viewId: id });
+    this.activeViewId = viewId;
+    this.emit("lr-view-change", { viewId });
   };
 
   /** Emits the cancelable interaction proposal before touching the persisted
@@ -622,24 +633,24 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 role="group"
                 aria-label=${this.localize("widgetViewGroup")}
               >
-                ${repeat(views, (view) => view.id, (v) => {
+                ${repeat(views, (view) => view.viewId, (view) => {
                   // `label` supplies the accessible name via its own visible text, same as
                   // before -- aria-label is only ever added for an icon-only toggle (`label`
-                  // omitted), where `ariaLabel` is the intended name and `id` is the last-resort
+                  // omitted), where `ariaLabel` is the intended name and `viewId` is the last-resort
                   // fallback if even that's missing (see LyraWidgetView's doc).
-                  const hasLabel = !!v.label;
+                  const hasLabel = !!view.label;
                   return html`<button
                     part="view-toggle"
                     type="button"
-                    data-view-id=${v.id}
-                    aria-pressed=${v.id === this.activeView ? "true" : "false"}
-                    aria-label=${hasLabel ? nothing : v.ariaLabel || v.id}
-                    @click=${() => this.setActiveView(v.id)}
+                    data-view-id=${view.viewId}
+                    aria-pressed=${view.viewId === this.activeViewId ? "true" : "false"}
+                    aria-label=${hasLabel ? nothing : view.ariaLabel || view.viewId}
+                    @click=${() => this.setActiveView(view.viewId)}
                   >
-                    ${v.icon
-                      ? renderInertPresentation(v.icon, { part: "view-icon" })
-                      : nothing}${v.label
-                      ? html`<span part="view-label">${v.label}</span>`
+                    ${view.icon
+                      ? renderInertPresentation(view.icon, { part: "view-icon" })
+                      : nothing}${view.label
+                      ? html`<span part="view-label">${view.label}</span>`
                       : nothing}
                   </button>`;
                 })}
@@ -684,10 +695,13 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             ? html`<slot></slot>`
             : repeat(
                 views,
-                (view) => view.id,
-                (v) =>
-                  html`<div data-view-id=${v.id} ?hidden=${v.id !== this.activeView}>
-                    <slot name="view-${v.id}"></slot>
+                (view) => view.viewId,
+                (view) =>
+                  html`<div
+                    data-view-id=${view.viewId}
+                    ?hidden=${view.viewId !== this.activeViewId}
+                  >
+                    <slot name="view-${view.viewId}"></slot>
                   </div>`
               )}
         </div>

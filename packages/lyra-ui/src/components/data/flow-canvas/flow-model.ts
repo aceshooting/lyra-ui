@@ -96,16 +96,20 @@ export function snapshotFlowHandles(
 
 export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode[] {
   if (!Array.isArray(value)) return Object.freeze([]);
-  return Object.freeze(
-    value.map((node) => {
+  const nodes: FlowNode[] = [];
+  const seen = new Set<string>();
+  for (const node of value) {
+    try {
+      const id = node?.id;
+      if (typeof id !== 'string' || id.trim().length === 0 || seen.has(id)) continue;
       const data = isRecord(node?.data) ? snapshotFlowData(node.data) : undefined;
       const position = node?.position
         ? Object.freeze({ x: node.position.x, y: node.position.y })
         : undefined;
       const inputs = snapshotFlowHandles(node?.inputs);
       const outputs = snapshotFlowHandles(node?.outputs);
-      return Object.freeze({
-        id: typeof node?.id === 'string' ? node.id : '',
+      const snapshot = Object.freeze({
+        id,
         ...(typeof node?.type === 'string' ? { type: node.type } : {}),
         ...(position ? { position } : {}),
         ...(data ? { data } : {}),
@@ -115,17 +119,26 @@ export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode
         ...(inputs ? { inputs } : {}),
         ...(outputs ? { outputs } : {}),
       });
-    }),
-  );
+      seen.add(id);
+      nodes.push(snapshot);
+    } catch {
+      // A malformed record cannot reserve its id or suppress a later valid occurrence.
+    }
+  }
+  return Object.freeze(nodes);
 }
 
 export function snapshotFlowEdges(value: readonly FlowEdge[]): readonly FlowEdge[] {
   if (!Array.isArray(value)) return Object.freeze([]);
-  return Object.freeze(
-    value.map((edge) => {
+  const edges: FlowEdge[] = [];
+  const seen = new Set<string>();
+  for (const edge of value) {
+    try {
+      const id = edge?.id;
+      if (typeof id !== 'string' || id.trim().length === 0 || seen.has(id)) continue;
       const tone = normalizeFlowVariant(edge?.tone);
-      return Object.freeze({
-        id: typeof edge?.id === 'string' ? edge.id : '',
+      const snapshot = Object.freeze({
+        id,
         source: typeof edge?.source === 'string' ? edge.source : '',
         target: typeof edge?.target === 'string' ? edge.target : '',
         ...(typeof edge?.sourceHandle === 'string' ? { sourceHandle: edge.sourceHandle } : {}),
@@ -133,8 +146,13 @@ export function snapshotFlowEdges(value: readonly FlowEdge[]): readonly FlowEdge
         ...(typeof edge?.label === 'string' ? { label: edge.label } : {}),
         ...(tone ? { tone } : {}),
       });
-    }),
-  );
+      seen.add(id);
+      edges.push(snapshot);
+    } catch {
+      // A malformed record cannot reserve its id or suppress a later valid occurrence.
+    }
+  }
+  return Object.freeze(edges);
 }
 
 export function snapshotFlowDecorations(value: unknown): FlowRunDecorations {

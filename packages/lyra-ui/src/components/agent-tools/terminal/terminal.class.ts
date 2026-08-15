@@ -165,7 +165,8 @@ export interface LyraTerminalEventMap {
  * @event lr-follow-change - `detail: { following }` — a user viewport/jump action changed
  *   stick-to-bottom. Direct `follow` assignments and imperative navigation do not echo an event.
  * @event lr-search-change - `detail: { query, matchCount, activeIndex }`.
- * @event lr-highlight-activate - `detail: { id }` — a highlighted line was clicked/activated.
+ * @event lr-highlight-activate - `detail: { highlightId }` — a highlighted line was
+ *   clicked/activated.
  * @event lr-text-select - `detail: { text, anchor, rects }` — fires on pointerup after a text
  *   selection ending inside the viewport. `anchor` is `null` when either selection endpoint isn't
  *   inside a currently-mounted (non-virtualized-out) line.
@@ -250,8 +251,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   @property() filename = 'terminal.log';
   @property({ type: Boolean, attribute: 'announce-output' }) announceOutput = false;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  /** Line-range highlights keyed by stable id. Duplicate ids normalize first-wins before range
-   *  ownership, activation, and anchor lookup. */
+  /** Line-range highlights keyed by stable id. Empty/blank ids are omitted and duplicates normalize
+   *  first-wins before range ownership, activation, and anchor lookup. */
   @property({ attribute: false }) highlights: LyraHighlight[] = [];
   @property({ attribute: false }) activeHighlightId: string | null = null;
 
@@ -661,7 +662,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private activateHighlight(h: LyraHighlight): void {
     this.activeHighlightId = h.id;
-    this.emit('lr-highlight-activate', { id: h.id });
+    this.emit('lr-highlight-activate', { highlightId: h.id });
   }
 
   private onLineKeyDown = (e: KeyboardEvent, h: LyraHighlight): void => {

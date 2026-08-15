@@ -18,7 +18,7 @@ import {
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_activityFeedCompletedStep, LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_activityFeedCompletedStep, LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -101,12 +101,16 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * the bottom. `lr-follow-change` reports user-driven transitions only; direct host assignments are
  * controlled input and never echo an event. At/above
  * `virtualizeAt` entries, the body renders through an internal `<lr-virtual-list>`
- * instead of a plain keyed list — same list semantics either way, keyed by `id`. Duplicate ids
- * normalize before counts, follow calculations, and rendering; the first occurrence wins.
+ * instead of a plain keyed list — same list semantics either way, keyed by `id`. Empty/blank ids
+ * are omitted and duplicates normalize before counts, follow calculations, and rendering; the
+ * first occurrence wins.
  *
  * Each entry's `text` renders as plain text by default; a host needing richer per-entry content
  * (rendered markdown, a trailing tool-call chip list, etc.) sets `renderText` to fully replace it,
  * identically whether or not the feed is currently virtualized.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-activity-feed
  * @event lr-toggle - The header was activated, expanding or collapsing the body. `detail: {
@@ -145,6 +149,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @since 4.0.0
  */
 export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["entries"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -157,6 +163,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -165,8 +172,9 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Append-only: stable ids, new entries at the end. Entries never change state once added.
-   *  Duplicate ids normalize first-wins before summary, virtualization, and rendering. */
-  @property({ attribute: false }) entries: ActivityEntry[] = [];
+   *  Empty/blank ids are omitted and duplicates normalize first-wins before summary,
+   *  virtualization, and rendering. */
+  @property({ attribute: false }) entries: readonly ActivityEntry[] = [];
 
   /** `'live'` follows the tail (per `follow`) and pulses; `'post-hoc'` shows the completed-count
    *  summary and never scrolls. */

@@ -45,12 +45,12 @@ it("renders with defaults: docked to the end edge, a resizable handle, no collap
   expect(el.resizable).to.equal(true);
   expect(el.collapsible).to.equal(false);
   const handle = el.shadowRoot!.querySelector('[part="handle"]');
-  expect((handle) !== (null)).to.equal(true);
+  expect(handle !== null).to.equal(true);
   expect(handle!.getAttribute("role")).to.equal("separator");
   expect(handle!.getAttribute("aria-orientation")).to.equal("vertical");
-  expect((el.shadowRoot!.querySelector('[part="collapse-toggle"]')) === (null)).to.equal(
-    true
-  );
+  expect(
+    el.shadowRoot!.querySelector('[part="collapse-toggle"]') === null
+  ).to.equal(true);
 });
 
 it("floors the collapse toggle at the shared minimum hit target", async () => {
@@ -70,7 +70,9 @@ it("contains long RTL dock and main content through collapse/expand in an exact 
       dir="rtl"
       style="display:flex;inline-size:320px;max-inline-size:320px;block-size:12rem;overflow:hidden"
     >
-      <main style="flex:1 1 0;min-inline-size:0;overflow:auto">${longText}</main>
+      <main style="flex:1 1 0;min-inline-size:0;overflow:auto">
+        ${longText}
+      </main>
       <lr-dock-panel
         edge="end"
         extent="240px"
@@ -93,11 +95,11 @@ it("contains long RTL dock and main content through collapse/expand in an exact 
     const wrapperRect = wrapper.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     const mainRect = main.getBoundingClientRect();
-    const baseRect = panel.shadowRoot!
-      .querySelector<HTMLElement>('[part="base"]')!
+    const baseRect = panel
+      .shadowRoot!.querySelector<HTMLElement>('[part="base"]')!
       .getBoundingClientRect();
-    const contentRect = panel.shadowRoot!
-      .querySelector<HTMLElement>('[part="content"]')!
+    const contentRect = panel
+      .shadowRoot!.querySelector<HTMLElement>('[part="content"]')!
       .getBoundingClientRect();
     const containedRects: Array<readonly [string, DOMRect]> = [
       ["panel", panelRect],
@@ -106,19 +108,25 @@ it("contains long RTL dock and main content through collapse/expand in an exact 
     ];
     if (!panel.collapsed) containedRects.push(["content", contentRect]);
     for (const [label, rect] of containedRects) {
-      expect(rect.left, `${label} left edge`).to.be.at.least(wrapperRect.left - 1);
-      expect(rect.right, `${label} right edge`).to.be.at.most(wrapperRect.right + 1);
+      expect(rect.left, `${label} left edge`).to.be.at.least(
+        wrapperRect.left - 1
+      );
+      expect(rect.right, `${label} right edge`).to.be.at.most(
+        wrapperRect.right + 1
+      );
     }
-    expect(panelRect.right, "RTL end panel stays physically before main").to.be.at.most(
-      mainRect.left + 1
-    );
+    expect(
+      panelRect.right,
+      "RTL end panel stays physically before main"
+    ).to.be.at.most(mainRect.left + 1);
     expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
   };
 
   expect(wrapper.clientWidth).to.equal(320);
   expect(panel.getBoundingClientRect().width).to.be.closeTo(240, 1);
   expect(main.scrollWidth).to.be.greaterThan(main.clientWidth);
-  const content = panel.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+  const content =
+    panel.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
   expect(content.scrollWidth).to.be.greaterThan(content.clientWidth);
   assertContained();
 
@@ -139,14 +147,18 @@ it("renders no drag handle at all when resizable is false", async () => {
   const el = await dockedFixture();
   el.resizable = false;
   await elementUpdated(el);
-  expect((el.shadowRoot!.querySelector('[part="handle"]')) === (null)).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(
+    true
+  );
 });
 
 it('honors the plain resizable="false" attribute form, not just a property binding', async () => {
   const el = await dockedFixture('resizable="false"');
   await elementUpdated(el);
   expect(el.resizable).to.equal(false);
-  expect((el.shadowRoot!.querySelector('[part="handle"]')) === (null)).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(
+    true
+  );
 });
 
 it("sets aria-orientation to horizontal for a top/bottom-docked handle", async () => {
@@ -160,6 +172,23 @@ it("applies the extent property as the host inline-size for a start/end edge", a
   const el = await dockedFixture('extent="300px"');
   await elementUpdated(el);
   expect(el.getBoundingClientRect().width).to.be.closeTo(300, 1);
+});
+
+it("inherits the collapsed rail size while a direct host value remains authoritative", async () => {
+  const wrapper = (await fixture(html`
+    <div
+      style="position:relative;display:flex;inline-size:300px;--lr-dock-panel-collapsed-size:52px"
+    >
+      <main style="flex:1 1 0">main</main>
+      <lr-dock-panel collapsible collapsed>panel body</lr-dock-panel>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector("lr-dock-panel") as LyraDockPanel;
+  await elementUpdated(el);
+  expect(el.getBoundingClientRect().width).to.be.closeTo(52, 1);
+
+  el.style.setProperty("--lr-dock-panel-collapsed-size", "44px");
+  expect(el.getBoundingClientRect().width).to.be.closeTo(44, 1);
 });
 
 it("applies and clamps block-size extent for a top/bottom edge", async () => {
@@ -192,15 +221,11 @@ it("treats each genuine keyboard step as a frozen input/change transaction", asy
   const details: LyraDockPanelResizeDetail[] = [];
   el.addEventListener("lr-resize-input", (event) => {
     order.push(event.type);
-    details.push(
-      (event as CustomEvent<LyraDockPanelResizeDetail>).detail
-    );
+    details.push((event as CustomEvent<LyraDockPanelResizeDetail>).detail);
   });
   el.addEventListener("lr-resize-change", (event) => {
     order.push(event.type);
-    details.push(
-      (event as CustomEvent<LyraDockPanelResizeDetail>).detail
-    );
+    details.push((event as CustomEvent<LyraDockPanelResizeDetail>).detail);
   });
   let legacyEvents = 0;
   el.addEventListener("lr-resize", () => (legacyEvents += 1));
@@ -347,10 +372,10 @@ it("emits live input on a pointer transition and one terminal change on genuine 
   expect(changes).to.equal(0);
 
   const change = oneEvent(el, "lr-resize-change");
-  window.dispatchEvent(
-    new PointerEvent("pointerup", primaryPointer(1))
-  );
-  const changeDetail = (await change as CustomEvent<LyraDockPanelResizeDetail>).detail;
+  window.dispatchEvent(new PointerEvent("pointerup", primaryPointer(1)));
+  const changeDetail = (
+    (await change) as CustomEvent<LyraDockPanelResizeDetail>
+  ).detail;
   expect(changeDetail).to.deep.equal({ extent: "360px" });
   expect(Object.isFrozen(changeDetail)).to.equal(true);
   expect(changes).to.equal(1);
@@ -490,7 +515,9 @@ it("keeps live input but excludes cancel and lost capture from terminal change",
       'extent="300px" min-extent="100px" max-extent="500px"'
     );
     await elementUpdated(el);
-    const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    const handle = el.shadowRoot!.querySelector(
+      '[part="handle"]'
+    ) as HTMLElement;
     handle.setPointerCapture = () => {};
     let inputs = 0;
     let changes = 0;
@@ -499,7 +526,10 @@ it("keeps live input but excludes cancel and lost capture from terminal change",
     const pointerId = 50 + index;
 
     handle.dispatchEvent(
-      new PointerEvent("pointerdown", primaryPointer(pointerId, { clientX: 200 }))
+      new PointerEvent(
+        "pointerdown",
+        primaryPointer(pointerId, { clientX: 200 })
+      )
     );
     window.dispatchEvent(
       new PointerEvent("pointermove", { pointerId, clientX: 150 })
@@ -540,7 +570,9 @@ it("cancels a terminal resize when live edge, extent, direction, or bounds inval
       'extent="300px" min-extent="100px" max-extent="500px"'
     );
     await elementUpdated(el);
-    const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    const handle = el.shadowRoot!.querySelector(
+      '[part="handle"]'
+    ) as HTMLElement;
     handle.setPointerCapture = () => {};
     let inputs = 0;
     let changes = 0;
@@ -549,7 +581,10 @@ it("cancels a terminal resize when live edge, extent, direction, or bounds inval
     const pointerId = 60 + index;
 
     handle.dispatchEvent(
-      new PointerEvent("pointerdown", primaryPointer(pointerId, { clientX: 200 }))
+      new PointerEvent(
+        "pointerdown",
+        primaryPointer(pointerId, { clientX: 200 })
+      )
     );
     window.dispatchEvent(
       new PointerEvent("pointermove", { pointerId, clientX: 150 })
@@ -570,7 +605,8 @@ it("routes an adopted drag through its owner window and removes that realm's lis
   const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
   const frameDocument = frame.contentDocument;
   const frameWindow = frame.contentWindow;
-  if (!frameDocument || !frameWindow) throw new Error("The iframe realm was unavailable.");
+  if (!frameDocument || !frameWindow)
+    throw new Error("The iframe realm was unavailable.");
   const originalRemoveEventListener = frameWindow.removeEventListener;
   const removedPointerTypes: string[] = [];
   frameWindow.removeEventListener = ((
@@ -578,7 +614,8 @@ it("routes an adopted drag through its owner window and removes that realm's lis
     listener: EventListenerOrEventListenerObject | null,
     options?: boolean | EventListenerOptions
   ) => {
-    if (type.startsWith("pointer") || type === "lostpointercapture") removedPointerTypes.push(type);
+    if (type.startsWith("pointer") || type === "lostpointercapture")
+      removedPointerTypes.push(type);
     originalRemoveEventListener.call(frameWindow, type, listener, options);
   }) as typeof frameWindow.removeEventListener;
 
@@ -589,7 +626,9 @@ it("routes an adopted drag through its owner window and removes that realm's lis
     frameDocument.body.append(wrapper);
     wrapper.append(el);
     await elementUpdated(el);
-    const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    const handle = el.shadowRoot!.querySelector(
+      '[part="handle"]'
+    ) as HTMLElement;
     handle.setPointerCapture = () => {};
     const expectedExtent = `${Math.round(
       Math.min(500, Math.max(100, el.getBoundingClientRect().width + 50))
@@ -604,10 +643,16 @@ it("routes an adopted drag through its owner window and removes that realm's lis
     window.dispatchEvent(
       new PointerEvent("pointermove", { pointerId: 72, clientX: 150 })
     );
-    expect(el.extent, "the ambient window must not own the adopted drag").to.equal("300px");
+    expect(
+      el.extent,
+      "the ambient window must not own the adopted drag"
+    ).to.equal("300px");
 
     frameWindow.dispatchEvent(
-      new frameWindow.PointerEvent("pointermove", { pointerId: 72, clientX: 150 })
+      new frameWindow.PointerEvent("pointermove", {
+        pointerId: 72,
+        clientX: 150,
+      })
     );
     expect(el.extent).to.equal(expectedExtent);
 
@@ -619,9 +664,14 @@ it("routes an adopted drag through its owner window and removes that realm's lis
       "pointerup",
     ]);
     frameWindow.dispatchEvent(
-      new frameWindow.PointerEvent("pointermove", { pointerId: 72, clientX: 100 })
+      new frameWindow.PointerEvent("pointermove", {
+        pointerId: 72,
+        clientX: 100,
+      })
     );
-    expect(el.extent, "the old owner window listener must be removed").to.equal(expectedExtent);
+    expect(el.extent, "the old owner window listener must be removed").to.equal(
+      expectedExtent
+    );
   } finally {
     if (el.ownerDocument !== document) document.adoptNode(el);
     frameWindow.removeEventListener = originalRemoveEventListener;
@@ -636,7 +686,8 @@ it("constructs its container observer in the adopted owner realm and disconnects
   const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
   const frameDocument = frame.contentDocument;
   const frameWindow = frame.contentWindow;
-  if (!frameDocument || !frameWindow) throw new Error("The iframe realm was unavailable.");
+  if (!frameDocument || !frameWindow)
+    throw new Error("The iframe realm was unavailable.");
   const OriginalResizeObserver = frameWindow.ResizeObserver;
   let constructions = 0;
   let disconnects = 0;
@@ -672,23 +723,39 @@ it("falls back to its owner viewport when it has no containing element", async (
   const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
   const frameDocument = frame.contentDocument;
   const frameWindow = frame.contentWindow;
-  if (!frameDocument || !frameWindow) throw new Error("The iframe realm was unavailable.");
-  const widthDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "innerWidth");
-  const heightDescriptor = Object.getOwnPropertyDescriptor(frameWindow, "innerHeight");
+  if (!frameDocument || !frameWindow)
+    throw new Error("The iframe realm was unavailable.");
+  const widthDescriptor = Object.getOwnPropertyDescriptor(
+    frameWindow,
+    "innerWidth"
+  );
+  const heightDescriptor = Object.getOwnPropertyDescriptor(
+    frameWindow,
+    "innerHeight"
+  );
 
   try {
-    Object.defineProperty(frameWindow, "innerWidth", { configurable: true, value: 321 });
-    Object.defineProperty(frameWindow, "innerHeight", { configurable: true, value: 654 });
+    Object.defineProperty(frameWindow, "innerWidth", {
+      configurable: true,
+      value: 321,
+    });
+    Object.defineProperty(frameWindow, "innerHeight", {
+      configurable: true,
+      value: 654,
+    });
     frameDocument.adoptNode(el);
     const internals = el as unknown as { containerPx(): number };
     expect(internals.containerPx()).to.equal(321);
     el.edge = "top";
     expect(internals.containerPx()).to.equal(654);
   } finally {
-    if (widthDescriptor) Object.defineProperty(frameWindow, "innerWidth", widthDescriptor);
+    if (widthDescriptor)
+      Object.defineProperty(frameWindow, "innerWidth", widthDescriptor);
     else delete (frameWindow as unknown as { innerWidth?: number }).innerWidth;
-    if (heightDescriptor) Object.defineProperty(frameWindow, "innerHeight", heightDescriptor);
-    else delete (frameWindow as unknown as { innerHeight?: number }).innerHeight;
+    if (heightDescriptor)
+      Object.defineProperty(frameWindow, "innerHeight", heightDescriptor);
+    else
+      delete (frameWindow as unknown as { innerHeight?: number }).innerHeight;
     if (el.ownerDocument !== document) document.adoptNode(el);
     el.remove();
     frame.remove();
@@ -782,7 +849,7 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   const toggle = el.shadowRoot!.querySelector(
     '[part="collapse-toggle"]'
   ) as HTMLElement;
-  expect((toggle) !== (null)).to.equal(true);
+  expect(toggle !== null).to.equal(true);
   expect(toggle.getAttribute("aria-expanded")).to.equal("true");
 
   let requestDetail: LyraDockPanelCollapseChangeDetail | undefined;
@@ -790,16 +857,13 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   el.addEventListener(
     "lr-collapse-request",
     (e) =>
-      (requestDetail = (
-        e as CustomEvent<LyraDockPanelCollapseChangeDetail>
-      ).detail)
+      (requestDetail = (e as CustomEvent<LyraDockPanelCollapseChangeDetail>)
+        .detail)
   );
   el.addEventListener(
     "lr-collapse-change",
     (e) =>
-      (detail = (
-        e as CustomEvent<LyraDockPanelCollapseChangeDetail>
-      ).detail)
+      (detail = (e as CustomEvent<LyraDockPanelCollapseChangeDetail>).detail)
   );
   toggle.click();
   await elementUpdated(el);
@@ -816,7 +880,9 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   ) as HTMLElement;
   expect(content.hidden).to.equal(true);
   // No drag handle while collapsed -- nothing meaningful to resize.
-  expect((el.shadowRoot!.querySelector('[part="handle"]')) === (null)).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(
+    true
+  );
 });
 
 it("emits a cancelable lr-collapse-request before lr-collapse-change, vetoing the mutation when prevented", async () => {
@@ -830,17 +896,23 @@ it("emits a cancelable lr-collapse-request before lr-collapse-change, vetoing th
   el.addEventListener("lr-collapse-request", (e) => {
     order.push("lr-collapse-request");
     expect((e as CustomEvent).cancelable).to.equal(true);
-    expect(el.collapsed, "collapsed must still be false while the request is pending").to.equal(false);
+    expect(
+      el.collapsed,
+      "collapsed must still be false while the request is pending"
+    ).to.equal(false);
     e.preventDefault();
   });
-  el.addEventListener("lr-collapse-change", () => order.push("lr-collapse-change"));
+  el.addEventListener("lr-collapse-change", () =>
+    order.push("lr-collapse-change")
+  );
 
   toggle.click();
   await elementUpdated(el);
 
-  expect(order, "a prevented request must veto the mutation and skip lr-collapse-change").to.deep.equal([
-    "lr-collapse-request",
-  ]);
+  expect(
+    order,
+    "a prevented request must veto the mutation and skip lr-collapse-change"
+  ).to.deep.equal(["lr-collapse-request"]);
   expect(el.collapsed).to.equal(false);
 });
 
@@ -981,8 +1053,7 @@ it("atomically clamps an absolute panel on shrink without restoring or emitting 
   wrapper.style.width = "200px";
   await waitUntil(
     () =>
-      el.extent === "200px" &&
-      handle().getAttribute("aria-valuemax") === "200",
+      el.extent === "200px" && handle().getAttribute("aria-valuemax") === "200",
     "the panel did not reconcile to the smaller containing block"
   );
   expect(el.getBoundingClientRect().width).to.be.closeTo(200, 1);
@@ -1052,7 +1123,9 @@ it("reconciles direct flex-layout writes, percentage/rem bounds, and inverted ra
 
 it("reconciles block-axis percentage, em, and viewport-unit bounds", async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
-    <div style="display:flex;flex-direction:column;inline-size:300px;block-size:300px">
+    <div
+      style="display:flex;flex-direction:column;inline-size:300px;block-size:300px"
+    >
       <main style="flex:1 1 0;min-block-size:0">main</main>
       <lr-dock-panel
         style="font-size:10px"
@@ -1148,7 +1221,9 @@ describe("aria-label localization", () => {
 });
 
 it("no longer answers to the pre-8.0.0 size/min-size/max-size attributes — extent replaced them outright", async () => {
-  const el = await dockedFixture('size="300px" min-size="24px" max-size="500px"');
+  const el = await dockedFixture(
+    'size="300px" min-size="24px" max-size="500px"'
+  );
   await elementUpdated(el);
   // `size` was a CSS length on a property name the rest of the library reserves for a tier on the
   // six-step ladder; the rename is clean, with no alias, so the old spellings are inert.
@@ -1192,7 +1267,9 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     try {
       await sendMouse({ type: "move", position });
       await settleTransition();
-      expect(getComputedStyle(toggle).backgroundColor).to.equal("rgb(10, 20, 30)");
+      expect(getComputedStyle(toggle).backgroundColor).to.equal(
+        "rgb(10, 20, 30)"
+      );
       expect(getComputedStyle(toggle).color).to.equal("rgb(40, 50, 60)");
       await sendMouse({ type: "down" });
       await settleTransition();
@@ -1219,7 +1296,8 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     // hovered/pressed colors below can be checked against the *exact* previous hardcoded values
     // rather than merely "changed from resting".
     const probe = document.createElement("div");
-    probe.style.cssText = "background-color: var(--lr-color-brand-quiet); color: var(--lr-color-brand);";
+    probe.style.cssText =
+      "background-color: var(--lr-color-brand-quiet); color: var(--lr-color-brand);";
     el.shadowRoot!.appendChild(probe);
     const expectedHoverBg = getComputedStyle(probe).backgroundColor;
     const expectedHoverColor = getComputedStyle(probe).color;
@@ -1255,7 +1333,9 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     `);
     const panel = el.querySelector("lr-dock-panel") as LyraDockPanel;
     await elementUpdated(panel);
-    const handle = panel.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    const handle = panel.shadowRoot!.querySelector(
+      '[part="handle"]'
+    ) as HTMLElement;
     const resting = getComputedStyle(handle).backgroundColor;
     handle.setPointerCapture = () => {};
     const rect = handle.getBoundingClientRect();
@@ -1265,10 +1345,14 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     ];
     try {
       await sendMouse({ type: "move", position });
-      expect(getComputedStyle(handle).backgroundColor).to.equal("rgb(70, 80, 90)");
+      expect(getComputedStyle(handle).backgroundColor).to.equal(
+        "rgb(70, 80, 90)"
+      );
       expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
       await sendMouse({ type: "down" });
-      expect(getComputedStyle(handle).backgroundColor).to.equal("rgb(100, 110, 120)");
+      expect(getComputedStyle(handle).backgroundColor).to.equal(
+        "rgb(100, 110, 120)"
+      );
       await sendMouse({ type: "up" });
     } finally {
       await resetMouse();
@@ -1287,7 +1371,9 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     `);
     const panel = el.querySelector("lr-dock-panel") as LyraDockPanel;
     await elementUpdated(panel);
-    const handle = panel.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    const handle = panel.shadowRoot!.querySelector(
+      '[part="handle"]'
+    ) as HTMLElement;
     handle.setPointerCapture = () => {};
     const rect = handle.getBoundingClientRect();
     const position: [number, number] = [

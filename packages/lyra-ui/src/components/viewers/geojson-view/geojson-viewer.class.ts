@@ -31,20 +31,7 @@ import type {
 } from '../document-viewer/anchors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import {
-  LYRA_DEFAULT_anchorJumped,
-  LYRA_DEFAULT_anchorJumpedToPage,
-  LYRA_DEFAULT_anchorNotFound,
-  LYRA_DEFAULT_documentPreviewEmpty,
-  LYRA_DEFAULT_documentPreviewResourceTooLarge,
-  LYRA_DEFAULT_documentPreviewTypeDocument,
-  LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-  LYRA_DEFAULT_geojsonViewFeatureCount,
-  LYRA_DEFAULT_geojsonViewInvalid,
-  LYRA_DEFAULT_geojsonViewLabel,
-  LYRA_DEFAULT_geojsonViewMissingMapLibrary,
-  LYRA_DEFAULT_loadingDocument,
-} from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_geojsonViewFeatureCount, LYRA_DEFAULT_geojsonViewInvalid, LYRA_DEFAULT_geojsonViewLabel, LYRA_DEFAULT_geojsonViewMissingMapLibrary, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The three structural container tags accepted by the GeoJSON bridge. */
@@ -503,23 +490,21 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
 export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      anchorJumped: LYRA_DEFAULT_anchorJumped,
-      anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
-      anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-      documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
-      documentPreviewResourceTooLarge:
-        LYRA_DEFAULT_documentPreviewResourceTooLarge,
-      documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
-      documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
-      geojsonViewFeatureCount: LYRA_DEFAULT_geojsonViewFeatureCount,
-      geojsonViewInvalid: LYRA_DEFAULT_geojsonViewInvalid,
-      geojsonViewLabel: LYRA_DEFAULT_geojsonViewLabel,
-      geojsonViewMissingMapLibrary: LYRA_DEFAULT_geojsonViewMissingMapLibrary,
-      loadingDocument: LYRA_DEFAULT_loadingDocument,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    anchorJumped: LYRA_DEFAULT_anchorJumped,
+    anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
+    anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
+    documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
+    documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
+    documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
+    geojsonViewFeatureCount: LYRA_DEFAULT_geojsonViewFeatureCount,
+    geojsonViewInvalid: LYRA_DEFAULT_geojsonViewInvalid,
+    geojsonViewLabel: LYRA_DEFAULT_geojsonViewLabel,
+    geojsonViewMissingMapLibrary: LYRA_DEFAULT_geojsonViewMissingMapLibrary,
+    loadingDocument: LYRA_DEFAULT_loadingDocument,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -1,24 +1,27 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { syncValidityStates } from '../../../internal/custom-states.js';
-import { nextId } from '../../../internal/a11y.js';
-import { closeIcon } from '../../../internal/icons.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { property, query, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import {
+  AnchoredValidityController,
+  VALIDITY_ANCHOR,
+} from "../../../internal/anchored-validity.js";
+import { syncValidityStates } from "../../../internal/custom-states.js";
+import { nextId } from "../../../internal/a11y.js";
+import { closeIcon } from "../../../internal/icons.js";
 import {
   autocorrectConverter,
   normalizeAutocorrect,
   spellcheckConverter,
-} from '../../../internal/converters.js';
-import { submitOnEnter } from '../../../internal/submit-on-enter.js';
+} from "../../../internal/converters.js";
+import { submitOnEnter } from "../../../internal/submit-on-enter.js";
 import {
   dispatchNativeEvent,
   dispatchNativeInputEvent,
   relayNativeEvent,
-} from '../../../internal/native-event-relay.js';
-import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize } from '../../../internal/variants.js';
-import { styles } from './token-input.styles.js';
+} from "../../../internal/native-event-relay.js";
+import { sizes } from "../../../internal/sizes.styles.js";
+import type { LyraSize } from "../../../internal/variants.js";
+import { styles } from "./token-input.styles.js";
 import {
   attachInternalsSafely,
   createStringArrayFormDataState,
@@ -28,27 +31,35 @@ import {
   readStringArrayFormDataState,
   setFormOwner,
   type FormOwnerValue,
-} from '../../../internal/form-associated.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
+} from "../../../internal/form-associated.js";
+import { installInvalidEventAlias } from "../../../internal/invalid-event-alias.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_fieldRequired,
+  LYRA_DEFAULT_removeWithContext,
+  LYRA_DEFAULT_tokenInputEditWithContext,
+  LYRA_DEFAULT_tokenInputRequired,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export interface LyraTokenInputEventMap {
-  'lr-invalid': CustomEvent<null>;
+  "lr-invalid": CustomEvent<null>;
   input: InputEvent;
   change: Event;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
-  'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
-  'lr-add': CustomEvent<Readonly<{ value: string; values: readonly string[] }>>;
-  'lr-remove': CustomEvent<{ value: string; index: number }>;
-  'lr-token-edit': CustomEvent<{ value: string; previousValue: string; index: number }>;
+  "lr-input": CustomEvent<Readonly<{ value: readonly string[] }>>;
+  "lr-change": CustomEvent<Readonly<{ value: readonly string[] }>>;
+  "lr-focus": CustomEvent<null>;
+  "lr-blur": CustomEvent<null>;
+  "lr-add": CustomEvent<Readonly<{ value: string; values: readonly string[] }>>;
+  "lr-remove": CustomEvent<{ value: string; index: number }>;
+  "lr-token-edit": CustomEvent<{
+    value: string;
+    previousValue: string;
+    index: number;
+  }>;
 }
 
 /**
@@ -60,10 +71,11 @@ export interface LyraTokenInputEventMap {
  */
 const delimiterConverter = {
   fromAttribute: (value: string | null): string | null => {
-    if (value === null) return ',';
-    return value === '' || value === 'none' ? null : value;
+    if (value === null) return ",";
+    return value === "" || value === "none" ? null : value;
   },
-  toAttribute: (value: string | null): string => (value === null ? 'none' : value),
+  toAttribute: (value: string | null): string =>
+    value === null ? "none" : value,
 };
 
 function normalizeStringArray(value: unknown): readonly string[] {
@@ -71,7 +83,7 @@ function normalizeStringArray(value: unknown): readonly string[] {
   try {
     const normalized: string[] = [];
     for (const entry of value) {
-      if (typeof entry === 'string') normalized.push(entry);
+      if (typeof entry === "string") normalized.push(entry);
     }
     return Object.freeze(normalized);
   } catch {
@@ -89,7 +101,8 @@ const stringArrayConverter = {
       return [];
     }
   },
-  toAttribute: (value: readonly string[] | null): string | null => value == null ? null : JSON.stringify(value),
+  toAttribute: (value: readonly string[] | null): string | null =>
+    value == null ? null : JSON.stringify(value),
 };
 
 /** `<lr-token-input>` — an editable, form-associated list of removable tokens.
@@ -148,8 +161,8 @@ const stringArrayConverter = {
  * @cssprop --lr-token-input-token-padding - Per-token chip padding, scaled by `size`.
  * @cssprop [--lr-token-input-gap=var(--lr-space-xs)] - Gap between form/row children.
  * @cssprop [--lr-token-input-token-gap=var(--lr-space-2xs)] - Gap inside token chips.
- * @cssprop [--lr-token-input-radius=var(--lr-radius)] - Row/token corner radius. The `pill`
- *   attribute swaps it for `--lr-radius-pill`.
+ * @cssprop [--lr-token-input-radius=var(--lr-radius)] - Row/token corner radius. `pill` changes its
+ *   private default to `--lr-radius-pill`; an inherited or direct public value still wins.
  * @cssprop [--lr-token-input-token-bg=var(--lr-color-brand-quiet)] - Token chip background.
  * @cssprop [--lr-token-input-action-hover-bg=var(--lr-color-brand-quiet)] - Edit/remove hover background.
  * @cssprop [--lr-token-input-edit-hover-bg=var(--lr-token-input-action-hover-bg)] - Editable token
@@ -195,25 +208,26 @@ const stringArrayConverter = {
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-    removeWithContext: LYRA_DEFAULT_removeWithContext,
-    tokenInputEditWithContext: LYRA_DEFAULT_tokenInputEditWithContext,
-    tokenInputRequired: LYRA_DEFAULT_tokenInputRequired,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      fieldRequired: LYRA_DEFAULT_fieldRequired,
+      removeWithContext: LYRA_DEFAULT_removeWithContext,
+      tokenInputEditWithContext: LYRA_DEFAULT_tokenInputEditWithContext,
+      tokenInputRequired: LYRA_DEFAULT_tokenInputRequired,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
-    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
+    customError: { attribute: "custom-error", reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     defaultValue: {
-      attribute: 'value',
+      attribute: "value",
       reflect: true,
       useDefault: true,
       converter: stringArrayConverter,
@@ -221,59 +235,65 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     },
   };
 
-  @property() label = '';
-  @property() hint = '';
-  @property({ attribute: 'error-text' }) errorText = '';
-  @property() placeholder = '';
+  @property() label = "";
+  @property() hint = "";
+  @property({ attribute: "error-text" }) errorText = "";
+  @property() placeholder = "";
   /** Forwarded to both native text inputs using the native explicit `"true"`/`"false"`
    *  attribute vocabulary. */
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   /** Forwarded to both native text inputs. Empty preserves the browser default. */
-  @property() override autocapitalize = '';
+  @property() override autocapitalize = "";
   private autocorrectValue = true;
   /** Native editing-assistance state forwarded to both text inputs. Reads are boolean; writes
    * accept booleans and the native/Shoelace string vocabulary (`off`/`false` disable it). */
   @property({ converter: autocorrectConverter })
-  override get autocorrect(): boolean { return this.autocorrectValue; }
+  override get autocorrect(): boolean {
+    return this.autocorrectValue;
+  }
   override set autocorrect(next: boolean | string) {
     this.autocorrectValue = normalizeAutocorrect(next);
     this.requestUpdate();
   }
   /** Accessible-name override forwarded to the input wrapper and draft input. Attribute presence
    *  wins, including an explicitly empty `aria-label`, which suppresses visible-label linkage. */
-  @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  @property({ attribute: "aria-label" }) accessibleLabel = "";
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`. The Web Awesome /
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
    *  tag rename with no attribute rewrite. */
-  @property({ reflect: true }) size: LyraSize = 'm';
+  @property({ reflect: true }) size: LyraSize = "m";
   /** Rounds the token row's corners to a full pill, mirroring `lr-input`'s own `pill`. It is a
    *  single override of `--lr-token-input-radius`, which the tokens share with the row, so the
    *  chips round with it. */
   @property({ type: Boolean, reflect: true }) pill = false;
-  @property({ attribute: 'allow-duplicates', type: Boolean }) allowDuplicates = false;
+  @property({ attribute: "allow-duplicates", type: Boolean }) allowDuplicates =
+    false;
   /** Allow editing an existing token in place: each token becomes a roving tab stop that opens an
    *  inline editor on click, Enter, or F2. Defaults to `false`, in which case the token row renders
    *  exactly as it does without this feature and stays non-focusable. Own or fieldset-cascaded
    *  disablement removes every edit trigger from focus and marks it `aria-disabled="true"`; one
    *  roving stop is restored when the control becomes enabled again. */
   private _editable = false;
-  @property({ attribute: 'editable', type: Boolean, reflect: true })
-  get editable(): boolean { return this._editable; }
+  @property({ attribute: "editable", type: Boolean, reflect: true })
+  get editable(): boolean {
+    return this._editable;
+  }
   set editable(next: boolean) {
     const old = this._editable;
     this._editable = Boolean(next);
     if (!this._editable) this.discardTransientState(false);
-    this.requestUpdate('editable', old);
+    this.requestUpdate("editable", old);
   }
   /** Character(s) that split a typed draft into several tokens, and (when a single character) the
    *  keystroke that commits the draft. `null` — from the property, or from `delimiter="none"` /
    *  `delimiter=""` — disables both, so a token may contain the delimiter verbatim. Defaults to `,`. */
-  @property({ attribute: 'delimiter', converter: delimiterConverter }) delimiter: string | null = ',';
-  @state() private draft = '';
+  @property({ attribute: "delimiter", converter: delimiterConverter })
+  delimiter: string | null = ",";
+  @state() private draft = "";
   @state() private touched = false;
   /** Index of the token whose inline editor is open, or `-1` when none is. */
   @state() private editingIndex = -1;
-  @state() private editDraft = '';
+  @state() private editDraft = "";
   /** Roving tab stop of the token row. Read through `activeTokenIndex`, which clamps it against the
    *  current token count so a shrinking list can never leave the row with no tab stop. */
   @state() private rovingIndex = 0;
@@ -293,14 +313,14 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   // Selected by id rather than by tag: an open token editor is also an `input`, and it precedes
   // this one in DOM order, so a bare `input` selector would silently retarget `focus()`, `blur()`,
   // and the validity anchor at the editor while a token is being edited.
-  @query('#input') private inputEl?: HTMLInputElement;
+  @query("#input") private inputEl?: HTMLInputElement;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
-  private labelId = nextId('token-input-label');
-  private hintId = nextId('token-input-hint');
-  private errorId = nextId('token-input-error');
+  private labelId = nextId("token-input-label");
+  private hintId = nextId("token-input-hint");
+  private errorId = nextId("token-input-error");
   private _value: readonly string[] = Object.freeze([]);
   private _defaultValue: readonly string[] = Object.freeze([]);
   private _valueDirty = false;
@@ -311,105 +331,143 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   // lr-select's/lr-combobox's identical `_fieldsetDisabled`/
   // `effectiveDisabled` pattern), only the combined getter below.
   private _fieldsetDisabled = false;
-  private _name = '';
+  private _name = "";
   private _required = false;
   private _disabled = false;
 
   @property({ attribute: false })
-  get value(): readonly string[] { return this._value; }
+  get value(): readonly string[] {
+    return this._value;
+  }
   set value(next: readonly string[]) {
     const old = this._value;
     if (!this.settingDefaultValue) this._valueDirty = true;
     const normalized = normalizeStringArray(next);
     if (this.editingIndex >= 0 && normalized !== old) {
       this.editingIndex = -1;
-      this.editDraft = '';
+      this.editDraft = "";
       this.focusEditorPending = false;
     }
     this._value = normalized;
-    this.requestUpdate('value', old);
+    this.requestUpdate("value", old);
     if (this.internals) this.syncValidity();
   }
   /** Reflected JSON-array reset default; changing it never overwrites a dirty live token list. */
-  get defaultValue(): readonly string[] { return this._defaultValue; }
+  get defaultValue(): readonly string[] {
+    return this._defaultValue;
+  }
   set defaultValue(next: readonly string[] | null) {
     if (this.reflectingDefaultValue) return;
     const old = this._defaultValue;
     this._defaultValue = normalizeStringArray(next);
     this.reflectingDefaultValue = true;
     try {
-      if (next == null) this.removeAttribute('value');
-      else this.setAttribute('value', JSON.stringify(this._defaultValue));
+      if (next == null) this.removeAttribute("value");
+      else this.setAttribute("value", JSON.stringify(this._defaultValue));
     } finally {
       this.reflectingDefaultValue = false;
     }
     if (!this._valueDirty) this.restoreLiveValueFromDefault();
-    this.requestUpdate('defaultValue', old);
+    this.requestUpdate("defaultValue", old);
   }
 
   /** The form submission key, reflected synchronously for native form APIs.
    *  This control keys its `FormData` entries directly off `name` (see
    *  `syncValidity()`), so a rename must rebuild that `FormData` in the same
    *  tick -- mirrors `<lr-combobox>`'s identical `name` setter. */
-  get name(): string { return this._name; }
+  get name(): string {
+    return this._name;
+  }
   set name(next: string) {
     const old = this._name;
-    this._name = next ?? '';
+    this._name = next ?? "";
     if (this._name) {
-      this.setAttribute('name', this._name);
+      this.setAttribute("name", this._name);
     } else {
-      this.removeAttribute('name');
+      this.removeAttribute("name");
     }
     this.syncValidity();
-    this.requestUpdate('name', old);
+    this.requestUpdate("name", old);
   }
 
-  get required(): boolean { return this._required; }
+  get required(): boolean {
+    return this._required;
+  }
   set required(next: boolean) {
     const old = this._required;
     this._required = Boolean(next);
-    this.toggleAttribute('required', this._required);
+    this.toggleAttribute("required", this._required);
     this.syncValidity();
-    this.requestUpdate('required', old);
+    this.requestUpdate("required", old);
   }
 
-  get disabled(): boolean { return this._disabled; }
+  get disabled(): boolean {
+    return this._disabled;
+  }
   set disabled(next: boolean) {
     const old = this._disabled;
     const wasEffectivelyDisabled = this.effectiveDisabled;
     this._disabled = Boolean(next);
-    if (!wasEffectivelyDisabled && this.effectiveDisabled) this.retireDisabledInteraction();
-    this.toggleAttribute('disabled', this._disabled);
+    if (!wasEffectivelyDisabled && this.effectiveDisabled)
+      this.retireDisabledInteraction();
+    this.toggleAttribute("disabled", this._disabled);
     // Disabling bars constraint validation, so the violation itself is recomputed here rather than
     // left raised on a control the browser will never enforce.
     this.syncValidity();
-    this.requestUpdate('disabled', old);
+    this.requestUpdate("disabled", old);
   }
 
   constructor() {
     super();
     this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    this.validityController = new AnchoredValidityController(
+      this,
+      this.internals,
+      () => this[VALIDITY_ANCHOR]()
+    );
+    installCustomErrorProperty(
+      this,
+      () => this.validityController.customValidityMessage
+    );
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
+      this.emit("lr-invalid", null, init)
+    );
   }
-  override connectedCallback(): void { super.connectedCallback(); this.syncValidity(); }
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.syncValidity();
+  }
   override disconnectedCallback(): void {
     this.discardTransientState(true);
     super.disconnectedCallback();
   }
-  get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
-  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
-  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
-  get labels(): NodeList { return this.internals.labels; }
-  get validity(): ValidityState { return this.internals.validity; }
-  get validationMessage(): string { return this.internals.validationMessage; }
-  get willValidate(): boolean { return this.internals.willValidate; }
+  get form(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
+  }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
+  }
+  get labels(): NodeList {
+    return this.internals.labels;
+  }
+  get validity(): ValidityState {
+    return this.internals.validity;
+  }
+  get validationMessage(): string {
+    return this.internals.validationMessage;
+  }
+  get willValidate(): boolean {
+    return this.internals.willValidate;
+  }
   /** Effective disabled state: this element's own `disabled` OR an ancestor
    *  `<fieldset disabled>`'s inherited state -- mirrors native `<input>`, whose
    *  own `disabled` IDL property/attribute is never mutated by a fieldset. */
-  get effectiveDisabled(): boolean { return this.disabled || this._fieldsetDisabled; }
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled;
+  }
   /**
    * Called by the browser when an ancestor `<fieldset disabled>` toggles.
    * Tracked separately from the consumer's own `disabled` (see
@@ -419,7 +477,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   formDisabledCallback(disabled: boolean): void {
     const wasEffectivelyDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
-    if (!wasEffectivelyDisabled && this.effectiveDisabled) this.retireDisabledInteraction();
+    if (!wasEffectivelyDisabled && this.effectiveDisabled)
+      this.retireDisabledInteraction();
     // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
     this.syncValidity();
     this.requestUpdate();
@@ -430,12 +489,24 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    * empty list has no token to edit, so the two states are mutually exclusive.
    * @internal
    */
-  [VALIDITY_ANCHOR](): HTMLElement | null { return this.inputEl ?? this.renderRoot?.querySelector('[part="input-wrapper"]') ?? null; }
-  checkValidity(): boolean { return this.internals.checkValidity(); }
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    return (
+      this.inputEl ??
+      this.renderRoot?.querySelector('[part="input-wrapper"]') ??
+      null
+    );
+  }
+  checkValidity(): boolean {
+    return this.internals.checkValidity();
+  }
   /** Reporting is what a submit attempt does, and a failed submit is precisely when native
    *  `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
    *  `FormAssociated` mixin. */
-  reportValidity(): boolean { this.touched = true; this.syncValidity(); return this.internals.reportValidity(); }
+  reportValidity(): boolean {
+    this.touched = true;
+    this.syncValidity();
+    return this.internals.reportValidity();
+  }
   /**
    * Sets or clears a consumer-supplied validation error — the standard channel for a rejection no
    * client-side constraint can express ("that tag is reserved"). A non-empty `message` raises
@@ -451,7 +522,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    * The message is caller-supplied content, so it is used verbatim and never localized here.
    */
   setCustomValidity(message: string): void {
-    this.validityController.setCustomValidity(message ?? '');
+    this.validityController.setCustomValidity(message ?? "");
     // Republishes `data-invalid` and the six validity custom states from the now-current effective
     // validity. The intrinsic recomputation this also runs is idempotent and, by construction,
     // never touches the custom layer the line above just set.
@@ -460,7 +531,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   /** Reads both component state and the UA's synchronous fieldset cascade before actions mutate
    * or enter one of this compound control's still-rendered native focus surfaces. */
   private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
+    return this.effectiveDisabled || this.matches(":disabled");
   }
   override focus(options?: FocusOptions): void {
     if (this.liveDisabled) return;
@@ -468,7 +539,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
   override blur(): void {
     const active = this.shadowRoot?.activeElement;
-    if (active && typeof (active as HTMLElement).blur === 'function') {
+    if (active && typeof (active as HTMLElement).blur === "function") {
       (active as HTMLElement).blur();
     }
   }
@@ -480,38 +551,48 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.inputEl?.focus();
   }
   /** Selects the complete pending draft in the internal native text input. */
-  select(): void { this.inputEl?.select(); }
+  select(): void {
+    this.inputEl?.select();
+  }
   /** Native draft selection start, or `null` before the internal input renders. */
-  get selectionStart(): number | null { return this.inputEl?.selectionStart ?? null; }
+  get selectionStart(): number | null {
+    return this.inputEl?.selectionStart ?? null;
+  }
   set selectionStart(value: number | null) {
     if (this.inputEl) this.inputEl.selectionStart = value ?? 0;
   }
   /** Native draft selection end, or `null` before the internal input renders. */
-  get selectionEnd(): number | null { return this.inputEl?.selectionEnd ?? null; }
+  get selectionEnd(): number | null {
+    return this.inputEl?.selectionEnd ?? null;
+  }
   set selectionEnd(value: number | null) {
     if (this.inputEl) this.inputEl.selectionEnd = value ?? 0;
   }
   /** Native draft selection direction, or `null` before the internal input renders. */
-  get selectionDirection(): HTMLInputElement['selectionDirection'] {
+  get selectionDirection(): HTMLInputElement["selectionDirection"] {
     return this.inputEl?.selectionDirection ?? null;
   }
-  set selectionDirection(value: HTMLInputElement['selectionDirection']) {
-    if (this.inputEl) this.inputEl.selectionDirection = value ?? 'none';
+  set selectionDirection(value: HTMLInputElement["selectionDirection"]) {
+    if (this.inputEl) this.inputEl.selectionDirection = value ?? "none";
   }
   /** Passthrough to the native draft input's selection range. */
   setSelectionRange(
     selectionStart: number,
     selectionEnd: number,
-    selectionDirection: HTMLInputElement['selectionDirection'] = 'none',
+    selectionDirection: HTMLInputElement["selectionDirection"] = "none"
   ): void {
-    this.inputEl?.setSelectionRange(selectionStart, selectionEnd, selectionDirection ?? 'none');
+    this.inputEl?.setSelectionRange(
+      selectionStart,
+      selectionEnd,
+      selectionDirection ?? "none"
+    );
   }
   /** Applies a native event-silent range edit and synchronizes the pending draft. */
   setRangeText(
     replacement: string,
     start?: number,
     end?: number,
-    selectMode: SelectionMode = 'preserve',
+    selectMode: SelectionMode = "preserve"
   ): void {
     const input = this.inputEl;
     if (!input) return;
@@ -525,11 +606,21 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but keeps a future mixin's willUpdate reachable
     if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
-      this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
-      this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
-      this.hasStartSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'start');
-      this.hasEndSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'end');
+      this.hasLabelSlot = Array.from(this.children ?? []).some(
+        (el) => el.getAttribute("slot") === "label"
+      );
+      this.hasHintSlot = Array.from(this.children ?? []).some(
+        (el) => el.getAttribute("slot") === "hint"
+      );
+      this.hasErrorSlot = Array.from(this.children ?? []).some(
+        (el) => el.getAttribute("slot") === "error"
+      );
+      this.hasStartSlot = Array.from(this.children ?? []).some(
+        (el) => el.getAttribute("slot") === "start"
+      );
+      this.hasEndSlot = Array.from(this.children ?? []).some(
+        (el) => el.getAttribute("slot") === "end"
+      );
     }
   }
 
@@ -544,8 +635,14 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // token lists, and with it the documented `:state(user-invalid)` error styling.
     const barred = this.barredFromValidation;
     const missing = !barred && this.required && this.value.length === 0;
-    this.validityController.setValidity(missing ? { valueMissing: true } : {}, missing ? this.localize('tokenInputRequired') : '');
-    this.toggleAttribute('data-invalid', !barred && this.touched && !this.internals.validity.valid);
+    this.validityController.setValidity(
+      missing ? { valueMissing: true } : {},
+      missing ? this.localize("tokenInputRequired") : ""
+    );
+    this.toggleAttribute(
+      "data-invalid",
+      !barred && this.touched && !this.internals.validity.valid
+    );
     // The six validity custom states, from the shared helper in `internal/custom-states.ts`. This
     // control drives `ElementInternals` directly rather than through the `FormAssociated` mixin
     // (its value is a `string[]`), so it publishes them itself; `touched` is its own interaction
@@ -561,22 +658,30 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (this.name) this.value.forEach((token) => data.append(this.name, token));
     this.internals.setFormValue(
       this.name ? data : null,
-      createStringArrayFormDataState(this.name, this.value),
+      createStringArrayFormDataState(this.name, this.value)
     );
   }
   private updateValue(next: readonly string[]): void {
     this.value = next;
     this.syncValidity();
     dispatchNativeInputEvent(this);
-    this.emit('lr-input', Object.freeze({ value: Object.freeze([...this.value]) }));
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', Object.freeze({ value: Object.freeze([...this.value]) }));
+    this.emit(
+      "lr-input",
+      Object.freeze({ value: Object.freeze([...this.value]) })
+    );
+    dispatchNativeEvent(this, "change");
+    this.emit(
+      "lr-change",
+      Object.freeze({ value: Object.freeze([...this.value]) })
+    );
   }
   private addDraft(): void {
     if (this.liveDisabled) return;
     // A null/empty delimiter means the whole draft is one token -- `''.split('')` would otherwise
     // explode the draft into one token per character.
-    const parts = this.delimiter ? this.draft.split(this.delimiter) : [this.draft];
+    const parts = this.delimiter
+      ? this.draft.split(this.delimiter)
+      : [this.draft];
     const candidates = parts.map((token) => token.trim()).filter(Boolean);
     const next = [...this.value];
     const seen = this.allowDuplicates ? null : new Set(next);
@@ -589,23 +694,26 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     }
     if (added.length > 0) {
       this.updateValue(next);
-      this.emit('lr-add', Object.freeze({
-        value: added[added.length - 1]!,
-        values: Object.freeze([...added]),
-      }));
+      this.emit(
+        "lr-add",
+        Object.freeze({
+          value: added[added.length - 1]!,
+          values: Object.freeze([...added]),
+        })
+      );
     }
-    this.draft = '';
+    this.draft = "";
   }
 
   /** Clears lifecycle-only editing state before focus teardown can turn a blur into a commit. */
   private discardTransientState(clearDraft: boolean): void {
     this.editingIndex = -1;
-    this.editDraft = '';
+    this.editDraft = "";
     this.focusEditorPending = false;
     this.focusTokenPending = -1;
     if (clearDraft) {
-      this.draft = '';
-      if (this.inputEl) this.inputEl.value = '';
+      this.draft = "";
+      if (this.inputEl) this.inputEl.value = "";
     }
   }
 
@@ -613,7 +721,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private retireDisabledInteraction(): void {
     this.discardTransientState(true);
     const active = this.shadowRoot?.activeElement;
-    if (active && typeof (active as HTMLElement).blur === 'function') {
+    if (active && typeof (active as HTMLElement).blur === "function") {
       (active as HTMLElement).blur();
     }
   }
@@ -624,11 +732,18 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // The roving/edit index can outlive the token it pointed at, and `lr-remove` promises a
     // `string` value -- a stale index has nothing to remove rather than a token named `undefined`.
     if (removed === undefined) return;
-    const event = this.emit('lr-remove', { value: removed, index }, { cancelable: true });
+    const event = this.emit(
+      "lr-remove",
+      { value: removed, index },
+      { cancelable: true }
+    );
     if (event.defaultPrevented) return;
     // Removing a token reindexes every later one, so an editor left open over the old indices would
     // commit against the wrong token.
-    if (this.editingIndex >= 0) { this.editingIndex = -1; this.editDraft = ''; }
+    if (this.editingIndex >= 0) {
+      this.editingIndex = -1;
+      this.editDraft = "";
+    }
     this.updateValue(this.value.filter((_token, i) => i !== index));
   }
   /**
@@ -656,7 +771,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (this.editingIndex < 0) return;
     this.focusTokenPending = this.editingIndex;
     this.editingIndex = -1;
-    this.editDraft = '';
+    this.editDraft = "";
   }
 
   /**
@@ -681,14 +796,20 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // stealing it back would fight them.
     if (restoreFocus) this.focusTokenPending = index;
     this.editingIndex = -1;
-    this.editDraft = '';
+    this.editDraft = "";
     // Editor state is cleared above even for a stale index; there is simply no previous token to
     // report, and `lr-token-edit` promises a `string` `previousValue`.
     if (previousValue === undefined) return;
     if (!next || next === previousValue) return;
-    if (!this.allowDuplicates && this.value.some((token, i) => i !== index && token === next)) return;
-    this.updateValue(this.value.map((token, i) => (i === index ? next : token)));
-    this.emit('lr-token-edit', { value: next, previousValue, index });
+    if (
+      !this.allowDuplicates &&
+      this.value.some((token, i) => i !== index && token === next)
+    )
+      return;
+    this.updateValue(
+      this.value.map((token, i) => (i === index ? next : token))
+    );
+    this.emit("lr-token-edit", { value: next, previousValue, index });
   }
 
   private moveRovingFocus(index: number): void {
@@ -701,16 +822,27 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private onTokenKeyDown(event: KeyboardEvent, index: number): void {
     if (this.liveDisabled) return;
     // ArrowLeft/ArrowRight mean previous/next *visually*, so they swap under RTL.
-    const rtl = this.effectiveDirection === 'rtl';
-    const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backward = rtl ? 'ArrowRight' : 'ArrowLeft';
+    const rtl = this.effectiveDirection === "rtl";
+    const forward = rtl ? "ArrowLeft" : "ArrowRight";
+    const backward = rtl ? "ArrowRight" : "ArrowLeft";
     // Space activates alongside Enter because the token carries `role="button"`; F2 matches the
     // grid/tree convention for "edit this cell in place".
-    if (event.key === 'Enter' || event.key === ' ' || event.key === 'F2') { event.preventDefault(); this.startEdit(index); }
-    else if (event.key === forward) { event.preventDefault(); this.moveRovingFocus(index + 1); }
-    else if (event.key === backward) { event.preventDefault(); this.moveRovingFocus(index - 1); }
-    else if (event.key === 'Home') { event.preventDefault(); this.moveRovingFocus(0); }
-    else if (event.key === 'End') { event.preventDefault(); this.moveRovingFocus(this.value.length - 1); }
+    if (event.key === "Enter" || event.key === " " || event.key === "F2") {
+      event.preventDefault();
+      this.startEdit(index);
+    } else if (event.key === forward) {
+      event.preventDefault();
+      this.moveRovingFocus(index + 1);
+    } else if (event.key === backward) {
+      event.preventDefault();
+      this.moveRovingFocus(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      this.moveRovingFocus(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      this.moveRovingFocus(this.value.length - 1);
+    }
   }
 
   private onEditInput = (event: Event): void => {
@@ -725,13 +857,20 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     }
     this.editorBlurRelayed = false;
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
+    this.emit("lr-focus");
   };
   private onEditKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Enter') { event.preventDefault(); this.commitEdit(true); }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      this.commitEdit(true);
+    }
     // Escape is consumed rather than left to bubble: an enclosing dialog/popover would otherwise
     // close on the same keystroke that only meant "abandon this token edit".
-    else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); this.cancelEdit(); }
+    else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.cancelEdit();
+    }
   };
   private onEditBlur = (event: FocusEvent): void => {
     if (this.editorBlurRelayed) {
@@ -750,7 +889,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
         this.commitEdit(false);
       }
       relayNativeEvent(this, event);
-      this.emit('lr-blur');
+      this.emit("lr-blur");
     });
   };
 
@@ -761,27 +900,44 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   };
   private onKeyDown = (event: KeyboardEvent): void => {
     if (this.liveDisabled) return;
-    if (event.key === 'Enter' || (this.delimiter !== null && event.key === this.delimiter)) {
-      if (this.draft.trim()) { event.preventDefault(); this.addDraft(); }
+    if (
+      event.key === "Enter" ||
+      (this.delimiter !== null && event.key === this.delimiter)
+    ) {
+      if (this.draft.trim()) {
+        event.preventDefault();
+        this.addDraft();
+      }
       // No draft to commit, so Enter means what it means in any other text field: implicit
       // submission of the ancestor form. Only Enter -- a delimiter keystroke is this component's
       // own commit key, never a submit key.
-      else if (event.key === 'Enter') submitOnEnter(this, event);
+      else if (event.key === "Enter") submitOnEnter(this, event);
+    } else if (event.key === "Tab") {
+      if (this.draft.trim()) this.addDraft();
     }
-    else if (event.key === 'Tab') { if (this.draft.trim()) this.addDraft(); }
     // An open token editor owns Backspace: the destructive "remove the last token" shortcut must
     // not fire for a keystroke that was aimed at the text being edited.
-    else if (event.key === 'Backspace' && !this.draft && this.value.length && this.editingIndex < 0) { this.removeToken(this.value.length - 1); }
+    else if (
+      event.key === "Backspace" &&
+      !this.draft &&
+      this.value.length &&
+      this.editingIndex < 0
+    ) {
+      this.removeToken(this.value.length - 1);
+    }
   };
   // Disabling a focused native control blurs it as plain platform
   // behavior (nothing to do with custom elements) -- that is not a real user interaction, so it
   // must not commit a pending draft or flip `touched`, which could otherwise reenter an in-flight
   // Lit update and trip its dev-mode "scheduled an update after an update completed" warning.
   private onBlur = (event: FocusEvent): void => {
-    if (!this.liveDisabled) { if (this.draft.trim()) this.addDraft(); this.touched = true; }
+    if (!this.liveDisabled) {
+      if (this.draft.trim()) this.addDraft();
+      this.touched = true;
+    }
     this.syncValidity();
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
+    this.emit("lr-blur");
   };
   private onFocus = (event: FocusEvent): void => {
     if (this.liveDisabled) {
@@ -789,14 +945,36 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
+    this.emit("lr-focus");
   };
-  private stopInternalChange(event: Event): void { event.stopPropagation(); }
-  private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
-  private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
-  private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
-  private onStartSlotChange = (e: Event): void => { this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
-  private onEndSlotChange = (e: Event): void => { this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
+  private stopInternalChange(event: Event): void {
+    event.stopPropagation();
+  }
+  private onLabelSlotChange = (e: Event): void => {
+    this.hasLabelSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
+  };
+  private onHintSlotChange = (e: Event): void => {
+    this.hasHintSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
+  };
+  private onErrorSlotChange = (e: Event): void => {
+    this.hasErrorSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
+  };
+  private onStartSlotChange = (e: Event): void => {
+    this.hasStartSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
+  };
+  private onEndSlotChange = (e: Event): void => {
+    this.hasEndSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
+  };
   formResetCallback(): void {
     this.restoreLiveValueFromDefault();
     this.discardTransientState(true);
@@ -806,13 +984,16 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
   private restoreLiveValueFromDefault(): void {
     this.settingDefaultValue = true;
-    try { this.value = [...this._defaultValue]; }
-    finally { this.settingDefaultValue = false; }
+    try {
+      this.value = [...this._defaultValue];
+    } finally {
+      this.settingDefaultValue = false;
+    }
     this._valueDirty = false;
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
-    _mode?: 'restore' | 'autocomplete',
+    _mode?: "restore" | "autocomplete"
   ): void {
     this.value = readStringArrayFormDataState(state);
     this.discardTransientState(true);
@@ -828,7 +1009,9 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     super.updated(changed); // no-op today, but keeps a future mixin's updated reachable
     if (this.focusEditorPending) {
       this.focusEditorPending = false;
-      const editor = this.renderRoot?.querySelector('[part="token-editor"]') as HTMLInputElement | null;
+      const editor = this.renderRoot?.querySelector(
+        '[part="token-editor"]'
+      ) as HTMLInputElement | null;
       editor?.focus();
       editor?.select();
     }
@@ -841,35 +1024,168 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       // WebKit does not consistently scroll a newly programmatically-focused shadow descendant
       // inside this capped block-axis scrollport. Make the keyboard destination explicit while
       // keeping both axes at their nearest positions so the page itself does not jump.
-      label?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      label?.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }
   private renderRemoveButton(token: string, index: number): TemplateResult {
-    return html`<button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button>`;
+    return html`<button
+      part="remove"
+      type="button"
+      aria-label=${this.localize("removeWithContext", undefined, {
+        label: token,
+      })}
+      ?disabled=${this.effectiveDisabled}
+      @click=${() => this.removeToken(index)}
+    >
+      ${closeIcon()}
+    </button>`;
   }
   private renderEditableToken(token: string, index: number): TemplateResult {
     if (this.editingIndex === index) {
-      return html`<span part="token"><input part="token-editor" .value=${this.editDraft} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect ? (this.autocorrect ? 'on' : 'off') : nothing} @input=${this.onEditInput} @change=${this.stopInternalChange} @keydown=${this.onEditKeyDown} @focus=${this.onEditFocus} @blur=${this.onEditBlur} />${this.renderRemoveButton(token, index)}</span>`;
+      return html`<span part="token"
+        ><input
+          part="token-editor"
+          .value=${this.editDraft}
+          aria-label=${this.localize("tokenInputEditWithContext", undefined, {
+            label: token,
+          })}
+          ?disabled=${this.effectiveDisabled}
+          spellcheck=${this.spellcheck}
+          autocapitalize=${this.autocapitalize || nothing}
+          autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+            ? this.autocorrect
+              ? "on"
+              : "off"
+            : nothing}
+          @input=${this.onEditInput}
+          @change=${this.stopInternalChange}
+          @keydown=${this.onEditKeyDown}
+          @focus=${this.onEditFocus}
+          @blur=${this.onEditBlur}
+        />${this.renderRemoveButton(token, index)}</span
+      >`;
     }
-    return html`<span part="token"><span part="token-label" role="button" tabindex=${this.effectiveDisabled ? nothing : index === this.activeTokenIndex ? 0 : -1} aria-disabled=${String(this.effectiveDisabled)} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} @click=${() => this.startEdit(index)} @focus=${() => { if (this.rovingIndex !== index) this.rovingIndex = index; }} @keydown=${(event: KeyboardEvent) => this.onTokenKeyDown(event, index)}>${token}</span>${this.renderRemoveButton(token, index)}</span>`;
+    return html`<span part="token"
+      ><span
+        part="token-label"
+        role="button"
+        tabindex=${this.effectiveDisabled
+          ? nothing
+          : index === this.activeTokenIndex
+          ? 0
+          : -1}
+        aria-disabled=${String(this.effectiveDisabled)}
+        aria-label=${this.localize("tokenInputEditWithContext", undefined, {
+          label: token,
+        })}
+        @click=${() => this.startEdit(index)}
+        @focus=${() => {
+          if (this.rovingIndex !== index) this.rovingIndex = index;
+        }}
+        @keydown=${(event: KeyboardEvent) => this.onTokenKeyDown(event, index)}
+        >${token}</span
+      >${this.renderRemoveButton(token, index)}</span
+    >`;
   }
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
-    const hasAccessibleLabel = this.hasAttribute('aria-label') || Boolean(this.accessibleLabel);
+    const hasAccessibleLabel =
+      this.hasAttribute("aria-label") || Boolean(this.accessibleLabel);
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
-    const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
+    const described =
+      [hasHint ? this.hintId : "", hasError ? this.errorId : ""]
+        .filter(Boolean)
+        .join(" ") || nothing;
     return html`<div part="form-control">
-      <label part="form-control-label" ?hidden=${!hasLabel} for="input" id=${this.labelId}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot></label>
-      <div part="input-wrapper" role="group" aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing} aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}>
-        <span part="start" ?hidden=${!this.hasStartSlot}><slot name="start" @slotchange=${this.onStartSlotChange}></slot></span>
-        ${this.value.map((token, index) => this.editable ? this.renderEditableToken(token, index) : html`<span part="token"><span>${token}</span><button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button></span>`)}
-        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize || nothing} autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect ? (this.autocorrect ? 'on' : 'off') : nothing} aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing} aria-labelledby=${!hasAccessibleLabel && hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @change=${this.stopInternalChange} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
-        <span part="end" ?hidden=${!this.hasEndSlot}><slot name="end" @slotchange=${this.onEndSlotChange}></slot></span>
+      <label
+        part="form-control-label"
+        ?hidden=${!hasLabel}
+        for="input"
+        id=${this.labelId}
+        >${this.label}<slot
+          name="label"
+          @slotchange=${this.onLabelSlotChange}
+        ></slot
+      ></label>
+      <div
+        part="input-wrapper"
+        role="group"
+        aria-labelledby=${!hasAccessibleLabel && hasLabel
+          ? this.labelId
+          : nothing}
+        aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
+      >
+        <span part="start" ?hidden=${!this.hasStartSlot}
+          ><slot name="start" @slotchange=${this.onStartSlotChange}></slot
+        ></span>
+        ${this.value.map((token, index) =>
+          this.editable
+            ? this.renderEditableToken(token, index)
+            : html`<span part="token"
+                ><span>${token}</span
+                ><button
+                  part="remove"
+                  type="button"
+                  aria-label=${this.localize("removeWithContext", undefined, {
+                    label: token,
+                  })}
+                  ?disabled=${this.effectiveDisabled}
+                  @click=${() => this.removeToken(index)}
+                >
+                  ${closeIcon()}
+                </button></span
+              >`
+        )}
+        <input
+          id="input"
+          part="input"
+          .value=${this.draft}
+          placeholder=${this.placeholder}
+          ?disabled=${this.effectiveDisabled}
+          spellcheck=${this.spellcheck}
+          autocapitalize=${this.autocapitalize || nothing}
+          autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+            ? this.autocorrect
+              ? "on"
+              : "off"
+            : nothing}
+          aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
+          aria-labelledby=${!hasAccessibleLabel && hasLabel
+            ? this.labelId
+            : nothing}
+          aria-describedby=${described}
+          aria-required=${this.required ? "true" : "false"}
+          aria-invalid=${this.touched && !this.internals.validity.valid
+            ? "true"
+            : "false"}
+          @input=${this.onInput}
+          @change=${this.stopInternalChange}
+          @keydown=${this.onKeyDown}
+          @blur=${this.onBlur}
+          @focus=${this.onFocus}
+        />
+        <span part="end" ?hidden=${!this.hasEndSlot}
+          ><slot name="end" @slotchange=${this.onEndSlotChange}></slot
+        ></span>
       </div>
-      <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
-      <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>
+      <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
+        ${this.hint}<slot
+          name="hint"
+          @slotchange=${this.onHintSlotChange}
+        ></slot>
+      </div>
+      <div part="error" id=${this.errorId} ?hidden=${!hasError}>
+        ${this.errorText}<slot
+          name="error"
+          @slotchange=${this.onErrorSlotChange}
+        ></slot>
+      </div>
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lr-token-input': LyraTokenInput; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    "lr-token-input": LyraTokenInput;
+  }
+}

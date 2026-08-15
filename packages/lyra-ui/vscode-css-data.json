@@ -348,7 +348,7 @@
       "name": "--controls-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-video>`** (default: `var(--lr-color-text)`) — Custom-control foreground color."
+        "value": "**`<lr-video>`** (default: `var(--lr-color-on-strong-overlay)`) — Custom-control foreground color."
       }
     },
     {
@@ -376,7 +376,7 @@
       "name": "--easing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** — Compatibility alias for `--lr-accordion-item-easing`."
+        "value": "**`<lr-accordion-item>`** — Upstream-compatible alias for `--lr-accordion-item-easing`."
       }
     },
     {
@@ -649,7 +649,7 @@
       "name": "--hide-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-hide-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup exit-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Collapse-icon transition duration.\n\n**`<lr-dialog>`** — Mapped closing animation duration.\n\n**`<lr-drawer>`** — Closing slide duration.\n\n**`<lr-dropdown>`** (default: `var(--lr-transition-fast)`) — Closing transition duration.\n\n**`<lr-popover>`** (default: `var(--lr-duration-fast)`) — Closing transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Deactivation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker closing duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-hide-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Collapse motion duration."
+        "value": "**`<lr-accordion-item>`** — Upstream-compatible alias for `--lr-accordion-item-hide-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup exit-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Collapse-icon transition duration.\n\n**`<lr-dialog>`** — Mapped closing animation duration.\n\n**`<lr-drawer>`** — Closing slide duration.\n\n**`<lr-dropdown>`** (default: `var(--lr-transition-fast)`) — Closing transition duration.\n\n**`<lr-popover>`** (default: `var(--lr-duration-fast)`) — Closing transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Deactivation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox exit-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker closing duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-hide-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Collapse motion duration."
       }
     },
     {
@@ -905,6 +905,13 @@
       }
     },
     {
+      "name": "--lr-agent-run-metric-brand-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-run>`** (default: `var(--lr-color-brand)`) — Brand metric value."
+      }
+    },
+    {
       "name": "--lr-agent-run-metric-danger-color",
       "description": {
         "kind": "markdown",
@@ -1034,14 +1041,14 @@
       "name": "--lr-app-rail-item-current-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-app-rail-item>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `active`/`aria-current=\"page\"` item. Scoped to `[aria-current='page']` only and declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the current item without hijacking the library-wide `--lr-color-brand-quiet` token."
+        "value": "**`<lr-app-rail-item>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `current`/`aria-current=\"page\"` item. Scoped to `[aria-current='page']` only and declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the current item without hijacking the library-wide `--lr-color-brand-quiet` token."
       }
     },
     {
       "name": "--lr-app-rail-item-current-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-app-rail-item>`** (default: `var(--lr-color-brand)`) — Text/icon color of the `active`/`aria-current=\"page\"` item."
+        "value": "**`<lr-app-rail-item>`** (default: `var(--lr-color-brand)`) — Text/icon color of the `current`/`aria-current=\"page\"` item."
       }
     },
     {
@@ -1195,21 +1202,21 @@
       "name": "--lr-attachment-chip-accent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-color-text-quiet)`) — Accent color used for the status text, spinner, and progress fill. Auto-swapped per `status` (`uploading`/`error`/`done`); the default is the neutral `pending` tone."
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-color-text-quiet)`) — Accent color used for the status text, spinner, and progress fill. Its private default changes per `status` (`uploading`/`error`/`success`); the public value remains authoritative."
       }
     },
     {
       "name": "--lr-attachment-chip-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-color-surface)`) — Chip background, auto-swapped per `status` to that status's `-quiet` tint."
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-color-surface)`) — Chip background. Its private default changes per `status` to that status's `-quiet` tint; the public value still wins."
       }
     },
     {
       "name": "--lr-attachment-chip-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-color-border)`) — Chip border color. Every non-`pending` `status` sets it to `transparent`."
+        "value": "**`<lr-attachment-chip>`** (default: `var(--lr-color-border)`) — Chip border color. Every non-`pending` `status` changes its private default to `transparent`."
       }
     },
     {
@@ -1342,49 +1349,49 @@
       "name": "--lr-avatar-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-color-border)`) — Container background. Each non-neutral `variant` sets it to that variant's `-quiet` tint."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-color-border)`) — Container background. Each non-neutral `variant` changes its private default to that variant's `-quiet` tint."
       }
     },
     {
       "name": "--lr-avatar-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-color-text)`) — Initials/glyph color. Each non-neutral `variant` sets it to that variant's loud color."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-color-text)`) — Initials/glyph color. Each non-neutral `variant` changes its private default to that variant's loud color."
       }
     },
     {
       "name": "--lr-avatar-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` steps it alongside the diameter, so the initials track the circle instead of staying at one fixed size across every tier."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` steps its private default alongside the diameter, so the initials track the circle instead of staying at one fixed size across every tier."
       }
     },
     {
       "name": "--lr-avatar-group-avatar-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar-group>`** (default: `var(--lr-size-2rem)`) — Sizes the overflow badge to match the slotted avatars, tier for tier with `<lr-avatar>`'s own `--lr-avatar-size`. Does not resize the avatars themselves (see class doc) — set a matching `size` on each `<lr-avatar>` child directly for that."
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-size-3rem)`) — Sizes the overflow badge to match the slotted avatars, tier for tier with `<lr-avatar>`'s own `--lr-avatar-size`."
       }
     },
     {
       "name": "--lr-avatar-group-badge-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar-group>`** (default: `var(--lr-color-border)`) — Overflow badge background. Variant-driven; see `variant`."
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-color-border)`) — Overflow badge background. Its private default follows `variant`; the public value remains authoritative."
       }
     },
     {
       "name": "--lr-avatar-group-badge-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar-group>`** (default: `var(--lr-color-text)`) — Overflow badge text color. Variant-driven; see `variant`."
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-color-text)`) — Overflow badge text color. Its private default follows `variant`; the public value remains authoritative."
       }
     },
     {
       "name": "--lr-avatar-group-badge-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar-group>`** (default: `var(--lr-font-size-sm)`) — Font size of the \"+N\" badge label. `size` steps it across the same six-step ladder as `<lr-avatar>`'s own `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight."
+        "value": "**`<lr-avatar-group>`** (default: `var(--lr-font-size-sm)`) — Font size of the \"+N\" badge label. `size` steps its private default across the same six-step ladder as `<lr-avatar>`'s own `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight."
       }
     },
     {
@@ -1412,7 +1419,7 @@
       "name": "--lr-avatar-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-avatar>`** (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` steps it across the shared six-step ladder, from `var(--lr-size-1rem)` (`2xs`) to `var(--lr-size-3rem)` (`xl`); the default `medium`/`m` tier is `var(--lr-size-2rem)`."
+        "value": "**`<lr-avatar>`** (default: `var(--lr-size-3rem)`) — Inline and block size of the container. `size` steps its private default across the shared six-step ladder, from `var(--lr-size-1-5rem)` (`2xs`) to `var(--lr-size-5rem)` (`xl`); an inherited or direct public value still wins."
       }
     },
     {
@@ -1804,7 +1811,7 @@
       "name": "--lr-button-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the internal button, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a lozenge). `appearance=\"link\"` ignores it (it renders with zero radius). `pill` re-assigns it to `--lr-radius-pill`."
+        "value": "**`<lr-button>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the internal button, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a lozenge). `appearance=\"link\"` ignores it (it renders with zero radius). `pill` changes the private default to `--lr-radius-pill`; an inherited or direct `--lr-button-radius` still wins."
       }
     },
     {
@@ -2102,6 +2109,62 @@
       }
     },
     {
+      "name": "--lr-chart-color-1",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-chart-1)`) — First series color."
+      }
+    },
+    {
+      "name": "--lr-chart-color-2",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-chart-2)`) — Second series color."
+      }
+    },
+    {
+      "name": "--lr-chart-color-3",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-chart-3)`) — Third series color."
+      }
+    },
+    {
+      "name": "--lr-chart-color-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-chart-4)`) — Fourth series color."
+      }
+    },
+    {
+      "name": "--lr-chart-color-5",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-chart-5)`) — Fifth series color."
+      }
+    },
+    {
+      "name": "--lr-chart-color-6",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-chart-6)`) — Sixth series color."
+      }
+    },
+    {
+      "name": "--lr-chart-color-7",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-chart-7)`) — Seventh series color."
+      }
+    },
+    {
+      "name": "--lr-chart-color-8",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-chart-8)`) — Eighth series color."
+      }
+    },
+    {
       "name": "--lr-chart-data-table-button-active-bg",
       "description": {
         "kind": "markdown",
@@ -2119,7 +2182,7 @@
       "name": "--lr-chart-grid-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-border)`) — Grid-line color. Resolved via `getComputedStyle` on every draw (Chart.js paints to canvas and cannot consume `var()`)."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-border)`) — Grid-line color. Resolved via `getComputedStyle` on every draw (Chart.js paints to canvas and cannot consume `var()`).\n\n**`<lr-box-plot>`** (default: `var(--lr-color-border)`) — Canvas grid-line color.\n\n**`<lr-lite-chart>`** (default: `var(--lr-color-border)`) — Grid-line color."
       }
     },
     {
@@ -2133,21 +2196,28 @@
       "name": "--lr-chart-legend-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-text)`) — Legend label color. Resolved via `getComputedStyle` on every draw."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-text)`) — Legend label color. Resolved via `getComputedStyle` on every draw.\n\n**`<lr-box-plot>`** (default: `var(--lr-color-text)`) — DOM legend label color.\n\n**`<lr-lite-chart>`** (default: `var(--lr-color-text)`) — Legend label color."
       }
     },
     {
       "name": "--lr-chart-legend-item-active-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** — Pressed background of a legend visibility button; defaults to the standard active mix of `--lr-color-brand-quiet`."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** — Pressed background of a legend visibility button; defaults to the standard active mix of `--lr-color-brand-quiet`.\n\n**`<lr-box-plot>`** — Legend-item pressed background."
       }
     },
     {
       "name": "--lr-chart-legend-item-hover-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of a legend visibility button."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of a legend visibility button.\n\n**`<lr-box-plot>`** (default: `var(--lr-color-brand-quiet)`) — Legend-item hover background."
+      }
+    },
+    {
+      "name": "--lr-chart-legend-side-max",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-size-15rem)`) — Maximum inline size reserved for a side-positioned DOM legend; the track is also capped at one third of the chart allocation.\n\n**`<lr-box-plot>`, `<lr-lite-chart>`** (default: `var(--lr-size-15rem)`) — Maximum side-legend track size."
       }
     },
     {
@@ -2175,21 +2245,21 @@
       "name": "--lr-chart-tick-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-text-quiet)`) — Axis tick-label color; also used for the `xLabel`/`yLabel`/`y2Label` axis-title text (there is no separate title-color token). Resolved via `getComputedStyle` on every draw."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-text-quiet)`) — Axis tick-label color; also used for the `xLabel`/`yLabel`/`y2Label` axis-title text (there is no separate title-color token). Resolved via `getComputedStyle` on every draw.\n\n**`<lr-box-plot>`** (default: `var(--lr-color-text-quiet)`) — Canvas tick and axis-title color.\n\n**`<lr-lite-chart>`** (default: `var(--lr-color-text-quiet)`) — Axis and legend-detail color."
       }
     },
     {
       "name": "--lr-chart-tooltip-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-surface)`) — Tooltip background color. Resolved via `getComputedStyle` on every draw."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-surface)`) — Tooltip background color. Resolved via `getComputedStyle` on every draw.\n\n**`<lr-box-plot>`** (default: `var(--lr-color-surface)`) — Canvas tooltip background."
       }
     },
     {
       "name": "--lr-chart-tooltip-text",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-text)`) — Tooltip text color. Resolved via `getComputedStyle` on every draw."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-text)`) — Tooltip text color. Resolved via `getComputedStyle` on every draw.\n\n**`<lr-box-plot>`** (default: `var(--lr-color-text)`) — Canvas tooltip text color."
       }
     },
     {
@@ -2217,7 +2287,7 @@
       "name": "--lr-chat-message-bubble-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chat-message>`** (default: `var(--lr-space-m)`) — Bubble padding. Prefer this over a `::part(bubble)` padding override: an outer-tree `::part` declaration outranks every rule in this shadow tree, which silently suppresses the per-`status` and per-role bubble styling below it."
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-space-m)`) — Bubble padding."
       }
     },
     {
@@ -2308,14 +2378,14 @@
       "name": "--lr-chat-message-user-bubble-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-brand-quiet)`) — Bubble fill for `data-role=\"user\"`."
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-brand-quiet)`) — Bubble fill for `message-role=\"user\"`."
       }
     },
     {
       "name": "--lr-chat-message-user-bubble-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text)`) — Bubble text color for `data-role=\"user\"`."
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text)`) — Bubble text color for `message-role=\"user\"`."
       }
     },
     {
@@ -2413,35 +2483,35 @@
       "name": "--lr-chip-accent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-color-text)`) — Text/icon color of the pill. Each non-neutral `variant` sets it to that variant's loud fill."
+        "value": "**`<lr-chip>`** (default: `var(--lr-color-text)`) — Text/icon color of the pill. Each non-neutral `variant` changes its private default to that variant's loud fill."
       }
     },
     {
       "name": "--lr-chip-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-color-surface)`) — Background of the pill. Each non-neutral `variant` sets it to that variant's quiet fill."
+        "value": "**`<lr-chip>`** (default: `var(--lr-color-surface)`) — Background of the pill. Each non-neutral `variant` changes its private default to that variant's quiet fill."
       }
     },
     {
       "name": "--lr-chip-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-color-border)`) — Border color of the pill. Every non-neutral `variant` sets it to `transparent`."
+        "value": "**`<lr-chip>`** (default: `var(--lr-color-border)`) — Border color of the pill. Every non-neutral `variant` changes its private default to `transparent`."
       }
     },
     {
       "name": "--lr-chip-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-font-size-sm)`) — Label font size. Each `size` sets it to that step's font size."
+        "value": "**`<lr-chip>`** (default: `var(--lr-font-size-sm)`) — Label font size. Each `size` changes its private default to that step's font size; an inherited or direct public value still wins."
       }
     },
     {
       "name": "--lr-chip-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-space-xs)`) — Gap between the icon, label, and remove button. Each `size` sets it to that step's gap."
+        "value": "**`<lr-chip>`** (default: `var(--lr-space-xs)`) — Gap between the icon, label, and remove button. Each `size` changes its private default to that step's gap."
       }
     },
     {
@@ -2469,7 +2539,7 @@
       "name": "--lr-chip-icon-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-font-size-sm)`) — Font size of the `icon` slot wrapper. Each `size` sets it to that step's icon size."
+        "value": "**`<lr-chip>`** (default: `var(--lr-font-size-sm)`) — Font size of the `start` slot wrapper. Each `size` sets it to that step's icon size."
       }
     },
     {
@@ -2511,7 +2581,7 @@
       "name": "--lr-chip-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-radius)`) — Corner radius of the pill and of the remove button, kept in sync so retuning one retunes both. `pill` raises it to `var(--lr-radius-pill)`. Does not vary by `size` tier."
+        "value": "**`<lr-chip>`** (default: `var(--lr-radius)`) — Corner radius of the pill and of the remove button, kept in sync so retuning one retunes both. `pill` changes its private default to `var(--lr-radius-pill)`. Does not vary by `size` tier."
       }
     },
     {
@@ -2532,14 +2602,14 @@
       "name": "--lr-citation-badge-accent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-citation-badge>`** (default: `var(--lr-color-text-quiet)`) — Text color of `base`, and its hover border color. Swapped by the reflected `status`: `var(--lr-color-success)` for `high`/`verified`, `var(--lr-color-warning)` for `medium`/`low`, `var(--lr-color-danger)` for `unverified`."
+        "value": "**`<lr-citation-badge>`** (default: `var(--lr-color-text-quiet)`) — Text color of `base`, and its hover border color. Its private default follows the reflected `status`: success for `high`/`verified`, warning for `medium`/`low`, and danger for `unverified`; a public value wins."
       }
     },
     {
       "name": "--lr-citation-badge-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-citation-badge>`** (default: `transparent`) — Background of `base`. Swapped by the reflected `status` to the matching `-quiet` tone (`success`/`warning`/`danger`)."
+        "value": "**`<lr-citation-badge>`** (default: `transparent`) — Background of `base`. Its private default follows `status` to the matching `-quiet` tone (`success`/`warning`/`danger`); a public value wins."
       }
     },
     {
@@ -2742,56 +2812,56 @@
       "name": "--lr-color-chart-1",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for color chart 1. Reads `--lr-theme-color-chart-1`."
+        "value": "**`<lr-embedding-explorer>`** (default: `var(--lr-theme-color-chart-1,#0e006e)`) — First cluster color.\n\n**Shared design token** — Canonical shared component token for color chart 1. Reads `--lr-theme-color-chart-1`."
       }
     },
     {
       "name": "--lr-color-chart-2",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for color chart 2. Reads `--lr-theme-color-chart-2`."
+        "value": "**`<lr-embedding-explorer>`** (default: `var(--lr-theme-color-chart-2,#4d011a)`) — Second cluster color.\n\n**Shared design token** — Canonical shared component token for color chart 2. Reads `--lr-theme-color-chart-2`."
       }
     },
     {
       "name": "--lr-color-chart-3",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for color chart 3. Reads `--lr-theme-color-chart-3`."
+        "value": "**`<lr-embedding-explorer>`** (default: `var(--lr-theme-color-chart-3,#862002)`) — Third cluster color.\n\n**Shared design token** — Canonical shared component token for color chart 3. Reads `--lr-theme-color-chart-3`."
       }
     },
     {
       "name": "--lr-color-chart-4",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for color chart 4. Reads `--lr-theme-color-chart-4`."
+        "value": "**`<lr-embedding-explorer>`** (default: `var(--lr-theme-color-chart-4,#503983)`) — Fourth cluster color.\n\n**Shared design token** — Canonical shared component token for color chart 4. Reads `--lr-theme-color-chart-4`."
       }
     },
     {
       "name": "--lr-color-chart-5",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for color chart 5. Reads `--lr-theme-color-chart-5`."
+        "value": "**`<lr-embedding-explorer>`** (default: `var(--lr-theme-color-chart-5,#315fdd)`) — Fifth cluster color.\n\n**Shared design token** — Canonical shared component token for color chart 5. Reads `--lr-theme-color-chart-5`."
       }
     },
     {
       "name": "--lr-color-chart-6",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for color chart 6. Reads `--lr-theme-color-chart-6`."
+        "value": "**`<lr-embedding-explorer>`** (default: `var(--lr-theme-color-chart-6,#935e7c)`) — Sixth cluster color.\n\n**Shared design token** — Canonical shared component token for color chart 6. Reads `--lr-theme-color-chart-6`."
       }
     },
     {
       "name": "--lr-color-chart-7",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for color chart 7. Reads `--lr-theme-color-chart-7`."
+        "value": "**`<lr-embedding-explorer>`** (default: `var(--lr-theme-color-chart-7,#de6906)`) — Seventh cluster color.\n\n**Shared design token** — Canonical shared component token for color chart 7. Reads `--lr-theme-color-chart-7`."
       }
     },
     {
       "name": "--lr-color-chart-8",
       "description": {
         "kind": "markdown",
-        "value": "**Shared design token** — Canonical shared component token for color chart 8. Reads `--lr-theme-color-chart-8`."
+        "value": "**`<lr-embedding-explorer>`** (default: `var(--lr-theme-color-chart-8,#8f81d3)`) — Eighth cluster color; later clusters wrap through the same ordered palette.\n\n**Shared design token** — Canonical shared component token for color chart 8. Reads `--lr-theme-color-chart-8`."
       }
     },
     {
@@ -2988,6 +3058,13 @@
       "description": {
         "kind": "markdown",
         "value": "**Shared design token** — Canonical shared component token for color on neutral."
+      }
+    },
+    {
+      "name": "--lr-color-on-strong-overlay",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Canonical shared component token for color on strong overlay. Reads `--lr-theme-color-on-strong-overlay`."
       }
     },
     {
@@ -3596,7 +3673,7 @@
       "name": "--lr-conversation-item-active-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-conversation-item>`** (default: `var(--lr-color-brand-quiet)`) — Background of the row while `active`. **Contrast-sensitive:** it is one half of a documented WCAG-AA pair — the active row's text is sized/toned for this background, so an override has to keep at least a 4.5:1 ratio against `--lr-conversation-item-active-color` (excerpt/timestamp) and against `--lr-color-text` (the title, which is not restyled by the pair)."
+        "value": "**`<lr-conversation-item>`** (default: `var(--lr-color-brand-quiet)`) — Background of the row while `active`. **Contrast-sensitive:** it is one half of a documented WCAG-AA pair — the active row's text is sized/toned for this background, so an override has to keep at least a 4.5:1 ratio against `--lr-conversation-item-active-color` (excerpt/timestamp) and against `--lr-color-text` (the label, which is not restyled by the pair)."
       }
     },
     {
@@ -3673,14 +3750,14 @@
       "name": "--lr-dashboard-grid-columns",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dashboard-grid>`** (default: `12`) — Column count of the underlying CSS Grid. Written inline on `[part=\"base\"]` from the `columns` property on every render, so the fallback only applies to a `[part=\"base\"]` this component has not rendered yet."
+        "value": "**`<lr-dashboard-grid>`** (default: `12`) — Author override for the column count; otherwise the normalized `columns` property supplies the computed value."
       }
     },
     {
       "name": "--lr-dashboard-grid-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dashboard-grid>`** (default: `var(--lr-space-m)`) — Gap between cells on both axes. Written inline on `[part=\"base\"]` from the `gap` property (in px) on every render."
+        "value": "**`<lr-dashboard-grid>`** (default: `8px`) — Author override for the gap between cells; otherwise the normalized `gap` property supplies a pixel value."
       }
     },
     {
@@ -3694,7 +3771,7 @@
       "name": "--lr-dashboard-grid-row-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dashboard-grid>`** (default: `var(--lr-size-5rem)`) — Row track height. Written inline on `[part=\"base\"]` from the `rowHeight` property (in px) on every render."
+        "value": "**`<lr-dashboard-grid>`** (default: `80px`) — Author override for row track height; otherwise the normalized `rowHeight` property supplies a pixel value."
       }
     },
     {
@@ -3709,6 +3786,48 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-dataset-viewer>`** (default: `none`) — Maximum block size of `[part=\"body\"]` before it scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-date-input-action-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `color-mix(...)`) — Clear/calendar action background while pressed."
+      }
+    },
+    {
+      "name": "--lr-date-input-action-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-date-input-action-hover-color,var(--lr-color-text))`) — Clear/calendar action color while pressed."
+      }
+    },
+    {
+      "name": "--lr-date-input-action-active-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-date-input-radius)`) — Clear/calendar action corner radius while pressed."
+      }
+    },
+    {
+      "name": "--lr-date-input-action-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `transparent`) — Clear/calendar action background on hover."
+      }
+    },
+    {
+      "name": "--lr-date-input-action-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-color-text)`) — Clear/calendar action color on hover."
+      }
+    },
+    {
+      "name": "--lr-date-input-action-hover-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-date-input-radius)`) — Clear/calendar action corner radius on hover."
       }
     },
     {
@@ -3771,7 +3890,7 @@
       "name": "--lr-date-input-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-date-input>`** (default: `var(--lr-radius)`) — Input-row corner radius. The `pill` attribute swaps it for `--lr-radius-pill`."
+        "value": "**`<lr-date-input>`** (default: `var(--lr-radius)`) — Input-row corner radius. `pill` changes its private default to `--lr-radius-pill`; an inherited or direct public value still wins."
       }
     },
     {
@@ -3894,6 +4013,13 @@
       }
     },
     {
+      "name": "--lr-date-picker-title-active-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-date-picker-radius)`) — Pressed title corner radius."
+      }
+    },
+    {
       "name": "--lr-date-picker-title-hover-color",
       "description": {
         "kind": "markdown",
@@ -3953,84 +4079,84 @@
       "name": "--lr-details-filled-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-brand-quiet)`) — Filled surface background."
+        "value": "**`<lr-details>`** (default: `var(--lr-color-brand-quiet)`) — Filled surface background."
       }
     },
     {
       "name": "--lr-details-filled-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `transparent`) — Filled border color."
+        "value": "**`<lr-details>`** (default: `transparent`) — Filled border color."
       }
     },
     {
       "name": "--lr-details-filled-outlined-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-brand-quiet)`) — Filled-outlined surface background."
+        "value": "**`<lr-details>`** (default: `var(--lr-color-brand-quiet)`) — Filled-outlined surface background."
       }
     },
     {
       "name": "--lr-details-filled-outlined-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-border)`) — Filled-outlined border color."
+        "value": "**`<lr-details>`** (default: `var(--lr-color-border)`) — Filled-outlined border color."
       }
     },
     {
       "name": "--lr-details-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-font-size)`) — Details compatibility alias for the item's text size.\n\n**`<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
+        "value": "**`<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
       }
     },
     {
       "name": "--lr-details-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-space-s)`) — Gap between summary content and its icon."
+        "value": "**`<lr-details>`** (default: `var(--lr-space-s)`) — Gap between summary content and its icon."
       }
     },
     {
       "name": "--lr-details-outlined-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-surface)`) — Outlined surface background."
+        "value": "**`<lr-details>`** (default: `var(--lr-color-surface)`) — Outlined surface background."
       }
     },
     {
       "name": "--lr-details-outlined-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-border)`) — Outlined border color."
+        "value": "**`<lr-details>`** (default: `var(--lr-color-border)`) — Outlined border color."
       }
     },
     {
       "name": "--lr-details-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-radius)`) — Disclosure surface corner radius."
+        "value": "**`<lr-details>`** (default: `var(--lr-radius)`) — Disclosure surface corner radius."
       }
     },
     {
       "name": "--lr-details-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-form-control-padding-inline)`) — Details compatibility alias for the item's spacing.\n\n**`<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
+        "value": "**`<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
       }
     },
     {
       "name": "--lr-details-summary-active-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `color-mix(...)`) — Summary pressed background."
+        "value": "**`<lr-details>`** (default: `color-mix(...)`) — Summary pressed background."
       }
     },
     {
       "name": "--lr-details-summary-hover-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`, `<lr-details>`** (default: `var(--lr-color-brand-quiet)`) — Summary hover background."
+        "value": "**`<lr-details>`** (default: `var(--lr-color-brand-quiet)`) — Summary hover background."
       }
     },
     {
@@ -4338,14 +4464,14 @@
       "name": "--lr-drawer-enter-x",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Horizontal offset the panel slides in from, and back out to, for start/end drawers. Set per placement (and flipped under RTL) by the stylesheet."
+        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Horizontal offset the panel slides in from, and back out to, for start/end drawers. Its private default changes per placement (and flips under RTL); an inherited or direct public value remains authoritative."
       }
     },
     {
       "name": "--lr-drawer-enter-y",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Vertical offset the panel slides in from, and back out to, for top/bottom drawers. Set to `var(--lr-size-1rem)` for `bottom`."
+        "value": "**`<lr-drawer>`** (default: `calc(-1 * var(--lr-size-1rem))`) — Vertical offset the panel slides in from, and back out to, for top/bottom drawers. Its private default becomes `var(--lr-size-1rem)` for `bottom`; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -4443,7 +4569,7 @@
       "name": "--lr-emoji-picker-active-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand-quiet)`) — Background of the keyboard-active (`data-active`) **and** hovered emoji button — the two share a single rule, so this one hook retints both consistently. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the emoji highlight without hijacking the library-wide `--lr-color-brand-quiet` token."
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand-quiet)`) — Compatibility fallback background for hover and roving-active states."
       }
     },
     {
@@ -4468,6 +4594,13 @@
       }
     },
     {
+      "name": "--lr-emoji-picker-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-emoji-picker-active-bg,var(--lr-color-brand-quiet))`) — Pointer-hover background. The legacy `--lr-emoji-picker-active-bg` remains its fallback."
+      }
+    },
+    {
       "name": "--lr-emoji-picker-item-radius",
       "description": {
         "kind": "markdown",
@@ -4479,6 +4612,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-emoji-picker>`** (default: `var(--lr-icon-button-size)`) — Each emoji button's box. Floored at the shared `--lr-icon-button-size`; small size tiers scale the glyph without shrinking the interactive target."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-keyboard-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-emoji-picker-active-bg,var(--lr-color-brand-quiet))`) — Roving keyboard/pointer-active background."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-keyboard-active-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand)`) — Outline color for the roving keyboard-active emoji."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-pressed-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `color-mix(...)`) — Pointer-pressed background."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-pressed-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand)`) — Outline color while an emoji button is being pointer-pressed."
       }
     },
     {
@@ -4500,6 +4661,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand)`) — Search hover border."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand-quiet)`) — Committed-value background."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-text)`) — Committed-value foreground."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-selected-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand)`) — Outline color for the committed selection."
       }
     },
     {
@@ -4713,10 +4895,10 @@
       }
     },
     {
-      "name": "--lr-flow-canvas-edge-accent-color",
+      "name": "--lr-flow-canvas-edge-brand-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Accent edge and arrowhead color."
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Brand edge and arrowhead color."
       }
     },
     {
@@ -4811,52 +4993,10 @@
       }
     },
     {
-      "name": "--lr-flow-minimap-node-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-border-strong)`) — Fill of nodes without an execution status."
-      }
-    },
-    {
-      "name": "--lr-flow-minimap-node-denied-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-warning)`) — Denied-node fill."
-      }
-    },
-    {
-      "name": "--lr-flow-minimap-node-error-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-danger)`) — Failed-node fill."
-      }
-    },
-    {
-      "name": "--lr-flow-minimap-node-pending-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-border-strong)`) — Pending-node fill."
-      }
-    },
-    {
-      "name": "--lr-flow-minimap-node-running-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-brand)`) — Running-node fill."
-      }
-    },
-    {
-      "name": "--lr-flow-minimap-node-success-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-success)`) — Successful-node fill."
-      }
-    },
-    {
       "name": "--lr-flow-minimap-viewport-min-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-size-1-5rem)`) — Smallest rendered size, in physical pixels, of the draggable `viewport` rectangle along either axis. On a canvas whose node bounds dwarf the visible viewport the raw rectangle collapses to a few pixels, which leaves the only pointer-drag handle for panning effectively unclickable; the floor grows it symmetrically about its own centre so it still points at what the viewport shows. Defaults to WCAG 2.2 SC 2.5.8's 24px minimum target size. Set `0` to opt out and render the exact viewport-to-content ratio instead."
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-icon-button-size)`) — Smallest rendered size, in physical pixels, of the transparent `viewport-hit-area` along either axis. On a canvas whose node bounds dwarf the visible viewport the raw rectangle collapses to a few pixels, which leaves the only pointer-drag handle for panning effectively unclickable; the floor grows it symmetrically about its own centre so it still points at what the viewport shows. The visible `viewport` stays exact. Defaults to Lyra's 40px interaction floor; set `0` to opt out."
       }
     },
     {
@@ -4898,7 +5038,7 @@
       "name": "--lr-flow-node-running-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Border color of the card while `status=\"running\"`. Independent from `--lr-flow-node-selected-border` so a consumer can retint just one of the two states without the other following along."
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Border color of the card while `status=\"running\"`. Independent from `--lr-flow-node-selected-outline-color` so a consumer can retint just one of the two states without the other following along."
       }
     },
     {
@@ -4909,94 +5049,52 @@
       }
     },
     {
-      "name": "--lr-flow-node-selected-border",
+      "name": "--lr-flow-node-selected-outline-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Border color of the card while `selected`. Overriding the selection color otherwise requires hijacking the library-wide `--lr-color-brand` token."
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Outline color of the card while `selected`. The outline stays independent from execution-state border and glow."
       }
     },
     {
-      "name": "--lr-flow-node-status-color",
+      "name": "--lr-flow-status-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-border-strong)`) — Status-dot color when no execution status is set."
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-border-strong)`) — Fill of nodes without an execution status.\n\n**`<lr-flow-node>`** (default: `var(--lr-color-border-strong)`) — Status-dot color when no execution status is set.\n\n**`<lr-flow-run-status>`** (default: `var(--lr-color-border-strong)`) — Count-dot color when no execution status is set."
       }
     },
     {
-      "name": "--lr-flow-node-status-denied-color",
+      "name": "--lr-flow-status-denied-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-warning)`) — Denied status-dot color."
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-warning)`) — Denied-node fill.\n\n**`<lr-flow-node>`** (default: `var(--lr-color-warning)`) — Denied status-dot color.\n\n**`<lr-flow-run-status>`** (default: `var(--lr-color-warning)`) — Denied count-dot color."
       }
     },
     {
-      "name": "--lr-flow-node-status-error-color",
+      "name": "--lr-flow-status-error-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-danger)`) — Error status-dot color."
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-danger)`) — Failed-node fill.\n\n**`<lr-flow-node>`** (default: `var(--lr-color-danger)`) — Error status-dot color.\n\n**`<lr-flow-run-status>`** (default: `var(--lr-color-danger)`) — Error count-dot color."
       }
     },
     {
-      "name": "--lr-flow-node-status-pending-color",
+      "name": "--lr-flow-status-pending-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-border-strong)`) — Pending status-dot color."
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-border-strong)`) — Pending-node fill.\n\n**`<lr-flow-node>`** (default: `var(--lr-color-border-strong)`) — Pending status-dot color.\n\n**`<lr-flow-run-status>`** (default: `var(--lr-color-border-strong)`) — Pending count-dot color."
       }
     },
     {
-      "name": "--lr-flow-node-status-running-color",
+      "name": "--lr-flow-status-running-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Running status-dot color."
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-brand)`) — Running-node fill.\n\n**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Running status-dot color.\n\n**`<lr-flow-run-status>`** (default: `var(--lr-color-brand)`) — Running count-dot color."
       }
     },
     {
-      "name": "--lr-flow-node-status-success-color",
+      "name": "--lr-flow-status-success-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-success)`) — Success status-dot color."
-      }
-    },
-    {
-      "name": "--lr-flow-run-overlay-status-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-border-strong)`) — Count-dot color when no execution status is set."
-      }
-    },
-    {
-      "name": "--lr-flow-run-overlay-status-denied-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-warning)`) — Denied count-dot color."
-      }
-    },
-    {
-      "name": "--lr-flow-run-overlay-status-error-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-danger)`) — Error count-dot color."
-      }
-    },
-    {
-      "name": "--lr-flow-run-overlay-status-pending-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-border-strong)`) — Pending count-dot color."
-      }
-    },
-    {
-      "name": "--lr-flow-run-overlay-status-running-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-brand)`) — Running count-dot color."
-      }
-    },
-    {
-      "name": "--lr-flow-run-overlay-status-success-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-success)`) — Success count-dot color."
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-success)`) — Successful-node fill.\n\n**`<lr-flow-node>`** (default: `var(--lr-color-success)`) — Success status-dot color.\n\n**`<lr-flow-run-status>`** (default: `var(--lr-color-success)`) — Success count-dot color."
       }
     },
     {
@@ -5143,7 +5241,7 @@
       "name": "--lr-form-control-required-content",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `' *'`) — The required marker appended to `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`** (default: `' *'`) — The required-field marker rendered after the label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-known-date>`** (default: `' *'`) — The required-field marker, rendered after the fieldset `legend` here rather than after the inner label span, so it follows the whole label rather than sitting inside it. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-rubric-form>`** (default: `' *'`) — Required-field marker after rubric-owned score and unsupported-field labels. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n\n**`<lr-tool-param-form>`** (default: `' *'`) — The required-field marker rendered after the `label` part of every field whose key is listed in the schema's `required` array — per field here, not per host, because this control's value is a whole object. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here."
+        "value": "**`<lr-checkbox-group>`, `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-model-select>`, `<lr-radio-group>`, `<lr-select>`, `<lr-slider>`, `<lr-token-input>`, `<lr-voice-picker>`** (default: `' *'`) — The required marker appended to `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n\n**`<lr-code-editor>`, `<lr-color-picker>`, `<lr-date-input>`, `<lr-input>`, `<lr-locale-picker>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-phone-input>`, `<lr-textarea>`, `<lr-time-input>`** (default: `' *'`) — The required-field marker rendered after the label. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-known-date>`** (default: `' *'`) — The required-field marker, rendered after the shared `form-control-label` marker contract. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here.\n\n**`<lr-rubric-form>`** (default: `' *'`) — Required-field marker after rubric-owned score and unsupported-field labels. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it.\n\n**`<lr-tool-param-form>`** (default: `' *'`) — The required-field marker rendered after the `label` part of every field whose key is listed in the schema's `required` array — per field here, not per host, because this control's value is a whole object. Set it to `''` to suppress the marker, or to any other quoted string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never localized here."
       }
     },
     {
@@ -5798,6 +5896,20 @@
       }
     },
     {
+      "name": "--lr-inline-cursor-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-streaming-text>`** (default: `var(--lr-size-1em)`) — Shared height of the inline cursor bar.\n\n**`<lr-typing-indicator>`** (default: `var(--lr-size-1em)`) — Shared inline-cursor height."
+      }
+    },
+    {
+      "name": "--lr-inline-cursor-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-streaming-text>`** (default: `var(--lr-size-0-125rem)`) — Shared width of the inline cursor bar (also its border radius).\n\n**`<lr-typing-indicator>`** (default: `var(--lr-size-0-125rem)`) — Shared inline-cursor width. The `size` property supplies compact and roomy tier fallbacks."
+      }
+    },
+    {
       "name": "--lr-input-action-active-bg",
       "description": {
         "kind": "markdown",
@@ -5829,7 +5941,7 @@
       "name": "--lr-input-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-color-border)`) — Border color of the control row, swapped per `appearance` in the same way as `--lr-input-fill`."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-color-border)`) — Border color of the control row, with a private default that changes per `appearance` in the same way as `--lr-input-fill`."
       }
     },
     {
@@ -5850,7 +5962,7 @@
       "name": "--lr-input-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `transparent`) — Background of the control row. Swapped per `appearance`; the documented default is `appearance=\"outlined\"`'s value."
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `transparent`) — Background of the control row. Its private default changes per `appearance`; the public value remains authoritative in every appearance."
       }
     },
     {
@@ -5893,6 +6005,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the control row, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius). `pill` swaps it to `--lr-radius-pill`."
+      }
+    },
+    {
+      "name": "--lr-input-time-picker-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-color-brand)`) — Pressed background for the browser-native time-picker indicator when `type=\"time\"`."
+      }
+    },
+    {
+      "name": "--lr-input-time-picker-focus-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-color-brand-quiet)`) — Focus-visible background for the native time-picker indicator."
+      }
+    },
+    {
+      "name": "--lr-input-time-picker-focus-ring",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-focus-ring-color)`) — Focus-visible outline color for the native time-picker indicator."
+      }
+    },
+    {
+      "name": "--lr-input-time-picker-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-native-time-input>`, `<lr-number-input>`** (default: `var(--lr-color-brand-quiet)`) — Hover background for the browser-native time-picker indicator when `type=\"time\"`."
       }
     },
     {
@@ -5983,7 +6123,7 @@
       "name": "--lr-known-date-field-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-known-date>`** (default: `var(--lr-form-control-font-size)`) — Font size of each `field-input`, auto-swapped per `size` by the shared ladder."
+        "value": "**`<lr-known-date>`** (default: `var(--lr-form-control-font-size)`) — Font size of each `field-input`; its private default follows `size` through the shared ladder."
       }
     },
     {
@@ -6004,21 +6144,21 @@
       "name": "--lr-known-date-field-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-known-date>`** (default: `max(var(--lr-form-control-height),var(--lr-size-24px))`) — Minimum block size of each `field-input`, auto-swapped per `size` (`2xs`/`xs`→`24px`, `s`→`1.875rem`, `m`→`2.5rem`, `l`→`3rem`, `xl`→`3.5rem`) -- the same shared control-height ladder `lr-input`/`lr-date-input` sit on, so a birthdate field in a form row beside those controls renders at the same height. The `max()` floors the two smallest tiers at WCAG 2.2 SC 2.5.8's 24px pointer-target minimum. At the small tiers the floor exceeds the field's own content height and actively pins the rendered box; at `l`/`xl` the content height stays under it, so those two tiers are unaffected."
+        "value": "**`<lr-known-date>`** (default: `max(var(--lr-form-control-height),var(--lr-size-24px))`) — Minimum block size of each `field-input`; its private default follows `size` (`2xs`/`xs`→`24px`, `s`→`1.875rem`, `m`→`2.5rem`, `l`→`3rem`, `xl`→`3.5rem`) -- the same shared control-height ladder `lr-input`/`lr-date-input` sit on, so a birthdate field in a form row beside those controls renders at the same height. The `max()` floors the two smallest tiers at WCAG 2.2 SC 2.5.8's 24px pointer-target minimum. At the small tiers the floor exceeds the field's own content height and actively pins the rendered box; at `l`/`xl` the content height stays under it, so those two tiers are unaffected. An inherited or direct public value wins in every tier."
       }
     },
     {
       "name": "--lr-known-date-field-padding-block",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-known-date>`** (default: `var(--lr-form-control-padding-block)`) — Block padding of each `field-input`, auto-swapped per `size` by the shared ladder."
+        "value": "**`<lr-known-date>`** (default: `var(--lr-form-control-padding-block)`) — Block padding of each `field-input`; its private default follows `size` through the shared ladder."
       }
     },
     {
       "name": "--lr-known-date-field-padding-inline",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-known-date>`** (default: `var(--lr-form-control-padding-inline)`) — Inline padding of each `field-input`, auto-swapped per `size` by the shared ladder."
+        "value": "**`<lr-known-date>`** (default: `var(--lr-form-control-padding-inline)`) — Inline padding of each `field-input`; its private default follows `size` through the shared ladder."
       }
     },
     {
@@ -6158,14 +6298,14 @@
       "name": "--lr-lite-chart-selected-outline-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-brand)`) — Stroke for a bar/point whose category index is in `selectedIndex`."
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-brand)`) — Stroke for a bar/point whose category index is in `selectedIndices`."
       }
     },
     {
       "name": "--lr-lite-chart-selected-outline-width",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-lite-chart>`** (default: `var(--lr-size-2px)`) — Stroke width for a bar/point whose category index is in `selectedIndex`."
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-size-2px)`) — Stroke width for a bar/point whose category index is in `selectedIndices`."
       }
     },
     {
@@ -6277,7 +6417,7 @@
       "name": "--lr-map-popup-close-button-active-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-map>`** (default: `var(--lr-color-brand)`) — Pressed foreground of `popup-close-button`. ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile server, which is not suitable for production traffic — see the `DEFAULT_STYLE` doc comment above. Always pass an explicit `mapStyle` in production."
+        "value": "**`<lr-map>`** (default: `var(--lr-color-brand)`) — Pressed foreground of `popup-close-button`. No style or tile provider is selected implicitly. Set `mapStyle` explicitly before connection; this prevents a bare component from making an undeclared third-party request."
       }
     },
     {
@@ -6298,7 +6438,7 @@
       "name": "--lr-markdown-font-mono",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-markdown>`** (default: `var(--lr-font-mono)`) — Monospace family for rendered `<code>` inside `content`."
+        "value": "**`<lr-markdown>`, `<lr-markdown-core>`** (default: `var(--lr-font-mono)`) — Monospace family for rendered `<code>` inside `content`."
       }
     },
     {
@@ -6417,7 +6557,7 @@
       "name": "--lr-menu-item-danger-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-color-danger)`) — Foreground of a `destructive` or `variant=\"danger\"` row."
+        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-color-danger)`) — Foreground of a `variant=\"danger\"` row."
       }
     },
     {
@@ -6438,7 +6578,7 @@
       "name": "--lr-menu-item-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the visual row and focusable host. Its fallback follows the active shared size tier. Declared as an inline `var()` fallback (never on `:host`), so an item or any ancestor can retune it without a `::part(base)` rule. Danger-state hooks are also inline fallbacks, so a menu can retheme only its destructive rows without replacing the shared danger palette elsewhere."
+        "value": "**`<lr-dropdown-item>`, `<lr-menu-item>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the visual row and focusable host. Its fallback follows the active shared size tier. Declared as an inline `var()` fallback (never on `:host`), so an item or any ancestor can retune it without a `::part(base)` rule. Danger-state hooks are also inline fallbacks, so a menu can retheme only its dangerous rows without replacing the shared danger palette elsewhere."
       }
     },
     {
@@ -6631,10 +6771,24 @@
       }
     },
     {
+      "name": "--lr-multi-split-divider-target-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-multi-split>`** (default: `max(var(--lr-icon-button-size),var(--lr-size-3px))`) — The real layout gutter reserved for each divider along the resize axis. The narrow visual rule is centered inside this owned track, so the target never overlaps either adjacent panel."
+      }
+    },
+    {
+      "name": "--lr-multi-split-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-multi-split>`** (default: `var(--lr-color-overlay)`) — The `'floating'` drawer scrim's color, applied to `[part=\"backdrop\"]`."
+      }
+    },
+    {
       "name": "--lr-node-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-graph>`** (default: `var(--lr-color-brand)`) — Default node fill, overridden per-node by `GraphNode.color`."
+        "value": "**`<lr-graph>`** (default: `var(--lr-color-brand)`) — Default node fill, overridden per-node by `LyraGraphNode.color`."
       }
     },
     {
@@ -7103,7 +7257,7 @@
       "name": "--lr-pan-zoom-min-block-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-pan-zoom>`** — Minimum viewport block size. The former `--lr-zoomable-frame-min-block-size` name remains a temporary fallback for migrated consumers."
+        "value": "**`<lr-pan-zoom>`** (default: `var(--lr-size-10rem)`) — Minimum viewport block size."
       }
     },
     {
@@ -7216,27 +7370,6 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-phone-input>`** (default: `var(--lr-radius)`) — Input-wrapper corner radius, shared with the country trigger's leading corners. The `pill` attribute swaps it for `--lr-radius-pill`."
-      }
-    },
-    {
-      "name": "--lr-playback-icon-size",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-playback>`** (default: `calc(var(--lr-icon-button-size) * 0.35)`) — Font size of the play/pause glyph, derived from the shared icon-button hit-target size."
-      }
-    },
-    {
-      "name": "--lr-playback-play-button-active-bg",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-playback>`** — Pressed play/pause button background. Defaults to the existing surface active mix; read as an inline fallback so an ancestor value inherits."
-      }
-    },
-    {
-      "name": "--lr-playback-play-button-active-border-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-playback>`** (default: `var(--lr-color-brand)`) — Pressed play/pause button border color; read as an inline fallback so an ancestor value inherits."
       }
     },
     {
@@ -7373,6 +7506,13 @@
       }
     },
     {
+      "name": "--lr-prompt-input-control-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-prompt-input>`** (default: `--lr-size-12rem`) — Preferred width of each generated model, voice, and source control before wrapping."
+      }
+    },
+    {
       "name": "--lr-prompt-studio-field-hover-border",
       "description": {
         "kind": "markdown",
@@ -7453,14 +7593,14 @@
       "name": "--lr-qr-code-background",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-qr-code>`** (default: `var(--lr-color-surface)`) — Light/background module color, including the quiet zone."
+        "value": "**`<lr-qr-code>`** — Optional alias for host `background-color`, used by the canvas background."
       }
     },
     {
       "name": "--lr-qr-code-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-qr-code>`** (default: `var(--lr-color-text)`) — Dark/foreground module color."
+        "value": "**`<lr-qr-code>`** — Optional alias for host `color`, used by foreground modules."
       }
     },
     {
@@ -7614,7 +7754,7 @@
       "name": "--lr-radio-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio>`** (default: `var(--lr-radius-pill)`) — Corner radius of the control's own chrome. A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at the shared control radius and swaps it for a pill when `pill` is set.\n\n**`<lr-radio-button>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the outer edges of the button row. Inherited from `<lr-radio>` and re-pointed here at the shared control radius; `pill` swaps it for `--lr-radius-pill`."
+        "value": "**`<lr-radio>`** (default: `var(--lr-radius-pill)`) — Corner radius of the control's own chrome. A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at the shared control radius and swaps it for a pill when `pill` is set.\n\n**`<lr-radio-button>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the outer edges of the button row. Its private default follows the shared control radius and changes to `--lr-radius-pill` for `pill`; an inherited or direct public value still wins."
       }
     },
     {
@@ -8045,6 +8185,20 @@
       }
     },
     {
+      "name": "--lr-random-content-item-alignment",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-random-content>`** (default: `flex-start`) — Cross-axis alignment of selected items."
+      }
+    },
+    {
+      "name": "--lr-random-content-item-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-random-content>`** (default: `var(--lr-space-s)`) — Gap between simultaneously selected items."
+      }
+    },
+    {
       "name": "--lr-rating-active-color",
       "description": {
         "kind": "markdown",
@@ -8076,7 +8230,7 @@
       "name": "--lr-rating-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-rating>`** (default: `var(--lr-font-size-xl)`) — Symbol size. Each `size` step rewrites it; the `m` default reproduces the treatment this component had before `size` existed."
+        "value": "**`<lr-rating>`** (default: `var(--lr-font-size-xl)`) — Symbol size. Its private default follows each `size` step; an inherited or direct public value wins. The `m` default reproduces the treatment this component had before `size` existed."
       }
     },
     {
@@ -8167,7 +8321,7 @@
       "name": "--lr-result-card-compact-header-gap",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-result-card>`** (default: `var(--lr-space-xs)`) — Gap between `[part=\"header\"]`'s title and actions while `compact`."
+        "value": "**`<lr-result-card>`** (default: `var(--lr-space-xs)`) — Gap between `[part=\"header\"]`'s heading and actions while `compact`."
       }
     },
     {
@@ -8339,6 +8493,13 @@
       }
     },
     {
+      "name": "--lr-schema-viewer-max-indent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-size-12rem)`) — Maximum visual indentation; complete JSON Pointer paths and selection semantics remain unchanged at deeper levels."
+      }
+    },
+    {
       "name": "--lr-schema-viewer-selected-border",
       "description": {
         "kind": "markdown",
@@ -8363,7 +8524,7 @@
       "name": "--lr-scroll-fade-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the track actually overflows, so a row that fits is never dimmed.\n\n**`<lr-tab-group>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.\n\n**Shared design token** — Canonical shared component token for scroll fade size. Reads `--lr-theme-scroll-fade-size`."
+        "value": "**`<lr-segmented>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the track actually overflows, so a row that fits is never dimmed.\n\n**`<lr-stepper>`** (default: `2rem`) — Width of each decorative horizontal overflow fade. Pointer-state hooks use inline `var()` fallbacks rather than a `:host` declaration, so they inherit from the stepper or any ancestor without retheming another state.\n\n**`<lr-tab-group>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.\n\n**`<lr-timeline>`** (default: `2rem`) — Inline size of each edge fade while a horizontal timeline overflows. Forced-colors mode disables the masks while retaining native scrolling.\n\n**Shared design token** — Canonical shared component token for scroll fade size. Reads `--lr-theme-scroll-fade-size`."
       }
     },
     {
@@ -8440,7 +8601,7 @@
       "name": "--lr-segmented-selected-shadow",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `var(--lr-shadow)`) — Box shadow lifting the checked segment off the track."
+        "value": "**`<lr-segmented>`** (default: `var(--lr-shadow-xs)`) — Box shadow lifting the checked segment off the track."
       }
     },
     {
@@ -8461,7 +8622,7 @@
       "name": "--lr-segmented-track-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `var(--lr-form-control-height)`) — Minimum height of the `base` track, taken from the `size` tier's shared control height; the `2.5rem` (40px) default applies at the unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared default-tier floor. Because it is declared on `:host`, override it on the element itself, not on an ancestor."
+        "value": "**`<lr-segmented>`** (default: `var(--lr-form-control-height)`) — Minimum height of the `base` track, taken from the `size` tier's shared control height; the `2.5rem` (40px) default applies at the unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared default-tier floor. The private default follows `size`; a public value inherited from an ancestor or set directly on the element remains authoritative in every tier."
       }
     },
     {
@@ -8598,38 +8759,31 @@
       }
     },
     {
-      "name": "--lr-selection-toolbar-block-shift",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-selection-toolbar>`** — Computed block collision-avoidance offset."
-      }
-    },
-    {
-      "name": "--lr-selection-toolbar-block-start",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-selection-toolbar>`** — Computed logical block anchor position."
-      }
-    },
-    {
-      "name": "--lr-selection-toolbar-inline-shift",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-selection-toolbar>`** — Computed inline collision-avoidance offset."
-      }
-    },
-    {
-      "name": "--lr-selection-toolbar-inline-start",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-selection-toolbar>`** — Computed logical inline anchor position."
-      }
-    },
-    {
       "name": "--lr-selection-toolbar-placement-gap",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-selection-toolbar>`** (default: `var(--lr-space-s)`) — Non-negative distance between the selection and toolbar, and between the toolbar and viewport during collision avoidance. Unitless pixel values and `px`, `rem`, and `em` values are resolved live; invalid values fall back to the default and negative values clamp to `0`."
+      }
+    },
+    {
+      "name": "--lr-sequence-playback-icon-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sequence-playback>`** (default: `calc(var(--lr-icon-button-size) * 0.35)`) — Font size of the play/pause glyph, derived from the shared icon-button hit-target size."
+      }
+    },
+    {
+      "name": "--lr-sequence-playback-play-button-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sequence-playback>`** — Pressed play/pause button background. Defaults to the existing surface active mix; read as an inline fallback so an ancestor value inherits."
+      }
+    },
+    {
+      "name": "--lr-sequence-playback-play-button-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-sequence-playback>`** (default: `var(--lr-color-brand)`) — Pressed play/pause button border color; read as an inline fallback so an ancestor value inherits."
       }
     },
     {
@@ -9620,20 +9774,6 @@
       }
     },
     {
-      "name": "--lr-split-divider-hit-slop",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-split>`** (default: `calc((var(--lr-size-3px) - var(--lr-icon-button-size)) / 2)`) — Per-side inset of `[part=\"divider\"]`'s invisible `::before` hit area, along the resize axis. Negative, so the `::before` box extends past the divider's own edges; derived from the shared `--lr-icon-button-size` WCAG 2.5.8 floor minus the divider's visible thickness, split evenly across both sides, so the effective target reaches the floor without widening the 3px divider anyone can see. Declared on `:host`, so an override must target the element itself (not an ancestor). Setting it by hand is rarely right -- retheme `--lr-size-3px`/`--lr-icon-button-size` instead and the slop recomputes."
-      }
-    },
-    {
-      "name": "--lr-split-overlay-color",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-split>`** (default: `var(--lr-color-overlay)`) — The `'floating'` drawer scrim's color, applied to `[part=\"backdrop\"]`."
-      }
-    },
-    {
       "name": "--lr-split-panel-divider-hit-area",
       "description": {
         "kind": "markdown",
@@ -9736,6 +9876,41 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-stat>`** (default: `var(--lr-color-brand)`) — Headline value color when `emphasis` is set on a neutral stat. Independent of the accent edge and `brand` variant."
+      }
+    },
+    {
+      "name": "--lr-stat-link-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `color-mix(...)`) — Linked-card background while pressed."
+      }
+    },
+    {
+      "name": "--lr-stat-link-active-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-stat-link-hover-border-color,var(--lr-color-brand))`) — Linked-card border while pressed."
+      }
+    },
+    {
+      "name": "--lr-stat-link-active-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-stat-link-hover-shadow,var(--lr-shadow-s))`) — Linked-card shadow while pressed."
+      }
+    },
+    {
+      "name": "--lr-stat-link-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-color-brand)`) — Linked-card border on hover."
+      }
+    },
+    {
+      "name": "--lr-stat-link-hover-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-shadow-s)`) — Linked-card shadow on hover."
       }
     },
     {
@@ -9861,49 +10036,35 @@
       "name": "--lr-stream-status-dot-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-text-quiet)`) — `indicator` dot color. Its unset default is swapped by the reflected `phase`: `var(--lr-color-brand)` for `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`. Set it on the element or any ancestor; an element value wins."
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-text-quiet)`) — `indicator` dot color. Its unset default is swapped by reflected `connection-state` and the component-owned `data-stalled` state: `var(--lr-color-brand)` for `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`. Set it on the element or any ancestor; an element value wins."
       }
     },
     {
       "name": "--lr-stream-status-dot-opacity",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stream-status>`** (default: `0.35`) — `indicator` dot opacity. Its unset default is swapped by the reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`. Set it on the element or any ancestor; an element value wins."
+        "value": "**`<lr-stream-status>`** (default: `0.35`) — `indicator` dot opacity. Its unset default is swapped by those same host states: `0.6` for `connecting`, `1` for `streaming` and `stalled`. Set it on the element or any ancestor; an element value wins."
       }
     },
     {
       "name": "--lr-stream-status-message-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-warning)`) — `message` text color while `phase=\"stalled\"`. Decoupled from `--lr-stream-status-stalled-border-color` even though both fall back to the same shared token today."
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-warning)`) — `message` text color while `data-stalled` is present. Decoupled from `--lr-stream-status-stalled-border-color` even though both fall back to the same shared token today."
       }
     },
     {
       "name": "--lr-stream-status-stalled-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-warning-quiet)`) — `base` row background while `phase=\"stalled\"`."
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-warning-quiet)`) — `base` row background while `data-stalled` is present."
       }
     },
     {
       "name": "--lr-stream-status-stalled-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-warning)`) — `base` row border color while `phase=\"stalled\"`."
-      }
-    },
-    {
-      "name": "--lr-streaming-text-cursor-height",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-streaming-text>`** (default: `var(--lr-size-1em)`) — Height of the `cursor` bar."
-      }
-    },
-    {
-      "name": "--lr-streaming-text-cursor-width",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-streaming-text>`** (default: `var(--lr-size-0-125rem)`) — Width of the `cursor` bar (also its border radius)."
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-warning)`) — `base` row border color while `data-stalled` is present."
       }
     },
     {
@@ -10001,7 +10162,7 @@
       "name": "--lr-swatch-picker-fill-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-5rem))`) — Visible fill/icon diameter for the swatch, swapped per tier. Set `--lr-theme-swatch-picker-fill-size` on an ancestor to give every tier a shared default."
+        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-5rem))`) — Visible fill/icon diameter for the swatch. Its private default follows the active tier. Set `--lr-theme-swatch-picker-fill-size` on an ancestor to give every tier a shared default, or set this component hook on an ancestor/direct host to override every tier."
       }
     },
     {
@@ -10029,7 +10190,7 @@
       "name": "--lr-swatch-picker-hit-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-size-2-5rem)`) — Hit-area size (both min-inline-size and min-block-size) for the swatch button, swapped per tier and floored at 24px."
+        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-size-2-5rem)`) — Hit-area size (both min-inline-size and min-block-size) for the swatch button. Its private default follows the active tier and is floored at 24px; an inherited or direct public value wins."
       }
     },
     {
@@ -10183,7 +10344,7 @@
       "name": "--lr-table-header-sorted-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-table>`** (default: `transparent`) — Background of the currently-sorted column's header cell (`[aria-sort]` other than `none`). Same rationale as `--lr-table-row-selected-bg`: `::part(header-cell)[aria-sort]` is invalid CSS, so this token is the supported way to recolor the sorted header without hijacking a library-wide token."
+        "value": "**`<lr-table>`** (default: `var(--lr-color-surface)`) — Background of the currently-sorted column's header cell (`[aria-sort]` other than `none`). Same rationale as `--lr-table-row-selected-bg`: `::part(header-cell)[aria-sort]` is invalid CSS, so this token is the supported way to recolor the sorted header without hijacking a library-wide token."
       }
     },
     {
@@ -10222,10 +10383,38 @@
       }
     },
     {
+      "name": "--lr-table-resize-handle-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `var(--lr-table-resize-handle-hover-bg,var(--lr-color-brand))`) — Resize-handle pressed background."
+      }
+    },
+    {
+      "name": "--lr-table-resize-handle-active-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `calc(var(--lr-table-resize-handle-hover-opacity,var(--lr-table-resize-handle-opacity,0.12))*2)`) — Resize-handle pressed opacity."
+      }
+    },
+    {
+      "name": "--lr-table-resize-handle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `var(--lr-color-brand)`) — Resize-handle hover/focus background."
+      }
+    },
+    {
+      "name": "--lr-table-resize-handle-hover-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `var(--lr-table-resize-handle-opacity,0.12)`) — Resize-handle hover/focus opacity."
+      }
+    },
+    {
       "name": "--lr-table-resize-handle-opacity",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-table>`** (default: `0.12`) — Hover/focus opacity of the resize handle. Inherits from theme ancestors."
+        "value": "**`<lr-table>`** (default: `0.12`) — Hover/focus opacity of the resize handle. Legacy shared-state hook; inherits from theme ancestors."
       }
     },
     {
@@ -10694,14 +10883,14 @@
       "name": "--lr-textarea-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-textarea>`** (default: `var(--lr-color-border)`) — Border color of the field, swapped per `appearance` in the same way as `--lr-textarea-fill`."
+        "value": "**`<lr-textarea>`** (default: `var(--lr-color-border)`) — Border color of the field. Its private default follows `appearance` in the same way as `--lr-textarea-fill`."
       }
     },
     {
       "name": "--lr-textarea-fill",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-textarea>`** (default: `transparent`) — Background of the field. Swapped per `appearance`; the documented default is `appearance=\"outlined\"`'s value."
+        "value": "**`<lr-textarea>`** (default: `transparent`) — Background of the field. Its private default follows `appearance`; the documented default is `appearance=\"outlined\"`'s value."
       }
     },
     {
@@ -10736,7 +10925,7 @@
       "name": "--lr-textarea-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-textarea>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the field, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius). `pill` swaps it to `--lr-radius-pill`."
+        "value": "**`<lr-textarea>`** (default: `var(--lr-form-control-radius)`) — Corner radius of the field, from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius). `pill` changes the private default to `--lr-radius-pill`; a public value still wins."
       }
     },
     {
@@ -11066,6 +11255,13 @@
       "description": {
         "kind": "markdown",
         "value": "**Application theme input** — Canonical application theme input for color no data."
+      }
+    },
+    {
+      "name": "--lr-theme-color-on-strong-overlay",
+      "description": {
+        "kind": "markdown",
+        "value": "**Application theme input** — Canonical application theme input for color on strong overlay."
       }
     },
     {
@@ -12910,6 +13106,13 @@
       }
     },
     {
+      "name": "--lr-timeline-active-ring-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline-item>`** (default: `var(--lr-timeline-marker-color)`) — Static outline color for the current/in-progress marker. The outline remains visible when reduced motion disables the optional pulse animation."
+      }
+    },
+    {
       "name": "--lr-timeline-gap",
       "description": {
         "kind": "markdown",
@@ -12917,45 +13120,10 @@
       }
     },
     {
-      "name": "--lr-timeline-item-direction",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `row`) — Internal orientation plumbing, not a retheming knob: `[part=\"base\"]`'s `flex-direction`, set by an ancestor `<lr-timeline>`'s `:host` and inherited across the slot boundary (`row` vertical, `column` horizontal). The `row` fallback applies when the item is used standalone."
-      }
-    },
-    {
-      "name": "--lr-timeline-item-gap-block-end",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `0`) — Internal orientation plumbing, not a retheming knob: `[part=\"content\"]`'s `padding-block-end`, set by a vertical `<lr-timeline>` so the rail reaches the next item's marker. `0` when standalone or horizontal; retheme `--lr-timeline-gap` on `<lr-timeline>` instead."
-      }
-    },
-    {
-      "name": "--lr-timeline-item-gap-inline-end",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `0`) — Internal orientation plumbing, not a retheming knob: the inline-axis counterpart of `--lr-timeline-item-gap-block-end`, non-zero only under a horizontal `<lr-timeline>`."
-      }
-    },
-    {
-      "name": "--lr-timeline-item-rail-visibility",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `visible`) — Internal plumbing, not a retheming knob: `[part=\"rail\"]`'s `visibility`, set to `hidden` by `<lr-timeline>`'s `::slotted(:last-child)` rule so the final item has no trailing rail."
-      }
-    },
-    {
-      "name": "--lr-timeline-item-track-direction",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `column`) — Internal orientation plumbing, not a retheming knob: `[part=\"track\"]`'s `flex-direction`, always the opposite axis from `--lr-timeline-item-direction` and set alongside it by `<lr-timeline>`."
-      }
-    },
-    {
       "name": "--lr-timeline-marker-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-timeline-item>`** (default: `var(--lr-color-text-quiet)`) — Marker fill/accent color. Swapped per `variant` (see the class doc's variant table); a consumer can override it on an ancestor for a themed group or directly on one item, with the direct value winning via the normal cascade."
+        "value": "**`<lr-timeline-item>`** (default: `var(--lr-color-text-quiet)`) — Marker fill/accent color. Its private default changes per `variant` (see the class doc's variant table); a consumer can override it on an ancestor for a themed group or directly on one item, with the direct value winning via the normal cascade."
       }
     },
     {
@@ -12983,7 +13151,7 @@
       "name": "--lr-toast-accent-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-toast>`** (default: `var(--lr-color-border)`) — Accent bar / icon color of a slotted item, auto-swapped per its `variant`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-color-border)`) — Color of the accent bar and the icon. Each non-neutral `variant` sets it to that variant's loud fill from the shared semantic grid; `neutral` keeps the plain border color, so an informational toast reads as unaccented."
+        "value": "**`<lr-toast>`** (default: `var(--lr-color-border)`) — Accent bar / icon color of a slotted item. Its private default follows `variant`; an inherited or direct public value wins.\n\n**`<lr-toast-item>`** (default: `var(--lr-color-border)`) — Color of the accent bar and the icon. Each non-neutral `variant` sets it to that variant's loud fill from the shared semantic grid; `neutral` keeps the plain border color, so an informational toast reads as unaccented."
       }
     },
     {
@@ -13025,7 +13193,7 @@
       "name": "--lr-toast-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-toast>`** (default: `var(--lr-font-size-m)`) — Font size of a slotted item, auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-font-size-m)`) — Font size of the item, auto-swapped per `size` across the shared six-step ladder."
+        "value": "**`<lr-toast>`** (default: `var(--lr-font-size-m)`) — Font size of a slotted item. Its private default follows `size`; an inherited or direct public value wins.\n\n**`<lr-toast-item>`** (default: `var(--lr-font-size-m)`) — Font size of the item. Its private default follows `size` across the shared six-step ladder; an inherited or direct public value wins."
       }
     },
     {
@@ -13060,7 +13228,7 @@
       "name": "--lr-toast-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-toast>`** (default: `var(--lr-space-m)`) — Padding of a slotted item, auto-swapped per its `size`. Read by `<lr-toast-item>`, so set it on the item.\n\n**`<lr-toast-item>`** (default: `var(--lr-space-m)`) — Padding of the item, auto-swapped per `size` across the shared six-step ladder."
+        "value": "**`<lr-toast>`** (default: `var(--lr-space-m)`) — Padding of a slotted item. Its private default follows `size`; an inherited or direct public value wins.\n\n**`<lr-toast-item>`** (default: `var(--lr-space-m)`) — Padding of the item. Its private default follows `size` across the shared six-step ladder; an inherited or direct public value wins."
       }
     },
     {
@@ -13172,7 +13340,7 @@
       "name": "--lr-token-input-radius",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-token-input>`** (default: `var(--lr-radius)`) — Row/token corner radius. The `pill` attribute swaps it for `--lr-radius-pill`."
+        "value": "**`<lr-token-input>`** (default: `var(--lr-radius)`) — Row/token corner radius. `pill` changes its private default to `--lr-radius-pill`; an inherited or direct public value still wins."
       }
     },
     {
@@ -13214,7 +13382,7 @@
       "name": "--lr-tool-approval-dialog-hover-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tool-approval-dialog>`** (default: `var(--lr-color-brand)`) — Border color of the raw-JSON args editor on hover."
+        "value": "**`<lr-tool-approval-dialog>`** (default: `var(--lr-color-brand)`) — Border color of a valid, editable raw-JSON args editor on hover. Invalid and pending states retain their semantic chrome."
       }
     },
     {
@@ -13242,21 +13410,21 @@
       "name": "--lr-tool-call-chip-accent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-color-text-quiet)`) — Per-status accent color for the status glyph and status text. Reassigned by this component's own `:host([status=\"…\"])` rules (`running` → brand, `success` → success, `error` → danger, `denied` → warning), so a page-level override only wins for the default/`pending` tone."
+        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-color-text-quiet)`) — Accent color for the status glyph and text. Its private default follows `status` (`running` → brand, `success` → success, `error` → danger, `denied` → warning); an inherited or direct public override always wins."
       }
     },
     {
       "name": "--lr-tool-call-chip-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-color-surface)`) — Per-status chip background. Reassigned by the same `:host([status=\"…\"])` rules (each status's `-quiet` tint)."
+        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-color-surface)`) — Chip background. Its private default follows the same `status` rules using each status's `-quiet` tint; a public override wins."
       }
     },
     {
       "name": "--lr-tool-call-chip-border",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-color-border)`) — Per-status chip border color. Reassigned by the same `:host([status=\"…\"])` rules (`transparent` for every non-`pending` status)."
+        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-color-border)`) — Chip border color. Its private default becomes transparent for every non-`pending` status; a public override wins."
       }
     },
     {
@@ -13561,6 +13729,13 @@
       }
     },
     {
+      "name": "--lr-trace-tree-max-indent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-size-12rem)`) — Maximum visual nesting indentation; semantic `aria-level` remains exact at deeper levels."
+      }
+    },
+    {
       "name": "--lr-trace-tree-pending-color",
       "description": {
         "kind": "markdown",
@@ -13764,20 +13939,6 @@
       }
     },
     {
-      "name": "--lr-typing-cursor-height",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-typing-indicator>`** (default: `var(--lr-size-1em)`) — Height of the `cursor` variant."
-      }
-    },
-    {
-      "name": "--lr-typing-cursor-width",
-      "description": {
-        "kind": "markdown",
-        "value": "**`<lr-typing-indicator>`** (default: `var(--lr-size-0-125rem)`) — Width of the `cursor` variant. The `size` property supplies compact and roomy tier overrides."
-      }
-    },
-    {
       "name": "--lr-typing-dot-size",
       "description": {
         "kind": "markdown",
@@ -13876,6 +14037,13 @@
       }
     },
     {
+      "name": "--lr-voice-picker-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-space-xs)`) — Gap between the field and preview action, and between trigger, combobox, and option children."
+      }
+    },
+    {
       "name": "--lr-voice-picker-open-border-color",
       "description": {
         "kind": "markdown",
@@ -13967,10 +14135,17 @@
       }
     },
     {
+      "name": "--lr-voice-picker-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-form-control-radius)`) — Trigger, combobox, listbox, option, and preview-action corner radius."
+      }
+    },
+    {
       "name": "--lr-widget-backdrop-inset",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-widget>`** (default: `var(--lr-widget-fullscreen-inset)`) — The `inset` applied to `[part=\"backdrop\"]`, so the scrim can be pulled back independently of the panel. Also set inline from the `backdrop-inset` attribute (falling back to `fullscreen-inset`). `fullscreen-inset` overrides the default `var(--lr-space-l)` inset applied to `[part=\"base\"]` and `[part=\"backdrop\"]` while fullscreen (e.g. `\"0 0 0 240px\"` to leave a persistent sidebar visible). `compact` tightens header/body padding — same convention as `lr-empty`'s `compact`."
+        "value": "**`<lr-widget>`** (default: `0`) — The `inset` applied to `[part=\"backdrop\"]`, so the scrim can be pulled back independently of the panel. Also set inline from the `backdrop-inset` attribute. `fullscreen-inset` overrides the safe-area panel inset while the viewport-filling backdrop stays at zero by default. `compact` tightens header/body padding — same convention as `lr-empty`."
       }
     },
     {
@@ -14376,7 +14551,7 @@
       "name": "--show-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** (default: `var(--lr-duration-base)`) — Compatibility alias for `--lr-accordion-item-show-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup enter-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Expand-icon transition duration.\n\n**`<lr-dialog>`** — Mapped opening animation duration.\n\n**`<lr-drawer>`** — Opening slide duration.\n\n**`<lr-dropdown>`** (default: `var(--lr-transition-fast)`) — Opening transition duration.\n\n**`<lr-popover>`** (default: `var(--lr-duration-fast)`) — Opening transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Activation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker opening duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-show-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Expansion motion duration."
+        "value": "**`<lr-accordion-item>`** — Upstream-compatible alias for `--lr-accordion-item-show-duration`.\n\n**`<lr-combobox>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition duration.\n\n**`<lr-date-input>`** (default: `var(--lr-transition-fast)`) — Popup enter-transition duration.\n\n**`<lr-details>`** (default: `var(--lr-duration-base)`) — Expand-icon transition duration.\n\n**`<lr-dialog>`** — Mapped opening animation duration.\n\n**`<lr-drawer>`** — Opening slide duration.\n\n**`<lr-dropdown>`** (default: `var(--lr-transition-fast)`) — Opening transition duration.\n\n**`<lr-popover>`** (default: `var(--lr-duration-fast)`) — Opening transition duration.\n\n**`<lr-popup>`** (default: `var(--lr-duration-fast)`) — Activation transition duration.\n\n**`<lr-select>`** (default: `var(--lr-transition-fast)`) — Listbox enter-transition timing.\n\n**`<lr-time-input>`** (default: `var(--lr-duration-fast)`) — Picker opening duration.\n\n**`<lr-toast-item>`** — Mapped alias for `--lr-toast-show-duration`.\n\n**`<lr-tree-item>`** (default: `var(--lr-duration-base)`) — Expansion motion duration."
       }
     },
     {
@@ -14411,7 +14586,7 @@
       "name": "--spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-accordion-item>`** — Compatibility alias for `--lr-accordion-item-spacing`; set on either name.\n\n**`<lr-card>`** (default: `var(--lr-space-m)`) — Space around and between card sections.\n\n**`<lr-details>`** — Upstream-compatible spacing override for the summary and content.\n\n**`<lr-dialog>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Mapped shared region spacing.\n\n**`<lr-divider>`** (default: `0`) — Space on both block sides (inline sides when vertical).\n\n**`<lr-drawer>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Web Awesome shared region spacing."
+        "value": "**`<lr-accordion-item>`** — Upstream-compatible alias for `--lr-accordion-item-spacing`.\n\n**`<lr-card>`** (default: `var(--lr-space-m)`) — Space around and between card sections.\n\n**`<lr-details>`** — Upstream-compatible spacing override for the summary and content.\n\n**`<lr-dialog>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Mapped shared region spacing.\n\n**`<lr-divider>`** (default: `0`) — Space on both block sides (inline sides when vertical).\n\n**`<lr-drawer>`** (default: `var(--lr-dialog-spacing,var(--lr-space-l))`) — Web Awesome shared region spacing."
       }
     },
     {

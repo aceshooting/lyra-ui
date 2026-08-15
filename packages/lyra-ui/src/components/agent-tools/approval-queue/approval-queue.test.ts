@@ -90,7 +90,7 @@ describe('lr-approval-queue', () => {
 
   it('translates nested approve and deny requests into correlated queue decisions', async () => {
     const el = (await fixture(html`
-      <lr-approval-queue selected-id="call-1" open .requests=${requests}></lr-approval-queue>
+      <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
     `)) as LyraApprovalQueue;
     const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
 
@@ -121,7 +121,7 @@ describe('lr-approval-queue', () => {
 
   it('propagates a canceled queue decision back to the nested dialog event', async () => {
     const el = (await fixture(html`
-      <lr-approval-queue selected-id="call-1" open .requests=${requests}></lr-approval-queue>
+      <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
     `)) as LyraApprovalQueue;
     const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
     el.addEventListener('lr-approval-decision', (event) => event.preventDefault());
@@ -146,7 +146,7 @@ describe('lr-approval-queue', () => {
 
   it('preserves the selected identity for close when a decision listener removes the request synchronously', async () => {
     const el = await fixture<LyraApprovalQueue>(html`
-      <lr-approval-queue selected-id="call-1" open .requests=${requests}></lr-approval-queue>
+      <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
     `);
     const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
     el.addEventListener('lr-approval-decision', () => {
@@ -169,11 +169,11 @@ describe('lr-approval-queue', () => {
 
   it('clears stale selected and open state when the controlled queue shrinks', async () => {
     const el = await fixture<LyraApprovalQueue>(html`
-      <lr-approval-queue selected-id="call-1" open .requests=${requests}></lr-approval-queue>
+      <lr-approval-queue selected-invocation-id="call-1" open .requests=${requests}></lr-approval-queue>
     `);
     el.requests = [];
     await el.updateComplete;
-    expect(el.selectedId).to.equal(null);
+    expect(el.selectedInvocationId).to.equal(null);
     expect(el.open).to.be.false;
     expect(el.shadowRoot!.querySelector('lr-tool-approval-dialog') === null).to.be.true;
   });
@@ -183,7 +183,7 @@ describe('lr-approval-queue', () => {
       { ...requests[0]!, status: 'approved' },
     ];
     const el = await fixture<LyraApprovalQueue>(html`
-      <lr-approval-queue selected-id="call-1" open .requests=${resolved}></lr-approval-queue>
+      <lr-approval-queue selected-invocation-id="call-1" open .requests=${resolved}></lr-approval-queue>
     `);
     let selections = 0;
     el.addEventListener('lr-approval-select', () => selections += 1);
@@ -192,22 +192,20 @@ describe('lr-approval-queue', () => {
     row.click();
     await el.updateComplete;
     expect(selections).to.equal(0);
-    expect(el.selectedId).to.equal(null);
+    expect(el.selectedInvocationId).to.equal(null);
     expect(el.open).to.be.false;
   });
 
-  it('distinguishes no selection from a request whose valid identity is empty string', async () => {
+  it('omits requests with empty or blank identities before counts, selection, and rendering', async () => {
     const emptyIdRequest: ToolApprovalRequest = { id: '', toolName: 'empty_id_tool', args: {} };
+    const blankIdRequest: ToolApprovalRequest = { id: '   ', toolName: 'blank_id_tool', args: {} };
     const el = await fixture<LyraApprovalQueue>(html`
-      <lr-approval-queue .requests=${[emptyIdRequest]}></lr-approval-queue>
+      <lr-approval-queue .requests=${[emptyIdRequest, blankIdRequest]}></lr-approval-queue>
     `);
-    expect(el.selectedId).to.equal(null);
-
-    (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
-    await el.updateComplete;
-    expect(el.selectedId).to.equal('');
-    expect(el.open).to.be.true;
-    expect(el.shadowRoot!.querySelector('lr-tool-approval-dialog') === null).to.be.false;
+    expect(el.selectedInvocationId).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[part="request"]')).to.have.length(0);
+    expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+    expect(Boolean(el.shadowRoot!.querySelector('lr-tool-approval-dialog'))).to.equal(false);
   });
 
   it('keeps a non-empty host name on the host and preserves explicit-empty section semantics', async () => {
@@ -250,7 +248,7 @@ describe('lr-approval-queue', () => {
 
   it('marks the selected request row with aria-current, not just data-selected', async () => {
     const el = (await fixture(html`
-      <lr-approval-queue selected-id="call-1" .requests=${requests}></lr-approval-queue>
+      <lr-approval-queue selected-invocation-id="call-1" .requests=${requests}></lr-approval-queue>
     `)) as LyraApprovalQueue;
     const request = el.shadowRoot!.querySelector('[part="request"]') as HTMLElement;
     expect(request.getAttribute('aria-current')).to.equal('true');
@@ -264,7 +262,7 @@ describe('lr-approval-queue', () => {
     const el = (await fixture(html`
       <lr-approval-queue
         style="--lr-approval-queue-selected-border: rgb(1, 2, 3)"
-        selected-id="call-1"
+        selected-invocation-id="call-1"
         .requests=${requests}
       ></lr-approval-queue>
     `)) as LyraApprovalQueue;

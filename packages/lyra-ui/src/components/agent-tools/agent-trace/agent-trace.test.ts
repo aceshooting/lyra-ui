@@ -206,7 +206,7 @@ describe('lr-agent-trace', () => {
     const listener = oneEvent(el, 'lr-span-select');
     subAgentButton.click();
     const ev = await listener;
-    expect(ev.detail).to.deep.equal({ id: 'sub-agent' });
+    expect(ev.detail).to.deep.equal({ spanId: 'sub-agent' });
     expect(el.activeSpanId).to.equal('sub-agent');
     await el.updateComplete;
     const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
@@ -222,7 +222,7 @@ describe('lr-agent-trace', () => {
     const listener = oneEvent(el, 'lr-span-select');
     row.click();
     const ev = await listener;
-    expect(ev.detail).to.deep.equal({ id: 'sub-agent' });
+    expect(ev.detail).to.deep.equal({ spanId: 'sub-agent' });
     expect(el.activeSpanId).to.equal('sub-agent');
     await el.updateComplete;
     const buttons = [...el.shadowRoot!.querySelectorAll('[part="handoff"]')] as HTMLButtonElement[];
@@ -238,7 +238,7 @@ describe('lr-agent-trace', () => {
     const listener = oneEvent(el, 'lr-span-toggle');
     toggle.click();
     const ev = await listener;
-    expect(ev.detail).to.deep.equal({ id: 'root', expanded: false });
+    expect(ev.detail).to.deep.equal({ spanId: 'root', expanded: false });
   });
 
   it('forwards show-tokens/show-cost/hide-bars to the composed lr-trace-tree', async () => {

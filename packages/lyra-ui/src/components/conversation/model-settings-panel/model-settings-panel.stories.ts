@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'ModelSettingsPanel',
   component: 'lr-model-settings-panel',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'The model catalog and emitted inCatalog field share the unique nonempty first-wins catalog projection. The catalog is a bounded clone-owned frozen snapshot; create and reassign a new array after changes.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

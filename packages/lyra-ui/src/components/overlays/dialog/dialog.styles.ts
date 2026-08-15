@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -6,7 +6,7 @@ export const styles = css`
        without a raw literal leaking into the public API (no shared
        --lr-*-overlay token exists in the design system to resolve through,
        same rationale as lr-widget's --lr-widget-overlay-color). */
-    --lr-dialog-overlay-color: var(--lr-color-overlay);
+    --_lr-dialog-overlay-color: var(--lr-color-overlay);
     display: none;
     position: fixed;
     inset: 0;
@@ -27,7 +27,10 @@ export const styles = css`
     justify-content: center;
     padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
     padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    padding-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));
+    padding-inline-start: max(
+      var(--lr-space-l),
+      var(--lr-safe-area-inline-start)
+    );
     padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
   }
   :host([open]) {
@@ -41,16 +44,19 @@ export const styles = css`
     display: flex;
     pointer-events: none;
   }
-  [part~='base'] {
+  [part~="base"] {
     display: contents;
   }
-  [part~='backdrop'] {
+  [part~="backdrop"] {
     position: absolute;
     inset: 0;
-    background: var(--lr-dialog-overlay-color);
-    backdrop-filter: var(--backdrop-filter, var(--lr-dialog-backdrop-filter, none));
+    background: var(--lr-dialog-overlay-color, var(--_lr-dialog-overlay-color));
+    backdrop-filter: var(
+      --backdrop-filter,
+      var(--lr-dialog-backdrop-filter, none)
+    );
   }
-  [part~='panel'] {
+  [part~="panel"] {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -65,7 +71,13 @@ export const styles = css`
        default, the cap falls back to the requested width itself (not the
        32rem default) so an assertive width isn't silently clipped by the
        old shrink-to-fit cap -- the viewport (100%) is still a hard limit. */
-    max-inline-size: min(var(--lr-dialog-max-width, var(--width, var(--lr-dialog-width, var(--lr-size-32rem)))), 100%);
+    max-inline-size: min(
+      var(
+        --lr-dialog-max-width,
+        var(--width, var(--lr-dialog-width, var(--lr-size-32rem)))
+      ),
+      100%
+    );
     max-block-size: 100%;
     /* The modal-panel surface, NOT the page surface. In dark mode --lr-color-surface is the same
        near-black as the page behind the scrim, so a dialog painted with it reads as a scrim with
@@ -80,17 +92,24 @@ export const styles = css`
     box-shadow: var(--lr-shadow-xl);
     overflow: auto;
   }
-  [part='header'] {
+  [part="header"] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     min-inline-size: 0;
     max-inline-size: 100%;
     gap: var(--lr-space-s);
-    padding: var(--header-spacing, var(--spacing, var(--lr-dialog-spacing-block, var(--lr-space-m)) var(--lr-dialog-spacing, var(--lr-space-l))));
+    padding: var(
+      --header-spacing,
+      var(
+        --spacing,
+        var(--lr-dialog-spacing-block, var(--lr-space-m))
+          var(--lr-dialog-spacing, var(--lr-space-l))
+      )
+    );
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part~='heading'] {
+  [part~="heading"] {
     flex: 1 1 auto;
     min-inline-size: 0;
     margin: 0;
@@ -99,7 +118,7 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  [part='header-actions'] {
+  [part="header-actions"] {
     flex: 1 1 auto;
     display: flex;
     flex-wrap: wrap;
@@ -111,12 +130,12 @@ export const styles = css`
     gap: var(--lr-space-xs);
     margin-inline-start: auto;
   }
-  [part='header-actions'] ::slotted(*) {
+  [part="header-actions"] ::slotted(*) {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part~='close-button'] {
+  [part~="close-button"] {
     flex: 0 0 auto;
     margin-inline-start: auto;
     display: inline-flex;
@@ -132,10 +151,10 @@ export const styles = css`
   }
   /* Once a header-actions group has claimed the auto margin, the close button must not claim a
      second one or it would be pushed away from the group it belongs beside. */
-  [part='header-actions'] + [part~='close-button'] {
+  [part="header-actions"] + [part~="close-button"] {
     margin-inline-start: 0;
   }
-  [part~='close-button']:hover {
+  [part~="close-button"]:hover {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
@@ -144,32 +163,39 @@ export const styles = css`
      this rule knowing which is in force -- the property filter: brightness() never had. The glyph
      colour is restated rather than left to the hover rule because keyboard activation raises
      :active with no :hover. */
-  [part~='close-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part~="close-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-brand);
   }
-  [part~='close-button']:focus-visible {
+  [part~="close-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part~='close-button'] svg {
+  [part~="close-button"] svg {
     display: block;
   }
-  [part='body'] {
+  [part="body"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    padding: var(--body-spacing, var(--spacing, var(--lr-dialog-spacing, var(--lr-space-l))));
+    padding: var(
+      --body-spacing,
+      var(--spacing, var(--lr-dialog-spacing, var(--lr-space-l)))
+    );
     overflow: auto;
     overflow-wrap: anywhere;
   }
   /* The body carries tabindex="-1" so an overflowing dialog can be scrolled from the keyboard;
      once it can hold focus it has to say so. Inset offset because the body is flush with the
      panel edges, where an outset ring would be clipped or would overlap the header rule. */
-  [part='body']:focus-visible {
+  [part="body"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  [part='footer'] {
+  [part="footer"] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -177,19 +203,26 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     gap: var(--lr-space-s);
-    padding: var(--footer-spacing, var(--spacing, var(--lr-dialog-spacing-block, var(--lr-space-m)) var(--lr-dialog-spacing, var(--lr-space-l))));
+    padding: var(
+      --footer-spacing,
+      var(
+        --spacing,
+        var(--lr-dialog-spacing-block, var(--lr-space-m))
+          var(--lr-dialog-spacing, var(--lr-space-l))
+      )
+    );
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
     overflow-wrap: anywhere;
   }
   /* Footer content is consumer-owned light DOM, so the wrapper's responsive rules do not select
      it directly. Keep each assigned action capable of shrinking to the panel and inherit the
      same emergency-wrap policy for a localized or identifier-like label. */
-  [part='footer'] ::slotted(*) {
+  [part="footer"] ::slotted(*) {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='footer'][hidden] {
+  [part="footer"][hidden] {
     display: none;
   }
 `;

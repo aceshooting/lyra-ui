@@ -8,6 +8,7 @@ import { supportsCustomHighlights } from '../../../internal/text-highlights.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
 import { styles } from './docx-viewer.styles.js';
+import { HIGHLIGHT_SNAPSHOT_LIMIT } from '../../../internal/anchor-target.js';
 
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64);
@@ -749,8 +750,8 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
           clientY: rect.top + rect.height / 2,
         }),
       );
-      const event = (await listener) as CustomEvent<{ id: string }>;
-      expect(event.detail).to.deep.equal({ id: 'h1' });
+      const event = (await listener) as CustomEvent<{ highlightId: string }>;
+      expect(event.detail).to.deep.equal({ highlightId: 'h1' });
     } finally {
       restore();
     }
@@ -771,7 +772,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       expect(action?.getAttribute('aria-label')).to.equal('Highlight: Ada passage');
       const eventPromise = oneEvent(el, 'lr-highlight-activate');
       action!.click();
-      expect((await eventPromise).detail).to.deep.equal({ id: 'ada' });
+      expect((await eventPromise).detail).to.deep.equal({ highlightId: 'ada' });
     } finally {
       restore();
     }
@@ -800,7 +801,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       expect(actions[0]!.textContent).to.equal('Ada passage');
       const eventPromise = oneEvent(el, 'lr-highlight-activate');
       actions[0]!.click();
-      expect((await eventPromise).detail).to.deep.equal({ id: 'ada' });
+      expect((await eventPromise).detail).to.deep.equal({ highlightId: 'ada' });
     } finally {
       restore();
     }
@@ -1093,7 +1094,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
 
       const resolved = (el as unknown as { resolvedHighlightRanges: unknown[] }).resolvedHighlightRanges;
       expect(resolved).to.have.length(100);
-      expect(idReads).to.be.at.most(1_100);
+      expect(idReads).to.be.at.most(HIGHLIGHT_SNAPSHOT_LIMIT + 1);
       expect(activeHighlightPainted(el)).to.be.true;
     } finally {
       restore();

@@ -10,7 +10,7 @@ import { styles } from './policy-summary.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_policySummaryAllowCount, LYRA_DEFAULT_policySummaryCategoryGuardrail, LYRA_DEFAULT_policySummaryCategoryPermission, LYRA_DEFAULT_policySummaryCategoryPrivacy, LYRA_DEFAULT_policySummaryCategoryTool, LYRA_DEFAULT_policySummaryDenyCount, LYRA_DEFAULT_policySummaryDetailLabel, LYRA_DEFAULT_policySummaryLabel, LYRA_DEFAULT_policySummaryNeedsReviewCount, LYRA_DEFAULT_policySummaryStateAllow, LYRA_DEFAULT_policySummaryStateDeny, LYRA_DEFAULT_policySummaryStateNeedsReview, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_policySummaryAllowCount, LYRA_DEFAULT_policySummaryCategoryGuardrail, LYRA_DEFAULT_policySummaryCategoryPermission, LYRA_DEFAULT_policySummaryCategoryPrivacy, LYRA_DEFAULT_policySummaryCategoryTool, LYRA_DEFAULT_policySummaryDenyCount, LYRA_DEFAULT_policySummaryDetailLabel, LYRA_DEFAULT_policySummaryLabel, LYRA_DEFAULT_policySummaryNeedsReviewCount, LYRA_DEFAULT_policySummaryStateAllow, LYRA_DEFAULT_policySummaryStateDeny, LYRA_DEFAULT_policySummaryStateNeedsReview, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -83,6 +83,9 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * there is no per-decision action here, and a decision's `state` is fixed data, not something a
  * viewer can change from this component.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-policy-summary
  * @csspart base - The root wrapper, only rendered while `decisions` is non-empty.
  * @csspart summary - The always-visible allow/deny/needs-review count row.
@@ -110,6 +113,8 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * @since 4.1.0
  */
 export class LyraPolicySummary extends LyraElement {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["decisions"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -134,6 +139,7 @@ export class LyraPolicySummary extends LyraElement {
     policySummaryStateAllow: LYRA_DEFAULT_policySummaryStateAllow,
     policySummaryStateDeny: LYRA_DEFAULT_policySummaryStateDeny,
     policySummaryStateNeedsReview: LYRA_DEFAULT_policySummaryStateNeedsReview,
+    progress: LYRA_DEFAULT_progress,
     restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
@@ -143,8 +149,9 @@ export class LyraPolicySummary extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
   /** The decisions to render, in the given order. Controlled and never mutated by this component
-   *  -- pass a new array to update it. Duplicate ids normalize first-wins before counts/rendering. */
-  @property({ attribute: false }) decisions: PolicyDecision[] = [];
+   *  -- pass a new array to update it. Empty/blank ids are omitted and duplicates normalize
+   *  first-wins before counts/rendering. */
+  @property({ attribute: false }) decisions: readonly PolicyDecision[] = [];
 
   private get normalizedDecisions(): PolicyDecision[] {
     return firstByIdentity(Array.isArray(this.decisions) ? this.decisions : [], (decision) => decision.id);

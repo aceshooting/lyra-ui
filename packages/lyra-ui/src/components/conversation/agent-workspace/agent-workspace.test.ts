@@ -439,6 +439,22 @@ it("renders a bounded latest-message window for very large fallback transcripts"
   expect(viewport.unreadStartIndex).to.equal(495);
 });
 
+it("maps the authored unread index through the same normalized message projection", async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace
+    unread-start-index="3"
+    .messages=${[
+      { id: "first", role: "assistant", text: "First" },
+      { id: "first", role: "assistant", text: "Ignored duplicate" },
+      { id: "", role: "assistant", text: "Ignored empty" },
+      { id: "second", role: "assistant", text: "Second" },
+    ]}
+  ></lr-agent-workspace>`);
+  const viewport = el.shadowRoot!.querySelector("lr-chat-viewport") as HTMLElement & {
+    unreadStartIndex: number | null;
+  };
+  expect(viewport.unreadStartIndex).to.equal(1);
+});
+
 it("uses both narrow body tracks without leaving dead space above the composer", async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
     <lr-agent-workspace
@@ -615,4 +631,26 @@ it("uses first-wins identity for duplicate message ids in the bounded fallback",
       }
     ).content
   ).to.equal("first");
+});
+
+it("normalizes nonempty message identities before applying the 500-message window", async () => {
+  const repeatedTail = Array.from({ length: 499 }, () => ({
+    id: "tail",
+    role: "assistant" as const,
+    text: "duplicate tail",
+  }));
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace
+    .messages=${[
+      { id: "kept", role: "assistant", text: "kept before malformed tail" },
+      ...repeatedTail,
+      { id: "", role: "assistant", text: "empty" },
+      { id: "   ", role: "assistant", text: "whitespace" },
+    ]}
+  ></lr-agent-workspace>`);
+
+  const rendered = [...el.shadowRoot!.querySelectorAll<HTMLElement>("lr-chat-message")];
+  expect(rendered.map((message) => message.getAttribute("message-id"))).to.deep.equal([
+    "kept",
+    "tail",
+  ]);
 });

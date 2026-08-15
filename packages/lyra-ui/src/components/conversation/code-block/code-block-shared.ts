@@ -24,6 +24,10 @@ import { prefersReducedMotion } from "../../../internal/motion.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { sanitizeCssLength } from "../../../internal/safe-css.js";
 import {
+  boundedSelectionRects,
+  boundedSelectionText,
+} from "../../../internal/text-quote.js";
+import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
@@ -337,8 +341,8 @@ export function codeBlockSelectionAnchor(
       return null;
     range = selection.getRangeAt(0);
   }
-  const text = range.toString();
-  if (!text.trim()) return null;
+  const text = boundedSelectionText(range);
+  if (!text) return null;
   const lineOf = (node: Node): number | null => {
     const el =
       node.nodeType === Node.ELEMENT_NODE
@@ -358,7 +362,7 @@ export function codeBlockSelectionAnchor(
       start: Math.min(start, end),
       end: Math.max(start, end),
     },
-    rects: Array.from(range.getClientRects()),
+    rects: boundedSelectionRects(range),
   };
 }
 

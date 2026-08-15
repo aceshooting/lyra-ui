@@ -1,55 +1,55 @@
-import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { css } from "lit";
+import { formControlRequiredMarker } from "../../../internal/form-control.styles.js";
 
 export const styles = css`
   :host {
     display: block;
-    --lr-textarea-max-block-size: none;
+    --_lr-textarea-max-block-size: none;
     /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, pulled in ahead of
        this sheet by textarea.class.ts), so this field's scale and lr-input's are the same scale
        rather than two copies. The ladder's INLINE gutter is used on all four sides on purpose: its
        block padding is 0 at the two tightest tiers because a control row's height floor supplies
        the space there, and a textarea has no floor -- the first line would sit on the border. */
-    --lr-textarea-padding: var(--lr-form-control-padding-inline);
-    --lr-textarea-font-size: var(--lr-form-control-font-size);
-    --lr-textarea-radius: var(--lr-form-control-radius);
+    --_lr-textarea-padding: var(--lr-form-control-padding-inline);
+    --_lr-textarea-font-size: var(--lr-form-control-font-size);
+    --_lr-textarea-radius: var(--lr-form-control-radius);
     /* Fill/border pair swapped per appearance below; the mapped default is outlined. */
-    --lr-textarea-fill: transparent;
-    --lr-textarea-border-color: var(--lr-color-border);
+    --_lr-textarea-fill: transparent;
+    --_lr-textarea-border-color: var(--lr-color-border);
   }
-  /* Retunes the shared radius knob rather than declaring border-radius on [part='textarea'], so
-     that one consumption point below stays the only place a corner radius is read -- and a
-     consumer's own --lr-textarea-radius override still wins over it. */
+  /* Changes the private radius default rather than declaring border-radius on [part='textarea'],
+     so that one consumption point below stays the only place a corner radius is read -- and an
+     inherited or direct --lr-textarea-radius override remains authoritative. */
   :host([pill]) {
-    --lr-textarea-radius: var(--lr-radius-pill);
+    --_lr-textarea-radius: var(--lr-radius-pill);
   }
-  :host([appearance='filled-outlined']) {
-    --lr-textarea-fill: var(--lr-color-surface);
-    --lr-textarea-border-color: var(--lr-color-border);
+  :host([appearance="filled-outlined"]) {
+    --_lr-textarea-fill: var(--lr-color-surface);
+    --_lr-textarea-border-color: var(--lr-color-border);
   }
-  :host([appearance='outlined']) {
-    --lr-textarea-fill: transparent;
-    --lr-textarea-border-color: var(--lr-color-border);
+  :host([appearance="outlined"]) {
+    --_lr-textarea-fill: transparent;
+    --_lr-textarea-border-color: var(--lr-color-border);
   }
-  :host([appearance='filled']) {
-    --lr-textarea-fill: var(--lr-color-surface-raised);
-    --lr-textarea-border-color: transparent;
+  :host([appearance="filled"]) {
+    --_lr-textarea-fill: var(--lr-color-surface-raised);
+    --_lr-textarea-border-color: transparent;
   }
   :host([filled]) {
-    --lr-textarea-fill: var(--lr-color-surface-raised);
-    --lr-textarea-border-color: transparent;
+    --_lr-textarea-fill: var(--lr-color-surface-raised);
+    --_lr-textarea-border-color: transparent;
   }
-  :host([appearance='plain']) {
-    --lr-textarea-fill: transparent;
-    --lr-textarea-border-color: transparent;
+  :host([appearance="plain"]) {
+    --_lr-textarea-fill: transparent;
+    --_lr-textarea-border-color: transparent;
   }
   /* Quiet brand tint as the fill, loud brand only on the border -- same reasoning as lr-input's
      accent tier: the user's own text has to stay legible on it. */
-  :host([appearance='accent']) {
-    --lr-textarea-fill: var(--lr-color-brand-quiet);
-    --lr-textarea-border-color: var(--lr-color-brand);
+  :host([appearance="accent"]) {
+    --_lr-textarea-fill: var(--lr-color-brand-quiet);
+    --_lr-textarea-border-color: var(--lr-color-brand);
   }
-  [part='form-control-label'] {
+  [part="form-control-label"] {
     display: block;
     margin-block-end: var(--lr-space-xs);
     font-size: var(--lr-font-size-md-sm);
@@ -58,7 +58,7 @@ export const styles = css`
   /* :empty never matches here -- the part always contains a literal slot child element regardless
      of assigned/text content -- so real emptiness is tracked in JS (hasLabelSlot) and reflected
      via the hidden attribute instead (same fix as lr-select's identical part). */
-  [part='form-control-label'][hidden] {
+  [part="form-control-label"][hidden] {
     display: none;
   }
   ${formControlRequiredMarker}
@@ -69,23 +69,27 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
   }
-  [part='textarea'] {
+  [part="textarea"] {
     display: block;
     inline-size: 100%;
     box-sizing: border-box;
-    padding: var(--lr-textarea-padding);
-    border: var(--lr-border-width-thin) solid var(--lr-textarea-border-color);
-    border-radius: var(--lr-textarea-radius);
-    background: var(--lr-textarea-fill);
+    padding: var(--lr-textarea-padding, var(--_lr-textarea-padding));
+    border: var(--lr-border-width-thin) solid
+      var(--lr-textarea-border-color, var(--_lr-textarea-border-color));
+    border-radius: var(--lr-textarea-radius, var(--_lr-textarea-radius));
+    background: var(--lr-textarea-fill, var(--_lr-textarea-fill));
     color: var(--lr-color-text);
     font: inherit;
-    font-size: var(--lr-textarea-font-size);
+    font-size: var(--lr-textarea-font-size, var(--_lr-textarea-font-size));
     line-height: var(--lr-line-height-normal);
   }
-  [part='textarea'][data-auto-resize] {
-    max-block-size: var(--lr-textarea-max-block-size);
+  [part="textarea"][data-auto-resize] {
+    max-block-size: var(
+      --lr-textarea-max-block-size,
+      var(--_lr-textarea-max-block-size)
+    );
   }
-  [part='textarea']:focus-visible {
+  [part="textarea"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -98,41 +102,41 @@ export const styles = css`
      The mousedown that would match :active is the same gesture that focuses the field, so a pressed
      treatment would render for one frame between the hover border and the focus ring and read as a
      flicker; focus is this control's real "you are acting on me" state. */
-  :host(:not(:disabled)) [part='textarea']:hover {
+  :host(:not(:disabled)) [part="textarea"]:hover {
     border-color: var(--lr-textarea-hover-border-color, var(--lr-color-brand));
   }
-  [part='textarea']:disabled {
+  [part="textarea"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='textarea']::placeholder {
+  [part="textarea"]::placeholder {
     color: var(--lr-color-text-quiet);
   }
-  [part~='hint'] {
+  [part~="hint"] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  [part~='hint'][hidden] {
+  [part~="hint"][hidden] {
     display: none;
   }
-  [part='error'] {
+  [part="error"] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-danger);
   }
-  [part='error'][hidden] {
+  [part="error"][hidden] {
     display: none;
   }
-  [part='footer'] {
+  [part="footer"] {
     display: flex;
     justify-content: flex-end;
     margin-block-start: var(--lr-space-xs);
   }
-  [part='footer'][hidden] {
+  [part="footer"][hidden] {
     display: none;
   }
-  [part='count'] {
+  [part="count"] {
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
@@ -149,11 +153,11 @@ export const styles = css`
     white-space: nowrap;
     border: 0;
   }
-  [part='form-control'],
-  [part='form-control-label'],
-  [part~='hint'],
-  [part='error'],
-  [part='footer'] {
+  [part="form-control"],
+  [part="form-control-label"],
+  [part~="hint"],
+  [part="error"],
+  [part="footer"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;

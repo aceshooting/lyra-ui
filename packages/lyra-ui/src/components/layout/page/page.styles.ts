@@ -1,13 +1,13 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
-    --lr-page-aside-width: var(--aside-width, auto);
-    --lr-page-banner-height: var(--banner-height, 0);
-    --lr-page-header-height: var(--header-height, 0);
-    --lr-page-main-width: var(--main-width, 1fr);
-    --lr-page-menu-width: var(--menu-width, auto);
-    --lr-page-subheader-height: var(--subheader-height, 0);
+    --_lr-page-aside-width: var(--aside-width, auto);
+    --_lr-page-banner-height: var(--banner-height, 0);
+    --_lr-page-header-height: var(--header-height, 0);
+    --_lr-page-main-width: var(--main-width, 1fr);
+    --_lr-page-menu-width: var(--menu-width, auto);
+    --_lr-page-subheader-height: var(--subheader-height, 0);
     display: block;
     min-inline-size: 0;
     color: var(--lr-color-text);
@@ -15,7 +15,7 @@ export const styles = css`
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
-  [part~='page'] {
+  [part~="page"] {
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
@@ -24,10 +24,13 @@ export const styles = css`
     background: var(--lr-color-surface);
   }
 
-  [part~='skip-to-content'] {
+  [part~="skip-to-content"] {
     position: fixed;
     inset-block-start: max(var(--lr-space-s), var(--lr-safe-area-top));
-    inset-inline-start: max(var(--lr-space-s), var(--lr-safe-area-inline-start));
+    inset-inline-start: max(
+      var(--lr-space-s),
+      var(--lr-safe-area-inline-start)
+    );
     z-index: var(--lr-layer-toast);
     display: inline-flex;
     align-items: center;
@@ -45,17 +48,19 @@ export const styles = css`
     box-shadow: var(--lr-shadow-m);
     text-decoration: none;
     transform: translateY(calc(-100% - var(--lr-space-l)));
-    transition:
-      opacity var(--lr-transition-fast),
+    transition: opacity var(--lr-transition-fast),
       transform var(--lr-transition-fast),
       background-color var(--lr-transition-fast);
     cursor: pointer;
   }
-  [part~='skip-to-content']:where(:hover) {
-    background: var(--lr-page-skip-to-content-hover-bg, var(--lr-color-brand-quiet));
+  [part~="skip-to-content"]:where(:hover) {
+    background: var(
+      --lr-page-skip-to-content-hover-bg,
+      var(--lr-color-brand-quiet)
+    );
     color: var(--lr-page-skip-to-content-hover-color, var(--lr-color-brand));
   }
-  [part~='skip-to-content']:where(:active) {
+  [part~="skip-to-content"]:where(:active) {
     background: var(
       --lr-page-skip-to-content-active-bg,
       color-mix(
@@ -66,7 +71,7 @@ export const styles = css`
     );
     color: var(--lr-page-skip-to-content-active-color, var(--lr-color-brand));
   }
-  [part~='skip-to-content']:where(:focus-visible) {
+  [part~="skip-to-content"]:where(:focus-visible) {
     opacity: 1;
     pointer-events: auto;
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -74,48 +79,57 @@ export const styles = css`
     transform: none;
   }
 
-  [part~='banner'],
-  [part~='header'],
-  [part~='subheader'],
-  [part~='menu'],
-  [part~='navigation-header'],
-  [part~='navigation-footer'],
-  [part~='main-header'],
-  [part~='main-content'],
-  [part~='main-footer'],
-  [part~='aside'],
-  [part~='footer'] {
+  [part~="banner"],
+  [part~="header"],
+  [part~="subheader"],
+  [part~="menu"],
+  [part~="navigation-header"],
+  [part~="navigation-footer"],
+  [part~="main-header"],
+  [part~="main-content"],
+  [part~="main-footer"],
+  [part~="aside"],
+  [part~="footer"] {
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
 
-  [part~='banner'] {
-    min-block-size: var(--lr-page-banner-height);
+  [part~="banner"] {
+    min-block-size: var(--lr-page-banner-height, var(--_lr-page-banner-height));
   }
-  [part~='header'] {
+  [part~="header"] {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--lr-space-s);
-    min-block-size: var(--lr-page-header-height);
+    min-block-size: var(--lr-page-header-height, var(--_lr-page-header-height));
   }
-  [part~='subheader'] {
-    min-block-size: var(--lr-page-subheader-height);
+  [part~="subheader"] {
+    min-block-size: var(
+      --lr-page-subheader-height,
+      var(--_lr-page-subheader-height)
+    );
   }
 
-  :host(:not([disable-sticky~='banner'])) [part~='banner'] {
+  :host(:not([disable-sticky~="banner"])) [part~="banner"] {
     position: sticky;
     inset-block-start: 0;
     z-index: var(--lr-layer-content);
   }
-  :host(:not([disable-sticky~='header'])) [part~='header'] {
+  :host(:not([disable-sticky~="header"])) [part~="header"] {
     position: sticky;
-    inset-block-start: var(--lr-page-banner-height);
+    inset-block-start: var(
+      --lr-page-banner-height,
+      var(--_lr-page-banner-height)
+    );
     z-index: var(--lr-layer-content);
   }
-  :host(:not([disable-sticky~='subheader'])) [part~='subheader'] {
+  :host(:not([disable-sticky~="subheader"])) [part~="subheader"] {
     position: sticky;
-    inset-block-start: calc(var(--lr-page-banner-height) + var(--lr-page-header-height));
+    inset-block-start: calc(
+      var(--lr-page-banner-height, var(--_lr-page-banner-height)) +
+        var(--lr-page-header-height, var(--_lr-page-header-height))
+    );
     z-index: var(--lr-layer-content);
   }
 
@@ -123,10 +137,10 @@ export const styles = css`
     display: none;
     flex: 0 0 auto;
   }
-  :host([view='mobile']) .navigation-toggle-container {
+  :host([view="mobile"]) .navigation-toggle-container {
     display: block;
   }
-  [part~='navigation-toggle'] {
+  [part~="navigation-toggle"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -141,16 +155,19 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  :host([disable-navigation-toggle]) [part~='navigation-toggle'] {
+  :host([disable-navigation-toggle]) [part~="navigation-toggle"] {
     display: none;
   }
-  [part~='navigation-toggle']:where(:hover),
-  ::slotted([slot='navigation-toggle']:hover) {
-    background: var(--lr-page-navigation-toggle-hover-bg, var(--lr-color-brand-quiet));
+  [part~="navigation-toggle"]:where(:hover),
+  ::slotted([slot="navigation-toggle"]:hover) {
+    background: var(
+      --lr-page-navigation-toggle-hover-bg,
+      var(--lr-color-brand-quiet)
+    );
     color: var(--lr-page-navigation-toggle-hover-color, var(--lr-color-brand));
   }
-  [part~='navigation-toggle']:where(:active),
-  ::slotted([slot='navigation-toggle']:active) {
+  [part~="navigation-toggle"]:where(:active),
+  ::slotted([slot="navigation-toggle"]:active) {
     background: var(
       --lr-page-navigation-toggle-active-bg,
       color-mix(
@@ -161,101 +178,104 @@ export const styles = css`
     );
     color: var(--lr-page-navigation-toggle-active-color, var(--lr-color-brand));
   }
-  [part~='navigation-toggle']:where(:focus-visible),
-  ::slotted([slot='navigation-toggle']:focus-visible) {
+  [part~="navigation-toggle"]:where(:focus-visible),
+  ::slotted([slot="navigation-toggle"]:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  ::slotted([slot='navigation-toggle']) {
+  ::slotted([slot="navigation-toggle"]) {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
   }
-  [part~='navigation-toggle-icon'] {
+  [part~="navigation-toggle-icon"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
   }
-  [part~='navigation-toggle-icon'] svg {
+  [part~="navigation-toggle-icon"] svg {
     display: block;
   }
 
-  [part~='body'] {
+  [part~="body"] {
     display: grid;
     flex: 1 1 auto;
-    grid-template-areas: 'menu navigation main aside';
+    grid-template-areas: "menu navigation main aside";
     grid-template-columns:
-      var(--lr-page-menu-width)
+      var(--lr-page-menu-width, var(--_lr-page-menu-width))
       auto
-      minmax(0, var(--lr-page-main-width))
-      var(--lr-page-aside-width);
+      minmax(0, var(--lr-page-main-width, var(--_lr-page-main-width)))
+      var(--lr-page-aside-width, var(--_lr-page-aside-width));
     min-inline-size: 0;
     align-items: stretch;
   }
-  :host([navigation-placement='end']) [part~='body'] {
-    grid-template-areas: 'menu main aside navigation';
+  :host([navigation-placement="end"]) [part~="body"] {
+    grid-template-areas: "menu main aside navigation";
     grid-template-columns:
-      var(--lr-page-menu-width)
-      minmax(0, var(--lr-page-main-width))
-      var(--lr-page-aside-width)
+      var(--lr-page-menu-width, var(--_lr-page-menu-width))
+      minmax(0, var(--lr-page-main-width, var(--_lr-page-main-width)))
+      var(--lr-page-aside-width, var(--_lr-page-aside-width))
       auto;
   }
 
-  [part~='menu'] {
+  [part~="menu"] {
     grid-area: menu;
-    inline-size: var(--lr-page-menu-width);
+    inline-size: var(--lr-page-menu-width, var(--_lr-page-menu-width));
   }
-  [part~='dialog-wrapper'],
-  [part~='drawer'] {
+  [part~="dialog-wrapper"],
+  [part~="drawer"] {
     display: contents;
   }
-  [part~='navigation'] {
+  [part~="navigation"] {
     grid-area: navigation;
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
   }
-  [part~='navigation'] > slot[name='navigation'] {
+  [part~="navigation"] > slot[name="navigation"] {
     flex: 1 1 auto;
   }
-  [part~='main'] {
+  [part~="main"] {
     grid-area: main;
     min-inline-size: 0;
-    inline-size: var(--lr-page-main-width);
+    inline-size: var(--lr-page-main-width, var(--_lr-page-main-width));
     max-inline-size: 100%;
     outline: none;
   }
-  [part~='aside'] {
+  [part~="aside"] {
     grid-area: aside;
-    inline-size: var(--lr-page-aside-width);
+    inline-size: var(--lr-page-aside-width, var(--_lr-page-aside-width));
     max-inline-size: 100%;
   }
 
-  :host(:not([disable-sticky~='menu'])) [part~='menu'],
-  :host(:not([disable-sticky~='aside'])) [part~='aside'] {
+  :host(:not([disable-sticky~="menu"])) [part~="menu"],
+  :host(:not([disable-sticky~="aside"])) [part~="aside"] {
     position: sticky;
     inset-block-start: calc(
-      var(--lr-page-banner-height) + var(--lr-page-header-height) + var(--lr-page-subheader-height)
+      var(--lr-page-banner-height, var(--_lr-page-banner-height)) +
+        var(--lr-page-header-height, var(--_lr-page-header-height)) +
+        var(--lr-page-subheader-height, var(--_lr-page-subheader-height))
     );
     align-self: start;
     max-block-size: calc(
-      100dvh - var(--lr-page-banner-height) - var(--lr-page-header-height) -
-        var(--lr-page-subheader-height)
+      100dvh - var(--lr-page-banner-height, var(--_lr-page-banner-height)) -
+        var(--lr-page-header-height, var(--_lr-page-header-height)) -
+        var(--lr-page-subheader-height, var(--_lr-page-subheader-height))
     );
     overflow-y: auto;
     overflow-x: clip;
   }
 
-  :host([view='mobile']) [part~='body'] {
+  :host([view="mobile"]) [part~="body"] {
     display: block;
   }
-  :host([view='mobile']) [part~='menu'],
-  :host([view='mobile']) [part~='main'],
-  :host([view='mobile']) [part~='aside'] {
+  :host([view="mobile"]) [part~="menu"],
+  :host([view="mobile"]) [part~="main"],
+  :host([view="mobile"]) [part~="aside"] {
     inline-size: 100%;
   }
-  :host([view='mobile']) [part~='dialog-wrapper'] {
+  :host([view="mobile"]) [part~="dialog-wrapper"] {
     position: fixed;
     inset: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
@@ -263,16 +283,15 @@ export const styles = css`
     visibility: hidden;
     pointer-events: none;
     background: transparent;
-    transition:
-      background-color var(--lr-transition-base),
+    transition: background-color var(--lr-transition-base),
       visibility var(--lr-transition-base);
   }
-  :host([view='mobile'][nav-open]) [part~='dialog-wrapper'] {
+  :host([view="mobile"][nav-open]) [part~="dialog-wrapper"] {
     visibility: visible;
     pointer-events: auto;
     background: var(--lr-page-navigation-backdrop-bg, var(--lr-color-overlay));
   }
-  :host([view='mobile']) [part~='drawer'] {
+  :host([view="mobile"]) [part~="drawer"] {
     position: absolute;
     inset-block: 0;
     display: flex;
@@ -285,30 +304,43 @@ export const styles = css`
     padding-block-end: var(--lr-safe-area-bottom);
     padding-inline-start: var(--lr-safe-area-inline-start);
     padding-inline-end: var(--lr-safe-area-inline-end);
-    background: var(--lr-page-navigation-drawer-bg, var(--lr-color-surface-overlay));
+    background: var(
+      --lr-page-navigation-drawer-bg,
+      var(--lr-color-surface-overlay)
+    );
     box-shadow: var(--lr-page-navigation-drawer-shadow, var(--lr-shadow-l));
     overflow-y: auto;
     overflow-x: clip;
     transition: transform var(--lr-transition-base);
   }
-  :host([view='mobile'][navigation-placement='start']) [part~='drawer'] {
+  :host([view="mobile"][navigation-placement="start"]) [part~="drawer"] {
     inset-inline-start: 0;
   }
-  :host([view='mobile'][navigation-placement='end']) [part~='drawer'] {
+  :host([view="mobile"][navigation-placement="end"]) [part~="drawer"] {
     inset-inline-end: 0;
   }
-  :host([view='mobile']:not([nav-open])[navigation-placement='start']:not(:dir(rtl))) [part~='drawer'],
-  :host([view='mobile']:not([nav-open])[navigation-placement='end']:dir(rtl)) [part~='drawer'] {
+  :host(
+      [view="mobile"]:not([nav-open])[navigation-placement="start"]:not(
+          :dir(rtl)
+        )
+    )
+    [part~="drawer"],
+  :host([view="mobile"]:not([nav-open])[navigation-placement="end"]:dir(rtl))
+    [part~="drawer"] {
     transform: translateX(-100%);
   }
-  :host([view='mobile']:not([nav-open])[navigation-placement='end']:not(:dir(rtl))) [part~='drawer'],
-  :host([view='mobile']:not([nav-open])[navigation-placement='start']:dir(rtl)) [part~='drawer'] {
+  :host(
+      [view="mobile"]:not([nav-open])[navigation-placement="end"]:not(:dir(rtl))
+    )
+    [part~="drawer"],
+  :host([view="mobile"]:not([nav-open])[navigation-placement="start"]:dir(rtl))
+    [part~="drawer"] {
     transform: translateX(100%);
   }
-  :host([view='mobile'][nav-open]) [part~='drawer'] {
+  :host([view="mobile"][nav-open]) [part~="drawer"] {
     transform: none;
   }
-  :host([view='mobile']) [part~='navigation'] {
+  :host([view="mobile"]) [part~="navigation"] {
     flex: 1 1 auto;
     min-block-size: 0;
   }
@@ -319,10 +351,10 @@ export const styles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    [part~='skip-to-content'],
-    [part~='navigation-toggle'],
-    [part~='dialog-wrapper'],
-    [part~='drawer'] {
+    [part~="skip-to-content"],
+    [part~="navigation-toggle"],
+    [part~="dialog-wrapper"],
+    [part~="drawer"] {
       transition: none !important;
     }
   }

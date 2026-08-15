@@ -31,6 +31,9 @@ export interface LyraKnowledgeBaseAdminEventMap {
  * source/ingestion action under a namespaced event and never creates connectors, uploads files, or
  * changes indexing configuration itself. Put configuration controls in the `settings` slot.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-knowledge-base-admin
  * @slot settings - Optional host-owned ingestion, chunking, embedding, or permissions controls.
  * @event lr-tab-change - The active operations tab changed. `detail: { tab }`.
@@ -55,6 +58,8 @@ export interface LyraKnowledgeBaseAdminEventMap {
  * @since 6.2.0
  */
 export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["sources", "ingestionItems"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -68,9 +73,9 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   static override styles = [LyraElement.styles, styles];
 
   /** Knowledge-base source connectors. */
-  @property({ attribute: false }) sources: KnowledgeSource[] = [];
+  @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
   /** Documents currently moving through ingestion. */
-  @property({ attribute: false }) ingestionItems: IngestionQueueItem[] = [];
+  @property({ attribute: false }) ingestionItems: readonly IngestionQueueItem[] = [];
   /** Active tab. Controlled by the host after `lr-tab-change` if desired. An invalid value, or an
    * ingestion tab that becomes unavailable, normalizes to `'sources'` through the same event
    * contract. */

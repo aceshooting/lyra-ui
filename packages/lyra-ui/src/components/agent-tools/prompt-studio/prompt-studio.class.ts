@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -33,8 +34,8 @@ export interface PromptStudioVariable {
 export interface PromptStudioVersion {
   id: string;
   label: string;
-  messages: PromptStudioMessage[];
-  variables?: PromptStudioVariable[];
+  messages: readonly PromptStudioMessage[];
+  variables?: readonly PromptStudioVariable[];
   createdAt?: string;
 }
 export interface PromptStudioState {
@@ -42,19 +43,19 @@ export interface PromptStudioState {
   variables: PromptStudioVariable[];
 }
 export interface PromptStudioMessageReorderDetail {
-  messages: PromptStudioMessage[];
-  messageId: string;
-  fromIndex: number;
-  toIndex: number;
+  readonly messages: readonly PromptStudioMessage[];
+  readonly messageId: string;
+  readonly fromIndex: number;
+  readonly toIndex: number;
 }
 export interface LyraPromptStudioEventMap {
   focus: CustomEvent<null>;
   blur: CustomEvent<null>;
-  'lr-change': CustomEvent<PromptStudioState>;
-  'lr-message-reorder': CustomEvent<PromptStudioMessageReorderDetail>;
-  'lr-run': CustomEvent<PromptStudioState>;
-  'lr-save': CustomEvent<PromptStudioState>;
-  'lr-version-select': CustomEvent<{ version: PromptStudioVersion }>;
+  'lr-change': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
+  'lr-message-reorder': CustomEvent<LyraEventDetailSnapshot<PromptStudioMessageReorderDetail>>;
+  'lr-run': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
+  'lr-save': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
+  'lr-version-select': CustomEvent<LyraEventDetailSnapshot<{ version: PromptStudioVersion }>>;
 }
 
 type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
@@ -68,6 +69,9 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * occurrence-addressed because their names are editable and may temporarily be empty or repeated;
  * duplicate names remain independently editable while placeholder resolution uses the first one.
  * Variable values resolve recursively; undefined and cyclic placeholders remain intact.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-prompt-studio
  * @event lr-change - A cancelable proposal that messages or variables are about to change.
@@ -111,6 +115,8 @@ type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
  * @since 7.0.0
  */
 export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["messages", "variables", "versions"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -139,9 +145,9 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ attribute: false }) messages: PromptStudioMessage[] = [];
-  @property({ attribute: false }) variables: PromptStudioVariable[] = [];
-  @property({ attribute: false }) versions: PromptStudioVersion[] = [];
+  @property({ attribute: false }) messages: readonly PromptStudioMessage[] = [];
+  @property({ attribute: false }) variables: readonly PromptStudioVariable[] = [];
+  @property({ attribute: false }) versions: readonly PromptStudioVersion[] = [];
   @property({ attribute: 'selected-version-id' }) selectedVersionId: string | null = null;
   /** Accessible name for the studio region. It is independent from the visible `heading`; when
    * absent, the heading text names the region. A host `aria-label` remains authoritative. */

@@ -110,8 +110,8 @@ function snapshotSegmentedItems(
  * @cssprop [--lr-segmented-track-min-height=var(--lr-form-control-height)] - Minimum height of the
  *   `base` track, taken from the `size` tier's shared control height; the `2.5rem` (40px) default
  *   applies at the unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared
- *   default-tier floor. Because it is declared on `:host`, override it on the element itself, not
- *   on an ancestor.
+ *   default-tier floor. The private default follows `size`; a public value inherited from an
+ *   ancestor or set directly on the element remains authoritative in every tier.
  * @cssprop [--lr-segmented-track-height] - Exact height of the `base` track, pinning it at every
  *   `size` tier (sets both `block-size` and `min-block-size`) so the row can sit flush beside a
  *   hard-sized toolbar control. **Genuinely unset by default** — while unset each tier keeps its

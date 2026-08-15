@@ -16,12 +16,16 @@ it('composes connection status, voice activity, transcript, and capture controls
       state="connected"
       voice-state="speaking"
       level="0.7"
+      session-id="voice-session-a"
       .entries=${[{ id: '1', speaker: 'Assistant', text: 'Hello' }]}
     ></lr-realtime-session>`
   )) as LyraRealtimeSession;
   expect(el.shadowRoot!.querySelector('lr-audio-visualizer')).to.exist;
   expect(el.shadowRoot!.querySelector('lr-transcript-feed')).to.exist;
   expect(el.shadowRoot!.querySelector('lr-push-to-talk')).to.exist;
+  expect((el.shadowRoot!.querySelector('lr-transcript-feed') as HTMLElement & { sessionId: string }).sessionId).to.equal(
+    'voice-session-a'
+  );
   expect(el.shadowRoot!.textContent).to.contain('Connected');
 });
 

@@ -52,6 +52,9 @@ export interface LyraTranscriptFeedEventMap {
  * Live captions only: recorded-media transcript sync — clickable cues, seek-on-select — is a
  * separate concern from this component.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-transcript-feed
  * @slot empty - Custom empty state. Default: the localized "No transcript yet".
  * @event lr-follow-change - `detail: { following: boolean }` — fires on every `follow` transition,
@@ -71,6 +74,8 @@ export interface LyraTranscriptFeedEventMap {
  * @since 4.0.0
  */
 export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["entries"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -84,7 +89,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ attribute: false }) entries: LyraTranscriptEntry[] = [];
+  @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   @property({ type: Boolean, attribute: 'show-timestamps' }) showTimestamps = false;
   /** Overrides the default `Intl.DateTimeFormat` short-time rendering. */

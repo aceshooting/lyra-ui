@@ -21,7 +21,7 @@ import { firstByIdentity } from '../collection-identity.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -56,7 +56,7 @@ export interface ContextInspectorSegment {
   /** Tokens omitted by truncation, shown in the truncation-boundary marker's text when set. */
   omittedTokens?: number;
   /** Character ranges within `text` that are redaction placeholders (see `ContextInspectorRedaction`). */
-  redactions?: ContextInspectorRedaction[];
+  redactions?: readonly ContextInspectorRedaction[];
 }
 
 interface NormalizedRedaction {
@@ -71,7 +71,10 @@ interface NormalizedRedaction {
  * overlapping spans) degrades to a clamped, non-overlapping range list instead of throwing or
  * corrupting the rendered text.
  */
-function normalizeRedactions(redactions: ContextInspectorRedaction[] | undefined, length: number): NormalizedRedaction[] {
+function normalizeRedactions(
+  redactions: readonly ContextInspectorRedaction[] | undefined,
+  length: number,
+): NormalizedRedaction[] {
   if (!redactions || redactions.length === 0) return [];
   const clamped = redactions
     .map((r) => ({
@@ -117,6 +120,9 @@ export interface LyraContextInspectorEventMap
  * unredacted content). Duplicate segment ids normalize before totals, exports, rendering, and
  * citation events; the first occurrence wins.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-context-inspector
  * @event lr-copy - `detail: { ok: true, text }`, surfaced by the embedded `lr-copy-button` copying the
  *   assembled context text (every segment's `label` + `text`, in order). Bubbles + composed
@@ -155,6 +161,8 @@ export interface LyraContextInspectorEventMap
  * @since 4.1.0
  */
 export class LyraContextInspector extends LyraElement<LyraContextInspectorEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["segments", "exportFormats"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -172,6 +180,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
@@ -181,8 +190,9 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   static override styles = [LyraElement.styles, styles];
 
   /** The assembled context, one entry per piece (system prompt, retrieved chunk, history turn,
-   *  ...). Duplicate ids normalize first-wins before metering, rendering, export, and events. */
-  @property({ attribute: false }) segments: ContextInspectorSegment[] = [];
+   *  ...). Empty/blank ids are omitted and duplicates normalize first-wins before metering,
+   *  rendering, export, and events. */
+  @property({ attribute: false }) segments: readonly ContextInspectorSegment[] = [];
 
   /** The full token budget `segments` are measured against — passed straight through to `<lr-context-meter>`'s own `total`. */
   @property({ type: Number }) total = 0;
@@ -191,7 +201,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   @property() label = '';
 
   /** Export format(s) offered by the embedded `<lr-export-button>` — a single id renders a plain button, more than one a format-choice menu. */
-  @property({ attribute: false }) exportFormats: LyraExportFormatOption[] = ['json'];
+  @property({ attribute: false }) exportFormats: readonly LyraExportFormatOption[] = ['json'];
 
   /** Download filename (no extension) passed through to `<lr-export-button>`. */
   @property({ attribute: 'export-filename' }) exportFilename = 'context';

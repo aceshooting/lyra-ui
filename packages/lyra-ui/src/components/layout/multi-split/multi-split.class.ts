@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -159,8 +160,8 @@ export interface LyraMultiSplitOrientationChangeDetail {
 }
 
 export interface LyraMultiSplitEventMap {
-  'lr-resize-request': CustomEvent<LyraMultiSplitResizeDetail>;
-  'lr-resize': CustomEvent<LyraMultiSplitResizeDetail>;
+  'lr-resize-request': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
+  'lr-resize': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
   'lr-multi-split-collapse-change': CustomEvent<LyraMultiSplitCollapseChangeDetail>;
   'lr-multi-split-constraints-invalid': CustomEvent<LyraMultiSplitConstraintIssueDetail>;
   'lr-multi-split-orientation-change': CustomEvent<LyraMultiSplitOrientationChangeDetail>;
@@ -223,6 +224,9 @@ export interface LyraMultiSplitEventMap {
  * reassignment) also closes it, the same way `<lr-app-rail>` closes its
  * mobile overlay when leaving `'mobile'` while open.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-multi-split
  * @event lr-resize-request - A cancelable proposed `sizes` change from a divider drag or keyboard
  *   step. Call `preventDefault()` to keep `sizes` and persistence unchanged. Not fired when a
@@ -259,6 +263,8 @@ export interface LyraMultiSplitEventMap {
  * @since unreleased
  */
 export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["sizes", "defaultSizes", "panelConstraints"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -287,7 +293,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     },
   };
 
-  @property({ attribute: false }) sizes: number[] = [];
+  @property({ attribute: false }) sizes: readonly number[] = [];
   /** Initialization-only size fallback, below valid persistence and above equal distribution. Later
    *  assignments never overwrite live resize state. Each entry is either a plain number (percent of
    *  the container, matching today's exact strict behavior) or a CSS length string (`'200px'`,
@@ -296,7 +302,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  connection), so same-turn framework property bindings and `storageKey` persistence participate
    *  before the layout becomes live. A pure-number array is validated unchanged (an array that does
    *  not sum to ~100 is still rejected). */
-  @property({ attribute: false }) defaultSizes: (number | string)[] = [];
+  @property({ attribute: false }) defaultSizes: readonly (number | string)[] = [];
   @property({ type: Number }) min = 10;
   @property({ reflect: true }) orientation: LyraOrientation = 'horizontal';
   /** Opt-in inline-size breakpoint for this component's *own* measured allocation. Below it,
@@ -344,7 +350,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  localStorage persistence stay percent-based regardless — only the
    *  effective clamp bounds change for a constrained panel. */
   @property({ attribute: false })
-  panelConstraints: (LyraMultiSplitPanelConstraint | null)[] = [];
+  panelConstraints: readonly (LyraMultiSplitPanelConstraint | null)[] = [];
   /** Opts a pane in to responsive collapse: `'start'` is the first light-DOM
    *  panel (index 0), `'end'` is the last. Both are LOGICAL positions, same
    *  as CSS `inset-inline-start`/`-end` — see the `collapsingIndex` getter
@@ -889,7 +895,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     return this.reconcileIdentitySizes(previousIds, this.sizes, nextIds);
   }
 
-  private validInitialSizes(value: number[]): boolean {
+  private validInitialSizes(value: readonly number[]): boolean {
     if (!Array.isArray(value) || value.length !== this.panelCount) return false;
     if (!value.every((size) => Number.isFinite(size) && size >= this.safeMin))
       return false;
@@ -899,7 +905,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   /** Post-mount assignments use the feasible shared floor. A configured `min` can exceed the
    * aggregate available space, in which case interaction deliberately falls back to
    * `normalizedDefaultMin()` rather than freezing every divider. */
-  private validLiveSizes(value: number[]): boolean {
+  private validLiveSizes(value: readonly number[]): boolean {
     if (!Array.isArray(value) || value.length !== this.panelCount) return false;
     const floor = this.normalizedDefaultMin();
     if (!value.every((size) => Number.isFinite(size) && size >= floor))
@@ -1648,7 +1654,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private clampPair(
-    sizes: number[],
+    sizes: readonly number[],
     i: number,
     delta: number,
     containerSize = 0

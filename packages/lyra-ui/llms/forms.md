@@ -113,8 +113,8 @@ therefore cannot widen a 320px LTR or RTL picker.
   decorative expand icon; `size="s"` shares its outer control height with `lr-input`, `lr-select`,
   and `lr-segmented` without part overrides)
 - `pill: boolean = false` (reflected) — rounds the trigger row's corners to a full pill, mirroring
-  `lr-input`'s own `pill`. It only re-assigns `--lr-combobox-radius` to `--lr-radius-pill`, so a
-  consumer setting that property directly still wins for a bespoke shape
+  `lr-input`'s own `pill`. It changes the private radius default to `--lr-radius-pill`, so an
+  inherited or direct `--lr-combobox-radius` remains authoritative
 - `placeholder: string = ''`
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
@@ -170,7 +170,7 @@ therefore cannot widen a 320px LTR or RTL picker.
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
   show before collapsing to `+N`)
 - `emptyText?: string` (attribute `empty-text`) — omission displays localized `noMatches` (`"No
-  matches"` in the built-in English locale); any supplied string, including `''`, renders verbatim
+matches"` in the built-in English locale); any supplied string, including `''`, renders verbatim
 - `loadingText?: string` (attribute `loading-text`) — shown while a `source` fetch is in flight;
   omission displays localized `loading` (`"Loading…"` in English), while any supplied string,
   including `''`, renders verbatim
@@ -597,9 +597,9 @@ exactly like the multi-option case, until the trigger is actually activated.
   expand icon, adornments and chips all ride that on-brand color rather than the quiet-text
   tokens). Every value keeps the same box, border width and radius, and each restates its own
   `:hover` feedback. `lr-input` and `lr-textarea` use the same mapped `outlined` default.
-- `pill: boolean = false` (reflected) — fully-rounded trigger corners. It only re-assigns
-  `--lr-select-radius` to `--lr-radius-pill`, so a consumer's own `--lr-select-radius` (inline or
-  from an outer-tree rule) still wins over it
+- `pill: boolean = false` (reflected) — fully-rounded trigger corners. It changes the private
+  radius default to `--lr-radius-pill`, so an inherited or direct `--lr-select-radius` remains
+  authoritative
 - `placement: Placement = 'bottom'` (reflected) — preferred listbox placement, from the
   Floating UI vocabulary (`'top'`, `'bottom-end'`, …). `flip`/`shift` may still move the popup to
   keep it in view, and the `left`/`right` component is swapped under RTL. Assignment while open
@@ -713,17 +713,18 @@ following option rows; options with an empty `group` get no heading or group wra
 With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
-`--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
+`--lr-select-font-size`, `--lr-select-expand-size` — all four have private defaults that follow
+`size` (`xs`…`xl`), while inherited or direct public values remain authoritative; the same pattern
 `lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-gap` (default
 `--lr-space-xs`, the gap inside `[part='trigger']`) is retunable without a `::part(trigger)` rule
 and does not vary by `size` — the adornment gap a field wants is looser than the icon-beside-label
 gap the ladder is tuned for. `--lr-select-radius` (default `--lr-form-control-radius`, the corner
 radius) is retunable the same way but _does_ follow the tier: the two tightest tiers take a smaller
-radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` re-assigns it to
-`--lr-radius-pill`. `--lr-select-tag-padding`
+radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` changes its private
+default to `--lr-radius-pill`. `--lr-select-tag-padding`
 (default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
-`var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius they are declared once on
-`:host` and do **not** vary by `size` tier.
+`var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius their private defaults do
+**not** vary by `size` tier, and inherited or direct public values win.
 Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
 `--hide-duration` cap one tag and independently retime the two popup directions.
 
@@ -924,7 +925,8 @@ values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{
 `weeknumber`, and `weeknumbers`. Lyra additionally retains the existing `week` part.
 
 **Themeable custom properties:** `--lr-cell-size` (default `2.25rem`, controls day-cell/grid-column
-size; auto-scaled per `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` default).
+size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the
+default). An inherited or direct public value remains authoritative in every tier.
 
 **Optional peer deps:** none.
 
@@ -1051,9 +1053,10 @@ With no label text the part is hidden and no glyph is painted.
 `--lr-date-input-font-size` (default `inherit`) — the `input` part's font size;
 `--lr-date-input-control-min-height` (default `--lr-form-control-height`, i.e. `2.5rem` at the
 default `m` tier) — the `input-wrapper`'s block-size
-floor. All four are declared on `:host` and auto-swapped per `size`
-(`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` defaults), using the same per-`size` values
-`lr-input` uses. `pill` re-assigns `--lr-date-input-radius` to `--lr-radius-pill`. Plus shared
+floor. Their private defaults follow `size` (`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the base defaults),
+using the same per-`size` values `lr-input` uses. Inherited or direct public values win in every
+tier. `pill` changes the private `--lr-date-input-radius` default to `--lr-radius-pill`; a public
+radius still wins. Plus shared
 tokens. The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's
 enter and exit transitions; both default to `var(--lr-transition-fast)`.
 The clear and calendar actions expose point-of-use state hooks:
@@ -1212,40 +1215,40 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 
 ### Properties
 
-| Property                 | Attribute                  | Type                                                                 | Default      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ------------------------ | -------------------------- | -------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `value`                  | `value`                    | `string`                                                             | `''`         | The current text value.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `defaultValue`           | `value` / `default-value`  | `string`                                                             | `''`         | Reset value. The Shoelace attribute alias and the native-style `value` content attribute share the same reset engine.                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `rows`                   | `rows`                     | `number`                                                             | `4`          | Visible text rows (mapped default).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `resize`                 | `resize`                   | `'none' \| 'vertical' \| 'horizontal' \| 'both' \| 'auto'`           | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`.                                                                                                                                                                                                                                                                                                                                 |
-| `size`                   | `size`                     | `LyraSize`                                                           | `'m'`        | Visual size on the shared control ladder — the same scale as `lr-input`/`lr-select`/`lr-button`, and both spellings of every tier are accepted (`2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`). Governs the field's padding, font size and corner radius. Reflected.                                                                                                                                                                                                                                                          |
-| `appearance`             | `appearance`               | `'accent' \| 'filled' \| 'outlined' \| 'filled-outlined' \| 'plain'` | `'outlined'` | Visual treatment of the field. The mapped default draws a border without a fill; the other values share `lr-input`'s vocabulary. Reflected.                                                                                                                                                                                                                                                                                                                                                                                              |
-| `filled`                 | `filled`                   | `boolean`                                                            | `false`      | Shoelace alias for the filled treatment.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `pill`                   | `pill`                     | `boolean`                                                            | `false`      | Fully rounded field corners, matching `lr-input`'s/`lr-select`'s own `pill` — both upstreams ship it on their textarea, so a mechanical tag rename must not drop it. It only re-assigns `--lr-textarea-radius` to `--lr-radius-pill`, so that property stays the single corner-radius knob and a consumer override still wins. Most useful on a one- or two-row field: a tall multi-line surface with fully rounded ends wastes its first and last line's inline space, which is why it is opt-in rather than tied to `size`. Reflected. |
-| `withCount`              | `with-count`               | `boolean`                                                            | `false`      | Renders a character count below the field, inside `[part="footer"]`. With `maxlength` set it counts _down_ the remaining characters instead of up from zero. Reflected.                                                                                                                                                                                                                                                                                                                                                                  |
-| `placeholder`            | `placeholder`              | `string`                                                             | `''`         | Placeholder text.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `readonly`               | `readonly`                 | `boolean`                                                            | `false`      | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected.                                                                                                                                                                                                                                                                                                                                                                              |
-| `label`                  | `label`                    | `string`                                                             | `''`         | Visible label text. Unset: no label chrome renders.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `hint`                   | `hint`                     | `string`                                                             | `''`         | Hint text below the field.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `helpText`               | `help-text`                | `string`                                                             | `''`         | Shoelace alias for `hint`; `hint` wins when both are set.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `withLabel` / `withHint` | `with-label` / `with-hint` | `boolean`                                                            | `false`      | SSR slot-presence hints; neither is required for hydrated client-side slot detection.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `errorText`              | `error-text`               | `string`                                                             | `''`         | Error text below the field (overridden by slotted `error` content).                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `customError`            | `custom-error`             | `string \| null`                                                     | `null`       | Reflected consumer-supplied validation message. A non-empty value blocks submission until `setCustomValidity('')` clears it.                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `accessibleLabel`        | `aria-label`               | `string \| null`                                                     | `null`       | Accessible-name override forwarded to the internal `<textarea>`; every non-`null` value wins by presence—including an explicit empty string—over `label`, `placeholder`, and the localized default.                                                                                                                                                                                                                                                                                                                                      |
-| `spellcheck`             | `spellcheck`               | `boolean`                                                            | `true`       | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `autofocus`              | `autofocus`                | `boolean`                                                            | `false`      | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `title`                  | `title`                    | `string`                                                             | `''`         | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `autocapitalize`         | `autocapitalize`           | `string`                                                             | `''`         | Forwarded to the native `<textarea>`; empty omits the attribute.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `autocorrect`            | `autocorrect`              | read: `boolean`; write: `boolean \| string`                          | `true`       | Forwarded to the native `<textarea>` (Safari/WebKit-specific). Reads are always boolean. Boolean writes preserve Web Awesome's IDL; Shoelace-compatible string writes normalize `off`/`false` to `false` and every other string to `true`. The HTML attribute uses canonical `on`/`off`. When the host attribute is absent and the state remains at its `true` default, the internal attribute is omitted so the browser keeps its default behavior.                                                                                     |
-| `wrap`                   | `wrap`                     | `'hard' \| 'soft' \| 'off'`                                          | `'soft'`     | Native line-wrapping/submission behavior.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `autocomplete`           | `autocomplete`             | `string`                                                             | `''`         | Forwarded to the native `<textarea>`; empty omits the attribute.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `inputMode`              | `inputmode`                | `string`                                                             | `''`         | Virtual-keyboard input hint forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `enterKeyHint`           | `enterkeyhint`             | `string`                                                             | `''`         | Virtual-keyboard Enter-key hint forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `minlength`              | `minlength`                | `number \| undefined`                                                | `undefined`  | Minimum text length; forwarded to the native `<textarea>` and reported as `validity.tooShort`.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `maxlength`              | `maxlength`                | `number \| undefined`                                                | `undefined`  | Maximum text length; forwarded to the native `<textarea>` (which also stops typing past it) and reported as `validity.tooLong`.                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `name`                   | `name`                     | `string`                                                             | `''`         | Form field name.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `disabled`               | `disabled`                 | `boolean`                                                            | `false`      | Disables the control.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `required`               | `required`                 | `boolean`                                                            | `false`      | Participates in native constraint validation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Property                 | Attribute                  | Type                                                                 | Default      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------ | -------------------------- | -------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`                  | `value`                    | `string`                                                             | `''`         | The current text value.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `defaultValue`           | `value` / `default-value`  | `string`                                                             | `''`         | Reset value. The Shoelace attribute alias and the native-style `value` content attribute share the same reset engine.                                                                                                                                                                                                                                                                                                                                                                                             |
+| `rows`                   | `rows`                     | `number`                                                             | `4`          | Visible text rows (mapped default).                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `resize`                 | `resize`                   | `'none' \| 'vertical' \| 'horizontal' \| 'both' \| 'auto'`           | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`.                                                                                                                                                                                                                                                                                                          |
+| `size`                   | `size`                     | `LyraSize`                                                           | `'m'`        | Visual size on the shared control ladder — the same scale as `lr-input`/`lr-select`/`lr-button`, and both spellings of every tier are accepted (`2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`). Governs the field's padding, font size and corner radius. Reflected.                                                                                                                                                                                                                                   |
+| `appearance`             | `appearance`               | `'accent' \| 'filled' \| 'outlined' \| 'filled-outlined' \| 'plain'` | `'outlined'` | Visual treatment of the field. The mapped default draws a border without a fill; the other values share `lr-input`'s vocabulary. Reflected.                                                                                                                                                                                                                                                                                                                                                                       |
+| `filled`                 | `filled`                   | `boolean`                                                            | `false`      | Shoelace alias for the filled treatment.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `pill`                   | `pill`                     | `boolean`                                                            | `false`      | Fully rounded field corners, matching `lr-input`'s/`lr-select`'s own `pill` — both upstreams ship it on their textarea, so a mechanical tag rename must not drop it. It changes the private radius default to `--lr-radius-pill`, so an inherited or direct `--lr-textarea-radius` stays authoritative. Most useful on a one- or two-row field: a tall multi-line surface with fully rounded ends wastes its first and last line's inline space, which is why it is opt-in rather than tied to `size`. Reflected. |
+| `withCount`              | `with-count`               | `boolean`                                                            | `false`      | Renders a character count below the field, inside `[part="footer"]`. With `maxlength` set it counts _down_ the remaining characters instead of up from zero. Reflected.                                                                                                                                                                                                                                                                                                                                           |
+| `placeholder`            | `placeholder`              | `string`                                                             | `''`         | Placeholder text.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `readonly`               | `readonly`                 | `boolean`                                                            | `false`      | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected.                                                                                                                                                                                                                                                                                                                                                       |
+| `label`                  | `label`                    | `string`                                                             | `''`         | Visible label text. Unset: no label chrome renders.                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `hint`                   | `hint`                     | `string`                                                             | `''`         | Hint text below the field.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `helpText`               | `help-text`                | `string`                                                             | `''`         | Shoelace alias for `hint`; `hint` wins when both are set.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `withLabel` / `withHint` | `with-label` / `with-hint` | `boolean`                                                            | `false`      | SSR slot-presence hints; neither is required for hydrated client-side slot detection.                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `errorText`              | `error-text`               | `string`                                                             | `''`         | Error text below the field (overridden by slotted `error` content).                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `customError`            | `custom-error`             | `string \| null`                                                     | `null`       | Reflected consumer-supplied validation message. A non-empty value blocks submission until `setCustomValidity('')` clears it.                                                                                                                                                                                                                                                                                                                                                                                      |
+| `accessibleLabel`        | `aria-label`               | `string \| null`                                                     | `null`       | Accessible-name override forwarded to the internal `<textarea>`; every non-`null` value wins by presence—including an explicit empty string—over `label`, `placeholder`, and the localized default.                                                                                                                                                                                                                                                                                                               |
+| `spellcheck`             | `spellcheck`               | `boolean`                                                            | `true`       | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `autofocus`              | `autofocus`                | `boolean`                                                            | `false`      | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `title`                  | `title`                    | `string`                                                             | `''`         | Forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `autocapitalize`         | `autocapitalize`           | `string`                                                             | `''`         | Forwarded to the native `<textarea>`; empty omits the attribute.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `autocorrect`            | `autocorrect`              | read: `boolean`; write: `boolean \| string`                          | `true`       | Forwarded to the native `<textarea>` (Safari/WebKit-specific). Reads are always boolean. Boolean writes preserve Web Awesome's IDL; Shoelace-compatible string writes normalize `off`/`false` to `false` and every other string to `true`. The HTML attribute uses canonical `on`/`off`. When the host attribute is absent and the state remains at its `true` default, the internal attribute is omitted so the browser keeps its default behavior.                                                              |
+| `wrap`                   | `wrap`                     | `'hard' \| 'soft' \| 'off'`                                          | `'soft'`     | Native line-wrapping/submission behavior.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `autocomplete`           | `autocomplete`             | `string`                                                             | `''`         | Forwarded to the native `<textarea>`; empty omits the attribute.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `inputMode`              | `inputmode`                | `string`                                                             | `''`         | Virtual-keyboard input hint forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `enterKeyHint`           | `enterkeyhint`             | `string`                                                             | `''`         | Virtual-keyboard Enter-key hint forwarded to the native `<textarea>`.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `minlength`              | `minlength`                | `number \| undefined`                                                | `undefined`  | Minimum text length; forwarded to the native `<textarea>` and reported as `validity.tooShort`.                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `maxlength`              | `maxlength`                | `number \| undefined`                                                | `undefined`  | Maximum text length; forwarded to the native `<textarea>` (which also stops typing past it) and reported as `validity.tooLong`.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `name`                   | `name`                     | `string`                                                             | `''`         | Form field name.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `disabled`               | `disabled`                 | `boolean`                                                            | `false`      | Disables the control.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `required`               | `required`                 | `boolean`                                                            | `false`      | Participates in native constraint validation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 The lowercase native IDLs `inputmode: string` and `enterkeyhint: string` delegate to
 `inputMode`/`enterKeyHint`; `autocorrect` is one public state with a boolean read type and a wider
@@ -1375,14 +1378,15 @@ With no label text the part is hidden and no glyph is painted.
   `--lr-textarea-font-size` (default `var(--lr-form-control-font-size)`) and
   `--lr-textarea-radius` (default `var(--lr-form-control-radius)`) — the native textarea's padding,
   font size and corner radius. All three read the active `size` tier of the shared control ladder,
-  so they follow the tier with no per-tier rule of their own; the two tightest tiers take a smaller
-  radius. `pill` re-assigns `--lr-textarea-radius` to `--lr-radius-pill`.
+  so their private defaults follow the tier; the two tightest tiers take a smaller radius. Public
+  values inherited from an ancestor or set directly on the host win in every tier. `pill` changes
+  the private `--lr-textarea-radius` default to `--lr-radius-pill`.
 - `--lr-textarea-fill` (default `transparent`) and `--lr-textarea-border-color` (default
-  `var(--lr-color-border)`) — the field's background and border color, both swapped per
-  `appearance` rather than per `size`. The documented defaults are `appearance="outlined"`'s
-  values, and both are also declared bare on `:host` so an element whose `appearance` attribute
-  hasn't reflected yet still paints the committed default. Set either directly to retune the
-  surface without a `::part(textarea)` rule.
+  `var(--lr-color-border)`) — the field's background and border color, whose private defaults
+  change per `appearance` rather than per `size`. The documented defaults are
+  `appearance="outlined"`'s private values. Set either on an ancestor or directly on the host to
+  retune the surface without a `::part(textarea)` rule; the public value remains authoritative
+  across appearances.
 - `--lr-textarea-hover-border-color` (default `var(--lr-color-brand)`) — the field border while the
   native textarea is hovered, independent of its resting border and every other brand-colored
   component state.
@@ -1462,10 +1466,10 @@ unsafe/unparseable `href` falls back to the native `<button>`.
   accepted — `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` — and the same ladder drives
   `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input`, so same-`size` controls share a height by
   construction rather than by two lists agreeing
-- `pill: boolean = false` (reflected) — fully rounded ends. It re-assigns `--lr-button-radius` to
-  `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so that property stays the
-  single corner-radius knob and a consumer override still wins. `appearance="link"` renders with
-  zero chrome, pill or not
+- `pill: boolean = false` (reflected) — fully rounded ends. It changes the private radius default
+  to `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so an inherited or
+  direct `--lr-button-radius` remains authoritative. `appearance="link"` renders with zero chrome,
+  pill or not
 - `circle: boolean = false` (reflected) — Shoelace-compatible circular icon-button treatment: a
   square control with the pill radius and compact inline padding. It is additive to, not a rename
   of, `pill`. Circle and automatically detected icon-only buttons retain the shared
@@ -1625,9 +1629,10 @@ Ordinary labelled buttons keep the exact shared form-control ladder heights abov
 `--lr-button-gap` (default `--lr-form-control-gap`, the gap between the icon/label and any slotted
 content) does not vary by tier. `--lr-button-radius` (default `--lr-form-control-radius`, the corner
 radius) _does_ follow the tier — the two tightest tiers take a smaller radius, since a 6px corner on
-a 20px-tall control reads as a lozenge. Both are retunable without a `::part(base)` rule;
-`appearance="link"` ignores the radius (it renders with zero), and `pill` re-assigns it to
-`--lr-radius-pill`. `--lr-button-caret-size` (default `var(--lr-size-0-75em)`) is the `with-caret`
+a 20px-tall control reads as a lozenge. Both are inheritable and retunable without a
+`::part(base)` rule; `appearance="link"` ignores the radius (it renders with zero), and `pill`
+changes its private default to `--lr-radius-pill`. `--lr-button-caret-size` (default
+`var(--lr-size-0-75em)`) is the `with-caret`
 chevron's font size — declared in `em`, so it tracks every `size` tier through the button's own font
 size instead of needing a per-tier value.
 `--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
@@ -1635,9 +1640,9 @@ byte-identical to before this property existed — set it to add a drop shadow (
 elevated/floating action button) without a `::part(base)` rule.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
-the active tier's geometry, and every `:host([size='…'])` rule does nothing but re-assign them — no
-per-tier rule ever declares a property on `[part='base']`. Overriding one therefore retunes
-whatever tier is active (e.g. pinning a `size="s"` button into a compact toolbar row), the same
+the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no
+per-tier rule redeclares a public hook or styles `[part='base']` directly. An inherited or direct
+public value therefore retunes whatever tier is active (e.g. pinning a `size="s"` button into a compact toolbar row), the same
 pattern `lr-input`/`lr-select`/`lr-combobox`/`lr-segmented`/`lr-date-input` follow. Each defaults to
 the shared ladder's value for the active tier, which at the default `m` tier resolves to the values
 in brackets:
@@ -1646,7 +1651,7 @@ in brackets:
 - `--lr-button-padding-inline` (default `--lr-form-control-padding-inline`; `--lr-space-m` at `m`)
 - `--lr-button-font-size` (default `--lr-form-control-font-size`; `--lr-font-size-m` at `m`)
 - `--lr-button-min-height` (default `--lr-form-control-height`) — the active tier's `min-block-size`
-  floor, re-assigned per tier to that tier's own `--lr-button-size-*` token, and used as the
+  floor. Its private default follows that tier's own `--lr-button-size-*` token, and it is used as the
   fallback when `--lr-button-height` is unset.
 - `--lr-button-height` — an **exact** height (both floor and cap), for pinning the button to a
   fixed toolbar row. **Undeclared by default**, so the button keeps the active tier's floor and an
@@ -2011,8 +2016,8 @@ above, and the reference implementation every other labelled control in the libr
 no glyph is painted.
 
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
-`--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
-(`2xs`…`xl`), the same pattern
+`--lr-input-font-size`, `--lr-input-control-min-height` — all four have private defaults that follow
+`size` (`2xs`…`xl`), while inherited or direct public values remain authoritative; the same pattern
 `lr-select`'s `--lr-select-trigger-padding`/`--lr-select-font-size` use.
 `--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
 for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
@@ -2023,14 +2028,15 @@ vary by `size` — the adornment gap a text field wants between an adornment and
 than the icon-beside-label gap the ladder is tuned for. `--lr-input-radius` (default
 `--lr-form-control-radius`, its corner radius) is retunable the same way but _does_ follow the tier:
 the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a
-lozenge. `pill` re-assigns it to `--lr-radius-pill`. `lr-number-input`/`lr-time-input` inherit both
+lozenge. `pill` changes its private default to `--lr-radius-pill`; an inherited or direct public
+value still wins. `lr-number-input`/`lr-time-input` inherit both
 unchanged.
 
 `--lr-input-fill` (default `transparent`) is the control row's background and
-`--lr-input-border-color` (default `var(--lr-color-border)`) its border color. Both are swapped by
-`appearance` rather than by `size`, and the documented defaults are `appearance="outlined"`'s
-values. Private fallback roles preserve that default without declaring the public hooks on the
-host, so ancestor theme wrappers still win. Setting either directly retunes the surface
+`--lr-input-border-color` (default `var(--lr-color-border)`) its border color. `appearance` changes
+their private fallback roles rather than the public hooks, and the documented defaults are
+`appearance="outlined"`'s values. Ancestor theme wrappers therefore still win. Setting either
+directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
 `--lr-input-focus-border-color` independently retunes the focused row. Built-in clear/password
 actions and `lr-number-input` steppers share `--lr-input-action-color`,
@@ -2590,8 +2596,9 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   min-height; `size="s"` shares its outer control height with `lr-input`, `lr-select`, and
   `lr-combobox` without part overrides)
 - `pill: boolean = false` (reflected) — rounds the field's corners to a full pill, mirroring
-  `lr-input`'s own `pill`. It re-assigns `--lr-phone-input-radius` to `--lr-radius-pill`, and the
-  country trigger's leading corners follow, since both read that one knob
+  `lr-input`'s own `pill`. It changes the private radius default to `--lr-radius-pill`, and the
+  country trigger's leading corners follow; an inherited or direct `--lr-phone-input-radius`
+  remains authoritative
 - `country: string` — current uppercase ISO alpha-2 selection; falls back to `defaultCountry`, then
   the first explicit/adapter country. A requested or adapter-detected country absent from the
   effective catalog resolves to that same valid fallback before property, trigger, native select,
@@ -3030,10 +3037,11 @@ changes via click or keyboard (re-selecting the current swatch is a no-op).
 **Slots:** none.
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `swatch` (a single `role="radio"` color
-swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — defaults to
-`--lr-size-2-5rem`, swapped per `size` tier and floored at 24px; the selected one is
+swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — its private default
+follows `size` and is floored at 24px; the selected one is
 `[part='swatch'][aria-checked='true']`), `swatch-fill` (the filled circle inside it, sized via
-`--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, also swapped per `size` tier —
+`--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, with a private default that also
+follows `size` —
 rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
 place when it has one, with its inherited `font-size` set to the same fill-size token so a `1em`
 glyph fills the wrapper; the wrapper is inert and aria-hidden across the flattened subtree).
@@ -3049,9 +3057,10 @@ for a looping brighten-and-settle pulse on the selected swatch. It drives a sepa
 `filter: brightness()` keyframe rather than `box-shadow`, so it composes with the blur token and
 works identically for a fill and an icon; disabled outright under `prefers-reduced-motion: reduce`,
 which also drops the hover/selection scale transition), `--lr-swatch-picker-hit-size` (hit-area
-size, swapped per `size` tier), `--lr-swatch-picker-fill-size` (visible fill/icon diameter, swapped
-per `size` tier; set `--lr-theme-swatch-picker-fill-size` on an ancestor for a shared default
-across every tier), `--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
+size; its private default follows `size`), `--lr-swatch-picker-fill-size` (visible fill/icon
+diameter; its private default follows `size`; set this hook on an ancestor/direct host to override
+every tier, or `--lr-theme-swatch-picker-fill-size` on an ancestor for a shared default),
+`--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
 gemstone mode), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in gemstone mode);
 plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
 `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,
@@ -3749,8 +3758,9 @@ calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge leng
   capped at half the circle so it can never outgrow its ring, whatever is done to either the ladder
   or the `--lr-icon-button-size` cap.
 - `--lr-radio-radius` (default `--lr-radius-pill`) — the corner radius of the control's own chrome.
-  A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at
-  the shared control radius and `pill` swaps it back to a pill.
+  A circular indicator is fully round at every setting; `<lr-radio-button>` changes the private
+  default to the shared control radius and `pill` changes it back to a pill. An inherited or direct
+  public value wins throughout.
 - `--lr-radio-label-indent` (default `calc(var(--lr-radio-circle-size) + var(--lr-space-s))`) — the
   inline distance from the control's start edge to the start of the label text, i.e. the circle plus
   the gap beside it. The rendered gap is derived from it, so the advertised value and the real offset
@@ -3831,9 +3841,10 @@ because an attribute selector
 after `::part()` never matches.
 
 **Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
-uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
-it at `--lr-form-control-radius` — the active `size` tier's shared corner radius — and `pill` swaps
-it back to `--lr-radius-pill`. Only the _outer_ corners of an actually contiguous run take it: an
+uses. `lr-radio` gives it a private `--lr-radius-pill` default for its circular indicator; this
+subclass changes that private default to `--lr-form-control-radius` — the active `size` tier's
+shared corner radius — and `pill` changes it back to `--lr-radius-pill`. An inherited or direct
+public value wins. Only the _outer_ corners of an actually contiguous run take it: an
 owning horizontal group measures same-line adjacency after layout, then collapses shared borders.
 The ordinary group gap, a plain-radio interruption, vertical layout, or a flex wrap starts a new
 fully rounded run, and live add/remove/reorder plus LTR/RTL changes are reconciled. Standalone
@@ -4221,8 +4232,9 @@ lowercase IDL. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected �
 same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
 tiers, and both `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` are accepted; the remove
 button's hit area stays fixed at `40px` across all sizes), `pill` (reflected, default `false` —
-rounds the token row's corners to a full pill by re-assigning `--lr-token-input-radius` to
-`--lr-radius-pill`; the chips share that knob with the row, so they round with it),
+rounds the token row's corners by changing the private radius default to `--lr-radius-pill`; the
+chips share the public `--lr-token-input-radius` hook with the row, and an inherited or direct
+value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
@@ -4622,12 +4634,13 @@ here exactly as they do on `lr-input`. With no label text the part is hidden and
 painted.
 
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
-not the button's minimum target. It is auto-swapped per `size` tier (default `'m'` reads `2.5rem`,
+not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.5rem`,
 `'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
 inline and block sizes are each
 `max(var(--lr-color-picker-swatch-size), var(--lr-icon-button-size))`: compact tiers center a smaller
 swatch inside the shared hit-area floor, while a larger swatch expands the target with it. The
-panel's geometry has its own set, all declared on `:host`:
+panel's geometry has its own public hook set; each hook inherits from an ancestor, and a direct host
+value wins:
 
 - `--lr-color-picker-grid-inline-size` (default `var(--lr-size-15rem)`) and
   `--lr-color-picker-grid-block-size` (default `var(--lr-size-8rem)`) — the saturation/brightness
@@ -5095,196 +5108,196 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-forms-color-picker-color-core-contracts`** — Supporting data types and helpers for this component family.
   `LyraColorHsva {
-    h: unknown;
-    s: unknown;
-    v: unknown;
-    a: unknown;
-  }`
+  h: unknown;
+  s: unknown;
+  v: unknown;
+  a: unknown;
+}`
 
 - **`components-forms-color-picker-color-picker-contracts`** — Supporting data types and helpers for this component family.
   `LyraColorPickerSwatch {
-    color: unknown;
-    label: unknown;
-  }`
+  color: unknown;
+  label: unknown;
+}`
 
 - **`components-forms-combobox-combobox-contracts`** — Supporting data types and helpers for this component family.
   `ComboboxFilterDetail {
-    value: unknown;
-  }`
+  value: unknown;
+}`
   `ComboboxSourceResult {
-    rows: unknown;
-    total: unknown;
-  }`
+  rows: unknown;
+  total: unknown;
+}`
   `ComboboxSourceRow {
-    value: unknown;
-    label: unknown;
-    sub: unknown;
-    icon: unknown;
-    badge: unknown;
-    accessibleLabel: unknown;
-    data: unknown;
-    dotColor: unknown;
-    group: unknown;
-    disabled: unknown;
-  }`
+  value: unknown;
+  label: unknown;
+  sub: unknown;
+  icon: unknown;
+  badge: unknown;
+  accessibleLabel: unknown;
+  data: unknown;
+  dotColor: unknown;
+  group: unknown;
+  disabled: unknown;
+}`
   `LyraComboboxObjectValidator {
-    observedAttributes: unknown;
-    checkValidity: unknown;
-    input: unknown;
-    message: unknown;
-  }`
+  observedAttributes: unknown;
+  checkValidity: unknown;
+  input: unknown;
+  message: unknown;
+}`
   `LyraComboboxObjectValidatorResult {
-    message: unknown;
-    isValid: unknown;
-    invalidKeys: unknown;
-  }`
+  message: unknown;
+  isValid: unknown;
+  invalidKeys: unknown;
+}`
 
 - **`components-forms-date-picker-date-input-contracts`** — Supporting data types and helpers for this component family.
   `LyraDateInputObjectValidator {
-    observedAttributes: unknown;
-    checkValidity: unknown;
-    input: unknown;
-    message: unknown;
-  }`
+  observedAttributes: unknown;
+  checkValidity: unknown;
+  input: unknown;
+  message: unknown;
+}`
   `LyraDateInputObjectValidatorResult {
-    message: unknown;
-    isValid: unknown;
-    invalidKeys: unknown;
-  }`
+  message: unknown;
+  isValid: unknown;
+  invalidKeys: unknown;
+}`
 
 - **`components-forms-date-picker-date-picker-contracts`** — Supporting data types and helpers for this component family.
   `DateRange {
-    from: unknown;
-    to: unknown;
-  }`
+  from: unknown;
+  to: unknown;
+}`
 
 - **`components-forms-emoji-picker-emoji-types-contracts`** — Supporting data types and helpers for this component family.
   `EmojiPickerGroup {
-    key: unknown;
-    label: unknown;
-    emojis: unknown;
-  }`
+  key: unknown;
+  label: unknown;
+  emojis: unknown;
+}`
   `EmojiPickerItem {
-    emoji: unknown;
-    name: unknown;
-    shortcodes: unknown;
-  }`
+  emoji: unknown;
+  name: unknown;
+  shortcodes: unknown;
+}`
 
 - **`components-forms-form-validator-contracts`** — Supporting data types and helpers for this component family.
   `LyraFormValidator {
-    observedAttributes: unknown;
-    checkValidity: unknown;
-    element: unknown;
-    message: unknown;
-  }`
+  observedAttributes: unknown;
+  checkValidity: unknown;
+  element: unknown;
+  message: unknown;
+}`
   `LyraFormValidatorResult {
-    isValid: unknown;
-    message: unknown;
-    invalidKeys: unknown;
-  }`
+  isValid: unknown;
+  message: unknown;
+  invalidKeys: unknown;
+}`
 
 - **`components-forms-locale-picker-locale-picker-contracts`** — Supporting data types and helpers for this component family.
   `LyraLocaleChangeDetail {
-    value: unknown;
-    previousValue: unknown;
-    direction: unknown;
-  }`
+  value: unknown;
+  previousValue: unknown;
+  direction: unknown;
+}`
   `LyraLocaleEntry {
-    tag: unknown;
-    label: unknown;
-    country: unknown;
-  }`
+  tag: unknown;
+  label: unknown;
+  country: unknown;
+}`
 
 - **`components-forms-phone-input-phone-input-contracts`** — Supporting data types and helpers for this component family.
   `LibphonenumberModuleLike {
-    getCountries: unknown;
-    getCountryCallingCode: unknown;
-    country: unknown;
-    parsePhoneNumberFromString: unknown;
-    input: unknown;
-    defaultCountry: unknown;
-    validatePhoneNumberLength: unknown;
-  }`
+  getCountries: unknown;
+  getCountryCallingCode: unknown;
+  country: unknown;
+  parsePhoneNumberFromString: unknown;
+  input: unknown;
+  defaultCountry: unknown;
+  validatePhoneNumberLength: unknown;
+}`
   `loadLibphonenumberAdapter(/* public names: loader */): unknown`
   `LyraPhoneCountry {
-    code: unknown;
-    callingCode: unknown;
-    label: unknown;
-  }`
+  code: unknown;
+  callingCode: unknown;
+  label: unknown;
+}`
   `LyraPhoneInputEventDetail {
-    value: unknown;
-    inputValue: unknown;
-    country: unknown;
-    valid: unknown;
-    status: unknown;
-  }`
+  value: unknown;
+  inputValue: unknown;
+  country: unknown;
+  valid: unknown;
+  status: unknown;
+}`
   `LyraPhoneNumberAdapter {
-    countries: unknown;
-    parse: unknown;
-    input: unknown;
-    country: unknown;
-  }`
+  countries: unknown;
+  parse: unknown;
+  input: unknown;
+  country: unknown;
+}`
 
 - **`components-forms-rubric-form-rubric-form-contracts`** — Supporting data types and helpers for this component family.
   `CategoryRubricKey {
-    type: unknown;
-    options: unknown;
-    multiple: unknown;
-    key: unknown;
-    label: unknown;
-    description: unknown;
-    required: unknown;
-  }`
+  type: unknown;
+  options: unknown;
+  multiple: unknown;
+  key: unknown;
+  label: unknown;
+  description: unknown;
+  required: unknown;
+}`
   `CommentRubricKey {
-    type: unknown;
-    placeholder: unknown;
-    key: unknown;
-    label: unknown;
-    description: unknown;
-    required: unknown;
-  }`
+  type: unknown;
+  placeholder: unknown;
+  key: unknown;
+  label: unknown;
+  description: unknown;
+  required: unknown;
+}`
   `RubricKeyOption {
-    value: unknown;
-    label: unknown;
-    description: unknown;
-  }`
+  value: unknown;
+  label: unknown;
+  description: unknown;
+}`
   `ScoreRubricKey {
-    type: unknown;
-    min: unknown;
-    max: unknown;
-    step: unknown;
-    key: unknown;
-    label: unknown;
-    description: unknown;
-    required: unknown;
-  }`
+  type: unknown;
+  min: unknown;
+  max: unknown;
+  step: unknown;
+  key: unknown;
+  label: unknown;
+  description: unknown;
+  required: unknown;
+}`
 
 - **`components-forms-slider-slider-contracts`** — Supporting data types and helpers for this component family.
   `LyraSliderChangeDetail {
-    value: unknown;
-    minValue: unknown;
-    maxValue: unknown;
-    handle: unknown;
-  }`
+  value: unknown;
+  minValue: unknown;
+  maxValue: unknown;
+  handle: unknown;
+}`
 
 - **`components-forms-swatch-picker-swatch-picker-contracts`** — Supporting data types and helpers for this component family.
   `SwatchPickerItem {
-    value: unknown;
-    color: unknown;
-    label: unknown;
-    icon: unknown;
-    gemstone: unknown;
-  }`
+  value: unknown;
+  color: unknown;
+  label: unknown;
+  icon: unknown;
+  gemstone: unknown;
+}`
 
 - **`components-forms-textarea-textarea-contracts`** — Supporting data types and helpers for this component family.
   `TextareaScrollPosition {
-    top: unknown;
-    left: unknown;
-  }`
+  top: unknown;
+  left: unknown;
+}`
 
 - **`components-forms-time-range-time-range-contracts`** — Supporting data types and helpers for this component family.
   `TimeRangePreset {
-    label: unknown;
-    start: unknown;
-    end: unknown;
-  }`
+  label: unknown;
+  start: unknown;
+  end: unknown;
+}`

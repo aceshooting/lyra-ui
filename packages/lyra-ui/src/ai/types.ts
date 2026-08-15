@@ -82,7 +82,7 @@ export interface AgentRun {
   endedAt?: number;
   model?: string;
   costEstimate?: number;
-  steps: AgentStep[];
+  steps: readonly AgentStep[];
 }
 
 /**
@@ -102,9 +102,9 @@ export interface ChatMessage {
   timestamp?: Date | string;
   /** Plain-text (or app-rendered-markdown-source) body; `<lr-chat-message>` renders none of the message content itself, so this is for state-holding/serialization, not direct binding. */
   text?: string;
-  attachments?: DocumentRef[];
+  attachments?: readonly DocumentRef[];
   /** Ordered, interleavable content. `text` remains the backward-compatible plain-body shortcut. */
-  parts?: MessagePart[];
+  parts?: readonly MessagePart[];
   metadata?: Record<string, unknown>;
 }
 
@@ -308,7 +308,7 @@ export interface GroundedClaim {
   id: string;
   text: string;
   status: GroundedClaimStatus;
-  citationIds: string[];
+  citationIds: readonly string[];
   answerRange?: { start: number; end: number };
   confidence?: number;
   explanation?: string;
@@ -322,8 +322,8 @@ export interface GroundingAssessment {
   coverage: number;
   /** 0-1. */
   confidence?: number;
-  warnings?: string[];
-  claims?: GroundedClaim[];
+  warnings?: readonly string[];
+  claims?: readonly GroundedClaim[];
 }
 
 /** `detail` for a run-lifecycle event (e.g. an agent run's status changing). */

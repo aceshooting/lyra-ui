@@ -1,7 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
-const componentsRoot = join(process.cwd(), 'src', 'components');
+const componentsRoot = join(process.cwd(), "src", "components");
 
 // Web Awesome's public data-grid variables intentionally retain their unprefixed spelling so a
 // consumer migration remains a mechanical tag rename. This is a closed, path-scoped compatibility
@@ -9,67 +9,92 @@ const componentsRoot = join(process.cwd(), 'src', 'components');
 // declarations must continue to reference Lyra tokens, so the exception cannot smuggle raw design
 // values into a component stylesheet.
 const dataGridCompatibilityProperties = new Set([
-  '--accent-color',
-  '--background-color',
-  '--border-color',
-  '--border-radius',
-  '--border-width',
-  '--cell-padding',
-  '--focus-ring',
-  '--header-background',
-  '--header-row-height',
-  '--header-text-color',
-  '--indent-size',
-  '--max-height',
-  '--row-height',
-  '--row-hover-background',
-  '--selected-background',
-  '--stripe-background',
-  '--text-color',
-  '--transition-duration',
+  "--accent-color",
+  "--background-color",
+  "--border-color",
+  "--border-radius",
+  "--border-width",
+  "--cell-padding",
+  "--focus-ring",
+  "--header-background",
+  "--header-row-height",
+  "--header-text-color",
+  "--indent-size",
+  "--max-height",
+  "--row-height",
+  "--row-hover-background",
+  "--selected-background",
+  "--stripe-background",
+  "--text-color",
+  "--transition-duration",
 ]);
-const dataGridStyleFile = join(componentsRoot, 'data', 'data-grid', 'data-grid.styles.ts');
+const dataGridStyleFile = join(
+  componentsRoot,
+  "data",
+  "data-grid",
+  "data-grid.styles.ts"
+);
 
 function styleFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const file = join(directory, entry.name);
     if (entry.isDirectory()) return styleFiles(file);
-    return entry.name.endsWith('.styles.ts') ? [file] : [];
+    return entry.name.endsWith(".styles.ts") ? [file] : [];
   });
 }
 
 function stripComments(source) {
-  return source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+  return source.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
+    comment.replace(/[^\n]/g, " ")
+  );
+}
+
+function documentedCssProperties(styleFile) {
+  const directory = dirname(styleFile);
+  const classSource = readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".class.ts"))
+    .map((entry) => readFileSync(join(directory, entry.name), "utf8"))
+    .join("\n");
+
+  return new Set(
+    [
+      ...classSource.matchAll(/@cssprop\s+(?:\[)?(--[A-Za-z_][A-Za-z0-9_-]*)/g),
+    ].map((match) => match[1])
+  );
 }
 
 const findings = [];
 const rawColor = /#[0-9a-fA-F]{3,8}\b|\brgb(?:a)?\(/;
 const rawDimension = /(?<![\w-])[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|ch)\b/;
-const semanticProperty = /^\s*(?:font-size|--[\w-]*font-size|font-weight|line-height|z-index|border(?:-[\w]+)*-radius)\s*:\s*([^;]+)/;
+const semanticProperty =
+  /^\s*(?:font-size|--[\w-]*font-size|font-weight|line-height|z-index|border(?:-[\w]+)*-radius)\s*:\s*([^;]+)/;
 const customProperty = /^\s*(--[A-Za-z][A-Za-z0-9-]*)\s*:/;
 
 for (const file of styleFiles(componentsRoot)) {
-  const source = stripComments(readFileSync(file, 'utf8'));
+  const source = stripComments(readFileSync(file, "utf8"));
+  const publicCssProperties = documentedCssProperties(file);
 
   // `container-type: inline-size` applies inline-size containment to the declaration's own box,
   // which removes content-based intrinsic sizing. In a shrink-to-fit flex/grid placement that
   // otherwise resolves the component to zero. Keep the fallback on the exact query-container rule
   // (host or internal part), so every new responsive surface is safe without relying on a distant
   // consumer allocation.
-  for (const match of source.matchAll(/container-type\s*:\s*inline-size\s*;/g)) {
-    const ruleStart = source.lastIndexOf('{', match.index);
-    const ruleEnd = source.indexOf('}', match.index);
+  for (const match of source.matchAll(
+    /container-type\s*:\s*inline-size\s*;/g
+  )) {
+    const ruleStart = source.lastIndexOf("{", match.index);
+    const ruleEnd = source.indexOf("}", match.index);
     const ruleBody = source.slice(ruleStart + 1, ruleEnd);
     if (!/contain-intrinsic-inline-size\s*:/.test(ruleBody)) {
-      const line = source.slice(0, match.index).split('\n').length;
+      const line = source.slice(0, match.index).split("\n").length;
       findings.push(
-        `${file}:${line}: inline-size query container must declare contain-intrinsic-inline-size in the same rule`,
+        `${file}:${line}: inline-size query container must declare contain-intrinsic-inline-size in the same rule`
       );
     }
   }
 
-  source.split('\n').forEach((line, index) => {
-    if (line.includes('@media') || line.includes('@container')) return;
+  source.split("\n").forEach((line, index) => {
+    if (line.includes("@media") || line.includes("@container")) return;
 
     if (rawColor.test(line) || /\bblack\b/.test(line)) {
       findings.push(`${file}:${index + 1}: raw color literal`);
@@ -80,21 +105,64 @@ for (const file of styleFiles(componentsRoot)) {
 
     const custom = customProperty.exec(line)?.[1];
     const isDataGridCompatibilityProperty =
-      file === dataGridStyleFile && custom !== undefined && dataGridCompatibilityProperties.has(custom);
-    if (custom && !/^(?:--lr-|--shiki-)/.test(custom) && !isDataGridCompatibilityProperty) {
-      findings.push(`${file}:${index + 1}: custom property must use a library or integration prefix (${custom})`);
+      file === dataGridStyleFile &&
+      custom !== undefined &&
+      dataGridCompatibilityProperties.has(custom);
+    if (
+      custom &&
+      !/^(?:--lr-|--shiki-)/.test(custom) &&
+      !isDataGridCompatibilityProperty
+    ) {
+      findings.push(
+        `${file}:${
+          index + 1
+        }: custom property must use a library or integration prefix (${custom})`
+      );
     }
-    if (isDataGridCompatibilityProperty && !line.includes('var(--lr-')) {
-      findings.push(`${file}:${index + 1}: data-grid compatibility property must resolve through a --lr-* token (${custom})`);
+    if (isDataGridCompatibilityProperty && !line.includes("var(--lr-")) {
+      findings.push(
+        `${file}:${
+          index + 1
+        }: data-grid compatibility property must resolve through a --lr-* token (${custom})`
+      );
+    }
+
+    // A documented CSS custom property is a consumer input, so it must remain undeclared inside
+    // the component's own shadow stylesheet. Any local declaration -- on :host, a state selector,
+    // or an internal part -- wins over the value inherited from a theme/container ancestor. It can
+    // also make a direct host value lose once the declaration sits on a descendant. Defaults belong
+    // in the consuming var() fallback, or in a private --_lr-* value selected by size/state rules.
+    // Scanning every declaration rather than only :host blocks keeps the invariant true across
+    // refactors and catches multiple declarations written on one line.
+    for (const declaration of line.matchAll(
+      /(--[A-Za-z_][A-Za-z0-9_-]*)\s*:/g
+    )) {
+      const name = declaration[1];
+      if (publicCssProperties.has(name)) {
+        findings.push(
+          `${file}:${
+            index + 1
+          }: documented CSS custom property must be consumed through a use-site/private fallback, not declared (${name})`
+        );
+      }
     }
 
     const property = semanticProperty.exec(line);
     if (property) {
       const value = property[1].trim();
-      const isGeometricRadius = /border(?:-[\w]+)*-radius/.test(property[0]) && /^(?:0|50%)(?:\s|$)/.test(value);
-      const isUnitlessZeroLineHeight = /line-height/.test(property[0]) && /^0(?:\s|$)/.test(value);
-      if (!isGeometricRadius && !isUnitlessZeroLineHeight && /^(?:[-+]?\d|\.\d|bold\b)/.test(value)) {
-        findings.push(`${file}:${index + 1}: semantic property has a numeric literal`);
+      const isGeometricRadius =
+        /border(?:-[\w]+)*-radius/.test(property[0]) &&
+        /^(?:0|50%)(?:\s|$)/.test(value);
+      const isUnitlessZeroLineHeight =
+        /line-height/.test(property[0]) && /^0(?:\s|$)/.test(value);
+      if (
+        !isGeometricRadius &&
+        !isUnitlessZeroLineHeight &&
+        /^(?:[-+]?\d|\.\d|bold\b)/.test(value)
+      ) {
+        findings.push(
+          `${file}:${index + 1}: semantic property has a numeric literal`
+        );
       }
     }
   });
@@ -105,5 +173,7 @@ if (findings.length > 0) {
   for (const finding of findings) console.error(`- ${finding}`);
   process.exitCode = 1;
 } else {
-  console.log(`Style policy passed for ${styleFiles(componentsRoot).length} style files.`);
+  console.log(
+    `Style policy passed for ${styleFiles(componentsRoot).length} style files.`
+  );
 }

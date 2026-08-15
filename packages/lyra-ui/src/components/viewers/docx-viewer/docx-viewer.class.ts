@@ -15,13 +15,16 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { invalidateLyraLocaleCache } from '../../../internal/localization-runtime.js';
 import { Slugger } from '../../../internal/slugger.js';
-import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
+import {
+  DocumentAnchorTarget,
+  prioritizedHighlightCandidates,
+  type LyraAnchorTargetEventMap,
+} from '../../../internal/anchor-target.js';
 import {
   buildQuoteAnchor,
   createTextQuoteIndex,
   emptyTextQuoteMatches,
   rangeFromTextQuoteMatch,
-  resolveTextQuote,
   scopeFromElement,
   TEXT_QUOTE_LIMITS,
   type TextQuoteIndex,
@@ -79,7 +82,6 @@ const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'd
 const MAX_DOCX_SEARCH_MATCHES = 1_000;
 const MAX_DOCX_PAINTED_SEARCH_MATCHES = 200;
 const MAX_DOCX_PAINTED_HIGHLIGHTS = 100;
-const MAX_DOCX_HIGHLIGHT_CANDIDATES = 1_000;
 
 /** Wraps the text covered by `range` in one or more `<mark part="...">` elements, splitting any
  *  text node the range only partially covers -- handles a match spanning an inline element
@@ -212,7 +214,7 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  *   matchCount, matchCountExact, activeIndex }`. At most 1,000 matches are retained; a false
  *   `matchCountExact` makes `matchCount` a lower bound.
  * @event lr-highlight-activate - A painted `text-quote` highlight was clicked or its resolved
- *   keyboard action was activated. `detail: { id }`.
+ *   keyboard action was activated. `detail: { highlightId }`.
  * @event lr-text-select - Fired on selection end inside the rendered content. `detail: { text,
  *   anchor, rects }`; `anchor` is a `text-quote` `LyraAnchor` scoped to the rendered content, or
  *   `null` if the selection couldn't be anchored.
@@ -531,7 +533,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   private applyTextQuoteAnchor(root: Element, anchor: Extract<LyraAnchor, { kind: 'text-quote' }>): boolean {
-    const range = resolveTextQuote(scopeFromElement(root), anchor, this.effectiveLocale);
+    const { scope, index } = this.refreshTextIndexMapping(root);
+    const match = index.resolve(anchor);
+    const range = match ? rangeFromTextQuoteMatch(scope, match) : null;
     if (!range) return false;
     const target = range.startContainer.nodeType === Node.ELEMENT_NODE ? (range.startContainer as Element) : range.startContainer.parentElement;
     (target ?? root).scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'center' });
@@ -543,7 +547,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   protected computeSelectionAnchor(range: Range): LyraAnchor | null {
     const root = this.contentRoot();
     if (!root) return null;
-    return buildQuoteAnchor(range, scopeFromElement(root));
+    return buildQuoteAnchor(range, this.refreshTextIndexMapping(root).scope);
   }
 
   // -- highlight painting ------------------------------------------------------------------------
@@ -569,26 +573,11 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       handle.setActive(null);
       return;
     }
-    const scope = scopeFromElement(root);
-    const index = createTextQuoteIndex(scope, this.effectiveLocale);
+    const { scope, index } = this.refreshTextIndexMapping(root);
     const workBudget = index.createWorkBudget();
     const rangesByTone = new Map<LyraHighlightTone, Range[]>(HIGHLIGHT_TONES.map((tone) => [tone, []]));
     let activeRange: Range | null = null;
-    let active: LyraHighlight | undefined;
-    const candidates: LyraHighlight[] = [];
-    const candidateCount = Math.min(this.highlights.length, MAX_DOCX_HIGHLIGHT_CANDIDATES);
-    for (let index = 0; index < candidateCount; index++) {
-      const highlight = this.highlights[index]!;
-      candidates.push(highlight);
-      if (highlight.id === this.activeHighlightId) active = highlight;
-    }
-    if (active) {
-      const activeIndex = candidates.indexOf(active);
-      if (activeIndex > 0) {
-        candidates.splice(activeIndex, 1);
-        candidates.unshift(active);
-      }
-    }
+    const candidates = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId);
     for (const highlight of candidates) {
       if (this.resolvedHighlightRanges.length >= MAX_DOCX_PAINTED_HIGHLIGHTS) break;
       if (highlight.anchor.kind !== 'text-quote') continue;
@@ -664,7 +653,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   // every render anyway.
   private onContentClick = (e: MouseEvent): void => {
     const highlightId = this.hitTestHighlightAt(e.clientX, e.clientY);
-    if (highlightId) this.emit('lr-highlight-activate', { id: highlightId });
+    if (highlightId) this.emit('lr-highlight-activate', { highlightId });
   };
 
   private highlightActionLabel(highlight: LyraHighlight): string {
@@ -687,7 +676,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         : resolved.range.commonAncestorContainer.parentElement;
     target?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
     this.activeHighlightId = highlight.id;
-    this.emit('lr-highlight-activate', { id: highlight.id });
+    this.emit('lr-highlight-activate', { highlightId: highlight.id });
   }
 
   private renderHighlightActions(): TemplateResult | typeof nothing {

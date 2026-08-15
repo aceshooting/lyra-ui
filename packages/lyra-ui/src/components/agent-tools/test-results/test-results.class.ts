@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -11,7 +12,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -30,7 +31,7 @@ export interface TestCaseResult {
 export interface TestSuiteResult {
   id: string;
   name: string;
-  tests: TestCaseResult[];
+  tests: readonly TestCaseResult[];
 }
 
 const STATUSES: TestStatus[] = ['passed', 'failed', 'skipped', 'running'];
@@ -105,7 +106,7 @@ export function testResultDetailSlotName(suiteId: string, testId: string): strin
 
 export interface LyraTestResultsEventMap {
   'lr-test-select': CustomEvent<{ suiteId: string; testId: string }>;
-  'lr-filter-change': CustomEvent<{ statuses: TestStatus[] }>;
+  'lr-filter-change': CustomEvent<LyraEventDetailSnapshot<{ statuses: TestStatus[] }>>;
   'lr-toggle': CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>;
 }
 
@@ -119,6 +120,9 @@ export interface LyraTestResultsEventMap {
  * `skipped` fallback. Completion announcements require an explicit same-`runId`
  * `runState="running"` -> `"complete"` transition; clearing data alone is not treated as a
  * completed run.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-test-results
  * @event lr-test-select - `detail: { suiteId, testId }` — a test row's name was activated.
@@ -165,6 +169,8 @@ export interface LyraTestResultsEventMap {
  * @since 4.0.0
  */
 export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["suites", "statusFilter"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -177,6 +183,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
@@ -201,10 +208,10 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   /** The suites to render, grouped in order. Controlled and never mutated by this component --
    *  pass a new array (e.g. as a run streams in) to update it. Duplicate suite ids and per-suite
    *  test ids use deterministic first-wins identity. */
-  @property({ attribute: false }) suites: TestSuiteResult[] = [];
+  @property({ attribute: false }) suites: readonly TestSuiteResult[] = [];
 
   /** When non-empty, only tests whose status is in this set are shown. Empty means "show all". */
-  @property({ attribute: false }) statusFilter: TestStatus[] = [];
+  @property({ attribute: false }) statusFilter: readonly TestStatus[] = [];
 
   /** Stable source-run identity used to correlate lifecycle announcements. */
   @property({ attribute: 'run-id' }) runId: string | null = null;

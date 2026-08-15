@@ -18,7 +18,7 @@ import type { AgentRunActivateDetail } from '../run-events.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -31,6 +31,9 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = { idle: 'neutral', queued: 
  * `<lr-agent-eval-dashboard>` — a controlled evaluation overview with metric cards, a trend chart,
  * and run-status history. It never launches or scores evaluations. Duplicate metric or run ids
  * normalize before selection, charting, rendering, and activation; the first occurrence wins.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-agent-eval-dashboard
  * @event lr-metric-change - A host-controlled metric selection changed. `detail: { metricId }`.
@@ -54,6 +57,8 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = { idle: 'neutral', queued: 
  * @since 6.2.0
  */
 export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["metrics", "runs"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -74,6 +79,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
@@ -82,11 +88,12 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  /** Metric cards and selector choices. Duplicate ids normalize first-wins. */
-  @property({ attribute: false }) metrics: AgentEvaluationMetric[] = [];
-  /** Run history used by both the chart and list. Duplicate ids normalize first-wins. */
-  @property({ attribute: false }) runs: AgentEvaluationDashboardRun[] = [];
-  /** Controlled metric selection. `null` selects the first metric; empty string remains a valid id. */
+  /** Metric cards and selector choices. Empty ids are omitted; duplicates normalize first-wins. */
+  @property({ attribute: false }) metrics: readonly AgentEvaluationMetric[] = [];
+  /** Run history used by both the chart and list. Empty ids are omitted; duplicates normalize
+   *  first-wins. */
+  @property({ attribute: false }) runs: readonly AgentEvaluationDashboardRun[] = [];
+  /** Controlled metric selection. `null` or an unmatched identity selects the first valid metric. */
   @property({ attribute: 'metric-id' }) metricId: string | null = null;
   /** ISO 4217 currency code used by metrics whose format is `currency`. Invalid codes use USD. */
   @property() currency = 'USD';

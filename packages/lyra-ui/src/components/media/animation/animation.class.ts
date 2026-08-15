@@ -1,20 +1,20 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import { html, type PropertyValues, type TemplateResult } from "lit";
+import { property } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { prefersReducedMotion } from "../../../internal/motion.js";
+import { finiteNumber, finiteRange } from "../../../internal/numbers.js";
 import {
   getAnimation,
   type LyraElementAnimation,
   type LyraResolvedElementAnimation,
-} from '../../../utilities/animation-registry.js';
-import { styles } from './animation.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+} from "../../../utilities/animation-registry.js";
+import { styles } from "./animation.styles.js";
+import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
 import {
   resolveCatalogAnimation,
   resolveNamedEasing,
   type LyraMirrorAnimationName,
-} from './animation-catalog.js';
+} from "./animation-catalog.js";
 
 export {
   animations,
@@ -25,45 +25,47 @@ export {
   type LyraAnimationEasingName,
   type LyraAnimationCatalog,
   type LyraMirrorAnimationName,
-} from './animation-catalog.js';
+} from "./animation-catalog.js";
 
 /** Curated preset catalog for the `name` property. `slide-in-start`/`slide-in-end`/
  * `slide-out-start`/`slide-out-end` are resolved separately (see `slidePreset()`)
  * because they depend on the element's inherited text direction. */
 export type LyraAnimationPreset =
   | LyraMirrorAnimationName
-  | 'none'
-  | 'fade-in'
-  | 'fade-out'
-  | 'zoom-in'
-  | 'zoom-out'
-  | 'slide-in-start'
-  | 'slide-in-end'
-  | 'slide-out-start'
-  | 'slide-out-end'
-  | 'slide-in-up'
-  | 'slide-in-down'
-  | 'bounce'
-  | 'pulse'
-  | 'spin'
-  | 'shake';
+  | "none"
+  | "fade-in"
+  | "fade-out"
+  | "zoom-in"
+  | "zoom-out"
+  | "slide-in-start"
+  | "slide-in-end"
+  | "slide-out-start"
+  | "slide-out-end"
+  | "slide-in-up"
+  | "slide-in-down"
+  | "bounce"
+  | "pulse"
+  | "spin"
+  | "shake";
 
 /** Ties `duration`/`easing` to the shared `--lr-transition-*` tokens instead of
  * the raw numeric properties. `'custom'` (the default) leaves `duration`/`easing`
  * fully consumer-controlled. */
-export type LyraAnimationTimingPreset = 'custom' | 'fast' | 'base' | 'ambient';
+export type LyraAnimationTimingPreset = "custom" | "fast" | "base" | "ambient";
 
 export interface LyraAnimationEventMap {
-  'lr-start': CustomEvent<null>;
-  'lr-finish': CustomEvent<null>;
-  'lr-cancel': CustomEvent<null>;
+  "lr-start": CustomEvent<null>;
+  "lr-finish": CustomEvent<null>;
+  "lr-cancel": CustomEvent<null>;
 }
 
 const MAX_VISIBILITY_THRESHOLDS = 1_000;
 
-function snapshotVisibilityThreshold(value: unknown): number | readonly number[] {
+function snapshotVisibilityThreshold(
+  value: unknown
+): number | readonly number[] {
   if (!Array.isArray(value)) {
-    const threshold = typeof value === 'number' ? finiteNumber(value, -1) : -1;
+    const threshold = typeof value === "number" ? finiteNumber(value, -1) : -1;
     return threshold >= 0 && threshold <= 1 ? threshold : 0;
   }
   try {
@@ -72,7 +74,8 @@ function snapshotVisibilityThreshold(value: unknown): number | readonly number[]
     for (let index = 0; index < count; index++) {
       try {
         const candidate = value[index];
-        const threshold = typeof candidate === 'number' ? finiteNumber(candidate, -1) : -1;
+        const threshold =
+          typeof candidate === "number" ? finiteNumber(candidate, -1) : -1;
         if (threshold >= 0 && threshold <= 1) thresholds.push(threshold);
       } catch {
         // A hostile indexed getter invalidates only its own entry.
@@ -85,44 +88,84 @@ function snapshotVisibilityThreshold(value: unknown): number | readonly number[]
 }
 
 const PRESETS: Readonly<Partial<Record<string, Keyframe[]>>> = {
-  'fade-in': [{ opacity: 0 }, { opacity: 1 }],
-  'fade-out': [{ opacity: 1 }, { opacity: 0 }],
-  'zoom-in': [
-    { opacity: 0, transform: 'scale(var(--lr-animation-zoom-scale, 0.5))' },
-    { opacity: 1, transform: 'scale(1)' },
+  "fade-in": [{ opacity: 0 }, { opacity: 1 }],
+  "fade-out": [{ opacity: 1 }, { opacity: 0 }],
+  "zoom-in": [
+    {
+      opacity: 0,
+      transform:
+        "scale(var(--lr-animation-zoom-scale, var(--_lr-animation-zoom-scale)))",
+    },
+    { opacity: 1, transform: "scale(1)" },
   ],
-  'zoom-out': [
-    { opacity: 1, transform: 'scale(1)' },
-    { opacity: 0, transform: 'scale(var(--lr-animation-zoom-scale, 0.5))' },
+  "zoom-out": [
+    { opacity: 1, transform: "scale(1)" },
+    {
+      opacity: 0,
+      transform:
+        "scale(var(--lr-animation-zoom-scale, var(--_lr-animation-zoom-scale)))",
+    },
   ],
-  'slide-in-up': [
-    { transform: 'translateY(var(--lr-animation-slide-distance, 100%))', opacity: 0 },
-    { transform: 'translateY(0)', opacity: 1 },
+  "slide-in-up": [
+    {
+      transform:
+        "translateY(var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance)))",
+      opacity: 0,
+    },
+    { transform: "translateY(0)", opacity: 1 },
   ],
-  'slide-in-down': [
-    { transform: 'translateY(calc(-1 * var(--lr-animation-slide-distance, 100%)))', opacity: 0 },
-    { transform: 'translateY(0)', opacity: 1 },
+  "slide-in-down": [
+    {
+      transform:
+        "translateY(calc(-1 * var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance))))",
+      opacity: 0,
+    },
+    { transform: "translateY(0)", opacity: 1 },
   ],
   bounce: [
-    { transform: 'translateY(0)', offset: 0 },
-    { transform: 'translateY(calc(-1 * var(--lr-animation-bounce-height, 25%)))', offset: 0.4 },
-    { transform: 'translateY(0)', offset: 0.7 },
-    { transform: 'translateY(calc(-0.4 * var(--lr-animation-bounce-height, 25%)))', offset: 0.85 },
-    { transform: 'translateY(0)', offset: 1 },
+    { transform: "translateY(0)", offset: 0 },
+    {
+      transform:
+        "translateY(calc(-1 * var(--lr-animation-bounce-height, var(--_lr-animation-bounce-height))))",
+      offset: 0.4,
+    },
+    { transform: "translateY(0)", offset: 0.7 },
+    {
+      transform:
+        "translateY(calc(-0.4 * var(--lr-animation-bounce-height, var(--_lr-animation-bounce-height))))",
+      offset: 0.85,
+    },
+    { transform: "translateY(0)", offset: 1 },
   ],
   pulse: [
-    { transform: 'scale(1)', opacity: 1, offset: 0 },
-    { transform: 'scale(0.92)', opacity: 0.75, offset: 0.5 },
-    { transform: 'scale(1)', opacity: 1, offset: 1 },
+    { transform: "scale(1)", opacity: 1, offset: 0 },
+    { transform: "scale(0.92)", opacity: 0.75, offset: 0.5 },
+    { transform: "scale(1)", opacity: 1, offset: 1 },
   ],
-  spin: [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }],
+  spin: [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
   shake: [
-    { transform: 'translateX(0)', offset: 0 },
-    { transform: 'translateX(calc(-1 * var(--lr-animation-shake-distance, 4%)))', offset: 0.2 },
-    { transform: 'translateX(var(--lr-animation-shake-distance, 4%))', offset: 0.4 },
-    { transform: 'translateX(calc(-1 * var(--lr-animation-shake-distance, 4%)))', offset: 0.6 },
-    { transform: 'translateX(var(--lr-animation-shake-distance, 4%))', offset: 0.8 },
-    { transform: 'translateX(0)', offset: 1 },
+    { transform: "translateX(0)", offset: 0 },
+    {
+      transform:
+        "translateX(calc(-1 * var(--lr-animation-shake-distance, var(--_lr-animation-shake-distance))))",
+      offset: 0.2,
+    },
+    {
+      transform:
+        "translateX(var(--lr-animation-shake-distance, var(--_lr-animation-shake-distance)))",
+      offset: 0.4,
+    },
+    {
+      transform:
+        "translateX(calc(-1 * var(--lr-animation-shake-distance, var(--_lr-animation-shake-distance))))",
+      offset: 0.6,
+    },
+    {
+      transform:
+        "translateX(var(--lr-animation-shake-distance, var(--_lr-animation-shake-distance)))",
+      offset: 0.8,
+    },
+    { transform: "translateX(0)", offset: 1 },
   ],
 };
 
@@ -130,13 +173,19 @@ const PRESETS: Readonly<Partial<Record<string, Keyframe[]>>> = {
  * `slide-out-start`/`slide-out-end`. "start"/"end" are logical edges: under
  * `ltr` the start edge is physically left and the end edge is physically
  * right; under `rtl` that's reversed. */
-function slidePreset(edge: 'start' | 'end', mode: 'in' | 'out', dir: 'ltr' | 'rtl'): Keyframe[] {
-  const negative = dir === 'ltr' ? edge === 'start' : edge === 'end';
+function slidePreset(
+  edge: "start" | "end",
+  mode: "in" | "out",
+  dir: "ltr" | "rtl"
+): Keyframe[] {
+  const negative = dir === "ltr" ? edge === "start" : edge === "end";
   const offscreen = `translateX(${
-    negative ? 'calc(-1 * var(--lr-animation-slide-distance, 100%))' : 'var(--lr-animation-slide-distance, 100%)'
+    negative
+      ? "calc(-1 * var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance)))"
+      : "var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance))"
   })`;
-  const onscreen = 'translateX(0)';
-  return mode === 'in'
+  const onscreen = "translateX(0)";
+  return mode === "in"
     ? [
         { transform: offscreen, opacity: 0 },
         { transform: onscreen, opacity: 1 },
@@ -147,21 +196,44 @@ function slidePreset(edge: 'start' | 'end', mode: 'in' | 'out', dir: 'ltr' | 'rt
       ];
 }
 
-const DIRECTIONAL_SLIDE_NAMES = new Set<string>(['slide-in-start', 'slide-in-end', 'slide-out-start', 'slide-out-end']);
-const PLAYBACK_DIRECTIONS = new Set<string>(['normal', 'reverse', 'alternate', 'alternate-reverse']);
-const FILL_MODES = new Set<string>(['none', 'forwards', 'backwards', 'both', 'auto']);
-function isElementOwnedBy(value: unknown, ownerDocument: Document): value is Element {
-  if (value === null || typeof value !== 'object') return false;
+const DIRECTIONAL_SLIDE_NAMES = new Set<string>([
+  "slide-in-start",
+  "slide-in-end",
+  "slide-out-start",
+  "slide-out-end",
+]);
+const PLAYBACK_DIRECTIONS = new Set<string>([
+  "normal",
+  "reverse",
+  "alternate",
+  "alternate-reverse",
+]);
+const FILL_MODES = new Set<string>([
+  "none",
+  "forwards",
+  "backwards",
+  "both",
+  "auto",
+]);
+function isElementOwnedBy(
+  value: unknown,
+  ownerDocument: Document
+): value is Element {
+  if (value === null || typeof value !== "object") return false;
   const candidate = value as Partial<Element> & { nodeType?: number };
   if (
-    candidate.nodeType !== 1
-    || candidate.ownerDocument !== ownerDocument
-    || typeof candidate.localName !== 'string'
-    || typeof candidate.getAttribute !== 'function'
-  ) return false;
+    candidate.nodeType !== 1 ||
+    candidate.ownerDocument !== ownerDocument ||
+    typeof candidate.localName !== "string" ||
+    typeof candidate.getAttribute !== "function"
+  )
+    return false;
   const ElementCtor = ownerDocument.defaultView?.Element;
   if (ElementCtor && value instanceof ElementCtor) return true;
-  return typeof candidate.matches === 'function' && typeof candidate.getRootNode === 'function';
+  return (
+    typeof candidate.matches === "function" &&
+    typeof candidate.getRootNode === "function"
+  );
 }
 
 /** Reads and decomposes a compound `--lr-transition-*` token (e.g. `"180ms ease-out"`)
@@ -169,24 +241,31 @@ function isElementOwnedBy(value: unknown, ownerDocument: Document): value is Ele
  * WAAPI's numeric timing options cannot take a `var()` reference the way a CSS `transform`
  * string can. Resolves against fully computed style, so a theme override that itself uses
  * `var()` internally never leaks unresolved text into `easing`. */
-function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'): { duration: number; easing: string } {
-  const raw = el.ownerDocument.defaultView
-    ?.getComputedStyle(el)
-    .getPropertyValue(`--lr-transition-${preset}`)
-    .trim() ?? '';
+function resolveTimingToken(
+  el: HTMLElement,
+  preset: "fast" | "base" | "ambient"
+): { duration: number; easing: string } {
+  const raw =
+    el.ownerDocument.defaultView
+      ?.getComputedStyle(el)
+      .getPropertyValue(`--lr-transition-${preset}`)
+      .trim() ?? "";
   const match = /^((?:\d+(?:\.\d*)?)|(?:\.\d+))(ms|s)\s+(.+)$/.exec(raw);
-  if (!match) return { duration: 1000, easing: 'linear' };
+  if (!match) return { duration: 1000, easing: "linear" };
   // safe: all three capture groups are non-optional, so a successful match fills them.
   const num = match[1]!;
   const unit = match[2]!;
   const easing = match[3]!;
-  const duration = (unit === 's' ? 1000 : 1) * Number(num);
+  const duration = (unit === "s" ? 1000 : 1) * Number(num);
   const resolvedEasing = easing.trim();
   if (
-    !Number.isFinite(duration)
-    || !el.ownerDocument.defaultView?.CSS?.supports('animation-timing-function', resolvedEasing)
+    !Number.isFinite(duration) ||
+    !el.ownerDocument.defaultView?.CSS?.supports(
+      "animation-timing-function",
+      resolvedEasing
+    )
   ) {
-    return { duration: 1000, easing: 'linear' };
+    return { duration: 1000, easing: "linear" };
   }
   return { duration, easing: resolvedEasing };
 }
@@ -247,29 +326,36 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Built-in preset or consumer-registered `animation.<name>` key. */
-  @property() name: string = 'none';
+  @property() name: string = "none";
   @property({ attribute: false }) keyframes: Keyframe[] | undefined = undefined;
   @property({ type: Boolean, reflect: true }) play = false;
   @property({ type: Number }) delay = 0;
-  @property() direction: PlaybackDirection = 'normal';
+  @property() direction: PlaybackDirection = "normal";
   @property({ type: Number }) duration = 1000;
-  @property() easing = 'linear';
-  @property({ type: Number, attribute: 'end-delay' }) endDelay = 0;
-  @property() fill: FillMode = 'auto';
+  @property() easing = "linear";
+  @property({ type: Number, attribute: "end-delay" }) endDelay = 0;
+  @property() fill: FillMode = "auto";
   @property({ type: Number }) iterations: number = Infinity;
-  @property({ type: Number, attribute: 'iteration-start' }) iterationStart = 0;
-  @property({ type: Number, attribute: 'playback-rate' }) playbackRate = 1;
-  @property({ attribute: 'timing-preset', reflect: true }) timingPreset: LyraAnimationTimingPreset = 'custom';
+  @property({ type: Number, attribute: "iteration-start" }) iterationStart = 0;
+  @property({ type: Number, attribute: "playback-rate" }) playbackRate = 1;
+  @property({ attribute: "timing-preset", reflect: true })
+  timingPreset: LyraAnimationTimingPreset = "custom";
   @property({
     type: Boolean,
-    attribute: 'respect-reduced-motion',
+    attribute: "respect-reduced-motion",
     reflect: true,
     converter: trueDefaultBooleanConverter,
   })
   respectReducedMotion = true;
-  @property({ type: Boolean, attribute: 'play-on-visible', reflect: true }) playOnVisible = false;
-  @property({ type: Boolean, attribute: 'play-on-visible-repeat', reflect: true }) playOnVisibleRepeat = false;
-  @property({ attribute: 'root-margin' }) rootMargin = '0px';
+  @property({ type: Boolean, attribute: "play-on-visible", reflect: true })
+  playOnVisible = false;
+  @property({
+    type: Boolean,
+    attribute: "play-on-visible-repeat",
+    reflect: true,
+  })
+  playOnVisibleRepeat = false;
+  @property({ attribute: "root-margin" }) rootMargin = "0px";
   private _threshold: number | readonly number[] = 0;
   /** Intersection thresholds for `playOnVisible`; arrays are bounded, filtered, and frozen. */
   @property({ attribute: false })
@@ -279,7 +365,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   set threshold(next: number | readonly number[]) {
     const old = this._threshold;
     this._threshold = snapshotVisibilityThreshold(next);
-    this.requestUpdate('threshold', old);
+    this.requestUpdate("threshold", old);
   }
   @property({ attribute: false }) root: Element | null = null;
 
@@ -288,7 +374,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private visibilityObserver?: IntersectionObserver;
   private motionQuery?: MediaQueryList;
   private motionQueryListener?: () => void;
-  private lastTextDirection?: 'ltr' | 'rtl';
+  private lastTextDirection?: "ltr" | "rtl";
 
   // WAAPI timing values are not timer durations. Signed finite delay/endDelay values are valid,
   // and finite non-negative durations may exceed setTimeout's ceiling. Keep the two domains
@@ -309,7 +395,9 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
    *  (which cannot itself represent "fall back to Infinity" -- its fallback parameter must be
    *  finite). Only a genuinely invalid raw value (`NaN`, negative, `-Infinity`) falls back to `1`. */
   private get safeIterations(): number {
-    return this.iterations === Infinity ? Infinity : finiteRange(this.iterations, 1, 0);
+    return this.iterations === Infinity
+      ? Infinity
+      : finiteRange(this.iterations, 1, 0);
   }
   private get safeIterationStart(): number {
     return finiteRange(this.iterationStart, 0, 0);
@@ -318,21 +406,26 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     return finiteNumber(this.playbackRate, 1);
   }
   private get safeDirection(): PlaybackDirection {
-    return PLAYBACK_DIRECTIONS.has(this.direction) ? this.direction : 'normal';
+    return PLAYBACK_DIRECTIONS.has(this.direction) ? this.direction : "normal";
   }
   private get safeFill(): FillMode {
-    return FILL_MODES.has(this.fill) ? this.fill : 'auto';
+    return FILL_MODES.has(this.fill) ? this.fill : "auto";
   }
   private get safeTimingPreset(): LyraAnimationTimingPreset {
-    return this.timingPreset === 'fast' || this.timingPreset === 'base' || this.timingPreset === 'ambient'
+    return this.timingPreset === "fast" ||
+      this.timingPreset === "base" ||
+      this.timingPreset === "ambient"
       ? this.timingPreset
-      : 'custom';
+      : "custom";
   }
   private safeEasing(value: string): string {
     const resolved = resolveNamedEasing(value);
-    return this.ownerDocument.defaultView?.CSS?.supports('animation-timing-function', resolved)
+    return this.ownerDocument.defaultView?.CSS?.supports(
+      "animation-timing-function",
+      resolved
+    )
       ? resolved
-      : 'linear';
+      : "linear";
   }
 
   override connectedCallback(): void {
@@ -369,20 +462,25 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private bindMotionPreference(): void {
     this.unbindMotionPreference();
     const owner = this.ownerDocument.defaultView;
-    const query = owner?.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const query = owner?.matchMedia?.("(prefers-reduced-motion: reduce)");
     if (!owner || !query) return;
     const listener = (): void => {
-      if (!this.isConnected || this.ownerDocument.defaultView !== owner || this.motionQuery !== query) return;
+      if (
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== owner ||
+        this.motionQuery !== query
+      )
+        return;
       this.createAnimation();
     };
     this.motionQuery = query;
     this.motionQueryListener = listener;
-    query.addEventListener('change', listener);
+    query.addEventListener("change", listener);
   }
 
   private unbindMotionPreference(): void {
     if (this.motionQuery && this.motionQueryListener) {
-      this.motionQuery.removeEventListener('change', this.motionQueryListener);
+      this.motionQuery.removeEventListener("change", this.motionQueryListener);
     }
     this.motionQuery = undefined;
     this.motionQueryListener = undefined;
@@ -391,26 +489,38 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const rebuildKeys = [
-      'name',
-      'keyframes',
-      'delay',
-      'direction',
-      'duration',
-      'easing',
-      'endDelay',
-      'fill',
-      'iterations',
-      'iterationStart',
-      'timingPreset',
-      'respectReducedMotion',
+      "name",
+      "keyframes",
+      "delay",
+      "direction",
+      "duration",
+      "easing",
+      "endDelay",
+      "fill",
+      "iterations",
+      "iterationStart",
+      "timingPreset",
+      "respectReducedMotion",
     ] as const;
     const textDirection = this.effectiveDirection;
-    const textDirectionChanged = this.lastTextDirection !== undefined && this.lastTextDirection !== textDirection;
+    const textDirectionChanged =
+      this.lastTextDirection !== undefined &&
+      this.lastTextDirection !== textDirection;
     this.lastTextDirection = textDirection;
-    if (rebuildKeys.some((key) => changed.has(key)) || textDirectionChanged) this.createAnimation();
-    else if (changed.has('play')) this.applyPlayState();
-    if (changed.has('playbackRate') && this.animation) this.animation.playbackRate = this.safePlaybackRate;
-    if (['playOnVisible', 'playOnVisibleRepeat', 'rootMargin', 'threshold', 'root'].some((key) => changed.has(key))) {
+    if (rebuildKeys.some((key) => changed.has(key)) || textDirectionChanged)
+      this.createAnimation();
+    else if (changed.has("play")) this.applyPlayState();
+    if (changed.has("playbackRate") && this.animation)
+      this.animation.playbackRate = this.safePlaybackRate;
+    if (
+      [
+        "playOnVisible",
+        "playOnVisibleRepeat",
+        "rootMargin",
+        "threshold",
+        "root",
+      ].some((key) => changed.has(key))
+    ) {
       this.scheduleAfterUpdate(this.syncVisibilityObserver);
     }
   }
@@ -421,7 +531,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   };
 
   private currentTarget(): Element | undefined {
-    const slot = this.renderRoot.querySelector('slot');
+    const slot = this.renderRoot.querySelector("slot");
     const [first] = slot?.assignedElements({ flatten: true }) ?? [];
     return isElementOwnedBy(first, this.ownerDocument) ? first : undefined;
   }
@@ -429,14 +539,14 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private resolveAnimation(): LyraResolvedElementAnimation | undefined {
     if (this.keyframes) return { keyframes: this.keyframes, options: {} };
     const { name } = this;
-    if (name === 'none') return undefined;
+    if (name === "none") return undefined;
     let fallback: LyraElementAnimation | undefined;
     if (DIRECTIONAL_SLIDE_NAMES.has(name)) {
-      const mode = name.startsWith('slide-in-') ? 'in' : 'out';
-      const edge = name.endsWith('-start') ? 'start' : 'end';
+      const mode = name.startsWith("slide-in-") ? "in" : "out";
+      const edge = name.endsWith("-start") ? "start" : "end";
       fallback = {
-        keyframes: slidePreset(edge, mode, 'ltr'),
-        rtlKeyframes: slidePreset(edge, mode, 'rtl'),
+        keyframes: slidePreset(edge, mode, "ltr"),
+        rtlKeyframes: slidePreset(edge, mode, "rtl"),
       };
     } else {
       const keyframes = PRESETS[name] ?? resolveCatalogAnimation(name);
@@ -451,7 +561,9 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
         respectReducedMotion: false,
       });
     } catch {
-      return fallback ? { keyframes: fallback.keyframes, options: fallback.options ?? {} } : undefined;
+      return fallback
+        ? { keyframes: fallback.keyframes, options: fallback.options ?? {} }
+        : undefined;
     }
   }
 
@@ -470,35 +582,46 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     let observer: IntersectionObserver | undefined;
     const callback: IntersectionObserverCallback = (entries) => {
       if (
-        !observer
-        || this.visibilityObserver !== observer
-        || !this.isConnected
-        || this.ownerDocument.defaultView !== owner
-      ) return;
+        !observer ||
+        this.visibilityObserver !== observer ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== owner
+      )
+        return;
       const entry = entries[entries.length - 1];
       if (!entry) return;
       if (entry.isIntersecting) {
         this.play = true;
         if (!this.playOnVisibleRepeat) {
           observer.disconnect();
-          if (this.visibilityObserver === observer) this.visibilityObserver = undefined;
+          if (this.visibilityObserver === observer)
+            this.visibilityObserver = undefined;
         }
       } else if (this.playOnVisibleRepeat) {
         this.play = false;
       }
     };
-    const root = isElementOwnedBy(this.root, this.ownerDocument) ? this.root : null;
+    const root = isElementOwnedBy(this.root, this.ownerDocument)
+      ? this.root
+      : null;
     try {
       observer = new Observer(callback, {
         root,
         rootMargin: this.rootMargin,
         // The DOM lib still spells this Web IDL sequence as mutable `number[]`; retain our
         // readonly public snapshot and hand the browser a fresh mutable boundary copy.
-        threshold: typeof this.threshold === 'number' ? this.threshold : [...this.threshold],
+        threshold:
+          typeof this.threshold === "number"
+            ? this.threshold
+            : [...this.threshold],
       });
     } catch {
       try {
-        observer = new Observer(callback, { root, rootMargin: '0px', threshold: 0 });
+        observer = new Observer(callback, {
+          root,
+          rootMargin: "0px",
+          threshold: 0,
+        });
       } catch {
         this.play = true;
         return;
@@ -529,8 +652,8 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   // `cancel` event is allowed through to `lr-cancel` on purpose.
   private destroyAnimation(): void {
     if (!this.animation) return;
-    this.animation.removeEventListener('cancel', this.onAnimationCancel);
-    this.animation.removeEventListener('finish', this.onAnimationFinish);
+    this.animation.removeEventListener("cancel", this.onAnimationCancel);
+    this.animation.removeEventListener("finish", this.onAnimationFinish);
     this.animation.cancel();
     this.animation = undefined;
     this.hasStarted = false;
@@ -546,18 +669,22 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     let keyframes: Keyframe[];
     try {
       const source = disabled ? [{}, {}] : registered.keyframes;
-      if (!Array.isArray(source) || source.length > 512) throw new TypeError('Invalid keyframe sequence.');
+      if (!Array.isArray(source) || source.length > 512)
+        throw new TypeError("Invalid keyframe sequence.");
       keyframes = source.map((keyframe) => {
-        if (typeof keyframe !== 'object' || keyframe === null) throw new TypeError('Invalid keyframe record.');
+        if (typeof keyframe !== "object" || keyframe === null)
+          throw new TypeError("Invalid keyframe record.");
         return { ...keyframe };
       });
     } catch {
       keyframes = [{}, {}];
     }
-    const reduced = this.respectReducedMotion && prefersReducedMotion(this.ownerDocument.defaultView);
+    const reduced =
+      this.respectReducedMotion &&
+      prefersReducedMotion(this.ownerDocument.defaultView);
     const timingPreset = this.safeTimingPreset;
     const { duration, easing } =
-      timingPreset === 'custom'
+      timingPreset === "custom"
         ? { duration: this.safeDuration, easing: this.safeEasing(this.easing) }
         : resolveTimingToken(this, timingPreset);
     const baseOptions: KeyframeAnimationOptions = {
@@ -568,9 +695,14 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
       endDelay: this.safeEndDelay,
       fill: this.safeFill,
       iterationStart: this.safeIterationStart,
-      iterations: reduced ? Math.min(this.safeIterations, 1) : this.safeIterations,
+      iterations: reduced
+        ? Math.min(this.safeIterations, 1)
+        : this.safeIterations,
     };
-    const options: KeyframeAnimationOptions = { ...baseOptions, ...registered.options };
+    const options: KeyframeAnimationOptions = {
+      ...baseOptions,
+      ...registered.options,
+    };
     // The component owns reduced-motion arbitration because it must also call finish() below to
     // preserve the resolved end state and lr-start/lr-finish ordering. Apply that policy after a
     // registry override's timing so customization can never reintroduce motion. An explicit null
@@ -595,11 +727,11 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
       }
     }
     this.animation.playbackRate = this.safePlaybackRate;
-    this.animation.addEventListener('cancel', this.onAnimationCancel);
-    this.animation.addEventListener('finish', this.onAnimationFinish);
+    this.animation.addEventListener("cancel", this.onAnimationCancel);
+    this.animation.addEventListener("finish", this.onAnimationFinish);
     if (this.play) {
       this.hasStarted = true;
-      this.emit('lr-start', null);
+      this.emit("lr-start", null);
       if (reduced) this.animation.finish();
     } else {
       this.animation.pause();
@@ -617,10 +749,10 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     if (this.play) {
       if (!this.hasStarted) {
         this.hasStarted = true;
-        this.emit('lr-start', null);
+        this.emit("lr-start", null);
       }
       this.animation.play();
-    } else if (this.animation.playState !== 'idle') {
+    } else if (this.animation.playState !== "idle") {
       // An idle (canceled) animation is already "not playing", and pause() is not a no-op for it:
       // per the Web Animations API, pausing an idle animation with a non-negative playback rate
       // seeks it to time zero and un-cancels it into 'paused', re-applying the effect's first
@@ -636,13 +768,13 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private onAnimationFinish = (): void => {
     this.play = false;
     this.hasStarted = false;
-    this.emit('lr-finish', null);
+    this.emit("lr-finish", null);
   };
 
   private onAnimationCancel = (): void => {
     this.play = false;
     this.hasStarted = false;
-    this.emit('lr-cancel', null);
+    this.emit("lr-cancel", null);
   };
 
   get currentTime(): CSSNumberish {
@@ -651,7 +783,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
 
   set currentTime(value: CSSNumberish) {
     if (!this.animation) return;
-    if (typeof value === 'number' && !Number.isFinite(value)) return;
+    if (typeof value === "number" && !Number.isFinite(value)) return;
     this.animation.currentTime = value;
   }
 
@@ -684,6 +816,6 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-animation': LyraAnimation;
+    "lr-animation": LyraAnimation;
   }
 }

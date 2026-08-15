@@ -13,6 +13,7 @@ import type {
 import { styles } from './page-rail.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pageRailLabel, LYRA_DEFAULT_pageRailPage, LYRA_DEFAULT_pageRailPageHighlighted } from '../../../internal/default-strings.generated.js';
@@ -140,7 +141,16 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   @property({ type: Number, attribute: 'page-count' }) pageCount = 0;
   /** Current page: auto-tracked in wired mode, host-bound in mediated mode. */
   @property({ type: Number, reflect: true }) page = 1;
-  @property({ attribute: false }) highlights: LyraHighlight[] = [];
+  private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
+  /** Per-page heat-marker highlights. IDs are trimmed and must be nonempty; the first record for
+   * an ID is retained and blank or later duplicate records are ignored. */
+  @property({ attribute: false })
+  get highlights(): readonly LyraHighlight[] { return this._highlights; }
+  set highlights(value: readonly LyraHighlight[]) {
+    const previous = this._highlights;
+    this._highlights = snapshotLyraHighlights(value);
+    this.requestUpdate('highlights', previous);
+  }
   /** Thumbnail CSS-px width, clamped to the container (320px-safe). */
   @property({ type: Number, attribute: 'thumb-width' }) thumbWidth = 96;
   /** Overrides the computed accessible name. */

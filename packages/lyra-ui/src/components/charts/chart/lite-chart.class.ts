@@ -268,6 +268,9 @@ export interface LyraLiteChartEventMap {
  * stacked bar chart, `tableTotals` adds an opt-in localized total column. Both are no-ops when
  * unset.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-lite-chart
  * @event lr-datum-activate - Fired when a bar/point is activated. The
  *   normalized detail includes `kind`, `datasetIndex`, `index`, `label`, and
@@ -330,6 +333,12 @@ export interface LyraLiteChartEventMap {
  * @since 4.0.0
  */
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "labels",
+    "datasets",
+    "selectedIndices",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -350,7 +359,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
   type: LyraLiteChartType = 'bar';
-  @property({ attribute: false }) labels: string[] = [];
+  @property({ attribute: false }) labels: readonly string[] = [];
   @property({ attribute: false }) datasets: readonly LyraLiteChartSeries[] = [];
   @property({ type: Boolean }) legend = false;
   /** Logical placement for the optional DOM legend. */

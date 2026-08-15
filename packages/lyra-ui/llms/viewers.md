@@ -83,7 +83,8 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   action when a composing shell already owns that action. This is property-only composition state;
   it does not suppress inline preview rendering.
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
-  over the image-format preview; ignored for the `text`/`generic` formats. A rectangle renders only
+  over the image-format preview; ignored for the `text`/`generic` formats. IDs are trimmed and
+  required to be nonempty, with the first record retained when IDs repeat. A rectangle renders only
   when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
@@ -103,7 +104,7 @@ matches, the anchor isn't `region`, or the format isn't currently `image`.
 - `lr-render-error` — `detail: { error }` — fired when this component's own `text/*`/
   `application/json` `fetch(src)` fails (network error or non-2xx response). Distinct from
   `status="error"`, which is entirely host-driven.
-- `lr-highlight-activate` — `detail: { id }` — a region highlight was clicked or activated via
+- `lr-highlight-activate` — `detail: { highlightId }` — a region highlight was clicked or activated via
   Enter/Space (image format only).
 
 **Slots:** `unsupported` — escape hatch: when populated, its content renders _instead of_ the generic
@@ -235,11 +236,12 @@ value, without suppressing the visible `name` heading.
   `payload.file` is authoritative for MIME dispatch, the dialog heading, renderer/fallback input,
   anchors/highlights, and download; the scalar `name`, `mimeType`, `src`, `anchor`, `highlights`,
   and `alt` properties resume their legacy behavior when `payload` is reset to `undefined`.
-- `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry override;
-  when unset, the instance owns an immutable snapshot of the built-ins registered when it was
-  constructed. A later module import/registration cannot mutate an existing viewer. A throwing
-  consumer matcher or renderer is contained as the localized error state rather than escaping the
-  update.
+- `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry
+  override. A native map assignment is copied behind a frozen readonly facade while renderer-
+  definition identity is retained; later source-map mutation is not observed. When unset, the
+  instance owns an immutable snapshot of the built-ins registered when it was constructed. A later
+  module import/registration cannot mutate an existing viewer. A throwing consumer matcher or
+  renderer is contained as the localized error state rather than escaping the update.
 - `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
@@ -347,7 +349,7 @@ import type { LyraDocumentRendererPayload } from "@aceshooting/lyra-ui/component
 const payload = {
   kind: "av",
   file: { name: "episode.mp4", mimeType: "video/mp4", src: "/episode.mp4" },
-  cues: [{ id: "intro", start: 0, text: "Welcome", speaker: "Host" }],
+  cues: [{ cueId: "intro", start: 0, text: "Welcome", speaker: "Host" }],
   tracks: [{ src: "/episode-en.vtt", kind: "captions", srclang: "en", label: "English" }],
 } satisfies LyraDocumentRendererPayload;
 
@@ -399,7 +401,7 @@ fails terminally. Non-fatal Mammoth conversion messages emit `lr-viewer-diagnost
 `detail.diagnostic` is readonly `{ code: 'docx-conversion-message', severity: 'warning', fatal:
 false, source: 'mammoth', cause }`. `lr-search-change` (`detail: { query, matchCount,
 matchCountExact, activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
-`lr-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked or its
+`lr-highlight-activate` (`detail: { highlightId }`) — a painted `text-quote` highlight was clicked or its
 resolved keyboard action was activated.
 `lr-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered
 content. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
@@ -654,7 +656,7 @@ clears the query, matches, and painted search annotation.
 `lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from `search()`/`searchNext()`/
 `searchPrevious()`/`clearSearch()`; `lr-anchor-result` (`detail: { found }`) after an anchor is
-applied; `lr-highlight-activate` (`detail: { id }`) when a painted CFI highlight is clicked; and
+applied; `lr-highlight-activate` (`detail: { highlightId }`) when a painted CFI highlight is clicked; and
 `lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
 
 **CSS parts:** `base` (explicit `aria-busy="true"|"false"`; visible loading text is ordinary
@@ -821,7 +823,7 @@ carrying the same boolean. Called before the SVG has finished loading it retries
 timers) rather than failing immediately.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
-`lr-highlight-activate` (`detail: { id }`) — a region highlight was clicked or activated via
+`lr-highlight-activate` (`detail: { highlightId }`) — a region highlight was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
 or a `scrollToAnchor()` call is applied, whether or not a match was found. `lr-text-select` is not
 part of this viewer's event contract because sanitized SVG has no extractable text-selection
@@ -945,7 +947,7 @@ resolving `false` when there are none); `clearSearch()` clears the query, matche
 PapaParse diagnostics also emit this event when the recoverable partial table remains rendered, so
 malformed or extra cells are never silently presented as a clean parse; exceeding that diagnostic
 budget is a resource-limit error instead.
-`lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
+`lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
@@ -1069,7 +1071,7 @@ nonnegative dimensions.
 - `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
   `searchPrevious()`/`clearSearch()`. A `src` change resets search state _silently_ (no event), since
   match page/offset coordinates only mean anything for the document they were found in.
-- `lr-highlight-activate` — `detail: { id }` — a painted highlight was clicked or activated via
+- `lr-highlight-activate` — `detail: { highlightId }` — a painted highlight was clicked or activated via
   Enter/Space. On a pointer hit-test, the last entry of `highlights` covering the point wins.
 - `lr-text-select` — `detail: { text, anchor, rects }` — a selection ended inside a page's text
   layer. `anchor` is the computed anchor (`null` when none resolves), carrying the resolved `page`
@@ -1167,7 +1169,7 @@ matches (wrapping, resolving `false` when there are none); `clearSearch()` clear
 matches, and painted marks.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
-`lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
+`lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
@@ -1232,7 +1234,7 @@ painted marks.
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing reports an error. Up to
 100 recoverable PapaParse diagnostics may accompany the rendered grid; exceeding that budget is a
 resource-limit error instead.
-`lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
+`lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
@@ -1377,8 +1379,9 @@ positioned content and owns their activation, active/flash styling, and keyboard
 order is the caller's own reading order; the layer does not re-sort geometrically. Fills its nearest
 positioned ancestor.
 
-**Properties:** `items: HighlightLayerItem[] = []` (attribute: false), `activeId: string | null =
-null` (attribute `active-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
+**Properties:** `items: HighlightLayerItem[] = []` (attribute: false), with IDs trimmed and required
+to be nonempty and the first item retained when IDs repeat; `activeId: string | null = null`
+(attribute `active-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
 activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
 dimensions are nonnegative; invalid rectangles are omitted from paint, focus, and activation. When
 `interactive=false`, the base is `aria-hidden` pure paint with no group role, accessible name, or
@@ -1388,7 +1391,7 @@ controls. If every rectangle is invalid, no shadow subtree is rendered.
 re-click of the same source citation).
 
 **Events:** `lr-highlight-activate` — a rect was activated (click, or Enter/Space while focused).
-`detail: { id }`.
+`detail: { highlightId }`.
 
 **CSS parts:** `base` (the absolutely-positioned overlay, inset 0), `rect` (one visual highlight
 rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and `rect-target`
@@ -1420,7 +1423,8 @@ truth.
 **Properties:** `viewer: PageThumbnailSource | null = null` (attribute: false) — the wired viewer.
 `for: string = ''` — an id selector alternative to setting `viewer` directly. `pageCount: number = 0`
 (attribute `page-count`) and `page: number = 1` (reflected) — mediated-mode page state.
-`highlights: readonly LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers.
+`highlights: readonly LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers;
+IDs are trimmed and required to be nonempty, with the first record retained when IDs repeat.
 `thumbWidth: number = 96` (attribute `thumb-width`) and `label: string = ''`. A wired
 `PageThumbnailSource` provides its one-based `page`, optionally exposes the atomic
 `pageViewerSnapshot`/`lr-page-viewer-state-change` protocol, and supplies at least one lazy preview
@@ -1483,8 +1487,11 @@ index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, n
 ipywidgets.
 
 **Properties:** `src: string = ''` — URL to fetch and parse as a notebook; ignored while `notebook`
-is present. `notebook?: object | string` (property only) — an already-parsed notebook document, or
-its raw JSON text; presence wins over `src` (including an empty string) and is parsed synchronously.
+is present. `notebook?: Readonly<NotebookDoc> | string` (property only) — an already-parsed
+notebook document, or its raw JSON text; presence wins over `src` (including an empty string) and
+is parsed synchronously. Parsed document assignments are synchronously clone-owned and recursively
+frozen; mutate a copy and reassign it to update the viewer, because later source-object mutation is
+not observed.
 Assigning `undefined` clears inline authority and immediately reloads the already configured `src`,
 or exposes the idle state when no URL exists. `source: LyraNotebookViewerSource` is a readonly
 discriminated snapshot (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or `null`).
@@ -1613,7 +1620,7 @@ show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-
 `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
 parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
 boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
-`lr-highlight-activate` — non-cancelable; `detail: { id }`, fired when a highlight's
+`lr-highlight-activate` — non-cancelable; `detail: { highlightId }`, fired when a highlight's
 `[part='highlight-action']` button is activated by click or Enter/Space. `lr-text-select` is not
 part of this structural tree viewer's event contract because it installs no selection binding.
 
@@ -1721,7 +1728,7 @@ columns already share one scroll container.
 **Events:** `lr-copy` fires only after clipboard fulfillment (`detail: { ok: true, text }`). A
 clipboard failure bubbles `lr-error` plus `lr-copy-error`
 (`detail: { ok: false, text, reason, error }`) unchanged from `lr-diff-view`. Also emits
-`lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { id }`), and
+`lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { highlightId }`), and
 `lr-render-error` (`detail: { error }`).
 
 **Slots:** none.
@@ -1918,7 +1925,7 @@ These named interfaces and helper signatures are available to typed integrations
     textSelect: unknown;
   }`
   `HighlightActivateDetail {
-    id: unknown;
+    highlightId: unknown;
   }`
   `LyraHighlight {
     id: unknown;

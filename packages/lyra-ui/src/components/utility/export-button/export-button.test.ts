@@ -45,6 +45,25 @@ it('offers a format menu when multiple formats are configured', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="menu-item"]').length).to.equal(2);
 });
 
+it('normalizes unique nonempty formatId values before menu state and export events', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.formats = [
+    { formatId: '', label: 'Empty' },
+    'csv',
+    { formatId: 'csv', label: 'Duplicate CSV' },
+    { formatId: '   ', label: 'Whitespace' },
+    { formatId: 'xlsx', label: 'First Excel' },
+    { formatId: 'xlsx', label: 'Later Excel' },
+  ];
+  await el.updateComplete;
+
+  const items = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
+  expect(items.map((item) => item.textContent!.trim())).to.deep.equal(['CSV', 'First Excel']);
+  const exported = oneEvent(el, 'lr-export');
+  items[1]!.click();
+  expect((await exported).detail).to.deep.equal({ format: 'xlsx' });
+});
+
 it('renders custom format descriptors and carries their formatId through lr-export', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.formats = [

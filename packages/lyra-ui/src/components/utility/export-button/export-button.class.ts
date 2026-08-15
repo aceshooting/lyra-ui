@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -38,6 +39,8 @@ export interface LyraExportButtonEventMap {
  * `<lr-export-button>` — a CSV/JSON download button, single-format or a
  * format-choice menu. First-party invention; consolidates the ad-hoc
  * "export CSV" button pattern common across dashboard UIs.
+ * Format ids are unique, nonempty occurrence identities. Malformed options and later duplicate
+ * ids are omitted before menu state, focus reconciliation, or export events; the first wins.
  *
  * @customElement lr-export-button
  * @event lr-export - `detail: { format }`, cancelable — call `preventDefault()`
@@ -110,6 +113,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   @property() filename = 'export';
   private _formats: readonly LyraExportFormatOption[] = Object.freeze(['csv']);
 
+  /** Format choices keyed by unique, nonempty `formatId`; the first duplicate wins. */
   get formats(): readonly LyraExportFormatOption[] {
     return this._formats;
   }
@@ -117,9 +121,16 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   set formats(next: readonly LyraExportFormatOption[]) {
     const previous = this._formats;
     const source = Array.isArray(next) ? next : [];
-    this._formats = Object.freeze(
-      source.map((format) => (typeof format === 'string' ? format : Object.freeze({ ...format }))),
-    );
+    const seen = new Set<string>();
+    const formats: LyraExportFormatOption[] = [];
+    for (const format of source) {
+      const snapshot = typeof format === 'string' ? format : Object.freeze({ ...format });
+      const id = typeof snapshot === 'string' ? snapshot : snapshot.formatId;
+      if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
+      seen.add(id);
+      formats.push(snapshot);
+    }
+    this._formats = Object.freeze(formats);
     this.requestUpdate('formats', previous);
   }
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -500,7 +511,9 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
               label: accessibleLabel,
             })}
           >
-            ${this.formats.map(
+            ${repeat(
+              this.formats,
+              (format) => this.formatId(format),
               (f) =>
                 html`<button
                   part="menu-item"

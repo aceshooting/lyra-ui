@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -21,7 +22,7 @@ import "../../forms/button/button.class.js";
 import "../../overlays/spinner/spinner.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -81,7 +82,8 @@ export interface LyraFilterBarCustomControlAdapter {
  * control, then attach `onValueChange` (or the more specific `onInput`/`onChange`) to its
  * committed-value event and `onFocusout` to its blur/focusout event. */
 export interface LyraFilterBarCustomControlContext {
-  readonly id: string;
+  /** The custom definition's stable business identity. */
+  readonly filterId: string;
   readonly label: string;
   readonly definition: LyraFilterBarCustomDefinition;
   readonly value: LyraFilterBarFieldValue;
@@ -112,7 +114,8 @@ export interface LyraFilterBarCustomControl {
 }
 
 interface LyraFilterBarDefinitionBase {
-  readonly id: string;
+  /** Stable, unique business identity and the key used in `LyraFilterBarValue`. */
+  readonly filterId: string;
   /** Visible label, forwarded to the composed control's own `label` prop (so it renders through
    *  that control's own label/hint/error chrome) -- caller-supplied content, not routed through
    *  `this.localize()` by this component (the same "data, not UI copy" carve-out a table's own
@@ -178,7 +181,7 @@ export type LyraFilterBarFilterDefinition =
 
 /**
  * The whole filter bar's current state: a plain, JSON-serializable object keyed by
- * `LyraFilterBarFilterDefinition.id`. This is the entire URL-querystring/app-state serialization
+ * `LyraFilterBarFilterDefinition.filterId`. This is the entire URL-querystring/app-state serialization
  * contract -- this component only reads and writes plain data through `value`, and never touches
  * `location`/`history`/storage itself; the host owns turning this object into (and back out of)
  * a querystring, matching every other Lyra "controlled" component's convention.
@@ -204,7 +207,7 @@ export interface LyraFilterBarResetDetail {
 
 export interface LyraFilterBarEventMap {
   "lr-input": CustomEvent<LyraFilterBarInputDetail>;
-  "lr-validity-change": CustomEvent<LyraFilterBarValidityDetail>;
+  "lr-validity-change": CustomEvent<LyraEventDetailSnapshot<LyraFilterBarValidityDetail>>;
   "lr-reset": CustomEvent<LyraFilterBarResetDetail>;
 }
 
@@ -367,9 +370,19 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     filterBarActiveFilters: LYRA_DEFAULT_filterBarActiveFilters,
     filterBarReset: LYRA_DEFAULT_filterBarReset,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -423,23 +436,29 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   }
   set filters(next: readonly LyraFilterBarFilterDefinition[] | null | undefined) {
     const old = this._filters;
-    // A queued text edit belongs to the exact schema that rendered its control. Even a same-id
+    // A queued text edit belongs to the exact schema that rendered its control. Even a same-filterId
     // replacement may change type/defaults/debounce semantics, so a schema assignment cancels all
     // drafts before the new controls are reconciled.
     this.cancelDebounce();
     this.renewSchemaContext();
     const seen = new Set<string>();
     this._filters = (Array.isArray(next) ? next : EMPTY_FILTERS).filter((definition) => {
-      if (!definition || typeof definition.id !== 'string' || definition.id.length === 0) return false;
-      if (seen.has(definition.id)) return false;
-      seen.add(definition.id);
+      if (
+        !definition ||
+        typeof definition.filterId !== "string" ||
+        definition.filterId.length === 0 ||
+        definition.filterId !== definition.filterId.trim()
+      )
+        return false;
+      if (seen.has(definition.filterId)) return false;
+      seen.add(definition.filterId);
       if ((definition.type === 'select' || definition.type === 'combobox') && !Array.isArray(definition.options)) {
         return false;
       }
       if (definition.type === 'custom' && !definition.custom?.adapter) return false;
       return true;
     });
-    const ids = new Set(this._filters.map((definition) => definition.id));
+    const ids = new Set(this._filters.map((definition) => definition.filterId));
     this.touchedFilters = new Set(
       [...this.touchedFilters].filter((id) => ids.has(id))
     );
@@ -486,8 +505,8 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   }
 
   private valueFor(def: LyraFilterBarFilterDefinition): LyraFilterBarFieldValue {
-    return Object.prototype.hasOwnProperty.call(this._value, def.id)
-      ? this._value[def.id]
+    return Object.prototype.hasOwnProperty.call(this._value, def.filterId)
+      ? this._value[def.filterId]
       : def.type === 'custom'
         ? def.custom.adapter.clearValue
         : undefined;
@@ -496,10 +515,10 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   private normalizeValue(value: LyraFilterBarValue | null | undefined): LyraFilterBarValue {
     const normalized: Record<string, LyraFilterBarFieldValue> = {};
     for (const def of this._filters) {
-      if (!Object.prototype.hasOwnProperty.call(value ?? {}, def.id)) continue;
-      const fieldValue = value?.[def.id];
+      if (!Object.prototype.hasOwnProperty.call(value ?? {}, def.filterId)) continue;
+      const fieldValue = value?.[def.filterId];
       if (this.isEmpty(def, fieldValue)) continue;
-      normalized[def.id] = Array.isArray(fieldValue)
+      normalized[def.filterId] = Array.isArray(fieldValue)
         ? Object.freeze([...fieldValue])
         : fieldValue;
     }
@@ -517,7 +536,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   get invalidFilterIds(): readonly string[] {
     return Object.freeze(this._filters
       .filter((def) => def.required && this.isEmpty(def, this.valueFor(def)))
-      .map((def) => def.id));
+      .map((def) => def.filterId));
   }
 
   /** Whether every `required` filter currently has a value. Never reveals inline errors on its
@@ -559,7 +578,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     const out: Record<string, LyraFilterBarFieldValue> = {};
     for (const def of this._filters) {
       if (def.defaultValue !== undefined && !this.isEmpty(def, def.defaultValue)) {
-        out[def.id] = Array.isArray(def.defaultValue)
+        out[def.filterId] = Array.isArray(def.defaultValue)
           ? Object.freeze([...def.defaultValue])
           : def.defaultValue;
       }
@@ -568,7 +587,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   }
 
   private setFilterValue(id: string, value: LyraFilterBarFieldValue): void {
-    const definition = this._filters.find((candidate) => candidate.id === id);
+    const definition = this._filters.find((candidate) => candidate.filterId === id);
     if (this.disabled || !definition) return;
     const next: Record<string, LyraFilterBarFieldValue> = { ...this._value };
     if (this.isEmpty(definition, value)) delete next[id];
@@ -591,7 +610,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       !this.isConnected ||
       !this._filters.includes(definition)
     ) return;
-    this.setFilterValue(definition.id, value);
+    this.setFilterValue(definition.filterId, value);
   }
 
   private markTouched(id: string): void {
@@ -630,16 +649,16 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     const next = (e.target as HTMLElement & { value: string }).value ?? "";
     const delay = def.debounce;
     if (typeof delay !== "number" || !Number.isFinite(delay) || delay <= 0) {
-      this.cancelDebounce(def.id);
-      this.setFilterValue(def.id, next);
+      this.cancelDebounce(def.filterId);
+      this.setFilterValue(def.filterId, next);
       return;
     }
-    this.pendingText.set(def.id, next);
-    const existing = this.debounceTimers.get(def.id);
+    this.pendingText.set(def.filterId, next);
+    const existing = this.debounceTimers.get(def.filterId);
     if (existing !== undefined) clearTimeout(existing);
     this.debounceTimers.set(
-      def.id,
-      setTimeout(() => this.flushDebounce(def.id), delay)
+      def.filterId,
+      setTimeout(() => this.flushDebounce(def.filterId), delay)
     );
   }
 
@@ -711,8 +730,8 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     if (this.disabled) return;
     // Same race as reset(): a pending keystroke would land after the chip removal and undo it.
     this.cancelDebounce(id);
-    const index = this.activeEntries.findIndex((entry) => entry.def.id === id);
-    const def = this._filters.find((f) => f.id === id);
+    const index = this.activeEntries.findIndex((entry) => entry.def.filterId === id);
+    const def = this._filters.find((f) => f.filterId === id);
     if (!def) return;
     const clearValue: LyraFilterBarFieldValue =
       def.type === "custom"
@@ -851,10 +870,10 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       if (id !== undefined) fields.set(id, element);
     }
     for (const def of this._filters) {
-      if (def.type !== "text" || this.debounceTimers.has(def.id)) continue;
-      const field = fields.get(def.id);
+      if (def.type !== "text" || this.debounceTimers.has(def.filterId)) continue;
+      const field = fields.get(def.filterId);
       if (!field) continue;
-      const raw = this._value[def.id];
+      const raw = this._value[def.filterId];
       const next = typeof raw === "string" ? raw : "";
       if (field.value !== next) field.value = next;
     }
@@ -897,11 +916,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     const value = this.valueFor(def);
     const missing = Boolean(def.required) && this.isEmpty(def, value);
     const errorText =
-      this.touchedFilters.has(def.id) && missing
+      this.touchedFilters.has(def.filterId) && missing
         ? this.localize("fieldRequired")
         : "";
-    const onChange = (e: Event) => this.onControlChange(def.id, e);
-    const onFocusout = () => this.markTouched(def.id);
+    const onChange = (e: Event) => this.onControlChange(def.filterId, e);
+    const onFocusout = () => this.markTouched(def.filterId);
 
     if (def.type === "custom") {
       const custom = def.custom;
@@ -909,7 +928,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       const signal = this.schemaSignal;
       const onCustomValueChange = (e: Event) => this.onCustomControlChange(def, generation, e);
       const context: LyraFilterBarCustomControlContext = {
-        id: def.id,
+        filterId: def.filterId,
         label: def.label,
         definition: def,
         value,
@@ -932,7 +951,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       };
       return html`<div
         part="filter-control"
-        data-filter-id=${def.id}
+        data-filter-id=${def.filterId}
         @lr-input=${(event: Event) => event.stopPropagation()}
         @lr-change=${(event: Event) => event.stopPropagation()}
       >${custom.render(context)}</div>`;
@@ -950,7 +969,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       return html`<lr-combobox
         part="filter-control"
         exportparts=${COMBOBOX_EXPORT_PARTS}
-        data-filter-id=${def.id}
+        data-filter-id=${def.filterId}
         .label=${def.label}
         placeholder=${def.placeholder || ""}
         ?multiple=${multiple}
@@ -983,7 +1002,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       return html`<lr-input
         part="filter-control"
         exportparts=${INPUT_EXPORT_PARTS}
-        data-filter-id=${def.id}
+        data-filter-id=${def.filterId}
         type="text"
         .label=${def.label}
         placeholder=${def.placeholder || ""}
@@ -996,9 +1015,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         }}
         @lr-change=${(e: Event) => {
           e.stopPropagation();
-          this.flushDebounce(def.id);
+          this.flushDebounce(def.filterId);
         }}
-        @focusout=${() => this.onTextFocusout(def.id)}
+        @focusout=${() => this.onTextFocusout(def.filterId)}
       ></lr-input>`;
     }
 
@@ -1006,7 +1025,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       return html`<lr-date-input
         part="filter-control"
         exportparts=${DATE_INPUT_EXPORT_PARTS}
-        data-filter-id=${def.id}
+        data-filter-id=${def.filterId}
         .label=${def.label}
         placeholder=${def.placeholder || ""}
         .mode=${def.type === "date-range" ? "range" : "single"}
@@ -1028,7 +1047,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     return html`<lr-select
       part="filter-control"
       exportparts=${SELECT_EXPORT_PARTS}
-      data-filter-id=${def.id}
+      data-filter-id=${def.filterId}
       .label=${def.label}
       placeholder=${def.placeholder || ""}
       ?required=${Boolean(def.required)}
@@ -1045,7 +1064,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
 
   private rendersValidationError(def: LyraFilterBarFilterDefinition): boolean {
     return Boolean(def.required) &&
-      this.touchedFilters.has(def.id) &&
+      this.touchedFilters.has(def.filterId) &&
       this.isEmpty(def, this.valueFor(def));
   }
 
@@ -1091,12 +1110,12 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
                   ({ def, display }) => html`<lr-chip
                     part="chip"
                     ?removable=${!this.disabled}
-                    value=${def.id}
+                    value=${def.filterId}
                     @lr-remove=${(e: Event) => {
                       e.stopPropagation();
                       const chip = e.currentTarget as HTMLElement;
                       this.clearFilter(
-                        def.id,
+                        def.filterId,
                         chip.shadowRoot?.activeElement !== null
                       );
                     }}

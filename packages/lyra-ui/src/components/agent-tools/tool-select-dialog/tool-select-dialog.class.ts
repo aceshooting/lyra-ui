@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -14,8 +15,9 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_noMatch
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** One selectable agent tool. `id` is the stable selection identity; when the input collection
- *  repeats an id, its first occurrence wins before grouping, searching, counting, or rendering.
+/** One selectable agent tool. `id` is the stable, nonempty selection identity; empty ids are
+ *  omitted and when the input collection repeats an id, its first occurrence wins before
+ *  grouping, searching, counting, or rendering.
  *  `category` groups the row; tools with no `category` (or an empty one) fall into the trailing
  *  localized "Other" bucket. A literal caller category named "Other" remains a separate ordinary
  *  category. */
@@ -41,8 +43,8 @@ export type ToolSelectFilter = (tool: ToolSelectDialogTool, query: string) => bo
 
 /** The proposed state carried by the cancelable `lr-change` event. */
 export interface ToolSelectionChangeDetail {
-  selected: string[];
-  useDefaults: boolean;
+  readonly selected: readonly string[];
+  readonly useDefaults: boolean;
 }
 
 /**
@@ -55,7 +57,7 @@ export interface ToolSelectionChangeDetail {
 export type ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | (string & Record<never, never>);
 
 export interface LyraToolSelectDialogEventMap {
-  'lr-change': CustomEvent<ToolSelectionChangeDetail>;
+  'lr-change': CustomEvent<LyraEventDetailSnapshot<ToolSelectionChangeDetail>>;
   'lr-close': CustomEvent<ToolSelectDialogCloseReason>;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
@@ -118,6 +120,9 @@ interface ToolProjection {
  * explicit and provide a keyboard-reachable continuation; search can independently narrow the
  * complete catalog. `tools`, selection counts, and emitted ids retain the caller's complete catalog.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-tool-select-dialog
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
  * Changes already apply live via `lr-change`, so this is optional.
@@ -161,6 +166,8 @@ interface ToolProjection {
  * @since 4.0.0
  */
 export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["tools", "selected"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -185,12 +192,13 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
   @property({ type: Boolean, reflect: true }) open = false;
 
-  /** The full set of tools a consumer offers, across all categories. Duplicate ids use a
-   *  deterministic first-wins projection. */
-  @property({ attribute: false }) tools: ToolSelectDialogTool[] = [];
+  /** The full set of tools a consumer offers, across all categories. Empty ids are omitted and
+   *  duplicate ids use a deterministic first-wins projection. */
+  @property({ attribute: false }) tools: readonly ToolSelectDialogTool[] = [];
 
-  /** The currently-enabled tool ids. Duplicate ids are treated as one selection. */
-  @property({ attribute: false }) selected: string[] = [];
+  /** The currently-enabled tool ids. Empty ids are omitted and duplicates are treated as one
+   *  selection. */
+  @property({ attribute: false }) selected: readonly string[] = [];
 
   /** Whether the conversation is using the default tool set (`true`) or a custom selection (`false`) — see the class doc for the exact interaction with `selected`/per-tool editing. */
   @property({ type: Boolean, reflect: true, attribute: 'use-defaults' }) useDefaults = false;
@@ -389,14 +397,14 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private get uniqueTools(): ToolSelectDialogTool[] {
     const seen = new Set<string>();
     return this.tools.filter((tool) => {
-      if (seen.has(tool.id)) return false;
+      if (tool.id.trim().length === 0 || seen.has(tool.id)) return false;
       seen.add(tool.id);
       return true;
     });
   }
 
   private get uniqueSelectedIds(): string[] {
-    return [...new Set(this.selected)];
+    return [...new Set(this.selected.filter((id) => id.trim().length > 0))];
   }
 
   /** Tools grouped by `category` (first-seen order), with an uncategorized

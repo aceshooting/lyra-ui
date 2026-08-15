@@ -1,6 +1,20 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html, svg } from 'lit'; import './command-palette.js'; import type { LyraCommandPalette } from './command-palette.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
-const meta: Meta = { title: 'Command Palette', component: 'lr-command-palette', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
+const meta: Meta = {
+  title: 'Command Palette',
+  component: 'lr-command-palette',
+  tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Command sequences are copied, bounded, and frozen while each row retains its identity for `onSelect`; create and reassign a new array after sequence or row changes.',
+      },
+    },
+  },
+};
+export default meta;
+type Story = StoryObj;
 const documentIcon = svg`<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h8l4 4v16H6zM13 3v4h4"></path></svg>`;
 export const Default: Story = { render: () => html`<button @click=${(e: Event) => ((e.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Open command palette</button><lr-command-palette hotkey="mod+k" .commands=${[{ commandId: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { commandId: 'search', label: 'Search workspace', group: 'Navigation' }]}></lr-command-palette>` };
 

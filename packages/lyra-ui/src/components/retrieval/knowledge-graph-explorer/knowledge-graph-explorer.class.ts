@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, state, query } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -78,7 +79,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  (the same self-toggle-then-emit contract `lr-graph-legend`'s `hiddenTypes`/`lr-visibility-
    *  change` already establishes), so reassigning it back is optional -- useful only for a host
    *  that wants to persist or observe pins elsewhere. */
-  "lr-pin-change": CustomEvent<{ pinnedNodeIds: string[] }>;
+  "lr-pin-change": CustomEvent<LyraEventDetailSnapshot<{ pinnedNodeIds: string[] }>>;
   /** The user typed in the toolbar's search box. `detail: { searchQuery }` -- the complete new
    *  query. The component has already applied it to its own `searchQuery` before emitting, the same
    *  self-toggle-then-emit contract `lr-pin-change` follows, so reassigning it back is optional and
@@ -144,6 +145,9 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * entirely, forwarding empty `dimmedNodeIds`/`dimmedLinkIds` regardless of search/selection state
  * -- for a host that wants to drive `lr-graph`'s dimming through a different composition instead.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-knowledge-graph-explorer
  * @slot details - Overrides the details popover's default content (an `lr-entity-card` with a
  *   nested `lr-neighbor-list` and a pin toggle). Receives no data -- a consumer overriding this
@@ -180,6 +184,17 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @since 4.1.0
  */
 export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphExplorerEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "nodes",
+    "links",
+    "nodeTypes",
+    "communities",
+    "entityDetails",
+    "pinnedNodeIds",
+    "path",
+    "hiddenTypes",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -202,29 +217,29 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Nodes forwarded to the composed graph and search experience. */
-  @property({ attribute: false }) nodes: LyraGraphNode[] = [];
+  @property({ attribute: false }) nodes: readonly LyraGraphNode[] = [];
   /** Links forwarded to the composed graph and path interactions. */
-  @property({ attribute: false }) links: LyraGraphLink[] = [];
+  @property({ attribute: false }) links: readonly LyraGraphLink[] = [];
   /** Labels, colors, and shapes for the graph's node-type vocabulary. */
-  @property({ attribute: false }) nodeTypes: LyraNodeTypeStyle[] = [];
+  @property({ attribute: false }) nodeTypes: readonly LyraNodeTypeStyle[] = [];
   /** Community hull definitions forwarded to the graph. */
-  @property({ attribute: false }) communities: GraphCommunity[] = [];
+  @property({ attribute: false }) communities: readonly GraphCommunity[] = [];
   /** Extra dossier fields, keyed by node id -- see `LyraKnowledgeGraphEntityDetails`. */
-  @property({ attribute: false }) entityDetails: Record<
+  @property({ attribute: false }) entityDetails: Readonly<Record<
     string,
-    LyraKnowledgeGraphEntityDetails
-  > = {};
+    Readonly<LyraKnowledgeGraphEntityDetails>
+  >> = {};
   /** Currently-pinned node ids. Self-toggled by the pin action in the details popover and by a
    *  pinned chip's remove button (see the class doc's "controlled vs. self-managed" note); still
    *  presettable/overridable like any other property. Exactly two pinned nodes reveals the "Find
    *  path" action. */
-  @property({ attribute: false }) pinnedNodeIds: string[] = [];
+  @property({ attribute: false }) pinnedNodeIds: readonly string[] = [];
   /** Host-supplied path-finding result, rendered via `lr-path-strip`. Empty (the default) renders
    *  no path strip. See `lr-path-request`. */
-  @property({ attribute: false }) path: LyraPathElement[] = [];
+  @property({ attribute: false }) path: readonly LyraPathElement[] = [];
   /** Currently-hidden `LyraGraphNode.type` values, forwarded to both `lr-graph.hiddenTypes` and
    *  `lr-graph-legend.hiddenTypes`. Self-toggled by the composed legend; still presettable. */
-  @property({ attribute: false }) hiddenTypes: string[] = [];
+  @property({ attribute: false }) hiddenTypes: readonly string[] = [];
   /** The currently-selected node id, driving both the details popover and `lr-graph`'s
    *  `selectedNodeIds` visual state. Presettable (e.g. to deep-link to a specific entity) as well
    *  as self-managed on every selection interaction. `null` (the default) shows no selection and

@@ -36,7 +36,11 @@ export interface LyraApprovalQueueEventMap {
  * `<lr-approval-queue>` — a controlled queue of tool calls that need human approval, with a
  * keyboard-accessible request list and a single reused `<lr-tool-approval-dialog>`. It never
  * executes tools, applies permissions, or persists decisions; the host owns those operations.
- * Duplicate request ids normalize before counts, selection, rendering, and events; the first wins.
+ * Empty request ids are omitted and duplicate ids normalize before counts, selection, rendering,
+ * and events; the first valid occurrence wins.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-approval-queue
  * @event lr-approval-select - A request was selected. `detail: { invocationId }`.
@@ -59,6 +63,8 @@ export interface LyraApprovalQueueEventMap {
  * @since 6.2.0
  */
 export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["requests"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -75,12 +81,13 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Requests in display order. Controlled and never mutated by this component. Duplicate ids
-   *  normalize first-wins before counts, selection, dialog lookup, and events. */
-  @property({ attribute: false }) requests: ToolApprovalRequest[] = [];
-  /** The request currently shown in the dialog, or `null` when none is selected. Empty string
-   *  remains a valid request identity. */
-  @property({ attribute: 'selected-id' }) selectedId: string | null = null;
+  /** Requests in display order. Controlled and never mutated by this component. Empty ids are
+   *  omitted and duplicate ids normalize first-wins before counts, selection, dialog lookup, and
+   *  events. */
+  @property({ attribute: false }) requests: readonly ToolApprovalRequest[] = [];
+  /** Stable invocation identity of the request currently shown in the dialog, or `null` when none
+   *  is selected. */
+  @property({ attribute: 'selected-invocation-id' }) selectedInvocationId: string | null = null;
   /** Whether the decision dialog is open. */
   @property({ type: Boolean, reflect: true }) open = false;
   /** Allows argument editing in the nested approval dialog. */
@@ -93,15 +100,15 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   }
 
   private get selectedRequest(): ToolApprovalRequest | undefined {
-    return this.normalizedRequests.find((request) => request.id === this.selectedId);
+    return this.normalizedRequests.find((request) => request.id === this.selectedInvocationId);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!changed.has('requests') && !changed.has('selectedId')) return;
+    if (!changed.has('requests') && !changed.has('selectedInvocationId')) return;
     const selected = this.selectedRequest;
     if (selected && (selected.status ?? 'pending') === 'pending') return;
-    if (this.selectedId !== null) this.selectedId = null;
+    if (this.selectedInvocationId !== null) this.selectedInvocationId = null;
     if (this.open) this.open = false;
   }
 
@@ -125,7 +132,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
 
   private select(request: ToolApprovalRequest): void {
     if ((request.status ?? 'pending') !== 'pending') return;
-    this.selectedId = request.id;
+    this.selectedInvocationId = request.id;
     this.open = true;
     this.emit('lr-approval-select', { invocationId: request.id });
   }
@@ -163,8 +170,8 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     return html`<div role="listitem"><button
       part="request"
       type="button"
-      data-selected=${request.id === this.selectedId ? 'true' : 'false'}
-      aria-current=${request.id === this.selectedId ? 'true' : 'false'}
+      data-selected=${request.id === this.selectedInvocationId ? 'true' : 'false'}
+      aria-current=${request.id === this.selectedInvocationId ? 'true' : 'false'}
       aria-label=${this.localize('approvalQueueOpen', undefined, { tool: request.toolName })}
       ?disabled=${status !== 'pending'}
       @click=${() => this.select(request)}

@@ -20,7 +20,7 @@ type Story = StoryObj;
 
 const dashboardFilters: LyraFilterBarFilterDefinition[] = [
   {
-    id: 'status',
+    filterId: 'status',
     label: 'Status',
     type: 'select',
     placeholder: 'Any status',
@@ -31,7 +31,7 @@ const dashboardFilters: LyraFilterBarFilterDefinition[] = [
     ],
   },
   {
-    id: 'owners',
+    filterId: 'owners',
     label: 'Owners',
     type: 'combobox',
     multiple: true,
@@ -42,8 +42,8 @@ const dashboardFilters: LyraFilterBarFilterDefinition[] = [
       { value: 'alan', label: 'Alan Turing' },
     ],
   },
-  { id: 'created', label: 'Created', type: 'date' },
-  { id: 'period', label: 'Active period', type: 'date-range' },
+  { filterId: 'created', label: 'Created', type: 'date' },
+  { filterId: 'period', label: 'Active period', type: 'date-range' },
 ];
 
 /** A filter bar with no filters set yet -- every control renders at its own empty default and
@@ -201,9 +201,9 @@ export const LiveEvents: Story = {
 export const FreeTextSearch: Story = {
   render: () => {
     const filters: LyraFilterBarFilterDefinition[] = [
-      { id: 'q', label: 'Search', type: 'text', placeholder: 'Search logs (e.g. GET /api/v1)', debounce: 250 },
+      { filterId: 'q', label: 'Search', type: 'text', placeholder: 'Search logs (e.g. GET /api/v1)', debounce: 250 },
       {
-        id: 'severity',
+        filterId: 'severity',
         label: 'Severity',
         type: 'select',
         placeholder: 'Any severity',
@@ -214,7 +214,7 @@ export const FreeTextSearch: Story = {
         ],
       },
       {
-        id: 'kind',
+        filterId: 'kind',
         label: 'Type',
         type: 'select',
         placeholder: 'Any type',
@@ -223,7 +223,7 @@ export const FreeTextSearch: Story = {
           { value: 'job', label: 'Job' },
         ],
       },
-      { id: 'period', label: 'Active period', type: 'date-range' },
+      { filterId: 'period', label: 'Active period', type: 'date-range' },
     ];
     let commits = 0;
     const onInput = (e: Event) => {
@@ -270,7 +270,7 @@ export const CustomControls: Story = {
     };
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: 'window',
+        filterId: 'window',
         label: 'Time window',
         type: 'custom',
         custom: {
@@ -296,7 +296,7 @@ export const CustomControls: Story = {
         },
       },
       {
-        id: 'archived',
+        filterId: 'archived',
         label: 'Include archived',
         type: 'custom',
         custom: {
@@ -314,7 +314,7 @@ export const CustomControls: Story = {
         },
       },
       {
-        id: 'owner',
+        filterId: 'owner',
         label: 'Owner',
         type: 'custom',
         custom: {
@@ -353,7 +353,7 @@ export const NarrowAllocation: Story = {
   render: () => {
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: 'status',
+        filterId: 'status',
         label: 'الحالة',
         type: 'select',
         options: [
@@ -380,7 +380,7 @@ export const OptionIcons: Story = {
     ></span>`;
     const filters: LyraFilterBarFilterDefinition[] = [
       {
-        id: 'status',
+        filterId: 'status',
         label: 'Status',
         type: 'select',
         placeholder: 'Any status',
@@ -391,7 +391,7 @@ export const OptionIcons: Story = {
         ],
       },
       {
-        id: 'owner',
+        filterId: 'owner',
         label: 'Owner',
         type: 'combobox',
         placeholder: 'Any owner',

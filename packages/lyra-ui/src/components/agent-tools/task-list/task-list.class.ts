@@ -20,7 +20,7 @@ import { styles } from './task-list.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -45,7 +45,7 @@ export interface TaskItem {
   detail?: string;
   /** One level of sub-steps. Deeper nesting (a child's own `children`) is ignored, with a
    *  `console.warn`. */
-  children?: TaskItem[];
+  children?: readonly TaskItem[];
 }
 
 export interface TaskListToggleDetail {
@@ -54,7 +54,12 @@ export interface TaskListToggleDetail {
 
 export interface LyraTaskListEventMap {
   'lr-toggle': CustomEvent<TaskListToggleDetail>;
-  'lr-reorder': CustomEvent<{ id: string; parentId: string | null; fromIndex: number; toIndex: number }>;
+  'lr-reorder': CustomEvent<{
+    taskId: string;
+    parentTaskId: string | null;
+    fromIndex: number;
+    toIndex: number;
+  }>;
 }
 
 interface PendingTaskReorder {
@@ -140,11 +145,15 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * `items` is controlled and never mutated by this component, mirroring `<lr-stepper>`'s `steps`
  * contract. Unlike stepper's single-`current` navigation control, task-list has no selection and
  * several steps may be `running` at once. Set `reorderable` to request sibling-scoped keyboard
- * moves; the host applies the reordered `items` array. Reordering requires globally unique ids
- * among every top-level task and direct child; duplicate data stays visible but fails closed.
+ * moves; the host applies the reordered `items` array. Reordering requires globally unique,
+ * nonempty ids among every top-level task and direct child; invalid/duplicate data stays visible
+ * but fails closed.
  * The visible header is a level-three heading by default; set `heading-level` from `1`–`6` to fit
  * the surrounding document outline, or `none` for a visual-only header.
  * Status changes and confirmed moves are announced through an internal `<lr-live-region>`.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-task-list
  * @slot detail-<id> - Dynamic, one per item id (e.g. `slot="detail-step-3"`). Rich detail under
@@ -152,8 +161,9 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  *   `<lr-chip>`. Plain-HTML friendly, no render props.
  * @event lr-toggle - The header was activated, expanding or collapsing the panel. `detail: {
  *   expanded }`.
- * @event lr-reorder - `detail: { id, parentId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown
- *   requests moving the focused task within its own sibling list (`parentId` is `null` for a
+ * @event lr-reorder - `detail: { taskId, parentTaskId, fromIndex, toIndex }` —
+ *   Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused task within its own sibling list
+ *   (`parentTaskId` is `null` for a
  *   top-level task; indices are sibling-scoped). Only fired while `reorderable` with unique ids;
  *   a boundary key never reparents. A move is announced only after the rendered order confirms it.
  * @csspart base - The outer container.
@@ -190,6 +200,8 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @since 4.0.0
  */
 export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["items"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -201,6 +213,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
@@ -219,7 +232,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** The plan. Controlled and never mutated by this component -- pass a new array to update it. */
-  @property({ attribute: false }) items: TaskItem[] = [];
+  @property({ attribute: false }) items: readonly TaskItem[] = [];
 
   /** Opts into Ctrl/Cmd+ArrowUp/ArrowDown reorder requests. `items` remains host-owned: the
    *  component never moves a task until the host reassigns a confirmed sibling order. All ids
@@ -305,7 +318,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     this.clearPendingReorder();
   }
 
-  private flattenOneLevel(items: TaskItem[]): TaskItem[] {
+  private flattenOneLevel(items: readonly TaskItem[]): TaskItem[] {
     const out: TaskItem[] = [];
     for (const item of items) {
       out.push(item);
@@ -358,7 +371,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private idsAreUnique(): boolean {
     const ids = new Set<string>();
     for (const item of this.flattenOneLevel(this.items)) {
-      if (ids.has(item.id)) return false;
+      if (item.id.trim().length === 0 || ids.has(item.id)) return false;
       ids.add(item.id);
     }
     return true;
@@ -368,7 +381,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     return this.reorderable && this.idsAreUnique();
   }
 
-  private siblingItems(parentId: string | null): TaskItem[] | undefined {
+  private siblingItems(parentId: string | null): readonly TaskItem[] | undefined {
     if (parentId === null) return this.items;
     return this.items.find((item) => item.id === parentId)?.children;
   }
@@ -389,7 +402,12 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
       toIndex,
     };
     this.pendingFocusId = null;
-    this.emit('lr-reorder', { id: item.id, parentId, fromIndex, toIndex });
+    this.emit('lr-reorder', {
+      taskId: item.id,
+      parentTaskId: parentId,
+      fromIndex,
+      toIndex,
+    });
   }
 
   /** Only direct row key presses can request a move. This leaves Ctrl/Cmd+Arrow on slotted detail

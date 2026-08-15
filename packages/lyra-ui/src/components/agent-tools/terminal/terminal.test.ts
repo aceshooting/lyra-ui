@@ -403,8 +403,8 @@ describe('lr-terminal', () => {
     expect(line.getAttribute('data-highlight-tone')).to.equal('warning');
     const listener = oneEvent(el, 'lr-highlight-activate');
     line.click();
-    const event = (await listener) as CustomEvent<{ id: string }>;
-    expect(event.detail.id).to.equal('h1');
+    const event = (await listener) as CustomEvent<{ highlightId: string }>;
+    expect(event.detail.highlightId).to.equal('h1');
     await el.updateComplete;
     expect(line.getAttribute('aria-current')).to.equal('true');
   });
@@ -451,7 +451,8 @@ describe('lr-terminal', () => {
 
     const activated = oneEvent(el, 'lr-highlight-activate');
     buttons[0]!.click();
-    expect(((await activated) as CustomEvent<{ id: string }>).detail.id).to.equal('range');
+    expect(((await activated) as CustomEvent<{ highlightId: string }>).detail.highlightId)
+      .to.equal('range');
   });
 
   it('gives every visibly resolved overlapping highlight exactly one interactive owner', async () => {
@@ -991,10 +992,12 @@ describe('lr-terminal', () => {
     const line = list.shadowRoot!.querySelector('[data-line-number="2"]') as HTMLElement;
     const enterListener = oneEvent(el, 'lr-highlight-activate');
     line.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-    expect(((await enterListener) as CustomEvent<{ id: string }>).detail.id).to.equal('h1');
+    expect(((await enterListener) as CustomEvent<{ highlightId: string }>).detail.highlightId)
+      .to.equal('h1');
     const spaceListener = oneEvent(el, 'lr-highlight-activate');
     line.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
-    expect(((await spaceListener) as CustomEvent<{ id: string }>).detail.id).to.equal('h1');
+    expect(((await spaceListener) as CustomEvent<{ highlightId: string }>).detail.highlightId)
+      .to.equal('h1');
   });
 
   it('a synchronously-throwing clipboard write emits failure without false success', async () => {

@@ -17,7 +17,7 @@ import {
 import { styles } from './histogram.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFrequency, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFrequency, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -26,11 +26,16 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_histogramFreq
  * renders them as a bar chart. Chart.js has no built-in histogram
  * controller; this composes `binValues()` with the plain `bar` type.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-histogram
  * @status stable
  * @since 4.0.0
  */
 export class LyraHistogram extends LyraChart {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["values"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -41,6 +46,7 @@ export class LyraHistogram extends LyraChart {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -59,7 +65,7 @@ export class LyraHistogram extends LyraChart {
 
   @property({ converter: { fromAttribute: (value) => normalizeHistogramBinCount(value) } })
   bins = 10;
-  @property({ attribute: false }) values: number[] = [];
+  @property({ attribute: false }) values: readonly number[] = [];
   /** Dataset label used for the legend, tooltip, table, and summary. */
   @property({ attribute: 'series-label' }) seriesLabel = '';
 
@@ -110,7 +116,7 @@ export class LyraHistogram extends LyraChart {
 // change doesn't re-run the O(n) bucketing loop from scratch on every access.
 const bucketCache = new WeakMap<
   LyraHistogram,
-  { values: number[]; bins: number; locale: string; buckets: HistogramBucket[] }
+  { values: readonly number[]; bins: number; locale: string; buckets: HistogramBucket[] }
 >();
 
 export function binnedBuckets(el: LyraHistogram): HistogramBucket[] {

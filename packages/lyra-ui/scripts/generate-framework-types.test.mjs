@@ -66,6 +66,90 @@ assert.doesNotMatch(svelte, /__lyraCSSCustomProperties__/);
 assert.match(svelte, /'icon-only'\?: LyraAttributeValue<boolean>/);
 assert.match(svelte, /'untyped-alias'\?: LyraUnknownAttributeValue/);
 
+// Attribute aliases backed by public class fields are rendered through indexed access on the
+// class. Their manifest type text is therefore not a dependency of this generated module. In
+// particular, it may name a type imported privately by the class, a generic parameter, or a
+// platform namespace member, and the same inherited alias can appear on several subclasses.
+const fieldBackedDependencies = structuredClone(fixture);
+const sampleTable = fieldBackedDependencies.modules[0].declarations[0];
+sampleTable.members.push(
+  {
+    kind: 'field',
+    name: 'headingLevel',
+    type: { text: 'LyraHeadingLevel' },
+    attribute: 'heading-level',
+  },
+  {
+    kind: 'field',
+    name: 'indexAxis',
+    type: { text: 'LyraChartIndexAxis' },
+    attribute: 'index-axis',
+  },
+  {
+    kind: 'field',
+    name: 'dataRows',
+    type: { text: 'readonly Row[]' },
+    attribute: 'data-rows',
+  },
+  {
+    kind: 'field',
+    name: 'timeZone',
+    type: { text: "Intl.DateTimeFormatOptions['timeZone']" },
+    attribute: 'time-zone',
+  },
+);
+sampleTable.attributes.push(
+  {
+    name: 'heading-level',
+    fieldName: 'headingLevel',
+    type: { text: 'LyraHeadingLevel' },
+  },
+  {
+    name: 'index-axis',
+    fieldName: 'indexAxis',
+    type: { text: 'LyraChartIndexAxis' },
+  },
+  {
+    name: 'data-rows',
+    fieldName: 'dataRows',
+    type: { text: 'readonly Row[]' },
+  },
+  {
+    name: 'time-zone',
+    fieldName: 'timeZone',
+    type: { text: "Intl.DateTimeFormatOptions['timeZone']" },
+  },
+);
+const sampleField = fieldBackedDependencies.modules[1].declarations[0];
+sampleField.members.push({
+  kind: 'field',
+  name: 'indexAxis',
+  type: { text: 'LyraChartIndexAxis' },
+  attribute: 'index-axis',
+});
+sampleField.attributes.push({
+  name: 'index-axis',
+  fieldName: 'indexAxis',
+  type: { text: 'LyraChartIndexAxis' },
+});
+
+const fieldBackedGenerated = generateFrameworkTypes(fieldBackedDependencies);
+for (const declarations of fieldBackedGenerated.values()) {
+  assert.doesNotMatch(
+    declarations,
+    /import type \{[^}]*\b(?:LyraHeadingLevel|LyraChartIndexAxis|Row|Intl|DateTimeFormatOptions)\b[^}]*\}/,
+    'field-backed aliases must not create imports from manifest type text',
+  );
+  assert.match(declarations, /'heading-level'\?: LyraSampleTable\['headingLevel'\]/);
+  assert.match(declarations, /'data-rows'\?: LyraSampleTable\['dataRows'\]/);
+  assert.match(declarations, /'time-zone'\?: LyraSampleTable\['timeZone'\]/);
+  assert.equal(
+    declarations.match(/\bLyraChartIndexAxis\b/g)?.length ?? 0,
+    0,
+    'a shared field type must not be imported once per subclass',
+  );
+}
+
 const asymmetric = structuredClone(fixture);
 const asymmetricValue = asymmetric.modules[1].declarations[0].members.find(
   ({ name }) => name === 'value',
@@ -84,6 +168,18 @@ asymmetric.modules[1].declarations[0].members.push(
     name: 'form',
     type: { text: 'HTMLFormElement | string | null' },
     lyraReadType: { text: 'HTMLFormElement | null' },
+  },
+  {
+    kind: 'field',
+    name: 'options',
+    type: { text: 'SampleSetterOptions | null | undefined' },
+    lyraReadType: { text: 'SampleSetterOptions' },
+  },
+  {
+    kind: 'field',
+    name: 'timeZone',
+    type: { text: "Intl.DateTimeFormatOptions['timeZone'] | null" },
+    lyraReadType: { text: "Intl.DateTimeFormatOptions['timeZone']" },
   },
 );
 const asymmetricGenerated = generateFrameworkTypes(asymmetric);
@@ -104,6 +200,18 @@ for (const [relative, frameworkName] of [
   );
   assert.match(block, /filters: readonly string\[\] \| null \| undefined/);
   assert.match(block, /form: HTMLFormElement \| string \| null/);
+  assert.match(block, /options: SampleSetterOptions \| null \| undefined/);
+  assert.match(block, /timeZone: Intl\.DateTimeFormatOptions\['timeZone'\] \| null/);
+  assert.match(
+    declarations,
+    /import type \{ [^}]*SampleSetterOptions[^}]* \} from '\.\/components\/forms\/sample-field\/sample-field\.class\.js';/,
+    `${relative}: a needed exported dependency must come from its canonical class module`,
+  );
+  assert.doesNotMatch(
+    declarations,
+    /import type \{[^}]*\b(?:Intl|DateTimeFormatOptions)\b[^}]*\}/,
+    `${relative}: platform namespace members must not become class-module imports`,
+  );
 }
 for (const declarations of asymmetricGenerated.values()) {
   assert.match(
@@ -133,6 +241,7 @@ try {
     'src/components/forms/sample-field/sample-field.class.ts',
     [
       "export interface LyraSampleFieldEventMap { 'lr-change': CustomEvent<{ value: string }>; focus: FocusEvent; }",
+      'export interface SampleSetterOptions { readonly strict: boolean; }',
       'export declare class LyraSampleField extends HTMLElement {',
       '  get value(): string;',
       '  set value(next: string | null | undefined);',
@@ -140,6 +249,10 @@ try {
       '  set filters(next: readonly string[] | null | undefined);',
       '  get form(): HTMLFormElement | null;',
       '  set form(next: HTMLFormElement | string | null);',
+      '  get options(): SampleSetterOptions;',
+      '  set options(next: SampleSetterOptions | null | undefined);',
+      "  get timeZone(): Intl.DateTimeFormatOptions['timeZone'];",
+      "  set timeZone(next: Intl.DateTimeFormatOptions['timeZone'] | null);",
       '  accessibleLabel: string | null;',
       '  disabled: boolean;',
       '}',

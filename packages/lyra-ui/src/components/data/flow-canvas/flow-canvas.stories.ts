@@ -20,6 +20,14 @@ const meta: Meta = {
   title: 'Flow Canvas',
   component: 'lr-flow-canvas',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Node and edge collections use unique nonempty first-wins ids before layout or interaction. Activation and move events expose domain-named nodeId/edgeId fields.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

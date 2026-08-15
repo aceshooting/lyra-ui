@@ -50,6 +50,9 @@ export interface LyraDocumentViewerEventMap {
  * A host `aria-label` names the nested dialog by attribute presence, including an explicitly
  * empty value; `name` remains the visible dialog heading.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-document-viewer
  * @event lr-close - Fired when the viewer's shell dialog dismisses the viewer. The detail is the
  *   dialog close reason. A registered renderer's own descendant dialog keeps its independent
@@ -69,6 +72,13 @@ export interface LyraDocumentViewerEventMap {
  * @since 4.0.0
  */
 export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "highlights",
+    "registry",
+  ]);
+  protected static override readonly identityCollectionProperties =
+    Object.freeze(["registry"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -115,10 +125,12 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     this.requestUpdate('payload', old);
   }
 
-  /** Optional per-instance immutable/read-only registry override. When unset, this instance owns a
-   * snapshot of the built-ins that existed when it was constructed; later registrations cannot
-   * mutate it. A consumer matcher or renderer that throws is contained as the localized error
-   * state, and a pending anchor completes once with `{ found: false }`. */
+  /** Optional per-instance immutable/read-only registry override. Native maps are synchronously
+   * copied behind a frozen readonly facade while renderer-definition identity is retained; later
+   * source-map mutation is not observed. When unset, this instance owns a snapshot of the built-ins
+   * that existed when it was constructed; later registrations cannot mutate it. A consumer matcher
+   * or renderer that throws is contained as the localized error state, and a pending anchor
+   * completes once with `{ found: false }`. */
   @property({ attribute: false }) registry?: DocumentRendererRegistry;
 
   /** Declarative scroll-to-anchor target, forwarded to the resolved renderer. A string is a
@@ -128,7 +140,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   @property({ attribute: false, hasChanged: () => true }) anchor: LyraAnchor | string | null = null;
 
   /** Highlights forwarded to the resolved renderer. */
-  @property({ attribute: false }) highlights: LyraHighlight[] = [];
+  @property({ attribute: false }) highlights: readonly LyraHighlight[] = [];
 
   /** Media alt text forwarded to the resolved renderer, for image-like renderers. Unset lets the
    *  renderer derive a fallback name; an explicit empty string marks decorative media. */

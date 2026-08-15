@@ -5,6 +5,14 @@ import './stack-trace.js';
 const meta: Meta = {
   title: 'StackTrace',
   component: 'lr-stack-trace',
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Internal match patterns are a bounded clone-owned frozen snapshot; create and reassign a new array after changing the matcher sequence.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

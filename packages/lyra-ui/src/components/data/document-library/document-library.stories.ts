@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "A bounded searchable document inventory with controlled searchTerm, canonical sort request/commit events, detached clone-owned readonly collections (including Date values), and bulk selection, built on lr-table, lr-chip-group, lr-input, lr-combobox, and lr-file-icon.",
+          "A bounded searchable document inventory with unique nonempty first-wins document ids, controlled searchTerm, canonical sort request/commit events, detached clone-owned readonly collections (including Date values), and bulk selection. Selection/open events expose documentIds/documentId, and the view is built on lr-table, lr-chip-group, lr-input, lr-combobox, and lr-file-icon.",
       },
     },
   },

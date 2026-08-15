@@ -98,7 +98,7 @@ export const CustomCellGeometry: Story = {
     docs: {
       description: {
         story:
-          '`--lr-cell-size` sets both dimensions of every day cell and the seven matching grid tracks. The default is `var(--lr-size-2-25rem)` and the public `size` tiers supply their own tokenized values.',
+          '`--lr-cell-size` sets both dimensions of every day cell and the seven matching grid tracks. Its private default is `var(--lr-size-2-25rem)` and follows the public `size` tier; an inherited or direct `--lr-cell-size` remains authoritative.',
       },
     },
   },

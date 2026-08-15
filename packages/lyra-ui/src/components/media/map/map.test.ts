@@ -1694,6 +1694,41 @@ describe('dataLayers', () => {
     expect(el.dataLayers).to.deep.equal([]);
   });
 
+  it('retains the first unique nonempty data-layer sourceId before reconciliation', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = await fixture<LyraMap>(html`<lr-map></lr-map>`);
+    el.mapStyle = RASTER_STYLE;
+    el.dataLayers = [POLY_LAYER];
+    await el.updateComplete;
+    await waitUntilMapLoaded(el);
+    await waitUntil(() => Boolean(dataLayerResourceId(el, 'zones')), 'source never added', { timeout: 2000 });
+
+    const sourceId = dataLayerResourceId(el, 'zones');
+    const source = el.map!.getSource(sourceId) as { setData: (geojson: unknown) => void };
+    const updates: unknown[] = [];
+    const originalSetData = source.setData.bind(source);
+    source.setData = (geojson: unknown) => {
+      updates.push(geojson);
+      originalSetData(geojson);
+    };
+    const firstGeojson = { type: 'FeatureCollection', features: [] } as const;
+    const duplicateGeojson = {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', geometry: null, properties: { duplicate: true } }],
+    } as const;
+
+    el.dataLayers = [
+      { sourceId: '', geojson: firstGeojson },
+      { sourceId: ' zones ', geojson: firstGeojson },
+      { sourceId: 'zones', geojson: duplicateGeojson },
+    ] as unknown as typeof el.dataLayers;
+    await el.updateComplete;
+
+    expect(updates).to.deep.equal([firstGeojson]);
+    const applied = (el as unknown as { _appliedDataLayerIds: Map<string, string> })._appliedDataLayerIds;
+    expect([...applied.keys()]).to.deep.equal(['zones']);
+  });
+
   it('keeps a colliding base-style source owned by its style across add and removal', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
@@ -2609,6 +2644,29 @@ it('does not collide two id-less markers placed at the same coordinates', async 
   await el.updateComplete;
   const instances = (el as unknown as { _markerInstances: Map<string, unknown> })._markerInstances;
   expect(instances.size).to.equal(2);
+});
+
+it('retains the first unique nonempty explicit marker id while preserving idless occurrences', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = await fixture<LyraMap>(html`<lr-map></lr-map>`);
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [
+    { id: '', lngLat: [0, 0], label: 'Empty explicit id' },
+    { id: ' station ', lngLat: [1, 1], label: 'First explicit id' },
+    { id: 'station', lngLat: [2, 2], label: 'Duplicate explicit id' },
+    { lngLat: [3, 3], label: 'First idless' },
+    { lngLat: [3, 3], label: 'Second idless' },
+  ];
+  await el.updateComplete;
+
+  const labels = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.maplibregl-marker')]
+    .map((marker) => marker.getAttribute('aria-label'));
+  expect(labels).to.have.members(['First explicit id', 'First idless', 'Second idless']);
+  expect(labels).to.have.length(3);
 });
 
 async function waitUntilMapLoaded(el: LyraMap): Promise<void> {

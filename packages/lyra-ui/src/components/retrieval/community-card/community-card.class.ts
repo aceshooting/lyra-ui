@@ -39,6 +39,9 @@ export interface LyraCommunityCardEventMap {
  * own community rendering on the graph or membership fetching -- `lr-drill` asks the host to
  * load members/subgraph.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-community-card
  * @slot actions - Extra header actions alongside the built-in drill button.
  * @event lr-drill - `detail: { id }`.
@@ -58,6 +61,8 @@ export interface LyraCommunityCardEventMap {
  * @since 4.0.0
  */
 export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["members"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -76,7 +81,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   /** `null` renders the `noData` empty state. */
   @property({ attribute: false }) community: LyraCommunity | null = null;
   /** Rendered as chips. */
-  @property({ attribute: false }) members: LyraEntity[] = [];
+  @property({ attribute: false }) members: readonly LyraEntity[] = [];
   /** Visible member chips before the "+N" overflow chip. */
   @property({ type: Number, attribute: "max-members" }) maxMembers = 8;
   /** Single-row layout (title + member count + drill button, no summary/chips). */

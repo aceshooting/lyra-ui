@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -11,13 +11,16 @@ export const styles = css`
        (internal/sizes.styles.ts): the track is half the tier's control height, and its inline size
        keeps the 1.8:1 aspect ratio the control has always had. At the default "m" tier that is
        exactly the 1.25rem x 2.25rem it shipped with before it had a size at all. */
-    --lr-switch-track-block-size: calc(var(--lr-form-control-height) * 0.5);
-    --lr-switch-track-inline-size: calc(var(--lr-switch-track-block-size) * 1.8);
-    --lr-switch-thumb-offset: var(--lr-size-2px);
+    --_lr-switch-track-block-size: calc(var(--lr-form-control-height) * 0.5);
+    --_lr-switch-track-inline-size: calc(
+      var(--lr-switch-track-block-size, var(--_lr-switch-track-block-size)) *
+        1.8
+    );
+    --_lr-switch-thumb-offset: var(--lr-size-2px);
     /* The track's resting fill, named so the hover and press mixes below have exactly one base to
        move away from in BOTH states -- the unchecked grey and the checked brand -- rather than two
        rules each restating a colour. */
-    --lr-switch-track-fill: var(--lr-color-border);
+    --_lr-switch-track-fill: var(--lr-color-border);
   }
   .switch-layout {
     display: inline-flex;
@@ -46,18 +49,32 @@ export const styles = css`
      [part~='base'] before 8.0.0, which was wrong twice over: a filter multiplies every channel, so
      it moved the track only by luck of its tone, and it applies to the whole subtree, so it faded
      the label text sitting next to the track as well. */
-  :host(:not(:disabled)) .switch-layout:hover [part~='track'] {
-    background: var(--lr-switch-track-hover-fill, color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+  :host(:not(:disabled)) .switch-layout:hover [part~="track"] {
+    background: var(
+      --lr-switch-track-hover-fill,
+      color-mix(
+        in oklab,
+        var(--lr-switch-track-fill, var(--_lr-switch-track-fill)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+      )
+    );
   }
-  :host(:not(:disabled)) .switch-layout:active [part~='track'] {
-    background: var(--lr-switch-track-active-fill, color-mix(in oklab, var(--lr-switch-track-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+  :host(:not(:disabled)) .switch-layout:active [part~="track"] {
+    background: var(
+      --lr-switch-track-active-fill,
+      color-mix(
+        in oklab,
+        var(--lr-switch-track-fill, var(--_lr-switch-track-fill)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
   :host(:disabled) .switch-layout {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
 
-  [part~='track'] {
+  [part~="track"] {
     position: relative;
     flex: 0 0 auto;
     /* content-box, not the library-wide border-box default: the thumb is absolutely positioned
@@ -69,22 +86,61 @@ export const styles = css`
        instead -- the same "sits outside, doesn't touch the fill" effect the docs already point
        consumers wanting a rim toward via outline. */
     box-sizing: content-box;
-    inline-size: var(--width, var(--lr-switch-track-inline-size));
-    block-size: var(--height, var(--lr-switch-track-block-size));
+    inline-size: var(
+      --width,
+      var(--lr-switch-track-inline-size, var(--_lr-switch-track-inline-size))
+    );
+    block-size: var(
+      --height,
+      var(--lr-switch-track-block-size, var(--_lr-switch-track-block-size))
+    );
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-switch-track-fill);
+    background: var(--lr-switch-track-fill, var(--_lr-switch-track-fill));
     transition: background-color var(--lr-transition-fast);
   }
-  [part~='track'][part~='checked'] {
-    --lr-switch-track-fill: var(--lr-switch-checked-track-fill, var(--lr-color-brand));
+  [part~="track"][part~="checked"] {
+    --_lr-switch-track-fill: var(
+      --lr-switch-checked-track-fill,
+      var(--lr-color-brand)
+    );
   }
 
-  [part='thumb'] {
+  [part="thumb"] {
     position: absolute;
-    inset-block-start: var(--lr-switch-thumb-offset);
-    inset-inline-start: var(--lr-switch-thumb-offset);
-    inline-size: var(--thumb-size, calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2)));
-    block-size: var(--thumb-size, calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2)));
+    inset-block-start: var(
+      --lr-switch-thumb-offset,
+      var(--_lr-switch-thumb-offset)
+    );
+    inset-inline-start: var(
+      --lr-switch-thumb-offset,
+      var(--_lr-switch-thumb-offset)
+    );
+    inline-size: var(
+      --thumb-size,
+      calc(
+        var(
+            --height,
+            var(
+              --lr-switch-track-block-size,
+              var(--_lr-switch-track-block-size)
+            )
+          ) -
+          (var(--lr-switch-thumb-offset, var(--_lr-switch-thumb-offset)) * 2)
+      )
+    );
+    block-size: var(
+      --thumb-size,
+      calc(
+        var(
+            --height,
+            var(
+              --lr-switch-track-block-size,
+              var(--_lr-switch-track-block-size)
+            )
+          ) -
+          (var(--lr-switch-thumb-offset, var(--_lr-switch-thumb-offset)) * 2)
+      )
+    );
     border-radius: 50%;
     background: var(--lr-switch-thumb-fill, var(--lr-color-surface));
     /* Animates the logical 'inset-inline-start' rather than a physical
@@ -93,11 +149,31 @@ export const styles = css`
        properties approach to RTL (see internal/lyra-element.ts). */
     transition: inset-inline-start var(--lr-transition-fast);
   }
-  [part~='track'][part~='checked'] [part='thumb'] {
+  [part~="track"][part~="checked"] [part="thumb"] {
     inset-inline-start: calc(
-      var(--width, var(--lr-switch-track-inline-size)) -
-        var(--thumb-size, calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2))) -
-        var(--lr-switch-thumb-offset)
+      var(
+          --width,
+          var(
+            --lr-switch-track-inline-size,
+            var(--_lr-switch-track-inline-size)
+          )
+        ) -
+        var(
+          --thumb-size,
+          calc(
+            var(
+                --height,
+                var(
+                  --lr-switch-track-block-size,
+                  var(--_lr-switch-track-block-size)
+                )
+              ) -
+              (
+                var(--lr-switch-thumb-offset, var(--_lr-switch-thumb-offset)) *
+                  2
+              )
+          )
+        ) - var(--lr-switch-thumb-offset, var(--_lr-switch-thumb-offset))
     );
   }
 
@@ -105,39 +181,39 @@ export const styles = css`
      [part='form-control-label']), so the UA stylesheet's default
      "[hidden] { display: none }" rule needs no author-side override to
      take effect when hasLabelSlot is false. */
-  [part='label'] {
+  [part="label"] {
     font-size: var(--lr-font-size-md-sm);
     color: var(--lr-color-text);
   }
 
-  [part~='hint'] {
+  [part~="hint"] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
   /* :empty never matches here -- same fix as [part='hint']/[part='error'] on lr-select. */
-  [part~='hint'][hidden] {
+  [part~="hint"][hidden] {
     display: none;
   }
-  [part='error'] {
+  [part="error"] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-danger);
   }
-  [part='error'][hidden] {
+  [part="error"][hidden] {
     display: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    [part~='track'],
-    [part='thumb'] {
+    [part~="track"],
+    [part="thumb"] {
       transition: none !important;
     }
   }
-  [part='form-control'],
-  [part='label'],
-  [part~='hint'],
-  [part='error'] {
+  [part="form-control"],
+  [part="label"],
+  [part~="hint"],
+  [part="error"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;

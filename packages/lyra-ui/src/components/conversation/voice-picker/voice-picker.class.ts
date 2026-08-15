@@ -223,8 +223,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   /** Informational only (e.g. `'elevenlabs'`); rendered as a small leading badge. */
   @property() provider = '';
-  /** The full voice list. Omit (or leave empty) to fall back to plain free-text entry. Replacing
-   *  the catalog retires any internal preview before the rendered candidate can change. */
+  /** The full voice list. Omit (or leave empty) to fall back to plain free-text entry. Catalog ids
+   *  must be nonempty and unique; malformed rows and later duplicates are omitted, first wins.
+   *  Replacing the catalog retires any internal preview before the rendered candidate can change. */
   @property({ attribute: false })
   get catalog(): LyraCatalog<LyraVoiceCatalogEntry> | undefined {
     return this._catalog;

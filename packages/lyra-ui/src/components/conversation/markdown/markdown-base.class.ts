@@ -8,10 +8,13 @@ import {
 } from "../../../internal/anchor-target.js";
 import {
   buildQuoteAnchor,
+  createTextQuoteIndex,
   scopeFromElement,
+  type TextQuoteIndex,
 } from "../../../internal/text-quote.js";
 import {
   acquireHighlightHandle,
+  supportsCustomHighlights,
   type HighlightHandle,
 } from "../../../internal/text-highlights.js";
 import { ThemeWatcher } from "../../../internal/theme-watcher.js";
@@ -156,6 +159,13 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   private readonly parser = new MarkdownParserController();
   private headingTree: MarkdownHeadingItem[] = [];
   private highlightHandle?: HighlightHandle;
+  private textQuoteIndexCache?: {
+    root: Element;
+    locale: string;
+    index: TextQuoteIndex;
+    mappingDirty: boolean;
+  };
+  private markdownTextScopeBuilds = 0;
   private resolvedHighlightRanges: ResolvedHighlightRange[] = [];
   private mathFailureReported = false;
   private highlightCache = new Map<string, string>();
@@ -202,6 +212,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.cancelStreamingRender();
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
+    this.textQuoteIndexCache = undefined;
   }
 
   override adoptedCallback(): void {
@@ -278,6 +289,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     applyMarkdownAriaBusy(this, !this.deps || this.streaming);
+    if (changed.has("renderedHtml")) this.textQuoteIndexCache = undefined;
     if (
       changed.has("renderedHtml") ||
       changed.has("highlights") ||
@@ -430,14 +442,24 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       return applyMarkdownFragmentAnchor(root, anchor, this.headingTree);
     }
     if (anchor.kind === "text-quote") {
-      return applyMarkdownTextQuoteAnchor(root, anchor, this.effectiveLocale);
+      const index = this.markdownTextIndex(root);
+      const found = applyMarkdownTextQuoteAnchor(root, anchor, this.effectiveLocale, index);
+      if (!supportsCustomHighlights(this.ownerDocument) && this.highlights.length > 0) {
+        this.repaintHighlights();
+      }
+      return found;
     }
     return false;
   }
 
   protected computeSelectionAnchor(range: Range): LyraAnchor | null {
     const root = this.contentRoot();
-    return root ? buildQuoteAnchor(range, scopeFromElement(root)) : null;
+    if (!root) return null;
+    const anchor = buildQuoteAnchor(range, this.markdownTextIndex(root).scope);
+    if (!supportsCustomHighlights(this.ownerDocument) && this.highlights.length > 0) {
+      this.scheduleAfterUpdate(() => this.repaintHighlights());
+    }
+    return anchor;
   }
 
   private ensureHighlightHandle(): HighlightHandle {
@@ -445,17 +467,60 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     return this.highlightHandle;
   }
 
+  private markdownTextIndex(root: Element): TextQuoteIndex {
+    const locale = this.effectiveLocale;
+    const cached = this.textQuoteIndexCache;
+    if (cached?.root === root && cached.locale === locale && !cached.mappingDirty) {
+      return cached.index;
+    }
+    if (cached?.mappingDirty) {
+      const handle = this.ensureHighlightHandle();
+      for (const tone of ["accent", "success", "warning", "danger", "neutral"] as const) {
+        handle.setRanges(tone, []);
+      }
+      handle.setActive(null);
+    }
+    const scope = scopeFromElement(root);
+    this.markdownTextScopeBuilds++;
+    if (
+      cached?.root === root
+      && cached.locale === locale
+      && cached.index.rebindScope(scope)
+    ) {
+      cached.mappingDirty = false;
+      return cached.index;
+    }
+    const index = createTextQuoteIndex(scope, locale);
+    this.textQuoteIndexCache = { root, locale, index, mappingDirty: false };
+    return index;
+  }
+
+  /** @internal Focused-test seam for one scope per rendered-content generation. */
+  protected markdownTextScopeBuildCount(): number {
+    return this.markdownTextScopeBuilds;
+  }
+
+  /** @internal Focused-test seam for occurrence reuse across quote highlights. */
+  protected markdownTextQuoteScanCount(): number {
+    return this.textQuoteIndexCache?.index.scanCount ?? 0;
+  }
+
   private repaintHighlights(): void {
     this.resolvedHighlightRanges = [];
     const root = this.contentRoot();
     if (!root) return;
+    const index = this.markdownTextIndex(root);
     this.resolvedHighlightRanges = repaintMarkdownHighlights({
       locale: this.effectiveLocale,
       root,
       handle: this.ensureHighlightHandle(),
       highlights: this.highlights,
       activeHighlightId: this.activeHighlightId,
+      index,
     });
+    if (!supportsCustomHighlights(this.ownerDocument) && this.textQuoteIndexCache) {
+      this.textQuoteIndexCache.mappingDirty = true;
+    }
   }
 
   private readonly onContentClick = (event: MouseEvent): void => {
@@ -465,7 +530,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       event.clientY
     );
     if (highlightId) {
-      this.emit("lr-highlight-activate", { id: highlightId });
+      this.emit("lr-highlight-activate", { highlightId });
       return;
     }
     const href = internalLinkHrefFrom(event, this.internalLinkPrefix);

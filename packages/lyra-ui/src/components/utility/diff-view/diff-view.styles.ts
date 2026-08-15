@@ -1,17 +1,17 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
-    --lr-diff-view-font: var(--lr-font-mono);
-    --lr-diff-view-add-background: var(--lr-color-success-quiet);
-    --lr-diff-view-add-color: var(--lr-color-success);
-    --lr-diff-view-remove-background: var(--lr-color-danger-quiet);
-    --lr-diff-view-remove-color: var(--lr-color-danger);
-    --lr-diff-view-fold-background: var(--lr-color-surface-raised);
-    --lr-diff-view-fold-color: var(--lr-color-text-quiet);
+    --_lr-diff-view-font: var(--lr-font-mono);
+    --_lr-diff-view-add-background: var(--lr-color-success-quiet);
+    --_lr-diff-view-add-color: var(--lr-color-success);
+    --_lr-diff-view-remove-background: var(--lr-color-danger-quiet);
+    --_lr-diff-view-remove-color: var(--lr-color-danger);
+    --_lr-diff-view-fold-background: var(--lr-color-surface-raised);
+    --_lr-diff-view-fold-color: var(--lr-color-text-quiet);
   }
-  [part='base'] {
+  [part="base"] {
     position: relative;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -22,7 +22,7 @@ export const styles = css`
     margin: 0;
     padding: var(--lr-space-s);
   }
-  [part='limit'] {
+  [part="limit"] {
     padding: var(--lr-space-m);
     color: var(--lr-color-text-quiet);
     overflow-wrap: anywhere;
@@ -34,18 +34,18 @@ export const styles = css`
     align-items: start;
     padding: var(--lr-space-s);
   }
-  [part='side'] {
+  [part="side"] {
     overflow-x: auto;
     overflow-y: hidden;
     min-inline-size: 0;
   }
-  [part='line'] {
+  [part="line"] {
     /* Lives here (rather than on the ancestor pre element) so layout="split" -- whose lines sit
        inside [part='side'], not a pre -- inherits the same monospace typography as the default
        unified pre. font-family/font-size/line-height are all inheritable, so moving them here
        from pre is visually identical for the unified layout (same computed values, just set
        directly instead of inherited). */
-    font-family: var(--lr-diff-view-font);
+    font-family: var(--lr-diff-view-font, var(--_lr-diff-view-font));
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-snug);
     white-space: pre-wrap;
@@ -55,7 +55,7 @@ export const styles = css`
     inline-size: max-content;
     min-inline-size: 100%;
   }
-  [part='line']:not([data-type='fold']) {
+  [part="line"]:not([data-type="fold"]) {
     /* Diffed source code is read left-to-right regardless of the surrounding document direction --
        same rationale (and matching fix shape) as code-block.styles.ts's [part='pre']: without this,
        an ancestor dir="rtl" bidi-reorders each line and right-aligns the block, making valid code
@@ -66,20 +66,29 @@ export const styles = css`
     direction: ltr;
     unicode-bidi: isolate;
   }
-  [part='line'][data-type='add'] {
-    background: var(--lr-diff-view-add-background);
-    color: var(--lr-diff-view-add-color);
+  [part="line"][data-type="add"] {
+    background: var(
+      --lr-diff-view-add-background,
+      var(--_lr-diff-view-add-background)
+    );
+    color: var(--lr-diff-view-add-color, var(--_lr-diff-view-add-color));
   }
-  [part='line'][data-type='remove'] {
-    background: var(--lr-diff-view-remove-background);
-    color: var(--lr-diff-view-remove-color);
+  [part="line"][data-type="remove"] {
+    background: var(
+      --lr-diff-view-remove-background,
+      var(--_lr-diff-view-remove-background)
+    );
+    color: var(--lr-diff-view-remove-color, var(--_lr-diff-view-remove-color));
   }
-  [part='line'][data-type='fold'] {
-    color: var(--lr-diff-view-fold-color);
-    background: var(--lr-diff-view-fold-background);
+  [part="line"][data-type="fold"] {
+    color: var(--lr-diff-view-fold-color, var(--_lr-diff-view-fold-color));
+    background: var(
+      --lr-diff-view-fold-background,
+      var(--_lr-diff-view-fold-background)
+    );
     text-align: center;
   }
-  [part='copy-button'] {
+  [part="copy-button"] {
     position: absolute;
     inset-block-start: var(--lr-space-xs);
     inset-inline-end: var(--lr-space-xs);
@@ -93,14 +102,18 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
   }
-  [part='copy-button']:hover {
+  [part="copy-button"]:hover {
     border-color: var(--lr-color-brand);
   }
-  [part='copy-button']:active {
+  [part="copy-button"]:active {
     border-color: var(--lr-color-brand);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='copy-button']:focus-visible {
+  [part="copy-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

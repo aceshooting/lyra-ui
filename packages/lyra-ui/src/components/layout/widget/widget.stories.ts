@@ -179,7 +179,7 @@ export const NarrowLongHeaderContent: Story = {
                 label=${longTitle}
                 collapsible
                 expandable
-                .views=${[{ id: 'long', label: longView }]}
+                .views=${[{ viewId: 'long', label: longView }]}
               >
                 <button slot="actions" style="white-space: nowrap;">${longAction}</button>
                 Panel body.
@@ -198,8 +198,8 @@ export const IconOnlyViewToggles: Story = {
       label="Usage"
       sublabel="Last 7 days"
       .views=${[
-        { id: 'chart', icon: barChartIcon, ariaLabel: 'Chart view' },
-        { id: 'table', icon: tableIcon, ariaLabel: 'Table view' },
+        { viewId: 'chart', icon: barChartIcon, ariaLabel: 'Chart view' },
+        { viewId: 'table', icon: tableIcon, ariaLabel: 'Table view' },
       ]}
       style="max-width: 28rem;"
     >
@@ -232,7 +232,7 @@ export const ThemedViewToggle: Story = {
         'success',
       )};"
     >
-      <lr-widget label="Usage" sublabel="Last 7 days" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
+      <lr-widget label="Usage" sublabel="Last 7 days" .views=${[{ viewId: 'chart', label: 'Chart' }, { viewId: 'table', label: 'Table' }]}>
         <div slot="view-chart" style="padding: 1rem;">Chart view body.</div>
         <div slot="view-table" style="padding: 1rem;">Table view body.</div>
       </lr-widget>
@@ -277,8 +277,8 @@ export const DecorativeTitleAndViewIcons: Story = {
     <lr-widget
       label="Usage"
       .views=${[
-        { id: 'chart', label: 'Chart', icon: html`<span>▥</span>` },
-        { id: 'table', label: 'Table', icon: html`<span>☷</span>` },
+        { viewId: 'chart', label: 'Chart', icon: html`<span>▥</span>` },
+        { viewId: 'table', label: 'Table', icon: html`<span>☷</span>` },
       ]}
       style="max-width: 28rem;"
     >

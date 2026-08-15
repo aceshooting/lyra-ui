@@ -164,6 +164,9 @@ function defaultFilter(
  * `<lr-dropdown>` + `<lr-menu>` with Rename/Delete — sets `renderActions` instead; its content is appended after any
  * built-in `rowActions` output in the same slot, and `wrapRow` continues to compose around the result.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-thread-list
  * @slot - Slotted mode only: host-supplied `lr-conversation-item`s, rendered in order. Each
  *   top-level assigned element that doesn't already carry an explicit `role` is given
@@ -243,6 +246,8 @@ function defaultFilter(
  * @since 4.0.0
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["threads", "groupOrder", "collapsedGroupIds", "rowActions"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -273,7 +278,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Non-empty ⇒ data mode (the default slot is ignored). Empty with no slotted content ⇒ data mode
    *  with zero rows (the built-in empty state). Empty *with* slotted content ⇒ slotted mode. Thread
    *  ids must be nonempty and unique; invalid/later duplicate rows are omitted, first wins. */
-  @property({ attribute: false }) threads: LyraChatThread[] = [];
+  @property({ attribute: false }) threads: readonly LyraChatThread[] = [];
 
   /**
    * Data mode: marks the matching raw thread id `active`/`aria-current` and scrolls it into view.
@@ -311,14 +316,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** `grouping="custom"`: explicit group-id order, or a comparator. Unlisted ids follow in their
    *  first-seen order when an array is supplied. */
   @property({ attribute: false }) groupOrder?:
-    | string[]
+    | readonly string[]
     | ((a: string, b: string) => number);
 
   /** Data mode: controlled ids of date/custom groups whose rows are omitted from virtualization. */
-  @property({ attribute: false }) collapsedGroupIds: string[] = [];
+  @property({ attribute: false }) collapsedGroupIds: readonly string[] = [];
 
   /** Data mode only: built-in icon buttons rendered into each row's `actions` slot, in display order. */
-  @property({ attribute: false }) rowActions: ThreadRowAction[] = [];
+  @property({ attribute: false }) rowActions: readonly ThreadRowAction[] = [];
 
   /** Data mode only: appended after any built-in `rowActions` buttons in the same row's `actions`
    *  slot -- the escape hatch for a fully custom per-row action surface (e.g. an `<lr-dropdown>`

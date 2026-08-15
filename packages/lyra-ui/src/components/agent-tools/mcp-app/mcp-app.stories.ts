@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'MCP App',
   component: 'lr-mcp-app',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Resource records and nested CSP/metadata collections are bounded clone-owned frozen snapshots; create and reassign a new resource after changes.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

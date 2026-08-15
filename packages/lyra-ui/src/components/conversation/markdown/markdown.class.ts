@@ -133,7 +133,8 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  *   (in `link-target`) and never fire this event.
  * @event lr-render-error - Fired whenever rendering falls back to plain
  *   text, or `math` is set but the `katex` peer isn't installed. `detail: { error: unknown }`.
- * @event lr-highlight-activate - A painted `text-quote` highlight was clicked. `detail: { id }`.
+ * @event lr-highlight-activate - A painted `text-quote` highlight was clicked.
+ *   `detail: { highlightId }`.
  * @event lr-text-select - Fired on selection end inside the rendered content. `detail: { text,
  *   anchor, rects }`; `anchor` is a `text-quote` `LyraAnchor` scoped to the rendered content, or
  *   `null` if the selection couldn't be anchored.

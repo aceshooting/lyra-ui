@@ -218,7 +218,7 @@ describe('DocumentFile/DocumentRendererDefinition widening', () => {
 describe('LyraDocumentRendererPayload adapters', () => {
   it('snapshots and hard-bounds AV cue/track collections and their retained records', () => {
     const cues = Array.from({ length: 10_005 }, (_unused, index) => ({
-      id: `cue-${index}`,
+      cueId: `cue-${index}`,
       start: index,
       text: index === 0
         ? 't'.repeat(120_000)
@@ -274,7 +274,7 @@ describe('LyraDocumentRendererPayload adapters', () => {
     const supplied = snapshotLyraDocumentRendererPayload({
       kind: 'av',
       file: PDF_FILE,
-      cues: [{ id: 'cue-1', start: 0, text: 'Searchable' }],
+      cues: [{ cueId: 'cue-1', start: 0, text: 'Searchable' }],
       tracks: [],
     });
 
@@ -316,11 +316,11 @@ describe('LyraDocumentRendererPayload adapters', () => {
       file: PDF_FILE,
       cues: [
         ...Array.from({ length: 10_000 }, (_unused, index) => ({
-          id: `empty-${index}`,
+          cueId: `empty-${index}`,
           start: index,
           text: '',
         })),
-        { id: 'omitted-searchable', start: 10_000, text: 'Needle' },
+        { cueId: 'omitted-searchable', start: 10_000, text: 'Needle' },
       ],
       tracks: [],
     });
@@ -332,7 +332,7 @@ describe('LyraDocumentRendererPayload adapters', () => {
     const searchable = adaptDocumentRenderer(definition, PDF_FILE, {
       kind: 'av',
       file: PDF_FILE,
-      cues: [{ id: 'speaker-only', start: 0, text: '', speaker: 'Host' }],
+      cues: [{ cueId: 'speaker-only', start: 0, text: '', speaker: 'Host' }],
       tracks: [],
     });
     expect(searchable.capabilities).to.deep.equal({ anchors: ['time-range'], search: true });

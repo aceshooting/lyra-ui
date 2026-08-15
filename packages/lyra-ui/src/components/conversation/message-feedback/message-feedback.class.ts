@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -11,8 +12,8 @@ import { LYRA_DEFAULT_feedbackCommentLabel, LYRA_DEFAULT_feedbackCommentPlacehol
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface MessageFeedbackReason {
-  id: string;
-  label: string;
+  readonly id: string;
+  readonly label: string;
 }
 
 export type MessageFeedbackRating = 'up' | 'down';
@@ -21,8 +22,8 @@ export type MessageFeedbackValue = MessageFeedbackRating | null;
 export type MessageFeedbackDetailFor = 'none' | 'up' | 'down' | 'both';
 
 export interface MessageFeedbackDetailConfiguration {
-  reasons?: readonly MessageFeedbackReason[];
-  commentable?: boolean;
+  readonly reasons?: readonly MessageFeedbackReason[];
+  readonly commentable?: boolean;
 }
 
 export interface MessageFeedbackSubmitDetail {
@@ -33,7 +34,7 @@ export interface MessageFeedbackSubmitDetail {
 
 export interface LyraMessageFeedbackEventMap {
   'lr-feedback-change': CustomEvent<{ rating: MessageFeedbackValue }>;
-  'lr-feedback-submit': CustomEvent<MessageFeedbackSubmitDetail>;
+  'lr-feedback-submit': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
   'lr-toolbar-actions-change': Event;
   blur: CustomEvent<null>;
   focus: CustomEvent<null>;
@@ -81,6 +82,8 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  * the surviving draft. A thumbs-only configuration (no `detail`, e.g.
  * `<lr-message-actions>`'s embedded built-in) never has a panel to reopen, so its thumbs always
  * behave as a plain toggle.
+ * The detail record and its reasons are a bounded clone-owned readonly snapshot. Create and
+ * reassign a new detail record after changes.
  *
  * @customElement lr-message-feedback
  * @event lr-feedback-change - `detail: { rating }`. Fires whenever thumb interaction changes the
@@ -96,6 +99,8 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  *   `<input>`.
  * @event focus - Re-dispatched from the comment `<textarea>`'s own native `focus`, for the same
  *   reason as `blur`.
+ * @event lr-toolbar-actions-change - No-detail coordination event emitted when the logical
+ *   toolbar actions exposed by this provider change availability or order.
  * @csspart base - The root.
  * @csspart thumbs - The wrapper around both thumb buttons.
  * @csspart up-button - The thumbs-up toggle button.
@@ -122,6 +127,8 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  * @since 4.0.0
  */
 export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(['detail']);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -141,7 +148,8 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   /** Current provisional or persisted rating. Host-writable for controlled restoration. */
   @property({ reflect: true }) rating: MessageFeedbackValue = null;
 
-  /** One explicit detail configuration. Omit it for a thumbs-only control. */
+  /** One clone-owned explicit detail configuration. Omit it for a thumbs-only control; reassign a
+   *  new record after changing its reasons. */
   @property({ attribute: false }) detail?: MessageFeedbackDetailConfiguration;
 
   /** Which rating opens the configured detail panel. `'none'` explicitly makes even a populated

@@ -90,6 +90,8 @@ export interface LyraModelSelectEventMap {
  * A focused trigger/input follows a rendering-mode replacement. If that new owner is disabled or
  * inert, focus returns to the available element that led into the picker, or to the stable
  * `form-control` owner when there is no return target; a newer external focus move always wins.
+ * Array-valued catalogs are clone-owned, bounded readonly snapshots. Create and reassign a new
+ * catalog array after changing its rows.
  *
  * @customElement lr-model-select
  * @event lr-change - The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.
@@ -161,6 +163,8 @@ export interface LyraModelSelectEventMap {
  * @since 4.0.0
  */
 export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -195,7 +199,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   /** Informational only — e.g. `'ollama'`. Rendered as a small leading badge for display grouping. */
   @property() provider = '';
-  /** The full model list. Omit (or leave empty) to fall back to plain free-text entry. */
+  /** The clone-owned full model list. Omit (or leave empty) to fall back to plain free-text entry.
+   *  Catalog ids must be nonempty and unique; malformed rows and later duplicates are omitted,
+   *  first wins. Reassign a new array after changes. */
   @property({ attribute: false }) catalog?: LyraCatalog<LyraModelCatalogEntry>;
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;

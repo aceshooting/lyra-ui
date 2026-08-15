@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -135,8 +136,8 @@ export interface LyraBoxPlotPointDetail {
 
 export interface LyraBoxPlotEventMap {
   'lr-point-click': CustomEvent<LyraBoxPlotPointDetail>;
-  'lr-before-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
-  'lr-legend-visibility-change': CustomEvent<LyraChartLegendVisibilityChangeDetail>;
+  'lr-before-legend-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
+  'lr-legend-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>;
   'lr-datum-activate': CustomEvent<
     LyraChartDatumActivateDetail<'box', BoxPlotPoint | null>
   >;
@@ -236,6 +237,9 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * summaries (no raw sample data is shipped to the browser). Beyond Web
  * Awesome's chart set — useful for summarizing distributions.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-box-plot
  * @csspart base - The chart wrapper.
  * @csspart plot - The fixed-height canvas region.
@@ -282,6 +286,12 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @since 4.0.0
  */
 export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "labels",
+    "datasets",
+    "hiddenDatasets",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -321,7 +331,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     });
   }
 
-  @property({ attribute: false }) labels: string[] = [];
+  @property({ attribute: false }) labels: readonly string[] = [];
   @property({ attribute: false }) datasets: readonly LyraBoxPlotSeries[] = [];
   /** @deprecated Use the family-consistent `datasets` property. */
   get boxes(): readonly LyraBoxPlotSeries[] {

@@ -4,6 +4,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from './text-viewer-target.js';
 import { defineElement } from './prefix.js';
+import { HIGHLIGHT_SNAPSHOT_LIMIT } from './anchor-target.js';
 
 const PARAGRAPH_ONE = 'The quick brown fox jumps over the lazy dog.';
 const PARAGRAPH_TWO = 'The fox runs fast under the bright sun.';
@@ -441,20 +442,32 @@ describe('TextViewerTarget mixin', () => {
       expect(internals(el).highlightPaintedRangeCount()).to.be.at.most(100);
     });
 
-    it('stops looking for an active host highlight at the candidate ceiling', async () => {
+    it('retains an active host highlight at the end of the bounded snapshot', async () => {
       const el = await stubFixture();
+      const handle = internals(el).searchHandle!;
+      let activeText = '';
+      const originalSetActive = handle.setActive.bind(handle);
+      handle.setActive = (range) => {
+        activeText = range?.toString() ?? '';
+        originalSetActive(range);
+      };
       let idReads = 0;
       el.highlights = Array.from({ length: 50_000 }, (_, index) => ({
         get id() {
           idReads++;
-          return index === 49_999 ? 'outside-cap' : `ordinary-${index}`;
+          return index === HIGHLIGHT_SNAPSHOT_LIMIT - 1 ? 'snapshot-end-active' : `ordinary-${index}`;
         },
-        anchor: { kind: 'text-quote' as const, quote: 'fox' },
+        anchor: {
+          kind: 'text-quote' as const,
+          quote: index === HIGHLIGHT_SNAPSHOT_LIMIT - 1 ? 'İzmir' : 'fox',
+        },
       }));
-      el.activeHighlightId = 'outside-cap';
+      el.activeHighlightId = 'snapshot-end-active';
       await el.updateComplete;
 
-      expect(idReads).to.be.at.most(1_000);
+      expect(activeText).to.equal('İzmir');
+      expect(idReads).to.be.at.most(HIGHLIGHT_SNAPSHOT_LIMIT);
+      expect(internals(el).highlightPaintedRangeCount()).to.be.at.most(100);
     });
 
     it('bounds active-id inspection and retains an active host highlight inside the candidate cap', async () => {
@@ -478,7 +491,7 @@ describe('TextViewerTarget mixin', () => {
       await el.updateComplete;
 
       expect(activeText).to.equal('İzmir');
-      expect(idReads).to.be.at.most(1_000);
+      expect(idReads).to.be.at.most(HIGHLIGHT_SNAPSHOT_LIMIT);
       expect(internals(el).highlightPaintedRangeCount()).to.be.at.most(100);
     });
 

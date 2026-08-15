@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -16,7 +17,7 @@ import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_moveDown, LYRA_DEFAUL
 export interface PromptQueueItem {
   id: string;
   value: string;
-  attachments?: DocumentRef[];
+  attachments?: readonly DocumentRef[];
   createdAt?: number;
   metadata?: Record<string, unknown>;
 }
@@ -30,8 +31,8 @@ export interface PromptQueueChangeDetail {
 }
 
 export interface LyraPromptQueueEventMap {
-  'lr-queue-change': CustomEvent<PromptQueueChangeDetail>;
-  'lr-send-now': CustomEvent<{ item: PromptQueueItem }>;
+  'lr-queue-change': CustomEvent<LyraEventDetailSnapshot<PromptQueueChangeDetail>>;
+  'lr-send-now': CustomEvent<LyraEventDetailSnapshot<{ item: PromptQueueItem }>>;
 }
 
 function uniqueQueueItems(source: readonly PromptQueueItem[] | undefined): PromptQueueItem[] {
@@ -54,6 +55,9 @@ function uniqueQueueItems(source: readonly PromptQueueItem[] | undefined): Promp
  * the nearest surviving row receives focus; an emptied queue focuses its stable region instead.
  * Controlled updates never steal focus when the removed row did not own it.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-prompt-queue
  * @event lr-queue-change - A proposed controlled queue update. `detail: { items, reason, itemId }`.
  * @event lr-send-now - Immediate send was requested. `detail: { item }`.
@@ -72,6 +76,8 @@ function uniqueQueueItems(source: readonly PromptQueueItem[] | undefined): Promp
  * @since 7.0.0
  */
 export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["items"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -91,7 +97,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ attribute: false }) items: PromptQueueItem[] = [];
+  @property({ attribute: false }) items: readonly PromptQueueItem[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) editable = true;
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property() label = '';

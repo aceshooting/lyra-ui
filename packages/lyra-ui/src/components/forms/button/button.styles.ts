@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -8,51 +8,51 @@ export const styles = css`
     /* A host width is meaningful for the public component, so the native
        button follows it. The variable keeps the contract opt-out-able for
        compact inline compositions. */
-    --lr-button-width: 100%;
+    --_lr-button-width: 100%;
     /* The whole size scale now comes from the shared form-control ladder (internal/sizes.styles.ts,
        pulled in ahead of this sheet by button.class.ts), so a button and an lr-input/lr-select/
        lr-combobox/lr-date-input of the same tier are the same height BY CONSTRUCTION rather than by
        two hand-maintained lists agreeing -- which is exactly how they drifted apart before 8.0.0.
        These per-tier names survive as the button's own override points; only their values moved. */
-    --lr-button-size-2xs: var(--lr-form-control-height-2xs);
-    --lr-button-size-xs: var(--lr-form-control-height-xs);
-    --lr-button-size-s: var(--lr-form-control-height-s);
-    --lr-button-size-m: var(--lr-form-control-height-m);
-    --lr-button-size-l: var(--lr-form-control-height-l);
-    --lr-button-size-xl: var(--lr-form-control-height-xl);
+    --_lr-button-size-2xs: var(--lr-form-control-height-2xs);
+    --_lr-button-size-xs: var(--lr-form-control-height-xs);
+    --_lr-button-size-s: var(--lr-form-control-height-s);
+    --_lr-button-size-m: var(--lr-form-control-height-m);
+    --_lr-button-size-l: var(--lr-form-control-height-l);
+    --_lr-button-size-xl: var(--lr-form-control-height-xl);
     /* Geometry knobs, each pointed at the ladder's active-tier value. No per-tier rule declares a
        CSS property on [part~='base'], so a consumer can still retune a tier (e.g. pin a size="s"
        button into a compact toolbar row) without a ::part(base) rule. The ladder matches BOTH
        spellings of every tier in one selector list, so size="small" is size="s" for free. */
-    --lr-button-padding-block: var(--lr-form-control-padding-block);
-    --lr-button-padding-inline: var(--lr-form-control-padding-inline);
-    --lr-button-font-size: var(--lr-form-control-font-size);
-    --lr-button-min-height: var(--lr-button-size-m);
-    --lr-button-gap: var(--lr-form-control-gap);
-    --lr-button-radius: var(--lr-form-control-radius);
+    --_lr-button-padding-block: var(--lr-form-control-padding-block);
+    --_lr-button-padding-inline: var(--lr-form-control-padding-inline);
+    --_lr-button-font-size: var(--lr-form-control-font-size);
+    --_lr-button-min-height: var(--lr-button-size-m, var(--_lr-button-size-m));
+    --_lr-button-gap: var(--lr-form-control-gap);
+    --_lr-button-radius: var(--lr-form-control-radius);
     /* Relative to the button's own font-size, so the with-caret chevron tracks every size tier
        without a per-tier rule -- same sizing stance as lr-attachment-trigger's expand-icon. */
-    --lr-button-caret-size: var(--lr-size-0-75em);
+    --_lr-button-caret-size: var(--lr-size-0-75em);
     /* The nine generic colour slots below are re-pointed at the active variant's row of the
        semantic grid by internal/variants.styles.ts, so this component needs no :host([variant='…'])
        block of its own -- it carried five near-identical ones before 8.0.0.
        "filled" reads the QUIET tier and "accent" the LOUD one: they used to share the same loud
        token for every chromatic variant (rendering identically) while neutral's "filled" was the
        page surface, i.e. no fill at all. */
-    --lr-button-accent: var(--lr-color-fill-loud);
-    --lr-button-fill: var(--lr-color-fill-quiet);
-    --lr-button-on-fill: var(--lr-color-on-quiet);
-    --lr-button-border: var(--lr-color-border-normal);
-    --lr-button-outlined-border: var(--lr-color-border-strong);
+    --_lr-button-accent: var(--lr-color-fill-loud);
+    --_lr-button-fill: var(--lr-color-fill-quiet);
+    --_lr-button-on-fill: var(--lr-color-on-quiet);
+    --_lr-button-border: var(--lr-color-border-normal);
+    --_lr-button-outlined-border: var(--lr-color-border-strong);
     /* Transparent by default (byte-identical to the previous hardcoded "background: transparent").
        Set it to tint an outlined button -- e.g. a faint surface wash behind the outline -- without
        reaching for a ::part(base) rule. Like --lr-button-quiet-*, it is deliberately NOT swapped
        per "variant": an outlined button's fill is a surface decision, not a semantic tone. */
-    --lr-button-outlined-fill: transparent;
-    --lr-button-quiet-border: var(--lr-color-border);
-    --lr-button-quiet-text: var(--lr-color-text-quiet);
-    --lr-button-accent-fill: var(--lr-color-fill-loud);
-    --lr-button-accent-on-fill: var(--lr-color-on-loud);
+    --_lr-button-outlined-fill: transparent;
+    --_lr-button-quiet-border: var(--lr-color-border);
+    --_lr-button-quiet-text: var(--lr-color-text-quiet);
+    --_lr-button-accent-fill: var(--lr-color-fill-loud);
+    --_lr-button-accent-on-fill: var(--lr-color-on-loud);
     /* Hover and press feedback, as a colour MIX rather than the filter: brightness() multiplier
        this carried before 8.0.0. A filter multiplies every channel, so it lightened a dark button
        and darkened a light one only by luck, did nothing whatsoever to a pure white or pure black
@@ -65,31 +65,34 @@ export const styles = css`
        var(--lr-color-surface), i.e. the page background itself, so hovering a quiet button on a
        default page changed nothing at all. A consumer who tints --lr-button-outlined-fill should
        point this at the same colour so the pair keeps moving together. */
-    --lr-button-hover-base: var(--lr-color-surface);
-    --lr-button-hover-background: color-mix(
+    --_lr-button-hover-base: var(--lr-color-surface);
+    --_lr-button-hover-background: color-mix(
       in oklab,
-      var(--lr-button-hover-base),
+      var(--lr-button-hover-base, var(--_lr-button-hover-base)),
       var(--lr-color-mix-partner) var(--lr-color-mix-hover)
     );
-    --lr-button-active-background: color-mix(
+    --_lr-button-active-background: color-mix(
       in oklab,
-      var(--lr-button-hover-base),
+      var(--lr-button-hover-base, var(--_lr-button-hover-base)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
   /* Each painted tier names its own fill as the mix base, so retuning --lr-button-fill or
      --lr-button-accent-fill retunes that tier's hover and press with it. */
-  :host([appearance='filled']),
-  :host([appearance='filled-outlined']) {
-    --lr-button-hover-base: var(--lr-button-fill);
+  :host([appearance="filled"]),
+  :host([appearance="filled-outlined"]) {
+    --_lr-button-hover-base: var(--lr-button-fill, var(--_lr-button-fill));
   }
-  :host([appearance='accent']) {
-    --lr-button-hover-base: var(--lr-button-accent-fill);
+  :host([appearance="accent"]) {
+    --_lr-button-hover-base: var(
+      --lr-button-accent-fill,
+      var(--_lr-button-accent-fill)
+    );
   }
   /* Shoelace's boolean outline surface is an additive alias. It never rewrites appearance, so
      removing it restores the exact Lyra treatment the author selected. */
   :host([outline]) {
-    --lr-button-hover-base: var(--lr-color-surface);
+    --_lr-button-hover-base: var(--lr-color-surface);
   }
   /* The one place a variant still needs naming. The four chromatic variants use their loud fill as
      the chrome-less foreground -- brand text on the page surface IS the brand colour. Neutral's
@@ -98,24 +101,25 @@ export const styles = css`
      appearance="plain" and appearance="quiet". Neutral keeps the body text colour instead. The
      :not([variant]) arm covers a host whose reflected attribute was removed by hand. */
   :host(:not([variant])),
-  :host([variant='neutral']) {
-    --lr-button-accent: var(--lr-color-text);
+  :host([variant="neutral"]) {
+    --_lr-button-accent: var(--lr-color-text);
   }
-  /* Fully rounded ends. Re-assigning the radius knob rather than declaring border-radius on
-     [part~='base'] keeps one corner-radius declaration in the sheet, and leaves
+  /* Fully rounded ends. Changing the private radius default rather than declaring border-radius
+     on [part~='base'] keeps one corner-radius declaration in the sheet, lets an inherited or
+     direct public radius win, and leaves
      appearance="link"'s own literal "border-radius: 0" winning (a pill inline link would be a
      button-shaped box, which is exactly what that appearance exists to avoid). */
   :host([pill]) {
-    --lr-button-radius: var(--lr-radius-pill);
+    --_lr-button-radius: var(--lr-radius-pill);
   }
   :host([circle]) {
-    --lr-button-radius: var(--lr-radius-pill);
+    --_lr-button-radius: var(--lr-radius-pill);
   }
-  [part~='base'] {
+  [part~="base"] {
     display: inline-flex;
     position: relative;
     box-sizing: border-box;
-    inline-size: var(--lr-button-width);
+    inline-size: var(--lr-button-width, var(--_lr-button-width));
     min-inline-size: 0;
     max-inline-size: 100%;
     /* --lr-button-height is deliberately left UNDECLARED on :host, so both var()s below take their
@@ -125,61 +129,80 @@ export const styles = css`
        "auto" on :host would break exactly this: a declared "auto" is a *defined* value, so the
        fallback arm would never fire and every tier's floor would become dead code (lr-select
        documents its own instance of that trap in select.styles.ts). */
-    min-block-size: var(--lr-button-height, var(--lr-button-min-height));
+    min-block-size: var(
+      --lr-button-height,
+      var(--lr-button-min-height, var(--_lr-button-min-height))
+    );
     block-size: var(--lr-button-height, auto);
     align-items: center;
     justify-content: center;
-    gap: var(--lr-button-gap);
-    padding-inline: var(--lr-button-padding-inline);
-    padding-block: var(--lr-button-padding-block);
-    border-radius: var(--lr-button-radius);
-    border: var(--lr-border-width-thin) solid var(--lr-button-border);
+    gap: var(--lr-button-gap, var(--_lr-button-gap));
+    padding-inline: var(
+      --lr-button-padding-inline,
+      var(--_lr-button-padding-inline)
+    );
+    padding-block: var(
+      --lr-button-padding-block,
+      var(--_lr-button-padding-block)
+    );
+    border-radius: var(--lr-button-radius, var(--_lr-button-radius));
+    border: var(--lr-border-width-thin) solid
+      var(--lr-button-border, var(--_lr-button-border));
     font: inherit;
     font-weight: var(--lr-font-weight-semibold);
     /* After the "font" shorthand, which would otherwise reset font-size back to the inherited one. */
-    font-size: var(--lr-button-font-size);
+    font-size: var(--lr-button-font-size, var(--_lr-button-font-size));
     cursor: pointer;
     /* Undeclared by default (byte-identical to today's absent box-shadow); set it to add a
        drop shadow (e.g. an elevated/floating action button) without a ::part(base) rule. */
     box-shadow: var(--lr-button-shadow, none);
   }
-  :host([appearance='filled']) [part~='base'] {
-    background: var(--lr-button-fill);
-    color: var(--lr-button-on-fill);
+  :host([appearance="filled"]) [part~="base"] {
+    background: var(--lr-button-fill, var(--_lr-button-fill));
+    color: var(--lr-button-on-fill, var(--_lr-button-on-fill));
   }
-  :host([appearance='accent']) [part~='base'] {
-    background: var(--lr-button-accent-fill);
-    color: var(--lr-button-accent-on-fill);
-    border-color: var(--lr-button-accent-fill);
+  :host([appearance="accent"]) [part~="base"] {
+    background: var(--lr-button-accent-fill, var(--_lr-button-accent-fill));
+    color: var(--lr-button-accent-on-fill, var(--_lr-button-accent-on-fill));
+    border-color: var(--lr-button-accent-fill, var(--_lr-button-accent-fill));
   }
-  :host([appearance='outlined']) [part~='base'] {
-    background: var(--lr-button-outlined-fill);
-    color: var(--lr-button-accent);
-    border-color: var(--lr-button-outlined-border);
+  :host([appearance="outlined"]) [part~="base"] {
+    background: var(--lr-button-outlined-fill, var(--_lr-button-outlined-fill));
+    color: var(--lr-button-accent, var(--_lr-button-accent));
+    border-color: var(
+      --lr-button-outlined-border,
+      var(--_lr-button-outlined-border)
+    );
   }
-  :host([outline]) [part~='base'] {
-    background: var(--lr-button-outlined-fill);
-    color: var(--lr-button-accent);
-    border-color: var(--lr-button-outlined-border);
+  :host([outline]) [part~="base"] {
+    background: var(--lr-button-outlined-fill, var(--_lr-button-outlined-fill));
+    color: var(--lr-button-accent, var(--_lr-button-accent));
+    border-color: var(
+      --lr-button-outlined-border,
+      var(--_lr-button-outlined-border)
+    );
   }
   /* The filled fill and foreground, but carrying the outlined tier's own border color instead of
      the variant-tinted --lr-button-border -- a filled button whose edge still reads against a
      same-toned surface. Both halves stay on their existing knobs, so retuning either tier retunes
      this one with it. */
-  :host([appearance='filled-outlined']) [part~='base'] {
-    background: var(--lr-button-fill);
-    color: var(--lr-button-on-fill);
-    border-color: var(--lr-button-outlined-border);
+  :host([appearance="filled-outlined"]) [part~="base"] {
+    background: var(--lr-button-fill, var(--_lr-button-fill));
+    color: var(--lr-button-on-fill, var(--_lr-button-on-fill));
+    border-color: var(
+      --lr-button-outlined-border,
+      var(--_lr-button-outlined-border)
+    );
   }
-  :host([appearance='plain']) [part~='base'] {
+  :host([appearance="plain"]) [part~="base"] {
     background: transparent;
-    color: var(--lr-button-accent);
+    color: var(--lr-button-accent, var(--_lr-button-accent));
     border-color: transparent;
   }
-  :host([appearance='quiet']) [part~='base'] {
+  :host([appearance="quiet"]) [part~="base"] {
     background: transparent;
-    color: var(--lr-button-quiet-text);
-    border-color: var(--lr-button-quiet-border);
+    color: var(--lr-button-quiet-text, var(--_lr-button-quiet-text));
+    border-color: var(--lr-button-quiet-border, var(--_lr-button-quiet-border));
   }
   /* Two selectors for one state, because the two render paths carry it differently. The native
      <button> path matches :disabled (from its own disabled attribute OR a fieldset cascade). The
@@ -189,38 +212,42 @@ export const styles = css`
      DOES carry is what keeps the two modes looking the same; without it a disabled link rendered
      fully opaque with a pointer cursor, i.e. exactly like a working link that silently does
      nothing. Every :not(:disabled) below excludes the same attribute for the same reason. */
-  [part~='base']:disabled,
-  [part~='base'][aria-disabled='true'] {
+  [part~="base"]:disabled,
+  [part~="base"][aria-disabled="true"] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part~='base']:not(:disabled, [aria-disabled='true']) {
-    transition:
-      background-color var(--lr-transition-fast),
-      color var(--lr-transition-fast),
-      transform var(--lr-transition-fast);
+  [part~="base"]:not(:disabled, [aria-disabled="true"]) {
+    transition: background-color var(--lr-transition-fast),
+      color var(--lr-transition-fast), transform var(--lr-transition-fast);
   }
   /* One hover and one press rule for every appearance -- what moves per tier is the mix BASE
      declared above, not the rule. Both out-specify each :host([appearance='…']) [part~='base']
      block, so no tier silently loses its pointer feedback. */
-  [part~='base']:not(:disabled, [aria-disabled='true']):hover {
-    background: var(--lr-button-hover-background);
+  [part~="base"]:not(:disabled, [aria-disabled="true"]):hover {
+    background: var(
+      --lr-button-hover-background,
+      var(--_lr-button-hover-background)
+    );
   }
-  [part~='base']:not(:disabled, [aria-disabled='true']):active {
-    background: var(--lr-button-active-background);
+  [part~="base"]:not(:disabled, [aria-disabled="true"]):active {
+    background: var(
+      --lr-button-active-background,
+      var(--_lr-button-active-background)
+    );
     transform: scale(var(--lr-button-active-scale, 0.9875));
   }
   @media (prefers-reduced-motion: reduce) {
-    [part~='base']:not(:disabled, [aria-disabled='true']):active {
+    [part~="base"]:not(:disabled, [aria-disabled="true"]):active {
       transform: none;
     }
   }
-  [part~='base']:focus-visible {
+  [part~="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part~='start'],
-  [part~='end'] {
+  [part~="start"],
+  [part~="end"] {
     display: inline-flex;
     flex: 0 1 40%;
     min-inline-size: 0;
@@ -230,7 +257,7 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  [part='label'] {
+  [part="label"] {
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow: hidden;
@@ -242,31 +269,37 @@ export const styles = css`
      This higher-specificity selector wins over the display: inline-flex above so the empty
      wrapper collapses and stops contributing a dead --lr-button-gap of inline space -- mirrors
      input.styles.ts's identical [part='start'][hidden]/[part='end'][hidden] rule. */
-  [part~='start'][hidden],
-  [part~='end'][hidden] {
+  [part~="start"][hidden],
+  [part~="end"][hidden] {
     display: none;
   }
   /* A declared circle and an automatically detected icon-only label both use a square control.
      circle additionally takes the pill radius above; an icon-only WA button keeps its selected
      appearance's ordinary radius. */
-  :host([circle]) [part~='base'],
-  [part~='base'][data-icon-button] {
-    inline-size: var(--lr-button-height, var(--lr-button-min-height));
+  :host([circle]) [part~="base"],
+  [part~="base"][data-icon-button] {
+    inline-size: var(
+      --lr-button-height,
+      var(--lr-button-min-height, var(--_lr-button-min-height))
+    );
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     aspect-ratio: 1;
-    padding-inline: var(--lr-button-padding-block);
+    padding-inline: var(
+      --lr-button-padding-block,
+      var(--_lr-button-padding-block)
+    );
   }
   /* Decorative dropdown chevron. The shared chevronIcon() points right, so the glyph -- not the
      wrapping part -- is rotated to point down, matching lr-select's expand-icon; a down caret is
      direction-neutral, so nothing here mirrors under RTL. */
-  [part='caret'] {
+  [part="caret"] {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
-    font-size: var(--lr-button-caret-size);
+    font-size: var(--lr-button-caret-size, var(--_lr-button-caret-size));
   }
-  [part='caret'] svg {
+  [part="caret"] svg {
     transform: rotate(90deg);
   }
   /* Padding and font-size per tier come straight from the ladder (see the :host block above), so
@@ -275,23 +308,32 @@ export const styles = css`
      deleting them would leave a documented custom property that silently does nothing, which is
      worse than removing it outright. Both spellings of each aliased tier are matched, exactly as
      the ladder does, so size="small" can never take the s tier's padding with the m tier's floor.
-     The "m"/"medium" tier needs no rule -- :host already declares it. */
-  :host([size='2xs']) {
-    --lr-button-min-height: var(--lr-button-size-2xs);
+     The "m"/"medium" tier needs no rule -- :host already carries that private default. */
+  :host([size="2xs"]) {
+    --_lr-button-min-height: var(
+      --lr-button-size-2xs,
+      var(--_lr-button-size-2xs)
+    );
   }
-  :host([size='xs']) {
-    --lr-button-min-height: var(--lr-button-size-xs);
+  :host([size="xs"]) {
+    --_lr-button-min-height: var(
+      --lr-button-size-xs,
+      var(--_lr-button-size-xs)
+    );
   }
-  :host([size='s']),
-  :host([size='small']) {
-    --lr-button-min-height: var(--lr-button-size-s);
+  :host([size="s"]),
+  :host([size="small"]) {
+    --_lr-button-min-height: var(--lr-button-size-s, var(--_lr-button-size-s));
   }
-  :host([size='l']),
-  :host([size='large']) {
-    --lr-button-min-height: var(--lr-button-size-l);
+  :host([size="l"]),
+  :host([size="large"]) {
+    --_lr-button-min-height: var(--lr-button-size-l, var(--_lr-button-size-l));
   }
-  :host([size='xl']) {
-    --lr-button-min-height: var(--lr-button-size-xl);
+  :host([size="xl"]) {
+    --_lr-button-min-height: var(
+      --lr-button-size-xl,
+      var(--_lr-button-size-xl)
+    );
   }
   /* A true inline-link appearance: zero chrome (no padding, border, radius, or min-height floor),
      underlined, colored from the same accent token "plain" uses, and inheriting the ambient font
@@ -300,7 +342,7 @@ export const styles = css`
      --lr-button-font-size knobs, so it wins over any tier's (and any consumer's) geometry, and it
      zeroes both min-block-size and block-size so a pinned --lr-button-height cannot give an inline
      link a button-shaped box either. */
-  :host([appearance='link']) [part~='base'] {
+  :host([appearance="link"]) [part~="base"] {
     inline-size: auto;
     padding: 0;
     border: 0;
@@ -308,7 +350,7 @@ export const styles = css`
     block-size: auto;
     border-radius: 0;
     background: transparent;
-    color: var(--lr-button-accent);
+    color: var(--lr-button-accent, var(--_lr-button-accent));
     font: inherit;
     text-decoration: underline;
     text-underline-offset: var(--lr-size-0-15rem);
@@ -317,26 +359,37 @@ export const styles = css`
      padding, so the shared hover/press background would paint a tight rectangle around bare
      inline text in the middle of a paragraph -- exactly the button-shaped box this appearance
      exists to avoid. It moves its text by the same two mix tokens instead. */
-  :host([appearance='link']) [part~='base']:not(:disabled, [aria-disabled='true']):hover {
+  :host([appearance="link"])
+    [part~="base"]:not(:disabled, [aria-disabled="true"]):hover {
     background: transparent;
-    color: color-mix(in oklab, var(--lr-button-accent), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    color: color-mix(
+      in oklab,
+      var(--lr-button-accent, var(--_lr-button-accent)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
   }
-  :host([appearance='link']) [part~='base']:not(:disabled, [aria-disabled='true']):active {
+  :host([appearance="link"])
+    [part~="base"]:not(:disabled, [aria-disabled="true"]):active {
     background: transparent;
-    color: color-mix(in oklab, var(--lr-button-accent), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: color-mix(
+      in oklab,
+      var(--lr-button-accent, var(--_lr-button-accent)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='spinner'] {
+  [part="spinner"] {
     display: inline-flex;
     position: absolute;
     inset: 0;
     align-items: center;
     justify-content: center;
-    animation: lr-button-spin var(--lr-button-spinner-duration, var(--lr-transition-ambient)) infinite;
+    animation: lr-button-spin
+      var(--lr-button-spinner-duration, var(--lr-transition-ambient)) infinite;
   }
-  :host([loading]) [part~='start'],
-  :host([loading]) [part='label'],
-  :host([loading]) [part~='end'],
-  :host([loading]) [part='caret'] {
+  :host([loading]) [part~="start"],
+  :host([loading]) [part="label"],
+  :host([loading]) [part~="end"],
+  :host([loading]) [part="caret"] {
     opacity: 0;
   }
   @keyframes lr-button-spin {
@@ -345,7 +398,7 @@ export const styles = css`
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='spinner'] {
+    [part="spinner"] {
       animation-duration: 0.001ms;
       animation-iteration-count: 1;
     }

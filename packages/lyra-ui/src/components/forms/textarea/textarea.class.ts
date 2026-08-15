@@ -1,35 +1,54 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
-import { styleMap } from 'lit/directives/style-map.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
-import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
-import { lengthViolations } from '../../../internal/length-constraints.js';
-import { styles } from './textarea.styles.js';
-import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { property, query, state } from "lit/decorators.js";
+import { styleMap } from "lit/directives/style-map.js";
+import {
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from "../../../internal/announcer.js";
+import { isAccessibilityVisible } from "../../../internal/accessibility-visibility.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import {
+  FormAssociated,
+  isBarredFromValidation,
+} from "../../../internal/form-associated.js";
+import { SET_ANCHORED_VALIDITY } from "../../../internal/anchored-validity.js";
+import { lengthViolations } from "../../../internal/length-constraints.js";
+import { styles } from "./textarea.styles.js";
+import { sizes } from "../../../internal/sizes.styles.js";
+import type { LyraAppearance, LyraSize } from "../../../internal/variants.js";
 import {
   autocorrectConverter,
   normalizeAutocorrect,
   spellcheckConverter,
-} from '../../../internal/converters.js';
-import { sanitizeCssResize } from '../../../internal/safe-css.js';
-import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
+} from "../../../internal/converters.js";
+import { sanitizeCssResize } from "../../../internal/safe-css.js";
+import { finiteCount, finiteNumber } from "../../../internal/numbers.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
+import { relayNativeEvent } from "../../../internal/native-event-relay.js";
+import { SlotPresenceController } from "../../../internal/slot-presence-controller.js";
+import {
+  currentValidityValidator,
+  type LyraFormValidator,
+} from "../form-validator.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_textareaCharacterCount, LYRA_DEFAULT_textareaCharactersRemaining, LYRA_DEFAULT_textareaLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_fieldRequired,
+  LYRA_DEFAULT_textareaCharacterCount,
+  LYRA_DEFAULT_textareaCharactersRemaining,
+  LYRA_DEFAULT_textareaLabel,
+  LYRA_DEFAULT_valueInvalid,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-export type TextareaResize = 'none' | 'vertical' | 'horizontal' | 'both' | 'auto';
-export type TextareaWrap = 'hard' | 'soft' | 'off';
-export type TextareaSelectionDirection = 'forward' | 'backward' | 'none';
+export type TextareaResize =
+  | "none"
+  | "vertical"
+  | "horizontal"
+  | "both"
+  | "auto";
+export type TextareaWrap = "hard" | "soft" | "off";
+export type TextareaSelectionDirection = "forward" | "backward" | "none";
 /** Scroll offsets read from, or written to, the internal native `<textarea>`. */
 export interface TextareaScrollPosition {
   top: number;
@@ -51,13 +70,13 @@ const COUNT_ANNOUNCE_DELAY_MS = 1000;
 export interface LyraTextareaEventMap {
   input: InputEvent;
   change: Event;
-  'lr-input': CustomEvent<{ value: string }>;
-  'lr-change': CustomEvent<{ value: string }>;
+  "lr-input": CustomEvent<{ value: string }>;
+  "lr-change": CustomEvent<{ value: string }>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
-  'lr-invalid': CustomEvent<null>;
+  "lr-blur": CustomEvent<null>;
+  "lr-focus": CustomEvent<null>;
+  "lr-invalid": CustomEvent<null>;
 }
 class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
 
@@ -122,11 +141,11 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * textarea, from the active `size` tier of the shared ladder.
  * @cssprop [--lr-textarea-radius=var(--lr-form-control-radius)] - Corner radius of the field, from
  * the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
- * `pill` swaps it to `--lr-radius-pill`.
- * @cssprop [--lr-textarea-fill=transparent] - Background of the field. Swapped per
+ * `pill` changes the private default to `--lr-radius-pill`; a public value still wins.
+ * @cssprop [--lr-textarea-fill=transparent] - Background of the field. Its private default follows
  * `appearance`; the documented default is `appearance="outlined"`'s value.
- * @cssprop [--lr-textarea-border-color=var(--lr-color-border)] - Border color of the field,
- * swapped per `appearance` in the same way as `--lr-textarea-fill`.
+ * @cssprop [--lr-textarea-border-color=var(--lr-color-border)] - Border color of the field. Its
+ * private default follows `appearance` in the same way as `--lr-textarea-fill`.
  * @cssprop [--lr-textarea-hover-border-color=var(--lr-color-brand)] - Field border color while the
  * native textarea is hovered.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
@@ -143,19 +162,29 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
 export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-    textareaCharacterCount: LYRA_DEFAULT_textareaCharacterCount,
-    textareaCharactersRemaining: LYRA_DEFAULT_textareaCharactersRemaining,
-    textareaLabel: LYRA_DEFAULT_textareaLabel,
-    valueInvalid: LYRA_DEFAULT_valueInvalid,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      fieldRequired: LYRA_DEFAULT_fieldRequired,
+      textareaCharacterCount: LYRA_DEFAULT_textareaCharacterCount,
+      textareaCharactersRemaining: LYRA_DEFAULT_textareaCharactersRemaining,
+      textareaLabel: LYRA_DEFAULT_textareaLabel,
+      valueInvalid: LYRA_DEFAULT_valueInvalid,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraTextarea>[] {
-    return [currentValidityValidator('required', 'disabled', 'readonly', 'value', 'minlength', 'maxlength')];
+    return [
+      currentValidityValidator(
+        "required",
+        "disabled",
+        "readonly",
+        "value",
+        "minlength",
+        "maxlength"
+      ),
+    ];
   }
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
   // so the padding/font-size/radius knobs point at the active tier's value -- and so both spellings
@@ -172,66 +201,67 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    *  `'both'`), plus `'auto'`: a `ResizeObserver`-driven grow-to-content mode with no manual drag
    *  handle (mirrors `wa-textarea`'s `resize="auto"`). An invalid runtime value falls back to
    *  `'vertical'`. */
-  @property({ reflect: true }) resize: TextareaResize = 'vertical';
+  @property({ reflect: true }) resize: TextareaResize = "vertical";
   /** Visual size on the library's one control ladder, shared with `<lr-input>`/`<lr-select>`.
    *  Accepts both the canonical `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's
    *  `'small'`/`'medium'`/`'large'` spellings of `s`/`m`/`l`; the two render identically. Governs
    *  the field's padding and font size — a textarea's own height comes from `rows`/`resize`, not
    *  from the ladder's control-height floor. */
-  @property({ reflect: true }) size: LyraSize = 'm';
+  @property({ reflect: true }) size: LyraSize = "m";
   /** Visual treatment of the field, from the library's shared vocabulary and with the same
    *  meanings as `<lr-input>`'s `appearance`. Each value only swaps
    *  `--lr-textarea-fill`/`--lr-textarea-border-color`. */
-  @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
+  @property({ reflect: true }) appearance: LyraAppearance = "outlined";
   /** Shoelace boolean alias for the filled treatment. */
   @property({ type: Boolean, reflect: true }) filled = false;
   /** Fully rounded field corners, matching `<lr-input>`'s/`<lr-select>`'s own `pill` — Shoelace and
    *  Web Awesome both ship it on their textarea, so a mechanical tag rename must not drop it.
-   *  Re-assigns `--lr-textarea-radius` to `--lr-radius-pill` rather than declaring a radius on
-   *  `[part="textarea"]`, so a consumer's own `--lr-textarea-radius` stays the single corner-radius
-   *  knob. Most useful on a one-or-two-row field; a tall multi-line surface with fully rounded ends
-   *  wastes its first and last line's inline space, so this is opt-in rather than tied to `size`. */
+   *  Changes the private radius default to `--lr-radius-pill` rather than declaring a radius on
+   *  `[part="textarea"]`, so an inherited or direct `--lr-textarea-radius` remains authoritative.
+   *  Most useful on a one-or-two-row field; a tall multi-line surface with fully rounded ends wastes
+   *  its first and last line's inline space, so this is opt-in rather than tied to `size`. */
   @property({ type: Boolean, reflect: true }) pill = false;
   /** Renders a character count below the field. With `maxlength` set it counts down the remaining
    *  characters instead of up from zero. The visible count and internal shadow mirror are
    *  `aria-hidden`; after user input pauses, the localized count is appended once to Lyra's shared
    *  light-DOM polite announcement sink so it is not spoken over every keystroke. The sink stays
    *  silent while this host or a composed ancestor is excluded from the accessibility tree. */
-  @property({ attribute: 'with-count', type: Boolean, reflect: true }) withCount = false;
-  @property() placeholder = '';
+  @property({ attribute: "with-count", type: Boolean, reflect: true })
+  withCount = false;
+  @property() placeholder = "";
   /** Forwards native read-only behavior to the internal textarea. The value remains focusable,
    *  selectable, copyable, and form-submittable; constraint validation is suspended until the
    *  property is unset. */
   @property({ type: Boolean, reflect: true }) readonly = false;
-  @property() label = '';
-  @property() hint = '';
+  @property() label = "";
+  @property() hint = "";
   /** Shoelace alias for {@link hint}. `hint` wins when both are set. */
-  @property({ attribute: 'help-text' }) helpText = '';
+  @property({ attribute: "help-text" }) helpText = "";
   /** SSR slot-presence hints for declarative shadow DOM and hydration. */
-  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
-  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
-  @property({ attribute: 'error-text' }) errorText = '';
+  @property({ type: Boolean, attribute: "with-label" }) withLabel = false;
+  @property({ type: Boolean, attribute: "with-hint" }) withHint = false;
+  @property({ attribute: "error-text" }) errorText = "";
   /** Accessible name overriding the label/placeholder-derived default. Any non-`null` value takes
    *  precedence by presence—including `''`—matching `<lr-date-input>`'s `accessibleLabel`. */
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
   /** Forwarded to the native `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the
    *  native element's own default. */
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   /** Forwarded to the internal native textarea. */
   @property({ type: Boolean }) override autofocus = false;
   /** Forwarded to the internal native textarea. */
-  @property() override title = '';
+  @property() override title = "";
   /** Forwarded to the native `<textarea>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
-  @property() override autocapitalize = '';
+  @property() override autocapitalize = "";
   private autocorrectValue = true;
   /** Forwarded to the native `<textarea>`'s own `wrap`. */
-  @property() wrap: TextareaWrap = 'soft';
+  @property() wrap: TextareaWrap = "soft";
   /** Native editing-assistance attributes forwarded to the wrapped textarea. Empty strings omit
    *  the corresponding attribute and retain the browser default. */
-  @property() autocomplete = '';
-  @property({ attribute: 'inputmode' }) override inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  @property() autocomplete = "";
+  @property({ attribute: "inputmode" }) override inputMode = "";
+  @property({ attribute: "enterkeyhint" }) override enterKeyHint = "";
   /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
    * boolean. Writes accept Web Awesome's boolean IDL and Shoelace's string vocabulary:
    * `'off'`/`'false'` normalize to false and every other string normalizes to true. */
@@ -250,24 +280,24 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     return this.inputMode;
   }
   set inputmode(next: string) {
-    this.inputMode = next ?? '';
+    this.inputMode = next ?? "";
   }
   get enterkeyhint(): string {
     return this.enterKeyHint;
   }
   set enterkeyhint(next: string) {
-    this.enterKeyHint = next ?? '';
+    this.enterKeyHint = next ?? "";
   }
   /** Internal reactive adapter for Shoelace's public `default-value` attribute alias. The
    * supported JS property remains `defaultValue`; this accessor is not public API.
    * @internal
    * @default '' */
-  @property({ attribute: 'default-value' })
+  @property({ attribute: "default-value" })
   get defaultValueAlias(): string {
     return this.defaultValue;
   }
   set defaultValueAlias(next: string) {
-    this.defaultValue = next ?? '';
+    this.defaultValue = next ?? "";
   }
   /** Minimum text length, forwarded to the native `<textarea>`'s own `minlength` and reported as
    *  `tooShort` by `updateValidity()`. Defaults to `undefined` (no lower bound). Like native
@@ -289,10 +319,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
 
   @state() private touched = false;
   /** Empty until the user pauses typing, so the live region says nothing on first render. */
-  @state() private announcedCountText = '';
+  @state() private announcedCountText = "";
   private readonly slotPresence = new SlotPresenceController(this);
 
-  @query('textarea') private textareaEl?: HTMLTextAreaElement;
+  @query("textarea") private textareaEl?: HTMLTextAreaElement;
   private resizeObserver?: ResizeObserver;
   private lastObservedWidth?: number;
   private resizeRaf?: number;
@@ -303,7 +333,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
 
   constructor() {
     super();
-    this.addEventListener('invalid', () => {
+    this.addEventListener("invalid", () => {
       this.touched = true;
     });
   }
@@ -332,16 +362,17 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   get selectionDirection(): TextareaSelectionDirection | null {
-    return this.textareaEl?.selectionDirection as TextareaSelectionDirection | null;
+    return this.textareaEl
+      ?.selectionDirection as TextareaSelectionDirection | null;
   }
 
   set selectionDirection(value: TextareaSelectionDirection | null) {
-    if (this.textareaEl) this.textareaEl.selectionDirection = value ?? 'none';
+    if (this.textareaEl) this.textareaEl.selectionDirection = value ?? "none";
   }
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
   private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
+    return this.effectiveDisabled || this.matches(":disabled");
   }
 
   override click(): void {
@@ -363,9 +394,13 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   setSelectionRange(
     selectionStart: number,
     selectionEnd: number,
-    selectionDirection: 'forward' | 'backward' | 'none' = 'none',
+    selectionDirection: "forward" | "backward" | "none" = "none"
   ): void {
-    this.textareaEl?.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+    this.textareaEl?.setSelectionRange(
+      selectionStart,
+      selectionEnd,
+      selectionDirection
+    );
   }
 
   /**
@@ -377,12 +412,17 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    * it writes only the axes present and returns `undefined`. Returns `undefined` either way before
    * the internal textarea has rendered.
    */
-  scrollPosition(position?: { top?: number; left?: number }): { top: number; left: number } | undefined {
+  scrollPosition(position?: {
+    top?: number;
+    left?: number;
+  }): { top: number; left: number } | undefined {
     const ta = this.textareaEl;
     if (!ta) return undefined;
     if (position) {
-      if (position.top !== undefined) ta.scrollTop = finiteNumber(position.top, ta.scrollTop);
-      if (position.left !== undefined) ta.scrollLeft = finiteNumber(position.left, ta.scrollLeft);
+      if (position.top !== undefined)
+        ta.scrollTop = finiteNumber(position.top, ta.scrollTop);
+      if (position.left !== undefined)
+        ta.scrollLeft = finiteNumber(position.left, ta.scrollLeft);
       return undefined;
     }
     return { top: ta.scrollTop, left: ta.scrollLeft };
@@ -394,7 +434,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     replacement: string,
     start?: number,
     end?: number,
-    selectMode: 'select' | 'start' | 'end' | 'preserve' = 'preserve',
+    selectMode: "select" | "start" | "end" | "preserve" = "preserve"
   ): void {
     const ta = this.textareaEl;
     if (!ta) return;
@@ -411,7 +451,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     super.connectedCallback();
     // The debounce ensures text arrives later, but the live region itself still has to be mounted
     // before that first message and in the textarea's current owner document.
-    this.countAnnouncementSink ??= acquireAnnouncementSink('polite', {
+    this.countAnnouncementSink ??= acquireAnnouncementSink("polite", {
       document: this.ownerDocument,
       source: this,
     });
@@ -420,7 +460,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     // teardown below -- Lit's connectedCallback doesn't schedule a re-render on its own, so
     // without this, auto-grow would only come back once some unrelated reactive property
     // happened to change, and a pure container-width resize landing before that would be missed.
-    if (this.resize === 'auto' && this.hasUpdated) {
+    if (this.resize === "auto" && this.hasUpdated) {
       this.armResizeObserver();
       this.fitToContent();
     }
@@ -429,7 +469,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   override disconnectedCallback(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
-    if (this.resizeRaf !== undefined) this.resizeRafOwner?.cancelAnimationFrame(this.resizeRaf);
+    if (this.resizeRaf !== undefined)
+      this.resizeRafOwner?.cancelAnimationFrame(this.resizeRaf);
     this.resizeRaf = undefined;
     this.resizeRafOwner = undefined;
     if (this.countAnnounceTimer !== undefined) {
@@ -447,8 +488,11 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    * unparseable — an attribute goes through `Number()`, so `maxlength="oops"` reaches this
    * property as `NaN`, and subtracting from that would render a literal `NaN` in the count.
    */
-  private effectiveLengthLimit(declared: number | undefined): number | undefined {
-    if (declared === undefined || !Number.isFinite(declared) || declared < 0) return undefined;
+  private effectiveLengthLimit(
+    declared: number | undefined
+  ): number | undefined {
+    if (declared === undefined || !Number.isFinite(declared) || declared < 0)
+      return undefined;
     return finiteCount(Math.trunc(declared), 0);
   }
 
@@ -471,13 +515,13 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     const max = this.countMaxlength();
     if (max !== undefined) {
       const remaining = Math.max(0, max - this.value.length);
-      return this.localize('textareaCharactersRemaining', undefined, {
+      return this.localize("textareaCharactersRemaining", undefined, {
         count: format.format(remaining),
         pluralCount: remaining,
       });
     }
     const length = this.value.length;
-    return this.localize('textareaCharacterCount', undefined, {
+    return this.localize("textareaCharacterCount", undefined, {
       count: format.format(length),
       pluralCount: length,
     });
@@ -496,7 +540,12 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.countAnnounceTimer = view.setTimeout(() => {
       this.countAnnounceTimer = undefined;
       this.countAnnounceTimerOwner = undefined;
-      if (!this.isConnected || this.ownerDocument.defaultView !== view || !this.withCount) return;
+      if (
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== view ||
+        !this.withCount
+      )
+        return;
       if (!isAccessibilityVisible(this)) return;
       const text = this.countText();
       this.announcedCountText = text;
@@ -530,15 +579,22 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       this[SET_ANCHORED_VALIDITY]({});
       return;
     }
-    if (this.required && this.value === '') {
-      this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
+    if (this.required && this.value === "") {
+      this[SET_ANCHORED_VALIDITY](
+        { valueMissing: true },
+        this.localize("fieldRequired")
+      );
       return;
     }
     const native = this.textareaEl;
     if (native && native.value !== this.value) native.value = this.value;
     const effectiveMinlength = this.effectiveLengthLimit(this.minlength);
     const effectiveMaxlength = this.effectiveLengthLimit(this.maxlength);
-    const own = lengthViolations(this.value, effectiveMinlength, effectiveMaxlength);
+    const own = lengthViolations(
+      this.value,
+      effectiveMinlength,
+      effectiveMaxlength
+    );
     const tooShort = Boolean(native?.validity.tooShort) || own.tooShort;
     const tooLong = Boolean(native?.validity.tooLong) || own.tooLong;
     if (!tooShort && !tooLong) {
@@ -550,39 +606,45 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       // Empty exactly when the native textarea itself sees nothing wrong, i.e. when only the
       // dirty-value supplement above fired — the browser has no message for a value it considers
       // valid, so fall back to the localized generic one.
-      native?.validationMessage || this.localize('valueInvalid'),
+      native?.validationMessage || this.localize("valueInvalid")
     );
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('value')) {
-      if (this.value === '') this.internals.states.add('blank');
-      else this.internals.states.delete('blank');
+    if (changed.has("value")) {
+      if (this.value === "") this.internals.states.add("blank");
+      else this.internals.states.delete("blank");
     }
     // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
     // reaches the native textarea only on this render, so validity has to be recomputed after it.
-    if (changed.has('minlength') || changed.has('maxlength') || changed.has('readonly')) {
+    if (
+      changed.has("minlength") ||
+      changed.has("maxlength") ||
+      changed.has("readonly")
+    ) {
       this.updateValidity();
     }
-    if (changed.has('resize')) {
-      if (this.resize === 'auto') {
+    if (changed.has("resize")) {
+      if (this.resize === "auto") {
         this.armResizeObserver();
-      } else if (changed.get('resize') === 'auto') {
+      } else if (changed.get("resize") === "auto") {
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
-        if (this.resizeRaf !== undefined) this.resizeRafOwner?.cancelAnimationFrame(this.resizeRaf);
+        if (this.resizeRaf !== undefined)
+          this.resizeRafOwner?.cancelAnimationFrame(this.resizeRaf);
         this.resizeRaf = undefined;
         this.resizeRafOwner = undefined;
         if (this.textareaEl) {
-          this.textareaEl.style.blockSize = '';
-          this.textareaEl.style.overflowY = '';
+          this.textareaEl.style.blockSize = "";
+          this.textareaEl.style.overflowY = "";
         }
       }
     }
-    if (this.resize === 'auto') {
+    if (this.resize === "auto") {
       this.armResizeObserver();
-      if (changed.has('value') || changed.has('rows') || changed.has('resize')) this.fitToContent();
+      if (changed.has("value") || changed.has("rows") || changed.has("resize"))
+        this.fitToContent();
     }
   }
 
@@ -607,17 +669,20 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       // armTextareaResizeObserver() guard.
       if (
         width === undefined ||
-        (this.lastObservedWidth !== undefined && Math.abs(width - this.lastObservedWidth) < 0.5)
+        (this.lastObservedWidth !== undefined &&
+          Math.abs(width - this.lastObservedWidth) < 0.5)
       ) {
         return;
       }
       this.lastObservedWidth = width;
-      if (this.resizeRaf !== undefined) this.resizeRafOwner?.cancelAnimationFrame(this.resizeRaf);
+      if (this.resizeRaf !== undefined)
+        this.resizeRafOwner?.cancelAnimationFrame(this.resizeRaf);
       this.resizeRafOwner = view;
       this.resizeRaf = view.requestAnimationFrame(() => {
         this.resizeRaf = undefined;
         this.resizeRafOwner = undefined;
-        if (!this.isConnected || this.ownerDocument.defaultView !== view) return;
+        if (!this.isConnected || this.ownerDocument.defaultView !== view)
+          return;
         this.fitToContent();
       });
     });
@@ -626,19 +691,23 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
 
   private fitToContent(): void {
     const ta = this.textareaEl;
-    if (!ta || this.resize !== 'auto') return;
+    if (!ta || this.resize !== "auto") return;
     // Collapse first so a shrinking edit (e.g. deleting a wrapped line) can shrink the box back
     // down too, not just grow it -- scrollHeight never reports smaller than the box's current
     // height otherwise.
-    ta.style.blockSize = 'auto';
+    ta.style.blockSize = "auto";
     const computed = ta.ownerDocument.defaultView?.getComputedStyle(ta);
     if (!computed) return;
-    const borderBlock = parseFloat(computed.borderBlockStartWidth) + parseFloat(computed.borderBlockEndWidth);
+    const borderBlock =
+      parseFloat(computed.borderBlockStartWidth) +
+      parseFloat(computed.borderBlockEndWidth);
     const parsedMax = parseFloat(computed.maxBlockSize);
-    const maxBlockSize = Number.isFinite(parsedMax) ? parsedMax : Number.POSITIVE_INFINITY;
+    const maxBlockSize = Number.isFinite(parsedMax)
+      ? parsedMax
+      : Number.POSITIVE_INFINITY;
     const contentBlockSize = ta.scrollHeight + borderBlock;
     ta.style.blockSize = `${Math.min(contentBlockSize, maxBlockSize)}px`;
-    ta.style.overflowY = contentBlockSize > maxBlockSize ? 'auto' : 'hidden';
+    ta.style.overflowY = contentBlockSize > maxBlockSize ? "auto" : "hidden";
   }
 
   private onInput = (event: InputEvent): void => {
@@ -648,10 +717,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     }
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
-    if (this.resize === 'auto') this.fitToContent();
+    if (this.resize === "auto") this.fitToContent();
     this.scheduleCountAnnouncement();
     relayNativeEvent(this, event);
-    this.emit('lr-input', { value: this.value });
+    this.emit("lr-input", { value: this.value });
   };
 
   private onChange = (event: Event): void => {
@@ -662,7 +731,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
     relayNativeEvent(this, event);
-    this.emit('lr-change', { value: this.value });
+    this.emit("lr-change", { value: this.value });
   };
 
   private onFocus = (event: FocusEvent): void => {
@@ -671,7 +740,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
+    this.emit("lr-focus");
   };
 
   private onBlur = (event: FocusEvent): void => {
@@ -686,25 +755,32 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     // validation regardless.
     if (!this.liveDisabled) this.touched = true;
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
+    this.emit("lr-blur");
   };
 
   override render(): TemplateResult {
     const hasHint =
-      this.slotPresence.has('hint') ||
-      this.slotPresence.has('help-text') ||
+      this.slotPresence.has("hint") ||
+      this.slotPresence.has("help-text") ||
       this.hint.length > 0 ||
       this.helpText.length > 0 ||
       this.withHint;
-    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
-    const hasLabel = this.slotPresence.has('label') || this.label.length > 0 || this.withLabel;
-    const describedBy = [hasError ? 'textarea-error' : '', hasHint ? 'textarea-hint' : '']
+    const hasError =
+      this.slotPresence.has("error") || this.errorText.length > 0;
+    const hasLabel =
+      this.slotPresence.has("label") || this.label.length > 0 || this.withLabel;
+    const describedBy = [
+      hasError ? "textarea-error" : "",
+      hasHint ? "textarea-hint" : "",
+    ]
       .filter(Boolean)
-      .join(' ');
+      .join(" ");
     // resize="auto" grows via JS (fitToContent()); the native CSS resize property stays 'none' so
     // there's no manual drag handle fighting the automatic sizing, matching wa-textarea.
     const cssResize =
-      this.resize === 'auto' ? 'none' : sanitizeCssResize(this.resize, 'vertical');
+      this.resize === "auto"
+        ? "none"
+        : sanitizeCssResize(this.resize, "vertical");
     return html`
       <div part="form-control">
         <label part="form-control-label" for="textarea" ?hidden=${!hasLabel}>
@@ -718,17 +794,24 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
             placeholder=${this.placeholder}
             title=${this.title || nothing}
             style=${styleMap({ resize: cssResize })}
-            ?data-auto-resize=${this.resize === 'auto'}
+            ?data-auto-resize=${this.resize === "auto"}
             aria-label=${this.accessibleLabel !== null
               ? this.accessibleLabel
-              : (hasLabel ? nothing : this.placeholder || this.localize('textareaLabel'))}
+              : hasLabel
+              ? nothing
+              : this.placeholder || this.localize("textareaLabel")}
             aria-describedby=${describedBy || nothing}
-            aria-required=${this.required ? 'true' : 'false'}
-            aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
+            aria-required=${this.required ? "true" : "false"}
+            aria-invalid=${hasError ||
+            (this.touched && !this.internals.validity.valid)
+              ? "true"
+              : "false"}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
-              ? (this.autocorrect ? 'on' : 'off')
+            autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+              ? this.autocorrect
+                ? "on"
+                : "off"
               : nothing}
             autocomplete=${this.autocomplete || nothing}
             inputmode=${this.inputMode || nothing}
@@ -750,13 +833,22 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
         <div id="textarea-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error"></slot>
         </div>
-        <div id="textarea-hint" part="hint form-control-help-text" ?hidden=${!hasHint}>
-          ${this.hint || this.helpText}<slot name="hint"></slot><slot name="help-text"></slot>
+        <div
+          id="textarea-hint"
+          part="hint form-control-help-text"
+          ?hidden=${!hasHint}
+        >
+          ${this.hint || this.helpText}<slot name="hint"></slot
+          ><slot name="help-text"></slot>
         </div>
         <div part="footer" ?hidden=${!this.withCount}>
           ${this.withCount
-            ? html`<div part="count" aria-hidden="true">${this.countText()}</div>
-                <div class="count-announcement" aria-hidden="true">${this.announcedCountText}</div>`
+            ? html`<div part="count" aria-hidden="true">
+                  ${this.countText()}
+                </div>
+                <div class="count-announcement" aria-hidden="true">
+                  ${this.announcedCountText}
+                </div>`
             : nothing}
         </div>
       </div>
@@ -766,6 +858,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-textarea': LyraTextarea;
+    "lr-textarea": LyraTextarea;
   }
 }

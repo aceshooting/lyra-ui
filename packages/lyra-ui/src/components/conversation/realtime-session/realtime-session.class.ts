@@ -47,6 +47,9 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  * connect/disconnect action. Hiding the public capture surface does the same only when capture
  * owned focus; surviving or foreign focus is never moved.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-realtime-session
  * @slot controls - Additional provider-specific controls.
  * @event lr-connect - Connection was requested.
@@ -76,6 +79,8 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  * @since 7.0.0
  */
 export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["entries"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -124,7 +129,10 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   }
   @property({ type: Number }) level: number | null = null;
   @property({ attribute: false }) stream: MediaStream | null = null;
-  @property({ attribute: false }) entries: LyraTranscriptEntry[] = [];
+  /** Stable identity forwarded to the transcript feed. Changing it resets finalized-entry
+   *  announcement history so reused entry ids in a new session remain unambiguous. */
+  @property({ attribute: 'session-id' }) sessionId = '';
+  @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
   @property({ type: Boolean, reflect: true }) muted = false;
   /** Shows native push-to-talk capture. Hiding a focused capture transfers focus to the current
    *  connect/disconnect action; hiding it while another control owns focus leaves that focus alone. */
@@ -316,7 +324,11 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
         ${this.showCapture
           ? html`<lr-push-to-talk part="capture" .disabled=${!active || this.muted} level-events></lr-push-to-talk>`
           : nothing}
-        <lr-transcript-feed part="transcript" .entries=${this.entries}></lr-transcript-feed>
+        <lr-transcript-feed
+          part="transcript"
+          .sessionId=${this.sessionId}
+          .entries=${this.entries}
+        ></lr-transcript-feed>
       </section>
     `;
   }

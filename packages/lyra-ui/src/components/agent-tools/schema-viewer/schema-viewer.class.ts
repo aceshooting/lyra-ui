@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -15,21 +16,21 @@ import { LYRA_DEFAULT_schemaViewerCircular, LYRA_DEFAULT_schemaViewerEmpty, LYRA
 
 
 export interface JsonSchemaNode {
-  $ref?: string;
-  type?: string | string[];
-  title?: string;
-  description?: string;
-  properties?: Record<string, JsonSchemaNode>;
-  items?: JsonSchemaNode | JsonSchemaNode[];
-  required?: string[];
-  enum?: unknown[];
-  const?: unknown;
-  default?: unknown;
-  examples?: unknown[];
-  oneOf?: JsonSchemaNode[];
-  anyOf?: JsonSchemaNode[];
-  allOf?: JsonSchemaNode[];
-  [key: string]: unknown;
+  readonly $ref?: string;
+  readonly type?: string | readonly string[];
+  readonly title?: string;
+  readonly description?: string;
+  readonly properties?: Readonly<Record<string, JsonSchemaNode>>;
+  readonly items?: JsonSchemaNode | readonly JsonSchemaNode[];
+  readonly required?: readonly string[];
+  readonly enum?: readonly unknown[];
+  readonly const?: unknown;
+  readonly default?: unknown;
+  readonly examples?: readonly unknown[];
+  readonly oneOf?: readonly JsonSchemaNode[];
+  readonly anyOf?: readonly JsonSchemaNode[];
+  readonly allOf?: readonly JsonSchemaNode[];
+  readonly [key: string]: unknown;
 }
 export interface SchemaValidationIssue {
   path: string;
@@ -37,7 +38,7 @@ export interface SchemaValidationIssue {
   severity?: 'error' | 'warning' | 'info';
 }
 export interface LyraSchemaViewerEventMap {
-  'lr-schema-select': CustomEvent<{ path: string; schema: JsonSchemaNode }>;
+  'lr-schema-select': CustomEvent<LyraEventDetailSnapshot<{ path: string; schema: JsonSchemaNode }>>;
 }
 
 interface SchemaRenderBudget {
@@ -82,10 +83,20 @@ function constraintValue(value: unknown): string {
   return visit(value, 0);
 }
 
+function isReadonlyArray<Value>(
+  value: Value | readonly Value[] | undefined,
+): value is readonly Value[] {
+  return Array.isArray(value);
+}
+
 /**
  * `<lr-schema-viewer>` — a recursive, selectable JSON Schema inspector with required-state,
  * constraints, composition branches, `$ref` display, validation issues, cycle protection, and a
  * configurable depth ceiling. It does not resolve remote references or validate values.
+ *
+ * Public schema records and issue collections take bounded, clone-owned readonly snapshots.
+ * Create and reassign a new record or array after changes; mutating the assigned value does not
+ * update the view.
  *
  * @customElement lr-schema-viewer
  * @event lr-schema-select - A schema node was activated. `detail: { path, schema }`.
@@ -116,6 +127,8 @@ function constraintValue(value: unknown): string {
  * @since 7.0.0
  */
 export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["schema", "issues"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -132,8 +145,9 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Clone-owned recursive schema snapshot. Reassign a new record after changing any branch. */
   @property({ attribute: false }) schema: JsonSchemaNode | null = null;
-  @property({ attribute: false }) issues: SchemaValidationIssue[] = [];
+  @property({ attribute: false }) issues: readonly SchemaValidationIssue[] = [];
   /** Controlled JSON Pointer selection. `null` means no selection; the empty
    *  string is the valid JSON Pointer for the schema root. */
   @property({ attribute: 'selected-path' }) selectedPath: string | null = null;
@@ -238,7 +252,9 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
       return html`<li part="node"><span part="description">${this.localize('schemaViewerCircular')}</span></li>`;
     }
     const nextAncestors = new Set(ancestors).add(schema);
-    const type = Array.isArray(schema.type) ? schema.type.join(' | ') : schema.type ?? (schema.properties ? 'object' : '');
+    const type = isReadonlyArray(schema.type)
+      ? schema.type.join(' | ')
+      : schema.type ?? (schema.properties ? 'object' : '');
     const constraints = this.constraints(schema);
     const issues = issuesByPath.get(path) ?? [];
     const children: Array<{ name: string; node: JsonSchemaNode; path: string; required: boolean }> = [];
@@ -275,7 +291,7 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
           })) break;
         }
       }
-      if (Array.isArray(schema.items)) {
+      if (isReadonlyArray(schema.items)) {
         for (let index = 0; index < schema.items.length; index++) {
           const node = schema.items[index];
           if (!node || !addChild({ name: `items[${index}]`, node, path: `${path}/items/${index}`, required: false })) break;

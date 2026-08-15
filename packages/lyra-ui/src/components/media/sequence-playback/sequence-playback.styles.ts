@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -9,14 +9,14 @@ export const styles = css`
        prior bare literal) so the rendered play/pause SVG icon (icons render
        at width/height: 1em, so this font-size directly controls its pixel
        size) tracks the button's own token instead of drifting from it. */
-    --lr-sequence-playback-icon-size: calc(var(--lr-icon-button-size) * 0.35);
+    --_lr-sequence-playback-icon-size: calc(var(--lr-icon-button-size) * 0.35);
   }
-  [part='base'] {
+  [part="base"] {
     display: flex;
     align-items: center;
     gap: var(--lr-space-s);
   }
-  [part='play-button'] {
+  [part="play-button"] {
     /* Already exactly the shared floor (2.5rem/40px) via inline-size/block-size for
        this circular button's own shape -- min-inline-size/min-block-size are added
        alongside (not swapped in) at the same value, so the floor is explicit and this
@@ -34,27 +34,37 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--lr-sequence-playback-icon-size);
-  }
-  [part='play-button']:hover {
-    border-color: var(--lr-color-brand);
-  }
-  [part='play-button']:active {
-    border-color: var(--lr-sequence-playback-play-button-active-border-color, var(--lr-color-brand));
-    background: var(
-      --lr-sequence-playback-play-button-active-bg,
-      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    font-size: var(
+      --lr-sequence-playback-icon-size,
+      var(--_lr-sequence-playback-icon-size)
     );
   }
-  [part='play-button']:disabled {
+  [part="play-button"]:hover {
+    border-color: var(--lr-color-brand);
+  }
+  [part="play-button"]:active {
+    border-color: var(
+      --lr-sequence-playback-play-button-active-border-color,
+      var(--lr-color-brand)
+    );
+    background: var(
+      --lr-sequence-playback-play-button-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-surface),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+  }
+  [part="play-button"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='play-button']:focus-visible {
+  [part="play-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='slider'] {
+  [part="slider"] {
     accent-color: var(--lr-color-brand);
     cursor: pointer;
   }
@@ -68,17 +78,25 @@ export const styles = css`
      the same visual by multiplying every channel of the whole subtree; it did nothing to a pure
      white or pure black accent, and it dimmed/lit the input's own focus ring along with the
      track.) */
-  :where([part='slider']):hover:where(:not(:disabled)) {
-    accent-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  :where([part="slider"]):hover:where(:not(:disabled)) {
+    accent-color: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
   }
-  :where([part='slider']):active:where(:not(:disabled)) {
-    accent-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  :where([part="slider"]):active:where(:not(:disabled)) {
+    accent-color: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='slider']:disabled {
+  [part="slider"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='slider']:focus-visible {
+  [part="slider"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

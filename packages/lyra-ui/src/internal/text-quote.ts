@@ -474,14 +474,8 @@ export function scopeFromItems(
 
 interface FoldedText {
   text: string;
-  expansions: CaseExpansion[];
-}
-
-interface CaseExpansion {
-  rawStart: number;
-  rawEnd: number;
-  foldedStart: number;
-  foldedEnd: number;
+  /** Packed `[rawStart, rawEnd, foldedStart, foldedEnd]` entries. */
+  expansions: Uint32Array;
 }
 
 function caseFold(value: string, locale?: string): string {
@@ -538,9 +532,29 @@ function* caseMappingSegments(value: string, locale?: string): Generator<CaseMap
  * as English `İ` and Lithuanian accent-sensitive `I` aligned with DOM offsets. */
 function foldText(value: string, locale?: string): FoldedText {
   const text = caseFold(value, locale);
-  if (text.length === value.length) return { text, expansions: [] };
+  if (text.length === value.length) return { text, expansions: new Uint32Array() };
 
-  const expansions: CaseExpansion[] = [];
+  let expansions = new Uint32Array(Math.min(64, Math.max(1, value.length)) * 4);
+  let expansionCount = 0;
+  const appendExpansion = (
+    rawStart: number,
+    rawEnd: number,
+    foldedStart: number,
+    foldedEnd: number,
+  ): void => {
+    if (expansionCount * 4 === expansions.length) {
+      const nextCapacity = Math.min(value.length, Math.max(1, (expansions.length >> 2) * 2));
+      const next = new Uint32Array(nextCapacity * 4);
+      next.set(expansions);
+      expansions = next;
+    }
+    const offset = expansionCount * 4;
+    expansions[offset] = rawStart;
+    expansions[offset + 1] = rawEnd;
+    expansions[offset + 2] = foldedStart;
+    expansions[offset + 3] = foldedEnd;
+    expansionCount++;
+  };
   let foldedStart = 0;
   for (const segment of caseMappingSegments(value, locale)) {
     // Length-changing special casing is grapheme-local. Contextual casing such as Greek final
@@ -550,25 +564,20 @@ function foldText(value: string, locale?: string): FoldedText {
       ? text.length
       : Math.min(text.length, foldedStart + isolatedLength);
     if (foldedEnd - foldedStart !== segment.rawEnd - segment.rawStart) {
-      expansions.push({
-        rawStart: segment.rawStart,
-        rawEnd: segment.rawEnd,
-        foldedStart,
-        foldedEnd,
-      });
+      appendExpansion(segment.rawStart, segment.rawEnd, foldedStart, foldedEnd);
     }
     foldedStart = foldedEnd;
   }
-  return { text, expansions };
+  return { text, expansions: expansions.slice(0, expansionCount * 4) };
 }
 
 function rawStartForFoldedOffset(folded: FoldedText, foldedOffset: number): number {
   let lo = 0;
-  let hi = folded.expansions.length - 1;
+  let hi = (folded.expansions.length >> 2) - 1;
   let found = -1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    if (folded.expansions[mid]!.foldedStart <= foldedOffset) {
+    if (folded.expansions[mid * 4 + 2]! <= foldedOffset) {
       found = mid;
       lo = mid + 1;
     } else {
@@ -576,18 +585,21 @@ function rawStartForFoldedOffset(folded: FoldedText, foldedOffset: number): numb
     }
   }
   if (found < 0) return foldedOffset;
-  const expansion = folded.expansions[found]!;
-  if (foldedOffset < expansion.foldedEnd) return expansion.rawStart;
-  return foldedOffset - (expansion.foldedEnd - expansion.rawEnd);
+  const offset = found * 4;
+  const rawStart = folded.expansions[offset]!;
+  const rawEnd = folded.expansions[offset + 1]!;
+  const foldedEnd = folded.expansions[offset + 3]!;
+  if (foldedOffset < foldedEnd) return rawStart;
+  return foldedOffset - (foldedEnd - rawEnd);
 }
 
 function rawEndForFoldedOffset(folded: FoldedText, foldedOffset: number): number {
   let lo = 0;
-  let hi = folded.expansions.length - 1;
+  let hi = (folded.expansions.length >> 2) - 1;
   let found = -1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    if (folded.expansions[mid]!.foldedStart < foldedOffset) {
+    if (folded.expansions[mid * 4 + 2]! < foldedOffset) {
       found = mid;
       lo = mid + 1;
     } else {
@@ -595,9 +607,11 @@ function rawEndForFoldedOffset(folded: FoldedText, foldedOffset: number): number
     }
   }
   if (found < 0) return foldedOffset;
-  const expansion = folded.expansions[found]!;
-  if (foldedOffset <= expansion.foldedEnd) return expansion.rawEnd;
-  return foldedOffset - (expansion.foldedEnd - expansion.rawEnd);
+  const offset = found * 4;
+  const rawEnd = folded.expansions[offset + 1]!;
+  const foldedEnd = folded.expansions[offset + 3]!;
+  if (foldedOffset <= foldedEnd) return rawEnd;
+  return foldedOffset - (foldedEnd - rawEnd);
 }
 
 export interface TextQuoteMatch {
@@ -687,11 +701,11 @@ function scanOccurrences(
 
 function foldedStartForRawOffset(folded: FoldedText, rawOffset: number): number {
   let lo = 0;
-  let hi = folded.expansions.length - 1;
+  let hi = (folded.expansions.length >> 2) - 1;
   let found = -1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    if (folded.expansions[mid]!.rawStart <= rawOffset) {
+    if (folded.expansions[mid * 4]! <= rawOffset) {
       found = mid;
       lo = mid + 1;
     } else {
@@ -699,18 +713,21 @@ function foldedStartForRawOffset(folded: FoldedText, rawOffset: number): number 
     }
   }
   if (found < 0) return rawOffset;
-  const expansion = folded.expansions[found]!;
-  if (rawOffset < expansion.rawEnd) return expansion.foldedStart;
-  return rawOffset + (expansion.foldedEnd - expansion.rawEnd);
+  const offset = found * 4;
+  const rawEnd = folded.expansions[offset + 1]!;
+  const foldedStart = folded.expansions[offset + 2]!;
+  const foldedEnd = folded.expansions[offset + 3]!;
+  if (rawOffset < rawEnd) return foldedStart;
+  return rawOffset + (foldedEnd - rawEnd);
 }
 
 function foldedEndForRawOffset(folded: FoldedText, rawOffset: number): number {
   let lo = 0;
-  let hi = folded.expansions.length - 1;
+  let hi = (folded.expansions.length >> 2) - 1;
   let found = -1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    if (folded.expansions[mid]!.rawStart < rawOffset) {
+    if (folded.expansions[mid * 4]! < rawOffset) {
       found = mid;
       lo = mid + 1;
     } else {
@@ -718,9 +735,11 @@ function foldedEndForRawOffset(folded: FoldedText, rawOffset: number): number {
     }
   }
   if (found < 0) return rawOffset;
-  const expansion = folded.expansions[found]!;
-  if (rawOffset <= expansion.rawEnd) return expansion.foldedEnd;
-  return rawOffset + (expansion.foldedEnd - expansion.rawEnd);
+  const offset = found * 4;
+  const rawEnd = folded.expansions[offset + 1]!;
+  const foldedEnd = folded.expansions[offset + 3]!;
+  if (rawOffset <= rawEnd) return foldedEnd;
+  return rawOffset + (foldedEnd - rawEnd);
 }
 
 function rawOffsetAt(segment: TextQuoteSegment, normalizedOffset: number): number {
@@ -1007,23 +1026,26 @@ export class TextQuoteIndex {
     }
     const first = candidates.at(0);
     if (!first || (!prefix && !suffix)) return first ?? null;
+    // Context is a disambiguator, not a best-effort hint. Returning an admitted prefix candidate
+    // when a resource ceiling omitted a later one can silently resolve to the wrong passage.
+    if (!candidates.matchCountExact) return null;
 
     const foldedScope = this.foldedFor(budget);
-    if (!foldedScope) return first;
+    if (!foldedScope) return null;
     const foldedPrefix = prefix ? caseFold(prefix, this.locale) : undefined;
     const foldedSuffix = suffix ? caseFold(suffix, this.locale) : undefined;
     let best = first;
     let bestScore = -1;
     for (const candidate of candidates) {
       const contextWork = (foldedPrefix?.length ?? 0) + (foldedSuffix?.length ?? 0);
-      if (!this.consumeWork(budget, contextWork)) break;
+      if (!this.consumeWork(budget, contextWork)) return null;
       let score = 0;
       const foldedStart = foldedStartForRawOffset(foldedScope, candidate.start);
       const foldedEnd = foldedEndForRawOffset(foldedScope, candidate.end);
       if (foldedPrefix) {
         let beforeEnd = foldedStart;
         while (beforeEnd > 0 && WHITESPACE_CHAR_RE.test(foldedScope.text[beforeEnd - 1]!)) {
-          if (!this.consumeWork(budget, 1)) return best;
+          if (!this.consumeWork(budget, 1)) return null;
           beforeEnd--;
         }
         if (foldedScope.text.endsWith(foldedPrefix, beforeEnd)) score++;
@@ -1031,7 +1053,7 @@ export class TextQuoteIndex {
       if (foldedSuffix) {
         let afterStart = foldedEnd;
         while (afterStart < foldedScope.text.length && WHITESPACE_CHAR_RE.test(foldedScope.text[afterStart]!)) {
-          if (!this.consumeWork(budget, 1)) return best;
+          if (!this.consumeWork(budget, 1)) return null;
           afterStart++;
         }
         if (foldedScope.text.startsWith(foldedSuffix, afterStart)) score++;
@@ -1207,6 +1229,36 @@ function boundedRangeText(range: Range, maxCodeUnits: number): string {
     node = next;
   }
   return text;
+}
+
+/** Returns normalized selection text without ever materializing the range's unbounded full
+ * `toString()` value. The public ceiling is the same one quote anchors and viewer queries accept. */
+export function boundedSelectionText(
+  range: Range,
+  maxCodeUnits = TEXT_QUOTE_LIMITS.maxQueryCodeUnits,
+): string {
+  const bounded = Number.isFinite(maxCodeUnits)
+    ? Math.min(TEXT_QUOTE_LIMITS.maxQueryCodeUnits, Math.max(0, Math.floor(maxCodeUnits)))
+    : TEXT_QUOTE_LIMITS.maxQueryCodeUnits;
+  return normalizeQuoteText(boundedRangeText(range, bounded));
+}
+
+export const TEXT_SELECTION_RECT_LIMIT = 1_000;
+
+/** Copies at most the hard rect ceiling instead of retaining an unbounded `DOMRectList`. */
+export function boundedSelectionRects(
+  range: Range,
+  maxRects = TEXT_SELECTION_RECT_LIMIT,
+): DOMRect[] {
+  const bounded = Number.isFinite(maxRects)
+    ? Math.min(TEXT_SELECTION_RECT_LIMIT, Math.max(0, Math.floor(maxRects)))
+    : TEXT_SELECTION_RECT_LIMIT;
+  const output: DOMRect[] = [];
+  for (const rect of range.getClientRects()) {
+    if (output.length >= bounded) break;
+    output.push(rect as DOMRect);
+  }
+  return output;
 }
 
 export function buildQuoteAnchor(range: Range, scope: TextQuoteScope): LyraAnchor {

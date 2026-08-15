@@ -2,7 +2,11 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { DocumentRef } from '../../../ai/types.js';
-import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
+import type {
+  HighlightActivateDetail,
+  LyraAnchor,
+  LyraHighlight,
+} from '../document-viewer/anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import type { ShikiLanguageInput } from '../../conversation/code-block/code-loader.js';
 import type { LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
@@ -18,7 +22,7 @@ import { styles } from './document-compare.styles.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -52,8 +56,8 @@ export interface LyraDocumentCompareEventMap {
   'lr-error': CustomEvent<null>;
   /** Detailed clipboard failure bubbled unchanged from the internal `<lr-diff-view>`. */
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
-  /** Bubbles unchanged from whichever pane's `<lr-document-preview>` it originated in, while `view="side-by-side"`. `detail: { id }`. Activating a highlight that shares its `id` with a highlight on the *other* version also scrolls that pane to the matching highlight -- see the class doc's "Synchronized anchors" section. */
-  'lr-highlight-activate': CustomEvent<{ id: string }>;
+  /** Bubbles unchanged from whichever pane's `<lr-document-preview>` it originated in, while `view="side-by-side"`. `detail: { highlightId }`. Activating a highlight that shares its `id` with a highlight on the *other* version also scrolls that pane to the matching highlight -- see the class doc's "Synchronized anchors" section. */
+  'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
   /** Bubbles unchanged from whichever pane's `<lr-document-preview>` it originated in. `detail: { src, filename }`. */
   'lr-download': CustomEvent<{ src: string; filename: string }>;
   /** Bubbles unchanged from whichever pane's `<lr-document-preview>` it originated in (a failed `text/*` fetch). `detail: { error }`. */
@@ -108,7 +112,8 @@ function versionSourceIdentity(version: DocumentCompareVersion | undefined): str
  * - **Highlight-anchor sync**: activating a region highlight in one pane (`lr-highlight-activate`)
  *   that shares its `id` with a highlight in the *other* version's `highlights` scrolls that pane
  *   to its own matching highlight via `<lr-document-preview>`'s own `scrollToAnchor()`. The
- *   `lr-highlight-activate` event itself still bubbles through unchanged (`detail: { id }`, no
+ *   `lr-highlight-activate` event itself still bubbles through unchanged (`detail: {
+ *   highlightId }`, no
  *   side discriminator) so an existing listener contract stays exactly what
  *   `<lr-document-preview>` already documents.
  * - A shared `anchor` property (same declarative shape as `<lr-document-viewer>`'s own `anchor`)
@@ -152,6 +157,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -316,14 +322,14 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   };
 
   /** Handles a pane's own `lr-highlight-activate` (not re-emitted -- the event bubbles through
-   *  unchanged, see the class doc). When the other version has a highlight sharing this `id`,
+   *  unchanged, see the class doc). When the other version has a highlight sharing this ID,
    *  scrolls that pane to it too. */
-  private onHighlightActivate(side: DocumentComparePaneSide, event: CustomEvent<{ id: string }>): void {
-    const { id } = event.detail;
+  private onHighlightActivate(side: DocumentComparePaneSide, event: CustomEvent<HighlightActivateDetail>): void {
+    const { highlightId } = event.detail;
     const otherVersion = side === 'old' ? this.newVersion : this.oldVersion;
-    if (!otherVersion?.highlights?.some((h) => h.id === id)) return;
+    if (!otherVersion?.highlights?.some((h) => h.id === highlightId)) return;
     const otherPreview = side === 'old' ? this.previewNewEl : this.previewOldEl;
-    void otherPreview?.scrollToAnchor(id);
+    void otherPreview?.scrollToAnchor(highlightId);
   }
 
   private versionLabel(version: DocumentCompareVersion | undefined, fallbackKey: 'documentCompareOldVersion' | 'documentCompareNewVersion'): string {
@@ -352,7 +358,8 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
         mime-type=${version.mimeType ?? ''}
         src=${version.uri ?? ''}
         .highlights=${version.highlights ?? []}
-        @lr-highlight-activate=${(e: CustomEvent<{ id: string }>) => this.onHighlightActivate(side, e)}
+        @lr-highlight-activate=${(e: CustomEvent<HighlightActivateDetail>) =>
+          this.onHighlightActivate(side, e)}
       ></lr-document-preview>
     `;
   }

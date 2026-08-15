@@ -1176,8 +1176,8 @@ describe('host-supplied highlights', () => {
 
     const activated = oneEvent(el, 'lr-highlight-activate');
     actions[1]!.click();
-    const event = await activated as CustomEvent<{ id: string }>;
-    expect(event.detail.id).to.equal('h2');
+    const event = await activated as CustomEvent<{ highlightId: string }>;
+    expect(event.detail.highlightId).to.equal('h2');
     expect(event.cancelable).to.be.false;
   });
 

@@ -26,7 +26,7 @@ property).
 - `plugins: LyraChartPlugin[] = []` — peer-neutral per-instance Chart.js plugin structures,
   combined without duplicates with Lyra's
   on-demand data-label plugin and any `config.plugins` entries
-- `labels: string[] = []` (attribute: false)
+- `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraChartSeries[] = []` (attribute: false) — `LyraChartSeries { readonly
   label: string; readonly data?: readonly (number|null)[]; readonly points?: readonly
   LyraChartPoint[]; readonly color?: string|readonly string[]; ... }`. The deprecated `Series` and
@@ -401,7 +401,7 @@ passthrough). Not a subclass of `LyraChart`.
 
 **Properties:**
 - `type: LyraLiteChartType = 'bar'` — `'bar' | 'line'`
-- `labels: string[] = []` (attribute: false)
+- `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraLiteChartSeries[] = []` (attribute: false) —
   `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
   readonly color?: string }`; the deprecated `LiteSeries` name remains an alias for migration.
@@ -493,6 +493,9 @@ passthrough). Not a subclass of `LyraChart`.
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
   forbids an attribute selector after `::part()` — so they silently never match; the outline is
   painted inside the shadow root and exposed through that token instead.
+- `labels`, `datasets`, and `selectedIndices` are clone-owned, bounded, frozen snapshots. Mutating
+  a previously assigned array or nested series data has no effect; create and reassign a new
+  collection.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values; finite input is capped at 1,000,000px before derived SVG geometry is
   calculated
@@ -777,7 +780,7 @@ Box-and-whisker chart from a precomputed five-number summary (no raw sample data
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 
 **Properties:**
-- `labels: string[] = []` (attribute: false)
+- `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly
   `LyraBoxPlotSummary { min, q1, median, q3, max }` values. `boxes`, `BoxPlotSeries`, and
   `BoxPlotPoint` remain deprecated migration aliases. Summaries must be finite and ordered
@@ -788,6 +791,9 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
   every series visible, while a defined canonical list of zero-based indexes hides those series.
   Duplicate, non-integer, negative, and out-of-range indexes are discarded. Accepted user toggles
   write their complete next snapshot back to this property; programmatic writes reconcile silently.
+- `labels`, `datasets`, and `hiddenDatasets` are clone-owned, bounded, frozen snapshots. Mutating a
+  previously assigned array or nested series data has no effect; create and reassign a new
+  collection.
 - `legend: boolean = false` — renders a wrapping DOM legend whose buttons toggle box-series
   visibility without clipping long labels.
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical,

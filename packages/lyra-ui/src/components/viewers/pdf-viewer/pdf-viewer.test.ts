@@ -599,7 +599,7 @@ describe('lr-pdf-viewer', () => {
       const rect = canvas.getBoundingClientRect();
       const eventPromise = oneEvent(el, 'lr-highlight-activate');
       pageDiv.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }));
-      expect((await eventPromise).detail).to.deep.equal({ id: 'cite-1' });
+      expect((await eventPromise).detail).to.deep.equal({ highlightId: 'cite-1' });
     } finally { restore(); }
   });
 
@@ -710,7 +710,7 @@ describe('lr-pdf-viewer', () => {
       await aTimeout(10);
 
       expect(receivedCount, 'exactly one lr-highlight-activate should reach the viewer').to.equal(1);
-      expect(receivedDetail).to.deep.equal({ id: 'cite-1' });
+      expect(receivedDetail).to.deep.equal({ highlightId: 'cite-1' });
       expect(leakedFromLayer, 'the raw <lr-highlight-layer> event must not keep bubbling past the viewer unstopped').to.be.false;
     } finally { restore(); }
   });
@@ -1333,6 +1333,29 @@ describe('anchor-target adoption', () => {
     }
   });
 
+  it('bounds page highlight paint while reserving an active entry in the lookahead slot', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.highlights = Array.from({ length: 1_001 }, (_, index) => ({
+        id: `h${index}`,
+        anchor: { kind: 'page' as const, page: 1 },
+      }));
+      el.activeHighlightId = 'h1000';
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(50);
+      const layer = listShadowRoot(el).querySelector('lr-highlight-layer') as unknown as {
+        items: { id: string }[];
+      };
+      expect(layer.items.length).to.be.at.most(100);
+      expect(layer.items.some((item) => item.id === 'h1000')).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
   it('a highlight anchored to a different page resolves to no rects for the current page', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
@@ -1368,6 +1391,37 @@ describe('anchor-target adoption', () => {
       const item = layer.items.find((i) => i.id === 'cite-1');
       expect(item).to.exist;
       expect(item!.rects.length).to.be.greaterThan(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('reuses one mounted-page scope and one occurrence scan for repeated quote highlights', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.highlights = Array.from({ length: 100 }, (_, index) => ({
+        id: `same-${index}`,
+        anchor: { kind: 'text-quote' as const, quote: 'revenue grew 12%' },
+      }));
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await aTimeout(80);
+      const internals = el as unknown as {
+        pdfTextScopeBuildCount(): number;
+        pdfTextQuoteScanCount(page: number): number;
+      };
+      const scopes = internals.pdfTextScopeBuildCount();
+      const scans = internals.pdfTextQuoteScanCount(1);
+      expect(scopes).to.be.at.most(1);
+      expect(scans).to.equal(1);
+
+      el.highlights = [...el.highlights];
+      await el.updateComplete;
+      await aTimeout(10);
+      expect(internals.pdfTextScopeBuildCount()).to.equal(scopes);
+      expect(internals.pdfTextQuoteScanCount(1)).to.equal(scans);
     } finally {
       restore();
     }
@@ -2282,6 +2336,112 @@ describe('search', () => {
     } finally {
       restore();
     }
+  });
+
+  it('rejects an oversized query before reading any page and reports a lower bound', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      let reads = 0;
+      (el as unknown as { getPageText: () => Promise<string> }).getPageText = () => {
+        reads++;
+        return Promise.resolve('needle');
+      };
+      let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
+
+      expect(await el.search('x'.repeat(4_097))).to.equal(0);
+      expect(reads).to.equal(0);
+      expect(detail).to.deep.include({ matchCount: 0, matchCountExact: false });
+    } finally {
+      restore();
+    }
+  });
+
+  it('bounds an otherwise-empty whole-document scan by page count and reports truncation', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1_001));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      let reads = 0;
+      (el as unknown as { getPageText: () => Promise<string> }).getPageText = () => {
+        reads++;
+        return Promise.resolve('');
+      };
+      let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
+
+      expect(await el.search('absent')).to.equal(0);
+      expect(reads).to.equal(1_000);
+      expect(detail).to.deep.include({ matchCount: 0, matchCountExact: false });
+    } finally {
+      restore();
+    }
+  });
+
+  it('NFC-normalizes search while painting the complete decomposed raw grapheme', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    class DecomposedTextLayer {
+      constructor(private options: { container: HTMLElement }) {}
+      render(): Promise<void> {
+        const span = document.createElement('span');
+        span.textContent = 'cafe\u0301';
+        this.options.container.appendChild(span);
+        return Promise.resolve();
+      }
+      cancel(): void {}
+    }
+    const page = {
+      ...fakePage(1),
+      getTextContent: () => Promise.resolve({ items: [{ str: 'cafe\u0301', hasEOL: false }] }),
+    };
+    const doc = { numPages: 1, getPage: () => Promise.resolve(page) };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(doc) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: DecomposedTextLayer,
+    });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.search('café')).to.equal(1);
+      expect(listShadowRoot(el).querySelector('mark[part~="search-match"]')?.textContent)
+        .to.equal('cafe\u0301');
+    } finally {
+      restore();
+    }
+  });
+
+  it('retains at most 200 live painted search ranges around the active result', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const container = document.createElement('div');
+    const span = document.createElement('span');
+    span.textContent = 'x '.repeat(300);
+    container.appendChild(span);
+    const internals = el as unknown as {
+      textLayerContainers: Map<number, HTMLElement>;
+      searchMatches: Array<{ page: number; start: number; length: number }>;
+      searchActiveIndex: number;
+      paintSearchMatches(page: number): void;
+    };
+    internals.textLayerContainers.set(1, container);
+    internals.searchMatches = Array.from({ length: 300 }, (_, index) => ({
+      page: 1,
+      start: index * 2,
+      length: 1,
+    }));
+    internals.searchActiveIndex = 299;
+
+    internals.paintSearchMatches(1);
+
+    expect(container.querySelectorAll('mark[part~="search-match"]').length).to.be.at.most(200);
+    expect(container.querySelector('mark[part~="search-match-active"]')?.textContent).to.equal('x');
   });
 
   it('searchPrevious wraps backward across matches', async () => {

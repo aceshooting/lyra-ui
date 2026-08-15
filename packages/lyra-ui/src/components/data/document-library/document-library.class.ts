@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -72,17 +73,17 @@ export type DocumentLibrarySortDetail =
   | DocumentLibrarySortRequestDetail
   | DocumentLibrarySortCommitDetail;
 export interface DocumentLibrarySelectionChangeDetail {
-  readonly ids: readonly string[];
+  readonly documentIds: readonly string[];
 }
 export interface DocumentLibraryOpenDetail {
-  readonly id: string;
+  readonly documentId: string;
 }
 
 export interface LyraDocumentLibraryEventMap {
-  "lr-filter-change": CustomEvent<DocumentLibraryFilterChangeDetail>;
+  "lr-filter-change": CustomEvent<LyraEventDetailSnapshot<DocumentLibraryFilterChangeDetail>>;
   "lr-sort-request": CustomEvent<DocumentLibrarySortRequestDetail>;
   "lr-sort": CustomEvent<DocumentLibrarySortCommitDetail>;
-  "lr-selection-change": CustomEvent<DocumentLibrarySelectionChangeDetail>;
+  "lr-selection-change": CustomEvent<LyraEventDetailSnapshot<DocumentLibrarySelectionChangeDetail>>;
   "lr-open": CustomEvent<DocumentLibraryOpenDetail>;
 }
 
@@ -126,6 +127,9 @@ const FRESHNESS_TONE: Record<
  * Post-mount selection-count changes announce through the document's shared light-DOM polite
  * sink, including zero and repeated equal counts; initial declarative selection stays silent. The
  * visible selection bar remains ordinary, non-live content.
+ * Document identity is a unique nonempty `id`: malformed, blank-id, and later duplicate records
+ * are omitted at assignment, so the first valid occurrence owns filtering, counts, selection,
+ * rows, and open events.
  * Internal search, tag-filter, and checkbox native/prefixed value-event aliases, plus table
  * selection/pagination events, are consumed at their translation boundary; hosts receive only the
  * documented library-level events.
@@ -140,10 +144,10 @@ const FRESHNESS_TONE: Record<
  *   `detail: { phase: 'commit', sortKey, sortDir }`.
  * @event lr-selection-change - The bulk selection changed (a row checkbox, the header
  *   select-all checkbox, or "Clear selection"). Frozen readonly
- *   `detail: { ids: readonly string[] }`. Translated checkbox
+ *   `detail: { documentIds: readonly string[] }`. Translated checkbox
  *   `lr-change` events do not escape the library.
  * @event lr-open - A document was activated (its name, or Enter/Space/click elsewhere on its
- *   row). Frozen readonly `detail: { id }`.
+ *   row). Frozen readonly `detail: { documentId }`.
  * @csspart base - The root region.
  * @csspart toolbar - Wraps the search field and tag filter.
  * @csspart search - The `<lr-input>` search field.
@@ -194,8 +198,9 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   private _documents: readonly LibraryDocument[] = Object.freeze([]);
   /** Clone-owned readonly full inventory. Document records, nested tag arrays, and dates are
-   * snapshotted at assignment time; reads return detached snapshots so even `Date` mutators cannot
-   * reach retained state. Reassign the collection to update. */
+   * snapshotted at assignment time; blank ids and later duplicate ids are omitted first-wins
+   * before filters, counts, selection, rows, and events. Reads return detached snapshots so even
+   * `Date` mutators cannot reach retained state. Reassign the collection to update. */
   @property({ attribute: false })
   get documents(): readonly LibraryDocument[] {
     return this.snapshotDocuments(this._documents);
@@ -290,11 +295,21 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   private snapshotDocuments(documents: readonly LibraryDocument[]): readonly LibraryDocument[] {
-    const snapshot = documents.map((document) => {
-      const updatedAt = document.updatedAt instanceof Date ? new Date(document.updatedAt.getTime()) : document.updatedAt;
-      const tags = document.tags === undefined ? undefined : Object.freeze([...document.tags]);
-      return Object.freeze({ ...document, updatedAt, tags });
-    });
+    const snapshot: LibraryDocument[] = [];
+    const seen = new Set<string>();
+    for (const document of documents) {
+      try {
+        const id = document?.id;
+        if (typeof id !== "string" || id.trim().length === 0 || seen.has(id)) continue;
+        const updatedAt = document.updatedAt instanceof Date ? new Date(document.updatedAt.getTime()) : document.updatedAt;
+        const tags = document.tags === undefined ? undefined : Object.freeze([...document.tags]);
+        const retained = Object.freeze({ ...document, id, updatedAt, tags });
+        seen.add(id);
+        snapshot.push(retained);
+      } catch {
+        // A malformed record cannot reserve its id or suppress a later valid occurrence.
+      }
+    }
     return Object.freeze(snapshot);
   }
 
@@ -502,13 +517,13 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   };
 
   private openDocument(document: LibraryDocument): void {
-    this.emit("lr-open", Object.freeze({ id: document.id }));
+    this.emit("lr-open", Object.freeze({ documentId: document.id }));
   }
 
   private setSelected(ids: Iterable<string>): void {
     this.selectedIds = [...ids];
     const eventIds = Object.freeze([...this.selectedIds]);
-    this.emit("lr-selection-change", Object.freeze({ ids: eventIds }));
+    this.emit("lr-selection-change", Object.freeze({ documentIds: eventIds }));
   }
 
   private toggleSelection(document: LibraryDocument, checked: boolean): void {

@@ -26,9 +26,9 @@ import type { LyraSchemaViewer, LyraSchemaViewerEventMap } from './components/ag
 import type { LyraSpanWaterfall, LyraSpanWaterfallEventMap } from './components/agent-tools/span-waterfall/span-waterfall.class.js';
 import type { LyraStackTrace, LyraStackTraceEventMap } from './components/agent-tools/stack-trace/stack-trace.class.js';
 import type { LyraSubagentPanel, LyraSubagentPanelEventMap } from './components/agent-tools/subagent-panel/subagent-panel.class.js';
-import type { LyraHeadingLevel, LyraTaskList, LyraTaskListEventMap } from './components/agent-tools/task-list/task-list.class.js';
+import type { LyraTaskList, LyraTaskListEventMap } from './components/agent-tools/task-list/task-list.class.js';
 import type { LyraTerminal, LyraTerminalEventMap } from './components/agent-tools/terminal/terminal.class.js';
-import type { LyraTestResults, LyraTestResultsEventMap, TestRunState } from './components/agent-tools/test-results/test-results.class.js';
+import type { LyraTestResults, LyraTestResultsEventMap } from './components/agent-tools/test-results/test-results.class.js';
 import type { LyraThinkingPanel, LyraThinkingPanelEventMap } from './components/agent-tools/thinking-panel/thinking-panel.class.js';
 import type { LyraToolApprovalDialog, LyraToolApprovalDialogEventMap } from './components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js';
 import type { LyraToolCallChip, LyraToolCallChipEventMap } from './components/agent-tools/tool-call-chip/tool-call-chip.class.js';
@@ -38,23 +38,23 @@ import type { LyraToolResultView, LyraToolResultViewEventMap } from './component
 import type { LyraToolSelectDialog, LyraToolSelectDialogEventMap } from './components/agent-tools/tool-select-dialog/tool-select-dialog.class.js';
 import type { LyraToolTimeline, LyraToolTimelineEventMap } from './components/agent-tools/tool-timeline/tool-timeline.class.js';
 import type { LyraTraceTree, LyraTraceTreeEventMap } from './components/agent-tools/trace-tree/trace-tree.class.js';
-import type { LyraBarChart, LyraChartIndexAxis, LyraChartLegendPosition } from './components/charts/chart/bar-chart.class.js';
-import type { LyraBoxPlot, LyraBoxPlotEventMap, LyraChartChromeLegendPosition } from './components/charts/chart/box-plot.class.js';
-import type { LyraBubbleChart, LyraChartIndexAxis, LyraChartLegendPosition } from './components/charts/chart/bubble-chart.class.js';
-import type { LyraChart, LyraChartEventMap, LyraChartIndexAxis, LyraChartLegendPosition } from './components/charts/chart/chart.class.js';
-import type { LyraChartIndexAxis, LyraChartLegendPosition, LyraDoughnutChart } from './components/charts/chart/doughnut-chart.class.js';
-import type { LyraChartIndexAxis, LyraChartLegendPosition, LyraHistogram } from './components/charts/chart/histogram.class.js';
-import type { LyraChartIndexAxis, LyraChartLegendPosition, LyraLineChart } from './components/charts/chart/line-chart.class.js';
-import type { LyraChartChromeLegendPosition, LyraLiteChart, LyraLiteChartEventMap } from './components/charts/chart/lite-chart.class.js';
-import type { LyraChartIndexAxis, LyraChartLegendPosition, LyraPieChart } from './components/charts/chart/pie-chart.class.js';
-import type { LyraChartIndexAxis, LyraChartLegendPosition, LyraPolarAreaChart } from './components/charts/chart/polar-area-chart.class.js';
-import type { LyraChartIndexAxis, LyraChartLegendPosition, LyraRadarChart } from './components/charts/chart/radar-chart.class.js';
-import type { LyraChartIndexAxis, LyraChartLegendPosition, LyraScatterChart } from './components/charts/chart/scatter-chart.class.js';
-import type { ChatComposerStatus, LyraAgentWorkspace, LyraAgentWorkspaceEventMap } from './components/conversation/agent-workspace/agent-workspace.class.js';
+import type { LyraBarChart } from './components/charts/chart/bar-chart.class.js';
+import type { LyraBoxPlot, LyraBoxPlotEventMap } from './components/charts/chart/box-plot.class.js';
+import type { LyraBubbleChart } from './components/charts/chart/bubble-chart.class.js';
+import type { LyraChart, LyraChartEventMap } from './components/charts/chart/chart.class.js';
+import type { LyraDoughnutChart } from './components/charts/chart/doughnut-chart.class.js';
+import type { LyraHistogram } from './components/charts/chart/histogram.class.js';
+import type { LyraLineChart } from './components/charts/chart/line-chart.class.js';
+import type { LyraLiteChart, LyraLiteChartEventMap } from './components/charts/chart/lite-chart.class.js';
+import type { LyraPieChart } from './components/charts/chart/pie-chart.class.js';
+import type { LyraPolarAreaChart } from './components/charts/chart/polar-area-chart.class.js';
+import type { LyraRadarChart } from './components/charts/chart/radar-chart.class.js';
+import type { LyraScatterChart } from './components/charts/chart/scatter-chart.class.js';
+import type { LyraAgentWorkspace, LyraAgentWorkspaceEventMap } from './components/conversation/agent-workspace/agent-workspace.class.js';
 import type { LyraAudioVisualizer } from './components/conversation/audio-visualizer/audio-visualizer.class.js';
 import type { LyraBranchPicker, LyraBranchPickerEventMap } from './components/conversation/branch-picker/branch-picker.class.js';
 import type { LyraChatComposer, LyraChatComposerEventMap } from './components/conversation/chat-composer/chat-composer.class.js';
-import type { ChatMessageActionsPosition, ChatMessageRole, LyraChatMessage, LyraChatMessageEventMap } from './components/conversation/chat-message/chat-message.class.js';
+import type { LyraChatMessage, LyraChatMessageEventMap } from './components/conversation/chat-message/chat-message.class.js';
 import type { LyraChatViewport, LyraChatViewportEventMap } from './components/conversation/chat-viewport/chat-viewport.class.js';
 import type { LyraCheckpoint, LyraCheckpointEventMap } from './components/conversation/checkpoint/checkpoint.class.js';
 import type { LyraCodeBlockCore, LyraCodeBlockCoreEventMap } from './components/conversation/code-block/code-block-core.class.js';
@@ -62,20 +62,20 @@ import type { LyraCodeBlock, LyraCodeBlockEventMap } from './components/conversa
 import type { LyraConversationItem, LyraConversationItemEventMap } from './components/conversation/conversation-item/conversation-item.class.js';
 import type { LyraGenerationMetrics, LyraGenerationMetricsEventMap } from './components/conversation/generation-metrics/generation-metrics.class.js';
 import type { LyraHandoffDivider } from './components/conversation/handoff-divider/handoff-divider.class.js';
-import type { LyraMarkdownCore, LyraMarkdownCoreEventMap, MarkdownHtmlMode } from './components/conversation/markdown/markdown-core.class.js';
-import type { LyraMarkdown, LyraMarkdownEventMap, MarkdownHtmlMode } from './components/conversation/markdown/markdown.class.js';
-import type { LyraMessageActions, LyraMessageActionsEventMap, MessageFeedbackValue } from './components/conversation/message-actions/message-actions.class.js';
-import type { LyraMessageFeedback, LyraMessageFeedbackEventMap, MessageFeedbackDetailFor } from './components/conversation/message-feedback/message-feedback.class.js';
+import type { LyraMarkdownCore, LyraMarkdownCoreEventMap } from './components/conversation/markdown/markdown-core.class.js';
+import type { LyraMarkdown, LyraMarkdownEventMap } from './components/conversation/markdown/markdown.class.js';
+import type { LyraMessageActions, LyraMessageActionsEventMap } from './components/conversation/message-actions/message-actions.class.js';
+import type { LyraMessageFeedback, LyraMessageFeedbackEventMap } from './components/conversation/message-feedback/message-feedback.class.js';
 import type { LyraMessageParts, LyraMessagePartsEventMap } from './components/conversation/message-parts/message-parts.class.js';
 import type { LyraModelSelect, LyraModelSelectEventMap } from './components/conversation/model-select/model-select.class.js';
 import type { LyraModelSettingsPanel, LyraModelSettingsPanelEventMap } from './components/conversation/model-settings-panel/model-settings-panel.class.js';
 import type { LyraPromptInput, LyraPromptInputEventMap } from './components/conversation/prompt-input/prompt-input.class.js';
 import type { LyraPromptQueue, LyraPromptQueueEventMap } from './components/conversation/prompt-queue/prompt-queue.class.js';
 import type { LyraPushToTalk, LyraPushToTalkEventMap } from './components/conversation/push-to-talk/push-to-talk.class.js';
-import type { AudioVisualizerState, LyraRealtimeSession, LyraRealtimeSessionEventMap } from './components/conversation/realtime-session/realtime-session.class.js';
+import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from './components/conversation/realtime-session/realtime-session.class.js';
 import type { LyraSelectionToolbar, LyraSelectionToolbarEventMap } from './components/conversation/selection-toolbar/selection-toolbar.class.js';
-import type { LyraStreamStatus, LyraStreamStatusEventMap, StreamConnectionState } from './components/conversation/stream-status/stream-status.class.js';
-import type { LyraStreamingText, StreamingTextContentMode } from './components/conversation/streaming-text/streaming-text.class.js';
+import type { LyraStreamStatus, LyraStreamStatusEventMap } from './components/conversation/stream-status/stream-status.class.js';
+import type { LyraStreamingText } from './components/conversation/streaming-text/streaming-text.class.js';
 import type { LyraSuggestionChips, LyraSuggestionChipsEventMap } from './components/conversation/suggestion-chips/suggestion-chips.class.js';
 import type { LyraThreadList, LyraThreadListEventMap } from './components/conversation/thread-list/thread-list.class.js';
 import type { LyraTranscriptFeed, LyraTranscriptFeedEventMap } from './components/conversation/transcript-feed/transcript-feed.class.js';
@@ -86,8 +86,8 @@ import type { LyraWidgetRenderer, LyraWidgetRendererEventMap } from './component
 import type { LyraCalendar, LyraCalendarEventMap } from './components/data/calendar/calendar.class.js';
 import type { LyraConditionBuilder, LyraConditionBuilderEventMap } from './components/data/condition-builder/condition-builder.class.js';
 import type { LyraContextMeter } from './components/data/context-meter/context-meter.class.js';
-import type { LyraDataGrid, LyraDataGridEventMap, Row } from './components/data/data-grid/data-grid.class.js';
-import type { LibraryDocumentSortKey, LyraDocumentLibrary, LyraDocumentLibraryEventMap, TableSortDirection } from './components/data/document-library/document-library.class.js';
+import type { LyraDataGrid, LyraDataGridEventMap } from './components/data/data-grid/data-grid.class.js';
+import type { LyraDocumentLibrary, LyraDocumentLibraryEventMap } from './components/data/document-library/document-library.class.js';
 import type { LyraEnvList, LyraEnvListEventMap } from './components/data/env-list/env-list.class.js';
 import type { LyraFileTree, LyraFileTreeEventMap } from './components/data/file-tree/file-tree.class.js';
 import type { LyraFlowCanvas, LyraFlowCanvasEventMap } from './components/data/flow-canvas/flow-canvas.class.js';
@@ -101,28 +101,28 @@ import type { LyraHeatmap, LyraHeatmapEventMap } from './components/data/heatmap
 import type { LyraPagination, LyraPaginationEventMap } from './components/data/pagination/pagination.class.js';
 import type { LyraSequenceStrip } from './components/data/sequence-strip/sequence-strip.class.js';
 import type { LyraSparkline } from './components/data/sparkline/sparkline.class.js';
-import type { LyraStat, StatGoodDirection } from './components/data/stat/stat.class.js';
-import type { LyraTable, LyraTableEventMap, TableLoadingAppearance, TableSelectionMode, TableSortDirection, TableSortMode } from './components/data/table/table.class.js';
+import type { LyraStat } from './components/data/stat/stat.class.js';
+import type { LyraTable, LyraTableEventMap } from './components/data/table/table.class.js';
 import type { LyraTimelineItem } from './components/data/timeline/timeline-item.class.js';
 import type { LyraTimeline } from './components/data/timeline/timeline.class.js';
 import type { LyraTreeItem, LyraTreeItemEventMap } from './components/data/tree/tree-item.class.js';
 import type { LyraTree, LyraTreeEventMap } from './components/data/tree/tree.class.js';
-import type { LyraWordCloud, LyraWordCloudEventMap, WordCloudRotation } from './components/data/word-cloud/word-cloud.class.js';
-import type { ButtonFormEnctype, ButtonFormMethod, LyraButton, LyraButtonEventMap } from './components/forms/button/button.class.js';
+import type { LyraWordCloud, LyraWordCloudEventMap } from './components/data/word-cloud/word-cloud.class.js';
+import type { LyraButton, LyraButtonEventMap } from './components/forms/button/button.class.js';
 import type { LyraCheckboxGroup, LyraCheckboxGroupEventMap } from './components/forms/checkbox-group/checkbox-group.class.js';
 import type { LyraCheckbox, LyraCheckboxEventMap } from './components/forms/checkbox/checkbox.class.js';
 import type { LyraCodeEditor, LyraCodeEditorEventMap } from './components/forms/code-editor/code-editor.class.js';
 import type { LyraColorPicker, LyraColorPickerEventMap } from './components/forms/color-picker/color-picker.class.js';
 import type { LyraCombobox, LyraComboboxEventMap } from './components/forms/combobox/combobox.class.js';
 import type { LyraOption, LyraOptionEventMap } from './components/forms/combobox/option.class.js';
-import type { LyraDateInput, LyraDateInputEventMap, LyraDateInputFirstDayOfWeek, LyraDatePickerDisabledDates, LyraDatePickerPageBy, WeekdayFormat } from './components/forms/date-picker/date-input.class.js';
-import type { LyraDatePicker, LyraDatePickerDisabledDates, LyraDatePickerEventMap, LyraDatePickerFirstDayOfWeek, LyraDatePickerPageBy, WeekdayFormat } from './components/forms/date-picker/date-picker.class.js';
+import type { LyraDateInput, LyraDateInputEventMap } from './components/forms/date-picker/date-input.class.js';
+import type { LyraDatePicker, LyraDatePickerEventMap } from './components/forms/date-picker/date-picker.class.js';
 import type { LyraEmojiPicker, LyraEmojiPickerEventMap } from './components/forms/emoji-picker/emoji-picker.class.js';
 import type { LyraIconButton, LyraIconButtonEventMap } from './components/forms/icon-button/icon-button.class.js';
 import type { LyraInput, LyraInputEventMap } from './components/forms/input/input.class.js';
 import type { LyraNativeTimeInput } from './components/forms/input/native-time-input.class.js';
 import type { LyraNumberInput, LyraNumberInputEventMap } from './components/forms/input/number-input.class.js';
-import type { LyraTimeInput, LyraTimeInputEventMap, LyraTimeInputHourFormat } from './components/forms/input/time-input.class.js';
+import type { LyraTimeInput, LyraTimeInputEventMap } from './components/forms/input/time-input.class.js';
 import type { LyraLocalePicker, LyraLocalePickerEventMap } from './components/forms/locale-picker/locale-picker.class.js';
 import type { LyraOtpInput, LyraOtpInputEventMap } from './components/forms/otp-input/otp-input.class.js';
 import type { LyraPhoneInput, LyraPhoneInputEventMap } from './components/forms/phone-input/phone-input.class.js';
@@ -131,14 +131,14 @@ import type { LyraRadioGroup, LyraRadioGroupEventMap } from './components/forms/
 import type { LyraRadio, LyraRadioEventMap } from './components/forms/radio/radio.class.js';
 import type { LyraRubricForm, LyraRubricFormEventMap } from './components/forms/rubric-form/rubric-form.class.js';
 import type { LyraSelect, LyraSelectEventMap } from './components/forms/select/select.class.js';
-import type { LyraSlider, LyraSliderEventMap, SliderTooltipPlacement } from './components/forms/slider/slider.class.js';
+import type { LyraSlider, LyraSliderEventMap } from './components/forms/slider/slider.class.js';
 import type { LyraSwatchPicker, LyraSwatchPickerEventMap } from './components/forms/swatch-picker/swatch-picker.class.js';
 import type { LyraSwitch, LyraSwitchEventMap } from './components/forms/switch/switch.class.js';
 import type { LyraTextarea, LyraTextareaEventMap } from './components/forms/textarea/textarea.class.js';
 import type { LyraTimeRange, LyraTimeRangeEventMap } from './components/forms/time-range/time-range.class.js';
 import type { LyraTokenInput, LyraTokenInputEventMap } from './components/forms/token-input/token-input.class.js';
 import type { LyraAppRailItem } from './components/layout/app-rail/app-rail-item.class.js';
-import type { AppRailPreferredMode, LyraAppRail, LyraAppRailEventMap } from './components/layout/app-rail/app-rail.class.js';
+import type { LyraAppRail, LyraAppRailEventMap } from './components/layout/app-rail/app-rail.class.js';
 import type { LyraBreadcrumbItem } from './components/layout/breadcrumb/breadcrumb-item.class.js';
 import type { LyraBreadcrumb } from './components/layout/breadcrumb/breadcrumb.class.js';
 import type { LyraButtonGroup } from './components/layout/button-group/button-group.class.js';
@@ -148,32 +148,32 @@ import type { LyraCarousel, LyraCarouselEventMap } from './components/layout/car
 import type { LyraCommandPalette, LyraCommandPaletteEventMap } from './components/layout/command-palette/command-palette.class.js';
 import type { LyraControlGroup } from './components/layout/control-group/control-group.class.js';
 import type { LyraDashboardGrid, LyraDashboardGridEventMap } from './components/layout/dashboard-grid/dashboard-grid.class.js';
-import type { LyraAccordionHeadingLevel, LyraAccordionIconPlacement, LyraAccordionItem } from './components/layout/details/accordion-item.class.js';
-import type { LyraAccordion, LyraAccordionEventMap, LyraAccordionHeadingLevel, LyraAccordionIconPlacement } from './components/layout/details/accordion.class.js';
-import type { LyraDetails, LyraDetailsEventMap, LyraDetailsIconPlacement } from './components/layout/details/details.class.js';
+import type { LyraAccordionItem } from './components/layout/details/accordion-item.class.js';
+import type { LyraAccordion, LyraAccordionEventMap } from './components/layout/details/accordion.class.js';
+import type { LyraDetails, LyraDetailsEventMap } from './components/layout/details/details.class.js';
 import type { LyraDockPanel, LyraDockPanelEventMap } from './components/layout/dock-panel/dock-panel.class.js';
-import type { LyraDrilldownCategory, LyraDrilldownPanel, LyraDrilldownPanelEventMap } from './components/layout/drilldown-panel/drilldown-panel.class.js';
+import type { LyraDrilldownPanel, LyraDrilldownPanelEventMap } from './components/layout/drilldown-panel/drilldown-panel.class.js';
 import type { LyraFilterBar, LyraFilterBarEventMap, LyraFilterBarFilterDefinition, LyraFilterBarValue } from './components/layout/filter-bar/filter-bar.class.js';
 import type { LyraDropdownItem, LyraDropdownItemEventMap } from './components/layout/menu/dropdown-item.class.js';
 import type { LyraMenuItem, LyraMenuItemEventMap } from './components/layout/menu/menu-item.class.js';
 import type { LyraMenuLabel } from './components/layout/menu/menu-label.class.js';
 import type { LyraMenu, LyraMenuEventMap } from './components/layout/menu/menu.class.js';
-import type { BreakpointBasis, LyraMultiSplit, LyraMultiSplitCollapseState, LyraMultiSplitEventMap, LyraOrientation } from './components/layout/multi-split/multi-split.class.js';
-import type { LyraPage, LyraPageEventMap, PageNavigationPlacement } from './components/layout/page/page.class.js';
+import type { LyraMultiSplit, LyraMultiSplitEventMap } from './components/layout/multi-split/multi-split.class.js';
+import type { LyraPage, LyraPageEventMap } from './components/layout/page/page.class.js';
 import type { LyraReorderItem, LyraReorderItemEventMap } from './components/layout/reorder-list/reorder-item.class.js';
 import type { LyraReorderList, LyraReorderListEventMap } from './components/layout/reorder-list/reorder-list.class.js';
 import type { LyraResponsivePanel, LyraResponsivePanelEventMap } from './components/layout/responsive-panel/responsive-panel.class.js';
 import type { LyraScroller, LyraScrollerEventMap } from './components/layout/scroller/scroller.class.js';
 import type { LyraSegmented, LyraSegmentedEventMap } from './components/layout/segmented/segmented.class.js';
 import type { LyraSplitPanel, LyraSplitPanelEventMap, SnapFunction } from './components/layout/split-panel/split-panel.class.js';
-import type { BreakpointBasis, LyraOrientation, LyraStepper, LyraStepperEventMap } from './components/layout/stepper/stepper.class.js';
+import type { LyraStepper, LyraStepperEventMap } from './components/layout/stepper/stepper.class.js';
 import type { LyraTabGroup, LyraTabGroupEventMap } from './components/layout/tab-group/tab-group.class.js';
 import type { LyraTabPanel } from './components/layout/tab-group/tab-panel.class.js';
 import type { LyraTab, LyraTabEventMap } from './components/layout/tab-group/tab.class.js';
-import type { LyraVirtualList, LyraVirtualListEventMap, VirtualListItemRole, VirtualListKey, VirtualListRowHeight } from './components/layout/virtual-list/virtual-list.class.js';
+import type { LyraVirtualList, LyraVirtualListEventMap } from './components/layout/virtual-list/virtual-list.class.js';
 import type { LyraWidget, LyraWidgetEventMap } from './components/layout/widget/widget.class.js';
 import type { LyraAnimatedImage, LyraAnimatedImageEventMap } from './components/media/animated-image/animated-image.class.js';
-import type { LyraAnimation, LyraAnimationEventMap, LyraAnimationTimingPreset } from './components/media/animation/animation.class.js';
+import type { LyraAnimation, LyraAnimationEventMap } from './components/media/animation/animation.class.js';
 import type { LyraAttachmentChip, LyraAttachmentChipEventMap } from './components/media/attachment-chip/attachment-chip.class.js';
 import type { LyraAttachmentTrigger, LyraAttachmentTriggerEventMap } from './components/media/attachment-trigger/attachment-trigger.class.js';
 import type { LyraAvPlayer, LyraAvPlayerEventMap } from './components/media/av-player/av-player.class.js';
@@ -188,7 +188,7 @@ import type { LyraLightbox, LyraLightboxEventMap } from './components/media/ligh
 import type { LyraMap, LyraMapEventMap } from './components/media/map/map.class.js';
 import type { LyraMediaCard, LyraMediaCardEventMap } from './components/media/media-card/media-card.class.js';
 import type { LyraPanZoom, LyraPanZoomEventMap } from './components/media/pan-zoom/pan-zoom.class.js';
-import type { LyraQrCode, LyraQrCodeErrorCorrection } from './components/media/qr-code/qr-code.class.js';
+import type { LyraQrCode } from './components/media/qr-code/qr-code.class.js';
 import type { LyraSequencePlayback, LyraSequencePlaybackEventMap } from './components/media/sequence-playback/sequence-playback.class.js';
 import type { LyraVideoPlaylist, LyraVideoPlaylistEventMap } from './components/media/video-playlist/video-playlist.class.js';
 import type { LyraVideo, LyraVideoEventMap } from './components/media/video/video.class.js';
@@ -196,22 +196,22 @@ import type { LyraZoomableFrame, LyraZoomableFrameEventMap } from './components/
 import type { LyraAlert, LyraAlertEventMap } from './components/overlays/alert/alert.class.js';
 import type { LyraBadge } from './components/overlays/badge/badge.class.js';
 import type { LyraTag, LyraTagEventMap } from './components/overlays/badge/tag.class.js';
-import type { LyraCallout, LyraCalloutEventMap, LyraHeadingLevel } from './components/overlays/callout/callout.class.js';
+import type { LyraCallout, LyraCalloutEventMap } from './components/overlays/callout/callout.class.js';
 import type { LyraChipGroup, LyraChipGroupEventMap } from './components/overlays/chip/chip-group.class.js';
 import type { LyraChip, LyraChipEventMap } from './components/overlays/chip/chip.class.js';
-import type { LyraDialog, LyraDialogEventMap, LyraHeadingLevel } from './components/overlays/dialog/dialog.class.js';
-import type { LyraDrawer, LyraHeadingLevel } from './components/overlays/drawer/drawer.class.js';
-import type { LyraEmpty, LyraHeadingLevel } from './components/overlays/empty/empty.class.js';
+import type { LyraDialog, LyraDialogEventMap } from './components/overlays/dialog/dialog.class.js';
+import type { LyraDrawer } from './components/overlays/drawer/drawer.class.js';
+import type { LyraEmpty } from './components/overlays/empty/empty.class.js';
 import type { LyraKbd } from './components/overlays/kbd/kbd.class.js';
-import type { LyraArrowPlacement, LyraDropdown, LyraDropdownEventMap, LyraPopupRole } from './components/overlays/overlay/dropdown.class.js';
-import type { LyraArrowPlacement, LyraPopover, LyraPopoverEventMap, LyraPopupRole } from './components/overlays/overlay/popover.class.js';
-import type { LyraArrowPlacement, LyraTooltip, LyraTooltipEventMap } from './components/overlays/overlay/tooltip.class.js';
-import type { LyraArrowPlacement, LyraPopup, LyraPopupEventMap, LyraPopupFlipFallbackStrategy, PlaceAutoSize } from './components/overlays/popup/popup.class.js';
+import type { LyraDropdown, LyraDropdownEventMap } from './components/overlays/overlay/dropdown.class.js';
+import type { LyraPopover, LyraPopoverEventMap } from './components/overlays/overlay/popover.class.js';
+import type { LyraTooltip, LyraTooltipEventMap } from './components/overlays/overlay/tooltip.class.js';
+import type { LyraPopup, LyraPopupEventMap } from './components/overlays/popup/popup.class.js';
 import type { LyraProgressBar } from './components/overlays/progress/progress-bar.class.js';
 import type { LyraProgressRing } from './components/overlays/progress/progress-ring.class.js';
 import type { LyraRating, LyraRatingEventMap } from './components/overlays/rating/rating.class.js';
 import type { LyraSkeleton } from './components/overlays/skeleton/skeleton.class.js';
-import type { LyraSpinner, SpinnerLabelPlacement } from './components/overlays/spinner/spinner.class.js';
+import type { LyraSpinner } from './components/overlays/spinner/spinner.class.js';
 import type { LyraToastItem, LyraToastItemEventMap } from './components/overlays/toast/toast-item.class.js';
 import type { LyraToast, LyraToastEventMap } from './components/overlays/toast/toast.class.js';
 import type { LyraChunkInspector, LyraChunkInspectorEventMap } from './components/retrieval/chunk-inspector/chunk-inspector.class.js';
@@ -223,10 +223,10 @@ import type { LyraEntityCard, LyraEntityCardEventMap } from './components/retrie
 import type { LyraEntityChip, LyraEntityChipEventMap } from './components/retrieval/entity-chip/entity-chip.class.js';
 import type { LyraEntityDossier, LyraEntityDossierEventMap } from './components/retrieval/entity-dossier/entity-dossier.class.js';
 import type { LyraGraphLegend, LyraGraphLegendEventMap } from './components/retrieval/graph-legend/graph-legend.class.js';
-import type { GraphSelectionMode, LyraGraph, LyraGraphEventMap } from './components/retrieval/graph/graph.class.js';
-import type { GroundingSummaryHeadingLevel, LyraGroundingSummary, LyraGroundingSummaryEventMap } from './components/retrieval/grounding-summary/grounding-summary.class.js';
+import type { LyraGraph, LyraGraphEventMap } from './components/retrieval/graph/graph.class.js';
+import type { LyraGroundingSummary, LyraGroundingSummaryEventMap } from './components/retrieval/grounding-summary/grounding-summary.class.js';
 import type { LyraIngestionQueue, LyraIngestionQueueEventMap } from './components/retrieval/ingestion-queue/ingestion-queue.class.js';
-import type { KnowledgeBaseAdminTab, LyraKnowledgeBaseAdmin, LyraKnowledgeBaseAdminEventMap } from './components/retrieval/knowledge-base-admin/knowledge-base-admin.class.js';
+import type { LyraKnowledgeBaseAdmin, LyraKnowledgeBaseAdminEventMap } from './components/retrieval/knowledge-base-admin/knowledge-base-admin.class.js';
 import type { LyraKnowledgeBase, LyraKnowledgeBaseEventMap } from './components/retrieval/knowledge-base/knowledge-base.class.js';
 import type { LyraKnowledgeGraphExplorer, LyraKnowledgeGraphExplorerEventMap } from './components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js';
 import type { LyraMemoryPanel, LyraMemoryPanelEventMap } from './components/retrieval/memory-panel/memory-panel.class.js';
@@ -244,13 +244,13 @@ import type { LyraRetrievalTrace, LyraRetrievalTraceEventMap } from './component
 import type { LyraSourceCard, LyraSourceCardEventMap } from './components/retrieval/source-card/source-card.class.js';
 import type { LyraSourceList, LyraSourceListEventMap } from './components/retrieval/source-list/source-list.class.js';
 import type { LyraSourcePicker, LyraSourcePickerEventMap } from './components/retrieval/source-picker/source-picker.class.js';
-import type { LyraCopyButton, LyraCopyButtonEventMap, LyraCopyButtonTooltipPlacement } from './components/utility/copy-button/copy-button.class.js';
+import type { LyraCopyButton, LyraCopyButtonEventMap } from './components/utility/copy-button/copy-button.class.js';
 import type { LyraDiffView, LyraDiffViewEventMap } from './components/utility/diff-view/diff-view.class.js';
 import type { LyraDivider } from './components/utility/divider/divider.class.js';
 import type { LyraExportButton, LyraExportButtonEventMap } from './components/utility/export-button/export-button.class.js';
 import type { LyraFormatBytes } from './components/utility/format/format-bytes.class.js';
-import type { DateTimeFormatOptions, FormatDateHour, FormatDateStyle, FormatDateTimeZoneName, Intl, LyraFormatDate } from './components/utility/format/format-date.class.js';
-import type { FormatCurrencyDisplay, LyraFormatNumber } from './components/utility/format/format-number.class.js';
+import type { LyraFormatDate } from './components/utility/format/format-date.class.js';
+import type { LyraFormatNumber } from './components/utility/format/format-number.class.js';
 import type { LyraRelativeTime } from './components/utility/format/relative-time.class.js';
 import type { LyraIcon, LyraIconEventMap } from './components/utility/icon/icon.class.js';
 import type { LyraIntersectionObserver, LyraIntersectionObserverEventMap } from './components/utility/intersection-observer/intersection-observer.class.js';
@@ -266,10 +266,10 @@ import type { LyraTour, LyraTourEventMap } from './components/utility/tour/tour.
 import type { LyraVisuallyHidden } from './components/utility/visually-hidden/visually-hidden.class.js';
 import type { LyraArchiveViewer, LyraArchiveViewerEventMap } from './components/viewers/archive-viewer/archive-viewer.class.js';
 import type { LyraCalendarViewer, LyraCalendarViewerEventMap } from './components/viewers/calendar-viewer/calendar-viewer.class.js';
-import type { LyraContactViewer, LyraContactViewerEventMap, LyraHeadingLevel } from './components/viewers/contact-viewer/contact-viewer.class.js';
+import type { LyraContactViewer, LyraContactViewerEventMap } from './components/viewers/contact-viewer/contact-viewer.class.js';
 import type { LyraCsvViewer, LyraCsvViewerEventMap } from './components/viewers/csv-viewer/csv-viewer.class.js';
 import type { LyraDatasetViewer, LyraDatasetViewerEventMap } from './components/viewers/dataset-viewer/dataset-viewer.class.js';
-import type { LyraDiffViewLayout, LyraDocumentCompare, LyraDocumentCompareEventMap } from './components/viewers/document-compare/document-compare.class.js';
+import type { LyraDocumentCompare, LyraDocumentCompareEventMap } from './components/viewers/document-compare/document-compare.class.js';
 import type { LyraDocumentPreview, LyraDocumentPreviewEventMap } from './components/viewers/document-preview/document-preview.class.js';
 import type { LyraDocumentViewer, LyraDocumentViewerEventMap } from './components/viewers/document-viewer/document-viewer.class.js';
 import type { LyraDocxViewer, LyraDocxViewerEventMap } from './components/viewers/docx-viewer/docx-viewer.class.js';
@@ -757,7 +757,7 @@ export type LyraApprovalQueueSvelteProps = LyraSvelteElementProps<
   | 'locale'
   | 'open'
   | 'requests'
-  | 'selectedId'
+  | 'selectedInvocationId'
   | 'strings',
   {},
   LyraApprovalQueueEventMap,
@@ -766,7 +766,7 @@ export type LyraApprovalQueueSvelteProps = LyraSvelteElementProps<
   | 'lr-approval-select',
   | '--lr-approval-queue-selected-border',
   {
-    'selected-id'?: LyraApprovalQueue['selectedId'];
+    'selected-invocation-id'?: LyraApprovalQueue['selectedInvocationId'];
   }
 >;
 
@@ -1219,7 +1219,8 @@ export type LyraBranchPickerSvelteProps = LyraSvelteElementProps<
   | 'strings',
   {},
   LyraBranchPickerEventMap,
-  | 'lr-branch-change',
+  | 'lr-branch-change'
+  | 'lr-toolbar-actions-change',
 never,
   {}
 >;
@@ -6043,7 +6044,8 @@ export type LyraMessageFeedbackSvelteProps = LyraSvelteElementProps<
   | 'blur'
   | 'focus'
   | 'lr-feedback-change'
-  | 'lr-feedback-submit',
+  | 'lr-feedback-submit'
+  | 'lr-toolbar-actions-change',
   | '--lr-message-feedback-down-active-bg'
   | '--lr-message-feedback-down-active-border'
   | '--lr-message-feedback-down-active-color'
@@ -7951,6 +7953,7 @@ export type LyraRealtimeSessionSvelteProps = LyraSvelteElementProps<
   | 'level'
   | 'locale'
   | 'muted'
+  | 'sessionId'
   | 'showCapture'
   | 'state'
   | 'stream'
@@ -7971,6 +7974,7 @@ export type LyraRealtimeSessionSvelteProps = LyraSvelteElementProps<
   | 'lr-record-stop',
 never,
   {
+    'session-id'?: LyraRealtimeSession['sessionId'];
     'show-capture'?: LyraRealtimeSession['showCapture'];
     'voice-state'?: LyraRealtimeSession['voiceState'];
   }
@@ -10638,7 +10642,7 @@ export type LyraVoicePickerSvelteProps = LyraSvelteElementProps<
 export type LyraWidgetSvelteProps = LyraSvelteElementProps<
   LyraWidget,
   | 'accessibleLabel'
-  | 'activeView'
+  | 'activeViewId'
   | 'backdropInset'
   | 'collapsed'
   | 'collapsible'

@@ -16,38 +16,38 @@ import { LYRA_DEFAULT_mcpAppLabel, LYRA_DEFAULT_mcpAppLoading, LYRA_DEFAULT_mcpA
 
 
 export interface McpAppPermissions {
-  camera?: boolean;
-  microphone?: boolean;
-  geolocation?: boolean;
-  clipboardRead?: boolean;
-  clipboardWrite?: boolean;
+  readonly camera?: boolean;
+  readonly microphone?: boolean;
+  readonly geolocation?: boolean;
+  readonly clipboardRead?: boolean;
+  readonly clipboardWrite?: boolean;
 }
 
 export interface McpAppCsp {
-  connectDomains?: string[];
-  resourceDomains?: string[];
-  frameDomains?: string[];
+  readonly connectDomains?: readonly string[];
+  readonly resourceDomains?: readonly string[];
+  readonly frameDomains?: readonly string[];
 }
 
 interface McpAppResourceBase {
-  uri: string;
-  title?: string;
-  csp?: McpAppCsp;
-  permissions?: McpAppPermissions;
-  metadata?: Record<string, unknown>;
+  readonly uri: string;
+  readonly title?: string;
+  readonly csp?: McpAppCsp;
+  readonly permissions?: McpAppPermissions;
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
 /** An executable app resource with exactly one document source. */
 export type McpAppResource = McpAppResourceBase & (
   | {
       /** Executable app document. It is assigned only to a uniquely-origin sandboxed iframe. */
-      html: string;
-      src?: never;
+      readonly html: string;
+      readonly src?: never;
     }
   | {
       /** HTTP(S) or relative app URL served as a separate resource. */
-      src: string;
-      html?: never;
+      readonly src: string;
+      readonly html?: never;
     }
 );
 
@@ -188,6 +188,8 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * Remote resources accept only relative and HTTP(S) document URLs and never send a referrer.
  * The frame can request tools, messages, links, logs, and resizing only through typed events;
  * the component never performs those external actions itself.
+ * Resource records and nested CSP/metadata collections are bounded clone-owned readonly
+ * snapshots. Create and reassign a new resource record after changes.
  *
  * @customElement lr-mcp-app
  * @event lr-mcp-ready - The frame loaded. `detail: { uri }`.
@@ -208,6 +210,8 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * @since 7.0.0
  */
 export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(['resource']);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -220,6 +224,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Clone-owned resource snapshot. Reassign a new record after changing its CSP collections. */
   @property({ attribute: false }) resource: McpAppResource | null = null;
   @property({ type: Number }) height = 320;
   @property({ type: Number, attribute: 'max-height' }) maxHeight = 800;

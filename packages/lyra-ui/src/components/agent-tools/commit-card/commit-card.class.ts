@@ -17,7 +17,7 @@ import {
 } from '../../../internal/clipboard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -77,6 +77,9 @@ export interface LyraCommitCardEventMap {
  * first occurrence wins. File addition/deletion counts are normalized to finite non-negative integers before totals,
  * localized display, and accessible summaries are derived.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-commit-card
  * @event lr-file-select - `detail: { path }` — a file row was activated.
  * @event lr-toggle - `detail: { collapsed }` — the file-list fold changed.
@@ -110,6 +113,8 @@ export interface LyraCommitCardEventMap {
  * @since 4.0.0
  */
 export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["files"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -134,6 +139,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -145,8 +151,9 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   @property() message = '';
   @property() author = '';
   @property({ type: Number, attribute: false }) timestamp?: number;
-  /** File changes keyed by path. Duplicate paths normalize first-wins before diffstat and events. */
-  @property({ attribute: false }) files: CommitFileChange[] = [];
+  /** File changes keyed by path. Empty/blank paths are omitted and duplicates normalize
+   *  first-wins before diffstat and events. */
+  @property({ attribute: false }) files: readonly CommitFileChange[] = [];
   @property({ type: Boolean, attribute: 'files-collapsed', reflect: true, converter: trueDefaultBooleanConverter })
   filesCollapsed = true;
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;

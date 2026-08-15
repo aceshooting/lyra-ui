@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -31,8 +32,8 @@ export interface LyraMessagePartsEventMap
     Omit<LyraCitationBadgeEventMap, 'lr-citation-activate'>,
     LyraJsonViewerEventMap,
     Omit<LyraWidgetRendererEventMap, 'lr-render-error'> {
-  'lr-citation-select': CustomEvent<CitationSelectEventDetail>;
-  'lr-part-retry': CustomEvent<{ part: MessagePart }>;
+  'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
+  'lr-part-retry': CustomEvent<LyraEventDetailSnapshot<{ part: MessagePart }>>;
   'lr-render-error': CustomEvent<{ error: unknown } | { toolName: string; error: unknown }>;
 }
 
@@ -40,11 +41,15 @@ export interface LyraMessagePartsEventMap
  * `<lr-message-parts>` — renders ordered, interleavable provider-neutral AI message parts. It
  * composes Lyra's existing Markdown, reasoning, tool, citation, attachment, widget, JSON, and
  * media primitives while keeping streaming order stable by part id.
- * Part ids are unique occurrence identities; when malformed input repeats
- * an id, the first occurrence wins and later duplicates are ignored.
+ * Part ids are unique, nonempty occurrence identities. Empty ids are omitted; when malformed
+ * input repeats an id, the first occurrence wins and later duplicates are ignored. Rendering,
+ * citation ranks, retry payloads, and error announcements all consume that same projection.
  * Streaming text and reasoning parts forward that state into their nested Markdown renderer, so
  * parsing/highlighting coalesces until the same-id part becomes complete.
  * Citation ranks are derived in one linear render prepass, including for mixed streaming arrays.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-message-parts
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
@@ -90,6 +95,8 @@ export interface LyraMessagePartsEventMap
  * @since 7.0.0
  */
 export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["parts"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -105,7 +112,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Ordered message content. */
-  @property({ attribute: false }) parts: MessagePart[] = [];
+  @property({ attribute: false }) parts: readonly MessagePart[] = [];
 
   /** Text/reasoning rendering mode. */
   @property({ reflect: true, attribute: 'content-mode' }) contentMode: 'plain' | 'markdown' = 'markdown';
@@ -151,10 +158,20 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     this.suppressNextErrorAnnouncement = true;
   }
 
+  private get effectiveParts(): readonly MessagePart[] {
+    const seen = new Set<string>();
+    return this.parts.filter((part) => {
+      const id = part?.id;
+      if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (!changed.has('parts')) return;
-    const current = this.parts.filter((part) => part.type === 'error');
+    const current = this.effectiveParts.filter((part) => part.type === 'error');
     if (this.hasUpdated && !this.suppressNextErrorAnnouncement) {
       for (const part of current) {
         if (!this.knownErrorIds.has(part.id)) {
@@ -304,12 +321,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   override render(): TemplateResult {
     const label = this.accessibleLabel ?? this.localize('messagePartsLabel');
-    const seenIds = new Set<string>();
-    const parts = this.parts.filter((part) => {
-      if (seenIds.has(part.id)) return false;
-      seenIds.add(part.id);
-      return true;
-    });
+    const parts = this.effectiveParts;
     const citationRanks = new Array<number>(parts.length).fill(0);
     let citationRank = 0;
     for (let index = 0; index < parts.length; index++) {

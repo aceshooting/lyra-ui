@@ -89,8 +89,8 @@ export const SyncedWithSelection: Story = {
         style="max-width: 40rem"
         .stages=${stages}
         active-stage-id=${selected ?? nothing}
-        @lr-stage-select=${(e: CustomEvent<{ id: string }>) => {
-          selected = e.detail.id;
+        @lr-stage-select=${(e: CustomEvent<{ stageId: string }>) => {
+          selected = e.detail.stageId;
           getEl().activeStageId = selected;
         }}
       ></lr-retrieval-trace>

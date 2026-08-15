@@ -31,7 +31,7 @@ import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
 import type { LyraScoreThresholds } from "../graph/graph.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The three tab ids this component renders -- also `lr-tab-group`' own `slot`/`tabId` values, so a
@@ -93,6 +93,9 @@ export interface LyraEntityDossierEventMap
  * projection + event conduit" convention `lr-provenance-panel` and `lr-spreadsheet-viewer`'s
  * internal `lr-tab-group` already establish.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-entity-dossier
  * @event lr-entity-activate - Surfaced unchanged from the embedded entity card or neighbor list.
  *   `detail: { id }`.
@@ -125,6 +128,15 @@ export interface LyraEntityDossierEventMap
  * @since 4.1.0
  */
 export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "entity",
+    "confidence",
+    "types",
+    "neighbors",
+    "chunks",
+    "provenance",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -138,6 +150,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     neighborListLabel: LYRA_DEFAULT_neighborListLabel,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     provenancePanelLabel: LYRA_DEFAULT_provenancePanelLabel,
     restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
@@ -148,11 +161,11 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** `null` renders the shared `lr-empty` `noData` state in place of the whole dossier. */
-  @property({ attribute: false }) entity: LyraEntity | null = null;
+  @property({ attribute: false }) entity: Readonly<LyraEntity> | null = null;
   /** `lr-graph` `nodeTypes` pass-through, forwarded to both `lr-entity-card` and
    *  `lr-provenance-panel` so the entity type badge and any provenance entity chips resolve
    *  identically. */
-  @property({ attribute: false }) types: LyraNodeTypeStyle[] = [];
+  @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Forwarded to `lr-entity-card`'s own `communityLabel`. */
   @property({ attribute: "community-label" }) communityLabel = "";
   /** Forwarded to `lr-entity-card`'s own `showFocusButton`. */
@@ -165,9 +178,9 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   /** Headline confidence KPI, rendered as an `lr-stat` next to the entity summary. Omitted
    *  entirely (no placeholder, no empty stat) when `null`. */
   @property({ attribute: false })
-  confidence: LyraEntityDossierConfidence | null = null;
+  confidence: Readonly<LyraEntityDossierConfidence> | null = null;
   /** Forwarded to `lr-neighbor-list`'s own `rows`. */
-  @property({ attribute: false }) neighbors: LyraNeighborRow[] = [];
+  @property({ attribute: false }) neighbors: readonly LyraNeighborRow[] = [];
   /** Forwarded to `lr-neighbor-list`'s own `groupByRelation`. */
   @property({ type: Boolean, attribute: "group-by-relation" }) groupByRelation =
     false;
@@ -175,7 +188,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   @property({ type: Boolean }) expandable = false;
   /** Forwarded to `lr-chunk-inspector`'s own `chunks` -- the evidence for this entity's own
    *  summary, distinct from `provenance` (see the class doc above). */
-  @property({ attribute: false }) chunks: LyraChunk[] = [];
+  @property({ attribute: false }) chunks: readonly LyraChunk[] = [];
   /** Forwarded to both `lr-chunk-inspector`'s and `lr-provenance-panel`'s own `thresholds`, so
    *  the score tiers agree everywhere a score renders in this dossier. */
   @property({ attribute: false }) thresholds: LyraScoreThresholds = {
@@ -183,7 +196,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     medium: 0.5,
   };
   /** Forwarded to `lr-provenance-panel`'s own `provenance`. */
-  @property({ attribute: false }) provenance: LyraProvenance | null = null;
+  @property({ attribute: false }) provenance: Readonly<LyraProvenance> | null = null;
   /** JS-only accessible name for the internal `lr-tab-group` strip while no host `aria-label` is
    *  authored. A host label independently names the dossier and is not cloned onto the strip. */
   @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;

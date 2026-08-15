@@ -8,10 +8,13 @@ import { styles } from "./dock-panel.styles.js";
 import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
 import { resolveCssLength } from "../../../internal/css-length.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_dockPanelCollapse,
+  LYRA_DEFAULT_dockPanelExpand,
+  LYRA_DEFAULT_dockPanelResize,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Which edge of the panel's own container it's docked to. `'start'`/`'end'`
  *  are logical-inline (mirror left/right depending on writing direction);
@@ -130,12 +133,13 @@ interface DragState {
 export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    dockPanelCollapse: LYRA_DEFAULT_dockPanelCollapse,
-    dockPanelExpand: LYRA_DEFAULT_dockPanelExpand,
-    dockPanelResize: LYRA_DEFAULT_dockPanelResize,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      dockPanelCollapse: LYRA_DEFAULT_dockPanelCollapse,
+      dockPanelExpand: LYRA_DEFAULT_dockPanelExpand,
+      dockPanelResize: LYRA_DEFAULT_dockPanelResize,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
@@ -257,7 +261,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   private applyHostSize(bounds = this.resolveBoundsPx()): void {
     const value = this.collapsed
-      ? "var(--lr-dock-panel-collapsed-size)"
+      ? "var(--lr-dock-panel-collapsed-size, var(--_lr-dock-panel-collapsed-size))"
       : this.extent;
     if (this.axis === "inline") {
       this.style.inlineSize = value;
@@ -283,7 +287,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const parent = this.parentElement;
     const rect = parent?.getBoundingClientRect();
     const ownerWindow = this.ownerDocument.defaultView;
-    if (this.axis === "inline") return rect?.width ?? ownerWindow?.innerWidth ?? 0;
+    if (this.axis === "inline")
+      return rect?.width ?? ownerWindow?.innerWidth ?? 0;
     return rect?.height ?? ownerWindow?.innerHeight ?? 0;
   }
 
@@ -330,10 +335,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const renderedPx = this.currentSizePx();
     const candidate = authoredPx ?? renderedPx;
     if (!Number.isFinite(candidate)) return;
-    const clamped = Math.min(
-      Math.max(candidate, bounds.minPx),
-      bounds.maxPx
-    );
+    const clamped = Math.min(Math.max(candidate, bounds.minPx), bounds.maxPx);
     const renderedOutsideBounds =
       Number.isFinite(renderedPx) &&
       (renderedPx < bounds.minPx - 0.5 || renderedPx > bounds.maxPx + 0.5);
@@ -520,10 +522,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   private handleTemplate(): TemplateResult | typeof nothing {
     if (!this.resizable || this.collapsed) return nothing;
     const { minPx, maxPx } = this.resolveBoundsPx();
-    const nowPx = Math.min(
-      Math.max(this.currentSizePx(), minPx),
-      maxPx
-    );
+    const nowPx = Math.min(Math.max(this.currentSizePx(), minPx), maxPx);
     // hit-area-exempt: a drag-handle separator (role="separator",
     // mouse-drag/arrow-key resize), not a tap-to-activate icon button --
     // mirrors lr-multi-split's own [part="divider"] precedent exactly: the

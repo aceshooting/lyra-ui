@@ -15,7 +15,7 @@ const kind: LyraAnchorKind = anchor.kind;
 const tone: LyraHighlightTone = 'accent';
 const highlight: LyraHighlight = { id: 'result', anchor, tone };
 const capabilities: AnchorTargetCapabilities = { anchors: [kind], search: true };
-const activated: HighlightActivateDetail = { id: highlight.id };
+const activated: HighlightActivateDetail = { highlightId: highlight.id };
 const selected: TextSelectDetail = { text: '', anchor, rects: [] };
 const result: AnchorResultDetail = { found: true };
 

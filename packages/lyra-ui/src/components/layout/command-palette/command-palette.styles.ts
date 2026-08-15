@@ -2,33 +2,45 @@ import { css } from "lit";
 export const styles = css`
   :host {
     display: contents;
-    --lr-command-palette-z-index: var(
+    --_lr-command-palette-z-index: var(
       --lr-overlay-stack-index,
       var(--lr-layer-modal)
     );
-    --lr-command-palette-max-inline-size: var(--lr-size-48rem);
-    --lr-command-palette-max-block-size: 70vh;
-    --lr-command-palette-list-max-block-size: 50vh;
-    --lr-command-palette-offset-block-start: 12vh;
-    --lr-command-palette-row-height: var(--lr-size-3rem);
-    --lr-command-palette-group-height: var(--lr-size-2rem);
+    --_lr-command-palette-max-inline-size: var(--lr-size-48rem);
+    --_lr-command-palette-max-block-size: 70vh;
+    --_lr-command-palette-list-max-block-size: 50vh;
+    --_lr-command-palette-offset-block-start: 12vh;
+    --_lr-command-palette-row-height: var(--lr-size-3rem);
+    --_lr-command-palette-group-height: var(--lr-size-2rem);
   }
   [part="backdrop"] {
     position: fixed;
     inset: 0;
-    z-index: var(--lr-command-palette-z-index);
+    z-index: var(
+      --lr-command-palette-z-index,
+      var(--_lr-command-palette-z-index)
+    );
     display: grid;
     place-items: start center;
-    padding-block-start: var(--lr-command-palette-offset-block-start);
+    padding-block-start: var(
+      --lr-command-palette-offset-block-start,
+      var(--_lr-command-palette-offset-block-start)
+    );
     background: var(--lr-color-overlay);
   }
   [part="dialog"] {
     inline-size: min(
-      var(--lr-command-palette-max-inline-size),
+      var(
+        --lr-command-palette-max-inline-size,
+        var(--_lr-command-palette-max-inline-size)
+      ),
       calc(100vw - 2 * var(--lr-space-l))
     );
     min-inline-size: 0;
-    max-block-size: var(--lr-command-palette-max-block-size);
+    max-block-size: var(
+      --lr-command-palette-max-block-size,
+      var(--_lr-command-palette-max-block-size)
+    );
     overflow: hidden;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -72,7 +84,10 @@ export const styles = css`
   }
   [part="list"] {
     position: relative;
-    max-block-size: var(--lr-command-palette-list-max-block-size);
+    max-block-size: var(
+      --lr-command-palette-list-max-block-size,
+      var(--_lr-command-palette-list-max-block-size)
+    );
     overflow-x: hidden;
     overflow-y: auto;
     padding: var(--lr-space-xs);
@@ -87,7 +102,10 @@ export const styles = css`
   [part="group"] {
     position: absolute;
     inset-inline: 0;
-    block-size: var(--lr-command-palette-group-height);
+    block-size: var(
+      --lr-command-palette-group-height,
+      var(--_lr-command-palette-group-height)
+    );
     box-sizing: border-box;
     overflow: hidden;
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -103,7 +121,10 @@ export const styles = css`
     display: flex;
     align-items: center;
     min-inline-size: 0;
-    block-size: var(--lr-command-palette-row-height);
+    block-size: var(
+      --lr-command-palette-row-height,
+      var(--_lr-command-palette-row-height)
+    );
     box-sizing: border-box;
     gap: var(--lr-space-s);
     inline-size: 100%;

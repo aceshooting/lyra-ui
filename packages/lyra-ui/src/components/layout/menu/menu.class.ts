@@ -118,11 +118,10 @@ export interface LyraMenuEventMap {
 export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
-    {
-      ...super.defaultStrings,
-      menuLabel: LYRA_DEFAULT_menuLabel,
-    };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    menuLabel: LYRA_DEFAULT_menuLabel,
+  };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

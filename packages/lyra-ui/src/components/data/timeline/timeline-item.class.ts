@@ -89,9 +89,9 @@ const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
  *   site) so a consumer can retint just the rail without touching the library-wide border color
  *   elsewhere. Inherits from theme ancestors.
  * @cssprop [--lr-timeline-marker-color=var(--lr-color-text-quiet)] - Marker fill/accent color.
- *   Swapped per `variant` (see the class doc's variant table); a consumer can override it on an
- *   ancestor for a themed group or directly on one item, with the direct value winning via the
- *   normal cascade.
+ *   Its private default changes per `variant` (see the class doc's variant table); a consumer can
+ *   override it on an ancestor for a themed group or directly on one item, with the direct value
+ *   winning via the normal cascade.
  * @cssprop [--lr-timeline-active-ring-color=var(--lr-timeline-marker-color)] - Static outline color
  *   for the current/in-progress marker. The outline remains visible when reduced motion disables
  *   the optional pulse animation.

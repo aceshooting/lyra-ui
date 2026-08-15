@@ -17,6 +17,7 @@ export const Connected: Story = {
     state="connected"
     voice-state="speaking"
     level="0.65"
+    session-id="voice-session-a"
     .entries=${[
       { id: '1', speaker: 'You', text: 'Summarize the evidence.' },
       {

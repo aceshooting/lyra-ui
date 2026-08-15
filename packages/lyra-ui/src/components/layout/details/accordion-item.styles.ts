@@ -2,10 +2,10 @@ import { css } from "lit";
 
 export const styles = css`
   :host {
-    --lr-accordion-item-spacing: var(--lr-form-control-padding-inline);
-    --lr-accordion-item-show-duration: var(--lr-duration-base);
-    --lr-accordion-item-hide-duration: var(--lr-duration-base);
-    --lr-accordion-item-easing: var(--lr-easing-standard);
+    --_lr-accordion-item-spacing: var(--lr-form-control-padding-inline);
+    --_lr-accordion-item-show-duration: var(--lr-duration-base);
+    --_lr-accordion-item-hide-duration: var(--lr-duration-base);
+    --_lr-accordion-item-easing: var(--lr-easing-standard);
     display: block;
     min-inline-size: 0;
     color: var(--lr-color-text);
@@ -37,11 +37,17 @@ export const styles = css`
   [part~="button"] {
     display: flex;
     align-items: center;
-    gap: var(--spacing, var(--lr-accordion-item-spacing));
+    gap: var(
+      --spacing,
+      var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
+    );
     inline-size: 100%;
     min-block-size: var(--lr-icon-button-size);
     box-sizing: border-box;
-    padding: var(--spacing, var(--lr-accordion-item-spacing));
+    padding: var(
+      --spacing,
+      var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
+    );
     border: none;
     border-radius: 0;
     background: transparent;
@@ -89,8 +95,17 @@ export const styles = css`
     justify-content: center;
     color: var(--lr-color-text-quiet);
     transition: rotate
-      var(--hide-duration, var(--lr-accordion-item-hide-duration))
-      var(--easing, var(--lr-accordion-item-easing));
+      var(
+        --hide-duration,
+        var(
+          --lr-accordion-item-hide-duration,
+          var(--_lr-accordion-item-hide-duration)
+        )
+      )
+      var(
+        --easing,
+        var(--lr-accordion-item-easing, var(--_lr-accordion-item-easing))
+      );
   }
   [part~="accordion-item"][data-icon-placement="start"] [part~="icon"] {
     order: -1;
@@ -110,7 +125,10 @@ export const styles = css`
     rotate: 90deg;
     transition-duration: var(
       --show-duration,
-      var(--lr-accordion-item-show-duration)
+      var(
+        --lr-accordion-item-show-duration,
+        var(--_lr-accordion-item-show-duration)
+      )
     );
   }
   :host([expanded]:dir(rtl)) [part~="icon"] {
@@ -123,11 +141,37 @@ export const styles = css`
     opacity: 0;
     color: var(--lr-color-text-quiet);
     transition: grid-template-rows
-        var(--hide-duration, var(--lr-accordion-item-hide-duration))
-        var(--easing, var(--lr-accordion-item-easing)),
-      opacity var(--hide-duration, var(--lr-accordion-item-hide-duration))
-        var(--easing, var(--lr-accordion-item-easing)),
-      visibility var(--hide-duration, var(--lr-accordion-item-hide-duration))
+        var(
+          --hide-duration,
+          var(
+            --lr-accordion-item-hide-duration,
+            var(--_lr-accordion-item-hide-duration)
+          )
+        )
+        var(
+          --easing,
+          var(--lr-accordion-item-easing, var(--_lr-accordion-item-easing))
+        ),
+      opacity
+        var(
+          --hide-duration,
+          var(
+            --lr-accordion-item-hide-duration,
+            var(--_lr-accordion-item-hide-duration)
+          )
+        )
+        var(
+          --easing,
+          var(--lr-accordion-item-easing, var(--_lr-accordion-item-easing))
+        ),
+      visibility
+        var(
+          --hide-duration,
+          var(
+            --lr-accordion-item-hide-duration,
+            var(--_lr-accordion-item-hide-duration)
+          )
+        )
         step-end;
   }
   :host([expanded]) [part~="panel"] {
@@ -135,11 +179,37 @@ export const styles = css`
     visibility: visible;
     opacity: 1;
     transition: grid-template-rows
-        var(--show-duration, var(--lr-accordion-item-show-duration))
-        var(--easing, var(--lr-accordion-item-easing)),
-      opacity var(--show-duration, var(--lr-accordion-item-show-duration))
-        var(--easing, var(--lr-accordion-item-easing)),
-      visibility var(--show-duration, var(--lr-accordion-item-show-duration))
+        var(
+          --show-duration,
+          var(
+            --lr-accordion-item-show-duration,
+            var(--_lr-accordion-item-show-duration)
+          )
+        )
+        var(
+          --easing,
+          var(--lr-accordion-item-easing, var(--_lr-accordion-item-easing))
+        ),
+      opacity
+        var(
+          --show-duration,
+          var(
+            --lr-accordion-item-show-duration,
+            var(--_lr-accordion-item-show-duration)
+          )
+        )
+        var(
+          --easing,
+          var(--lr-accordion-item-easing, var(--_lr-accordion-item-easing))
+        ),
+      visibility
+        var(
+          --show-duration,
+          var(
+            --lr-accordion-item-show-duration,
+            var(--_lr-accordion-item-show-duration)
+          )
+        )
         step-start;
   }
   .panel-clip {
@@ -148,8 +218,15 @@ export const styles = css`
   }
   [part~="content"] {
     display: block;
-    padding: 0 var(--spacing, var(--lr-accordion-item-spacing))
-      var(--spacing, var(--lr-accordion-item-spacing));
+    padding: 0
+      var(
+        --spacing,
+        var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
+      )
+      var(
+        --spacing,
+        var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
+      );
     overflow-wrap: anywhere;
   }
   @media (prefers-reduced-motion: reduce) {

@@ -14,6 +14,15 @@ const requests: ToolApprovalRequest[] = [
 ];
 
 export const Default: Story = { render: () => html`<lr-approval-queue .requests=${requests}></lr-approval-queue>` };
+export const SelectedInvocation: Story = {
+  render: () => html`
+    <lr-approval-queue
+      .requests=${requests}
+      .selectedInvocationId=${'call-2'}
+      open
+    ></lr-approval-queue>
+  `,
+};
 export const Empty: Story = { render: () => html`<lr-approval-queue></lr-approval-queue>` };
 export const Narrow320: Story = {
   name: 'Narrow (320px, long content)',

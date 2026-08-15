@@ -49,13 +49,14 @@ function modifiedArrow(
 }
 
 function applyItemsReorder(el: LyraTaskList, event: CustomEvent): void {
-  const { parentId, fromIndex, toIndex } = event.detail as {
-    parentId: string | null;
+  const { parentTaskId, fromIndex, toIndex } = event.detail as {
+    taskId: string;
+    parentTaskId: string | null;
     fromIndex: number;
     toIndex: number;
   };
   const next = JSON.parse(JSON.stringify(el.items)) as TaskItem[];
-  const siblings = parentId === null ? next : next.find((item) => item.id === parentId)?.children;
+  const siblings = parentTaskId === null ? next : next.find((item) => item.id === parentTaskId)?.children;
   if (!siblings) return;
   const [moved] = siblings.splice(fromIndex, 1);
   if (!moved) return;
@@ -108,15 +109,15 @@ describe('reorderable', () => {
 
     expect(events.length).to.equal(1);
     expect(events[0]!.detail).to.deep.equal({
-      id: 'prepare',
-      parentId: null,
+      taskId: 'prepare',
+      parentTaskId: null,
       fromIndex: 0,
       toIndex: 1,
     });
     expect(events[0]!.bubbles).to.be.true;
     expect(events[0]!.composed).to.be.true;
     expect(source.map((item) => item.id)).to.deep.equal(['prepare', 'write', 'review']);
-    expect(el.items).to.equal(source);
+    expect(el.items).to.deep.equal(source);
   });
 
   it('Cmd+ArrowUp on a child reports its parent and sibling-scoped indices', async () => {
@@ -131,8 +132,8 @@ describe('reorderable', () => {
 
     expect(events.length).to.equal(1);
     expect(events[0]!.detail).to.deep.equal({
-      id: 'prepare-b',
-      parentId: 'prepare',
+      taskId: 'prepare-b',
+      parentTaskId: 'prepare',
       fromIndex: 1,
       toIndex: 0,
     });
@@ -336,8 +337,8 @@ describe('reorderable', () => {
     await el.updateComplete;
 
     expect(events[0]!.detail).to.deep.equal({
-      id: 'prepare',
-      parentId: null,
+      taskId: 'prepare',
+      parentTaskId: null,
       fromIndex: 0,
       toIndex: 1,
     });

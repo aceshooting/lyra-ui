@@ -122,7 +122,7 @@ uses for its own `[part="body"]`.
   normally and never fire this
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
   fallback matrix below), or `math` is set but the `katex` peer isn't installed
-- `lr-highlight-activate` (`detail: { id: string }`) — a painted `text-quote` highlight was clicked
+- `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked
 - `lr-text-select` (`detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`) — a text
   selection inside the rendered content ended; `anchor` is a `text-quote` anchor scoped to the
   rendered content, or `null` when the selection couldn't be anchored
@@ -1051,7 +1051,9 @@ focus move.
 - `LyraCatalogEntry { id: string; label: string }` — the shared minimum row vocabulary.
 - `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
   — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
-  shorthand uses the same string for both id and label; readonly tuples/arrays are accepted.
+  shorthand uses the same string for both id and label; readonly tuples/arrays are accepted. Ids
+  must be nonempty and unique: malformed rows and later duplicates are omitted first-wins before
+  mode selection, rendering, focus reconciliation, selection, or preview lookup.
 - `LyraModelCatalogEntry extends LyraCatalogEntry { icon?: string }` — one model row. An
   optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
   change the option's accessible name.
@@ -1060,7 +1062,9 @@ focus move.
 
 - `provider: string = ''` — informational only (e.g. `'ollama'`); rendered as a small leading badge.
 - `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false) — the full model list. Omit (or
-  leave empty) to fall back to plain free-text entry.
+  leave empty) to fall back to plain free-text entry. Ids use the shared unique, nonempty,
+  first-wins catalog rule above. The array is clone-owned, bounded, and frozen; reassign a new
+  catalog array after changing its rows.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
 - `label: string = ''` — optional visible title above the control, rendered alongside the `label`
@@ -1787,7 +1791,9 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
   `lr-model-select`.
 - `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false, JS-only) — a readonly string
   catalog or readonly object-row catalog (every entry must be one shape or the other, never mixed);
-  passed straight through to the internal `lr-model-select`.
+  passed straight through to the internal `lr-model-select`, with the shared unique, nonempty,
+  first-wins catalog projection also used for this panel's `inCatalog` event field. The array is
+  clone-owned, bounded, and frozen; reassign a new catalog array after changing its rows.
 - `model: string = ''` — the current model id.
 - `allowCustom: boolean = false` (attribute `allow-custom`) — lets the model control accept a value
   outside `catalog`; passed straight through.
@@ -1920,7 +1926,8 @@ rendered chevron), `blur()` blurs both chevrons, `click()` activates that same e
 
 **Events:** `lr-branch-change` — a branch navigation was requested. `detail: { index }`, always a
 valid target (never past either bound); the consumer applies `index` after switching the displayed
-branch content.
+branch content. `lr-toolbar-actions-change` is the no-detail coordination event emitted when the
+provider's logical toolbar actions change availability or order.
 
 **CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`,
 `previous-glyph` and `next-glyph` (the chevron inside each button — target these to swap the
@@ -1948,7 +1955,8 @@ even after a controlled state write changed the remembered stop.
 
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins
-render, in that order. `copyText: string = ''`
+render, in that order. Duplicate names are omitted first-wins before rendering, roving focus, or
+intent events, so each built-in can occur at most once. `copyText: string = ''`
 (attribute `copy-text`) — required for the `copy` built-in to render at all. `feedbackRating:
 MessageFeedbackValue = null` (attribute `feedback-rating`) — forwarded to the embedded, thumbs-only
 `lr-message-feedback` (its `detail`/`detailFor` are never forwarded, so its detail panel never
@@ -1989,6 +1997,8 @@ uses the ordinary re-activate-to-clear toggle.
 **Properties:** `rating: MessageFeedbackValue = null` (`'up' | 'down' | null`, reflected),
 `detail?: MessageFeedbackDetailConfiguration` (attribute: false) — one configuration with optional
 `reasons?: readonly { id, label }[]` and `commentable?: boolean`; omit it for thumbs-only feedback.
+The record and nested reasons are a bounded clone-owned frozen snapshot; create and reassign a new
+detail record after changes.
 `detailFor: 'none' | 'up' | 'down' | 'both' = 'down'` (attribute `detail-for`) selects which rating
 owns that one detail panel. `disabled: boolean = false` (reflected) makes a recorded rating read-only, and
 `pending: boolean = false` (reflected) — set automatically when a submit listener prevents the
@@ -2012,6 +2022,8 @@ is installed before dispatch, so even a synchronous listener may finalize/revert
 success announcement/focus until `finalizePendingSubmit()`; call `revertPendingSubmit()` on failure.
 When uncanceled it retains the synchronous close/announce/focus behavior. The optional comment
 `<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.
+`lr-toolbar-actions-change` is the no-detail coordination event emitted when the provider's logical
+toolbar actions change availability or order.
 
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
@@ -2269,7 +2281,8 @@ external focus move.
 **Properties:** `suggestions: readonly LyraChatSuggestion[] = []` (attribute: false) —
 `LyraChatSuggestion { suggestionId: string; label: string; icon?: string; detail?: string }`
 (exported here). Identifiers must be nonempty and unique; invalid/later duplicates are omitted with
-the first valid occurrence winning. `icon` is an optional
+the first valid occurrence winning. The input is clone-owned, bounded, and frozen; reassign a new
+array after changing the sequence or a row. `icon` is an optional
 peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
 `detail` is an optional secondary line. Empty renders nothing at all. `wrap: boolean = false`
 (reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label:
@@ -2805,7 +2818,9 @@ selection direction exposed in free-text mode.
 **Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
 small leading badge. `catalog?: LyraCatalog<LyraVoiceCatalogEntry>` (attribute: false) — the full
 voice list; omit (or leave empty) to fall back to plain free-text entry; replacing it retires any
-internal preview before the rendered candidate changes. `allowCustom: boolean = false` (attribute
+internal preview before the rendered candidate changes. Ids use the shared unique, nonempty,
+first-wins catalog rule documented under `lr-model-select`, including preview lookup.
+`allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`. `preview:
 boolean = true` (reflected) — whether to render preview affordances at all. `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
@@ -2945,8 +2960,9 @@ metadata?: Record<string, unknown> }`. Each entry renders as an `lr-chat-message
   `role`/`status`/`timestamp` come straight across. A nonempty `parts` array renders in order through
   `lr-message-parts` and takes precedence over the legacy `text` shortcut; otherwise `text` renders
   as sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
-  richer bodies. The latest 500 authored entries are considered; within that window the first
-  occurrence of each id wins. Host owns ordering, updates, and persistence
+  richer bodies. Empty ids and later duplicates are omitted first-wins before the latest 500 valid
+  identities are chosen, so malformed tail rows cannot evict earlier valid messages. Host owns
+  ordering, updates, and persistence
 - `follow: boolean = true` (reflected) — forwarded to the internal `lr-chat-viewport`
 - `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — forwarded to the viewport
 
@@ -3129,14 +3145,20 @@ request. `label` names the prompt section; it is not generic field chrome.
 `autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
 `enterKeyHint: string = ''` (attribute `enterkeyhint`) forward unchanged to the composed native
 textarea; empty string hints preserve the browser default.
-`attachments: readonly LyraPromptInputAttachment[] = []`, `attachmentCapabilities: readonly
-LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: LyraPromptSuggestion[] =
-[]`, `commandItems: LyraPromptSuggestion[] = []`,
+`attachments: readonly LyraPromptInputAttachment[] = []` — `attachmentId` must be nonempty and
+unique; malformed rows and later duplicates are omitted first-wins before rendering and attachment
+events, and surviving chips reconcile by `attachmentId`. `attachmentCapabilities: readonly
+LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: readonly LyraPromptSuggestion[] =
+[]`, `commandItems: readonly LyraPromptSuggestion[] = []`,
 `modelCatalog?: LyraCatalog<LyraModelCatalogEntry>`,
 `voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>`,
-`sources: LyraSourceEntry[] = []`, `selectedSourceIds: string[] = []`, and `queue:
-PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
+`sources: readonly LyraSourceEntry[] = []`, `selectedSourceIds: readonly string[] = []`, and `queue:
+readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+
+Every array-valued property above is a clone-owned, bounded, frozen readonly snapshot, including
+nested source children and queued attachments. Mutating a previously assigned collection has no
+effect; create and reassign a new array after changes.
 
 `LyraPromptSuggestion` extends `LyraMentionItem { suggestionId, label, description?, icon? }` with
 optional `insertText` (defaults to `label`). The selected occurrence's original, pre-filter `index`
@@ -3194,10 +3216,10 @@ When a focused row action requests removal and the host applies the proposed que
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
 receives focus. Removing an unfocused row does not move focus.
 
-**Properties:** `items: PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
+**Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
 (reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
-`PromptQueueItem = { id: string; value: string; attachments?: DocumentRef[]; createdAt?: number;
+`PromptQueueItem = { id: string; value: string; attachments?: readonly DocumentRef[]; createdAt?: number;
 metadata?: Record<string, unknown> }`.
 
 Item ids are occurrence identities. Empty ids and later duplicates are ignored before rendering or
@@ -3223,10 +3245,12 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 `DocumentLocator` into ask, quote, cite, and copy actions.
 
 **Properties:** `open: boolean = false` (reflected); `text: string = ''`;
-`anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
-`actions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
+clone-owned `anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
+clone-owned `actions: readonly SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
-`SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`.
+`SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`. Duplicate built-in names are omitted
+first-wins before rendering, roving focus, and action events. The anchor (including any path) and
+actions are bounded frozen snapshots; reassign a new record or array after changes.
 
 When a controlled `actions` refresh replaces the focused action, focus follows the same action id
 through reordering, otherwise moves to the nearest surviving action, or to the stable toolbar when
@@ -3278,8 +3302,10 @@ Provider-neutral realtime voice shell composing connection state, `lr-audio-visu
 **Properties:** `state: RealtimeConnectionState = 'disconnected'` (reflected), where the closed set
 is `'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error'`; `voiceState:
 AudioVisualizerState = 'idle'` (attribute `voice-state`); `level: number | null = null` (finite,
-clamped by the composed visualizer); `stream: MediaStream | null = null` and `entries:
-LyraTranscriptEntry[] = []` (attribute: false); `muted: boolean = false` (reflected);
+clamped by the composed visualizer); `stream: MediaStream | null = null`; `sessionId: string = ''`
+(attribute `session-id`) — forwarded to the transcript feed so changing sessions resets finalized
+entry announcement identity; `entries: LyraTranscriptEntry[] = []` (attribute: false);
+`muted: boolean = false` (reflected);
 `showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
 converter); `label: string = ''`. Invalid attribute or direct-property values for `state` and
 `voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same

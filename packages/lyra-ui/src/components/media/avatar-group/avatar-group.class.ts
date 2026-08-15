@@ -79,12 +79,12 @@ export interface LyraAvatarGroupEventMap {
  * drawn around every avatar and the overflow badge.
  * @cssprop [--lr-avatar-group-ring-width=var(--lr-border-width-medium)] - Ring thickness.
  * @cssprop [--lr-avatar-group-badge-bg=var(--lr-color-border)] - Overflow badge background.
- * Variant-driven; see `variant`.
+ * Its private default follows `variant`; the public value remains authoritative.
  * @cssprop [--lr-avatar-group-badge-color=var(--lr-color-text)] - Overflow badge text color.
- * Variant-driven; see `variant`.
+ * Its private default follows `variant`; the public value remains authoritative.
  * @cssprop [--lr-avatar-group-badge-font-size=var(--lr-font-size-sm)] - Font size of the "+N"
- * badge label. `size` steps it across the same six-step ladder as `<lr-avatar>`'s own
- * `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight.
+ * badge label. `size` steps its private default across the same six-step ladder as `<lr-avatar>`'s
+ * own `--lr-avatar-font-size`, so the badge and the avatars it caps read at the same optical weight.
  * @status stable
  * @since 4.0.0
  */

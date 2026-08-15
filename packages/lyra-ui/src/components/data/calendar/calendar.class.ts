@@ -33,6 +33,9 @@ export type CalendarView = 'month' | 'agenda';
  * keyboard users can activate individual events without switching views.
  * Agenda view renders the same events as full-width buttons.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-calendar
  * @event lr-date-select - A calendar date was selected.
  * @event lr-event-select - An event was selected.
@@ -63,6 +66,8 @@ export type CalendarView = 'month' | 'agenda';
  * @since 4.0.0
  */
 export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["events"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -75,7 +80,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  @property({ attribute: false }) events: CalendarEvent[] = [];
+  @property({ attribute: false }) events: readonly CalendarEvent[] = [];
   @property() value = '';
   @property({ attribute: 'view-date' }) viewDate: string = formatISO(new Date()).slice(0, 7) + '-01';
   private _view: CalendarView = 'month';

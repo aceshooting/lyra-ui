@@ -82,6 +82,19 @@ it("does not apply inline-size containment that collapses intrinsic inline layou
   expect(base.scrollWidth).to.be.at.most(el.clientWidth);
 });
 
+it("normalizes duplicate built-in controls before rendering and activation", async () => {
+  const el = (await fixture(html`<lr-message-actions
+    .controls=${["edit", "edit", "regenerate", "regenerate"]}
+  ></lr-message-actions>`)) as LyraMessageActions;
+  expect(el.shadowRoot!.querySelectorAll('[part="edit-button"]')).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelectorAll('[part="regenerate-button"]')).to.have.lengthOf(1);
+
+  let edits = 0;
+  el.addEventListener("lr-edit", () => edits++);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="edit-button"]')!.click();
+  expect(edits).to.equal(1);
+});
+
 it("renders no built-ins by default and no copy button without copyText", async () => {
   const el = (await fixture(
     html`<lr-message-actions></lr-message-actions>`

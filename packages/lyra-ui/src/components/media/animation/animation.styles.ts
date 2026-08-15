@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 // This component has no CSS `animation:`/`transition:` declaration of its
 // own to disable under `@media (prefers-reduced-motion: reduce)` -- the
@@ -10,9 +10,9 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: contents;
-    --lr-animation-slide-distance: 100%;
-    --lr-animation-zoom-scale: 0.5;
-    --lr-animation-bounce-height: 25%;
-    --lr-animation-shake-distance: 4%;
+    --_lr-animation-slide-distance: 100%;
+    --_lr-animation-zoom-scale: 0.5;
+    --_lr-animation-bounce-height: 25%;
+    --_lr-animation-shake-distance: 4%;
   }
 `;

@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -31,8 +32,8 @@ export interface LyraRagCitationSelectDetail extends CitationSelectEventDetail {
 }
 
 export interface LyraRagAnswerEventMap {
-  "lr-citation-select": CustomEvent<LyraRagCitationSelectDetail>;
-  "lr-claim-select": CustomEvent<{ claim: GroundedClaim }>;
+  "lr-citation-select": CustomEvent<LyraEventDetailSnapshot<LyraRagCitationSelectDetail>>;
+  "lr-claim-select": CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
   "lr-retry": CustomEvent<null>;
 }
 
@@ -40,6 +41,9 @@ export interface LyraRagAnswerEventMap {
  * `<lr-rag-answer>` — a controlled grounded-answer surface combining sanitized Markdown, citation
  * badges, a grounding assessment, and source previews. It performs no model call, retrieval,
  * citation parsing, or source fetching.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-rag-answer
  * @slot answer - Replaces the data-driven Markdown answer body.
@@ -65,6 +69,12 @@ export interface LyraRagAnswerEventMap {
  * @since 6.2.0
  */
 export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "citations",
+    "sources",
+    "assessment",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -80,11 +90,11 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   /** Markdown answer content rendered when the `answer` slot is empty. */
   @property() answer = "";
   /** Citations referenced by the answer and grounding assessment. */
-  @property({ attribute: false }) citations: Citation[] = [];
+  @property({ attribute: false }) citations: readonly Citation[] = [];
   /** Source records rendered when the `sources` slot is empty. */
-  @property({ attribute: false }) sources: DocumentRef[] = [];
+  @property({ attribute: false }) sources: readonly DocumentRef[] = [];
   /** Optional grounding assessment summarized above the citations. */
-  @property({ attribute: false }) assessment: GroundingAssessment | null = null;
+  @property({ attribute: false }) assessment: Readonly<GroundingAssessment> | null = null;
   /** Marks answer generation as pending. Busy semantics and the loading cue remain present while
    * partial property or slotted answer content streams; `errorText` takes state precedence if a
    * host supplies both flags during a transition. */

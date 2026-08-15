@@ -10,6 +10,7 @@ import type {
 import { styles } from './pptx-viewer.styles.js';
 import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
+import { VIEWER_SEARCH_QUERY_LIMIT } from '../viewer-search-limits.js';
 
 function zipWithDeclaredSize(uncompressedBytes = 1): ArrayBuffer {
   const localSize = 32;
@@ -316,6 +317,30 @@ describe('lr-pptx-viewer', () => {
       const changed = oneEvent(el, 'lr-search-change');
       expect(await el.search('x')).to.equal(10_000);
       expect((await changed).detail).to.deep.include({ matchCount: 10_000, matchCountExact: false });
+    } finally {
+      restore();
+    }
+  });
+
+  it('rejects an oversized query before invoking the renderer search operation', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const changed = oneEvent(el, 'lr-search-change');
+      const query = 'x'.repeat(VIEWER_SEARCH_QUERY_LIMIT + 1);
+
+      expect(await el.search(query)).to.equal(0);
+      expect(fake.calls.searchText).to.equal(0);
+      expect((await changed).detail).to.deep.equal({
+        query,
+        matchCount: 0,
+        matchCountExact: false,
+        activeIndex: -1,
+      });
     } finally {
       restore();
     }

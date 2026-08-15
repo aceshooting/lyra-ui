@@ -89,7 +89,7 @@ describe('lr-eval-result', () => {
     expect(review.value).to.deep.equal({});
   });
 
-  it('distinguishes null fallback selections from valid empty-string run identities', async () => {
+  it('omits empty run identities and falls back to the first valid run', async () => {
     const emptyIdRun: EvalRunResult = {
       id: '',
       label: 'Root run',
@@ -99,17 +99,17 @@ describe('lr-eval-result', () => {
     };
     const el = await fixture<LyraEvalResult>(html`
       <lr-eval-result
-        .runs=${[RUNS[0]!, emptyIdRun]}
+        .runs=${[RUNS[0]!, emptyIdRun, { ...emptyIdRun, id: '   ', label: 'Blank run' }]}
         .columns=${COLUMNS}
         .rubricKeys=${RUBRIC_KEYS}
-        selected-run-id=""
-        baseline-run-id=""
       ></lr-eval-result>
     `);
     const review = el.shadowRoot!.querySelector('[part="review"]') as HTMLElement & { itemId: string };
-    expect(el.selectedRunId).to.equal('');
-    expect(el.baselineRunId).to.equal('');
-    expect(review.itemId).to.equal('');
+    const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & { rows: unknown[] };
+    expect(el.selectedRunId).to.equal(null);
+    expect(el.baselineRunId).to.equal(null);
+    expect(review.itemId).to.equal('run-a');
+    expect(table.rows).to.have.length(1);
   });
 
   it('binds the review form to the run named by selected-run-id, including its existing review value', async () => {

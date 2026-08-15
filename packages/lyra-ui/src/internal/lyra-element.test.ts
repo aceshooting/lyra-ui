@@ -1,5 +1,6 @@
 import { fixture, expect, html } from "@open-wc/testing";
 import { nothing, type PropertyValues } from "lit";
+import { property } from "lit/decorators.js";
 import {
   observeInheritedContext,
   recordInheritedDirectionRead,
@@ -17,6 +18,34 @@ class Demo extends LyraElement {
   }
 }
 customElements.define(tag("demo-base"), Demo);
+
+interface DemoCollectionEntry {
+  readonly label: string;
+  readonly nested: Readonly<{ values: readonly number[] }>;
+}
+
+class DemoOwnedCollection extends LyraElement {
+  protected static override readonly ownedCollectionProperties = ["items"];
+
+  @property({ attribute: false })
+  items: readonly DemoCollectionEntry[] = [];
+}
+customElements.define(tag("demo-owned-collection"), DemoOwnedCollection);
+
+class DemoIdentityCollection extends DemoOwnedCollection {
+  protected static override readonly ownedCollectionProperties = [
+    "items",
+    "registry",
+  ];
+  protected static override readonly identityCollectionProperties = [
+    "items",
+    "registry",
+  ];
+
+  @property({ attribute: false })
+  registry: ReadonlyMap<string, object> = new Map();
+}
+customElements.define(tag("demo-identity-collection"), DemoIdentityCollection);
 
 class DemoLocale extends LyraElement {
   get exposedLocale() {
@@ -100,6 +129,154 @@ it("emit() dispatches a composed, bubbling lyra event", async () => {
   expect(caught!.bubbles).to.be.true;
   expect(caught!.composed).to.be.true;
   expect((caught!.detail as { ok: boolean }).ok).to.be.true;
+});
+
+it("snapshots and freezes collection-bearing event details before dispatch", async () => {
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
+  const source = [{ id: "first", nested: [1, 2] }];
+  let caught: CustomEvent | undefined;
+  el.addEventListener("lr-snapshot", (event) => {
+    caught = event as CustomEvent;
+  });
+
+  (el as unknown as { emit: (name: string, detail: unknown) => void }).emit(
+    "lr-snapshot",
+    { rows: source }
+  );
+  source[0]!.id = "mutated";
+  source[0]!.nested.push(3);
+  source.push({ id: "later", nested: [] });
+
+  const detail = caught!.detail as {
+    readonly rows: readonly Readonly<{
+      id: string;
+      nested: readonly number[];
+    }>[];
+  };
+  expect(detail.rows.map((row) => row.id)).to.deep.equal(["first"]);
+  expect(detail.rows[0]!.nested).to.deep.equal([1, 2]);
+  expect(Object.isFrozen(detail)).to.be.true;
+  expect(Object.isFrozen(detail.rows)).to.be.true;
+  expect(Object.isFrozen(detail.rows[0])).to.be.true;
+  expect(Object.isFrozen(detail.rows[0]!.nested)).to.be.true;
+});
+
+it("detaches Map and Set event paths behind mutation-free readonly facades", async () => {
+  const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
+  const mapEntry = { label: "first" };
+  const setEntry = { label: "only" };
+  const sourceMap = new Map([["entry", mapEntry]]);
+  const sourceSet = new Set([setEntry]);
+  let caught: CustomEvent | undefined;
+  el.addEventListener("lr-map-snapshot", (event) => {
+    caught = event as CustomEvent;
+  });
+
+  (el as unknown as { emit: (name: string, detail: unknown) => void }).emit(
+    "lr-map-snapshot",
+    { map: sourceMap, set: sourceSet }
+  );
+  mapEntry.label = "mutated";
+  setEntry.label = "mutated";
+  sourceMap.set("later", { label: "later" });
+  sourceSet.add({ label: "later" });
+
+  const detail = caught!.detail as {
+    map: ReadonlyMap<string, Readonly<{ label: string }>>;
+    set: ReadonlySet<Readonly<{ label: string }>>;
+  };
+  expect(detail.map.size).to.equal(1);
+  expect(detail.map.get("entry")!.label).to.equal("first");
+  expect([...detail.set][0]!.label).to.equal("only");
+  expect(Object.isFrozen(detail.map)).to.be.true;
+  expect(Object.isFrozen(detail.set)).to.be.true;
+  expect("set" in detail.map).to.be.false;
+  expect("add" in detail.set).to.be.false;
+});
+
+it("owns bounded immutable collection and record snapshots", async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  const source = [{ label: "first", nested: { values: [1, 2] } }];
+
+  el.items = source;
+  source[0]!.label = "mutated";
+  source[0]!.nested.values.push(3);
+  source.push({ label: "later", nested: { values: [] } });
+
+  expect(el.items.map((entry) => entry.label)).to.deep.equal(["first"]);
+  expect(el.items[0]!.nested.values).to.deep.equal([1, 2]);
+  expect(Object.isFrozen(el.items)).to.be.true;
+  expect(Object.isFrozen(el.items[0])).to.be.true;
+  expect(Object.isFrozen(el.items[0]!.nested)).to.be.true;
+  expect(Object.isFrozen(el.items[0]!.nested.values)).to.be.true;
+
+  const oversized = Array.from({ length: 10_005 }, (_, index) => ({
+    label: String(index),
+    nested: { values: [] },
+  }));
+  el.items = oversized;
+  expect(el.items.length).to.equal(10_000);
+});
+
+it("does not invoke hostile array getters and retains safe siblings", async () => {
+  const el = await fixture<DemoOwnedCollection>(
+    `<lr-demo-owned-collection></lr-demo-owned-collection>`
+  );
+  const source = [
+    { label: "hostile", nested: { values: [0] } },
+    { label: "safe", nested: { values: [1] } },
+  ];
+  const hostile = new Proxy(source, {
+    get(target, key, receiver) {
+      if (key === "length") throw new Error("length getter must not run");
+      return Reflect.get(target, key, receiver);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "0") throw new Error("first entry is hostile");
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+
+  expect(() => {
+    el.items = hostile;
+  }).not.to.throw();
+  expect(el.items.map((entry) => entry.label)).to.deep.equal(["safe"]);
+  expect(Object.isFrozen(el.items)).to.be.true;
+});
+
+it("retains item identity only for explicitly enrolled identity collections", async () => {
+  const el = await fixture<DemoIdentityCollection>(
+    `<lr-demo-identity-collection></lr-demo-identity-collection>`
+  );
+  const item = { label: "first", nested: { values: [1] } };
+  const source = [item];
+
+  el.items = source;
+  source.push({ label: "later", nested: { values: [] } });
+
+  expect(el.items.length).to.equal(1);
+  expect(el.items[0] === item).to.be.true;
+  expect(Object.isFrozen(el.items)).to.be.true;
+  expect(Object.isFrozen(item)).to.be.false;
+});
+
+it("owns a bounded frozen readonly-map facade while retaining value identity", async () => {
+  const el = await fixture<DemoIdentityCollection>(
+    `<lr-demo-identity-collection></lr-demo-identity-collection>`
+  );
+  const definition = { render: () => "first" };
+  const source = new Map<string, object>([["first", definition]]);
+
+  el.registry = source;
+  source.set("later", { render: () => "later" });
+
+  expect(el.registry.size).to.equal(1);
+  expect(el.registry.get("first") === definition).to.be.true;
+  expect(el.registry.has("later")).to.be.false;
+  expect(Object.isFrozen(el.registry)).to.be.true;
+  expect("set" in el.registry).to.be.false;
 });
 
 it("emit() normalizes an omitted no-payload detail to null", async () => {

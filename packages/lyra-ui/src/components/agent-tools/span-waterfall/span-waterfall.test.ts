@@ -93,7 +93,7 @@ describe('lr-span-waterfall', () => {
     const bar = el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
     setTimeout(() => bar.click());
     const ev = await oneEvent(el, 'lr-span-select');
-    expect(ev.detail).to.deep.equal({ id: 'llm' });
+    expect(ev.detail).to.deep.equal({ spanId: 'llm' });
   });
 
   it('tints bar on hover, and further again while pressed', async () => {

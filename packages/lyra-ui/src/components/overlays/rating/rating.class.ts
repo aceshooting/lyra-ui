@@ -1,8 +1,18 @@
-import { html, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import {
+  html,
+  svg,
+  type PropertyValues,
+  type SVGTemplateResult,
+  type TemplateResult,
+} from "lit";
+import { property, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import {
+  finiteCount,
+  finiteNumber,
+  finiteRange,
+} from "../../../internal/numbers.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
 import {
   attachInternalsSafely,
   getFormOwner,
@@ -10,31 +20,43 @@ import {
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
-} from '../../../internal/form-associated.js';
-import { syncValidityStates } from '../../../internal/custom-states.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { normalizeSize, type LyraSize, type LyraSizeStep } from '../../../internal/variants.js';
-import { styles } from './rating.styles.js';
-import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
-import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+} from "../../../internal/form-associated.js";
+import { syncValidityStates } from "../../../internal/custom-states.js";
+import {
+  AnchoredValidityController,
+  VALIDITY_ANCHOR,
+} from "../../../internal/anchored-validity.js";
+import {
+  normalizeSize,
+  type LyraSize,
+  type LyraSizeStep,
+} from "../../../internal/variants.js";
+import { styles } from "./rating.styles.js";
+import { dispatchNativeEvent } from "../../../internal/native-event-relay.js";
+import { installInvalidEventAlias } from "../../../internal/invalid-event-alias.js";
+import { omittedEmptyStringConverter } from "../../../internal/converters.js";
 import {
   EXTERNAL_LABEL_HOST_SEMANTICS,
   type ExternalLabelHostSemanticOperation,
-} from '../../../internal/form-control-labels.js';
-import { currentValidityValidator, type LyraFormValidator } from '../../forms/form-validator.js';
+} from "../../../internal/form-control-labels.js";
+import {
+  currentValidityValidator,
+  type LyraFormValidator,
+} from "../../forms/form-validator.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rating } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_fieldRequired,
+  LYRA_DEFAULT_rating,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 const DEFAULT_MAX = 5;
 /** No real-world star rating needs more stars than this; caps an untrusted `max` so it can't turn
  *  `render()`'s `Array.from({ length: count })` below into an unbounded allocation. */
 const MAX_STARS = 100;
 const DEFAULT_PRECISION = 1;
-const MANAGED_ARIA_LABEL_ATTRIBUTE = 'data-lr-rating-managed-label';
+const MANAGED_ARIA_LABEL_ATTRIBUTE = "data-lr-rating-managed-label";
 /** A `<= 0` precision would divide-by-zero when `setValue` snaps `next / precision`; keep it
  *  comfortably positive and no coarser than the star count itself. */
 const MIN_PRECISION = 0.01;
@@ -43,7 +65,7 @@ const MIN_PRECISION = 0.01;
 export type LyraRatingSize = LyraSize;
 
 /** Which point of a hover gesture an `lr-hover` event describes. */
-export type LyraRatingHoverPhase = 'start' | 'move' | 'end';
+export type LyraRatingHoverPhase = "start" | "move" | "end";
 
 /**
  * Renders one symbol. Called twice per position — once for the empty backdrop (`selected` false)
@@ -52,17 +74,20 @@ export type LyraRatingHoverPhase = 'start' | 'move' | 'end';
  * inert and pointer-transparent, so pointer and keyboard selection stay on the rating control.
  * Return any Lit-renderable value; a plain string renders as text, never as markup.
  */
-export type LyraRatingSymbolRenderer = (value: number, selected: boolean) => unknown;
+export type LyraRatingSymbolRenderer = (
+  value: number,
+  selected: boolean
+) => unknown;
 
 export interface LyraRatingEventMap {
   change: Event;
-  'lr-change': CustomEvent<{ value: number }>;
-  'lr-hover': CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>;
+  "lr-change": CustomEvent<{ value: number }>;
+  "lr-hover": CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
-  'lr-invalid': CustomEvent<null>;
+  "lr-focus": CustomEvent<null>;
+  "lr-blur": CustomEvent<null>;
+  "lr-invalid": CustomEvent<null>;
 }
 
 // A five-point star, sharing internal/icons.ts's 24x24 viewBox / 1em sizing
@@ -72,7 +97,8 @@ export interface LyraRatingEventMap {
 // `currentColor`-filled solid clipped to the filled fraction -- so a
 // fractional `precision` (e.g. `0.5`) can render a partial fill instead of
 // only ever snapping to the nearest whole star.
-const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2';
+const STAR_POINTS =
+  "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2";
 function starOutline(): SVGTemplateResult {
   return svg`<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points=${STAR_POINTS}></polygon></svg>`;
 }
@@ -132,8 +158,9 @@ function starSolid(): SVGTemplateResult {
  * @cssprop [--lr-rating-fill=var(--lr-color-warning)] - Filled-symbol color.
  * @cssprop [--lr-rating-empty-color=var(--lr-color-border)] - Unfilled-symbol color, retained during
  * hover preview.
- * @cssprop [--lr-rating-size=var(--lr-font-size-xl)] - Symbol size. Each `size` step rewrites it;
- * the `m` default reproduces the treatment this component had before `size` existed.
+ * @cssprop [--lr-rating-size=var(--lr-font-size-xl)] - Symbol size. Its private default follows each
+ * `size` step; an inherited or direct public value wins. The `m` default reproduces the treatment
+ * this component had before `size` existed.
  * @cssprop [--lr-rating-gap=var(--symbol-spacing,var(--lr-space-xs))] - Gap between symbols. It
  * takes precedence over the `--symbol-spacing` compatibility hook while preserving that hook and
  * the shared spacing token as fallbacks.
@@ -163,23 +190,32 @@ function starSolid(): SVGTemplateResult {
 export class LyraRating extends LyraElement<LyraRatingEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-    rating: LYRA_DEFAULT_rating,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      fieldRequired: LYRA_DEFAULT_fieldRequired,
+      rating: LYRA_DEFAULT_rating,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraRating>[] {
-    return [currentValidityValidator('required', 'disabled', 'readonly', 'value', 'max')];
+    return [
+      currentValidityValidator(
+        "required",
+        "disabled",
+        "readonly",
+        "value",
+        "max"
+      ),
+    ];
   }
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, styles];
 
   static override get observedAttributes(): string[] {
-    return [...new Set([...super.observedAttributes, 'role'])];
+    return [...new Set([...super.observedAttributes, "role"])];
   }
 
   // Hand-written accessors (rather than plain reactive fields) so the host attribute, the
@@ -187,14 +223,18 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   // assignment: native form APIs (`new FormData(form)`, `form.checkValidity()`) read them in the
   // same tick, long before Lit's async update cycle would have run.
   static override properties = {
-    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
-    value: { attribute: 'value', type: Number, noAccessor: true },
+    customError: { attribute: "custom-error", reflect: true, noAccessor: true },
+    value: { attribute: "value", type: Number, noAccessor: true },
     defaultValue: {
       attribute: false,
       noAccessor: true,
     },
     max: { type: Number, noAccessor: true },
-    name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
+    name: {
+      reflect: true,
+      noAccessor: true,
+      converter: omittedEmptyStringConverter,
+    },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
@@ -203,16 +243,22 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   @property({ type: Boolean, reflect: true }) readonly = false;
   /** Accessible-name property override. A host `aria-label` attribute has higher priority, and an
    * explicitly empty host attribute is preserved instead of restoring a fallback name. */
-  @property({ attribute: false }) accessibleLabel = '';
+  @property({ attribute: false }) accessibleLabel = "";
   /** Accessible name for the whole control, used when the host carries no `aria-label`. Not
    *  rendered as visible text — a rating has no field frame of its own. */
-  @property() label = '';
-  /** Visual density; rewrites `--lr-rating-size`. Valid upstream long-form sizes remain observable
-   * verbatim rather than being reflected back as a different token. */
-  @property({ reflect: true }) size: LyraRatingSize = 'm';
+  @property() label = "";
+  /** Visual density; changes the private fallback behind `--lr-rating-size`. An inherited or
+   * direct public value wins. Valid upstream long-form sizes remain observable verbatim rather
+   * than being reflected back as a different token. */
+  @property({ reflect: true }) size: LyraRatingSize = "m";
   private get effectiveSize(): LyraSizeStep {
     const value = this.size as string;
-    if (!['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'].includes(value)) return 'm';
+    if (
+      !["2xs", "xs", "s", "m", "l", "xl", "small", "medium", "large"].includes(
+        value
+      )
+    )
+      return "m";
     return normalizeSize(value as LyraSize);
   }
   /** Renders a consumer-supplied decorative symbol per position instead of the built-in star.
@@ -223,7 +269,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
    * supported JS property remains `defaultValue`; this accessor is not public API.
    * @internal
    * @default 0 */
-  @property({ attribute: 'default-value', type: Number })
+  @property({ attribute: "default-value", type: Number })
   get defaultValueAlias(): number {
     return this.defaultValue;
   }
@@ -241,7 +287,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   declare customError: string | null;
   private _value = 0;
   private _max = DEFAULT_MAX;
-  private _name = '';
+  private _name = "";
   private _required = false;
   private _disabled = false;
   private _fieldsetDisabled = false;
@@ -267,29 +313,43 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   constructor() {
     super();
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
+      this.emit("lr-invalid", null, init)
+    );
     // Shares the mixin's attach-or-degrade helper so both paths handle a missing *and* a throwing
     // `attachInternals()` (SSR/test DOMs, partial polyfills) without breaking construction.
     this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    this.internals.setFormValue('0');
+    this.validityController = new AnchoredValidityController(
+      this,
+      this.internals,
+      () => this[VALIDITY_ANCHOR]()
+    );
+    installCustomErrorProperty(
+      this,
+      () => this.validityController.customValidityMessage
+    );
+    this.internals.setFormValue("0");
     // Retain `focusout` as an interaction signal for delegated/synthetic integration flows. The
     // host's own native `blur` listener below marks real focus transitions directly. Registered
     // once, in the constructor, so a disconnect/reconnect cycle cannot stack duplicates.
-    this.addEventListener('focusout', this.markInteracted);
-    this.addEventListener('keydown', this.onHostKeyDown as EventListener);
-    this.addEventListener('focus', this.onFocus);
-    this.addEventListener('blur', this.onBlur);
+    this.addEventListener("focusout", this.markInteracted);
+    this.addEventListener("keydown", this.onHostKeyDown as EventListener);
+    this.addEventListener("focus", this.onFocus);
+    this.addEventListener("blur", this.onBlur);
     this.syncValidityStates();
   }
 
-  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
-    if (this.syncingHostSemantics && (name === 'aria-label' || name === 'role')) return;
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    value: string | null
+  ): void {
+    if (this.syncingHostSemantics && (name === "aria-label" || name === "role"))
+      return;
     super.attributeChangedCallback(name, oldValue, value);
-    if (name === 'aria-label') {
+    if (name === "aria-label") {
       const managed = this.getAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE);
-      const rehydratedManagedName = oldValue === null && managed !== null && managed === value;
+      const rehydratedManagedName =
+        oldValue === null && managed !== null && managed === value;
       this.authorAriaLabel = rehydratedManagedName ? null : value;
       if (!rehydratedManagedName) {
         this.syncingHostSemantics = true;
@@ -300,10 +360,10 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
         }
       }
     }
-    if (name === 'role' && value !== 'slider') {
+    if (name === "role" && value !== "slider") {
       this.syncingHostSemantics = true;
       try {
-        this.setAttribute('role', 'slider');
+        this.setAttribute("role", "slider");
       } finally {
         this.syncingHostSemantics = false;
       }
@@ -311,15 +371,18 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   /** @internal Guarded label-name transactions for the host-owned role/focus surface. */
-  [EXTERNAL_LABEL_HOST_SEMANTICS](operation: ExternalLabelHostSemanticOperation): boolean | void {
-    if (operation.type === 'has-authored-name') return this.authorAriaLabel !== null;
-    if (operation.type === 'apply') {
+  [EXTERNAL_LABEL_HOST_SEMANTICS](
+    operation: ExternalLabelHostSemanticOperation
+  ): boolean | void {
+    if (operation.type === "has-authored-name")
+      return this.authorAriaLabel !== null;
+    if (operation.type === "apply") {
       this.externalLabelNameActive = true;
       this.syncingHostSemantics = true;
       try {
         this.setAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE, operation.name);
-        if (this.getAttribute('aria-label') !== operation.name) {
-          this.setAttribute('aria-label', operation.name);
+        if (this.getAttribute("aria-label") !== operation.name) {
+          this.setAttribute("aria-label", operation.name);
         }
       } finally {
         this.syncingHostSemantics = false;
@@ -330,14 +393,14 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this.externalLabelNameActive = false;
     this.syncingHostSemantics = true;
     try {
-      if (this.getAttribute('aria-label') === operation.appliedName) {
+      if (this.getAttribute("aria-label") === operation.appliedName) {
         if (operation.hadPrevious) {
-          const previous = operation.previous ?? '';
+          const previous = operation.previous ?? "";
           this.setAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE, previous);
-          this.setAttribute('aria-label', previous);
+          this.setAttribute("aria-label", previous);
         } else {
           this.removeAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE);
-          this.removeAttribute('aria-label');
+          this.removeAttribute("aria-label");
         }
       }
     } finally {
@@ -354,27 +417,30 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   set value(next: number) {
     const old = this._value;
     if (!this.settingDefaultValue) this._valueDirty = true;
-    this._value = typeof next === 'number' ? next : Number(next);
+    this._value = typeof next === "number" ? next : Number(next);
     this.syncFormValue();
-    this.requestUpdate('value', old);
+    this.requestUpdate("value", old);
   }
   /** Current reset default; changing it never overwrites a dirty live rating. The independently
    * reflected `default-value` compatibility attribute reaches this same property.
    * @default 0 */
-  get defaultValue(): number { return this._defaultValue; }
+  get defaultValue(): number {
+    return this._defaultValue;
+  }
   set defaultValue(next: number | null) {
     if (this.reflectingDefaultValue) return;
     const old = this._defaultValue;
-    this._defaultValue = next == null ? 0 : (typeof next === 'number' ? next : Number(next));
+    this._defaultValue =
+      next == null ? 0 : typeof next === "number" ? next : Number(next);
     this.reflectingDefaultValue = true;
     try {
-      if (next == null) this.removeAttribute('default-value');
-      else this.setAttribute('default-value', String(this._defaultValue));
+      if (next == null) this.removeAttribute("default-value");
+      else this.setAttribute("default-value", String(this._defaultValue));
     } finally {
       this.reflectingDefaultValue = false;
     }
     if (!this._valueDirty) this.restoreLiveValueFromDefault();
-    this.requestUpdate('defaultValue', old);
+    this.requestUpdate("defaultValue", old);
   }
 
   /** The highest rating to show, i.e. the number of symbols rendered. */
@@ -383,10 +449,10 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
   set max(next: number) {
     const old = this._max;
-    this._max = typeof next === 'number' ? next : Number(next);
+    this._max = typeof next === "number" ? next : Number(next);
     // `safeValue` is clamped to `max`, so the submitted entry changes with it.
     this.syncFormValue();
-    this.requestUpdate('max', old);
+    this.requestUpdate("max", old);
   }
 
   /** Submitted as the name half of the form-data name/value pair. */
@@ -395,10 +461,10 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
   set name(next: string | null) {
     const old = this._name;
-    this._name = next ?? '';
-    if (this._name) this.setAttribute('name', this._name);
-    else this.removeAttribute('name');
-    this.requestUpdate('name', old);
+    this._name = next ?? "";
+    if (this._name) this.setAttribute("name", this._name);
+    else this.removeAttribute("name");
+    this.requestUpdate("name", old);
   }
 
   /** Blocks form submission until a rating above zero is set. */
@@ -408,9 +474,9 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   set required(next: boolean) {
     const old = this._required;
     this._required = Boolean(next);
-    this.toggleAttribute('required', this._required);
+    this.toggleAttribute("required", this._required);
     this.updateValidity();
-    this.requestUpdate('required', old);
+    this.requestUpdate("required", old);
   }
 
   get disabled(): boolean {
@@ -421,12 +487,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this._disabled = Boolean(next);
     // Reflected synchronously: `:disabled` and constraint-validation barring are both driven by
     // the live host attribute, which same-tick form APIs read.
-    this.toggleAttribute('disabled', this._disabled);
+    this.toggleAttribute("disabled", this._disabled);
     if (this._disabled) this.resetHover();
     // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
     // the states republished.
     this.updateValidity();
-    this.requestUpdate('disabled', old);
+    this.requestUpdate("disabled", old);
   }
 
   /** Whether the control is disabled explicitly or by an ancestor `<fieldset disabled>`. */
@@ -437,8 +503,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   get form(): HTMLFormElement | null {
     return getFormOwner(this.internals);
   }
-  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
-  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
+  set form(owner: FormOwnerValue) {
+    setFormOwner(this, owner);
+  }
+  getForm(): HTMLFormElement | null {
+    return getFormOwner(this.internals);
+  }
   get labels(): NodeList {
     return this.internals.labels;
   }
@@ -485,13 +555,13 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
    * The message is caller-supplied content, so it is used verbatim and never localized here.
    */
   setCustomValidity(message: string): void {
-    this.validityController.setCustomValidity(message ?? '');
+    this.validityController.setCustomValidity(message ?? "");
     this.syncValidityStates();
   }
 
   /** Clears consumer-supplied validity and restores the current required/value constraint. */
   resetValidity(): void {
-    this.setCustomValidity('');
+    this.setCustomValidity("");
   }
 
   formResetCallback(): void {
@@ -505,16 +575,19 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   formStateRestoreCallback(
     state: string | File | FormData | null,
-    reason: 'autocomplete' | 'restore',
+    reason: "autocomplete" | "restore"
   ): void {
     void reason;
-    this.value = typeof state === 'string' ? finiteNumber(Number(state), 0) : 0;
+    this.value = typeof state === "string" ? finiteNumber(Number(state), 0) : 0;
   }
 
   private restoreLiveValueFromDefault(): void {
     this.settingDefaultValue = true;
-    try { this.value = this._defaultValue; }
-    finally { this.settingDefaultValue = false; }
+    try {
+      this.value = this._defaultValue;
+    } finally {
+      this.settingDefaultValue = false;
+    }
     this._valueDirty = false;
   }
 
@@ -554,7 +627,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   /** `precision`, normalized to a finite number and kept within `[MIN_PRECISION, safeMax]` — a
    *  `<= 0` precision would otherwise divide-by-zero in `setValue`'s `next / precision` step. */
   private get safePrecision(): number {
-    const precision = finiteRange(this.precision, DEFAULT_PRECISION, MIN_PRECISION, this.safeMax);
+    const precision = finiteRange(
+      this.precision,
+      DEFAULT_PRECISION,
+      MIN_PRECISION,
+      this.safeMax
+    );
     return precision > 0 ? precision : DEFAULT_PRECISION;
   }
 
@@ -585,7 +663,10 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     if (this.barredFromValidation) {
       this.validityController.setValidity({});
     } else if (this.required && this.safeValue <= 0) {
-      this.validityController.setValidity({ valueMissing: true }, this.localize('fieldRequired'));
+      this.validityController.setValidity(
+        { valueMissing: true },
+        this.localize("fieldRequired")
+      );
     } else {
       this.validityController.setValidity({});
     }
@@ -619,11 +700,14 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // interaction even though it changes nothing.
     this.markInteracted();
     const precision = this.safePrecision;
-    const clamped = Math.max(0, Math.min(this.safeMax, Math.round(next / precision) * precision));
+    const clamped = Math.max(
+      0,
+      Math.min(this.safeMax, Math.round(next / precision) * precision)
+    );
     if (clamped === this.value) return;
     this.value = clamped;
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: this.value });
+    dispatchNativeEvent(this, "change");
+    this.emit("lr-change", { value: this.value });
   }
 
   /**
@@ -633,17 +717,28 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
    * usually wider than they are.
    */
   private pointerValue(event: MouseEvent): number | null {
-    const target = (event.target as HTMLElement | null)?.closest?.('[data-value]') as HTMLElement | null;
+    const target = (event.target as HTMLElement | null)?.closest?.(
+      "[data-value]"
+    ) as HTMLElement | null;
     if (!target) return null;
-    const star = Number(target.dataset['value']);
+    const star = Number(target.dataset["value"]);
     if (!Number.isFinite(star)) return null;
     const rect = target.getBoundingClientRect();
     const precision = this.safePrecision;
     if (rect.width <= 0) return Math.max(0, Math.min(this.safeMax, star));
-    const physicalFraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    const logicalFraction = this.effectiveDirection === 'rtl' ? 1 - physicalFraction : physicalFraction;
+    const physicalFraction = Math.max(
+      0,
+      Math.min(1, (event.clientX - rect.left) / rect.width)
+    );
+    const logicalFraction =
+      this.effectiveDirection === "rtl"
+        ? 1 - physicalFraction
+        : physicalFraction;
     const rawValue = star - 1 + logicalFraction;
-    return Math.max(precision, Math.min(this.safeMax, Math.ceil(rawValue / precision) * precision));
+    return Math.max(
+      precision,
+      Math.min(this.safeMax, Math.ceil(rawValue / precision) * precision)
+    );
   }
 
   private onClick = (event: MouseEvent): void => {
@@ -656,7 +751,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     if (!this.interactive) return;
     this.hovering = true;
     this.hoverValue = this.pointerValue(event) ?? this.hoverValue;
-    this.emit('lr-hover', { phase: 'start', value: this.hoverValue });
+    this.emit("lr-hover", { phase: "start", value: this.hoverValue });
   };
 
   private onPointerMove = (event: PointerEvent): void => {
@@ -668,12 +763,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
       // under a stationary pointer, or the gesture began on a neighbouring element).
       this.hovering = true;
       this.hoverValue = next;
-      this.emit('lr-hover', { phase: 'start', value: next });
+      this.emit("lr-hover", { phase: "start", value: next });
       return;
     }
     if (next === this.hoverValue) return;
     this.hoverValue = next;
-    this.emit('lr-hover', { phase: 'move', value: next });
+    this.emit("lr-hover", { phase: "move", value: next });
   };
 
   /** Ends the gesture on pointerleave and on pointercancel alike — a touch drag taken over by
@@ -681,7 +776,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   private onPointerEnd = (): void => {
     if (!this.hovering) return;
     this.hovering = false;
-    this.emit('lr-hover', { phase: 'end', value: this.hoverValue });
+    this.emit("lr-hover", { phase: "end", value: this.hoverValue });
   };
 
   /** Drops the preview without announcing an end phase, for teardown paths the user didn't drive. */
@@ -691,12 +786,26 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {
-    const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-    if (event.key === forwardKey || event.key === 'ArrowUp') { event.preventDefault(); this.setValue(this.safeValue + this.safePrecision); }
-    if (event.key === backwardKey || event.key === 'ArrowDown') { event.preventDefault(); this.setValue(this.safeValue - this.safePrecision); }
-    if (event.key === 'Home') { event.preventDefault(); this.setValue(0); }
-    if (event.key === 'End') { event.preventDefault(); this.setValue(this.safeMax); }
+    const forwardKey =
+      this.effectiveDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
+    const backwardKey =
+      this.effectiveDirection === "rtl" ? "ArrowRight" : "ArrowLeft";
+    if (event.key === forwardKey || event.key === "ArrowUp") {
+      event.preventDefault();
+      this.setValue(this.safeValue + this.safePrecision);
+    }
+    if (event.key === backwardKey || event.key === "ArrowDown") {
+      event.preventDefault();
+      this.setValue(this.safeValue - this.safePrecision);
+    }
+    if (event.key === "Home") {
+      event.preventDefault();
+      this.setValue(0);
+    }
+    if (event.key === "End") {
+      event.preventDefault();
+      this.setValue(this.safeMax);
+    }
   };
 
   /** Real keyboard input targets the host semantic owner. Keeping the same handler on the
@@ -719,13 +828,13 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   private onFocus = (event: FocusEvent): void => {
-    if (event.target === this) this.emit('lr-focus');
+    if (event.target === this) this.emit("lr-focus");
   };
 
   private onBlur = (event: FocusEvent): void => {
     if (event.target !== this) return;
     this.markInteracted();
-    this.emit('lr-blur');
+    this.emit("lr-blur");
   };
 
   /**
@@ -738,7 +847,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
    */
   private captureHostNameProvenance(): void {
     if (this.externalLabelNameActive || this.authorAriaLabel !== null) return;
-    const current = this.getAttribute('aria-label');
+    const current = this.getAttribute("aria-label");
     if (current === null) return;
     const managed = this.getAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE);
     if (managed === current) return;
@@ -757,27 +866,37 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     this.captureHostNameProvenance();
     const safeMax = this.safeMax;
     const safeValue = this.safeValue;
-    const generatedLabel = this.accessibleLabel || this.label || this.localize('rating');
+    const generatedLabel =
+      this.accessibleLabel || this.label || this.localize("rating");
     this.syncingHostSemantics = true;
     try {
-      this.setAttribute('role', 'slider');
-      this.setAttribute('tabindex', this.effectiveDisabled ? '-1' : '0');
-      this.setAttribute('aria-valuemin', '0');
-      this.setAttribute('aria-valuemax', String(safeMax));
-      this.setAttribute('aria-valuenow', String(safeValue));
-      this.setAttribute('aria-valuetext', getNumberFormat(this.effectiveLocale).format(safeValue));
-      this.setAttribute('aria-disabled', this.effectiveDisabled ? 'true' : 'false');
-      this.setAttribute('aria-readonly', this.readonly ? 'true' : 'false');
-      this.setAttribute('aria-required', this.required ? 'true' : 'false');
-      this.setAttribute('data-effective-size', this.effectiveSize);
+      this.setAttribute("role", "slider");
+      this.setAttribute("tabindex", this.effectiveDisabled ? "-1" : "0");
+      this.setAttribute("aria-valuemin", "0");
+      this.setAttribute("aria-valuemax", String(safeMax));
+      this.setAttribute("aria-valuenow", String(safeValue));
+      this.setAttribute(
+        "aria-valuetext",
+        getNumberFormat(this.effectiveLocale).format(safeValue)
+      );
+      this.setAttribute(
+        "aria-disabled",
+        this.effectiveDisabled ? "true" : "false"
+      );
+      this.setAttribute("aria-readonly", this.readonly ? "true" : "false");
+      this.setAttribute("aria-required", this.required ? "true" : "false");
+      this.setAttribute("data-effective-size", this.effectiveSize);
       if (
         !this.externalLabelNameActive &&
         this.authorAriaLabel === null &&
-        this.getAttribute('aria-label') !== generatedLabel
+        this.getAttribute("aria-label") !== generatedLabel
       ) {
         this.setAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE, generatedLabel);
-        this.setAttribute('aria-label', generatedLabel);
-      } else if (!this.externalLabelNameActive && this.authorAriaLabel === null) {
+        this.setAttribute("aria-label", generatedLabel);
+      } else if (
+        !this.externalLabelNameActive &&
+        this.authorAriaLabel === null
+      ) {
         this.setAttribute(MANAGED_ARIA_LABEL_ATTRIBUTE, generatedLabel);
       }
     } finally {
@@ -790,7 +909,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // `disabled` can only change through its own setter; the fieldset path goes through
     // `formDisabledCallback`, and `readonly` is a plain reactive property — so a rating that
     // becomes non-settable mid-hover drops its preview here.
-    if (changed.has('readonly') && !this.interactive) this.resetHover();
+    if (changed.has("readonly") && !this.interactive) this.resetHover();
     this.syncHostSemantics();
   }
 
@@ -800,7 +919,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // recompute from. It has to be recomputed *after* `update()` rather than in `willUpdate()`:
     // the platform reads the reflected `readonly` *attribute* when it answers
     // `internals.willValidate`, and that attribute is only current once reflection has run.
-    if (changed.has('readonly')) this.updateValidity();
+    if (changed.has("readonly")) this.updateValidity();
   }
 
   /** One symbol: the consumer's `getSymbol` when set, otherwise the built-in star. */
@@ -812,7 +931,9 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   /** Wraps renderer output so a consumer-supplied control cannot compete with the one slider
    * interaction surface. The star remains the event target carrying `data-value`. */
   private renderSymbol(star: number, selected: boolean): TemplateResult {
-    return html`<span aria-hidden="true" inert style="pointer-events: none">${this.symbol(star, selected)}</span>`;
+    return html`<span aria-hidden="true" inert style="pointer-events: none"
+      >${this.symbol(star, selected)}</span
+    >`;
   }
 
   override render(): TemplateResult {
@@ -820,21 +941,41 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     const safeValue = this.safeValue;
     // The hover preview is never applied to a rating that can't be changed, and is clamped in case
     // `max` shrank below the hovered position while the pointer was still down.
-    const displayValue = this.hovering && this.interactive ? Math.min(this.hoverValue, safeMax) : safeValue;
+    const displayValue =
+      this.hovering && this.interactive
+        ? Math.min(this.hoverValue, safeMax)
+        : safeValue;
     const count = Math.round(safeMax);
-    return html`<div part="base rating" aria-hidden="true"
-      @click=${this.onClick} @keydown=${this.onKeyDown}
-      @pointerenter=${this.onPointerEnter} @pointermove=${this.onPointerMove}
-      @pointerleave=${this.onPointerEnd} @pointercancel=${this.onPointerEnd}>
+    return html`<div
+      part="base rating"
+      aria-hidden="true"
+      @click=${this.onClick}
+      @keydown=${this.onKeyDown}
+      @pointerenter=${this.onPointerEnter}
+      @pointermove=${this.onPointerMove}
+      @pointerleave=${this.onPointerEnd}
+      @pointercancel=${this.onPointerEnd}
+    >
       ${Array.from({ length: count }, (_, index) => {
         const star = index + 1;
         const fraction = Math.max(0, Math.min(1, displayValue - index));
-        return html`<span part="star" data-value=${star} ?data-filled=${fraction >= 1} aria-hidden="true">
+        return html`<span
+          part="star"
+          data-value=${star}
+          ?data-filled=${fraction >= 1}
+          aria-hidden="true"
+        >
           ${this.renderSymbol(star, false)}
-          <span part="star-fill" style=${`inline-size:${fraction * 100}%`}>${this.renderSymbol(star, true)}</span>
+          <span part="star-fill" style=${`inline-size:${fraction * 100}%`}
+            >${this.renderSymbol(star, true)}</span
+          >
         </span>`;
       })}
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lr-rating': LyraRating; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    "lr-rating": LyraRating;
+  }
+}

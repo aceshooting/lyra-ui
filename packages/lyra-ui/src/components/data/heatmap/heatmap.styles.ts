@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -10,23 +10,23 @@ export const styles = css`
        getComputedStyle and interpolates between them). Component-specific
        business color — exposed so hosts can retheme
        the ramp without raw hex leaking into the public API. */
-    --lr-heatmap-scale-lo: var(--lr-color-brand-quiet);
-    --lr-heatmap-scale-hi: var(--lr-color-brand);
+    --_lr-heatmap-scale-lo: var(--lr-color-brand-quiet);
+    --_lr-heatmap-scale-hi: var(--lr-color-brand);
     /* No-data cell fill (the -1 sentinel / NaN case) — same resolve-via-
        getComputedStyle pattern as the ramp endpoints above, so hosts can
        retheme it instead of it being a hardcoded literal in heatmap.ts. */
-    --lr-heatmap-no-data-fill: var(--lr-color-no-data);
+    --_lr-heatmap-no-data-fill: var(--lr-color-no-data);
     /* Canvas-drawn axis/month/weekday label font — same resolve-via-
        getComputedStyle pattern as the ramp endpoints above (canvas can't
        consume var() directly). */
-    --lr-heatmap-label-font: var(--lr-size-10px) var(--lr-font);
+    --_lr-heatmap-label-font: var(--lr-size-10px) var(--lr-font);
     /* [part="tooltip"] is a real DOM element (not canvas-drawn), so unlike
        the tokens above it consumes these var()s directly — no getComputedStyle
        resolution needed. Own tokens (not the bare --lr-color-surface/-text)
        so a host can retheme just the heatmap tooltip, same rationale as
        chart.ts's --lr-chart-tooltip-bg/-text. */
-    --lr-heatmap-tooltip-bg: var(--lr-color-surface);
-    --lr-heatmap-tooltip-text: var(--lr-color-text);
+    --_lr-heatmap-tooltip-bg: var(--lr-color-surface);
+    --_lr-heatmap-tooltip-text: var(--lr-color-text);
     /* Canvas-drawn focus-ring stroke around the keyboard-focused cell — same
        resolve-via-getComputedStyle pattern as the ramp endpoints (canvas
        can't consume var() directly). A dedicated token (rather than reusing
@@ -35,20 +35,20 @@ export const styles = css`
        outline in the library, while defaulting to that same brand color —
        also reused by the [part="canvas"]:focus-visible outline below so the
        two stay visually in sync. */
-    --lr-heatmap-focus-ring-color: var(--lr-focus-ring-color);
+    --_lr-heatmap-focus-ring-color: var(--lr-focus-ring-color);
     /* Canvas-drawn ring around annotated cells — same resolve-via-
        getComputedStyle pattern. Defaults to --lr-color-danger (a loud,
        attention-grabbing color distinct from the sequential data ramp) so an
        annotation reads clearly against any point on that ramp. */
-    --lr-heatmap-annotation-color: var(--lr-color-danger);
+    --_lr-heatmap-annotation-color: var(--lr-color-danger);
     /* Canvas-drawn ring around the persistently selectedCell — same
        resolve-via-getComputedStyle pattern. A dedicated token so a host can
        retheme it independently of the focus ring
        (--lr-heatmap-focus-ring-color) and the annotation ring
        (--lr-heatmap-annotation-color) it's drawn between. */
-    --lr-heatmap-selected-color: var(--lr-color-success);
+    --_lr-heatmap-selected-color: var(--lr-color-success);
   }
-  [part='base'] {
+  [part="base"] {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -72,19 +72,21 @@ export const styles = css`
        never shows a pointer over a canvas the mouse can't actually interact with. */
     cursor: pointer;
   }
-  [part='canvas']:hover {
-    outline: var(--lr-size-1px) solid var(--lr-heatmap-focus-ring-color);
+  [part="canvas"]:hover {
+    outline: var(--lr-size-1px) solid
+      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* Neither the canvas nor a cell has a background of its own to tint -- the fill under the pointer
      is painted into the bitmap from the consumer's data -- so the pointer feedback is carried by the
      outline, and the pressed step is the ring thickening from a hairline to the full focus-ring
      width. */
-  [part='canvas']:active {
-    outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);
+  [part="canvas"]:active {
+    outline: var(--lr-focus-ring-width) solid
+      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='cells'] {
+  [part="cells"] {
     position: absolute;
     inset: 0;
     direction: ltr;
@@ -93,7 +95,7 @@ export const styles = css`
   .cell-row {
     display: contents;
   }
-  [part='cell'] {
+  [part="cell"] {
     position: absolute;
     display: block;
     padding: 0;
@@ -106,40 +108,44 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }
-  [part='cell']:hover {
-    outline: var(--lr-size-1px) solid var(--lr-heatmap-focus-ring-color);
+  [part="cell"]:hover {
+    outline: var(--lr-size-1px) solid
+      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='cell']:active {
-    outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);
+  [part="cell"]:active {
+    outline: var(--lr-focus-ring-width) solid
+      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='cell']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);
+  [part="cell"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid
+      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='canvas']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-heatmap-focus-ring-color);
+  [part="canvas"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid
+      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='tooltip'] {
+  [part="tooltip"] {
     position: absolute;
     transform: translate(-50%, -100%);
     margin-block-start: var(--lr-size-neg-6px);
     padding: var(--lr-size-2px) var(--lr-size-6px);
     border-radius: var(--lr-radius);
-    background: var(--lr-heatmap-tooltip-bg);
-    color: var(--lr-heatmap-tooltip-text);
+    background: var(--lr-heatmap-tooltip-bg, var(--_lr-heatmap-tooltip-bg));
+    color: var(--lr-heatmap-tooltip-text, var(--_lr-heatmap-tooltip-text));
     font-size: var(--lr-font-size-xs);
     white-space: nowrap;
     box-shadow: var(--lr-shadow-m);
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }
-  [part='tooltip'][hidden] {
+  [part="tooltip"][hidden] {
     display: none;
   }
-  [part='legend'] {
+  [part="legend"] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -150,7 +156,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     overflow-wrap: anywhere;
   }
-  [part='legend'] .bar {
+  [part="legend"] .bar {
     flex: 0 1 var(--lr-size-6rem);
     min-inline-size: 0;
     inline-size: var(--lr-size-6rem);
@@ -158,18 +164,22 @@ export const styles = css`
     border-radius: var(--lr-size-2px);
     background: var(
       --lr-heatmap-color-steps-gradient,
-      linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))
+      linear-gradient(
+        to right,
+        var(--lr-heatmap-scale-lo, var(--_lr-heatmap-scale-lo)),
+        var(--lr-heatmap-scale-hi, var(--_lr-heatmap-scale-hi))
+      )
     );
   }
   /* Flex row order already follows inherited direction, placing the low
      endpoint at inline-start. Mirror the physical CSS gradient as well so
      its colors stay aligned with those labels, including custom step ramps. */
-  :host(:dir(rtl)) [part='legend'] .bar {
+  :host(:dir(rtl)) [part="legend"] .bar {
     transform: scaleX(-1);
   }
   /* One discrete legendStops entry. Same swatch-then-text shape (and the same gap) as
      [part='legend-annotation'] below, so a legend mixing stops and annotations reads as one row. */
-  [part='legend-stop'] {
+  [part="legend-stop"] {
     display: inline-flex;
     align-items: center;
     gap: var(--lr-size-3px);
@@ -179,26 +189,26 @@ export const styles = css`
   }
   /* The swatch's background is the consumer-supplied stop color, applied inline per stop --
      it's data, not a themeable design value, so it can't live here. */
-  [part='legend-swatch'] {
+  [part="legend-swatch"] {
     flex: 0 0 auto;
     inline-size: var(--lr-size-0-6rem);
     block-size: var(--lr-size-0-6rem);
     border-radius: var(--lr-radius-xs);
   }
-  [part='legend-stop-label'] {
+  [part="legend-stop-label"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
     font-variant-numeric: tabular-nums;
   }
-  [part='legend-lo'],
-  [part='legend-hi'],
-  [part='legend-value-label'] {
+  [part="legend-lo"],
+  [part="legend-hi"],
+  [part="legend-value-label"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='legend-annotation'] {
+  [part="legend-annotation"] {
     display: inline-flex;
     align-items: center;
     gap: var(--lr-size-3px);
@@ -206,11 +216,12 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='legend-annotation'] .ring-swatch {
+  [part="legend-annotation"] .ring-swatch {
     flex: 0 0 auto;
     inline-size: var(--lr-size-0-6rem);
     block-size: var(--lr-size-0-6rem);
     border-radius: 50%;
-    border: var(--lr-border-width-medium) solid var(--lr-heatmap-annotation-color);
+    border: var(--lr-border-width-medium) solid
+      var(--lr-heatmap-annotation-color, var(--_lr-heatmap-annotation-color));
   }
 `;

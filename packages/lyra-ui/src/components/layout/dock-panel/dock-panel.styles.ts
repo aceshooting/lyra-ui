@@ -14,7 +14,7 @@ export const styles = css`
        the class doc for why collapse hides content rather than zeroing the
        box). Reuses the shared icon-button tap-target token so the collapse
        toggle sitting on the rail stays comfortably tappable by default. */
-    --lr-dock-panel-collapsed-size: var(--lr-icon-button-size);
+    --_lr-dock-panel-collapsed-size: var(--lr-icon-button-size);
     position: relative;
   }
   :host([edge="start"]),
@@ -35,11 +35,17 @@ export const styles = css`
      aria-valuenow. */
   :host([edge="start"][collapsed]),
   :host([edge="end"][collapsed]) {
-    min-inline-size: var(--lr-dock-panel-collapsed-size);
+    min-inline-size: var(
+      --lr-dock-panel-collapsed-size,
+      var(--_lr-dock-panel-collapsed-size)
+    );
   }
   :host([edge="top"][collapsed]),
   :host([edge="bottom"][collapsed]) {
-    min-block-size: var(--lr-dock-panel-collapsed-size);
+    min-block-size: var(
+      --lr-dock-panel-collapsed-size,
+      var(--_lr-dock-panel-collapsed-size)
+    );
   }
 
   [part="base"] {
@@ -159,16 +165,28 @@ export const styles = css`
      [part="handle"] precedent above, where :active has always derived straight from whatever
      color :hover uses instead of carrying an independent token. */
   [part="collapse-toggle"]:hover {
-    background: var(--lr-dock-panel-collapse-toggle-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-dock-panel-collapse-toggle-hover-color, var(--lr-color-brand));
+    background: var(
+      --lr-dock-panel-collapse-toggle-hover-bg,
+      var(--lr-color-brand-quiet)
+    );
+    color: var(
+      --lr-dock-panel-collapse-toggle-hover-color,
+      var(--lr-color-brand)
+    );
   }
   [part="collapse-toggle"]:active {
     background: color-mix(
       in oklab,
-      var(--lr-dock-panel-collapse-toggle-hover-bg, var(--lr-color-brand-quiet)),
+      var(
+        --lr-dock-panel-collapse-toggle-hover-bg,
+        var(--lr-color-brand-quiet)
+      ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
-    color: var(--lr-dock-panel-collapse-toggle-hover-color, var(--lr-color-brand));
+    color: var(
+      --lr-dock-panel-collapse-toggle-hover-color,
+      var(--lr-color-brand)
+    );
   }
   [part="collapse-toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

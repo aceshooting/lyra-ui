@@ -12,7 +12,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -132,12 +132,12 @@ export interface LyraAttachmentChipEventMap {
  * @cssprop [--lr-attachment-chip-spinner-duration=0.8s] - Duration of one indeterminate
  * upload-spinner rotation. The ambient loop stops under reduced motion.
  * @cssprop [--lr-attachment-chip-accent=var(--lr-color-text-quiet)] - Accent color used for the
- * status text, spinner, and progress fill. Auto-swapped per `status`
- * (`uploading`/`error`/`success`); the default is the neutral `pending` tone.
- * @cssprop [--lr-attachment-chip-bg=var(--lr-color-surface)] - Chip background, auto-swapped per
- * `status` to that status's `-quiet` tint.
+ * status text, spinner, and progress fill. Its private default changes per `status`
+ * (`uploading`/`error`/`success`); the public value remains authoritative.
+ * @cssprop [--lr-attachment-chip-bg=var(--lr-color-surface)] - Chip background. Its private
+ * default changes per `status` to that status's `-quiet` tint; the public value still wins.
  * @cssprop [--lr-attachment-chip-border=var(--lr-color-border)] - Chip border color. Every
- * non-`pending` `status` sets it to `transparent`.
+ * non-`pending` `status` changes its private default to `transparent`.
  * @cssprop [--lr-attachment-chip-compact-thumbnail-size=var(--lr-size-1-75rem)] - Thumbnail size
  * while `compact`, rethemeable independently of `--lr-icon-button-size`. Retry, preview, and
  * remove actions retain that shared token's minimum hit-area floor.
@@ -171,6 +171,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,

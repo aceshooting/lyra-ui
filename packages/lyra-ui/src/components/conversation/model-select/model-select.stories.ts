@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'ModelSelect',
   component: 'lr-model-select',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Catalog ids must be unique and nonempty; malformed rows and later duplicates are omitted first-wins. The catalog is a bounded clone-owned frozen snapshot; create and reassign a new array after changes.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

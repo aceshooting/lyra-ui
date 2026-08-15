@@ -160,7 +160,7 @@ assert.match(
   /VISUAL_SHARD_INDEX: \$\{\{ matrix\.shard \}\}/,
   'each CI leg must pass its one-based visual shard index',
 );
-assert.match(ciWorkflow, /VISUAL_SHARD_TOTAL: '3'/, 'CI and the runner must agree on shard total');
+assert.match(ciWorkflow, /VISUAL_SHARD_TOTAL: ["']3["']/, 'CI and the runner must agree on shard total');
 assert.match(
   ciWorkflow,
   /visual-regression-diff-\$\{\{ matrix\.shard \}\}-of-3/,

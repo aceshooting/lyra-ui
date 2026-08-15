@@ -47,6 +47,20 @@ it("renders built-in English action labels when no locale is registered", async 
   expect(labels).to.deep.equal(["Ask", "Quote", "Cite", "Copy"]);
 });
 
+it("normalizes duplicate built-in actions before rendering and activation", async () => {
+  const el = (await fixture(html`<lr-selection-toolbar
+    open
+    text="selected"
+    .actions=${["ask", "ask", "quote", "quote"]}
+  ></lr-selection-toolbar>`)) as LyraSelectionToolbar;
+  const actions = [...el.shadowRoot!.querySelectorAll<HTMLElement>("lr-button[data-action]")];
+  expect(actions.map((action) => action.dataset["action"])).to.deep.equal(["ask", "quote"]);
+
+  const selected = oneEvent(el, "lr-selection-action");
+  actions[1]!.click();
+  expect((await selected).detail.action).to.equal("quote");
+});
+
 it("treats rect as the sole coordinate input and ignores removed public coordinate hooks", async () => {
   const el = (await fixture(html`
     <lr-selection-toolbar

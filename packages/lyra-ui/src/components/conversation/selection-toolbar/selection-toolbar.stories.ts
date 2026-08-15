@@ -8,6 +8,14 @@ const meta: Meta = {
   title: 'Selection Toolbar',
   component: 'lr-selection-toolbar',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'The controlled built-in action collection normalizes duplicate names first-wins before rendering and roving focus. Anchors and actions are bounded clone-owned frozen snapshots; create and reassign a new record or array after changes.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

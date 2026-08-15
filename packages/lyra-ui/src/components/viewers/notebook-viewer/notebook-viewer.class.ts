@@ -21,6 +21,7 @@ import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owne
 import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_notebookViewerCodeCell, LYRA_DEFAULT_notebookViewerCollapseOutput, LYRA_DEFAULT_notebookViewerErrorOutput, LYRA_DEFAULT_notebookViewerInPrompt, LYRA_DEFAULT_notebookViewerInPromptEmpty, LYRA_DEFAULT_notebookViewerInvalid, LYRA_DEFAULT_notebookViewerLabel, LYRA_DEFAULT_notebookViewerMarkdownCell, LYRA_DEFAULT_notebookViewerRawCell, LYRA_DEFAULT_notebookViewerShowAllOutput, LYRA_DEFAULT_notebookViewerTooManyCells, LYRA_DEFAULT_notebookViewerUnrenderedOutput, LYRA_DEFAULT_notebookViewerUnsupportedVersion } from '../../../internal/default-strings.generated.js';
@@ -34,34 +35,37 @@ const SUPPORTED_MAJOR = 4;
 const SUPPORTED_MINORS = [0, 1, 2, 3, 4, 5];
 
 interface NotebookOutput {
-  output_type: 'stream' | 'error' | 'display_data' | 'execute_result';
-  name?: 'stdout' | 'stderr';
-  text?: string | string[];
-  ename?: string;
-  evalue?: string;
-  traceback?: string[];
-  data?: Record<string, unknown>;
+  readonly output_type: 'stream' | 'error' | 'display_data' | 'execute_result';
+  readonly name?: 'stdout' | 'stderr';
+  readonly text?: string | readonly string[];
+  readonly ename?: string;
+  readonly evalue?: string;
+  readonly traceback?: readonly string[];
+  readonly data?: Readonly<Record<string, unknown>>;
 }
 interface NotebookCell {
-  cell_type: 'markdown' | 'code' | 'raw';
-  id?: string;
-  source: string | string[];
-  execution_count?: number | null;
-  outputs?: NotebookOutput[];
-  metadata?: { language_info?: unknown };
+  readonly cell_type: 'markdown' | 'code' | 'raw';
+  readonly id?: string;
+  readonly source: string | readonly string[];
+  readonly execution_count?: number | null;
+  readonly outputs?: readonly NotebookOutput[];
+  readonly metadata?: Readonly<{ language_info?: unknown }>;
 }
 interface NotebookDoc {
-  nbformat: number;
-  nbformat_minor: number;
-  cells: NotebookCell[];
-  metadata?: { language_info?: { name?: string }; kernelspec?: { language?: string } };
+  readonly nbformat: number;
+  readonly nbformat_minor: number;
+  readonly cells: readonly NotebookCell[];
+  readonly metadata?: Readonly<{
+    language_info?: Readonly<{ name?: string }>;
+    kernelspec?: Readonly<{ language?: string }>;
+  }>;
 }
 
-function joinSource(source: string | string[] | undefined): string {
-  return Array.isArray(source) ? source.join('') : (source ?? '');
+function joinSource(source: string | readonly string[] | undefined): string {
+  return typeof source === 'string' ? source : (source?.join('') ?? '');
 }
 
-function isDenseArray(value: unknown[]): boolean {
+function isDenseArray(value: readonly unknown[]): boolean {
   for (let index = 0; index < value.length; index++) {
     if (!Object.prototype.hasOwnProperty.call(value, index)) return false;
   }
@@ -75,7 +79,31 @@ function joinText(text: unknown): string {
     : '';
 }
 
-function isTextValue(value: unknown): value is string | string[] {
+function* notebookSearchTextParts(text: unknown): Generator<string> {
+  if (typeof text === 'string') {
+    yield text;
+    return;
+  }
+  if (!Array.isArray(text) || !isDenseArray(text)) return;
+  for (const part of text) if (typeof part === 'string') yield part;
+}
+
+function* notebookOutputSearchParts(outputs: readonly NotebookOutput[]): Generator<string> {
+  for (const output of outputs) {
+    yield* notebookSearchTextParts(output.text);
+    const data = output.data;
+    if (data) {
+      for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          yield* notebookSearchTextParts(data[key]);
+        }
+      }
+    }
+    yield ' ';
+  }
+}
+
+function isTextValue(value: unknown): value is string | readonly string[] {
   return typeof value === 'string' ||
     (Array.isArray(value) && isDenseArray(value) && value.every((item) => typeof item === 'string'));
 }
@@ -210,6 +238,9 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * when there is nothing to move to. A find-in-page host can therefore drive this viewer through the
  * same typed surface as every other one.
  *
+ * Parsed `notebook` assignments are synchronously clone-owned and recursively frozen. Mutate a
+ * copy and reassign it to update the viewer; later changes to the source object are not observed.
+ *
  * @customElement lr-notebook-viewer
  * @event lr-load - Fired once a notebook has been parsed and validated. `detail: { cellCount,
  *   language }`.
@@ -244,6 +275,10 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * @since 4.0.0
  */
 export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerBase) {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'notebook',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -521,20 +556,29 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
    *  validation ceiling is applied before search, so the resolved count and emitted
    *  `matchCount` are exact. */
   async search(query: string): Promise<number> {
-    const q = query.trim().toLocaleLowerCase(this.effectiveLocale);
+    const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
+    const q = boundedQuery.needle;
     this.searchQuery = query;
-    if (this.loadState.kind !== 'loaded' || !q) {
+    this.searchMatchCountExact = boundedQuery.accepted;
+    if (this.loadState.kind !== 'loaded' || !q || !boundedQuery.accepted) {
       this.searchMatches = [];
     } else {
-      this.searchMatches = this.loadState.doc.cells.reduce<number[]>((acc, cell, i) => {
-        const source = joinSource(cell.source).toLocaleLowerCase(this.effectiveLocale);
-        const outputText = (cell.outputs ?? [])
-          .map((o) => joinText(o.text) + Object.values(o.data ?? {}).map(joinText).join(''))
-          .join(' ')
-          .toLocaleLowerCase(this.effectiveLocale);
-        if (source.includes(q) || outputText.includes(q)) acc.push(i);
-        return acc;
-      }, []);
+      const budget = new ViewerSearchWorkBudget();
+      const matches: number[] = [];
+      for (let index = 0; index < this.loadState.doc.cells.length; index++) {
+        const cell = this.loadState.doc.cells[index]!;
+        const sourceParts = typeof cell.source === 'string' ? [cell.source] : cell.source;
+        const sourceMatch = budget.includesJoined(sourceParts, q, this.effectiveLocale);
+        const outputMatch = sourceMatch
+          ? false
+          : budget.includesJoined(notebookOutputSearchParts(cell.outputs ?? []), q, this.effectiveLocale);
+        if (sourceMatch || outputMatch) matches.push(index);
+        if (!budget.complete) {
+          this.searchMatchCountExact = false;
+          break;
+        }
+      }
+      this.searchMatches = matches;
     }
     this.activeSearchIndex = this.searchMatches.length ? 0 : -1;
     this.activateSearchMatch();

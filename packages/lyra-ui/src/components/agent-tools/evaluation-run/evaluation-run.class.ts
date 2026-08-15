@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -67,10 +68,10 @@ export interface EvaluationExampleResult {
   grounding?: GroundingAssessment;
   /** Evidence citations backing `grounding`, forwarded verbatim to `<lr-grounding-summary>`'s own
    *  `citations`. Only consulted while `grounding` is also set. */
-  citations?: Citation[];
+  citations?: readonly Citation[];
   /** This example's own tool-call trace. Omitted or empty means no tool-trace section renders for
    *  this example. */
-  toolTrace?: ToolTimelineEntry[];
+  toolTrace?: readonly ToolTimelineEntry[];
 }
 
 /** `detail` for `lr-example-toggle`. */
@@ -109,8 +110,8 @@ export interface EvaluationClaimSelectDetail {
 
 export interface LyraEvaluationRunEventMap {
   'lr-example-toggle': CustomEvent<EvaluationExampleToggleDetail>;
-  'lr-example-citation-select': CustomEvent<EvaluationCitationSelectDetail>;
-  'lr-example-claim-select': CustomEvent<EvaluationClaimSelectDetail>;
+  'lr-example-citation-select': CustomEvent<LyraEventDetailSnapshot<EvaluationCitationSelectDetail>>;
+  'lr-example-claim-select': CustomEvent<LyraEventDetailSnapshot<EvaluationClaimSelectDetail>>;
   'lr-example-tool-approval-decide': CustomEvent<EvaluationToolApprovalDetail>;
   'lr-example-tool-activate': CustomEvent<EvaluationToolActivateDetail>;
   'lr-example-tool-render-error': CustomEvent<EvaluationToolRenderErrorDetail>;
@@ -150,6 +151,9 @@ type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
  * `src/ai/types.ts` rather than inventing a divergent shape) -- a host listening at this
  * component's boundary never needs to walk the DOM to find out which example a nested selection
  * or approval decision came from.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-evaluation-run
  * @event lr-example-toggle - An example's disclosure was expanded or collapsed. `detail: { exampleId,
@@ -197,6 +201,8 @@ type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
  * @since 4.1.0
  */
 export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["examples"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -233,9 +239,10 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** The batch's examples so far. Controlled -- never mutated by this component; pass a new array
-   *  to update it (e.g. as each example finishes, or as the whole batch streams in). Duplicate ids
-   *  normalize first-wins before expansion, counts, announcements, rendering, and events. */
-  @property({ attribute: false }) examples: EvaluationExampleResult[] = [];
+   *  to update it (e.g. as each example finishes, or as the whole batch streams in). Empty/blank ids
+   *  are omitted and duplicates normalize first-wins before expansion, counts, announcements,
+   *  rendering, and events. */
+  @property({ attribute: false }) examples: readonly EvaluationExampleResult[] = [];
 
   /** The batch's expected total example count. `null` (the default) derives it from
    *  `examples.length` instead -- the common case once every result has already arrived; set this
@@ -439,7 +446,10 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     `;
   }
 
-  private renderToolTrace(example: EvaluationExampleResult, toolTrace: ToolTimelineEntry[]): TemplateResult {
+  private renderToolTrace(
+    example: EvaluationExampleResult,
+    toolTrace: readonly ToolTimelineEntry[],
+  ): TemplateResult {
     return html`
       <section part="tool-trace-section">
         <h4 part="section-heading">${this.localize('evaluationRunToolTraceHeading')}</h4>

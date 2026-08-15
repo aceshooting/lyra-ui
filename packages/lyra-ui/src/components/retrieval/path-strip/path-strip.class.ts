@@ -40,6 +40,9 @@ export interface LyraPathStripEventMap {
  * (GraphRAG local-search reasoning paths) as a compact, horizontally scrollable strip.
  * One-dimensional and presentational: no path finding, no branching, no per-element popovers.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-path-strip
  * @event lr-entity-activate - A node element activated. `detail: { id }`.
  * @event lr-relation-activate - An edge element activated. `detail: { relation, sourceId?,
@@ -54,6 +57,8 @@ export interface LyraPathStripEventMap {
  * @since 4.0.0
  */
 export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["path"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -68,7 +73,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Rendered in array order; alternation is the intended shape but not enforced. */
-  @property({ attribute: false }) path: LyraPathElement[] = [];
+  @property({ attribute: false }) path: readonly LyraPathElement[] = [];
   /** Accessible name for the stable group when the host has no `aria-label`; falls back to
    *  localized `pathStripLabel`. An explicitly empty host label stays empty. */
   @property() label = "";

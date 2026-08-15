@@ -12,7 +12,7 @@ import { styles } from './trace-tree.styles.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from './span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -89,8 +89,8 @@ const STATUS_LABEL_KEY: Record<LyraSpan['status'], string> = {
 };
 
 export interface LyraTraceTreeEventMap {
-  'lr-span-select': CustomEvent<{ id: string }>;
-  'lr-span-toggle': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-span-select': CustomEvent<{ spanId: string }>;
+  'lr-span-toggle': CustomEvent<{ spanId: string; expanded: boolean }>;
 }
 
 /**
@@ -99,9 +99,12 @@ export interface LyraTraceTreeEventMap {
  * duration bar on the shared trace time scale, and optional tokens/cost
  * columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-trace-tree
- * @event lr-span-select - `detail: { id }` — a row was activated (click, Enter, Space).
- * @event lr-span-toggle - `detail: { id, expanded }` — a row was expanded or collapsed.
+ * @event lr-span-select - `detail: { spanId }` — a row was activated (click, Enter, Space).
+ * @event lr-span-toggle - `detail: { spanId, expanded }` — a row was expanded or collapsed.
  * @csspart base - The root wrapper (`role="tree"`).
  * @csspart header - The column-header row, rendered only when `showTokens`/`showCost` is on.
  * @csspart row - One span's row (`role="treeitem"`).
@@ -147,6 +150,8 @@ export interface LyraTraceTreeEventMap {
  * @since 4.0.0
  */
 export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["spans"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -162,6 +167,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
@@ -194,7 +200,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
    * broken into roots so hostile trace data cannot recurse indefinitely. Foreign runtime
    * `kind`/`status` values normalize to `'other'`/`'pending'` before rendering.
    */
-  @property({ attribute: false }) spans: LyraSpan[] = [];
+  @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   /** Controlled selection — the matching row carries `aria-current`/`data-active` and scrolls into view. */
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
   /** Accessible name for the `role="tree"` element. Falls back to the localized default; a host
@@ -349,7 +355,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     // roving tabindex here -- otherwise toggling an ancestor other than the currently-focused row
     // can hide that row entirely, leaving no row with tabindex="0" at all.
     this.focusedId = id;
-    this.emit('lr-span-toggle', { id, expanded: collapsed });
+    this.emit('lr-span-toggle', { spanId: id, expanded: collapsed });
   }
 
   /** Expand every collapsible row. Resolves once the update reflecting it has committed. */
@@ -391,7 +397,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   private selectRow(id: string): void {
     this.focusedId = id;
-    this.emit('lr-span-select', { id });
+    this.emit('lr-span-select', { spanId: id });
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {

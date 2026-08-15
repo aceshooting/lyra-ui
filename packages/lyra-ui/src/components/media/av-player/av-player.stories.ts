@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Audio/video player built on a native media element with bounded readonly cue/track collections whose retained records are cloned and frozen, a uniquely identified cue transcript synced to playback, time-range anchor/highlight actions, a bounded dependency-free waveform, and two-way volume/mute/rate state. Cue changes carry a frozen readonly `{ cueId, index }`; marker buttons are siblings of the slider rather than nested controls. Self-registers into the document-viewer registry for common audio/video MIME types.',
+          'Audio/video player built on a native media element with bounded readonly cue/track collections whose retained records are cloned and frozen. Cue collections require a trimmed nonempty `cueId` and retain the first occurrence, while the transcript stays synced to playback. Cue changes carry a frozen readonly `{ cueId, index }`; time-range marker activations carry `{ highlightId }`. Marker buttons are siblings of the slider rather than nested controls. Self-registers into the document-viewer registry for common audio/video MIME types.',
       },
     },
   },
@@ -21,13 +21,13 @@ export default meta;
 type Story = StoryObj;
 
 const CUES: LyraAvCue[] = [
-  { id: 'c1', start: 0, end: 0.6, text: 'Welcome to the show.', speaker: 'Host' },
-  { id: 'c2', start: 0.6, end: 1.4, text: 'Today we discuss agentic UI.', speaker: 'Host' },
-  { id: 'c3', start: 1.4, end: 2, text: 'Thanks for having me.', speaker: 'Guest' },
+  { cueId: 'c1', start: 0, end: 0.6, text: 'Welcome to the show.', speaker: 'Host' },
+  { cueId: 'c2', start: 0.6, end: 1.4, text: 'Today we discuss agentic UI.', speaker: 'Host' },
+  { cueId: 'c3', start: 1.4, end: 2, text: 'Thanks for having me.', speaker: 'Guest' },
 ];
 const PEAKS = Array.from({ length: 120 }, (_v, i) => Math.abs(Math.sin(i / 6)) * 0.9 + 0.05);
 const SEARCH_CUES = Array.from({ length: 72 }, (_v, index): LyraAvCue => ({
-  id: `search-cue-${index}`,
+  cueId: `search-cue-${index}`,
   start: index * 4,
   text: index === 58 ? 'Needle: search result beyond the initial transcript viewport.' : `Transcript cue ${index + 1}.`,
   speaker: index % 2 === 0 ? 'Host' : 'Guest',

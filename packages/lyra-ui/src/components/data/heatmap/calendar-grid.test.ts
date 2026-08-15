@@ -86,13 +86,13 @@ describe('buildCalendarGrid', () => {
     expect(weekCount).to.equal(MAX_CALENDAR_WEEKS);
   });
 
-  it('uses one last-wins cell for duplicate ISO dates', () => {
+  it('uses the first valid cell for each unique ISO date', () => {
     const result = buildCalendarGrid([
       { date: '2026-03-05', value: 1 },
       { date: '2026-03-05', value: 9 },
     ]);
     expect(result.cells).to.have.length(1);
-    expect(result.cells[0]!.value).to.equal(9);
+    expect(result.cells[0]!.value).to.equal(1);
     expect(result.truncated).to.equal(false);
   });
 

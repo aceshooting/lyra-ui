@@ -7,8 +7,25 @@ import { finiteInteger } from "../../../internal/numbers.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { styles } from "./citation-badge.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_citationUnverified, LYRA_DEFAULT_citationVerified, LYRA_DEFAULT_citationWithCustomLabel, LYRA_DEFAULT_citationWithStatus, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_citation,
+  LYRA_DEFAULT_citationHighConfidence,
+  LYRA_DEFAULT_citationLowConfidence,
+  LYRA_DEFAULT_citationMediumConfidence,
+  LYRA_DEFAULT_citationUnverified,
+  LYRA_DEFAULT_citationVerified,
+  LYRA_DEFAULT_citationWithCustomLabel,
+  LYRA_DEFAULT_citationWithStatus,
+  LYRA_DEFAULT_collapse,
+  LYRA_DEFAULT_details,
+  LYRA_DEFAULT_map,
+  LYRA_DEFAULT_navigation,
+  LYRA_DEFAULT_open,
+  LYRA_DEFAULT_progress,
+  LYRA_DEFAULT_search,
+  LYRA_DEFAULT_select,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type CitationBadgeStatus =
@@ -125,11 +142,10 @@ function isRealPreviewNode(n: Node): boolean {
  * @csspart index - The citation number.
  * @csspart popover - The floating preview panel (only meaningful while open).
  * @cssprop [--lr-citation-badge-accent=var(--lr-color-text-quiet)] - Text color of `base`, and its
- * hover border color. Swapped by the reflected `status`: `var(--lr-color-success)` for
- * `high`/`verified`, `var(--lr-color-warning)` for `medium`/`low`, `var(--lr-color-danger)` for
- * `unverified`.
- * @cssprop [--lr-citation-badge-bg=transparent] - Background of `base`. Swapped by the reflected
- * `status` to the matching `-quiet` tone (`success`/`warning`/`danger`).
+ * hover border color. Its private default follows the reflected `status`: success for
+ * `high`/`verified`, warning for `medium`/`low`, and danger for `unverified`; a public value wins.
+ * @cssprop [--lr-citation-badge-bg=transparent] - Background of `base`. Its private default follows
+ * `status` to the matching `-quiet` tone (`success`/`warning`/`danger`); a public value wins.
  * @cssprop [--lr-citation-badge-border=transparent] - Resting border color of `base`; no `status`
  * changes it, so it stays transparent unless a host overrides it.
  * @status stable
@@ -138,24 +154,26 @@ function isRealPreviewNode(n: Node): boolean {
 export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    citation: LYRA_DEFAULT_citation,
-    citationHighConfidence: LYRA_DEFAULT_citationHighConfidence,
-    citationLowConfidence: LYRA_DEFAULT_citationLowConfidence,
-    citationMediumConfidence: LYRA_DEFAULT_citationMediumConfidence,
-    citationUnverified: LYRA_DEFAULT_citationUnverified,
-    citationVerified: LYRA_DEFAULT_citationVerified,
-    citationWithCustomLabel: LYRA_DEFAULT_citationWithCustomLabel,
-    citationWithStatus: LYRA_DEFAULT_citationWithStatus,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      citation: LYRA_DEFAULT_citation,
+      citationHighConfidence: LYRA_DEFAULT_citationHighConfidence,
+      citationLowConfidence: LYRA_DEFAULT_citationLowConfidence,
+      citationMediumConfidence: LYRA_DEFAULT_citationMediumConfidence,
+      citationUnverified: LYRA_DEFAULT_citationUnverified,
+      citationVerified: LYRA_DEFAULT_citationVerified,
+      citationWithCustomLabel: LYRA_DEFAULT_citationWithCustomLabel,
+      citationWithStatus: LYRA_DEFAULT_citationWithStatus,
+      collapse: LYRA_DEFAULT_collapse,
+      details: LYRA_DEFAULT_details,
+      map: LYRA_DEFAULT_map,
+      navigation: LYRA_DEFAULT_navigation,
+      open: LYRA_DEFAULT_open,
+      progress: LYRA_DEFAULT_progress,
+      search: LYRA_DEFAULT_search,
+      select: LYRA_DEFAULT_select,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

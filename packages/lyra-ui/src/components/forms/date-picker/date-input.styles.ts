@@ -1,14 +1,14 @@
-import { css } from 'lit';
-import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { css } from "lit";
+import { formControlRequiredMarker } from "../../../internal/form-control.styles.js";
 
 export const styles = css`
   :host {
     display: block;
-    --lr-date-input-padding-block: var(--lr-space-xs);
-    --lr-date-input-padding-inline: var(--lr-space-s);
-    --lr-date-input-font-size: inherit;
-    --lr-date-input-gap: var(--lr-space-xs);
-    --lr-date-input-radius: var(--lr-form-control-radius);
+    --_lr-date-input-padding-block: var(--lr-space-xs);
+    --_lr-date-input-padding-inline: var(--lr-space-s);
+    --_lr-date-input-font-size: inherit;
+    --_lr-date-input-gap: var(--lr-space-xs);
+    --_lr-date-input-radius: var(--lr-form-control-radius);
     /* Per-tier minimum block size of the input row, reusing lr-input's own min-height scale
        values. This does NOT make the two controls height-matched at a given size, and nothing here
        should be read as promising that: [part='input-wrapper'] has no min-block-size of its own,
@@ -25,7 +25,7 @@ export const styles = css`
        --lr-theme-form-control-height-* moves this control and every sibling field together. That
        ladder matches both spellings of every tier, which is what makes size="small" resolve here
        without a per-component alias rule. */
-    --lr-date-input-control-min-height: var(--lr-form-control-height);
+    --_lr-date-input-control-min-height: var(--lr-form-control-height);
     /* --lr-date-input-control-height is intentionally NOT declared here. It is a consumer-facing
        exact-height escape hatch consumed only through the var() fallbacks on [part='input-wrapper']
        below; declaring any value for it (even 'auto') would make those fallback arms unreachable
@@ -36,19 +36,19 @@ export const styles = css`
        row rather than shrinking (WCAG 2.2 SC 2.5.8 preserved). */
   }
   :host([pill]) {
-    --lr-date-input-radius: var(--lr-radius-pill);
+    --_lr-date-input-radius: var(--lr-radius-pill);
   }
-  [part='date-input'],
-  [part='base'] {
+  [part="date-input"],
+  [part="base"] {
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  :host([appearance='filled']) [part='input-wrapper'] {
+  :host([appearance="filled"]) [part="input-wrapper"] {
     border-color: transparent;
     background: var(--lr-color-surface-raised);
   }
-  :host([appearance='filled-outlined']) [part='input-wrapper'] {
+  :host([appearance="filled-outlined"]) [part="input-wrapper"] {
     background: var(--lr-color-surface-raised);
   }
   /* Each tier reuses lr-input's own 2xs-xl padding/font-size scale (input.styles.ts), so the two
@@ -60,34 +60,34 @@ export const styles = css`
      so the unset-size render is untouched by this scale. Both spellings of a tier match, for the
      same reason sizes.styles.ts emits both -- the height ladder accepts size="small", so a row
      whose density silently ignored it would be worse than one that never accepted it. */
-  :host([size='2xs']) {
-    --lr-date-input-padding-block: var(--lr-size-0-0625rem);
-    --lr-date-input-padding-inline: var(--lr-space-2xs);
-    --lr-date-input-font-size: var(--lr-font-size-2xs);
+  :host([size="2xs"]) {
+    --_lr-date-input-padding-block: var(--lr-size-0-0625rem);
+    --_lr-date-input-padding-inline: var(--lr-space-2xs);
+    --_lr-date-input-font-size: var(--lr-font-size-2xs);
   }
-  :host([size='xs']) {
-    --lr-date-input-padding-block: var(--lr-size-0-125rem);
-    --lr-date-input-padding-inline: var(--lr-space-xs);
-    --lr-date-input-font-size: var(--lr-font-size-xs);
+  :host([size="xs"]) {
+    --_lr-date-input-padding-block: var(--lr-size-0-125rem);
+    --_lr-date-input-padding-inline: var(--lr-space-xs);
+    --_lr-date-input-font-size: var(--lr-font-size-xs);
   }
-  :host([size='s']),
-  :host([size='small']) {
-    --lr-date-input-padding-block: var(--lr-space-xs);
-    --lr-date-input-padding-inline: var(--lr-space-xs);
-    --lr-date-input-font-size: var(--lr-font-size-sm);
+  :host([size="s"]),
+  :host([size="small"]) {
+    --_lr-date-input-padding-block: var(--lr-space-xs);
+    --_lr-date-input-padding-inline: var(--lr-space-xs);
+    --_lr-date-input-font-size: var(--lr-font-size-sm);
   }
-  :host([size='l']),
-  :host([size='large']) {
-    --lr-date-input-padding-block: var(--lr-space-m);
-    --lr-date-input-padding-inline: var(--lr-space-m);
-    --lr-date-input-font-size: var(--lr-font-size-lg);
+  :host([size="l"]),
+  :host([size="large"]) {
+    --_lr-date-input-padding-block: var(--lr-space-m);
+    --_lr-date-input-padding-inline: var(--lr-space-m);
+    --_lr-date-input-font-size: var(--lr-font-size-lg);
   }
-  :host([size='xl']) {
-    --lr-date-input-padding-block: var(--lr-space-l);
-    --lr-date-input-padding-inline: var(--lr-space-l);
-    --lr-date-input-font-size: var(--lr-font-size-xl);
+  :host([size="xl"]) {
+    --_lr-date-input-padding-block: var(--lr-space-l);
+    --_lr-date-input-padding-inline: var(--lr-space-l);
+    --_lr-date-input-font-size: var(--lr-font-size-xl);
   }
-  [part='form-control-label'] {
+  [part="form-control-label"] {
     display: block;
     margin-block-end: var(--lr-space-xs);
     font-size: var(--lr-font-size-md-sm);
@@ -99,35 +99,48 @@ export const styles = css`
      instead (same fix as [part='hint']/[part='error'] below). Without this,
      the required-asterisk ::after below (which attaches to this box)
      renders a stray ' *' with nothing before it whenever label is unset. */
-  [part='form-control-label'][hidden] {
+  [part="form-control-label"][hidden] {
     display: none;
   }
   ${formControlRequiredMarker}
   [part='input-wrapper'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-date-input-gap);
+    gap: var(--lr-date-input-gap, var(--_lr-date-input-gap));
     inline-size: 100%;
     min-inline-size: 0;
     max-inline-size: 100%;
     box-sizing: border-box;
-    min-block-size: var(--lr-date-input-control-height, var(--lr-date-input-control-min-height));
+    min-block-size: var(
+      --lr-date-input-control-height,
+      var(
+        --lr-date-input-control-min-height,
+        var(--_lr-date-input-control-min-height)
+      )
+    );
     /* Pinned only when --lr-date-input-control-height is set; 'auto' otherwise, so the row keeps
        growing to fit its content and the calendar toggle's full touch target. */
     block-size: var(--lr-date-input-control-height, auto);
-    padding: var(--lr-date-input-padding-block) var(--lr-date-input-padding-inline);
+    padding: var(
+        --lr-date-input-padding-block,
+        var(--_lr-date-input-padding-block)
+      )
+      var(--lr-date-input-padding-inline, var(--_lr-date-input-padding-inline));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-date-input-radius);
+    border-radius: var(--lr-date-input-radius, var(--_lr-date-input-radius));
     background: var(--lr-color-surface);
   }
-  [part='input-wrapper']:focus-within {
-    border-color: var(--lr-date-input-focus-border-color, var(--lr-color-brand));
+  [part="input-wrapper"]:focus-within {
+    border-color: var(
+      --lr-date-input-focus-border-color,
+      var(--lr-color-brand)
+    );
   }
-  :host(:disabled) [part='input-wrapper'] {
+  :host(:disabled) [part="input-wrapper"] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='input'] {
+  [part="input"] {
     flex: 1 1 auto;
     min-inline-size: 0;
     border: none;
@@ -135,17 +148,17 @@ export const styles = css`
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: var(--lr-date-input-font-size);
+    font-size: var(--lr-date-input-font-size, var(--_lr-date-input-font-size));
   }
-  [part='form-control-input'],
-  [part='segment'] {
+  [part="form-control-input"],
+  [part="segment"] {
     display: contents;
   }
-  [part='input']::placeholder {
+  [part="input"]::placeholder {
     color: var(--lr-date-input-placeholder-color, var(--lr-color-text-quiet));
   }
-  [part='start'],
-  [part='end'] {
+  [part="start"],
+  [part="end"] {
     flex: 0 1 40%;
     display: inline-flex;
     min-inline-size: 0;
@@ -156,12 +169,12 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  [part='start'][hidden],
-  [part='end'][hidden] {
+  [part="start"][hidden],
+  [part="end"][hidden] {
     display: none;
   }
-  [part='clear-button'],
-  [part='expand-button'] {
+  [part="clear-button"],
+  [part="expand-button"] {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -185,18 +198,21 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-font-size-m);
   }
-  [part='clear-button']:hover:not(:disabled),
-  [part='expand-button']:hover:not(:disabled) {
+  [part="clear-button"]:hover:not(:disabled),
+  [part="expand-button"]:hover:not(:disabled) {
     color: var(--lr-date-input-action-hover-color, var(--lr-color-text));
     background: var(--lr-date-input-action-hover-bg, transparent);
-    border-radius: var(--lr-date-input-action-hover-radius, var(--lr-date-input-radius));
+    border-radius: var(
+      --lr-date-input-action-hover-radius,
+      var(--lr-date-input-radius, var(--_lr-date-input-radius))
+    );
   }
   /* Hover has already spent the colour step (quiet -> full text), so the press is a background pad
      mixed off the row's own --lr-color-surface fill: it moves toward the text colour, so it darkens
      a light field and lightens a dark one instead of depending on which way a filter happens to
      push. */
-  [part='clear-button']:active:not(:disabled),
-  [part='expand-button']:active:not(:disabled) {
+  [part="clear-button"]:active:not(:disabled),
+  [part="expand-button"]:active:not(:disabled) {
     color: var(
       --lr-date-input-action-active-color,
       var(--lr-date-input-action-hover-color, var(--lr-color-text))
@@ -209,35 +225,41 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    border-radius: var(--lr-date-input-action-active-radius, var(--lr-date-input-radius));
+    border-radius: var(
+      --lr-date-input-action-active-radius,
+      var(--lr-date-input-radius, var(--_lr-date-input-radius))
+    );
   }
-  [part='clear-button']:focus-visible,
-  [part='expand-button']:focus-visible {
+  [part="clear-button"]:focus-visible,
+  [part="expand-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='popup'] {
+  [part="popup"] {
     position: fixed;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
-    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem));
+    max-inline-size: min(
+      var(--lr-popover-viewport-clamp),
+      var(--lr-size-28rem)
+    );
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
     transition-property: opacity, transform, visibility;
     transition-duration: var(--hide-duration, var(--lr-transition-fast));
   }
-  :host([open]) [part='popup'] {
+  :host([open]) [part="popup"] {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
     transition-duration: var(--show-duration, var(--lr-transition-fast));
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='popup'] {
+    [part="popup"] {
       transition: none !important;
     }
   }
-  [part='hint'] {
+  [part="hint"] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
@@ -246,21 +268,21 @@ export const styles = css`
      slot child element regardless of assigned/text content -- so real
      emptiness is tracked in JS (hasHintSlot/hasErrorSlot) and reflected via
      the hidden attribute instead (same fix as lr-stat's icon/caption). */
-  [part='hint'][hidden] {
+  [part="hint"][hidden] {
     display: none;
   }
-  [part='error'] {
+  [part="error"] {
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-danger);
   }
-  [part='error'][hidden] {
+  [part="error"][hidden] {
     display: none;
   }
-  [part='form-control'],
-  [part='form-control-label'],
-  [part='hint'],
-  [part='error'] {
+  [part="form-control"],
+  [part="form-control-label"],
+  [part="hint"],
+  [part="error"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;

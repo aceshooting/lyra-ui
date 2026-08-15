@@ -19,9 +19,9 @@ function assertiveAnnouncements(): string[] {
 }
 
 const CUES: LyraAvCue[] = [
-  { id: 'c1', start: 0, end: 10, text: 'Welcome to the show', speaker: 'Host' },
-  { id: 'c2', start: 10, end: 25, text: 'Today we discuss agents', speaker: 'Host' },
-  { id: 'c3', start: 25, end: 40, text: 'Thanks for having me', speaker: 'Guest' },
+  { cueId: 'c1', start: 0, end: 10, text: 'Welcome to the show', speaker: 'Host' },
+  { cueId: 'c2', start: 10, end: 25, text: 'Today we discuss agents', speaker: 'Host' },
+  { cueId: 'c3', start: 25, end: 40, text: 'Thanks for having me', speaker: 'Guest' },
 ];
 
 it('redraws a token-colored waveform after an out-of-band theme invalidation', async () => {
@@ -415,9 +415,9 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
     },
   });
   const cues = [
-    { id: 'valid', start: 1, text: 'Valid' },
+    { cueId: 'valid', start: 1, text: 'Valid' },
     hostileCue,
-    { id: '', start: 2, text: 'Missing identity' },
+    { cueId: '', start: 2, text: 'Missing identity' },
   ];
   el.cues = cues as unknown as readonly LyraAvCue[];
   el.rates = [1, 1, Number.NaN, 2];
@@ -429,7 +429,7 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
 
   // Admission is synchronous: no caller-owned collection is observable between assignment and
   // the next Lit update.
-  expect(el.cues.map((cue) => cue.id)).to.deep.equal(['valid']);
+  expect(el.cues.map((cue) => cue.cueId)).to.deep.equal(['valid']);
   expect(el.rates).to.deep.equal([1, 2]);
   expect(el.peaks).to.deep.equal([0.25, 0, 1]);
   expect(el.tracks).to.have.length(1);
@@ -508,7 +508,7 @@ describe('playback controls', () => {
   });
 
   it('keeps an open-ended cue current after native playback advances past its start', async () => {
-    const cues: LyraAvCue[] = [{ id: 'open-ended', start: 10, text: 'Open-ended cue' }];
+    const cues: LyraAvCue[] = [{ cueId: 'open-ended', start: 10, text: 'Open-ended cue' }];
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${cues}></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
     Object.defineProperty(media, 'currentTime', { value: 60, writable: true, configurable: true });
@@ -759,7 +759,7 @@ describe('cues and transcript', () => {
   });
 
   it('formats a cue timestamp with an hours component once start reaches 1 hour', async () => {
-    const longCues: LyraAvCue[] = [{ id: 'long', start: 3661, text: 'An hour in' }];
+    const longCues: LyraAvCue[] = [{ cueId: 'long', start: 3661, text: 'An hour in' }];
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${longCues}></lr-av-player>`)) as LyraAvPlayer;
     await el.updateComplete;
     const rows = cueRows(el);
@@ -771,7 +771,7 @@ describe('cues and transcript', () => {
       <lr-av-player
         lang="ar-EG"
         src=${MP3_SRC}
-        .cues=${[{ id: 'c1', start: 61, text: 'Localized time' }]}
+        .cues=${[{ cueId: 'c1', start: 61, text: 'Localized time' }]}
         .rates=${[1, 1.5]}
       ></lr-av-player>
     `)) as LyraAvPlayer;
@@ -785,8 +785,8 @@ describe('cues and transcript', () => {
 
   it('retains the first valid cue for each unique nonempty cue id', async () => {
     const cues: LyraAvCue[] = [
-      { id: 'duplicate', start: 0, end: 10, text: 'First' },
-      { id: 'duplicate', start: 2, end: 10, text: 'Second' },
+      { cueId: ' duplicate ', start: 0, end: 10, text: 'First' },
+      { cueId: 'duplicate', start: 2, end: 10, text: 'Second' },
     ];
     const el = (await fixture(html`
       <lr-av-player src=${MP3_SRC} .cues=${cues}></lr-av-player>
@@ -796,6 +796,7 @@ describe('cues and transcript', () => {
     await list.updateComplete;
     const rows = cueRows(el);
     expect(el.cues).to.have.length(1);
+    expect(el.cues[0]!.cueId).to.equal('duplicate');
     expect(el.cues[0]!.text).to.equal('First');
     expect(rows).to.have.length(1);
     expect(Object.isFrozen(el.cues)).to.be.true;
@@ -804,8 +805,8 @@ describe('cues and transcript', () => {
 
   it('ends an omitted cue at the next chronological start without mutating caller order', async () => {
     const cues: LyraAvCue[] = [
-      { id: 'later', start: 10, end: 20, text: 'Later finite cue' },
-      { id: 'open', start: 0, text: 'Open until later' },
+      { cueId: 'later', start: 10, end: 20, text: 'Later finite cue' },
+      { cueId: 'open', start: 0, text: 'Open until later' },
     ];
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${cues}></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
@@ -824,7 +825,7 @@ describe('cues and transcript', () => {
     media.currentTime = 25;
     media.dispatchEvent(new Event('timeupdate'));
     expect((await afterLater).detail).to.deep.equal({ cueId: null, index: -1 });
-    expect(cues.map((cue) => cue.id)).to.deep.equal(['later', 'open']);
+    expect(cues.map((cue) => cue.cueId)).to.deep.equal(['later', 'open']);
   });
 
   it('reconciles cue identity immediately on a paused seek and cue replacement', async () => {
@@ -840,7 +841,7 @@ describe('cues and transcript', () => {
     expect((await seekChange).detail).to.deep.equal({ cueId: 'c2', index: 1 });
 
     const replacementChange = oneEvent(el, 'lr-cue-change');
-    el.cues = [{ id: 'replacement', start: 0, end: 20, text: 'Replacement' }];
+    el.cues = [{ cueId: 'replacement', start: 0, end: 20, text: 'Replacement' }];
     await el.updateComplete;
     expect((await replacementChange).detail).to.deep.equal({ cueId: 'replacement', index: 0 });
     expect(cueRows(el)[0]?.getAttribute('aria-current')).to.equal('true');
@@ -849,8 +850,8 @@ describe('cues and transcript', () => {
 
 describe('transcript virtualization', () => {
   it('keeps cue keys and retained row identity stable across unrelated updates and insertion', async () => {
-    const first: LyraAvCue = { id: 'first', start: 0, text: 'First' };
-    const retained: LyraAvCue = { id: 'retained', start: 5, text: 'Retained' };
+    const first: LyraAvCue = { cueId: 'first', start: 0, text: 'First' };
+    const retained: LyraAvCue = { cueId: 'retained', start: 5, text: 'Retained' };
     const el = (await fixture(html`
       <lr-av-player src=${MP3_SRC} .cues=${[first, retained]}></lr-av-player>
     `)) as LyraAvPlayer;
@@ -869,7 +870,7 @@ describe('transcript virtualization', () => {
     expect(list.keyFunction === originalKeyFunction).to.be.true;
     expect(list.renderItem === originalRenderItem).to.be.true;
 
-    el.cues = [{ id: 'inserted', start: 0, text: 'Inserted' }, first, retained];
+    el.cues = [{ cueId: 'inserted', start: 0, text: 'Inserted' }, first, retained];
     await el.updateComplete;
     await list.updateComplete;
     expect(list.keyFunction === originalKeyFunction).to.be.true;
@@ -879,8 +880,8 @@ describe('transcript virtualization', () => {
   });
 
   it('uses the unique cue id as stable row identity and ignores a duplicate replacement', async () => {
-    const first: LyraAvCue = { id: 'duplicate', start: 0, text: 'First duplicate' };
-    const duplicate: LyraAvCue = { id: 'duplicate', start: 5, text: 'Ignored duplicate' };
+    const first: LyraAvCue = { cueId: 'duplicate', start: 0, text: 'First duplicate' };
+    const duplicate: LyraAvCue = { cueId: 'duplicate', start: 5, text: 'Ignored duplicate' };
     const el = (await fixture(html`
       <lr-av-player src=${MP3_SRC} .cues=${[first]}></lr-av-player>
     `)) as LyraAvPlayer;
@@ -899,7 +900,7 @@ describe('transcript virtualization', () => {
     expect(el.cues).to.have.length(1);
     expect(renderedTranscriptRow(list, 0) === firstRow).to.be.true;
 
-    const replacement: LyraAvCue = { id: 'duplicate', start: 8, text: 'Replacement' };
+    const replacement: LyraAvCue = { cueId: 'duplicate', start: 8, text: 'Replacement' };
     el.cues = [replacement];
     await el.updateComplete;
     await list.updateComplete;
@@ -946,7 +947,7 @@ describe('search', () => {
 
   it('reveals each active search result in the transcript without seeking playback', async () => {
     const cues = Array.from({ length: 80 }, (_unused, index): LyraAvCue => ({
-      id: `cue-${index}`,
+      cueId: `cue-${index}`,
       start: index,
       text: index === 21 || index === 67 ? `Needle ${index}` : `Cue ${index}`,
     }));
@@ -981,7 +982,7 @@ describe('search', () => {
   });
 
   it('uses locale-aware case folding for Turkish cue searches', async () => {
-    const cues: LyraAvCue[] = [{ id: 'tr', start: 0, text: 'İSTANBUL' }];
+    const cues: LyraAvCue[] = [{ cueId: 'tr', start: 0, text: 'İSTANBUL' }];
     const el = (await fixture(html`
       <lr-av-player lang="tr" src=${MP3_SRC} .cues=${cues}></lr-av-player>
     `)) as LyraAvPlayer;
@@ -995,8 +996,8 @@ describe('search', () => {
     await el.search('host');
     el.searchNext();
     el.cues = [
-      { id: 'new-1', start: 0, text: 'No match' },
-      { id: 'new-2', start: 5, text: 'Host replacement' },
+      { cueId: 'new-1', start: 0, text: 'No match' },
+      { cueId: 'new-2', start: 5, text: 'Host replacement' },
     ];
     await el.updateComplete;
     const rows = cueRows(el);
@@ -1110,9 +1111,31 @@ describe('timeline marker activation', () => {
     const marker = el.shadowRoot!.querySelector('[part="timeline-marker"]') as HTMLButtonElement;
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     marker.click();
-    expect((await eventPromise).detail).to.deep.equal({ id: 'h1' });
+    expect((await eventPromise).detail).to.deep.equal({ highlightId: 'h1' });
     expect(media.currentTime).to.equal(30);
     expect(el.activeHighlightId).to.equal('h1');
+  });
+
+  it('retains the first unique nonempty time-range highlight id for markers and activation', async () => {
+    const el = await fixture<LyraAvPlayer>(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`);
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    el.highlights = [
+      { id: '', label: 'Empty', anchor: { kind: 'time-range', start: 1 } },
+      { id: ' chapter ', label: 'First', anchor: { kind: 'time-range', start: 5 } },
+      { id: 'chapter', label: 'Duplicate', anchor: { kind: 'time-range', start: 20 } },
+    ];
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+
+    const markers = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="timeline-marker"]')];
+    expect(markers).to.have.length(1);
+    expect(markers[0]!.getAttribute('aria-label')).to.contain('First');
+
+    const activated = oneEvent(el, 'lr-highlight-activate');
+    markers[0]!.click();
+    expect((await activated).detail).to.deep.equal({ highlightId: 'chapter' });
+    expect(el.activeHighlightId).to.equal('chapter');
   });
 
   it('keeps a very short timeline marker visually addressable with a compliant hit target', async () => {
@@ -1385,7 +1408,7 @@ describe('numeric safety (finite clamping)', () => {
 
   it('normalizes non-finite cue times and waveform peaks before visible/canvas math', async () => {
     const cues: LyraAvCue[] = [{
-      id: 'bad-time',
+      cueId: 'bad-time',
       start: Number.POSITIVE_INFINITY,
       end: Number.NaN,
       text: 'Still renderable',
@@ -1426,7 +1449,7 @@ it('contains unbroken transcript text inside a 320px allocation', async () => {
     <div style="inline-size: 320px">
       <lr-av-player
         src=${MP3_SRC}
-        .cues=${[{ id: 'long', start: 0, text: 'Transcript'.repeat(250) }]}
+        .cues=${[{ cueId: 'long', start: 0, text: 'Transcript'.repeat(250) }]}
       ></lr-av-player>
     </div>
   `)) as HTMLElement;
@@ -2415,7 +2438,7 @@ it('registers one shared audio/video renderer across every AV MIME type', async 
   const richPayload = snapshotLyraDocumentRendererPayload({
     kind: 'av',
     file,
-    cues: [{ id: 'cue-1', start: 0, text: 'Reachable document transcript' }],
+    cues: [{ cueId: 'cue-1', start: 0, text: 'Reachable document transcript' }],
     tracks: [{
       src: 'https://example.test/en.vtt',
       kind: 'captions',
@@ -2428,7 +2451,7 @@ it('registers one shared audio/video renderer across every AV MIME type', async 
   const richHost = (await fixture(html`<div>${richInvocation.render()}</div>`)) as HTMLElement;
   const richPlayer = richHost.querySelector('lr-av-player') as LyraAvPlayer;
   await richPlayer.updateComplete;
-  expect(richPlayer.cues.map((cue) => cue.id)).to.deep.equal(['cue-1']);
+  expect(richPlayer.cues.map((cue) => cue.cueId)).to.deep.equal(['cue-1']);
   expect(richPlayer.tracks.map((track) => track.label)).to.deep.equal(['English']);
   expect(await richPlayer.search('reachable')).to.equal(1);
 
@@ -2437,11 +2460,11 @@ it('registers one shared audio/video renderer across every AV MIME type', async 
     file,
     cues: [
       ...Array.from({ length: 10_000 }, (_unused, index) => ({
-        id: `empty-${index}`,
+        cueId: `empty-${index}`,
         start: index,
         text: '',
       })),
-      { id: 'omitted-searchable', start: 10_000, text: 'Only omitted content is searchable' },
+      { cueId: 'omitted-searchable', start: 10_000, text: 'Only omitted content is searchable' },
     ],
     tracks: [],
   });

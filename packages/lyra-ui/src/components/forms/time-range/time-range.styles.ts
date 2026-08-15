@@ -1,66 +1,77 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
-    --lr-time-range-handle-size: calc(
-      var(--lr-size-14px) * var(--lr-time-range-size-scale)
+    --_lr-time-range-handle-size: calc(
+      var(--lr-size-14px) *
+        var(--lr-time-range-size-scale, var(--_lr-time-range-size-scale))
     );
-    --lr-time-range-hit-size: max(
+    --_lr-time-range-hit-size: max(
       var(--lr-size-24px),
-      calc(var(--lr-size-28px) * var(--lr-time-range-size-scale))
-    );
-    --lr-time-range-track-size: calc(
-      var(--lr-size-4px) * var(--lr-time-range-size-scale)
-    );
-    --lr-time-range-base-size: calc(
-      var(--lr-size-1-5rem) * var(--lr-time-range-size-scale)
-    );
-    --lr-time-range-preset-gap: var(--lr-space-xs);
-    --lr-time-range-preset-radius: var(--lr-radius);
-    --lr-time-range-preset-padding: calc(
-        var(--lr-space-xs) * var(--lr-time-range-size-scale)
+      calc(
+        var(--lr-size-28px) *
+          var(--lr-time-range-size-scale, var(--_lr-time-range-size-scale))
       )
-      calc(var(--lr-space-s) * var(--lr-time-range-size-scale));
-    --lr-time-range-preset-font-size: calc(
-      var(--lr-font-size-sm) * var(--lr-time-range-size-scale)
+    );
+    --_lr-time-range-track-size: calc(
+      var(--lr-size-4px) *
+        var(--lr-time-range-size-scale, var(--_lr-time-range-size-scale))
+    );
+    --_lr-time-range-base-size: calc(
+      var(--lr-size-1-5rem) *
+        var(--lr-time-range-size-scale, var(--_lr-time-range-size-scale))
+    );
+    --_lr-time-range-preset-gap: var(--lr-space-xs);
+    --_lr-time-range-preset-radius: var(--lr-radius);
+    --_lr-time-range-preset-padding: calc(
+        var(--lr-space-xs) *
+          var(--lr-time-range-size-scale, var(--_lr-time-range-size-scale))
+      )
+      calc(
+        var(--lr-space-s) *
+          var(--lr-time-range-size-scale, var(--_lr-time-range-size-scale))
+      );
+    --_lr-time-range-preset-font-size: calc(
+      var(--lr-font-size-sm) *
+        var(--lr-time-range-size-scale, var(--_lr-time-range-size-scale))
     );
     /* No fixed block-size here (unlike before presets existed): [part="base"]
        now carries its own 1.5rem below and the host's block box is just the
        natural stack height of its children. With presets empty this still
        computes to exactly 1.5rem (the one [part="base"] child), so the
        brush-only case renders byte-for-byte the same as before. */
-    --lr-time-range-size-scale: 1;
+    --_lr-time-range-size-scale: 1;
   }
   /* This control has no form-control row to floor: size scales a brush track, its handles and the
      preset chips together, so the tier resolves to one multiplier rather than to the shared
      --lr-form-control-height ladder. It still matches both spellings of every tier, the same way
      internal/sizes.styles.ts does, so size="small" is honoured here too. */
-  :host([size='2xs']) {
-    --lr-time-range-size-scale: 0.5;
+  :host([size="2xs"]) {
+    --_lr-time-range-size-scale: 0.5;
   }
-  :host([size='xs']) {
-    --lr-time-range-size-scale: 0.6;
+  :host([size="xs"]) {
+    --_lr-time-range-size-scale: 0.6;
   }
-  :host([size='s']),
-  :host([size='small']) {
-    --lr-time-range-size-scale: 0.75;
+  :host([size="s"]),
+  :host([size="small"]) {
+    --_lr-time-range-size-scale: 0.75;
   }
-  :host([size='l']),
-  :host([size='large']) {
-    --lr-time-range-size-scale: 1.2;
+  :host([size="l"]),
+  :host([size="large"]) {
+    --_lr-time-range-size-scale: 1.2;
   }
-  :host([size='xl']) {
-    --lr-time-range-size-scale: 1.4;
+  :host([size="xl"]) {
+    --_lr-time-range-size-scale: 1.4;
   }
-  [part='presets'] {
+  [part="presets"] {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lr-time-range-preset-gap);
+    gap: var(--lr-time-range-preset-gap, var(--_lr-time-range-preset-gap));
     margin-block-end: var(--lr-space-s);
   }
-  [part='preset-button'] {
+  [part="preset-button"] {
     display: inline-flex;
     align-items: center;
     /* Floors, not fixed sizes -- matches --lr-icon-button-size's contract elsewhere in the library:
@@ -71,13 +82,22 @@ export const styles = css`
        label (e.g. "1h") measures under 24px wide at 2xs/xs once the padding shrinks with it. */
     min-block-size: var(--lr-size-24px);
     min-inline-size: var(--lr-size-24px);
-    padding: var(--lr-time-range-preset-padding);
+    padding: var(
+      --lr-time-range-preset-padding,
+      var(--_lr-time-range-preset-padding)
+    );
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-time-range-preset-radius);
+    border-radius: var(
+      --lr-time-range-preset-radius,
+      var(--_lr-time-range-preset-radius)
+    );
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
-    font-size: var(--lr-time-range-preset-font-size);
+    font-size: var(
+      --lr-time-range-preset-font-size,
+      var(--_lr-time-range-preset-font-size)
+    );
     cursor: pointer;
     transition: var(--lr-transition-fast);
   }
@@ -85,18 +105,35 @@ export const styles = css`
      functionally identical selection to [part='preset-button']:hover:not(:disabled), but no longer
      beating a consumer's own ::part(preset-button):hover override on specificity -- mirrors
      lr-attachment-trigger's identical :where() fix for this exact selector shape. */
-  :where([part='preset-button']):hover:where(:not(:disabled)) {
-    border-color: var(--lr-time-range-preset-hover-border-color, var(--lr-color-brand));
+  :where([part="preset-button"]):hover:where(:not(:disabled)) {
+    border-color: var(
+      --lr-time-range-preset-hover-border-color,
+      var(--lr-color-brand)
+    );
   }
   /* Pressed goes further than the hover's edge change: the button's own surface fill mixes toward
      --lr-color-mix-partner (which follows the text colour), so it darkens on a light theme and
      lightens on a dark one. Same :where() wrapping as the hover rule above, for the same
      specificity reason, and gated on :not(:disabled) so a disabled preset stays inert. */
-  :where([part='preset-button']):active:where(:not(:disabled)) {
-    border-color: var(--lr-time-range-preset-pressed-border-color, color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
-    background: var(--lr-time-range-preset-pressed-bg, color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+  :where([part="preset-button"]):active:where(:not(:disabled)) {
+    border-color: var(
+      --lr-time-range-preset-pressed-border-color,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    background: var(
+      --lr-time-range-preset-pressed-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-surface),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
-  [part='preset-button']:focus-visible {
+  [part="preset-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -106,55 +143,71 @@ export const styles = css`
      to require hijacking the shared --lr-color-brand/--lr-color-on-brand tokens, repainting
      everything else that reads them. Unset, each falls back to the token the rule used before, so
      the rendering is unchanged. */
-  [part='preset-button'][data-active] {
+  [part="preset-button"][data-active] {
     background: var(--lr-time-range-preset-active-bg, var(--lr-color-brand));
-    border-color: var(--lr-time-range-preset-active-border-color, var(--lr-color-brand));
+    border-color: var(
+      --lr-time-range-preset-active-border-color,
+      var(--lr-color-brand)
+    );
     color: var(--lr-time-range-preset-active-color, var(--lr-color-on-brand));
   }
-  [part='preset-button']:disabled {
+  [part="preset-button"]:disabled {
     /* Dimming already comes from :host(:disabled)'s opacity below (applies
        to the whole host, presets row included) — stacking a second opacity
        here would compound multiplicatively and over-dim relative to the
        handles, which only restate the cursor for the same reason. */
     cursor: not-allowed;
   }
-  [part='base'] {
+  [part="base"] {
     position: relative;
     inline-size: 100%;
-    block-size: var(--lr-time-range-base-size);
+    block-size: var(--lr-time-range-base-size, var(--_lr-time-range-base-size));
     display: flex;
     align-items: center;
   }
-  [part='track'] {
+  [part="track"] {
     position: absolute;
     inset-inline: 0;
-    block-size: var(--lr-time-range-track-size);
+    block-size: var(
+      --lr-time-range-track-size,
+      var(--_lr-time-range-track-size)
+    );
     border-radius: var(--lr-size-2px);
     background: var(--lr-color-border);
   }
-  [part='range'] {
+  [part="range"] {
     position: absolute;
-    block-size: var(--lr-time-range-track-size);
+    block-size: var(
+      --lr-time-range-track-size,
+      var(--_lr-time-range-track-size)
+    );
     border-radius: var(--lr-size-2px);
     background: var(--lr-color-brand);
   }
-  [part^='handle'] {
+  [part^="handle"] {
     position: absolute;
-    inline-size: var(--lr-time-range-handle-size);
-    block-size: var(--lr-time-range-handle-size);
+    inline-size: var(
+      --lr-time-range-handle-size,
+      var(--_lr-time-range-handle-size)
+    );
+    block-size: var(
+      --lr-time-range-handle-size,
+      var(--_lr-time-range-handle-size)
+    );
     border-radius: 50%;
     background: var(--lr-time-range-handle-bg, var(--lr-color-brand));
-    border: var(--lr-border-width-medium) solid var(--lr-time-range-handle-border-color, var(--lr-color-surface));
+    border: var(--lr-border-width-medium) solid
+      var(--lr-time-range-handle-border-color, var(--lr-color-surface));
     /* Resting chrome, not an overlay: a knob riding on its own track, matching lr-slider's thumb. */
     box-shadow: var(--lr-shadow-s);
     transform: translateX(-50%);
     cursor: grab;
     touch-action: none;
   }
-  [part^='handle'][data-at-domain-start] {
+  [part^="handle"][data-at-domain-start] {
     transform: translateX(0);
   }
-  [part^='handle'][data-at-domain-end] {
+  [part^="handle"][data-at-domain-end] {
     transform: translateX(-100%);
   }
   /* [part^='handle'] is positioned with a logical inset-inline-start:<pct>%
@@ -163,13 +216,13 @@ export const styles = css`
      translateX(-50%) above assumes an LTR left edge anchor, so it has to
      flip sign under RTL or the visible dot ends up a full handle-width off
      from its true track position. */
-  :host(:dir(rtl)) [part^='handle'] {
+  :host(:dir(rtl)) [part^="handle"] {
     transform: translateX(50%);
   }
-  :host(:dir(rtl)) [part^='handle'][data-at-domain-start] {
+  :host(:dir(rtl)) [part^="handle"][data-at-domain-start] {
     transform: translateX(0);
   }
-  :host(:dir(rtl)) [part^='handle'][data-at-domain-end] {
+  :host(:dir(rtl)) [part^="handle"][data-at-domain-end] {
     transform: translateX(100%);
   }
   /*
@@ -189,21 +242,21 @@ export const styles = css`
    * separate DOM node/event target), so this is purely additive and cannot
    * change the drag math.
    */
-  [part^='handle']::before {
-    content: '';
+  [part^="handle"]::before {
+    content: "";
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    inline-size: var(--lr-time-range-hit-size);
-    block-size: var(--lr-time-range-hit-size);
+    inline-size: var(--lr-time-range-hit-size, var(--_lr-time-range-hit-size));
+    block-size: var(--lr-time-range-hit-size, var(--_lr-time-range-hit-size));
     transform: translate(-50%, -50%);
     border-radius: 50%;
   }
-  [part^='handle'][data-at-domain-start]::before {
+  [part^="handle"][data-at-domain-start]::before {
     inset-inline-start: 0;
     transform: translate(0, -50%);
   }
-  [part^='handle'][data-at-domain-end]::before {
+  [part^="handle"][data-at-domain-end]::before {
     inset-inline-start: 100%;
     transform: translate(-100%, -50%);
   }
@@ -211,16 +264,19 @@ export const styles = css`
      this enlarged hit-area is centered on inset-inline-start: 50%, so its
      horizontal translate must flip sign under RTL too or the actual drag
      hit zone detaches from the visible handle. */
-  :host(:dir(rtl)) [part^='handle']:not([data-at-domain-start]):not([data-at-domain-end])::before {
+  :host(:dir(rtl))
+    [part^="handle"]:not([data-at-domain-start]):not(
+      [data-at-domain-end]
+    )::before {
     transform: translate(50%, -50%);
   }
-  :host(:dir(rtl)) [part^='handle'][data-at-domain-start]::before {
+  :host(:dir(rtl)) [part^="handle"][data-at-domain-start]::before {
     transform: translate(0, -50%);
   }
-  :host(:dir(rtl)) [part^='handle'][data-at-domain-end]::before {
+  :host(:dir(rtl)) [part^="handle"][data-at-domain-end]::before {
     transform: translate(100%, -50%);
   }
-  [part^='handle']:focus-visible {
+  [part^="handle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -228,8 +284,15 @@ export const styles = css`
      gives keyboard users, matching the sibling [part='preset-button']:hover treatment above --
      gated via :host(:not(:disabled)) the same way lr-checkbox's/lr-radio's [part='base']:hover
      rules are, since a disabled handle must not still brighten on hover. */
-  :host(:not(:disabled)) [part^='handle']:hover {
-    background: var(--lr-time-range-handle-hover-bg, color-mix(in oklab, var(--lr-time-range-handle-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+  :host(:not(:disabled)) [part^="handle"]:hover {
+    background: var(
+      --lr-time-range-handle-hover-bg,
+      color-mix(
+        in oklab,
+        var(--lr-time-range-handle-bg, var(--lr-color-brand)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+      )
+    );
   }
   /* Pressed = the grab itself, which is the only feedback a drag has before the value starts
      moving: the knob mixes a full step further toward the text colour and the cursor closes.
@@ -237,8 +300,15 @@ export const styles = css`
      applied to the whole subtree, so it also washed out the surface-coloured ring and the shadow
      that separate the knob from its own track, and it did nothing at all on a theme whose brand
      colour is pure white or pure black. */
-  :host(:not(:disabled)) [part^='handle']:active {
-    background: var(--lr-time-range-handle-pressed-bg, color-mix(in oklab, var(--lr-time-range-handle-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+  :host(:not(:disabled)) [part^="handle"]:active {
+    background: var(
+      --lr-time-range-handle-pressed-bg,
+      color-mix(
+        in oklab,
+        var(--lr-time-range-handle-bg, var(--lr-color-brand)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
     cursor: grabbing;
   }
   /* :host(:disabled), not :host([disabled]) -- this is a form-associated custom element
@@ -253,7 +323,7 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  :host(:disabled) [part^='handle'] {
+  :host(:disabled) [part^="handle"] {
     /* [part^='handle'] above sets \`cursor: grab\` unconditionally, which
        would otherwise keep winning over the inherited :host cursor (it
        isn't conditioned on [disabled]) — restate not-allowed here so the
@@ -262,17 +332,17 @@ export const styles = css`
     cursor: not-allowed;
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='preset-button'],
-    [part^='handle'],
-    [part='range'] {
+    [part="preset-button"],
+    [part^="handle"],
+    [part="range"] {
       transition: none !important;
     }
   }
-  [part='presets'] {
+  [part="presets"] {
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  [part='preset-button'] {
+  [part="preset-button"] {
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }

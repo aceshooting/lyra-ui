@@ -49,7 +49,7 @@ export interface ToolTimelineEntry extends ToolInvocation {
    *  `['args.apiKey', 'result.rows.0.ssn']`, or the bare `'args'`/`'result'`/`'error'` to mask an
    *  entire branch. A path with no matching field is a no-op, never a thrown error. Never applied
    *  to the copy of `args` handed to the approval dialog -- see the class doc's approval note. */
-  redactedFields?: string[];
+  redactedFields?: readonly string[];
   /** Whether this call is gated behind a human approval decision. While `true` and `approved` is
    *  still `undefined`, activating the entry's chip opens the shared approval dialog instead of
    *  merely firing the chip's own selection event. */
@@ -90,14 +90,19 @@ export interface LyraToolTimelineEventMap {
   'lr-tool-render-error': CustomEvent<ToolTimelineRenderErrorDetail>;
 }
 
+function entrySourceKey(entry: ToolTimelineEntry): string | undefined {
+  return entry.sourceKey?.trim() ? entry.sourceKey : undefined;
+}
+
 function entryIdentity(entry: ToolTimelineEntry): string {
-  return JSON.stringify([entry.sourceKey ?? null, entry.id]);
+  return JSON.stringify([entrySourceKey(entry) ?? null, entry.id]);
 }
 
 function entryCorrelation(entry: ToolTimelineEntry): ToolTimelineActivateDetail {
-  return entry.sourceKey === undefined
+  const sourceKey = entrySourceKey(entry);
+  return sourceKey === undefined
     ? { invocationId: entry.id }
-    : { invocationId: entry.id, sourceKey: entry.sourceKey };
+    : { invocationId: entry.id, sourceKey };
 }
 
 const MAX_RENDERED_ENTRIES = 500;
@@ -243,6 +248,9 @@ interface RedactionCacheEntry extends RedactedEntry {
  * belonging to an entry that isn't pending approval emits the timeline-owned, correlated
  * `lr-tool-activate`; raw child selection and disclosure lifecycle events are contained.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-tool-timeline
  * @event lr-tool-approval-decide - A pending entry's approval dialog was resolved.
  *   `detail: { invocationId, approved, args? }` — `args` (the dialog's current, possibly
@@ -296,6 +304,8 @@ interface RedactionCacheEntry extends RedactedEntry {
  * @since 4.1.0
  */
 export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["entries"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -312,8 +322,9 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
-  /** The calls to render, in any order — see the class doc's ordering note. */
-  @property({ attribute: false }) entries: ToolTimelineEntry[] = [];
+  /** The calls to render, in any order — see the class doc's ordering note. Entries with empty
+   *  invocation ids are omitted; duplicate `(sourceKey, id)` identities normalize first-wins. */
+  @property({ attribute: false }) entries: readonly ToolTimelineEntry[] = [];
 
   /** Forwarded to the shared approval dialog's own `editable` — whether a reviewer can edit an
    *  entry's arguments before approving it. */
@@ -406,6 +417,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     const seen = new Set<string>();
     for (const sourceEntry of entries) {
       const entry = normalizeEntry(sourceEntry);
+      if (entry.id.trim().length === 0) continue;
       const key = entryIdentity(entry);
       if (seen.has(key)) continue;
       seen.add(key);

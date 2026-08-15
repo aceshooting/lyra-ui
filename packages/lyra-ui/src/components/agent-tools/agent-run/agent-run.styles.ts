@@ -1,11 +1,11 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
-    --lr-agent-run-spin: var(--lr-transition-ambient);
+    --_lr-agent-run-spin: var(--lr-transition-ambient);
   }
-  [part='base'] {
+  [part="base"] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-m);
@@ -21,7 +21,7 @@ export const styles = css`
      var() fallbacks (rather than a :host declaration, which every instance would re-declare and so
      shadow any ancestor value) so a consumer can retune them from outside without restating the
      whole rule; the fallbacks are the pre-existing values, so an unset run renders unchanged. */
-  :host([compact]) [part='base'] {
+  :host([compact]) [part="base"] {
     padding: var(--lr-agent-run-compact-padding, var(--lr-space-s));
     gap: var(--lr-agent-run-compact-gap, var(--lr-space-s));
   }
@@ -30,13 +30,13 @@ export const styles = css`
      and frame="plain". plain is the stronger statement ("no chrome at all"), so it goes last. The built-in
      Cancel/Retry buttons keep their own border/background -- that chrome is theirs, not the card's,
      so a chrome-less run still has a visible interactive affordance. */
-  :host([frame='plain']) [part='base'] {
+  :host([frame="plain"]) [part="base"] {
     padding: 0;
     border: 0;
     border-radius: 0;
     background: transparent;
   }
-  [part='header'] {
+  [part="header"] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -45,13 +45,13 @@ export const styles = css`
     column-gap: var(--lr-space-m);
     row-gap: var(--lr-space-s);
   }
-  [part='status'] {
+  [part="status"] {
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
     min-inline-size: 0;
   }
-  [part='status-message'] {
+  [part="status-message"] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -59,15 +59,15 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  [part='elapsed'],
-  [part='elapsed-static'] {
+  [part="elapsed"],
+  [part="elapsed-static"] {
     flex: 0 0 auto;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-  [part='current-step'] {
+  [part="current-step"] {
     display: flex;
     align-items: center;
     gap: var(--lr-size-0-4em);
@@ -76,22 +76,23 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  [part='current-step-icon'] {
+  [part="current-step-icon"] {
     display: inline-flex;
     flex: 0 0 auto;
     color: var(--lr-color-brand);
   }
-  [part='current-step-icon'] svg {
+  [part="current-step-icon"] svg {
     display: block;
-    animation: lr-agent-run-spin var(--lr-agent-run-spin) infinite;
+    animation: lr-agent-run-spin
+      var(--lr-agent-run-spin, var(--_lr-agent-run-spin)) infinite;
   }
-  [part='current-step-label'] {
+  [part="current-step-label"] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     min-inline-size: 0;
   }
-  [part='summary'] {
+  [part="summary"] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -101,10 +102,10 @@ export const styles = css`
     max-inline-size: 100%;
     font-size: var(--lr-font-size-sm);
   }
-  [part='summary'][hidden] {
+  [part="summary"][hidden] {
     display: none;
   }
-  [part='metric'] {
+  [part="metric"] {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: baseline;
@@ -113,46 +114,46 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='metric-label'],
-  [part='metric-value'] {
+  [part="metric-label"],
+  [part="metric-value"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='metric-label'] {
+  [part="metric-label"] {
     color: var(--lr-color-text-quiet);
   }
-  [part='metric-value'] {
+  [part="metric-value"] {
     font-variant-numeric: tabular-nums;
     font-weight: var(--lr-font-weight-semibold);
   }
-  [part='metric-value'][data-variant='brand'] {
+  [part="metric-value"][data-variant="brand"] {
     color: var(--lr-agent-run-metric-brand-color, var(--lr-color-brand));
   }
-  [part='metric-value'][data-variant='danger'] {
+  [part="metric-value"][data-variant="danger"] {
     color: var(--lr-agent-run-metric-danger-color, var(--lr-color-danger));
   }
-  [part='metric-value'][data-variant='success'] {
+  [part="metric-value"][data-variant="success"] {
     color: var(--lr-agent-run-metric-success-color, var(--lr-color-success));
   }
-  [part='metric-value'][data-variant='warning'] {
+  [part="metric-value"][data-variant="warning"] {
     color: var(--lr-agent-run-metric-warning-color, var(--lr-color-warning));
   }
-  [part='model'] {
+  [part="model"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
     color: var(--lr-color-text-quiet);
   }
-  [part='actions'] {
+  [part="actions"] {
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
     flex: 0 0 auto;
     margin-inline-start: auto;
   }
-  [part='cancel-button'],
-  [part='retry-button'] {
+  [part="cancel-button"],
+  [part="retry-button"] {
     box-sizing: border-box;
     min-block-size: var(--lr-size-1-75rem);
     padding: var(--lr-size-0-25rem) var(--lr-space-s);
@@ -164,16 +165,14 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition:
-      background-color var(--lr-transition-fast),
-      border-color var(--lr-transition-fast),
-      color var(--lr-transition-fast);
+    transition: background-color var(--lr-transition-fast),
+      border-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
-  [part='cancel-button']:hover {
+  [part="cancel-button"]:hover {
     border-color: var(--lr-color-danger);
     color: var(--lr-color-danger);
   }
-  [part='retry-button']:hover {
+  [part="retry-button"]:hover {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
@@ -181,16 +180,20 @@ export const styles = css`
      deepen -- so pressed tints the button's own surface fill toward --lr-color-mix-partner (which
      follows the text colour) instead. The :hover border/label colours still apply underneath while
      the pointer is down, so Cancel stays danger-toned and Retry stays brand-toned when pressed. */
-  [part='cancel-button']:active,
-  [part='retry-button']:active {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="cancel-button"]:active,
+  [part="retry-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='cancel-button']:focus-visible,
-  [part='retry-button']:focus-visible {
+  [part="cancel-button"]:focus-visible,
+  [part="retry-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='body'] {
+  [part="body"] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-m);
@@ -202,11 +205,11 @@ export const styles = css`
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='cancel-button'],
-    [part='retry-button'] {
+    [part="cancel-button"],
+    [part="retry-button"] {
       transition: none !important;
     }
-    [part='current-step-icon'] svg {
+    [part="current-step-icon"] svg {
       animation: none !important;
     }
   }

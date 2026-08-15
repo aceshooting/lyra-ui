@@ -35,12 +35,12 @@ import {
   type LyraAvCue,
   type LyraAvTrack,
 } from './av-metadata.js';
-export type { LyraAvCue, LyraAvTrack } from './av-metadata.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type { LyraAvCue, LyraAvTrack } from './av-metadata.js';
 
 export type LyraAvKind = 'audio' | 'video';
 export type LyraAvPreload = 'none' | 'metadata' | 'auto';
@@ -252,7 +252,8 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @event lr-rate-change - `detail: { rate }`.
  * @event lr-cue-change - The active transcript cue changed. `detail: { cueId, index }`
  *   (`cueId:null,index:-1` when none is active).
- * @event lr-highlight-activate - A `time-range` highlight marker was activated. `detail: { id }`.
+ * @event lr-highlight-activate - A `time-range` highlight marker was activated.
+ *   `detail: { highlightId }`.
  * @event lr-anchor-result - Fired after `anchor` (or a `scrollToAnchor()` call) is applied.
  *   `detail: { found }`.
  * @event lr-search-change - Fired from `search()`/`searchNext()`/`searchPrevious()`/
@@ -397,8 +398,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.requestUpdate('rates', previous);
   }
   private _cues: readonly LyraAvCue[] = EMPTY_CUES;
-  /** Transcript entries, rendered as a virtualized, `currentTime`-synced list. Valid nonempty cue
-   * IDs are unique; the first occurrence wins. Inputs are bounded, cloned, and frozen. */
+  /** Transcript entries, rendered as a virtualized, `currentTime`-synced list. Valid nonempty
+   * `cueId` values are unique; the first occurrence wins. Inputs are bounded, cloned, and frozen. */
   @property({ attribute: false })
   get cues(): readonly LyraAvCue[] { return this._cues; }
   set cues(value: readonly LyraAvCue[]) {
@@ -949,7 +950,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         }
       }
     });
-    const nextId = active?.id ?? null;
+    const nextId = active?.cueId ?? null;
     this.setActiveCue(nextId, activeIndex);
   }
 
@@ -990,7 +991,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     const previousMatchIndex = this.searchMatches[this.activeSearchIndex];
     const previousActiveId =
       previousCues && previousMatchIndex !== undefined
-        ? previousCues[previousMatchIndex]?.id
+        ? previousCues[previousMatchIndex]?.cueId
         : undefined;
     this.searchMatches = q
       ? this.cues.reduce<number[]>((acc, cue, index) => {
@@ -1010,7 +1011,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       return;
     }
     const retainedPosition = previousActiveId
-      ? this.searchMatches.findIndex((index) => this.cues[index]?.id === previousActiveId)
+      ? this.searchMatches.findIndex((index) => this.cues[index]?.cueId === previousActiveId)
       : -1;
     this.activeSearchIndex =
       retainedPosition >= 0
@@ -1156,7 +1157,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private onHighlightActivate = (id: string, start: number): void => {
     this.activeHighlightId = id;
     this.seek(start);
-    this.emit('lr-highlight-activate', { id });
+    this.emit('lr-highlight-activate', { highlightId: id });
   };
 
   private renderMarkers(): TemplateResult | typeof nothing {
@@ -1268,7 +1269,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
 
   private rebuildCueKeys(): void {
-    this.cueKeys = this.cues.map((cue) => `cue:${cue.id.length}:${cue.id}`);
+    this.cueKeys = this.cues.map((cue) => `cue:${cue.cueId.length}:${cue.cueId}`);
   }
 
   private cueKey = (_cue: unknown, index: number): string => this.cueKeys[index] ?? `index:${index}`;

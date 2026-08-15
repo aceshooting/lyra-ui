@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 // Deliberately minimal -- most visual weight comes from whatever the
 // registered renderer's own template contributes; this wrapper only needs to
@@ -11,20 +11,23 @@ export const styles = css`
        --lr-json-viewer-font and lr-tool-approval-dialog's mono font) so a
        consumer retheming --lr-theme-font-family-mono also repaints the plain-text
        fallback view, instead of it being stuck on the hardcoded system stack. */
-    --lr-tool-result-view-font: var(--lr-font-mono);
+    --_lr-tool-result-view-font: var(--lr-font-mono);
   }
-  [part='base'] {
+  [part="base"] {
     display: block;
   }
-  [part='fallback-text'] {
+  [part="fallback-text"] {
     margin: 0;
     white-space: pre-wrap;
     word-break: break-word;
-    font-family: var(--lr-tool-result-view-font);
+    font-family: var(
+      --lr-tool-result-view-font,
+      var(--_lr-tool-result-view-font)
+    );
     font-size: var(--lr-font-size-md-sm);
     color: var(--lr-color-text);
   }
-  [part='fallback-copy'] {
+  [part="fallback-copy"] {
     margin-block-start: var(--lr-space-xs);
   }
 `;

@@ -59,8 +59,8 @@ export const SyncedWithSelection: Story = {
         style="max-width: 40rem"
         .spans=${spans}
         active-span-id=${selected}
-        @lr-span-select=${(e: CustomEvent<{ id: string }>) => {
-          selected = e.detail.id;
+        @lr-span-select=${(e: CustomEvent<{ spanId: string }>) => {
+          selected = e.detail.spanId;
           getEl().activeSpanId = selected;
         }}
       ></lr-trace-tree>

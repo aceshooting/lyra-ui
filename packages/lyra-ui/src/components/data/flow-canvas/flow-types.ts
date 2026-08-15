@@ -7,7 +7,8 @@ export interface FlowHandle {
   readonly label?: string;
 }
 
-/** A controlled node in a flow canvas. Reassign the collection to publish model changes. */
+/** A controlled node in a flow canvas. `id` must be nonempty and unique within `nodes`; the
+ * first valid occurrence wins. Reassign the collection to publish model changes. */
 export interface FlowNode {
   readonly id: string;
   /**
@@ -25,7 +26,8 @@ export interface FlowNode {
   readonly outputs?: readonly FlowHandle[];
 }
 
-/** A directed edge in a flow canvas. */
+/** A directed edge in a flow canvas. `id` must be nonempty and unique within `edges`; the first
+ * valid occurrence wins. */
 export interface FlowEdge {
   readonly id: string;
   readonly source: string;
@@ -94,4 +96,3 @@ export interface FlowLayoutChangeDetail {
 
 /** The drag/drop MIME type shared by the node palette and flow canvas. */
 export const FLOW_PALETTE_MIME_TYPE = 'application/lr-flow-node';
-

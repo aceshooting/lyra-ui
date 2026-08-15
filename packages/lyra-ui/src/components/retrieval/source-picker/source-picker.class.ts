@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, state } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
@@ -18,7 +19,7 @@ import {
 } from "../../../internal/announcer.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_selectAllSources, LYRA_DEFAULT_sourceListDefaultLabel, LYRA_DEFAULT_sourcePickerSelection, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_selectAllSources, LYRA_DEFAULT_sourceListDefaultLabel, LYRA_DEFAULT_sourcePickerSelection, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraSourceEntry {
@@ -29,11 +30,11 @@ export interface LyraSourceEntry {
   /** Filename fallback for icon detection. */
   name?: string;
   /** Presence makes this a group/folder row. */
-  children?: LyraSourceEntry[];
+  children?: readonly LyraSourceEntry[];
 }
 
 export interface LyraSourcePickerEventMap {
-  "lr-sources-change": CustomEvent<{ selectedIds: string[] }>;
+  "lr-sources-change": CustomEvent<LyraEventDetailSnapshot<{ selectedIds: string[] }>>;
 }
 
 interface SourceRow {
@@ -65,6 +66,9 @@ const MAX_SOURCE_DEPTH = 64;
  * tri-state folders, select-all, type icons, search. **Not `FormAssociated`, deliberately**: this
  * is a scoping panel, not a form control — the selection is immediate app state consumed by the
  * next retrieval call, exactly the stance `lr-tool-select-dialog` already takes.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-source-picker
  * @event lr-sources-change - `detail: { selectedIds }` — the complete updated leaf-id array,
@@ -105,6 +109,8 @@ const MAX_SOURCE_DEPTH = 64;
  * @since 4.0.0
  */
 export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["sources", "selectedIds"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -123,6 +129,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
@@ -136,10 +143,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Flat (no `children`) or a tree. */
-  @property({ attribute: false }) sources: LyraSourceEntry[] = [];
+  @property({ attribute: false }) sources: readonly LyraSourceEntry[] = [];
   /** Leaf ids only. Duplicates and ids absent from `sources` are discarded. The picker updates
    * its own copy on toggle *then* emits; reassign to control. */
-  @property({ attribute: false }) selectedIds: string[] = [];
+  @property({ attribute: false }) selectedIds: readonly string[] = [];
   /** Whether the header exposes one control for selecting or clearing every visible leaf source. */
   @property({
     type: Boolean,
@@ -161,7 +168,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   @state() private activeId: string | null = null;
   private pendingFocusIndex: number | "search" | "base" | undefined;
   private keyboardFocusGeneration = 0;
-  private normalizedInput?: LyraSourceEntry[];
+  private normalizedInput?: readonly LyraSourceEntry[];
   private normalizedModel?: NormalizedSourceModel;
   private announcementSink?: AnnouncementSink;
   private isMounting = true;

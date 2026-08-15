@@ -7,6 +7,13 @@ const meta: Meta = {
   title: 'Message Parts',
   component: 'lr-message-parts',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'Part ids normalize to one unique nonempty first-wins collection shared by rendering, citation ranks, retries, and error announcements.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

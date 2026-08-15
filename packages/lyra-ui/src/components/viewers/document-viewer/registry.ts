@@ -8,14 +8,14 @@ import {
 
 /** A file supplied to a document renderer. */
 export interface DocumentFile {
-  name: string;
-  mimeType: string;
-  src: string;
+  readonly name: string;
+  readonly mimeType: string;
+  readonly src: string;
   /** A string is a highlight id in `highlights`. */
-  anchor?: LyraAnchor | string;
-  highlights?: LyraHighlight[];
+  readonly anchor?: LyraAnchor | string;
+  readonly highlights?: readonly LyraHighlight[];
   /** Media alt text for image-like renderers. */
-  alt?: string;
+  readonly alt?: string;
 }
 
 /** Immutable file data wrapped by a `LyraDocumentRendererPayload`. */

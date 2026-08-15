@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 // Shares its collapsible-header shape (border/radius/hover/focus-ring, the
 // rotating chevron) with lr-source-list's styles almost verbatim -- the two
@@ -11,9 +11,9 @@ export const styles = css`
        before it scrolls internally, e.g. via ::part(body) or by overriding
        this custom property directly -- not exposed as a component prop
        since it's a pure layout knob, not something a template branches on. */
-    --lr-thinking-panel-max-block-size: var(--lr-size-16rem);
+    --_lr-thinking-panel-max-block-size: var(--lr-size-16rem);
   }
-  [part='base'] {
+  [part="base"] {
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -22,21 +22,24 @@ export const styles = css`
   /* Density escape for transcript rows. The values sit behind inline var() fallbacks so a
      containing transcript can retune them without redeclaring the rules, while an unset panel
      keeps the pre-existing regular dimensions. */
-  :host([compact]) [part='header'] {
-    padding: var(--lr-thinking-panel-compact-header-padding, var(--lr-space-2xs) var(--lr-space-s));
+  :host([compact]) [part="header"] {
+    padding: var(
+      --lr-thinking-panel-compact-header-padding,
+      var(--lr-space-2xs) var(--lr-space-s)
+    );
     gap: var(--lr-thinking-panel-compact-header-gap, var(--lr-space-2xs));
   }
-  :host([compact]) [part='body'] {
+  :host([compact]) [part="body"] {
     padding: var(--lr-thinking-panel-compact-body-padding, var(--lr-space-s));
   }
   /* Removes only the outer card treatment. The header/body divider remains because it explains
      the expanded disclosure structure even when a surrounding message supplies the outer frame. */
-  :host([frame='plain']) [part='base'] {
+  :host([frame="plain"]) [part="base"] {
     border: 0;
     border-radius: 0;
     background: transparent;
   }
-  [part='header'] {
+  [part="header"] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -52,26 +55,30 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  [part='header']:hover {
+  [part="header"]:hover {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
      --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
      than hover in both light and dark themes rather than repeating it. */
-  [part='header']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="header"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='header']:focus-visible {
+  [part="header"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  [part='toggle'] {
+  [part="toggle"] {
     display: inline-flex;
     flex: 0 0 auto;
     transition: transform var(--lr-transition-fast);
   }
-  :host([expanded]) [part='toggle'] {
+  :host([expanded]) [part="toggle"] {
     transform: rotate(90deg);
   }
   /* RTL: the resting (collapsed) chevron mirrors to point left, the
@@ -81,17 +88,17 @@ export const styles = css`
      needs no mirroring: rotating this left-right-asymmetric glyph 90deg
      already produces a left-right-symmetric down chevron. Mirrors
      lr-source-list's and lr-code-block's identical toggle chevron. */
-  :host(:not([expanded]):dir(rtl)) [part='toggle'] {
+  :host(:not([expanded]):dir(rtl)) [part="toggle"] {
     transform: scaleX(-1);
   }
-  [part='label'] {
+  [part="label"] {
     flex: 1 1 auto;
     min-inline-size: var(--lr-size-6ch);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  [part='duration'] {
+  [part="duration"] {
     display: inline-flex;
     align-items: center;
     gap: var(--lr-size-0-35em);
@@ -109,7 +116,7 @@ export const styles = css`
      does: that dims it well below AA contrast for part of every cycle, fine
      for a purely decorative shape but not for text carrying real content
      ("Thinking…"). */
-  [part='duration'][data-pending] {
+  [part="duration"][data-pending] {
     color: var(--lr-thinking-panel-pending-color, var(--lr-color-brand));
   }
   .pending-dot {
@@ -130,10 +137,13 @@ export const styles = css`
       transform: scale(1);
     }
   }
-  [part='body'] {
+  [part="body"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    max-block-size: var(--lr-thinking-panel-max-block-size);
+    max-block-size: var(
+      --lr-thinking-panel-max-block-size,
+      var(--_lr-thinking-panel-max-block-size)
+    );
     overflow-inline: hidden;
     overflow-block: auto;
     overflow-wrap: anywhere;
@@ -153,7 +163,7 @@ export const styles = css`
      scrollable region) -- same convention as lr-code-block's [part='body'] and lr-virtual-list's
      [part='base'], both cited by name in this component's own class file. Without this rule a
      keyboard user tabbing into the reasoning transcript gets no visible indicator at all. */
-  [part='body']:focus-visible {
+  [part="body"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     /* Negative (inward) so the ring isn't clipped by this element's own
        overflow-block:auto -- same reasoning as lr-code-block's identical rule. */
@@ -164,15 +174,15 @@ export const styles = css`
      so the eventual :focus-visible ring stays visually distinct -- matching lr-virtual-list. */
   /* no-pressed-state: this is a scroll port, not an activation target -- pressing it activates
      nothing, and :active would match on any press landing inside the transcript text. */
-  [part='body']:hover:not(:focus-visible) {
+  [part="body"]:hover:not(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-color-border);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  [part='body'][hidden] {
+  [part="body"][hidden] {
     display: none;
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='toggle'] {
+    [part="toggle"] {
       transition: none !important;
     }
     .pending-dot {

@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -204,17 +205,17 @@ function normalizeSavedQueries(value: unknown): readonly GraphQuerySavedItem[] {
 
 export interface LyraGraphQueryBuilderEventMap {
   'lr-invalid': CustomEvent<null>;
-  'lr-input': CustomEvent<{ readonly value: GraphQuery }>;
+  'lr-input': CustomEvent<LyraEventDetailSnapshot<{ readonly value: GraphQuery }>>;
   'lr-validity-change': CustomEvent<{
     readonly valid: boolean;
     readonly errors: Readonly<Record<string, string>>;
   }>;
-  'lr-before-query-run': CustomEvent<GraphQueryRunDetail>;
-  'lr-query-run': CustomEvent<GraphQueryRunDetail>;
-  'lr-before-query-save': CustomEvent<GraphQuerySaveDetail>;
-  'lr-query-save': CustomEvent<GraphQuerySaveDetail>;
-  'lr-before-query-load': CustomEvent<GraphQueryLoadDetail>;
-  'lr-query-load': CustomEvent<GraphQueryLoadDetail>;
+  'lr-before-query-run': CustomEvent<LyraEventDetailSnapshot<GraphQueryRunDetail>>;
+  'lr-query-run': CustomEvent<LyraEventDetailSnapshot<GraphQueryRunDetail>>;
+  'lr-before-query-save': CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>;
+  'lr-query-save': CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>;
+  'lr-before-query-load': CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>;
+  'lr-query-load': CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>;
   'lr-before-query-delete': CustomEvent<GraphQueryDeleteDetail>;
   'lr-query-delete': CustomEvent<GraphQueryDeleteDetail>;
 }

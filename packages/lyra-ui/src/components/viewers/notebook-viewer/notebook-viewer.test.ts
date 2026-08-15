@@ -53,6 +53,30 @@ describe('defaults', () => {
     el.notebook = undefined;
     expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/fallback.ipynb' });
   });
+
+  it('synchronously owns and freezes parsed notebook assignments', () => {
+    const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
+    const source = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{ cell_type: 'markdown', source: ['before'] }],
+    };
+
+    el.notebook = source as typeof el.notebook;
+    source.cells[0]!.source[0] = 'after';
+    source.cells.push({ cell_type: 'markdown', source: ['later'] });
+
+    const snapshot = el.notebook;
+    expect(snapshot).not.to.equal(source);
+    expect(typeof snapshot).to.equal('object');
+    if (typeof snapshot !== 'object' || snapshot === null) throw new Error('expected parsed notebook');
+    expect(snapshot.cells.length).to.equal(1);
+    expect(snapshot.cells[0]!.source).to.deep.equal(['before']);
+    expect(Object.isFrozen(snapshot)).to.be.true;
+    expect(Object.isFrozen(snapshot.cells)).to.be.true;
+    expect(Object.isFrozen(snapshot.cells[0])).to.be.true;
+    expect(Object.isFrozen(snapshot.cells[0]!.source)).to.be.true;
+  });
 });
 
 describe('parsing and rendering', () => {

@@ -511,8 +511,8 @@ describe('region highlights', () => {
       await el.updateComplete;
       const listener = oneEvent(el, 'lr-highlight-activate');
       (el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement).click();
-      const event = (await listener) as CustomEvent<{ id: string }>;
-      expect(event.detail).to.deep.equal({ id: 'h1' });
+      const event = (await listener) as CustomEvent<{ highlightId: string }>;
+      expect(event.detail).to.deep.equal({ highlightId: 'h1' });
     } finally {
       restore();
     }

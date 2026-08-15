@@ -11,6 +11,14 @@ import type {
 const meta: Meta = {
   title: "Drilldown Panel",
   component: "lr-drilldown-panel",
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Correlates contained document-preview highlight activation through `lr-drilldown-document-highlight-activate` with `{ nodeId, documentId, highlightId }`.",
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

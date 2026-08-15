@@ -230,6 +230,9 @@ export interface LyraVirtualListEventMap {
  * row around this component (see `<lr-dataset-viewer>`), where `row-index-offset="1"` accounts for
  * that external header row occupying `aria-rowindex="1"`.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-virtual-list
  * @event lr-load-more - Fired once per approach to the bottom of the list
  *   while `has-more` is true and `loading` is false. Deliberately does not
@@ -284,16 +287,29 @@ export interface LyraVirtualListEventMap {
  * @since 4.0.0
  */
 export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "items",
+    "source",
+    "groups",
+  ]);
+  /** Generic rows are keyed/rendered by caller identity; only their containing sequence is owned. */
+  protected static override readonly identityCollectionProperties = Object.freeze([
+    "items",
+    "source",
+  ]);
+
   static override styles = [LyraElement.styles, styles];
 
   /**
    * The full (non-windowed) item collection. Preserved as the array-compatible source when
    * `source` is unset.
    */
-  @property({ attribute: false }) items: unknown[] = [];
+  @property({ attribute: false }) items: readonly unknown[] = [];
 
   /**
-   * A readonly array or count/index-backed collection. When set, this takes precedence over
+   * A readonly array or count/index-backed collection. An array assignment is copied, bounded,
+   * and frozen while retaining each generic row's identity; reassign a new array after sequence
+   * changes. Indexed-source objects pass through by identity. When set, this takes precedence over
    * `items`; an indexed source lets synthetic or remote models expose a large row count without
    * allocating an `Array(0…count)` merely to feed the virtualizer.
    */
@@ -323,7 +339,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * ordinary row (and would otherwise get two stacked headers) but still needs
    * this component to know where each group starts, e.g. to drive
    * `renderStickyGroup`. Omitting `label` entirely still falls back to `key`. */
-  @property({ attribute: false }) groups?: VirtualListGroup[];
+  @property({ attribute: false }) groups?: readonly VirtualListGroup[];
 
   /** Renders the pinned copy of whichever `groups` entry the viewport is
    *  currently inside, into a `[part="sticky-group"]` overlay layer that stays

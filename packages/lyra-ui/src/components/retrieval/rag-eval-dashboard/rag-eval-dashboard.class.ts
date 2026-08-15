@@ -50,6 +50,9 @@ export interface LyraRagEvalDashboardEventMap {
  * the current runs is preserved and renders an explicit localized unavailable-filter state;
  * the component never silently switches it to All.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-rag-eval-dashboard
  * @event lr-metric-change - A metric was activated. `detail: { metricId }`.
  * @event lr-slice-change - An evaluation slice was activated. `detail: { slice }`.
@@ -71,6 +74,8 @@ export interface LyraRagEvalDashboardEventMap {
  * @since 7.0.0
  */
 export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["metrics", "runs"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -87,9 +92,9 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   static override styles = [LyraElement.styles, styles];
 
   /** Metric definitions shown as controls and used to format run values. */
-  @property({ attribute: false }) metrics: RagEvaluationMetric[] = [];
+  @property({ attribute: false }) metrics: readonly RagEvaluationMetric[] = [];
   /** Evaluation runs displayed in the trend chart and run history. */
-  @property({ attribute: false }) runs: RagEvaluationRun[] = [];
+  @property({ attribute: false }) runs: readonly RagEvaluationRun[] = [];
   /** Controlled id of the active metric; empty selects the first available metric. */
   @property({ attribute: "metric-id" }) metricId = "";
   /** Controlled evaluation slice. An unavailable value is preserved and renders an explicit
@@ -126,7 +131,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     ];
   }
 
-  private get filteredRuns(): RagEvaluationRun[] {
+  private get filteredRuns(): readonly RagEvaluationRun[] {
     return this.slice
       ? this.runs.filter((run) => run.slice === this.slice)
       : this.runs;

@@ -5,7 +5,7 @@ import { minMax } from '../../data/heatmap/heatmap-scale.js';
 export interface LyraTopic {
   id: string;
   label: string;
-  children?: LyraTopic[];
+  children?: readonly LyraTopic[];
 }
 
 /** A topic after radial layout — original id/label plus computed geometry. */
@@ -46,7 +46,7 @@ export interface MindMapLayoutResult {
 interface InternalNode {
   id: string;
   label: string;
-  children: LyraTopic[];
+  children: readonly LyraTopic[];
 }
 
 const LAYOUT_PADDING = 60;
@@ -110,7 +110,7 @@ function place(
  * implicit `'__hub__'`-id center node labeled `hubLabel`. Pure function, no DOM access -- see
  * `<lr-mind-map>` for the component wrapping this.
  */
-export function layoutMindMap(topics: LyraTopic[], hubLabel: string, opts: MindMapLayoutOptions): MindMapLayoutResult {
+export function layoutMindMap(topics: readonly LyraTopic[], hubLabel: string, opts: MindMapLayoutOptions): MindMapLayoutResult {
   if (topics.length === 0) return { placed: [], links: [], width: 0, height: 0, centerX: 0, centerY: 0 };
 
   const root: InternalNode =

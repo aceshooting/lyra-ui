@@ -5,7 +5,7 @@ import type { LyraDashboardCell } from "./dashboard-grid.js";
 
 const layout: LyraDashboardCell[] = [
   {
-    id: "users",
+    cellId: "users",
     x: 0,
     y: 0,
     w: 4,
@@ -14,7 +14,7 @@ const layout: LyraDashboardCell[] = [
     widget: { type: "stat", props: { label: "Active users", value: "1,204" } },
   },
   {
-    id: "errors",
+    cellId: "errors",
     x: 4,
     y: 0,
     w: 4,
@@ -23,7 +23,7 @@ const layout: LyraDashboardCell[] = [
     widget: { type: "stat", props: { label: "Errors", value: "3" } },
   },
   {
-    id: "latency",
+    cellId: "latency",
     x: 8,
     y: 0,
     w: 4,
@@ -32,7 +32,7 @@ const layout: LyraDashboardCell[] = [
     widget: { type: "stat", props: { label: "p95 latency", value: "212ms" } },
   },
   {
-    id: "summary",
+    cellId: "summary",
     x: 0,
     y: 2,
     w: 12,
@@ -113,7 +113,7 @@ export const LockedCell: Story = {
       cells-draggable
       cells-resizable
       .layout=${layout.map((cell) =>
-        cell.id === "errors" ? { ...cell, locked: true } : cell
+        cell.cellId === "errors" ? { ...cell, locked: true } : cell
       )}
     ></lr-dashboard-grid>`,
 };
@@ -164,8 +164,8 @@ export const NarrowShortResizableCustomCells: Story = {
         style="inline-size: 100%;"
         cells-resizable
         .layout=${[
-          { id: "short-a", x: 0, y: 0, w: 6, h: 1, label: "Short A" },
-          { id: "short-b", x: 6, y: 0, w: 6, h: 1, label: "Short B" },
+          { cellId: "short-a", x: 0, y: 0, w: 6, h: 1, label: "Short A" },
+          { cellId: "short-b", x: 6, y: 0, w: 6, h: 1, label: "Short B" },
         ] satisfies LyraDashboardCell[]}
       >
         <div cell-id="short-a">A</div>
@@ -193,9 +193,9 @@ export const NarrowLongCustomContent: Story = {
       <lr-dashboard-grid
         style="inline-size: 100%;"
         .layout=${[
-          { id: "wrapped", x: 0, y: 0, w: 6, h: 1, label: "Wrapped content" },
+          { cellId: "wrapped", x: 0, y: 0, w: 6, h: 1, label: "Wrapped content" },
           {
-            id: "scrollport",
+            cellId: "scrollport",
             x: 6,
             y: 0,
             w: 6,

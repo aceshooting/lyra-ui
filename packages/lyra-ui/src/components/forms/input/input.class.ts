@@ -184,10 +184,10 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @cssprop [--lr-input-radius=var(--lr-form-control-radius)] - Corner radius of the control row,
  * from the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
  * `pill` swaps it to `--lr-radius-pill`.
- * @cssprop [--lr-input-fill=transparent] - Background of the control row. Swapped per
- * `appearance`; the documented default is `appearance="outlined"`'s value.
+ * @cssprop [--lr-input-fill=transparent] - Background of the control row. Its private default
+ * changes per `appearance`; the public value remains authoritative in every appearance.
  * @cssprop [--lr-input-border-color=var(--lr-color-border)] - Border color of the control row,
- * swapped per `appearance` in the same way as `--lr-input-fill`.
+ * with a private default that changes per `appearance` in the same way as `--lr-input-fill`.
  * @cssprop [--lr-input-focus-border-color=var(--lr-color-brand)] - Control-row border color while
  *   focus is within the field.
  * @cssprop [--lr-input-action-color=var(--lr-color-text-quiet)] - Resting clear/password/number-

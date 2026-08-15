@@ -989,14 +989,20 @@ it("retunes the trigger gap and corner radius with no ::part(combobox) rule", as
   expect(cs.borderRadius).to.equal("3px");
 });
 
-it('declares --lr-combobox-gap/--lr-combobox-radius on :host and consumes them once on [part="combobox"]', () => {
+it("keeps gap/radius defaults private and consumes inherited public hooks first", () => {
   const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(/:host \{[^}]*--lr-combobox-gap: var\(--lr-space-xs\);/);
   expect(css).to.match(
-    /:host \{[^}]*--lr-combobox-radius: var\(--lr-form-control-radius\);/
+    /:host \{[^}]*--_lr-combobox-gap: var\(--lr-space-xs\);/
   );
-  expect(css).to.include("gap: var(--lr-combobox-gap);");
-  expect(css).to.include("border-radius: var(--lr-combobox-radius);");
+  expect(css).to.match(
+    /:host \{[^}]*--_lr-combobox-radius: var\(--lr-form-control-radius\);/
+  );
+  expect(css).to.include(
+    "gap: var(--lr-combobox-gap, var(--_lr-combobox-gap));"
+  );
+  expect(css).to.include(
+    "border-radius: var(--lr-combobox-radius, var(--_lr-combobox-radius));"
+  );
 });
 
 it("gives the clear button and expand icon a real touch target instead of collapsing to bare glyph height", async () => {
@@ -1970,7 +1976,9 @@ async function affectedStatusTexts(overrides: {
   return [
     loading.shadowRoot!.querySelector(".loading")!.textContent!.trim(),
     empty.shadowRoot!.querySelector(".empty")!.textContent!.trim(),
-    overflow.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent!.trim(),
+    overflow
+      .shadowRoot!.querySelector('[part="option-overflow"]')!
+      .textContent!.trim(),
   ];
 }
 

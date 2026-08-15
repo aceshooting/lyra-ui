@@ -1,23 +1,26 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     position: fixed;
     inset-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
     inset-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    inset-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));
+    inset-inline-start: max(
+      var(--lr-space-l),
+      var(--lr-safe-area-inline-start)
+    );
     inset-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
     z-index: var(--lr-layer-toast);
     display: grid;
-    --lr-toast-gap: var(--gap, var(--lr-space-s));
-    --lr-toast-width: var(--width, var(--lr-size-28rem));
+    --_lr-toast-gap: var(--gap, var(--lr-space-s));
+    --_lr-toast-width: var(--width, var(--lr-size-28rem));
     pointer-events: none;
   }
-  [part='stack'] {
+  [part="stack"] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-toast-gap);
-    inline-size: min(var(--lr-toast-width), 100%);
+    gap: var(--lr-toast-gap, var(--_lr-toast-gap));
+    inline-size: min(var(--lr-toast-width, var(--_lr-toast-width)), 100%);
     max-inline-size: 100%;
     min-block-size: 0;
     max-block-size: 100%;
@@ -32,20 +35,20 @@ export const styles = css`
     pointer-events: none;
   }
 
-  :host([placement^='top']) [part='stack'] {
+  :host([placement^="top"]) [part="stack"] {
     align-self: start;
   }
-  :host([placement^='bottom']) [part='stack'] {
+  :host([placement^="bottom"]) [part="stack"] {
     align-self: end;
     flex-direction: column-reverse;
   }
-  :host([placement$='start']) [part='stack'] {
+  :host([placement$="start"]) [part="stack"] {
     justify-self: start;
   }
-  :host([placement$='center']) [part='stack'] {
+  :host([placement$="center"]) [part="stack"] {
     justify-self: center;
   }
-  :host([placement$='end']) [part='stack'] {
+  :host([placement$="end"]) [part="stack"] {
     justify-self: end;
   }
 `;

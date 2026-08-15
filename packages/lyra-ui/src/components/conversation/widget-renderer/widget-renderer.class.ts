@@ -117,10 +117,15 @@ export interface LyraWidgetRendererEventMap {
  * @since 4.0.0
  */
 export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "document",
+  ]);
+
   static override styles = [LyraElement.styles, styles];
 
-  /** Version-two declarative document. `null` renders an empty base. A malformed root or nested
-   * node clears prior content and emits one `lr-render-error`. */
+  /** Version-two declarative document. Assignment takes a bounded recursively frozen snapshot;
+   * mutate a copy and reassign it to update. `null` renders an empty base. A malformed root or
+   * nested node clears prior content and emits one `lr-render-error`. */
   @property({ attribute: false }) document: LyraWidgetDocument | null = null;
 
   /** Explicit controlled binding state. `null` is a real state value, never an absence sentinel. */

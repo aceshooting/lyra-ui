@@ -110,7 +110,7 @@ describe('lr-trace-tree', () => {
     const toggle = el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLElement;
     setTimeout(() => toggle.click());
     const ev = await oneEvent(el, 'lr-span-toggle');
-    expect(ev.detail).to.deep.equal({ id: 'root', expanded: false });
+    expect(ev.detail).to.deep.equal({ spanId: 'root', expanded: false });
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
   });
@@ -121,7 +121,7 @@ describe('lr-trace-tree', () => {
     const row = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
     setTimeout(() => row.click());
     const ev = await oneEvent(el, 'lr-span-select');
-    expect(ev.detail).to.deep.equal({ id: 'search' });
+    expect(ev.detail).to.deep.equal({ spanId: 'search' });
   });
 
   it('moves roving tabindex with ArrowDown/ArrowUp', async () => {
@@ -616,7 +616,7 @@ describe('lr-trace-tree', () => {
     expect((el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement).getAttribute('tabindex')).to.equal('0');
     setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true })));
     const ev = await oneEvent(el, 'lr-span-toggle');
-    expect(ev.detail).to.deep.equal({ id: 'root', expanded: true });
+    expect(ev.detail).to.deep.equal({ spanId: 'root', expanded: true });
   });
 
   it('collapses with ArrowLeft, and walks up to the nearest shallower ancestor from a leaf', async () => {
@@ -634,7 +634,7 @@ describe('lr-trace-tree', () => {
     // "root" has children and is expanded -> ArrowLeft collapses it.
     setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true })));
     const ev = await oneEvent(el, 'lr-span-toggle');
-    expect(ev.detail).to.deep.equal({ id: 'root', expanded: false });
+    expect(ev.detail).to.deep.equal({ spanId: 'root', expanded: false });
   });
 
   it('emits lr-span-select on Enter and on Space (keyboard activation)', async () => {
@@ -643,11 +643,11 @@ describe('lr-trace-tree', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true })));
     const enterEv = await oneEvent(el, 'lr-span-select');
-    expect(enterEv.detail).to.deep.equal({ id: 'root' });
+    expect(enterEv.detail).to.deep.equal({ spanId: 'root' });
 
     setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, composed: true })));
     const spaceEv = await oneEvent(el, 'lr-span-select');
-    expect(spaceEv.detail).to.deep.equal({ id: 'root' });
+    expect(spaceEv.detail).to.deep.equal({ spanId: 'root' });
   });
 
   it('ignores unhandled keys', async () => {

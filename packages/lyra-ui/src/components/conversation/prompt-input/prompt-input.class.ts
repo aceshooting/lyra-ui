@@ -1,6 +1,8 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
+import { repeat } from "lit/directives/repeat.js";
 import type { DocumentRef } from "../../../ai/types.js";
 import {
   autocorrectConverter,
@@ -14,6 +16,7 @@ import {
 import { relayNativeEvent } from "../../../internal/native-event-relay.js";
 import { SlotPresenceController } from "../../../internal/slot-presence-controller.js";
 import { deepActiveElementIn } from "../../../internal/active-element.js";
+import { normalizeCatalog } from "../../../internal/catalog-picker.js";
 import { composedContains } from "../../../internal/overlay-manager.js";
 import type {
   LyraAttachmentCapability,
@@ -86,13 +89,13 @@ export interface LyraPromptInputEventMap {
     label: string;
     trigger: "@" | "/";
   }>;
-  "lr-attachments-add": CustomEvent<LyraAttachmentFilesDetail>;
+  "lr-attachments-add": CustomEvent<LyraEventDetailSnapshot<LyraAttachmentFilesDetail>>;
   "lr-attachment-remove": CustomEvent<LyraAttachmentIdDetail>;
   "lr-model-change": CustomEvent<{ value: string; inCatalog: boolean }>;
   "lr-voice-change": CustomEvent<{ value: string; inCatalog: boolean }>;
-  "lr-sources-change": CustomEvent<{ selectedIds: string[] }>;
-  "lr-queue-change": CustomEvent<PromptQueueChangeDetail>;
-  "lr-send-now": CustomEvent<{ item: PromptQueueItem }>;
+  "lr-sources-change": CustomEvent<LyraEventDetailSnapshot<{ selectedIds: string[] }>>;
+  "lr-queue-change": CustomEvent<LyraEventDetailSnapshot<PromptQueueChangeDetail>>;
+  "lr-send-now": CustomEvent<LyraEventDetailSnapshot<{ item: PromptQueueItem }>>;
   "lr-camera-request": CustomEvent<null>;
   "lr-audio-request": CustomEvent<null>;
   "lr-attachment-retry": CustomEvent<LyraAttachmentIdDetail>;
@@ -117,6 +120,11 @@ type LyraPromptInputCustomEventName = Exclude<
  * The composed text surface exposes the same native editing-assistance, selection, and range-edit
  * APIs as `<lr-chat-composer>`. Silent `setRangeText()` calls keep this outer `value` synchronized
  * without emitting `lr-input`; selection APIs are no-ops before the nested textarea renders.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Attachment ids are unique, nonempty occurrence identities; malformed rows and later duplicate
+ * ids are omitted before chip rendering or attachment events, with the first occurrence winning.
  *
  * @customElement lr-prompt-input
  * @slot controls - Replaces the data-driven model, voice, and source controls.
@@ -164,6 +172,18 @@ type LyraPromptInputCustomEventName = Exclude<
  * @since 7.0.0
  */
 export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "attachments",
+    "attachmentCapabilities",
+    "mentionItems",
+    "commandItems",
+    "modelCatalog",
+    "voiceCatalog",
+    "sources",
+    "selectedSourceIds",
+    "queue",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -220,6 +240,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property({ attribute: "inputmode" }) override inputMode = "";
   /** Virtual-keyboard enter-action hint forwarded to the composed textarea. */
   @property({ attribute: "enterkeyhint" }) override enterKeyHint = "";
+  /** Attachment chips keyed by unique, nonempty `attachmentId`; the first duplicate wins. */
   @property({ attribute: false })
   attachments: readonly LyraPromptInputAttachment[] = [];
   @property({ attribute: false })
@@ -228,15 +249,15 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     "image",
     "audio",
   ];
-  @property({ attribute: false }) mentionItems: LyraPromptSuggestion[] = [];
-  @property({ attribute: false }) commandItems: LyraPromptSuggestion[] = [];
+  @property({ attribute: false }) mentionItems: readonly LyraPromptSuggestion[] = [];
+  @property({ attribute: false }) commandItems: readonly LyraPromptSuggestion[] = [];
   @property({ attribute: false }) modelCatalog?: LyraCatalog<LyraModelCatalogEntry>;
   @property() model = "";
   @property({ attribute: false }) voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>;
   @property() voice = "";
-  @property({ attribute: false }) sources: LyraSourceEntry[] = [];
-  @property({ attribute: false }) selectedSourceIds: string[] = [];
-  @property({ attribute: false }) queue: PromptQueueItem[] = [];
+  @property({ attribute: false }) sources: readonly LyraSourceEntry[] = [];
+  @property({ attribute: false }) selectedSourceIds: readonly string[] = [];
+  @property({ attribute: false }) queue: readonly PromptQueueItem[] = [];
   @property() label = "";
   @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
 
@@ -372,7 +393,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     });
   }
 
-  private suggestions(): LyraPromptSuggestion[] {
+  private suggestions(): readonly LyraPromptSuggestion[] {
     return this.activeSuggestion?.trigger === "/"
       ? this.commandItems
       : this.mentionItems;
@@ -573,6 +594,16 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     this.emit("lr-attachments-add", event.detail);
   }
 
+  private get effectiveAttachments(): readonly LyraPromptInputAttachment[] {
+    const seen = new Set<string>();
+    return this.attachments.filter((attachment) => {
+      const id = attachment?.attachmentId;
+      if (typeof id !== "string" || id.trim() === "" || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }
+
   private renderDefaultAttachmentTrigger(): TemplateResult {
     return html`<lr-attachment-trigger
       .capabilities=${this.attachmentCapabilities}
@@ -643,9 +674,11 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   private renderControls(): TemplateResult | typeof nothing {
+    const modelCatalog = normalizeCatalog<LyraModelCatalogEntry>(this.modelCatalog);
+    const voiceCatalog = normalizeCatalog<LyraVoiceCatalogEntry>(this.voiceCatalog);
     if (
-      !this.modelCatalog?.length &&
-      !this.voiceCatalog?.length &&
+      modelCatalog.length === 0 &&
+      voiceCatalog.length === 0 &&
       !this.sources.length
     )
       return nothing;
@@ -654,7 +687,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       role="group"
       aria-label=${this.localize("promptInputControls")}
     >
-      ${this.modelCatalog?.length
+      ${modelCatalog.length
         ? html`<lr-model-select
             .catalog=${this.modelCatalog}
             .value=${this.model}
@@ -664,7 +697,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             ) => this.reemit(event, "lr-model-change")}
           ></lr-model-select>`
         : nothing}
-      ${this.voiceCatalog?.length
+      ${voiceCatalog.length
         ? html`<lr-voice-picker
             .catalog=${this.voiceCatalog}
             .value=${this.voice}
@@ -699,8 +732,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   override render(): TemplateResult {
     const label =
       this.accessibleLabel ?? (this.label || this.localize("promptInputLabel"));
-    const hasChips =
-      this.attachments.length > 0 || this.slotPresence.has("chips");
+    const attachments = this.effectiveAttachments;
+    const hasChips = attachments.length > 0 || this.slotPresence.has("chips");
     return html`<section
       part="base"
       aria-label=${label}
@@ -758,8 +791,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
               aria-label=${this.localize("promptInputAttachments")}
             >
               <slot name="chips"
-                >${this.attachments.map((attachment) =>
-                  this.renderAttachment(attachment)
+                >${repeat(
+                  attachments,
+                  (attachment) => attachment.attachmentId,
+                  (attachment) => this.renderAttachment(attachment)
                 )}</slot
               >
             </div>`

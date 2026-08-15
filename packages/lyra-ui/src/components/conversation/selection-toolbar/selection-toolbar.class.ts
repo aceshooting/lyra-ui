@@ -1,5 +1,7 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, query, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 import type { DocumentLocator } from "../../../ai/types.js";
 import { deepActiveElementIn } from "../../../internal/active-element.js";
@@ -47,7 +49,7 @@ export interface SelectionActionDetail {
 }
 
 export interface LyraSelectionToolbarEventMap {
-  "lr-selection-action": CustomEvent<SelectionActionDetail>;
+  "lr-selection-action": CustomEvent<LyraEventDetailSnapshot<SelectionActionDetail>>;
   "lr-dismiss": CustomEvent<null>;
   "lr-copy": CustomEvent<LyraClipboardWriteSuccess>;
   "lr-error": CustomEvent<null>;
@@ -79,6 +81,11 @@ interface ActionFocusRepair {
  * accessible name and click handling; this component only manages its tab stop. Availability,
  * actionability, and `tabindex` changes are reconciled live; focused removals/unavailable actions
  * move to the nearest survivor or stable toolbar without overriding newer external focus.
+ * Duplicate built-in names normalize first-wins before rendering, roving focus, or action events.
+ *
+ * Public anchor records and action collections take bounded, clone-owned readonly snapshots.
+ * Create and reassign a new record or array after changes; mutating the assigned value does not
+ * update the view.
  *
  * @customElement lr-selection-toolbar
  * @slot actions - Extra actions rendered after the built-in ask/quote/cite/copy buttons, inside
@@ -103,6 +110,8 @@ interface ActionFocusRepair {
  * @since 7.0.0
  */
 export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["anchor", "actions"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -120,13 +129,15 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   @property({ type: Boolean, reflect: true }) open = false;
   @property() text = "";
+  /** Clone-owned selection anchor. Reassign a new record after changing any path segment. */
   @property({ attribute: false }) anchor: DocumentLocator | null = null;
   @property({ attribute: false }) rect: DOMRectReadOnly | null = null;
   /**
    * Controlled action set. A focused action survives reordering by id; if it is removed, focus
-   * moves to the nearest action or the stable toolbar when the set becomes empty.
+   * moves to the nearest action or the stable toolbar when the set becomes empty. Duplicate names
+   * normalize first-wins.
    */
-  @property({ attribute: false }) actions: SelectionAction[] = [
+  @property({ attribute: false }) actions: readonly SelectionAction[] = [
     "ask",
     "quote",
     "cite",
@@ -148,6 +159,24 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private actionObserver?: MutationObserver;
   private managedActionStops = new Set<HTMLElement>();
   private authoredActionTabIndex = new WeakMap<HTMLElement, string | null>();
+
+  private get effectiveActions(): readonly SelectionAction[] {
+    const seen = new Set<SelectionAction>();
+    const actions: SelectionAction[] = [];
+    for (const value of this.actions as readonly unknown[]) {
+      if (
+        typeof value !== "string" ||
+        !SELECTION_ACTIONS.includes(value as SelectionAction) ||
+        seen.has(value as SelectionAction)
+      ) {
+        continue;
+      }
+      const action = value as SelectionAction;
+      seen.add(action);
+      actions.push(action);
+    }
+    return actions;
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -818,7 +847,9 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       @focusout=${this.onToolbarFocusOut}
       @keydown=${this.onToolbarKeyDown}
     >
-      ${this.actions.map(
+      ${repeat(
+        this.effectiveActions,
+        (action) => action,
         (action) => html`<lr-button
           part=${this.actionPartNames(action)}
           data-action=${action}

@@ -11,9 +11,9 @@ import { styles } from "./stepper.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 const steps = () => [
-  { id: "basics", label: "Basics", state: "completed" as const },
-  { id: "inputs", label: "Inputs", state: "current" as const },
-  { id: "review", label: "Review", state: "pending" as const },
+  { stepId: "basics", label: "Basics", state: "completed" as const },
+  { stepId: "inputs", label: "Inputs", state: "current" as const },
+  { stepId: "review", label: "Review", state: "pending" as const },
 ];
 
 function stepButtons(el: LyraStepper): HTMLButtonElement[] {
@@ -122,6 +122,19 @@ function installOwnerMatchMediaStub(
 }
 
 describe("lr-stepper", () => {
+  it("uses stepId as the public step identity", async () => {
+    const el = await fixture<LyraStepper>(html`
+      <lr-stepper
+        .steps=${[
+          { stepId: "account", label: "Account", state: "current" as const },
+        ] as unknown as LyraStepper["steps"]}
+      ></lr-stepper>
+    `);
+    await el.updateComplete;
+
+    expect(stepButtons(el)[0]?.dataset["stepId"]).to.equal("account");
+  });
+
   it("renders one step per entry with the right state-driven part/attribute", async () => {
     const el = (await fixture(
       html`<lr-stepper .steps=${steps()}></lr-stepper>`
@@ -141,17 +154,17 @@ describe("lr-stepper", () => {
     document.body.append(frame);
     const foreignArray = new frame.contentWindow!.Array();
     const hostile = {};
-    Object.defineProperty(hostile, "id", {
+    Object.defineProperty(hostile, "stepId", {
       get(): never {
         throw new Error("hostile id");
       },
     });
-    const source = { id: "safe", label: "Safe", state: "current" as const };
+    const source = { stepId: "safe", label: "Safe", state: "current" as const };
     foreignArray.push(
       hostile,
-      { id: "", label: "Missing id", state: "pending" },
+      { stepId: "", label: "Missing id", state: "pending" },
       source,
-      { id: "later", label: "Later", state: "completed" }
+      { stepId: "later", label: "Later", state: "completed" }
     );
     const el = (await fixture(
       html`<lr-stepper .steps=${foreignArray}></lr-stepper>`
@@ -159,7 +172,7 @@ describe("lr-stepper", () => {
     frame.remove();
 
     source.label = "Caller mutation";
-    expect(stepButtons(el).map((button) => button.dataset["id"])).to.deep.equal(
+    expect(stepButtons(el).map((button) => button.dataset["stepId"])).to.deep.equal(
       ["safe", "later"]
     );
     expect(el.steps[0]!.label).to.equal("Safe");
@@ -167,7 +180,7 @@ describe("lr-stepper", () => {
     expect(Object.isFrozen(el.steps[0])).to.be.true;
 
     const oversized = Array.from({ length: 260 }, (_, index) => ({
-      id: `step-${index}`,
+      stepId: `step-${index}`,
       label: `Step ${index}`,
       state: "pending" as const,
     }));
@@ -207,17 +220,17 @@ describe("lr-stepper", () => {
 
   it("uses the first duplicate current step as the single ARIA current and promotes the next when it is removed", async () => {
     const firstCurrent = {
-      id: "account",
+      stepId: "account",
       label: "Account",
       state: "current" as const,
     };
     const secondCurrent = {
-      id: "details",
+      stepId: "details",
       label: "Details",
       state: "current" as const,
     };
     const pending = {
-      id: "review",
+      stepId: "review",
       label: "Review",
       state: "pending" as const,
     };
@@ -251,9 +264,9 @@ describe("lr-stepper", () => {
     const el = (await fixture(
       html`<lr-stepper
         .steps=${[
-          { id: "basics", label: "Basics", state: "completed" as const },
-          { id: "inputs", label: "Inputs", state: "completed" as const },
-          { id: "review", label: "Review", state: "completed" as const },
+          { stepId: "basics", label: "Basics", state: "completed" as const },
+          { stepId: "inputs", label: "Inputs", state: "completed" as const },
+          { stepId: "review", label: "Review", state: "completed" as const },
         ]}
       ></lr-stepper>`
     )) as LyraStepper;
@@ -269,8 +282,8 @@ describe("lr-stepper", () => {
     const el = (await fixture(
       html`<lr-stepper
         .steps=${[
-          { id: "basics", label: "Basics", state: "pending" as const },
-          { id: "inputs", label: "Inputs", state: "pending" as const },
+          { stepId: "basics", label: "Basics", state: "pending" as const },
+          { stepId: "inputs", label: "Inputs", state: "pending" as const },
         ]}
       ></lr-stepper>`
     )) as LyraStepper;
@@ -286,12 +299,12 @@ describe("lr-stepper", () => {
       html`<lr-stepper
         .steps=${[
           {
-            id: "basics",
+            stepId: "basics",
             label: "Basics",
             state: "completed" as const,
             disabled: true,
           },
-          { id: "inputs", label: "Inputs", state: "pending" as const },
+          { stepId: "inputs", label: "Inputs", state: "pending" as const },
         ]}
       ></lr-stepper>`
     )) as LyraStepper;
@@ -315,7 +328,7 @@ describe("lr-stepper", () => {
     await el.updateComplete;
 
     const focused = el.shadowRoot!.activeElement as HTMLElement | null;
-    expect(focused?.dataset["id"]).to.equal("basics");
+    expect(focused?.dataset["stepId"]).to.equal("basics");
     expect(focused?.tabIndex).to.equal(0);
   });
 
@@ -329,7 +342,7 @@ describe("lr-stepper", () => {
     await el.updateComplete;
 
     const focused = el.shadowRoot!.activeElement as HTMLElement | null;
-    expect(focused?.dataset["id"]).to.equal("basics");
+    expect(focused?.dataset["stepId"]).to.equal("basics");
     expect(focused?.tabIndex).to.equal(0);
   });
 
@@ -343,7 +356,7 @@ describe("lr-stepper", () => {
     await el.updateComplete;
 
     const focused = el.shadowRoot!.activeElement as HTMLElement | null;
-    expect(focused?.dataset["id"]).to.equal("inputs");
+    expect(focused?.dataset["stepId"]).to.equal("inputs");
     expect(focused?.tabIndex).to.equal(0);
   });
 
@@ -361,7 +374,7 @@ describe("lr-stepper", () => {
     await el.updateComplete;
 
     const focused = el.shadowRoot!.activeElement as HTMLElement | null;
-    expect(focused?.dataset["id"]).to.equal("review");
+    expect(focused?.dataset["stepId"]).to.equal("review");
     expect(focused?.tabIndex).to.equal(-1);
   });
 
@@ -372,7 +385,7 @@ describe("lr-stepper", () => {
     const buttons = stepButtons(el);
     setTimeout(() => buttons[2]!.click());
     const ev = await oneEvent(el, "lr-step-select");
-    expect(ev.detail).to.deep.equal({ index: 2, id: "review" });
+    expect(ev.detail).to.deep.equal({ stepId: "review", index: 2 });
     // Not cancelable: this component is fully controlled (mirrors lr-table's columns/rows
     // contract) and never takes a default action of its own on selection, so there is no real
     // veto point for `preventDefault()` to gate -- see AGENTS.md's event convention.
@@ -384,9 +397,9 @@ describe("lr-stepper", () => {
     const el = (await fixture(
       html`<lr-stepper
         .steps=${[
-          { id: "basics", label: "Basics", state: "completed" as const },
+          { stepId: "basics", label: "Basics", state: "completed" as const },
           {
-            id: "inputs",
+            stepId: "inputs",
             label: "Inputs",
             state: "pending" as const,
             disabled: true,
@@ -412,18 +425,18 @@ describe("lr-stepper", () => {
       html`<lr-stepper
         .steps=${[
           {
-            id: "payment",
+            stepId: "payment",
             label: "Payment",
             state: "current" as const,
             icon: "\u{1F4B3}",
           },
           {
-            id: "shipping",
+            stepId: "shipping",
             label: "Shipping",
             state: "completed" as const,
             icon: "\u{1F4E6}",
           },
-          { id: "review", label: "Review", state: "pending" as const },
+          { stepId: "review", label: "Review", state: "pending" as const },
         ]}
       ></lr-stepper>`
     )) as LyraStepper;
@@ -458,7 +471,7 @@ describe("lr-stepper", () => {
       html`<lr-stepper
         .steps=${[
           {
-            id: "payment",
+            stepId: "payment",
             label: "Payment",
             state: "current" as const,
             icon: html`<button id="step-icon-control" type="button">
@@ -482,13 +495,16 @@ describe("lr-stepper", () => {
 
     step.focus();
     iconControl!.focus();
-    expect(el.shadowRoot!.activeElement?.getAttribute("data-id")).to.equal(
+    expect(el.shadowRoot!.activeElement?.getAttribute("data-step-id")).to.equal(
       "payment"
     );
 
     const selection = oneEvent(el, "lr-step-select");
     step.click();
-    expect((await selection).detail).to.deep.equal({ index: 0, id: "payment" });
+    expect((await selection).detail).to.deep.equal({
+      stepId: "payment",
+      index: 0,
+    });
     await expect(el).to.be.accessible();
   });
 
@@ -498,7 +514,7 @@ describe("lr-stepper", () => {
         .steps=${[
           ...steps().slice(0, 2),
           {
-            id: "review",
+            stepId: "review",
             label: "Review",
             state: "pending" as const,
             disabled: true,
@@ -521,12 +537,12 @@ describe("lr-stepper", () => {
       <lr-stepper
         .steps=${[
           {
-            id: "current-locked",
+            stepId: "current-locked",
             label: "Current but locked",
             state: "current" as const,
             disabled: true,
           },
-          { id: "next", label: "Next", state: "pending" as const },
+          { stepId: "next", label: "Next", state: "pending" as const },
         ]}
       ></lr-stepper>
     `)) as LyraStepper;
@@ -561,15 +577,15 @@ describe("lr-stepper", () => {
       <lr-stepper
         orientation="vertical"
         .steps=${[
-          { id: "account", label: "Account", state: "completed" as const },
-          { id: "details", label: "Details", state: "current" as const },
+          { stepId: "account", label: "Account", state: "completed" as const },
+          { stepId: "details", label: "Details", state: "current" as const },
           {
-            id: "locked",
+            stepId: "locked",
             label: "Locked",
             state: "error" as const,
             disabled: true,
           },
-          { id: "review", label: "Review", state: "pending" as const },
+          { stepId: "review", label: "Review", state: "pending" as const },
         ]}
       ></lr-stepper>
     `)) as LyraStepper;
@@ -602,7 +618,10 @@ describe("lr-stepper", () => {
         cancelable: true,
       })
     );
-    expect((await selection).detail).to.deep.equal({ index: 1, id: "details" });
+    expect((await selection).detail).to.deep.equal({
+      stepId: "details",
+      index: 1,
+    });
   });
 
   it("mirrors horizontal arrow navigation under RTL", async () => {
@@ -610,9 +629,9 @@ describe("lr-stepper", () => {
       <lr-stepper
         dir="rtl"
         .steps=${[
-          { id: "account", label: "Account", state: "current" as const },
-          { id: "details", label: "Details", state: "pending" as const },
-          { id: "review", label: "Review", state: "pending" as const },
+          { stepId: "account", label: "Account", state: "current" as const },
+          { stepId: "details", label: "Details", state: "pending" as const },
+          { stepId: "review", label: "Review", state: "pending" as const },
         ]}
       ></lr-stepper>
     `)) as LyraStepper;
@@ -642,8 +661,8 @@ describe("lr-stepper", () => {
     const el = (await fixture(
       html`<lr-stepper
         .steps=${[
-          { id: "basics", label: "Basics", state: "current" as const },
-          { id: 'inputs"]', label: "Inputs", state: "pending" as const },
+          { stepId: "basics", label: "Basics", state: "current" as const },
+          { stepId: 'inputs"]', label: "Inputs", state: "pending" as const },
         ]}
       ></lr-stepper>`
     )) as LyraStepper;
@@ -727,8 +746,8 @@ describe("lr-stepper", () => {
             wrap-labels
             style="inline-size: 100%;"
             .steps=${[
-              { id: "account", label: longLabel, state: "completed" as const },
-              { id: "review", label: longLabel, state: "current" as const },
+              { stepId: "account", label: longLabel, state: "completed" as const },
+              { stepId: "review", label: longLabel, state: "current" as const },
             ]}
           ></lr-stepper>
         </div>
@@ -781,13 +800,13 @@ describe("lr-stepper", () => {
     expect(list.getAttribute("aria-label")).to.equal("");
   });
 
-  it("keeps exactly one roving stop and navigates by occurrence when step ids are duplicated", async () => {
+  it("keeps exactly one roving stop and navigates by occurrence when step IDs are duplicated", async () => {
     const el = (await fixture(html`
       <lr-stepper
         .steps=${[
-          { id: "same", label: "First", state: "current" as const },
-          { id: "same", label: "Second", state: "pending" as const },
-          { id: "other", label: "Third", state: "pending" as const },
+          { stepId: "same", label: "First", state: "current" as const },
+          { stepId: "same", label: "Second", state: "pending" as const },
+          { stepId: "other", label: "Third", state: "pending" as const },
         ]}
       ></lr-stepper>
     `)) as LyraStepper;
@@ -805,6 +824,30 @@ describe("lr-stepper", () => {
     await el.updateComplete;
     buttons = stepButtons(el);
     expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
+  });
+
+  it("preserves focus on the same duplicate occurrence when steps refresh", async () => {
+    const el = await fixture<LyraStepper>(html`
+      <lr-stepper
+        .steps=${[
+          { stepId: "same", label: "First", state: "current" as const },
+          { stepId: "same", label: "Second", state: "pending" as const },
+          { stepId: "other", label: "Third", state: "pending" as const },
+        ]}
+      ></lr-stepper>
+    `);
+    stepButtons(el)[1]!.focus();
+
+    el.steps = [
+      { stepId: "same", label: "First refreshed", state: "current" },
+      { stepId: "same", label: "Second refreshed", state: "pending" },
+      { stepId: "other", label: "Third refreshed", state: "pending" },
+    ];
+    await el.updateComplete;
+
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset["index"]
+    ).to.equal("1");
   });
 
   it("formats numbered step chips with the effective locale", async () => {
@@ -1388,10 +1431,10 @@ describe("state-styling cssprops", () => {
   }
 
   const themedSteps = () => [
-    { id: "basics", label: "Basics", state: "completed" as const },
-    { id: "inputs", label: "Inputs", state: "current" as const },
-    { id: "oops", label: "Oops", state: "error" as const },
-    { id: "review", label: "Review", state: "pending" as const },
+    { stepId: "basics", label: "Basics", state: "completed" as const },
+    { stepId: "inputs", label: "Inputs", state: "current" as const },
+    { stepId: "oops", label: "Oops", state: "error" as const },
+    { stepId: "review", label: "Review", state: "pending" as const },
   ];
 
   const overrides =

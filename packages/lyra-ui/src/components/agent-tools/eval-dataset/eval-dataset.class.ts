@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -30,7 +31,7 @@ export interface EvalExample {
   id: string;
   input: string;
   expectedOutput?: string;
-  tags?: string[];
+  tags?: readonly string[];
   metadata?: Record<string, unknown>;
 }
 
@@ -38,7 +39,7 @@ export interface LyraEvalDatasetEventMap {
   'lr-example-select': CustomEvent<{ exampleId: string | null }>;
   'lr-example-add-request': CustomEvent<null>;
   'lr-example-remove-request': CustomEvent<{ exampleId: string }>;
-  'lr-import-request': CustomEvent<{ files: File[] }>;
+  'lr-import-request': CustomEvent<LyraEventDetailSnapshot<{ files: File[] }>>;
   'lr-export-request': CustomEvent<{ format: string }>;
   /** Deliberate pass-through from the controlled comparison table. */
   'lr-sort': LyraTableEventMap<EvalExample>['lr-sort'];
@@ -78,6 +79,9 @@ export interface LyraEvalDatasetEventMap {
  * `examples` and hand back a resorted array -- the same "the host owns the actual data" contract
  * as every other mutation this component surfaces.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-eval-dataset
  * @event lr-example-select - A row was activated. `detail: { exampleId }` -- `exampleId` is `null` once the
  *   previously-selected row no longer exists in `examples` or falls outside the active filters
@@ -111,6 +115,8 @@ export interface LyraEvalDatasetEventMap {
  * @since 4.1.0
  */
 export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["examples", "exportFormats"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -138,9 +144,9 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
    *  gracefully: a `selectedId` that no longer matches any row or falls outside the filtered
    *  result set resets to `null` (so Remove cannot act on a hidden row), and an active tag filter
    *  that no longer matches any row's `tags` is dropped rather than silently matching zero rows
-   *  forever. Duplicate ids normalize first-wins before filtering, selection, the nested grid, and
-   *  mutation events. */
-  @property({ attribute: false }) examples: EvalExample[] = [];
+   *  forever. Empty/blank ids are omitted and duplicates normalize first-wins before filtering,
+   *  selection, the nested grid, and mutation events. */
+  @property({ attribute: false }) examples: readonly EvalExample[] = [];
 
   /** Shows the built-in free-text search field, filtering by a case-insensitive substring match
    *  against `input`, `expectedOutput`, and `tags`. */
@@ -176,7 +182,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   @property() accept = '';
 
   /** Forwarded to the internal `<lr-export-button>`'s own `formats`. */
-  @property({ attribute: false }) exportFormats: LyraExportFormatOption[] = ['csv', 'json'];
+  @property({ attribute: false }) exportFormats: readonly LyraExportFormatOption[] = ['csv', 'json'];
 
   /** Disables every add/remove/import/export affordance -- e.g. while a host-side mutation from a
    *  previous request is still in flight. */

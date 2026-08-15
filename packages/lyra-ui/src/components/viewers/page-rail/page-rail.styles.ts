@@ -1,15 +1,18 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
-    --lr-page-rail-height: var(--lr-size-24rem);
+    --_lr-page-rail-height: var(--lr-size-24rem);
   }
-  [part='base'] {
+  [part="base"] {
     display: block;
   }
-  [part='pages'] {
-    --lr-virtual-list-height: var(--lr-page-rail-height);
+  [part="pages"] {
+    --lr-virtual-list-height: var(
+      --lr-page-rail-height,
+      var(--_lr-page-rail-height)
+    );
   }
   /* Page rows are produced by this component's renderItem but are committed into the embedded
      lr-virtual-list's OWN shadow root, one boundary deeper than this stylesheet: a bare
@@ -35,7 +38,11 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   lr-virtual-list::part(page):active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-raised),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   lr-virtual-list::part(page):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -51,7 +58,11 @@ export const styles = css`
     background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet));
   }
   lr-virtual-list::part(page-current):active {
-    background: color-mix(in oklab, var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   lr-virtual-list::part(thumbnail) {
     position: relative;
@@ -98,7 +109,10 @@ export const styles = css`
     background: var(--lr-page-rail-heat-danger-color, var(--lr-color-danger));
   }
   lr-virtual-list::part(heat-dot-neutral) {
-    background: var(--lr-page-rail-heat-neutral-color, var(--lr-color-text-quiet));
+    background: var(
+      --lr-page-rail-heat-neutral-color,
+      var(--lr-color-text-quiet)
+    );
   }
   lr-virtual-list::part(heat-dot-overflow) {
     inline-size: auto;

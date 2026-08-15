@@ -18,7 +18,7 @@ const MISSING = Symbol("missing-dashboard-value");
 export type DashboardAuthoredCellSnapshot = Readonly<LyraDashboardCell>;
 
 interface DashboardCellRect {
-  readonly id: string;
+  readonly cellId: string;
   readonly x: number;
   readonly y: number;
   readonly w: number;
@@ -117,7 +117,7 @@ export function snapshotDashboardLayout(
       typeof value !== "object"
     )
       continue;
-    const id = safeRead(value, "id");
+    const cellId = safeRead(value, "cellId");
     const x = safeRead(value, "x");
     const y = safeRead(value, "y");
     const w = safeRead(value, "w");
@@ -131,7 +131,7 @@ export function snapshotDashboardLayout(
     const locked = safeRead(value, "locked");
     if (
       [
-        id,
+        cellId,
         x,
         y,
         w,
@@ -144,10 +144,10 @@ export function snapshotDashboardLayout(
         widget,
         locked,
       ].includes(INVALID) ||
-      typeof id !== "string" ||
-      id.length === 0 ||
-      id !== id.trim() ||
-      ids.has(id) ||
+      typeof cellId !== "string" ||
+      cellId.length === 0 ||
+      cellId !== cellId.trim() ||
+      ids.has(cellId) ||
       x === MISSING ||
       y === MISSING ||
       w === MISSING ||
@@ -162,7 +162,7 @@ export function snapshotDashboardLayout(
     const maxH = optionalFiniteInteger(maxHValue, 1, Number.MAX_SAFE_INTEGER);
     const widgetSnapshot = snapshotDashboardWidget(widget);
     const cell: LyraDashboardCell = {
-      id,
+      cellId,
       x: asFiniteInteger(x, 0, 0, Number.MAX_SAFE_INTEGER),
       y: asFiniteInteger(y, 0, 0, Number.MAX_SAFE_INTEGER),
       w: asFiniteInteger(w, 1, 1, DASHBOARD_MAX_COLUMNS),
@@ -175,7 +175,7 @@ export function snapshotDashboardLayout(
       ...(typeof label === "string" ? { label } : {}),
       ...(widgetSnapshot === undefined ? {} : { widget: widgetSnapshot }),
     };
-    ids.add(id);
+    ids.add(cellId);
     output.push(Object.freeze(cell));
   }
   return Object.freeze(output);
@@ -273,8 +273,8 @@ export function createDashboardSpatialIndex(
   );
   for (let index = 0; index < layout.length; index += 1) {
     const cell = layout[index]!;
-    byId.set(cell.id, cell);
-    orderById.set(cell.id, index);
+    byId.set(cell.cellId, cell);
+    orderById.set(cell.cellId, index);
     const end = Math.min(columns, cell.x + cell.w);
     for (let column = cell.x; column < end; column += 1) {
       buckets[column]!.push(cell);
@@ -300,7 +300,7 @@ export function findDashboardCollisions(
   for (let column = Math.max(0, candidate.x); column < end; column += 1) {
     for (const cell of index.columnBuckets[column] ?? []) {
       metrics && (metrics.collisionCandidates += 1);
-      if (cell.id !== candidate.id) candidates.add(cell);
+      if (cell.cellId !== candidate.cellId) candidates.add(cell);
     }
   }
   return Object.freeze(
@@ -308,9 +308,9 @@ export function findDashboardCollisions(
       .filter((cell) => overlapsDashboardCells(cell, candidate))
       .sort(
         (a, b) =>
-          (index.orderById.get(a.id) ?? 0) - (index.orderById.get(b.id) ?? 0)
+          (index.orderById.get(a.cellId) ?? 0) - (index.orderById.get(b.cellId) ?? 0)
       )
-      .map((cell) => cell.id)
+      .map((cell) => cell.cellId)
   );
 }
 
@@ -371,7 +371,7 @@ function pushResolve(
   columns: number,
   metrics?: DashboardPlacementMetrics
 ): readonly LyraDashboardCell[] {
-  const others = layout.filter((cell) => cell.id !== candidate.id);
+  const others = layout.filter((cell) => cell.cellId !== candidate.cellId);
   const ordered: LyraDashboardCell[] = [
     candidate,
     ...others.filter((cell) => cell.locked),
@@ -385,7 +385,7 @@ function pushResolve(
 
   for (const cell of ordered) {
     let y = cell.y;
-    if (cell.id === candidate.id || !cell.locked) {
+    if (cell.cellId === candidate.cellId || !cell.locked) {
       for (let pass = 0; pass <= placedById.size; pass += 1) {
         let nextY = y;
         const endColumn = Math.min(columns, cell.x + cell.w);
@@ -403,7 +403,7 @@ function pushResolve(
       }
     }
     const placed = Object.freeze({ ...cell, y });
-    placedById.set(placed.id, placed);
+    placedById.set(placed.cellId, placed);
     const occupiedEnd = Math.min(Number.MAX_SAFE_INTEGER, placed.y + placed.h);
     const endColumn = Math.min(columns, placed.x + placed.w);
     for (let column = placed.x; column < endColumn; column += 1) {
@@ -412,12 +412,12 @@ function pushResolve(
     }
   }
 
-  return Object.freeze(layout.map((cell) => placedById.get(cell.id) ?? cell));
+  return Object.freeze(layout.map((cell) => placedById.get(cell.cellId) ?? cell));
 }
 
 export function resolveDashboardPlacement(
   layout: readonly LyraDashboardCell[],
-  candidateId: string,
+  candidateCellId: string,
   requested: Readonly<{ x: number; y: number; w: number; h: number }>,
   columnsInput: number,
   policyInput: LyraDashboardCollisionPolicy,
@@ -426,37 +426,37 @@ export function resolveDashboardPlacement(
   const columns = finiteInteger(columnsInput, 12, 1, DASHBOARD_MAX_COLUMNS);
   const policy = normalizeLyraDashboardCollisionPolicy(policyInput);
   const spatialIndex = createDashboardSpatialIndex(layout, columns);
-  const current = spatialIndex.byId.get(candidateId);
+  const current = spatialIndex.byId.get(candidateCellId);
   if (!current) {
     return Object.freeze({
       accepted: false,
       layout,
-      collidedWith: Object.freeze([]),
+      collidedCellIds: Object.freeze([]),
     });
   }
 
   const clamped = clampDashboardCandidate(current, requested, columns);
   const candidate = Object.freeze({ ...current, ...clamped });
-  const collidedWith = findDashboardCollisions(
+  const collidedCellIds = findDashboardCollisions(
     spatialIndex,
     candidate,
     metrics
   );
-  if (policy === "reject" && collidedWith.length > 0) {
-    return Object.freeze({ accepted: false, layout, collidedWith });
+  if (policy === "reject" && collidedCellIds.length > 0) {
+    return Object.freeze({ accepted: false, layout, collidedCellIds });
   }
   if (
     policy === "push" &&
-    collidedWith.some((id) => spatialIndex.byId.get(id)?.locked)
+    collidedCellIds.some((cellId) => spatialIndex.byId.get(cellId)?.locked)
   ) {
-    return Object.freeze({ accepted: false, layout, collidedWith });
+    return Object.freeze({ accepted: false, layout, collidedCellIds });
   }
 
   const nextLayout =
-    policy === "push" && collidedWith.length > 0
+    policy === "push" && collidedCellIds.length > 0
       ? pushResolve(layout, candidate, columns, metrics)
       : Object.freeze(
-          layout.map((cell) => (cell.id === candidate.id ? candidate : cell))
+          layout.map((cell) => (cell.cellId === candidate.cellId ? candidate : cell))
         );
-  return Object.freeze({ accepted: true, layout: nextLayout, collidedWith });
+  return Object.freeze({ accepted: true, layout: nextLayout, collidedCellIds });
 }

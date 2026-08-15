@@ -61,8 +61,34 @@ import type {
   SortingState,
 } from "./data-grid-types.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_collapse,
+  LYRA_DEFAULT_copied,
+  LYRA_DEFAULT_copyFailed,
+  LYRA_DEFAULT_dataGridColumnMenu,
+  LYRA_DEFAULT_dataGridPinEnd,
+  LYRA_DEFAULT_dataGridPinStart,
+  LYRA_DEFAULT_dataGridRowsPerPage,
+  LYRA_DEFAULT_dataGridTreeLimitReached,
+  LYRA_DEFAULT_dataGridUnpin,
+  LYRA_DEFAULT_expand,
+  LYRA_DEFAULT_loading,
+  LYRA_DEFAULT_next,
+  LYRA_DEFAULT_noColumns,
+  LYRA_DEFAULT_noData,
+  LYRA_DEFAULT_noMatches,
+  LYRA_DEFAULT_paginationFirstPage,
+  LYRA_DEFAULT_paginationJumpToPage,
+  LYRA_DEFAULT_paginationLabel,
+  LYRA_DEFAULT_paginationLastPage,
+  LYRA_DEFAULT_previous,
+  LYRA_DEFAULT_resizeColumn,
+  LYRA_DEFAULT_search,
+  LYRA_DEFAULT_select,
+  LYRA_DEFAULT_showAllColumns,
+  LYRA_DEFAULT_tableFilterLabel,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export * from "./data-grid-types.js";
@@ -105,7 +131,11 @@ function snapshotColumns<Row>(
   const output: DataGridColumn<Row>[] = [];
   for (const column of value) {
     try {
-      if (column === null || typeof column !== "object" || Array.isArray(column))
+      if (
+        column === null ||
+        typeof column !== "object" ||
+        Array.isArray(column)
+      )
         continue;
       output.push(Object.freeze({ ...column }));
     } catch {
@@ -153,16 +183,23 @@ function serializableFilterValue(value: unknown): DataGridJsonValue {
         nested !== null &&
         typeof nested === "object" &&
         Object.prototype.toString.call(nested) === "[object Set]"
-      ) return [...(nested as Set<unknown>)];
+      )
+        return [...(nested as Set<unknown>)];
       return nested;
     });
     if (!serialized) return null;
-    const snapshot = (JSON.parse(serialized) as { value?: unknown }).value ?? null;
+    const snapshot =
+      (JSON.parse(serialized) as { value?: unknown }).value ?? null;
     const stack = [snapshot];
     const visited = new Set<unknown>();
     while (stack.length > 0) {
       const current = stack.pop();
-      if (current === null || typeof current !== "object" || visited.has(current)) continue;
+      if (
+        current === null ||
+        typeof current !== "object" ||
+        visited.has(current)
+      )
+        continue;
       visited.add(current);
       for (const nested of Object.values(current)) stack.push(nested);
       Object.freeze(current);
@@ -269,7 +306,9 @@ function normalizePinSide(side: DataGridPinSide): "left" | "right" | false {
   return side;
 }
 
-function normalizedGroupBy(value: string | readonly string[] | null): readonly string[] {
+function normalizedGroupBy(
+  value: string | readonly string[] | null
+): readonly string[] {
   if (typeof value !== "string") {
     return (value ?? [])
       .map((entry) => entry.trim())
@@ -405,34 +444,35 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 > {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    copied: LYRA_DEFAULT_copied,
-    copyFailed: LYRA_DEFAULT_copyFailed,
-    dataGridColumnMenu: LYRA_DEFAULT_dataGridColumnMenu,
-    dataGridPinEnd: LYRA_DEFAULT_dataGridPinEnd,
-    dataGridPinStart: LYRA_DEFAULT_dataGridPinStart,
-    dataGridRowsPerPage: LYRA_DEFAULT_dataGridRowsPerPage,
-    dataGridTreeLimitReached: LYRA_DEFAULT_dataGridTreeLimitReached,
-    dataGridUnpin: LYRA_DEFAULT_dataGridUnpin,
-    expand: LYRA_DEFAULT_expand,
-    loading: LYRA_DEFAULT_loading,
-    next: LYRA_DEFAULT_next,
-    noColumns: LYRA_DEFAULT_noColumns,
-    noData: LYRA_DEFAULT_noData,
-    noMatches: LYRA_DEFAULT_noMatches,
-    paginationFirstPage: LYRA_DEFAULT_paginationFirstPage,
-    paginationJumpToPage: LYRA_DEFAULT_paginationJumpToPage,
-    paginationLabel: LYRA_DEFAULT_paginationLabel,
-    paginationLastPage: LYRA_DEFAULT_paginationLastPage,
-    previous: LYRA_DEFAULT_previous,
-    resizeColumn: LYRA_DEFAULT_resizeColumn,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
-    showAllColumns: LYRA_DEFAULT_showAllColumns,
-    tableFilterLabel: LYRA_DEFAULT_tableFilterLabel,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      collapse: LYRA_DEFAULT_collapse,
+      copied: LYRA_DEFAULT_copied,
+      copyFailed: LYRA_DEFAULT_copyFailed,
+      dataGridColumnMenu: LYRA_DEFAULT_dataGridColumnMenu,
+      dataGridPinEnd: LYRA_DEFAULT_dataGridPinEnd,
+      dataGridPinStart: LYRA_DEFAULT_dataGridPinStart,
+      dataGridRowsPerPage: LYRA_DEFAULT_dataGridRowsPerPage,
+      dataGridTreeLimitReached: LYRA_DEFAULT_dataGridTreeLimitReached,
+      dataGridUnpin: LYRA_DEFAULT_dataGridUnpin,
+      expand: LYRA_DEFAULT_expand,
+      loading: LYRA_DEFAULT_loading,
+      next: LYRA_DEFAULT_next,
+      noColumns: LYRA_DEFAULT_noColumns,
+      noData: LYRA_DEFAULT_noData,
+      noMatches: LYRA_DEFAULT_noMatches,
+      paginationFirstPage: LYRA_DEFAULT_paginationFirstPage,
+      paginationJumpToPage: LYRA_DEFAULT_paginationJumpToPage,
+      paginationLabel: LYRA_DEFAULT_paginationLabel,
+      paginationLastPage: LYRA_DEFAULT_paginationLastPage,
+      previous: LYRA_DEFAULT_previous,
+      resizeColumn: LYRA_DEFAULT_resizeColumn,
+      search: LYRA_DEFAULT_search,
+      select: LYRA_DEFAULT_select,
+      showAllColumns: LYRA_DEFAULT_showAllColumns,
+      tableFilterLabel: LYRA_DEFAULT_tableFilterLabel,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, sizes, srOnly, styles];
@@ -447,10 +487,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private _columnOrder: readonly string[] = Object.freeze([]);
   /** Clone-owned controlled column order; an empty array uses declaration order. */
   @property({ attribute: false })
-  get columnOrder(): readonly string[] { return this._columnOrder; }
+  get columnOrder(): readonly string[] {
+    return this._columnOrder;
+  }
   set columnOrder(value: readonly string[]) {
     const previous = this._columnOrder;
-    this._columnOrder = frozenArray(Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : []);
+    this._columnOrder = frozenArray(
+      Array.isArray(value)
+        ? value.filter((id): id is string => typeof id === "string")
+        : []
+    );
     this.requestUpdate("columnOrder", previous);
   }
 
@@ -458,7 +504,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Clone-owned readonly column-definition sequence. Reassign to update.
    * @default [] */
   @property({ attribute: false })
-  get columns(): readonly DataGridColumn<Row>[] { return this._columns; }
+  get columns(): readonly DataGridColumn<Row>[] {
+    return this._columns;
+  }
   set columns(value: readonly DataGridColumn<Row>[]) {
     const previous = this._columns;
     this._columns = snapshotColumns(value);
@@ -469,7 +517,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Clone-owned readonly client rows or current server page. Row identities are preserved.
    * @default [] */
   @property({ attribute: false })
-  get data(): readonly Row[] { return this._data; }
+  get data(): readonly Row[] {
+    return this._data;
+  }
   set data(value: readonly Row[]) {
     const previous = this._data;
     this._data = frozenArray(Array.isArray(value) ? value : []);
@@ -482,10 +532,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private _expandedKeys: readonly DataGridKey[] = Object.freeze([]);
   /** Clone-owned controlled expanded tree/detail/group keys. */
   @property({ attribute: false })
-  get expandedKeys(): readonly DataGridKey[] { return this._expandedKeys; }
+  get expandedKeys(): readonly DataGridKey[] {
+    return this._expandedKeys;
+  }
   set expandedKeys(value: readonly DataGridKey[]) {
     const previous = this._expandedKeys;
-    this._expandedKeys = frozenArray(Array.isArray(value) ? value.filter(isKey) : []);
+    this._expandedKeys = frozenArray(
+      Array.isArray(value) ? value.filter(isKey) : []
+    );
     this.requestUpdate("expandedKeys", previous);
   }
   /** Delay before server search/filter requests. */
@@ -501,7 +555,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private _filters: readonly DataGridFilter[] = Object.freeze([]);
   /** Clone-owned controlled per-column filters. */
   @property({ attribute: false })
-  get filters(): readonly DataGridFilter[] { return this._filters; }
+  get filters(): readonly DataGridFilter[] {
+    return this._filters;
+  }
   set filters(value: readonly DataGridFilter[]) {
     const previous = this._filters;
     const next: DataGridFilter[] = [];
@@ -509,9 +565,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       for (const filter of value) {
         try {
           if (!filter || typeof filter.id !== "string") continue;
-          const filterValue = filter.value instanceof Set
-            ? frozenArray(filter.value)
-            : Array.isArray(filter.value)
+          const filterValue =
+            filter.value instanceof Set
+              ? frozenArray(filter.value)
+              : Array.isArray(filter.value)
               ? frozenArray(filter.value)
               : filter.value;
           next.push(Object.freeze({ id: filter.id, value: filterValue }));
@@ -527,13 +584,18 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** One or more field/column identifiers used to group client rows.
    * @default null */
   @property({ attribute: "group-by" })
-  get groupBy(): string | readonly string[] | null { return this._groupBy; }
+  get groupBy(): string | readonly string[] | null {
+    return this._groupBy;
+  }
   set groupBy(value: string | readonly string[] | null) {
     const previous = this._groupBy;
-    this._groupBy = typeof value === "string"
-      ? value
-      : Array.isArray(value)
-        ? frozenArray(value.filter((item): item is string => typeof item === "string"))
+    this._groupBy =
+      typeof value === "string"
+        ? value
+        : Array.isArray(value)
+        ? frozenArray(
+            value.filter((item): item is string => typeof item === "string")
+          )
         : null;
     this.requestUpdate("groupBy", previous);
   }
@@ -559,11 +621,15 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Rows per page. */
   @property({ type: Number, attribute: "page-size" }) pageSize = 20;
   /** Choices rendered by the page-size selector. */
-  private _pageSizeOptions: readonly number[] = Object.freeze([10, 20, 50, 100]);
+  private _pageSizeOptions: readonly number[] = Object.freeze([
+    10, 20, 50, 100,
+  ]);
   /** Clone-owned choices rendered by the page-size selector.
    * @default [10, 20, 50, 100] */
   @property({ attribute: false })
-  get pageSizeOptions(): readonly number[] { return this._pageSizeOptions; }
+  get pageSizeOptions(): readonly number[] {
+    return this._pageSizeOptions;
+  }
   set pageSizeOptions(value: readonly number[]) {
     const previous = this._pageSizeOptions;
     this._pageSizeOptions = frozenArray(Array.isArray(value) ? value : []);
@@ -603,17 +669,23 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private _selectedKeys: readonly DataGridKey[] = Object.freeze([]);
   /** Clone-owned controlled selected row keys. */
   @property({ attribute: false })
-  get selectedKeys(): readonly DataGridKey[] { return this._selectedKeys; }
+  get selectedKeys(): readonly DataGridKey[] {
+    return this._selectedKeys;
+  }
   set selectedKeys(value: readonly DataGridKey[]) {
     const previous = this._selectedKeys;
-    this._selectedKeys = frozenArray(Array.isArray(value) ? value.filter(isKey) : []);
+    this._selectedKeys = frozenArray(
+      Array.isArray(value) ? value.filter(isKey) : []
+    );
     this.requestUpdate("selectedKeys", previous);
   }
   /** Selected rows, derived from `selectedKeys`. Assigning current source rows updates those keys. */
   get selectedRows(): readonly Row[] {
-    return frozenArray(this.allSourceRows.filter((row, index) =>
-      arrayHasKey(this.selectedKeys, this.keyForRow(row, index))
-    ));
+    return frozenArray(
+      this.allSourceRows.filter((row, index) =>
+        arrayHasKey(this.selectedKeys, this.keyForRow(row, index))
+      )
+    );
   }
   set selectedRows(next: readonly Row[]) {
     const source = this.allSourceRows;
@@ -638,7 +710,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private _sort: SortingState = Object.freeze([]);
   /** Clone-owned controlled multi-column sorting state. */
   @property({ attribute: false })
-  get sort(): SortingState { return this._sort; }
+  get sort(): SortingState {
+    return this._sort;
+  }
   set sort(value: SortingState) {
     const previous = this._sort;
     const next: DataGridSortingState[number][] = [];
@@ -785,7 +859,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         this.keyForRow(row, index)
       );
       const validKeySet = new Set(validKeys);
-      const selectedKeys = this.selectedKeys.filter((key) => validKeySet.has(key));
+      const selectedKeys = this.selectedKeys.filter((key) =>
+        validKeySet.has(key)
+      );
       if (
         selectedKeys.length !== this.selectedKeys.length ||
         selectedKeys.some(
@@ -871,12 +947,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private get safePage(): number {
-    return finiteInteger(
-      this.page,
-      0,
-      0,
-      Math.max(0, this.pageCount - 1)
-    );
+    return finiteInteger(this.page, 0, 0, Math.max(0, this.pageCount - 1));
   }
 
   private get safePageSize(): number {
@@ -887,7 +958,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this.total === -1 ? -1 : finiteCount(this.total);
   }
 
-  private sourceProjection(): { readonly rows: readonly Row[]; readonly truncated: boolean } {
+  private sourceProjection(): {
+    readonly rows: readonly Row[];
+    readonly truncated: boolean;
+  } {
     const result: Row[] = [];
     const visited = new Set<unknown>();
     const stack: Array<{ readonly row: Row; readonly depth: number }> = [];
@@ -897,7 +971,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     let truncated = false;
     while (stack.length > 0 && result.length < DATA_GRID_TREE_NODE_LIMIT) {
       const current = stack.pop()!;
-      const trackIdentity = (typeof current.row === "object" && current.row !== null) || typeof current.row === "function";
+      const trackIdentity =
+        (typeof current.row === "object" && current.row !== null) ||
+        typeof current.row === "function";
       if (trackIdentity && visited.has(current.row)) continue;
       if (trackIdentity) visited.add(current.row);
       result.push(current.row);
@@ -919,7 +995,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this.sourceProjection().rows;
   }
 
-  private sourceIndexMap(rows: readonly Row[] = this.allSourceRows): Map<Row, number> {
+  private sourceIndexMap(
+    rows: readonly Row[] = this.allSourceRows
+  ): Map<Row, number> {
     const indexes = new Map<Row, number>();
     rows.forEach((row, index) => {
       if (!indexes.has(row)) indexes.set(row, index);
@@ -1011,7 +1089,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           : this.childRows
           ? pathValue(row, this.childRows)
           : undefined;
-      return Array.isArray(children) ? children.slice(0, DATA_GRID_TREE_NODE_LIMIT) as Row[] : [];
+      return Array.isArray(children)
+        ? (children.slice(0, DATA_GRID_TREE_NODE_LIMIT) as Row[])
+        : [];
     } catch {
       return [];
     }
@@ -1050,12 +1130,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     ].filter((element) => element.getAttribute("data-column-id") === columnId);
   }
 
-  private computedToken(name: string): string {
+  private computedToken(name: string, privateDefault?: string): string {
     if (!this.isConnected) return "";
     const owner = this.ownerDocument.defaultView;
     if (!owner || typeof owner.getComputedStyle !== "function") return "";
     try {
-      return owner.getComputedStyle(this).getPropertyValue(name).trim();
+      const style = owner.getComputedStyle(this);
+      return (
+        style.getPropertyValue(name).trim() ||
+        (privateDefault ? style.getPropertyValue(privateDefault).trim() : "")
+      );
     } catch {
       // Detached/partial DOM implementations can expose the API without supporting this host.
       return "";
@@ -1190,7 +1274,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       }
     }
     return Number.isFinite(minimum) && Number.isFinite(maximum)
-      ? Object.freeze({ uniqueValues, minMax: Object.freeze([minimum, maximum] as const) })
+      ? Object.freeze({
+          uniqueValues,
+          minMax: Object.freeze([minimum, maximum] as const),
+        })
       : Object.freeze({ uniqueValues });
   }
 
@@ -1222,9 +1309,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (size === 0) return [];
     const start = this.safePage * size;
     if (normalizedGroupBy(this.groupBy).length > 0) {
-      return frozenArray(this.topLevelGroupBuckets(rows)
-        .slice(start, start + size)
-        .flatMap((bucket) => bucket.rows));
+      return frozenArray(
+        this.topLevelGroupBuckets(rows)
+          .slice(start, start + size)
+          .flatMap((bucket) => bucket.rows)
+      );
     }
     return frozenArray(rows.slice(start, start + size));
   }
@@ -1237,10 +1326,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       visibility: Object.freeze(Object.fromEntries(this.columnVisibility)),
       pinning: Object.freeze(Object.fromEntries(this.columnPinning)),
       sort: frozenArray(this.sort.map((item) => Object.freeze({ ...item }))),
-      filters: frozenArray(this.filters.map((item) => Object.freeze({
-        id: item.id,
-        value: serializableFilterValue(item.value),
-      }))),
+      filters: frozenArray(
+        this.filters.map((item) =>
+          Object.freeze({
+            id: item.id,
+            value: serializableFilterValue(item.value),
+          })
+        )
+      ),
       search: this.searchTerm,
       selectedKeys: frozenArray(this.selectedKeys),
       expandedKeys: frozenArray(this.expandedKeys),
@@ -1346,16 +1439,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   /** Scrolls the requested processed-row index into the virtual viewport. */
-  scrollToIndex(
-    index: number,
-    options: DataGridScrollOptions = {}
-  ): void {
+  scrollToIndex(index: number, options: DataGridScrollOptions = {}): void {
     const rows = this.getVisibleRows();
     if (rows.length === 0) return;
     const requestedIndex = finiteInteger(index, 0, 0, rows.length - 1);
     const requestedRow = rows[requestedIndex]!;
     const sourceIndex = this.sourceIndexMap().get(requestedRow);
-    const requestedKey = this.keyForRow(requestedRow, sourceIndex ?? requestedIndex);
+    const requestedKey = this.keyForRow(
+      requestedRow,
+      sourceIndex ?? requestedIndex
+    );
     const target = this.displayItems.findIndex(
       (item) =>
         item.kind === "row" &&
@@ -1397,7 +1490,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       );
     if (state.pinning)
       this.columnPinning = this.validColumnMap(state.pinning, known, (side) =>
-        side === "left" || side === "right" || side === "start" || side === "end"
+        side === "left" ||
+        side === "right" ||
+        side === "start" ||
+        side === "end"
           ? side
           : false
       );
@@ -1424,7 +1520,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const body = this.bodyElement;
     if (!body || this.visibleColumns.length === 0) return;
     const selectionWidth = this.selectionEnabled
-      ? resolveCssLength(this.computedToken("--lr-icon-button-size"), { host: this }) ?? 0
+      ? resolveCssLength(this.computedToken("--lr-icon-button-size"), {
+          host: this,
+        }) ?? 0
       : 0;
     const available = Math.max(0, body.clientWidth - selectionWidth);
     const flexible = this.visibleColumns.filter(
@@ -1491,7 +1589,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private async copyAndReport(text: string): Promise<void> {
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     const outcome = await this.writeClipboard(text, owner);
-    if (!owner || !this.isConnected || this.ownerDocument.defaultView !== owner) return;
+    if (!owner || !this.isConnected || this.ownerDocument.defaultView !== owner)
+      return;
     if (outcome.ok) {
       if (!this.isMounting) this.announce(this.localize("copied"));
       this.emit("lr-copy", outcome);
@@ -1504,11 +1603,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   private async writeClipboard(
     text: string,
-    owner: Window | null,
+    owner: Window | null
   ): Promise<LyraClipboardWriteOutcome> {
     const ownerDocument = this.ownerDocument;
     const outcome = await writeClipboardText(owner, text);
-    if (outcome.ok || !owner || ownerDocument.defaultView !== owner || !ownerDocument.body) {
+    if (
+      outcome.ok ||
+      !owner ||
+      ownerDocument.defaultView !== owner ||
+      !ownerDocument.body
+    ) {
       return outcome;
     }
     const textarea = ownerDocument.createElement("textarea");
@@ -1541,11 +1645,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     next.set(columnIdValue, safeWidth);
     this.columnWidths = next;
     if (emit)
-      this.emit("lr-column-resize", Object.freeze({
-        columnId: columnIdValue,
-        width: safeWidth,
-        finished,
-      }));
+      this.emit(
+        "lr-column-resize",
+        Object.freeze({
+          columnId: columnIdValue,
+          width: safeWidth,
+          finished,
+        })
+      );
   }
 
   private cancelRequestTimer(): void {
@@ -1604,18 +1711,21 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       pageSize: this.safePageSize,
       signal: this.requestController?.signal,
     });
-    const requestDetail = (): DataGridRequest => Object.freeze({
-      ...request,
-      sort: frozenArray(request.sort.map((item) => Object.freeze({ ...item }))),
-      filters: frozenArray(
-        request.filters.map((item) =>
-          Object.freeze({
-            id: item.id,
-            value: serializableFilterValue(item.value),
-          })
-        )
-      ),
-    });
+    const requestDetail = (): DataGridRequest =>
+      Object.freeze({
+        ...request,
+        sort: frozenArray(
+          request.sort.map((item) => Object.freeze({ ...item }))
+        ),
+        filters: frozenArray(
+          request.filters.map((item) =>
+            Object.freeze({
+              id: item.id,
+              value: serializableFilterValue(item.value),
+            })
+          )
+        ),
+      });
     this.emit("request", requestDetail());
     if (!this.dataSource) return;
     this.ownsLoadingState = true;
@@ -1643,7 +1753,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         return;
       this.loading = false;
       this.ownsLoadingState = false;
-      this.emit("lr-data-error", Object.freeze({ error, request: requestDetail() }));
+      this.emit(
+        "lr-data-error",
+        Object.freeze({ error, request: requestDetail() })
+      );
     }
   }
 
@@ -1686,12 +1799,17 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private hasMatchingDescendant(row: Row): boolean {
-    const stack = this.childrenFor(row).map((child) => ({ row: child, depth: 1 }));
+    const stack = this.childrenFor(row).map((child) => ({
+      row: child,
+      depth: 1,
+    }));
     const visited = new Set<unknown>();
     let inspected = 0;
     while (stack.length > 0 && inspected < DATA_GRID_TREE_NODE_LIMIT) {
       const current = stack.pop()!;
-      const trackIdentity = (typeof current.row === "object" && current.row !== null) || typeof current.row === "function";
+      const trackIdentity =
+        (typeof current.row === "object" && current.row !== null) ||
+        typeof current.row === "function";
       if (trackIdentity && visited.has(current.row)) continue;
       if (trackIdentity) visited.add(current.row);
       inspected += 1;
@@ -1713,22 +1831,33 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     key: DataGridKey;
   }> {
     const result: Array<{ row: Row; key: DataGridKey }> = [];
-    const sourceIndex = new Map(this.allSourceRows.map((row, index) => [row, index]));
+    const sourceIndex = new Map(
+      this.allSourceRows.map((row, index) => [row, index])
+    );
     const visited = new Set<unknown>();
-    const stack = [...this.pageRows].reverse().map((row) => ({ row, depth: 0 }));
+    const stack = [...this.pageRows]
+      .reverse()
+      .map((row) => ({ row, depth: 0 }));
     let inspected = 0;
     while (stack.length > 0 && inspected < DATA_GRID_TREE_NODE_LIMIT) {
       const current = stack.pop()!;
-      const trackIdentity = (typeof current.row === "object" && current.row !== null) || typeof current.row === "function";
+      const trackIdentity =
+        (typeof current.row === "object" && current.row !== null) ||
+        typeof current.row === "function";
       if (trackIdentity && visited.has(current.row)) continue;
       if (trackIdentity) visited.add(current.row);
       inspected += 1;
       const index = sourceIndex.get(current.row);
       const key = this.keyForRow(current.row, index ?? result.length);
-      if (this.rowIsSelectable(current.row)) result.push({ row: current.row, key });
+      if (this.rowIsSelectable(current.row))
+        result.push({ row: current.row, key });
       if (current.depth >= DATA_GRID_TREE_DEPTH_LIMIT) continue;
       const children = this.childrenFor(current.row);
-      for (let childIndex = children.length - 1; childIndex >= 0; childIndex -= 1) {
+      for (
+        let childIndex = children.length - 1;
+        childIndex >= 0;
+        childIndex -= 1
+      ) {
         stack.push({ row: children[childIndex]!, depth: current.depth + 1 });
       }
     }
@@ -1814,17 +1943,31 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const sourceRows = this.allSourceRows;
     const indexes = this.sourceIndexMap(sourceRows);
     const visited = new Set<unknown>();
-    const stack = [...this.pageRows].reverse().map((row) => ({ row, depth: 0 }));
+    const stack = [...this.pageRows]
+      .reverse()
+      .map((row) => ({ row, depth: 0 }));
     while (stack.length > 0 && result.length < DATA_GRID_TREE_NODE_LIMIT) {
       const current = stack.pop()!;
-      const trackIdentity = (typeof current.row === "object" && current.row !== null) || typeof current.row === "function";
+      const trackIdentity =
+        (typeof current.row === "object" && current.row !== null) ||
+        typeof current.row === "function";
       if (trackIdentity && visited.has(current.row)) continue;
       if (trackIdentity) visited.add(current.row);
       const sourceIndex = indexes.get(current.row);
       const safeIndex = sourceIndex ?? result.length;
       const key = this.keyForRow(current.row, safeIndex);
-      result.push({ kind: "row", row: current.row, key, depth: current.depth, sourceIndex: safeIndex });
-      if (!arrayHasKey(this.expandedKeys, key) || current.depth >= DATA_GRID_TREE_DEPTH_LIMIT) continue;
+      result.push({
+        kind: "row",
+        row: current.row,
+        key,
+        depth: current.depth,
+        sourceIndex: safeIndex,
+      });
+      if (
+        !arrayHasKey(this.expandedKeys, key) ||
+        current.depth >= DATA_GRID_TREE_DEPTH_LIMIT
+      )
+        continue;
       const children = this.processedChildrenFor(current.row);
       for (let index = children.length - 1; index >= 0; index -= 1) {
         stack.push({ row: children[index]!, depth: current.depth + 1 });
@@ -1874,7 +2017,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       if (!arrayHasKey(this.expandedKeys, key)) continue;
       if (depth + 1 < fields.length)
         result.push(
-          ...this.groupedDisplayItems(bucket, fields, depth + 1, key, sourceIndexes)
+          ...this.groupedDisplayItems(
+            bucket,
+            fields,
+            depth + 1,
+            key,
+            sourceIndexes
+          )
         );
       else {
         for (const row of bucket) {
@@ -1893,7 +2042,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private get resolvedRowHeight(): number {
-    const raw = this.computedToken("--row-height");
+    const raw = this.computedToken(
+      "--row-height",
+      "--_lr-data-grid-row-height"
+    );
     return finiteRange(resolveCssLength(raw, { host: this }) ?? 56, 56, 1);
   }
 
@@ -1905,14 +2057,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const items = this.displayItems;
     const expandedDetails = Boolean(
       this.rowDetail &&
-      items.some(
-        (item) => item.kind === "row" && arrayHasKey(this.expandedKeys, item.key)
-      )
+        items.some(
+          (item) =>
+            item.kind === "row" && arrayHasKey(this.expandedKeys, item.key)
+        )
     );
     const disable =
       items.length < VIRTUALIZATION_THRESHOLD ||
       expandedDetails ||
-      this.computedToken("--max-height") === "none";
+      this.computedToken("--max-height", "--_lr-data-grid-max-height") ===
+        "none";
     if (disable) return { items, start: 0, end: items.length };
     const height = this.resolvedRowHeight;
     const visibleCount = Math.max(
@@ -1935,13 +2089,18 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       const bounds = this.columnBounds(column);
       const width = this.columnWidths.get(id) ?? column.width;
       if (width !== undefined && Number.isFinite(width) && width > 0)
-        return `${finiteRange(width, bounds.minimum, bounds.minimum, bounds.maximum)}px`;
+        return `${finiteRange(
+          width,
+          bounds.minimum,
+          bounds.minimum,
+          bounds.maximum
+        )}px`;
       const minimum =
         bounds.minimum > 0
           ? `${bounds.minimum}px`
           : Number.isFinite(column.maxWidth) && (column.maxWidth ?? 0) > 0
-            ? "0px"
-            : "var(--lr-size-7rem)";
+          ? "0px"
+          : "var(--lr-size-7rem)";
       const maximum =
         Number.isFinite(column.maxWidth) && (column.maxWidth ?? 0) > 0
           ? `${bounds.maximum}px`
@@ -2083,7 +2242,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.emit(
       "lr-filter-change",
       Object.freeze({
-        filters: frozenArray(next.map((filter) => Object.freeze({ ...filter }))),
+        filters: frozenArray(
+          next.map((filter) => Object.freeze({ ...filter }))
+        ),
       })
     );
   }
@@ -2119,12 +2280,15 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       event.currentTarget.contains(interactive)
     )
       return;
-    this.emit("lr-cell-click", Object.freeze({
-      column,
-      value: columnValue(column, item.row),
-      row: item.row,
-      index,
-    }));
+    this.emit(
+      "lr-cell-click",
+      Object.freeze({
+        column,
+        value: columnValue(column, item.row),
+        row: item.row,
+        index,
+      })
+    );
   }
 
   private emitCellContextMenu(
@@ -2149,10 +2313,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private descendantRows(row: Row): Row[] {
     const result: Row[] = [];
     const visited = new Set<unknown>();
-    const stack = this.childrenFor(row).reverse().map((child) => ({ row: child, depth: 1 }));
+    const stack = this.childrenFor(row)
+      .reverse()
+      .map((child) => ({ row: child, depth: 1 }));
     while (stack.length > 0 && result.length < DATA_GRID_TREE_NODE_LIMIT) {
       const current = stack.pop()!;
-      const trackIdentity = (typeof current.row === "object" && current.row !== null) || typeof current.row === "function";
+      const trackIdentity =
+        (typeof current.row === "object" && current.row !== null) ||
+        typeof current.row === "function";
       if (trackIdentity && visited.has(current.row)) continue;
       if (trackIdentity) visited.add(current.row);
       result.push(current.row);
@@ -2260,10 +2428,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (expanded) this.collapseRow(item.key);
     else this.expandRow(item.key);
     if (emitUserEvent) {
-      this.emit(expanded ? "lr-row-collapse" : "lr-row-expand", Object.freeze({
-        key: item.key,
-        row: item.row,
-      }));
+      this.emit(
+        expanded ? "lr-row-collapse" : "lr-row-expand",
+        Object.freeze({
+          key: item.key,
+          row: item.row,
+        })
+      );
     }
   }
 
@@ -2290,11 +2461,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     order.splice(to, 0, id);
     this.columnOrder = order;
     if (emitUserEvent)
-      this.emit("lr-column-move", Object.freeze({
-        columnOrder: frozenArray(order),
-        columnId: id,
-        finished: true,
-      }));
+      this.emit(
+        "lr-column-move",
+        Object.freeze({
+          columnOrder: frozenArray(order),
+          columnId: id,
+          finished: true,
+        })
+      );
   }
 
   private columnCanMove(id: string): boolean {
@@ -2335,7 +2509,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       sourceId === targetId ||
       !this.columnCanMove(sourceId) ||
       !this.columnCanMove(targetId)
-    ) return;
+    )
+      return;
     const order = this.orderedColumns.map((entry) => entry.id);
     const source = order.indexOf(sourceId);
     const target = order.indexOf(targetId);
@@ -2343,11 +2518,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     order.splice(source, 1);
     order.splice(target, 0, sourceId);
     this.columnOrder = order;
-    this.emit("lr-column-move", Object.freeze({
-      columnOrder: frozenArray(order),
-      columnId: sourceId,
-      finished: true,
-    }));
+    this.emit(
+      "lr-column-move",
+      Object.freeze({
+        columnOrder: frozenArray(order),
+        columnId: sourceId,
+        finished: true,
+      })
+    );
   }
 
   private onResizeStart(event: PointerEvent, id: string): void {
@@ -2411,11 +2589,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     else next.set(session.columnId, session.initialStateWidth);
     this.columnWidths = next;
     if (emit) {
-      this.emit("lr-column-resize", Object.freeze({
-        columnId: session.columnId,
-        width: session.startWidth,
-        finished: false,
-      }));
+      this.emit(
+        "lr-column-resize",
+        Object.freeze({
+          columnId: session.columnId,
+          width: session.startWidth,
+          finished: false,
+        })
+      );
     }
   }
 
@@ -2427,11 +2608,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       return;
     }
     const width = this.columnWidths.get(session.columnId) ?? session.startWidth;
-    this.emit("lr-column-resize", Object.freeze({
-      columnId: session.columnId,
-      width,
-      finished: true,
-    }));
+    this.emit(
+      "lr-column-resize",
+      Object.freeze({
+        columnId: session.columnId,
+        width,
+        finished: true,
+      })
+    );
   }
 
   private onResizeCancel(event: PointerEvent): void {
@@ -2441,10 +2625,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private onResizeKey(event: KeyboardEvent, id: string): void {
-    if (
-      (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
-    )
-      return;
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     const entry = this.orderedColumns.find((item) => item.id === id);
     if (!entry || !this.columnCanResize(id)) return;
     const logical =
@@ -2590,12 +2771,15 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       if (rowPosition < 0 && columnIdValue)
         this.activateSort(columnIdValue, event.shiftKey);
       else if (item && column)
-        this.emit("lr-cell-click", Object.freeze({
-          column,
-          value: columnValue(column, item.row),
-          row: item.row,
-          index: rowPosition,
-        }));
+        this.emit(
+          "lr-cell-click",
+          Object.freeze({
+            column,
+            value: columnValue(column, item.row),
+            row: item.row,
+            index: rowPosition,
+          })
+        );
       event.preventDefault();
     } else if (event.key === " " && item) {
       const selected = !arrayHasKey(this.selectedKeys, item.key);
@@ -2748,12 +2932,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const pinAllowed = this.pinnable || column.pinnable;
     const visible = this.columnVisibility.get(id) ?? column.hidden !== true;
     const label = this.columnLabel(column, id);
-    const menuId = `column-menu-${Math.max(0, this.orderedColumns.findIndex((entry) => entry.id === id))}`;
-    const menuLabel = this.localize(
-      "dataGridColumnMenu",
-      undefined,
-      { label }
-    );
+    const menuId = `column-menu-${Math.max(
+      0,
+      this.orderedColumns.findIndex((entry) => entry.id === id)
+    )}`;
+    const menuLabel = this.localize("dataGridColumnMenu", undefined, { label });
     return html`
       <div part="column-menu">
         <button
@@ -2778,8 +2961,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                   if (event.key !== "Escape") return;
                   this.activeColumnMenu = null;
                   event.preventDefault();
-                  const trigger = (event.currentTarget as HTMLElement)
-                    .parentElement?.querySelector<HTMLElement>('[part="column-menu-button"]');
+                  const trigger = (
+                    event.currentTarget as HTMLElement
+                  ).parentElement?.querySelector<HTMLElement>(
+                    '[part="column-menu-button"]'
+                  );
                   void this.updateComplete.then(() => trigger?.focus());
                 }}
               >
@@ -2790,33 +2976,23 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                         data-column-action="pin-start"
                         @click=${() => this.userPinColumn(id, "left")}
                       >
-                        ${this.localize(
-                          "dataGridPinStart",
-                          undefined,
-                          { label }
-                        )}
+                        ${this.localize("dataGridPinStart", undefined, {
+                          label,
+                        })}
                       </button>
                       <button
                         type="button"
                         data-column-action="pin-end"
                         @click=${() => this.userPinColumn(id, "right")}
                       >
-                        ${this.localize(
-                          "dataGridPinEnd",
-                          undefined,
-                          { label }
-                        )}
+                        ${this.localize("dataGridPinEnd", undefined, { label })}
                       </button>
                       <button
                         type="button"
                         data-column-action="unpin"
                         @click=${() => this.userPinColumn(id, false)}
                       >
-                        ${this.localize(
-                          "dataGridUnpin",
-                          undefined,
-                          { label }
-                        )}
+                        ${this.localize("dataGridUnpin", undefined, { label })}
                       </button>
                     `
                   : nothing}
@@ -2904,7 +3080,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                   session &&
                   this.columnCanMove(session.sourceId) &&
                   this.columnCanMove(id)
-                ) event.preventDefault();
+                )
+                  event.preventDefault();
               }}
               @drop=${(event: DragEvent) => this.onDrop(event, id)}
             >
@@ -3271,12 +3448,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     let ariaRowIndex =
       2 +
       window.start +
-      allItems.slice(0, window.start).filter(
-        (item) =>
-          item.kind === "row" &&
-          Boolean(this.rowDetail) &&
-          arrayHasKey(this.expandedKeys, item.key)
-      ).length;
+      allItems
+        .slice(0, window.start)
+        .filter(
+          (item) =>
+            item.kind === "row" &&
+            Boolean(this.rowDetail) &&
+            arrayHasKey(this.expandedKeys, item.key)
+        ).length;
     return html`
       ${window.start > 0
         ? html`<div
@@ -3392,7 +3571,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                 html`<option value=${value}>${format.format(value)}</option>`
             )}
           </select>
-          <span class="page-size-chevron" aria-hidden="true">${chevronIcon()}</span>
+          <span class="page-size-chevron" aria-hidden="true"
+            >${chevronIcon()}</span
+          >
         </span>
         <button
           part="pager-button first-button"
@@ -3531,7 +3712,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             `
           : nothing}
         ${this.renderPager()}
-        <div part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</div>
+        <div part="live-region" class="sr-only" aria-hidden="true">
+          ${this.liveText}
+        </div>
         ${this.dragGhost
           ? html`<div part="drag-ghost">${this.dragGhost}</div>`
           : nothing}

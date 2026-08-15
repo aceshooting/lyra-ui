@@ -1,9 +1,10 @@
 import { finiteNumber } from '../../../internal/numbers.js';
 
 /** One synced transcript entry. `end` is exclusive; an omitted `end` extends to the next cue (or
- * forever, for the last one). */
+ * forever, for the last one). Cue collections require a trimmed nonempty `cueId` and retain the
+ * first occurrence when IDs repeat. */
 export interface LyraAvCue {
-  readonly id: string;
+  readonly cueId: string;
   readonly start: number;
   readonly end?: number;
   readonly text: string;
@@ -72,10 +73,10 @@ export function snapshotLyraAvCues(value: unknown): readonly LyraAvCue[] {
     (candidate) => {
       if (candidate === null || typeof candidate !== 'object') return undefined;
       const record = candidate as Record<string, unknown>;
-      if (typeof record['id'] !== 'string' || typeof record['text'] !== 'string') return undefined;
-      const id = record['id'].trim();
-      if (!id || id.length > MAX_CUE_ID_CHARS || seenIds.has(id)) return undefined;
-      seenIds.add(id);
+      if (typeof record['cueId'] !== 'string' || typeof record['text'] !== 'string') return undefined;
+      const cueId = record['cueId'].trim();
+      if (!cueId || cueId.length > MAX_CUE_ID_CHARS || seenIds.has(cueId)) return undefined;
+      seenIds.add(cueId);
       const rawStart = record['start'];
       const start = Math.max(0, finiteNumber(typeof rawStart === 'number' ? rawStart : 0, 0));
       const rawEnd = record['end'];
@@ -87,7 +88,7 @@ export function snapshotLyraAvCues(value: unknown): readonly LyraAvCue[] {
         ? rawSpeaker.slice(0, MAX_CUE_SPEAKER_CHARS)
         : undefined;
       return Object.freeze({
-        id,
+        cueId,
         start,
         text: record['text'].slice(0, MAX_CUE_TEXT_CHARS),
         ...(end !== undefined ? { end } : {}),

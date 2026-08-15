@@ -1,13 +1,12 @@
-import { html, nothing, type TemplateResult } from 'lit';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { sizes } from '../../../internal/sizes.styles.js';
-import { LyraRadio } from './radio.class.js';
-import { styles } from './radio-button.styles.js';
+import { html, nothing, type TemplateResult } from "lit";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { sizes } from "../../../internal/sizes.styles.js";
+import { LyraRadio } from "./radio.class.js";
+import { styles } from "./radio-button.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import { LYRA_DEFAULT_fieldRequired } from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /**
  * `<lr-radio-button>` — a single-choice control rendered as a button rather than a circle.
@@ -68,8 +67,8 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
  * @csspart end - The trailing-content wrapper.
  * @csspart suffix - Shoelace-compatible alias for `end`; both names are on the same wrapper.
  * @cssprop [--lr-radio-radius=var(--lr-form-control-radius)] - Corner radius of the outer edges of
- * the button row. Inherited from `<lr-radio>` and re-pointed here at the shared control radius;
- * `pill` swaps it for `--lr-radius-pill`.
+ * the button row. Its private default follows the shared control radius and changes to
+ * `--lr-radius-pill` for `pill`; an inherited or direct public value still wins.
  * @cssprop [--lr-radio-button-gap=var(--lr-space-xs)] - Gap between the start/prefix wrapper,
  * label, and end/suffix wrapper in both `<lr-radio-button>` and `<lr-radio appearance="button">`.
  * @cssprop [--lr-radio-button-hover-bg=var(--lr-color-brand-quiet)] - Unchecked button background
@@ -97,10 +96,11 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
 export class LyraRadioButton extends LyraRadio {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      fieldRequired: LYRA_DEFAULT_fieldRequired,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, sizes, styles];
@@ -108,33 +108,43 @@ export class LyraRadioButton extends LyraRadio {
   override render(): TemplateResult {
     const disabled = this.effectiveDisabled;
     const parts = [
-      'base',
-      'button',
-      'control',
-      this.checked ? 'checked button--checked' : '',
-      disabled ? 'disabled' : '',
-    ].filter(Boolean).join(' ');
+      "base",
+      "button",
+      "control",
+      this.checked ? "checked button--checked" : "",
+      disabled ? "disabled" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     return html`
       <span
         part=${parts}
         data-run=${this.buttonRunPosition}
         role="radio"
-        tabindex=${disabled || !this.groupTabbable ? '-1' : '0'}
-        aria-checked=${this.checked ? 'true' : 'false'}
-        aria-disabled=${disabled ? 'true' : 'false'}
-        aria-required=${this.effectiveRequired ? 'true' : 'false'}
-        aria-label=${this.getAttribute('aria-label') ?? nothing}
+        tabindex=${disabled || !this.groupTabbable ? "-1" : "0"}
+        aria-checked=${this.checked ? "true" : "false"}
+        aria-disabled=${disabled ? "true" : "false"}
+        aria-required=${this.effectiveRequired ? "true" : "false"}
+        aria-label=${this.getAttribute("aria-label") ?? nothing}
         @click=${this.onClick}
         @keydown=${this.onKeyDown}
         @focus=${this.onFocus}
         @blur=${this.onBlur}
       >
-        <span part="start prefix"><slot name="start"></slot><slot name="prefix"></slot></span>
+        <span part="start prefix"
+          ><slot name="start"></slot><slot name="prefix"></slot
+        ></span>
         <span part="label"><slot></slot></span>
-        <span part="end suffix"><slot name="end"></slot><slot name="suffix"></slot></span>
+        <span part="end suffix"
+          ><slot name="end"></slot><slot name="suffix"></slot
+        ></span>
       </span>
     `;
   }
 }
 
-declare global { interface HTMLElementTagNameMap { 'lr-radio-button': LyraRadioButton; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    "lr-radio-button": LyraRadioButton;
+  }
+}

@@ -33,6 +33,7 @@ import type {
   PageThumbnailRenderHandle,
 } from '../page-rail/page-rail.class.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_pptxViewerFidelityNotice, LYRA_DEFAULT_pptxViewerLabel, LYRA_DEFAULT_pptxViewerNextSlide, LYRA_DEFAULT_pptxViewerPreviousSlide, LYRA_DEFAULT_pptxViewerRenderError, LYRA_DEFAULT_pptxViewerSlideOf } from '../../../internal/default-strings.generated.js';
@@ -150,10 +151,18 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   override async search(query: string): Promise<number> {
     const generation = ++this.pptxSearchGeneration;
     const viewer = this.viewer;
+    const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
     this.pptxSearchQuery = query;
     this.disposeSearchHighlight();
     viewer?.clearSearchHighlights();
-    if (!viewer || !query.trim()) {
+    if (!boundedQuery.accepted) {
+      this.pptxSearchMatches = [];
+      this.pptxSearchMatchCountExact = false;
+      this.pptxSearchActiveIndex = -1;
+      this.emitPptxSearchChange();
+      return 0;
+    }
+    if (!viewer || !boundedQuery.needle) {
       this.pptxSearchMatches = [];
       this.pptxSearchMatchCountExact = true;
       this.pptxSearchActiveIndex = -1;
@@ -161,7 +170,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       return 0;
     }
     try {
-      const raw = viewer.searchText(query, { matchCase: false });
+      const raw = viewer.searchText(query.trim(), { matchCase: false });
       if (generation !== this.pptxSearchGeneration || viewer !== this.viewer) {
         return this.pptxSearchMatches.length;
       }
@@ -429,8 +438,13 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   ): { matches: PptxTextSearchResult[]; matchCountExact: boolean } {
     if (!Array.isArray(value)) throw new TypeError('PPTX search returned a non-array result.');
     const matches: PptxTextSearchResult[] = [];
+    const work = new ViewerSearchWorkBudget();
     let matchCountExact = true;
     for (const candidate of value) {
+      if (!work.consume('')) {
+        matchCountExact = false;
+        break;
+      }
       if (!candidate || typeof candidate !== 'object') continue;
       const result = candidate as Partial<PptxTextSearchResult>;
       if (
@@ -445,13 +459,17 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
         || result.matchEnd! < result.matchStart!
         || result.matchEnd! > result.text.length
       ) continue;
+      if (!work.consume(result.nodeId) || !work.consume(result.text)) {
+        matchCountExact = false;
+        break;
+      }
       if (matches.length === MAX_PPTX_SEARCH_MATCHES) {
         matchCountExact = false;
         break;
       }
       matches.push(candidate as PptxTextSearchResult);
     }
-    return { matches, matchCountExact };
+    return { matches, matchCountExact: matchCountExact && work.complete };
   }
 
   private async focusPptxSearchMatch(

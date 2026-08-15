@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -7,10 +7,10 @@ export const styles = css`
     max-inline-size: 100%;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
-    --lr-compare-panel-max-height: var(--lr-size-24rem);
+    --_lr-compare-panel-max-height: var(--lr-size-24rem);
   }
 
-  [part='base'] {
+  [part="base"] {
     display: flex;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -19,17 +19,17 @@ export const styles = css`
     color: var(--lr-color-text);
   }
 
-  [part='prompt'] {
+  [part="prompt"] {
     padding: var(--lr-space-s) var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
   }
-  [part='prompt'][hidden] {
+  [part="prompt"][hidden] {
     display: none;
   }
 
-  [part='panes'] {
+  [part="panes"] {
     display: flex;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -37,8 +37,8 @@ export const styles = css`
     align-items: stretch;
   }
 
-  [part='pane-a'],
-  [part='pane-b'] {
+  [part="pane-a"],
+  [part="pane-b"] {
     flex: 1 1 0;
     min-inline-size: 0;
     display: flex;
@@ -47,17 +47,20 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     padding: var(--lr-space-m);
-    max-block-size: var(--lr-compare-panel-max-height);
+    max-block-size: var(
+      --lr-compare-panel-max-height,
+      var(--_lr-compare-panel-max-height)
+    );
     overflow-x: hidden;
     overflow-y: auto;
   }
-  [part='pane-a']:focus-visible,
-  [part='pane-b']:focus-visible {
+  [part="pane-a"]:focus-visible,
+  [part="pane-b"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
 
-  [part='pane-header'] {
+  [part="pane-header"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
@@ -68,7 +71,7 @@ export const styles = css`
     letter-spacing: var(--lr-size-0-02em);
   }
 
-  [part='vote-bar'] {
+  [part="vote-bar"] {
     display: flex;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -76,7 +79,7 @@ export const styles = css`
     gap: var(--lr-space-s);
   }
 
-  [part='vote-button'] {
+  [part="vote-button"] {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
@@ -88,9 +91,10 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
+    transition: background-color var(--lr-transition-fast),
+      border-color var(--lr-transition-fast);
   }
-  [part='vote-button']:hover {
+  [part="vote-button"]:hover {
     background: var(--lr-color-brand-quiet);
   }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
@@ -98,26 +102,39 @@ export const styles = css`
      than hover in both light and dark themes rather than repeating it. Placed before the selected
      rule deliberately: once a vote is cast, the selected treatment is the state worth showing, and
      the button's own :hover already answers the pointer. */
-  [part='vote-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="vote-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='vote-button']:where([data-selected]) {
-    background: var(--lr-compare-panel-selected-background, var(--lr-color-brand-quiet));
-    border-color: var(--lr-compare-panel-selected-border-color, var(--lr-color-brand));
+  [part="vote-button"]:where([data-selected]) {
+    background: var(
+      --lr-compare-panel-selected-background,
+      var(--lr-color-brand-quiet)
+    );
+    border-color: var(
+      --lr-compare-panel-selected-border-color,
+      var(--lr-color-brand)
+    );
     color: var(--lr-compare-panel-selected-color, var(--lr-color-brand));
-    font-weight: var(--lr-compare-panel-selected-font-weight, var(--lr-font-weight-semibold));
+    font-weight: var(
+      --lr-compare-panel-selected-font-weight,
+      var(--lr-font-weight-semibold)
+    );
   }
-  [part='vote-button']:disabled {
+  [part="vote-button"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='vote-button']:focus-visible {
+  [part="vote-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
 
   @container (max-inline-size: 639.98px) {
-    [part='panes'] {
+    [part="panes"] {
       flex-direction: column;
     }
   }

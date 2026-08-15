@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Starter prompts and follow-up suggestions as a chip row. Each item has a unique nonempty suggestionId; invalid and later duplicate identifiers are omitted. Never writes into a composer or sends anything — the host listens for lr-suggestion-select with { suggestionId, label }.',
+          'Starter prompts and follow-up suggestions as a chip row. Each item has a unique nonempty suggestionId; invalid and later duplicate identifiers are omitted. Suggestions are a bounded clone-owned frozen snapshot; create and reassign a new array after changes. Never writes into a composer or sends anything — the host listens for lr-suggestion-select with { suggestionId, label }.',
       },
     },
   },

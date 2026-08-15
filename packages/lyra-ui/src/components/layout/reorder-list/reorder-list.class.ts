@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property, query } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -24,7 +25,7 @@ export interface LyraReorderDetail {
 }
 
 export interface LyraReorderListEventMap {
-  "lr-reorder": CustomEvent<LyraReorderDetail>;
+  "lr-reorder": CustomEvent<LyraEventDetailSnapshot<LyraReorderDetail>>;
 }
 
 type ReorderFocusTarget = {

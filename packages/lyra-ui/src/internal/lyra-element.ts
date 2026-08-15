@@ -44,6 +44,28 @@ export interface LyraEmitOptions {
 export type LyraEventMap = Record<string, Event>;
 
 /**
+ * Public event-detail view: collection paths and their containing records are recursively readonly.
+ * Components may construct a mutable local value before `emit()`; listeners always receive the
+ * detached, frozen runtime snapshot represented by this type.
+ */
+export type LyraEventDetailSnapshot<Value> = Value extends (
+  ...args: never[]
+) => unknown
+  ? Value
+  : Value extends ReadonlyMap<infer Key, infer Entry>
+  ? ReadonlyMap<
+      LyraEventDetailSnapshot<Key>,
+      LyraEventDetailSnapshot<Entry>
+    >
+  : Value extends ReadonlySet<infer Entry>
+  ? ReadonlySet<LyraEventDetailSnapshot<Entry>>
+  : Value extends readonly unknown[]
+  ? { readonly [Key in keyof Value]: LyraEventDetailSnapshot<Value[Key]> }
+  : Value extends object
+  ? { readonly [Key in keyof Value]: LyraEventDetailSnapshot<Value[Key]> }
+  : Value;
+
+/**
  * The trailing `emit()` arguments for one entry of a component's event map.
  *
  * The map entry is the single source of truth: `CustomEvent<{ id: string }>` makes `detail`
@@ -74,6 +96,343 @@ export type LyraEmittedEvent<Events, K extends keyof Events & string> = [
   ? CustomEvent<Detail>
   : CustomEvent<unknown>;
 
+/** Maximum number of array entries retained by the shared public-collection snapshot boundary. */
+const PUBLIC_COLLECTION_ENTRY_LIMIT = 10_000;
+/** Maximum number of plain-record properties retained across one snapshot. */
+const PUBLIC_COLLECTION_NODE_LIMIT = 50_000;
+/** Maximum nesting depth traversed while detaching plain records and nested arrays. */
+const PUBLIC_COLLECTION_DEPTH_LIMIT = 16;
+const OMIT_COLLECTION_VALUE = Symbol("omit-public-collection-value");
+
+interface CollectionSnapshotBudget {
+  remaining: number;
+  readonly seen: WeakMap<object, unknown>;
+}
+
+function isRealmNeutralPlainRecord(value: object): boolean {
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === null || Object.getPrototypeOf(prototype) === null;
+  } catch {
+    return false;
+  }
+}
+
+function isArrayValue(value: unknown): value is unknown[] {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detaches the data-bearing portion of a public collection without invoking accessors or an
+ * arbitrary iterable. Platform objects and functions remain identity values; arrays and plain
+ * records are copied recursively, bounded, and frozen before they become observable.
+ */
+function snapshotCollectionValue(
+  value: unknown,
+  budget: CollectionSnapshotBudget,
+  depth: number
+): unknown | typeof OMIT_COLLECTION_VALUE {
+  if (
+    value === null ||
+    (typeof value !== "object" && typeof value !== "function")
+  ) {
+    return value;
+  }
+  if (typeof value === "function") return value;
+  if (depth > PUBLIC_COLLECTION_DEPTH_LIMIT || budget.remaining <= 0)
+    return OMIT_COLLECTION_VALUE;
+
+  const existing = budget.seen.get(value);
+  if (existing !== undefined) return existing;
+
+  if (isArrayValue(value)) {
+    const output: unknown[] = [];
+    budget.seen.set(value, output);
+    let lengthDescriptor: PropertyDescriptor | undefined;
+    try {
+      lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+    } catch {
+      return Object.freeze(output);
+    }
+    const length =
+      lengthDescriptor &&
+      "value" in lengthDescriptor &&
+      typeof lengthDescriptor.value === "number" &&
+      Number.isSafeInteger(lengthDescriptor.value) &&
+      lengthDescriptor.value >= 0
+        ? Math.min(lengthDescriptor.value, PUBLIC_COLLECTION_ENTRY_LIMIT)
+        : 0;
+    for (let index = 0; index < length && budget.remaining > 0; index += 1) {
+      let descriptor: PropertyDescriptor | undefined;
+      try {
+        descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      } catch {
+        continue;
+      }
+      if (!descriptor || !("value" in descriptor)) continue;
+      budget.remaining -= 1;
+      const entry = snapshotCollectionValue(
+        descriptor.value,
+        budget,
+        depth + 1
+      );
+      if (entry !== OMIT_COLLECTION_VALUE) output.push(entry);
+    }
+    return Object.freeze(output);
+  }
+
+  const mapEntries = nativeMapEntries(value);
+  if (mapEntries) return snapshotDetachedMap(value, mapEntries, budget, depth);
+  const setValues = nativeSetValues(value);
+  if (setValues) return snapshotDetachedSet(value, setValues, budget, depth);
+
+  if (!isRealmNeutralPlainRecord(value)) return value;
+
+  let prototype: object | null;
+  try {
+    prototype = Object.getPrototypeOf(value);
+  } catch {
+    return OMIT_COLLECTION_VALUE;
+  }
+  const output = Object.create(
+    prototype === null ? null : Object.prototype
+  ) as Record<PropertyKey, unknown>;
+  budget.seen.set(value, output);
+  let descriptors: PropertyDescriptorMap;
+  try {
+    descriptors = Object.getOwnPropertyDescriptors(value);
+  } catch {
+    return OMIT_COLLECTION_VALUE;
+  }
+  for (const key of Reflect.ownKeys(descriptors)) {
+    if (budget.remaining <= 0) break;
+    const descriptor = descriptors[key as keyof PropertyDescriptorMap];
+    if (!descriptor?.enumerable || !("value" in descriptor)) continue;
+    budget.remaining -= 1;
+    const entry = snapshotCollectionValue(
+      descriptor.value,
+      budget,
+      depth + 1
+    );
+    if (entry !== OMIT_COLLECTION_VALUE) {
+      Object.defineProperty(output, key, {
+        value: entry,
+        enumerable: true,
+        configurable: false,
+        writable: false,
+      });
+    }
+  }
+  return Object.freeze(output);
+}
+
+function snapshotPublicCollection(value: unknown): unknown {
+  if (!isArrayValue(value)) {
+    if (value === null || typeof value !== "object") return value;
+    if (
+      !isRealmNeutralPlainRecord(value) &&
+      !nativeMapEntries(value) &&
+      !nativeSetValues(value)
+    ) {
+      return value;
+    }
+  }
+  const snapshot = snapshotCollectionValue(
+    value,
+    { remaining: PUBLIC_COLLECTION_NODE_LIMIT, seen: new WeakMap() },
+    0
+  );
+  return snapshot === OMIT_COLLECTION_VALUE ? Object.freeze([]) : snapshot;
+}
+
+function nativeMapEntries(
+  value: object
+): IterableIterator<readonly [unknown, unknown]> | undefined {
+  try {
+    return Map.prototype.entries.call(value) as IterableIterator<
+      readonly [unknown, unknown]
+    >;
+  } catch {
+    return undefined;
+  }
+}
+
+function nativeSetValues(value: object): IterableIterator<unknown> | undefined {
+  try {
+    return Set.prototype.values.call(value) as IterableIterator<unknown>;
+  } catch {
+    return undefined;
+  }
+}
+
+function readonlyMapFacade(
+  backing: ReadonlyMap<unknown, unknown>
+): ReadonlyMap<unknown, unknown> {
+  let facade: ReadonlyMap<unknown, unknown>;
+  facade = {
+    get size() {
+      return backing.size;
+    },
+    entries: () => backing.entries(),
+    get: (key) => backing.get(key),
+    has: (key) => backing.has(key),
+    keys: () => backing.keys(),
+    values: () => backing.values(),
+    forEach: (callback, thisArg) => {
+      backing.forEach((entry, key) => callback.call(thisArg, entry, key, facade));
+    },
+    [Symbol.iterator]: () => backing[Symbol.iterator](),
+  };
+  return Object.freeze(facade);
+}
+
+function readonlySetFacade(backing: ReadonlySet<unknown>): ReadonlySet<unknown> {
+  let facade: ReadonlySet<unknown>;
+  facade = {
+    get size() {
+      return backing.size;
+    },
+    entries: () => backing.entries(),
+    has: (value) => backing.has(value),
+    keys: () => backing.keys(),
+    values: () => backing.values(),
+    forEach: (callback, thisArg) => {
+      backing.forEach((entry) => callback.call(thisArg, entry, entry, facade));
+    },
+    [Symbol.iterator]: () => backing[Symbol.iterator](),
+  };
+  return Object.freeze(facade);
+}
+
+/** Creates a frozen facade whose mutating `Map` methods and mutable backing store are unreachable. */
+function snapshotIdentityMap(
+  entries: IterableIterator<readonly [unknown, unknown]>
+): ReadonlyMap<unknown, unknown> {
+  const backing = new Map<unknown, unknown>();
+  for (
+    let next = entries.next(), count = 0;
+    !next.done && count < PUBLIC_COLLECTION_ENTRY_LIMIT;
+    next = entries.next(), count += 1
+  ) {
+    backing.set(next.value[0], next.value[1]);
+  }
+  return readonlyMapFacade(backing);
+}
+
+/** Creates a frozen facade whose mutating `Set` methods and mutable backing store are unreachable. */
+function snapshotIdentitySet(
+  values: IterableIterator<unknown>
+): ReadonlySet<unknown> {
+  const backing = new Set<unknown>();
+  for (
+    let next = values.next(), count = 0;
+    !next.done && count < PUBLIC_COLLECTION_ENTRY_LIMIT;
+    next = values.next(), count += 1
+  ) {
+    backing.add(next.value);
+  }
+  return readonlySetFacade(backing);
+}
+
+function snapshotDetachedMap(
+  source: object,
+  entries: IterableIterator<readonly [unknown, unknown]>,
+  budget: CollectionSnapshotBudget,
+  depth: number
+): ReadonlyMap<unknown, unknown> {
+  const backing = new Map<unknown, unknown>();
+  const facade = readonlyMapFacade(backing);
+  budget.seen.set(source, facade);
+  for (
+    let next = entries.next(), count = 0;
+    !next.done &&
+    count < PUBLIC_COLLECTION_ENTRY_LIMIT &&
+    budget.remaining > 0;
+    next = entries.next(), count += 1
+  ) {
+    budget.remaining -= 1;
+    const key = snapshotCollectionValue(next.value[0], budget, depth + 1);
+    const entry = snapshotCollectionValue(next.value[1], budget, depth + 1);
+    if (key !== OMIT_COLLECTION_VALUE && entry !== OMIT_COLLECTION_VALUE) {
+      backing.set(key, entry);
+    }
+  }
+  return facade;
+}
+
+function snapshotDetachedSet(
+  source: object,
+  values: IterableIterator<unknown>,
+  budget: CollectionSnapshotBudget,
+  depth: number
+): ReadonlySet<unknown> {
+  const backing = new Set<unknown>();
+  const facade = readonlySetFacade(backing);
+  budget.seen.set(source, facade);
+  for (
+    let next = values.next(), count = 0;
+    !next.done &&
+    count < PUBLIC_COLLECTION_ENTRY_LIMIT &&
+    budget.remaining > 0;
+    next = values.next(), count += 1
+  ) {
+    budget.remaining -= 1;
+    const entry = snapshotCollectionValue(next.value, budget, depth + 1);
+    if (entry !== OMIT_COLLECTION_VALUE) backing.add(entry);
+  }
+  return facade;
+}
+
+function snapshotIdentityCollection(value: unknown): unknown {
+  if (isArrayValue(value)) {
+    const output: unknown[] = [];
+    let lengthDescriptor: PropertyDescriptor | undefined;
+    try {
+      lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+    } catch {
+      return Object.freeze(output);
+    }
+    const length =
+      lengthDescriptor &&
+      "value" in lengthDescriptor &&
+      typeof lengthDescriptor.value === "number" &&
+      Number.isSafeInteger(lengthDescriptor.value) &&
+      lengthDescriptor.value >= 0
+        ? Math.min(lengthDescriptor.value, PUBLIC_COLLECTION_ENTRY_LIMIT)
+        : 0;
+    for (let index = 0; index < length; index += 1) {
+      let descriptor: PropertyDescriptor | undefined;
+      try {
+        descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      } catch {
+        continue;
+      }
+      if (descriptor && "value" in descriptor) output.push(descriptor.value);
+    }
+    return Object.freeze(output);
+  }
+  if (value === null || typeof value !== "object") return value;
+  const mapEntries = nativeMapEntries(value);
+  if (mapEntries) return snapshotIdentityMap(mapEntries);
+  const setValues = nativeSetValues(value);
+  if (setValues) return snapshotIdentitySet(setValues);
+  return value;
+}
+
+function snapshotEventDetail(value: unknown): unknown {
+  if (value === undefined || value === null) return value;
+  const snapshot = snapshotCollectionValue(
+    value,
+    { remaining: PUBLIC_COLLECTION_NODE_LIMIT, seen: new WeakMap() },
+    0
+  );
+  return snapshot === OMIT_COLLECTION_VALUE ? null : snapshot;
+}
+
 /**
  * Internal controller seam for browser-derived state that must not change a hydrating element's
  * first render. A symbol keeps the hook out of the component API while allowing shared reactive
@@ -101,6 +460,72 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   // free to reference them. Both are shared `CSSResult` instances, so adopting them in every
   // component costs one stylesheet in the bundle, not one per component.
   static override styles: CSSResultGroup = [palette, tokens];
+
+  /**
+   * Reactive public properties whose array/tuple assignments cross the shared immutable ownership
+   * boundary. Subclasses list only their own collection properties; the descriptor consults the
+   * concrete constructor at assignment time, after static initialization has completed.
+   */
+  protected static readonly ownedCollectionProperties: readonly PropertyKey[] =
+    Object.freeze([]);
+
+  /**
+   * Explicit exceptions whose item identity is itself part of the public contract (for example a
+   * generic virtual-list row or a command object returned to an imperative callback). The array
+   * sequence is still bounded, detached, and frozen; only its item references are retained.
+   */
+  protected static readonly identityCollectionProperties: readonly PropertyKey[] =
+    Object.freeze([]);
+
+  static override getPropertyDescriptor(
+    name: PropertyKey,
+    key: string | symbol,
+    options: PropertyDeclaration
+  ): PropertyDescriptor | undefined {
+    const descriptor = super.getPropertyDescriptor(name, key, options);
+    if (!descriptor?.set) return descriptor;
+    const originalSet = descriptor.set;
+    return {
+      ...descriptor,
+      set(this: LyraElement, value: unknown) {
+        let constructor: typeof LyraElement | null = this
+          .constructor as typeof LyraElement;
+        let ownsCollection = false;
+        let preservesItemIdentity = false;
+        while (constructor && constructor !== LitElement) {
+          if (
+            Object.prototype.hasOwnProperty.call(
+              constructor,
+              "ownedCollectionProperties"
+            ) &&
+            constructor.ownedCollectionProperties.includes(name)
+          ) {
+            ownsCollection = true;
+          }
+          if (
+            Object.prototype.hasOwnProperty.call(
+              constructor,
+              "identityCollectionProperties"
+            ) &&
+            constructor.identityCollectionProperties.includes(name)
+          ) {
+            preservesItemIdentity = true;
+          }
+          constructor = Object.getPrototypeOf(
+            constructor
+          ) as typeof LyraElement | null;
+        }
+        originalSet.call(
+          this,
+          ownsCollection
+            ? preservesItemIdentity
+              ? snapshotIdentityCollection(value)
+              : snapshotPublicCollection(value)
+            : value
+        );
+      },
+    };
+  }
 
   /** @internal English fallbacks owned by this class hierarchy and generated per component. */
   protected static readonly defaultStrings: Readonly<LyraLocaleStrings> =
@@ -567,7 +992,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     }
     CustomEventCtor ??= globalThis.CustomEvent;
     const event = new CustomEventCtor(name, {
-      detail: detail === undefined ? null : detail,
+      detail: detail === undefined ? null : snapshotEventDetail(detail),
       bubbles: true,
       composed: true,
       cancelable: options?.cancelable ?? false,

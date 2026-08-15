@@ -26,6 +26,31 @@ describe('lr-env-list', () => {
     expect(Object.isFrozen(el.entries[0]!)).to.be.true;
   });
 
+  it('keeps the first unique nonempty name before rendering, reveal state, actions, and events', async () => {
+    const el = await fixture<LyraEnvList>(html`<lr-env-list></lr-env-list>`);
+    el.entries = [
+      { name: '', value: 'blank' },
+      { name: '   ', value: 'whitespace' },
+      { name: 'TOKEN', value: 'first', secret: true },
+      { name: 'TOKEN', value: 'later duplicate', secret: true },
+      { name: 'MODE', value: 'production', secret: false },
+    ];
+    await el.updateComplete;
+
+    expect(el.entries.map((entry) => [entry.name, entry.value])).to.deep.equal([
+      ['TOKEN', 'first'],
+      ['MODE', 'production'],
+    ]);
+    expect(el.shadowRoot!.querySelectorAll('[part="name"]').length).to.equal(2);
+    expect(el.shadowRoot!.querySelectorAll('[part="value"]').length).to.equal(2);
+
+    const revealEvent = oneEvent(el, 'lr-reveal-change');
+    (el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLButtonElement).click();
+    expect((await revealEvent as CustomEvent).detail).to.deep.equal({ envName: 'TOKEN', revealed: true });
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="value"]')!.textContent?.trim()).to.equal('first');
+  });
+
   it('gives the reveal and copy buttons a :focus-visible outline (regression)', async () => {
     const el = (await fixture(
       html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secret1', secret: true }]}></lr-env-list>`,
@@ -92,8 +117,8 @@ describe('lr-env-list', () => {
     const reveal = el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLButtonElement;
     const listener = oneEvent(el, 'lr-reveal-change');
     reveal.click();
-    const event = (await listener) as CustomEvent<{ name: string; revealed: boolean }>;
-    expect(event.detail).to.deep.equal({ name: 'API_KEY', revealed: true });
+    const event = (await listener) as CustomEvent<{ envName: string; revealed: boolean }>;
+    expect(event.detail).to.deep.equal({ envName: 'API_KEY', revealed: true });
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).textContent!.trim()).to.equal('secret1');
     el.entries = [{ name: 'API_KEY', value: 'secret2', secret: true }];

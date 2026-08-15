@@ -2,7 +2,8 @@ import { minMax } from './heatmap-scale.js';
 import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 
 export interface CalendarDay {
-  /** ISO `yyyy-mm-dd` date string. */
+  /** ISO `yyyy-mm-dd` date identity. Invalid dates and later duplicate dates are omitted; the
+   * first valid occurrence owns counts, scale, paint, selection, focus, and events. */
   date: string;
   value: number;
 }
@@ -91,8 +92,10 @@ export function buildCalendarGrid(
     .slice(0, MAX_CALENDAR_INPUT_DAYS)
     .map((d) => ({ ...d, dateObj: parseIsoDate(d.date) }))
     .filter((d) => !Number.isNaN(d.dateObj.getTime()) && isCalendarValid(d.date, d.dateObj))
-    .forEach((day) => parsedByDate.set(day.date, day));
-  // Calendar identity is the ISO date. A deterministic last-wins policy is applied before every
+    .forEach((day) => {
+      if (!parsedByDate.has(day.date)) parsedByDate.set(day.date, day);
+    });
+  // Calendar identity is the ISO date. A deterministic first-valid policy is applied before every
   // scale, count, paint, focus, event and annotation path consumes the grid.
   const parsed = [...parsedByDate.values()];
 

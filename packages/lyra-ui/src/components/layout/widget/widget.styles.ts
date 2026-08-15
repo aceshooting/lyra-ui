@@ -6,15 +6,15 @@ export const styles = css`
     /* Fullscreen scrim color -- component-specific so a host can retheme it
        without a raw literal leaking into the public API (no shared
        --lr-*-overlay token exists in the design system to resolve through). */
-    --lr-widget-overlay-color: var(--lr-color-overlay);
-    --lr-widget-fullscreen-inset: max(
+    --_lr-widget-overlay-color: var(--lr-color-overlay);
+    --_lr-widget-fullscreen-inset: max(
         var(--lr-space-l),
         var(--lr-safe-area-top)
       )
       max(var(--lr-space-l), var(--lr-safe-area-inline-end))
       max(var(--lr-space-l), var(--lr-safe-area-bottom))
       max(var(--lr-space-l), var(--lr-safe-area-inline-start));
-    --lr-widget-backdrop-inset: 0;
+    --_lr-widget-backdrop-inset: 0;
   }
   [part="base"] {
     display: flex;
@@ -159,7 +159,10 @@ export const styles = css`
      consumer can retint just the hover state without hijacking the shared brand-quiet/text tokens
      used everywhere else. */
   :where([part="view-toggle"]):hover {
-    background: var(--lr-widget-view-toggle-hover-bg, var(--lr-color-brand-quiet));
+    background: var(
+      --lr-widget-view-toggle-hover-bg,
+      var(--lr-color-brand-quiet)
+    );
     color: var(--lr-widget-view-toggle-hover-color, var(--lr-color-text));
   }
   /* Whatever fill hover resolved to -- including a consumer's own
@@ -186,10 +189,7 @@ export const styles = css`
       var(--lr-color-brand-quiet)
     );
     color: var(--lr-widget-view-toggle-active-color, var(--lr-color-brand));
-    border-color: var(
-      --lr-widget-view-toggle-active-border-color,
-      transparent
-    );
+    border-color: var(--lr-widget-view-toggle-active-border-color, transparent);
   }
   [part="view-toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -251,13 +251,16 @@ export const styles = css`
   }
   [part="backdrop"] {
     position: fixed;
-    inset: var(--lr-widget-backdrop-inset, 0);
-    background: var(--lr-widget-overlay-color);
+    inset: var(--lr-widget-backdrop-inset, var(--_lr-widget-backdrop-inset, 0));
+    background: var(--lr-widget-overlay-color, var(--_lr-widget-overlay-color));
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
   }
   :host([fullscreen]) [part="base"] {
     position: fixed;
-    inset: var(--lr-widget-fullscreen-inset, 0);
+    inset: var(
+      --lr-widget-fullscreen-inset,
+      var(--_lr-widget-fullscreen-inset, 0)
+    );
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 1);
     /* Top of the scale: fullscreen is a modal layer sitting above [part="backdrop"], and it is the
        only state in which this widget stops being resting chrome. */

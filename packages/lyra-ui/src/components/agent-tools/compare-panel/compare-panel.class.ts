@@ -22,6 +22,8 @@ export interface LyraComparePanelEventMap {
  * bar, synchronized reading.
  * A host may commit `itemId` and its controlled `vote` in either assignment order. Changing only
  * `itemId` clears the prior vote; an explicit vote in the same update is preserved.
+ * `allowedVotes` is a clone-owned, bounded readonly snapshot; create and reassign a new array
+ * after changing the permitted choices.
  *
  * @customElement lr-compare-panel
  * @slot a - The first output (any content — a chat message, markdown, a viewer).
@@ -51,6 +53,8 @@ export interface LyraComparePanelEventMap {
  * @since 4.0.0
  */
 export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["allowedVotes"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -139,9 +143,9 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     this.requestUpdate('itemId', old);
   }
 
-  /** Vote choices shown in the canonical `a`, `b`, `tie`, `both-bad` order.
+  /** Clone-owned vote choices shown in the canonical `a`, `b`, `tie`, `both-bad` order.
    *  JS-only so the positive choice list stays typed instead of relying on a
-   *  lossy comma-separated attribute representation. */
+   *  lossy comma-separated attribute representation. Reassign a new array after changes. */
   @property({ attribute: false }) allowedVotes: readonly CompareVote[] = ['a', 'b', 'tie', 'both-bad'];
 
   get syncScroll(): boolean {

@@ -11,11 +11,25 @@ it('normalizes string shorthand without changing complete records', () => {
   expect(normalizeCatalog([full])).to.deep.equal([full]);
 });
 
+it('keeps the first unique nonempty catalog id before any picker uses the collection', () => {
+  const first = { id: 'same', label: 'First', previewUrl: 'first.mp3' };
+  const later = { id: 'same', label: 'Later', previewUrl: 'later.mp3' };
+
+  expect(normalizeCatalog(['', 'alpha', 'alpha', '   ', 'beta'])).to.deep.equal([
+    { id: 'alpha', label: 'alpha' },
+    { id: 'beta', label: 'beta' },
+  ]);
+  expect(normalizeCatalog([first, later])).to.deep.equal([first]);
+});
+
 it('adds one synthetic stale value without mutating the source catalog', () => {
   const source = [{ id: 'a', label: 'Alpha' }];
   expect(withSyntheticCatalogValue(source, 'stale')).to.deep.equal([
     { id: 'a', label: 'Alpha', synthetic: false },
     { id: 'stale', label: 'stale', synthetic: true },
+  ]);
+  expect(withSyntheticCatalogValue(source, '   ')).to.deep.equal([
+    { id: 'a', label: 'Alpha', synthetic: false },
   ]);
   expect(source).to.deep.equal([{ id: 'a', label: 'Alpha' }]);
 });

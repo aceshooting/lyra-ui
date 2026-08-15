@@ -91,10 +91,10 @@ export interface LazyToolRendererDefinition extends ToolRendererDefinitionBase {
 export type ToolRendererDefinition = DirectToolRendererDefinition | LazyToolRendererDefinition;
 
 /** A tool-name -> renderer-definition registry, as consulted by `findToolRenderer()`. */
-export type ToolRendererRegistry = Map<string, ToolRendererDefinition>;
+export type ToolRendererRegistry = ReadonlyMap<string, ToolRendererDefinition>;
 
 /** The module-level registry every `<lr-tool-result-view>` dispatches against by default (see its `registry` prop to opt a given instance into a different one instead). */
-const defaultRegistry: ToolRendererRegistry = new Map();
+const defaultRegistry = new Map<string, ToolRendererDefinition>();
 
 /**
  * Resolved-`load()` cache, keyed by *definition object identity* rather than

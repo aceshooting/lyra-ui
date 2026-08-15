@@ -16,12 +16,17 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './document-preview.styles.js';
-import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
+import type {
+  HighlightActivateDetail,
+  LyraAnchor,
+  LyraHighlight,
+} from '../document-viewer/anchors.js';
 import {
   sanitizeCssLength,
   sanitizePercentRect,
 } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_convertingDocument, LYRA_DEFAULT_documentPreviewAlt, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewNotAvailable, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -99,7 +104,7 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
 export interface LyraDocumentPreviewEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-download': CustomEvent<{ src: string; filename: string }>;
-  'lr-highlight-activate': CustomEvent<{ id: string }>;
+  'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
 }
 /**
  * `<lr-document-preview>` — a format-dispatching viewer for one document/
@@ -169,7 +174,8 @@ export interface LyraDocumentPreviewEventMap {
  *   component's own `text/*`/`application/json` `fetch(src)` fails. Distinct
  *   from `status="error"`, which is entirely host-driven (see the class
  *   doc).
- * @event lr-highlight-activate - A region highlight was activated (image format only). `detail: { id }`.
+ * @event lr-highlight-activate - A region highlight was activated (image format only).
+ *   `detail: { highlightId }`.
  * @csspart base - The root container.
  * @csspart header - The row above the body, holding `filename`. Hidden entirely when `filename` is unset.
  * @csspart filename - The filename text.
@@ -279,9 +285,17 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
    * Property-only: this is a composition control rather than author-facing markup state. */
   @property({ attribute: false }) suppressDownload = false;
 
+  private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
   /** Display-only region highlights over the image-format preview (see the class doc's format-
-   *  dispatch scope -- text/generic formats never render these). */
-  @property({ attribute: false }) highlights: LyraHighlight[] = [];
+   * dispatch scope -- text/generic formats never render these). IDs are trimmed and must be
+   * nonempty; the first record for an ID is retained and blank or later duplicates are ignored. */
+  @property({ attribute: false })
+  get highlights(): readonly LyraHighlight[] { return this._highlights; }
+  set highlights(value: readonly LyraHighlight[]) {
+    const previous = this._highlights;
+    this._highlights = snapshotLyraHighlights(value);
+    this.requestUpdate('highlights', previous);
+  }
   @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
   readonly anchorKinds: LyraAnchor['kind'][] = ['region'];
 
@@ -605,7 +619,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
             type="button"
             role="button"
             aria-label=${this.highlightActionLabel(h, index, regionHighlights.length)}
-            @click=${() => this.emit('lr-highlight-activate', { id: h.id })}
+            @click=${() => this.emit('lr-highlight-activate', { highlightId: h.id })}
           ></button>` : nothing}
           <div
             part="region-highlight"
@@ -638,7 +652,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
           type="button"
           data-highlight-id=${highlight.id}
           aria-label=${label}
-          @click=${() => this.emit('lr-highlight-activate', { id: highlight.id })}
+          @click=${() => this.emit('lr-highlight-activate', { highlightId: highlight.id })}
         >
           ${highlight.label || label}
         </button>

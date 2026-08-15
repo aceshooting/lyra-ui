@@ -176,7 +176,7 @@ export const LabelIndent: Story = {
     docs: {
       description: {
         story:
-          '`--lr-checkbox-label-indent` publishes the distance from the control\'s start edge to the start of the label — the box floor (`--lr-checkbox-box-size`, which tracks `size`) plus the label gap (`--lr-space-s`). The same value drives the real gap, so the two can never drift. Because custom properties inherit down and not sideways, a **sibling** node in your own tree cannot read it off the checkbox: give the wrapper the same formula (from the `--lr-theme-*` tokens you control) and both stay aligned, as the second block shows.',
+          '`--lr-checkbox-label-indent` controls the distance from the control\'s start edge to the start of the label — its private default is the box floor (`--lr-checkbox-box-size`, which tracks `size`) plus the label gap (`--lr-space-s`). The same input drives the real gap. Because custom properties inherit down and not sideways, a **sibling** node in your own tree cannot read the resolved private default off the checkbox: give the wrapper the same formula (from the `--lr-theme-*` tokens you control) and both stay aligned, as the second block shows.',
       },
     },
   },
@@ -184,8 +184,8 @@ export const LabelIndent: Story = {
     <div style="display: grid; gap: 1rem; max-inline-size: 26rem;">
       <div>
         <lr-checkbox value="daily" id="indent-checkbox">Daily digest</lr-checkbox>
-        <!-- Read off the checkbox itself: works because this <p> is a descendant of nothing --
-             it is positioned by a padding copied from the element's own published value. -->
+        <!-- This sibling cannot inherit from the checkbox, so its fallback mirrors the default
+             2.25rem indent rather than pretending to read the component's private default. -->
         <p
           style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-checkbox-label-indent, 2.25rem); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
         >

@@ -229,7 +229,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property({ converter: monthsConverter, reflect: true }) months: 1 | 2 = 1;
-  /** Visual size — scales `--lr-cell-size` proportionally; not pixel-matched to
+  /** Visual size — scales the private default behind `--lr-cell-size` proportionally; not pixel-matched to
    *  `lr-input`'s row-height scale (a calendar cell isn't a text row). The Web Awesome / Shoelace spellings
    *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
    *  attribute rewrite. */

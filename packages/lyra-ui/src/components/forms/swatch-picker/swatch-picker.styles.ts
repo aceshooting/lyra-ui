@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -12,14 +12,14 @@ export const styles = css`
        --lr-focus-ring-color from tokens.styles.ts) so a host can retheme the
        selection indicator independently of the :focus-visible outline and every
        other ring color in the library, while defaulting to the brand color. */
-    --lr-swatch-picker-selected-color: var(--lr-color-brand);
+    --_lr-swatch-picker-selected-color: var(--lr-color-brand);
     /* Blur radius of that same ring -- 0 by default (a crisp ring, today's look for every
        existing consumer). A host that wants a soft glow instead sets this to a real length
        (e.g. 0.4rem) rather than reaching for ::part(swatch)[aria-checked] from outside, which
        isn't reliably selectable: the CSS Shadow Parts spec only allows a fixed set of
        pseudo-classes after ::part(), not arbitrary attribute selectors, so that combinator can
        silently fail to match depending on the engine. */
-    --lr-swatch-picker-selected-blur: 0;
+    --_lr-swatch-picker-selected-blur: 0;
     /* Pulsing "shine" duration for the selected swatch -- 0s (the default) is a no-op (today's
        static look for every existing consumer, and unaffected by this token at all: a 0-duration
        animation resolves to its end state instantly and imperceptibly). A host sets a real
@@ -30,51 +30,75 @@ export const styles = css`
        and an icon swatch alike -- filter applies to the whole element including a slotted icon,
        with no icon-specific branching needed (unlike the box-shadow/drop-shadow split below, which
        needs one precisely because box-shadow doesn't reach into a transparent box's own content). */
-    --lr-swatch-picker-shine-duration: 0s;
-    --lr-swatch-picker-gemstone-selected-blur: var(--lr-size-0-5rem);
-    --lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);
-    --lr-swatch-picker-hit-size: var(--lr-size-2-5rem);
-    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-5rem));
-    --lr-swatch-picker-gap: var(--lr-space-xs);
+    --_lr-swatch-picker-shine-duration: 0s;
+    --_lr-swatch-picker-gemstone-selected-blur: var(--lr-size-0-5rem);
+    --_lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);
+    --_lr-swatch-picker-hit-size: var(--lr-size-2-5rem);
+    --_lr-swatch-picker-fill-size: var(
+      --lr-theme-swatch-picker-fill-size,
+      var(--lr-size-1-5rem)
+    );
+    --_lr-swatch-picker-gap: var(--lr-space-xs);
   }
   /* A swatch is a square tap target in a wrapping grid, not a form-control row, so this is the
      component's own ladder rather than the shared --lr-form-control-height one: the two agree from
      m upwards, but the shared 2xs/xs steps (20/24px) would put a swatch at or under the WCAG 2.5.8
      minimum with no margin. It still matches both spellings of every tier, the same way
      internal/sizes.styles.ts does, so size="small" is honoured here too. */
-  :host([size='2xs']) {
-    --lr-swatch-picker-hit-size: var(--lr-size-1-5rem);
-    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-0-75rem));
+  :host([size="2xs"]) {
+    --_lr-swatch-picker-hit-size: var(--lr-size-1-5rem);
+    --_lr-swatch-picker-fill-size: var(
+      --lr-theme-swatch-picker-fill-size,
+      var(--lr-size-0-75rem)
+    );
   }
-  :host([size='xs']) {
-    --lr-swatch-picker-hit-size: var(--lr-size-1-75rem);
-    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1rem));
+  :host([size="xs"]) {
+    --_lr-swatch-picker-hit-size: var(--lr-size-1-75rem);
+    --_lr-swatch-picker-fill-size: var(
+      --lr-theme-swatch-picker-fill-size,
+      var(--lr-size-1rem)
+    );
   }
-  :host([size='s']),
-  :host([size='small']) {
-    --lr-swatch-picker-hit-size: var(--lr-size-2rem);
-    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-25rem));
+  :host([size="s"]),
+  :host([size="small"]) {
+    --_lr-swatch-picker-hit-size: var(--lr-size-2rem);
+    --_lr-swatch-picker-fill-size: var(
+      --lr-theme-swatch-picker-fill-size,
+      var(--lr-size-1-25rem)
+    );
   }
-  :host([size='l']),
-  :host([size='large']) {
-    --lr-swatch-picker-hit-size: var(--lr-size-3rem);
-    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-1-75rem));
+  :host([size="l"]),
+  :host([size="large"]) {
+    --_lr-swatch-picker-hit-size: var(--lr-size-3rem);
+    --_lr-swatch-picker-fill-size: var(
+      --lr-theme-swatch-picker-fill-size,
+      var(--lr-size-1-75rem)
+    );
   }
-  :host([size='xl']) {
-    --lr-swatch-picker-hit-size: var(--lr-size-3-5rem);
-    --lr-swatch-picker-fill-size: var(--lr-theme-swatch-picker-fill-size, var(--lr-size-2rem));
+  :host([size="xl"]) {
+    --_lr-swatch-picker-hit-size: var(--lr-size-3-5rem);
+    --_lr-swatch-picker-fill-size: var(
+      --lr-theme-swatch-picker-fill-size,
+      var(--lr-size-2rem)
+    );
   }
-  :host([mode='gemstone']) {
-    --lr-swatch-picker-selected-blur: var(--lr-swatch-picker-gemstone-selected-blur);
-    --lr-swatch-picker-shine-duration: var(--lr-swatch-picker-gemstone-shine-duration);
+  :host([mode="gemstone"]) {
+    --_lr-swatch-picker-selected-blur: var(
+      --lr-swatch-picker-gemstone-selected-blur,
+      var(--_lr-swatch-picker-gemstone-selected-blur)
+    );
+    --_lr-swatch-picker-shine-duration: var(
+      --lr-swatch-picker-gemstone-shine-duration,
+      var(--_lr-swatch-picker-gemstone-shine-duration)
+    );
   }
-  [part='base'] {
+  [part="base"] {
     display: inline-flex;
     flex-wrap: wrap;
     min-inline-size: 0;
-    gap: var(--lr-swatch-picker-gap);
+    gap: var(--lr-swatch-picker-gap, var(--_lr-swatch-picker-gap));
   }
-  [part='swatch'] {
+  [part="swatch"] {
     box-sizing: border-box;
     /* The interactive hit target is sized via the component-scoped --lr-swatch-picker-hit-size
        (default --lr-size-2-5rem, swapped per size tier below, floored at 24px for WCAG 2.5.8),
@@ -87,8 +111,14 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-swatch-picker-hit-size);
-    min-block-size: var(--lr-swatch-picker-hit-size);
+    min-inline-size: var(
+      --lr-swatch-picker-hit-size,
+      var(--_lr-swatch-picker-hit-size)
+    );
+    min-block-size: var(
+      --lr-swatch-picker-hit-size,
+      var(--_lr-swatch-picker-hit-size)
+    );
     padding: 0;
     border: none;
     border-radius: 50%;
@@ -98,11 +128,17 @@ export const styles = css`
     color: var(--lr-swatch-color);
     cursor: pointer;
   }
-  [part='swatch-fill'] {
+  [part="swatch-fill"] {
     box-sizing: border-box;
     display: block;
-    inline-size: var(--lr-swatch-picker-fill-size);
-    block-size: var(--lr-swatch-picker-fill-size);
+    inline-size: var(
+      --lr-swatch-picker-fill-size,
+      var(--_lr-swatch-picker-fill-size)
+    );
+    block-size: var(
+      --lr-swatch-picker-fill-size,
+      var(--_lr-swatch-picker-fill-size)
+    );
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: 50%;
     /* Per-swatch fill from the option's color, set inline by swatch-picker.class.ts.
@@ -114,16 +150,25 @@ export const styles = css`
        and its focus/selection affordances continue to use system colors in forced-colors mode. */
     forced-color-adjust: none;
   }
-  [part='swatch-icon'] {
+  [part="swatch-icon"] {
     display: flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-swatch-picker-fill-size);
-    block-size: var(--lr-swatch-picker-fill-size);
+    inline-size: var(
+      --lr-swatch-picker-fill-size,
+      var(--_lr-swatch-picker-fill-size)
+    );
+    block-size: var(
+      --lr-swatch-picker-fill-size,
+      var(--_lr-swatch-picker-fill-size)
+    );
     /* gemstoneGlyph() follows the icon convention of a 1em intrinsic box. Establish that em from
        the visible fill token here so the SVG fills this wrapper instead of inheriting the browser's
        smaller default button font size. Consumer-provided em-sized icons benefit identically. */
-    font-size: var(--lr-swatch-picker-fill-size);
+    font-size: var(
+      --lr-swatch-picker-fill-size,
+      var(--_lr-swatch-picker-fill-size)
+    );
     transition: transform var(--lr-transition-fast);
     forced-color-adjust: none;
   }
@@ -131,20 +176,20 @@ export const styles = css`
      binds -- not :host([disabled]) -- so the swatch that is actually inert is the swatch that
      actually dims. (:host(:disabled) would be dead code here: this control is deliberately not
      form-associated, so the UA never computes a FACE disabled state for the host.) */
-  [part='swatch']:disabled {
+  [part="swatch"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='swatch']:not(:disabled):hover [part='swatch-fill'],
-  [part='swatch']:not(:disabled):hover [part='swatch-icon'] {
+  [part="swatch"]:not(:disabled):hover [part="swatch-fill"],
+  [part="swatch"]:not(:disabled):hover [part="swatch-icon"] {
     transform: scale(1.2);
   }
-  [part='swatch']:focus-visible {
+  [part="swatch"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='swatch'][aria-checked='true'] [part='swatch-fill'],
-  [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
+  [part="swatch"][aria-checked="true"] [part="swatch-fill"],
+  [part="swatch"][aria-checked="true"] [part="swatch-icon"] {
     transform: scale(1.2);
   }
   /* The pressed state is expressed as scale, not as a colour mix, because this part's fill IS the
@@ -154,13 +199,27 @@ export const styles = css`
      Deliberately placed AFTER the aria-checked rule above: the two selectors are the same
      specificity (0,3,0), so ordering is the only thing that lets the already-selected swatch --
      the one most likely to be pressed again -- show any pressed feedback at all. */
-  [part='swatch']:not(:disabled):active [part='swatch-fill'],
-  [part='swatch']:not(:disabled):active [part='swatch-icon'] {
+  [part="swatch"]:not(:disabled):active [part="swatch-fill"],
+  [part="swatch"]:not(:disabled):active [part="swatch-icon"] {
     transform: scale(0.95);
   }
-  [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
-    box-shadow: 0 0 var(--lr-swatch-picker-selected-blur) var(--lr-border-width-thick) var(--lr-swatch-picker-selected-color);
-    animation: lr-swatch-picker-shine var(--lr-swatch-picker-shine-duration) infinite;
+  [part="swatch"][aria-checked="true"] [part="swatch-fill"] {
+    box-shadow: 0 0
+      var(
+        --lr-swatch-picker-selected-blur,
+        var(--_lr-swatch-picker-selected-blur)
+      )
+      var(--lr-border-width-thick)
+      var(
+        --lr-swatch-picker-selected-color,
+        var(--_lr-swatch-picker-selected-color)
+      );
+    animation: lr-swatch-picker-shine
+      var(
+        --lr-swatch-picker-shine-duration,
+        var(--_lr-swatch-picker-shine-duration)
+      )
+      infinite;
   }
   @keyframes lr-swatch-picker-shine {
     0%,
@@ -184,17 +243,54 @@ export const styles = css`
      The keyframe therefore re-states the drop-shadow alongside the brightness so the two compose,
      and the static declaration below stays as the path taken when the animation isn't running
      (--lr-swatch-picker-shine-duration: 0s, and prefers-reduced-motion). */
-  [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
-    filter: drop-shadow(0 0 var(--lr-swatch-picker-selected-blur) var(--lr-swatch-picker-selected-color));
-    animation: lr-swatch-picker-shine-icon var(--lr-swatch-picker-shine-duration) infinite;
+  [part="swatch"][aria-checked="true"] [part="swatch-icon"] {
+    filter: drop-shadow(
+      0 0
+        var(
+          --lr-swatch-picker-selected-blur,
+          var(--_lr-swatch-picker-selected-blur)
+        )
+        var(
+          --lr-swatch-picker-selected-color,
+          var(--_lr-swatch-picker-selected-color)
+        )
+    );
+    animation: lr-swatch-picker-shine-icon
+      var(
+        --lr-swatch-picker-shine-duration,
+        var(--_lr-swatch-picker-shine-duration)
+      )
+      infinite;
   }
   @keyframes lr-swatch-picker-shine-icon {
     0%,
     100% {
-      filter: drop-shadow(0 0 var(--lr-swatch-picker-selected-blur) var(--lr-swatch-picker-selected-color)) brightness(1);
+      filter: drop-shadow(
+          0 0
+            var(
+              --lr-swatch-picker-selected-blur,
+              var(--_lr-swatch-picker-selected-blur)
+            )
+            var(
+              --lr-swatch-picker-selected-color,
+              var(--_lr-swatch-picker-selected-color)
+            )
+        )
+        brightness(1);
     }
     50% {
-      filter: drop-shadow(0 0 var(--lr-swatch-picker-selected-blur) var(--lr-swatch-picker-selected-color)) brightness(1.4);
+      filter: drop-shadow(
+          0 0
+            var(
+              --lr-swatch-picker-selected-blur,
+              var(--_lr-swatch-picker-selected-blur)
+            )
+            var(
+              --lr-swatch-picker-selected-color,
+              var(--_lr-swatch-picker-selected-color)
+            )
+        )
+        brightness(1.4);
     }
   }
   /* The scale is redundant selection feedback (the ring already conveys it), so keep the
@@ -204,12 +300,12 @@ export const styles = css`
      loops -- a host that opted into --lr-swatch-picker-shine-duration still gets a selected
      swatch, just without the rhythmic brightening. */
   @media (prefers-reduced-motion: reduce) {
-    [part='swatch-fill'],
-    [part='swatch-icon'] {
+    [part="swatch-fill"],
+    [part="swatch-icon"] {
       transition: none;
     }
-    [part='swatch'][aria-checked='true'] [part='swatch-fill'],
-    [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
+    [part="swatch"][aria-checked="true"] [part="swatch-fill"],
+    [part="swatch"][aria-checked="true"] [part="swatch-icon"] {
       animation: none;
     }
   }

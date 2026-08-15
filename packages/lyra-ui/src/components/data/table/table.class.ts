@@ -21,7 +21,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -90,6 +90,12 @@ interface TableRovingFocusSnapshot {
   index: number;
   targetKey: string | null;
   element: HTMLElement;
+}
+
+interface TableRowEntry<T> {
+  row: T;
+  index: number;
+  key: string | number;
 }
 
 /**
@@ -433,6 +439,9 @@ export interface LyraTableEventMap<T = unknown> {
  * member, focus follows the same stable key when it survives and otherwise
  * clamps to the nearest surviving index; an update never reclaims focus once
  * the user has moved it outside the table.
+ * Blank and later-duplicate column keys are omitted first-wins at assignment. Rows retain their
+ * caller-owned records, then one canonical `rowKey` projection omits blank and later-duplicate
+ * identities before filtering, counts, pagination, focus, actions, and events.
  *
  * Set `aria-label` on the host to give the `role="grid"` element an
  * accessible name; it's forwarded into the shadow DOM's `<table>`.
@@ -665,11 +674,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
     expand: LYRA_DEFAULT_expand,
     loadMore: LYRA_DEFAULT_loadMore,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     noColumns: LYRA_DEFAULT_noColumns,
     noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
     showFewerColumns: LYRA_DEFAULT_showFewerColumns,
     tableEditCell: LYRA_DEFAULT_tableEditCell,
@@ -682,20 +699,37 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   private _columns: readonly TableColumn<T>[] = Object.freeze([]);
-  /** Clone-owned readonly column-definition sequence. Column objects and callbacks retain their
-   * identities; reassign the collection to update. */
+  /** Clone-owned readonly column-definition sequence. Blank keys and later duplicate keys are
+   * omitted (first valid occurrence wins) before any header, cell, sort, focus, or event path.
+   * Column objects and callbacks retain their identities; reassign the collection to update. */
   @property({ attribute: false })
   get columns(): readonly TableColumn<T>[] {
     return this._columns;
   }
   set columns(value: readonly TableColumn<T>[]) {
     const previous = this._columns;
-    this._columns = frozenArray(Array.isArray(value) ? value : []);
+    const columns: TableColumn<T>[] = [];
+    const seen = new Set<string>();
+    if (Array.isArray(value)) {
+      for (const column of value) {
+        try {
+          const key = column?.key;
+          if (typeof key !== 'string' || key.trim().length === 0 || seen.has(key)) continue;
+          seen.add(key);
+          columns.push(column);
+        } catch {
+          // A malformed definition cannot reserve its key or suppress a later valid definition.
+        }
+      }
+    }
+    this._columns = frozenArray(columns);
     this.requestUpdate('columns', previous);
   }
 
   private _rows: readonly T[] = Object.freeze([]);
-  /** Clone-owned readonly row sequence. Row identities are preserved; reassign to update. */
+  /** Clone-owned readonly row sequence. Row objects are retained here; the rendered model applies
+   * `rowKey` as one unique nonempty first-wins identity projection before filtering, counts,
+   * pagination, focus, actions, and events. Reassign the collection to update. */
   @property({ attribute: false })
   get rows(): readonly T[] {
     return this._rows;
@@ -765,7 +799,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  in `rows`, which is only a safe identity while `rows` never reorders —
    *  provide `rowKey` whenever `rows` can be sorted, filtered, or otherwise
    *  re-ordered across renders, or row identity (selection, focus, click
-   *  targets) can silently attach to the wrong row. */
+   *  targets) can silently attach to the wrong row. Empty string identities and later duplicates
+   *  are omitted before every rendered/count/focus/action/event path; the first valid occurrence
+   *  wins. */
   @property({ attribute: false }) rowKey?: (row: T) => string | number;
   @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: TableSelectionMode = 'none';
   private _selectedKeys = new Set<string | number>();
@@ -966,7 +1002,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   /** Window that owns the active resize gesture's global pointer listeners. */
   private resizeEventWindow?: Window;
 
-  private rowsByKey = new Map<string, { row: T; index: number }>();
+  private rowsByKey = new Map<string, TableRowEntry<T>>();
   private columnsByKey = new Map<string, TableColumn<T>>();
 
   /** Watches `[part='base']`'s own inline-size — the `@container` query
@@ -1404,8 +1440,46 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     }
   }
 
-  private keyOf(row: T, index: number): string | number {
-    return this.rowKey ? this.rowKey(row) : index;
+  private keyOf(row: T, index: number): string | number | undefined {
+    try {
+      const key: unknown = this.rowKey ? this.rowKey(row) : index;
+      if (typeof key === 'string') return key.trim().length === 0 ? undefined : key;
+      return typeof key === 'number' ? key : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** The one identity projection shared by filtering, sorting, pagination, focus, actions, events,
+   * totals, and rendering. Identity is resolved once per source occurrence and retained on the
+   * entry, so a stateful `rowKey` callback cannot make those consumers disagree within one model. */
+  private cachedCanonicalRowEntries: TableRowEntry<T>[] | null = null;
+  private canonicalRowEntriesInputs: {
+    rows: readonly T[];
+    rowKey: ((row: T) => string | number) | undefined;
+  } | null = null;
+  private canonicalRowEntries(): TableRowEntry<T>[] {
+    const inputs = this.canonicalRowEntriesInputs;
+    if (
+      this.cachedCanonicalRowEntries !== null &&
+      inputs?.rows === this.rows &&
+      inputs.rowKey === this.rowKey
+    ) {
+      return this.cachedCanonicalRowEntries;
+    }
+    const entries: TableRowEntry<T>[] = [];
+    const seen = new Set<string>();
+    this.rows.forEach((row, index) => {
+      const key = this.keyOf(row, index);
+      if (key === undefined) return;
+      const encoded = encodeKey(key);
+      if (seen.has(encoded)) return;
+      seen.add(encoded);
+      entries.push({ row, index, key });
+    });
+    this.canonicalRowEntriesInputs = { rows: this.rows, rowKey: this.rowKey };
+    this.cachedCanonicalRowEntries = entries;
+    return entries;
   }
 
   /** Memoized across update cycles and re-validated against the exact inputs the computation
@@ -1419,44 +1493,45 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  single filtering pass. The locale is compared as its resolved string, so a change that
    *  arrives without a matching reactive-property key (an ancestor `lang` edit picked up on the
    *  next update, `setLyraLocale()`'s keyless `requestUpdate()`) still recomputes. */
-  private cachedMatchingEntries: Array<{ row: T; index: number }> | null = null;
+  private cachedMatchingEntries: TableRowEntry<T>[] | null = null;
   private matchingEntriesInputs: {
-    rows: readonly T[];
+    entries: TableRowEntry<T>[];
     filter: ((row: T, text: string) => boolean) | undefined;
     text: string;
     locale: string;
   } | null = null;
-  private matchingEntries(): Array<{ row: T; index: number }> {
+  private matchingEntries(): TableRowEntry<T>[] {
     const text = this.filterText.trim();
     // The locale only affects case-folding, which only happens when there is
     // filter text — skipping the read here keeps a locale change from
     // invalidating an unfiltered cache.
     const locale = text === '' ? '' : this.effectiveLocale;
+    const canonicalEntries = this.canonicalRowEntries();
     const inputs = this.matchingEntriesInputs;
     if (
       this.cachedMatchingEntries !== null &&
       inputs !== null &&
-      inputs.rows === this.rows &&
+      inputs.entries === canonicalEntries &&
       inputs.filter === this.filter &&
       inputs.text === text &&
       inputs.locale === locale
     ) {
       return this.cachedMatchingEntries;
     }
-    let entries: Array<{ row: T; index: number }>;
+    let entries: TableRowEntry<T>[];
     if (text === '') {
-      entries = this.rows.map((row, index) => ({ row, index }));
+      entries = canonicalEntries;
     } else {
       const intlLocale = this.effectiveLocale;
       const normalized = text.toLocaleLowerCase(intlLocale);
-      entries = this.rows.flatMap((row, index) => {
+      entries = canonicalEntries.filter(({ row }) => {
         const matches = this.filter
           ? this.filter(row, text)
           : safeStringifyForFilter(row).toLocaleLowerCase(intlLocale).includes(normalized);
-        return matches ? [{ row, index }] : [];
+        return matches;
       });
     }
-    this.matchingEntriesInputs = { rows: this.rows, filter: this.filter, text, locale };
+    this.matchingEntriesInputs = { entries: canonicalEntries, filter: this.filter, text, locale };
     this.cachedMatchingEntries = entries;
     return entries;
   }
@@ -1507,9 +1582,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  once per reader would multiply that callback work by the number of readers for no benefit.
    *  `columns` is compared by identity because the ordering reads `sortValue`/`cell` off the
    *  active column object; `locale` because it selects the collator. */
-  private cachedSortedEntries: Array<{ row: T; index: number }> | null = null;
+  private cachedSortedEntries: TableRowEntry<T>[] | null = null;
   private sortedEntriesInputs: {
-    entries: Array<{ row: T; index: number }>;
+    entries: TableRowEntry<T>[];
     columns: readonly TableColumn<T>[];
     mode: TableSortMode;
     key: string;
@@ -1535,7 +1610,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  within-group sort is provably inert, so the *groups* are ordered by that constant value
    *  instead. Without it, sorting on the group column would flip `aria-sort` and the chevron while
    *  changing nothing — announcing an ordering the table never applied. */
-  private sortedEntries(): Array<{ row: T; index: number }> {
+  private sortedEntries(): TableRowEntry<T>[] {
     const entries = this.matchingEntries();
     if (this.sortMode !== 'client' || this.sortKey === '') return entries;
     const col = this.columnsByKey.get(this.sortKey);
@@ -1581,7 +1656,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
       return collator.compare(String(av), String(bv)) * dir;
     };
-    let sorted: Array<{ row: T; index: number }>;
+    let sorted: TableRowEntry<T>[];
     const groupBy = this.groupBy;
     if (groupBy === undefined) {
       decorated.sort(compare);
@@ -1629,7 +1704,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return sorted;
   }
 
-  private renderedEntries(): Array<{ row: T; index: number }> {
+  private renderedEntries(): TableRowEntry<T>[] {
     const entries = this.sortedEntries();
     if (this.paginationMode === 'server') return entries.slice(0, this.normalizedPageSize);
     const start = (this.appliedPage - 1) * this.normalizedPageSize;
@@ -1695,7 +1770,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       if (this.rowsByKey.has(selected)) return selected;
     }
     const first = this.renderedEntries()[0];
-    return first ? encodeKey(this.keyOf(first.row, first.index)) : null;
+    return first ? encodeKey(first.key) : null;
   }
 
   private rowsAffectingRovingFocusChanged(changed: PropertyValues): boolean {
@@ -1811,7 +1886,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       changed.has('groupBy')
     ) {
       this.rowsByKey = new Map(
-        this.renderedEntries().map((entry) => [encodeKey(this.keyOf(entry.row, entry.index)), entry])
+        this.renderedEntries().map((entry) => [encodeKey(entry.key), entry])
       );
     }
     this.resolveRovingFocusTarget();
@@ -2019,15 +2094,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     this.activeRowKey = key;
     const entry = this.rowsByKey.get(key);
     if (entry === undefined) return;
-    const { row, index } = entry;
+    const { row, key: selectedKey } = entry;
     this.emit('lr-row-click', Object.freeze({ row }));
     if (this.selectionMode === 'single') {
-      const selectedKey = this.keyOf(row, index);
       this.selectedKeys = new Set([selectedKey]);
       const keys = Object.freeze([selectedKey] as const);
       this.emit('lr-selection-change', Object.freeze({ keys }));
     } else if (this.selectionMode === 'multiple') {
-      const rawKey = this.keyOf(row, index);
+      const rawKey = selectedKey;
       const next = new Set(this._selectedKeys);
       if (next.has(rawKey)) next.delete(rawKey);
       else next.add(rawKey);
@@ -2440,7 +2514,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const matchingEntries = this.sortedEntries();
     // A cold load is exactly the case where `rows` is still empty, so skeleton mode must not take
     // either empty-state branch -- "no data" is a *result*, and the load has not produced one yet.
-    if (!skeletonLoading && this.rows.length === 0 && !this.filterable) {
+    if (!skeletonLoading && this.canonicalRowEntries().length === 0 && !this.filterable) {
       return html`<slot name="empty"
         ><lr-empty
           part="empty"
@@ -2563,10 +2637,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                 ? this.renderSkeletonRows(hasExpand, hasRowTotal)
                 : repeat(
                     renderedEntries,
-                    (entry) => this.keyOf(entry.row, entry.index),
+                    (entry) => entry.key,
                     (entry, entryIndex) => {
-                      const { row, index } = entry;
-                      const key = this.keyOf(row, index);
+                      const { row, key } = entry;
                       const selected = this._selectedKeys.has(key);
                       const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
                       const rowExpanded = canExpandRow && this._expandedKeys.has(key);

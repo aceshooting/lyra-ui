@@ -5,31 +5,31 @@ import type { LyraStepItem } from "./stepper.js";
 import { storyColor } from "../../../../../../.storybook/theme-contract.js";
 
 const wizardSteps: LyraStepItem[] = [
-  { id: "account", label: "Account", state: "completed" },
-  { id: "profile", label: "Profile", state: "completed" },
-  { id: "plan", label: "Plan", state: "current" },
-  { id: "payment", label: "Payment", state: "pending" },
-  { id: "confirm", label: "Confirm", state: "pending", disabled: true },
+  { stepId: "account", label: "Account", state: "completed" },
+  { stepId: "profile", label: "Profile", state: "completed" },
+  { stepId: "plan", label: "Plan", state: "current" },
+  { stepId: "payment", label: "Payment", state: "pending" },
+  { stepId: "confirm", label: "Confirm", state: "pending", disabled: true },
 ];
 
 const errorSteps: LyraStepItem[] = [
-  { id: "account", label: "Account", state: "completed" },
-  { id: "profile", label: "Profile", state: "error" },
-  { id: "plan", label: "Plan", state: "pending" },
-  { id: "payment", label: "Payment", state: "pending", disabled: true },
+  { stepId: "account", label: "Account", state: "completed" },
+  { stepId: "profile", label: "Profile", state: "error" },
+  { stepId: "plan", label: "Plan", state: "pending" },
+  { stepId: "payment", label: "Payment", state: "pending", disabled: true },
 ];
 
 const lockedStepsWithTitle: LyraStepItem[] = [
-  { id: "account", label: "Account", state: "current" },
+  { stepId: "account", label: "Account", state: "current" },
   {
-    id: "profile",
+    stepId: "profile",
     label: "Profile",
     state: "pending",
     disabled: true,
     title: "Complete Account first",
   },
   {
-    id: "plan",
+    stepId: "plan",
     label: "Plan",
     state: "pending",
     disabled: true,
@@ -39,17 +39,17 @@ const lockedStepsWithTitle: LyraStepItem[] = [
 
 const longLabelSteps: LyraStepItem[] = [
   {
-    id: "account",
+    stepId: "account",
     label: "Account and organization details",
     state: "completed",
   },
   {
-    id: "profile",
+    stepId: "profile",
     label: "Profile and notification preferences",
     state: "current",
   },
   {
-    id: "review",
+    stepId: "review",
     label: "Review and confirm everything before submitting",
     state: "pending",
   },
@@ -120,8 +120,8 @@ export const NarrowLongLabels: Story = {
         4
       );
     const narrowSteps: LyraStepItem[] = [
-      { id: "account", label: longLabel, state: "completed" },
-      { id: "review", label: longLabel, state: "current" },
+      { stepId: "account", label: longLabel, state: "completed" },
+      { stepId: "review", label: longLabel, state: "current" },
     ];
     return html`
       <div style="display: grid; gap: var(--lr-space-l);">
@@ -182,10 +182,10 @@ export const ThemedStates: Story = {
     >
       <lr-stepper
         .steps=${[
-          { id: "account", label: "Account", state: "completed" },
-          { id: "profile", label: "Profile", state: "error" },
-          { id: "plan", label: "Plan", state: "current" },
-          { id: "confirm", label: "Confirm", state: "pending" },
+          { stepId: "account", label: "Account", state: "completed" },
+          { stepId: "profile", label: "Profile", state: "error" },
+          { stepId: "plan", label: "Plan", state: "current" },
+          { stepId: "confirm", label: "Confirm", state: "pending" },
         ] as LyraStepItem[]}
       ></lr-stepper>
     </div>
@@ -209,10 +209,10 @@ export const StepSelectEvent: Story = {
     <div>
       <lr-stepper
         .steps=${wizardSteps}
-        @lr-step-select=${(e: CustomEvent<{ index: number; id: string }>) => {
+        @lr-step-select=${(e: CustomEvent<{ index: number; stepId: string }>) => {
           const out = document.getElementById("stepper-select-log");
           if (out)
-            out.textContent = `Selected step: ${e.detail.id} (index ${e.detail.index})`;
+            out.textContent = `Selected step: ${e.detail.stepId} (index ${e.detail.index})`;
         }}
       ></lr-stepper>
       <p id="stepper-select-log">Selected step: (none yet)</p>

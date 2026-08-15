@@ -75,6 +75,52 @@ it("renders every document as a grid row, sorted by name ascending by default (u
   ]);
 });
 
+it("keeps the first unique nonempty document id before filtering, selection, rows, counts, and open events", async () => {
+  const first: LibraryDocument = { id: "shared", name: "First document", tags: ["first"] };
+  const duplicate: LibraryDocument = { id: "shared", name: "Later duplicate", tags: ["duplicate"] };
+  const el = (await fixture(
+    html`<lr-document-library
+      .documents=${[
+        { id: "", name: "Blank document" },
+        { id: "   ", name: "Whitespace document" },
+        first,
+        duplicate,
+        { id: "other", name: "Other document" },
+      ]}
+      .selectedIds=${["", "   ", "shared", "missing"]}
+    ></lr-document-library>`
+  )) as LyraDocumentLibrary;
+
+  expect(el.documents.map((document) => [document.id, document.name])).to.deep.equal([
+    ["shared", "First document"],
+    ["other", "Other document"],
+  ]);
+  expect(el.selectedIds).to.deep.equal(["shared"]);
+  const table = el.shadowRoot!.querySelector("lr-table")!;
+  await waitUntil(() => table.shadowRoot!.querySelectorAll('[part="row"]').length === 2);
+  expect(table.shadowRoot!.textContent).to.contain("First document");
+  expect(table.shadowRoot!.textContent).not.to.contain("Later duplicate");
+
+  const input = el.shadowRoot!.querySelector("lr-input")!;
+  const filterEvent = oneEvent(el, "lr-filter-change");
+  input.dispatchEvent(new CustomEvent("lr-input", {
+    detail: { value: "duplicate" },
+    bubbles: true,
+    composed: true,
+  }));
+  expect((await filterEvent as CustomEvent).detail.matchCount).to.equal(0);
+
+  input.dispatchEvent(new CustomEvent("lr-input", {
+    detail: { value: "" },
+    bubbles: true,
+    composed: true,
+  }));
+  await waitUntil(() => table.shadowRoot!.querySelectorAll('[part="document-name"]').length === 2);
+  const openEvent = oneEvent(el, "lr-open");
+  (table.shadowRoot!.querySelector('[part="document-name"]') as HTMLButtonElement).click();
+  expect((await openEvent as CustomEvent).detail).to.deep.equal({ documentId: "shared" });
+});
+
 it("is accessible with no documents", async () => {
   const el = await fixture(html`<lr-document-library></lr-document-library>`);
   await expect(el).to.be.accessible();
@@ -391,7 +437,7 @@ it("toggles a row selection via its checkbox and emits lr-selection-change", asy
   const listener = oneEvent(el, "lr-selection-change");
   findCheckbox(table, 0).click(); // sorted order: row 0 is Alpha (d1)
   const event = await listener;
-  expect((event as CustomEvent).detail).to.deep.equal({ ids: ["d1"] });
+  expect((event as CustomEvent).detail).to.deep.equal({ documentIds: ["d1"] });
   expect(el.selectedIds).to.deep.equal(["d1"]);
 });
 
@@ -408,7 +454,7 @@ it("select-all header checkbox selects/deselects every currently visible row and
   const listener = oneEvent(el, "lr-selection-change");
   headerCheckboxBase().click();
   const event = await listener;
-  expect((event as CustomEvent).detail.ids).to.have.members(["d1", "d2", "d3"]);
+  expect((event as CustomEvent).detail.documentIds).to.have.members(["d1", "d2", "d3"]);
   // The checkbox `.checked` property is set synchronously as part of this update, but reflecting
   // it into `aria-checked` requires `<lr-checkbox>`'s own nested update cycle to also complete --
   // a second, independent async cycle `el.updateComplete` (the outer element's own) does not wait
@@ -421,7 +467,7 @@ it("select-all header checkbox selects/deselects every currently visible row and
   const secondListener = oneEvent(el, "lr-selection-change");
   findCheckbox(table, 0).click(); // sorted order: row 0 is Alpha (d1)
   const secondEvent = await secondListener;
-  expect((secondEvent as CustomEvent).detail.ids).to.have.members(["d2", "d3"]);
+  expect((secondEvent as CustomEvent).detail.documentIds).to.have.members(["d2", "d3"]);
   await waitUntil(
     () => headerCheckboxBase().getAttribute("aria-checked") === "mixed"
   );
@@ -441,7 +487,7 @@ it('"Clear selection" empties selectedIds and emits lr-selection-change with an 
   const listener = oneEvent(el, "lr-selection-change");
   clearButton.click();
   const event = await listener;
-  expect((event as CustomEvent).detail).to.deep.equal({ ids: [] });
+  expect((event as CustomEvent).detail).to.deep.equal({ documentIds: [] });
   expect(el.selectedIds).to.deep.equal([]);
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('[part="selection-bar"]')) == null).to.be.true;
@@ -516,7 +562,7 @@ it("opens a document via its name button, firing lr-open with the document id", 
   const listener = oneEvent(el, "lr-open");
   nameButton.click();
   const event = await listener;
-  expect((event as CustomEvent).detail).to.deep.equal({ id: "d1" });
+  expect((event as CustomEvent).detail).to.deep.equal({ documentId: "d1" });
 });
 
 it("opens a document by activating its row elsewhere (non-interactive area), via lr-table lr-row-click", async () => {
@@ -530,7 +576,7 @@ it("opens a document by activating its row elsewhere (non-interactive area), via
   const listener = oneEvent(el, "lr-open");
   row.click();
   const event = await listener;
-  expect((event as CustomEvent).detail).to.deep.equal({ id: "d1" });
+  expect((event as CustomEvent).detail).to.deep.equal({ documentId: "d1" });
 });
 
 it("renders the built-in English fallback with no locale/strings registered", async () => {
@@ -596,7 +642,7 @@ it('renders under dir="rtl" and keeps document-open interaction working', async 
   const listener = oneEvent(el, "lr-open");
   nameButton.click();
   const event = await listener;
-  expect((event as CustomEvent).detail).to.deep.equal({ id: "d1" });
+  expect((event as CustomEvent).detail).to.deep.equal({ documentId: "d1" });
 });
 
 it("scrolls a 320px allocation horizontally rather than overflowing, hiding low-priority columns", async () => {
@@ -725,7 +771,7 @@ describe("v9 controlled and immutable contracts", () => {
     const el = (await fixture(
       html`<lr-document-library .documents=${docs}></lr-document-library>`
     )) as LyraDocumentLibrary;
-    const details: Array<{ ids: readonly string[] }> = [];
+    const details: Array<{ documentIds: readonly string[] }> = [];
     el.addEventListener("lr-selection-change", (event) => details.push(event.detail));
     const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
 
@@ -736,10 +782,10 @@ describe("v9 controlled and immutable contracts", () => {
 
     expect(details.length).to.equal(2);
     expect(Object.isFrozen(details[0])).to.equal(true);
-    expect(Object.isFrozen(details[0]!.ids)).to.equal(true);
-    expect(details[0]!.ids).to.deep.equal(["d1"]);
-    expect(details[1]!.ids).to.deep.equal(["d1", "d3"]);
-    expect(details[0]!.ids === details[1]!.ids).to.equal(false);
+    expect(Object.isFrozen(details[0]!.documentIds)).to.equal(true);
+    expect(details[0]!.documentIds).to.deep.equal(["d1"]);
+    expect(details[1]!.documentIds).to.deep.equal(["d1", "d3"]);
+    expect(details[0]!.documentIds === details[1]!.documentIds).to.equal(false);
     expect([...el.selectedIds]).to.deep.equal(["d1", "d3"]);
   });
 

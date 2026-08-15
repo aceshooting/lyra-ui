@@ -900,19 +900,18 @@ describe("track height", () => {
     }
   });
 
-  it("still honours a min-height override while the exact height is unset", async () => {
-    // --lr-segmented-track-min-height is re-declared on :host per tier, so it is overridden on the
-    // host element itself (inline styles win over the component's own :host rule), unlike the
-    // exact-height hatch which is never declared and therefore inherits from any ancestor.
-    const el = (await fixture(
-      html`<lr-segmented
-        size="s"
-        style="--lr-segmented-track-min-height: 44px"
-        .items=${items()}
-      ></lr-segmented>`
-    )) as LyraSegmented;
+  it("inherits a min-height override while the exact height is unset and lets the host win", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-segmented-track-min-height: 44px">
+        <lr-segmented size="s" .items=${items()}></lr-segmented>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-segmented") as LyraSegmented;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).minBlockSize).to.equal("44px");
+
+    el.style.setProperty("--lr-segmented-track-min-height", "46px");
+    expect(getComputedStyle(base).minBlockSize).to.equal("46px");
   });
 });
 

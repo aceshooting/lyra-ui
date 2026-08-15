@@ -170,17 +170,17 @@ function isSourceLabelAvailable(node: Node): boolean {
  * toggle mode is active.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
  * @cssprop [--lr-chip-accent=var(--lr-color-text)] - Text/icon color of the pill. Each non-neutral
- * `variant` sets it to that variant's loud fill.
+ * `variant` changes its private default to that variant's loud fill.
  * @cssprop [--lr-chip-bg=var(--lr-color-surface)] - Background of the pill. Each non-neutral
- * `variant` sets it to that variant's quiet fill.
+ * `variant` changes its private default to that variant's quiet fill.
  * @cssprop [--lr-chip-border=var(--lr-color-border)] - Border color of the pill. Every non-neutral
- * `variant` sets it to `transparent`.
- * @cssprop [--lr-chip-font-size=var(--lr-font-size-sm)] - Label font size. Each `size` sets it to
- * that step's font size.
+ * `variant` changes its private default to `transparent`.
+ * @cssprop [--lr-chip-font-size=var(--lr-font-size-sm)] - Label font size. Each `size` changes its
+ * private default to that step's font size; an inherited or direct public value still wins.
  * @cssprop [--lr-chip-gap=var(--lr-space-xs)] - Gap between the icon, label, and remove button.
- * Each `size` sets it to that step's gap.
+ * Each `size` changes its private default to that step's gap.
  * @cssprop [--lr-chip-radius=var(--lr-radius)] - Corner radius of the pill and of the remove
- * button, kept in sync so retuning one retunes both. `pill` raises it to
+ * button, kept in sync so retuning one retunes both. `pill` changes its private default to
  * `var(--lr-radius-pill)`. Does not vary by `size` tier.
  * @cssprop [--lr-chip-icon-size=var(--lr-font-size-sm)] - Font size of the `start` slot wrapper.
  * Each `size` sets it to that step's icon size.

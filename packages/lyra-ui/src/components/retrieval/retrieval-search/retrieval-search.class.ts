@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -43,9 +44,9 @@ export interface RetrievalFiltersChangeDetail {
 }
 
 export interface LyraRetrievalSearchEventMap {
-  "lr-search": CustomEvent<RetrievalQuery>;
+  "lr-search": CustomEvent<LyraEventDetailSnapshot<RetrievalQuery>>;
   "lr-cancel": CustomEvent<CancelEventDetail>;
-  "lr-filters-change": CustomEvent<RetrievalFiltersChangeDetail>;
+  "lr-filters-change": CustomEvent<LyraEventDetailSnapshot<RetrievalFiltersChangeDetail>>;
 }
 
 /**
@@ -74,6 +75,9 @@ export interface LyraRetrievalSearchEventMap {
  * host-driven flag (the last completed search returned zero results); this component holds no
  * results data of its own -- see `<lr-retrieval-results>` for rendering the actual chunk list.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-retrieval-search
  * @event lr-search - The query was submitted (Enter in the query field, or the submit button
  *   while not `loading`). `detail`: the full `RetrievalQuery` (`{ text, mode, filters, scope }`).
@@ -101,6 +105,8 @@ export interface LyraRetrievalSearchEventMap {
  * @since 4.1.0
  */
 export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["filters", "scope"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -146,11 +152,11 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   /** Arbitrary metadata filters, rendered as removable `"{key}: {value}"` chips. Controlled --
    *  reassign to change what's shown; see the class doc's "update, then emit" round-trip. */
-  @property({ attribute: false }) filters: Record<string, unknown> = {};
+  @property({ attribute: false }) filters: Readonly<Record<string, unknown>> = {};
 
   /** Source-scope ids/labels this query is restricted to, rendered as removable chips alongside
    *  `filters`. Same controlled round-trip as `filters`. */
-  @property({ attribute: false }) scope: string[] = [];
+  @property({ attribute: false }) scope: readonly string[] = [];
 
   /** Host-driven busy flag. This component never performs retrieval itself and has no way to know
    *  when a request resolves, so the host toggles this explicitly around its own fetch -- see the

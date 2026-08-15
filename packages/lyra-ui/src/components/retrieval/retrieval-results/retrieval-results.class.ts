@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -36,13 +37,13 @@ export interface RetrievalResultsSelectDetail {
 }
 
 export interface LyraRetrievalResultsEventMap {
-  "lr-select": CustomEvent<RetrievalResultsSelectDetail>;
+  "lr-select": CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>;
   "lr-load-more": CustomEvent<null>;
-  "lr-chunk-open": CustomEvent<{
+  "lr-chunk-open": CustomEvent<LyraEventDetailSnapshot<{
     id: string;
     sourceId: string;
     anchor?: DocumentLocator;
-  }>;
+  }>>;
 }
 
 export type RetrievalResultsGrouping = "source" | "custom" | "none";
@@ -104,6 +105,9 @@ function safeScore(score: number): number {
  * unchanged). Below the virtualization threshold (a short, non-grouped list), scrolling near the
  * bottom isn't a meaningful gesture, so a `[part="load-more"]` button takes its place instead,
  * showing a spinner in place of the button while `loading` is true.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-retrieval-results
  * @event lr-select - The selected-chunk set changed. `detail: { ids, chunks }` — `ids` is the
@@ -167,6 +171,8 @@ function safeScore(score: number): number {
  * @since 4.1.0
  */
 export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["chunks", "selectedIds", "groupOrder"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -182,12 +188,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   static override styles = [LyraElement.styles, styles];
 
   /** The raw (not deduplicated/sorted/grouped) result set. Host-owned. */
-  @property({ attribute: false }) chunks: RetrievalChunk[] = [];
+  @property({ attribute: false }) chunks: readonly RetrievalChunk[] = [];
 
   /** Controlled selection, by chunk `id`. The component updates its own copy on toggle *then*
    *  emits `lr-select`; reassign to control. An id with no matching chunk is harmless -- it simply
    *  never renders a checked row. */
-  @property({ attribute: false }) selectedIds: string[] = [];
+  @property({ attribute: false }) selectedIds: readonly string[] = [];
 
   /** Shows a per-row `<lr-checkbox>`. */
   @property({
@@ -230,7 +236,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   /** `grouping="custom"`: explicit group-id order, or a comparator. Ids missing from an array
    *  follow in their first-seen order. */
   @property({ attribute: false }) groupOrder?:
-    | string[]
+    | readonly string[]
     | ((a: string, b: string) => number);
 
   /** `'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text
@@ -282,7 +288,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   // `dedupe`, `sort`, `grouping`) changed, so `updated()` and `render()` each read the same
   // already-computed result instead of independently repeating the full dedup/sort/group work.
   private processedChunksCache?: {
-    chunks: RetrievalChunk[];
+    chunks: readonly RetrievalChunk[];
     groups: VirtualListGroup[];
   };
 
@@ -454,7 +460,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     return finiteCount(this.virtualizeAt, 50);
   }
 
-  private get dedupedChunks(): RetrievalChunk[] {
+  private get dedupedChunks(): readonly RetrievalChunk[] {
     if (!this.dedupe) return this.chunks;
     return this.canonicalChunks();
   }
@@ -475,14 +481,14 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   // `??=` fallback only matters before the component's first `willUpdate()` has ever run (e.g. a
   // direct call from a test), so it can never observably return stale data.
   private get processedChunks(): {
-    chunks: RetrievalChunk[];
+    chunks: readonly RetrievalChunk[];
     groups: VirtualListGroup[];
   } {
     return (this.processedChunksCache ??= this.computeProcessedChunks());
   }
 
   private computeProcessedChunks(): {
-    chunks: RetrievalChunk[];
+    chunks: readonly RetrievalChunk[];
     groups: VirtualListGroup[];
   } {
     const deduped = this.dedupedChunks;
@@ -527,7 +533,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   private bucketed(
-    sorted: RetrievalChunk[],
+    sorted: readonly RetrievalChunk[],
     keyOf: (chunk: RetrievalChunk) => string,
     labelOf: (id: string, chunks: RetrievalChunk[]) => string
   ): { chunks: RetrievalChunk[]; groups: VirtualListGroup[] } {

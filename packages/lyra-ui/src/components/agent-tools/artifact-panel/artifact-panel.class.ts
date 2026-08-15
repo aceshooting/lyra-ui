@@ -41,7 +41,11 @@ export interface LyraArtifactPanelEventMap {
  * title/kind header, a preview<->code toggle, version navigation with
  * restore, a streaming indicator, and built-in copy/download actions.
  * Renders none of the artifact itself — content is slotted. Version ids are stable identities;
- * duplicate ids normalize before navigation, labels, restore actions, and counts, first-wins.
+ * empty/blank ids are omitted and duplicates normalize before navigation, labels, restore actions,
+ * and counts, first-wins.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-artifact-panel
  * @event lr-view-change - `detail: { view }`. Fired when the preview/code toggle changes.
@@ -88,6 +92,8 @@ export interface LyraArtifactPanelEventMap {
  * @since 4.0.0
  */
 export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["versions"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -118,9 +124,9 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   /** Which slot is currently visible. */
   @property({ reflect: true }) view: ArtifactPanelView = 'preview';
 
-  /** The artifact's version history, oldest first. The last entry is the latest version. Duplicate
-   *  ids normalize first-wins before navigation, position counts, and restore events. */
-  @property({ attribute: false }) versions: ArtifactVersion[] = [];
+  /** The artifact's version history, oldest first. The last entry is the latest version. Empty/blank
+   *  ids are omitted and duplicates normalize first-wins before navigation, counts, and events. */
+  @property({ attribute: false }) versions: readonly ArtifactVersion[] = [];
 
   /** The currently viewed version's id, or `null` to mean "the latest version". */
   @property({ attribute: 'active-version-id' }) activeVersionId: string | null = null;

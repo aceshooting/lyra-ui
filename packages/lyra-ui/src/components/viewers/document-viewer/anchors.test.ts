@@ -68,7 +68,7 @@ describe('anchors.ts', () => {
 
   it('AnchorTargetCapabilities/HighlightActivateDetail/TextSelectDetail/AnchorResultDetail shapes compile', () => {
     const capabilities: AnchorTargetCapabilities = { anchors: ['page', 'text-quote'], search: true, textSelect: true };
-    const activate: HighlightActivateDetail = { id: 'cite-1' };
+    const activate: HighlightActivateDetail = { highlightId: 'cite-1' };
     const select: TextSelectDetail = { text: 'hello', anchor: null, rects: [] };
     const result: AnchorResultDetail = { found: true };
     expect(capabilities.anchors).to.deep.equal(['page', 'text-quote']);

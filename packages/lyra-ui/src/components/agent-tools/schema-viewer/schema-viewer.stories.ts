@@ -2,7 +2,18 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components';
 import './schema-viewer.js';
 
-const meta: Meta = { title: 'Agent Tools/Schema Viewer', component: 'lr-schema-viewer' };
+const meta: Meta = {
+  title: 'Agent Tools/Schema Viewer',
+  component: 'lr-schema-viewer',
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Schema records and issue collections are bounded clone-owned frozen snapshots; create and reassign a new record or array after changes.',
+      },
+    },
+  },
+};
 export default meta;
 type Story = StoryObj;
 

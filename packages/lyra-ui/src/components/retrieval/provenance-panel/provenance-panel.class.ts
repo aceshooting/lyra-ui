@@ -29,15 +29,17 @@ import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
 import type { LyraScoreThresholds } from "../graph/graph.class.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraProvenance {
-  entities?: LyraEntity[];
+  readonly entities?: readonly LyraEntity[];
   /** One `lr-path-strip` row each. */
-  relationships?: { path: LyraPathElement[] }[];
-  communities?: LyraCommunity[];
-  chunks?: LyraChunk[];
+  readonly relationships?: readonly Readonly<{
+    path: readonly LyraPathElement[];
+  }>[];
+  readonly communities?: readonly LyraCommunity[];
+  readonly chunks?: readonly LyraChunk[];
 }
 
 type Section = "entities" | "relationships" | "communities" | "chunks";
@@ -59,6 +61,9 @@ export interface LyraProvenancePanelEventMap
  * panel (Entities / Relationships / Communities / Text chunks) composing this family's own pieces.
  * The chat <-> graph <-> document glue component. Pure projection + event conduit: no fetching, no
  * graph/viewer imports, no persistence.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-provenance-panel
  * @event lr-toggle - A section header was toggled. `detail: { section, expanded }`.
@@ -84,6 +89,11 @@ export interface LyraProvenancePanelEventMap
  * @since 4.0.0
  */
 export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "provenance",
+    "types",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -94,6 +104,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     provenanceChunks: LYRA_DEFAULT_provenanceChunks,
     provenanceCommunities: LYRA_DEFAULT_provenanceCommunities,
     provenanceEmpty: LYRA_DEFAULT_provenanceEmpty,
@@ -109,9 +120,9 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   static override styles = [LyraElement.styles, styles];
 
   /** Provenance model whose entity, relationship, community, and chunk sections are rendered. */
-  @property({ attribute: false }) provenance: LyraProvenance | null = null;
+  @property({ attribute: false }) provenance: Readonly<LyraProvenance> | null = null;
   /** `lr-graph` `nodeTypes` pass-through; resolves each `entity.type` for the entity chips' `typeLabel`. */
-  @property({ attribute: false }) types: LyraNodeTypeStyle[] = [];
+  @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Score boundaries forwarded to the composed chunk inspector. */
   @property({ attribute: false }) thresholds: LyraScoreThresholds = {
     high: 0.75,

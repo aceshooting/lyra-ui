@@ -1,15 +1,15 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
-    --lr-lightbox-overlay-color: var(--lr-color-overlay-strong);
+    --_lr-lightbox-overlay-color: var(--lr-color-overlay-strong);
     /* Background for every floating/toolbar icon button (close-button, previous-button,
        next-button). These buttons float directly over arbitrary image content, not the app's
        normal surface, so they reuse the "solid, high-contrast neutral fill" token rather than
        --lr-color-surface for guaranteed contrast independent of both the page theme and
        whatever's in the photo. */
-    --lr-lightbox-control-bg: var(--lr-color-neutral);
-    --lr-lightbox-control-color: var(--lr-color-on-neutral);
+    --_lr-lightbox-control-bg: var(--lr-color-neutral);
+    --_lr-lightbox-control-color: var(--lr-color-on-neutral);
     display: none;
     position: fixed;
     inset: 0;
@@ -18,18 +18,24 @@ export const styles = css`
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
     padding-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
-    padding-inline-start: max(var(--lr-space-l), var(--lr-safe-area-inline-start));
+    padding-inline-start: max(
+      var(--lr-space-l),
+      var(--lr-safe-area-inline-start)
+    );
     padding-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
   }
   :host([open]) {
     display: flex;
   }
-  [part='backdrop'] {
+  [part="backdrop"] {
     position: absolute;
     inset: 0;
-    background: var(--lr-lightbox-overlay-color);
+    background: var(
+      --lr-lightbox-overlay-color,
+      var(--_lr-lightbox-overlay-color)
+    );
   }
-  [part='panel'] {
+  [part="panel"] {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -40,14 +46,14 @@ export const styles = css`
     min-block-size: 0;
     outline: none;
   }
-  [part='toolbar'] {
+  [part="toolbar"] {
     display: flex;
     align-items: center;
     flex: 0 0 auto;
     flex-wrap: wrap;
     gap: var(--lr-space-s);
   }
-  [part='counter'] {
+  [part="counter"] {
     display: inline-block;
     min-inline-size: 0;
     max-inline-size: 60%;
@@ -56,11 +62,11 @@ export const styles = css`
     white-space: nowrap;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius);
-    background: var(--lr-lightbox-control-bg);
-    color: var(--lr-lightbox-control-color);
+    background: var(--lr-lightbox-control-bg, var(--_lr-lightbox-control-bg));
+    color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
     font-size: var(--lr-font-size-sm);
   }
-  [part='actions'] {
+  [part="actions"] {
     display: flex;
     align-items: center;
     flex: 1 1 0;
@@ -71,18 +77,18 @@ export const styles = css`
     gap: var(--lr-space-xs);
     margin-inline-start: auto;
   }
-  slot[name='actions']::slotted(*) {
+  slot[name="actions"]::slotted(*) {
     box-sizing: border-box;
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='actions'][hidden] {
+  [part="actions"][hidden] {
     display: none;
   }
-  [part='close-button'],
-  [part='previous-button'],
-  [part='next-button'] {
+  [part="close-button"],
+  [part="previous-button"],
+  [part="next-button"] {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -91,49 +97,53 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     border: none;
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-lightbox-control-bg);
-    color: var(--lr-lightbox-control-color);
+    background: var(--lr-lightbox-control-bg, var(--_lr-lightbox-control-bg));
+    color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
     cursor: pointer;
   }
-  [part='close-button'] {
+  [part="close-button"] {
     margin-inline-start: var(--lr-space-xs);
   }
   /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
      -- mirrors lr-attachment-trigger's identical fix for the same [part='x']:hover:not(:disabled)
      over-specificity shape, so a consumer's ::part(close-button):hover /
      ::part(previous-button):hover / ::part(next-button):hover override wins without !important. */
-  :where([part='close-button']):hover,
-  :where([part='previous-button']):hover:where(:not(:disabled)),
-  :where([part='next-button']):hover:where(:not(:disabled)) {
+  :where([part="close-button"]):hover,
+  :where([part="previous-button"]):hover:where(:not(:disabled)),
+  :where([part="next-button"]):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
   /* Pressed carries the hover fill further toward --lr-color-mix-partner. These controls float over
      arbitrary photography, so the press has to be legible on its own rather than relying on the
      surrounding image to supply contrast. */
-  :where([part='close-button']):active,
-  :where([part='previous-button']):active:where(:not(:disabled)),
-  :where([part='next-button']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  :where([part="close-button"]):active,
+  :where([part="previous-button"]):active:where(:not(:disabled)),
+  :where([part="next-button"]):active:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
     color: var(--lr-color-brand);
   }
-  [part='close-button']:focus-visible,
-  [part='previous-button']:focus-visible,
-  [part='next-button']:focus-visible {
+  [part="close-button"]:focus-visible,
+  [part="previous-button"]:focus-visible,
+  [part="next-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='previous-button']:disabled,
-  [part='next-button']:disabled {
+  [part="previous-button"]:disabled,
+  [part="next-button"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='close-button'] svg,
-  [part='previous-glyph'],
-  [part='next-glyph'] {
+  [part="close-button"] svg,
+  [part="previous-glyph"],
+  [part="next-glyph"] {
     display: block;
   }
-  [part='stage'] {
+  [part="stage"] {
     position: relative;
     flex: 1 1 auto;
     min-inline-size: 0;
@@ -141,55 +151,55 @@ export const styles = css`
   }
   /* Plain ::part() styling one level in, unrelated to exportparts -- stretches the embedded
      frame to fill the stage, overriding pan-zoom's own min-block-size default. */
-  lr-pan-zoom[part='frame'] {
+  lr-pan-zoom[part="frame"] {
     display: block;
     inline-size: 100%;
     block-size: 100%;
   }
-  lr-pan-zoom[part='frame']::part(base) {
+  lr-pan-zoom[part="frame"]::part(base) {
     block-size: 100%;
   }
-  lr-pan-zoom[part='frame']::part(viewport) {
+  lr-pan-zoom[part="frame"]::part(viewport) {
     block-size: 100%;
   }
-  [part='previous-button'],
-  [part='next-button'] {
+  [part="previous-button"],
+  [part="next-button"] {
     position: absolute;
     inset-block-start: 50%;
     transform: translateY(-50%);
     z-index: var(--lr-layer-content);
   }
-  [part='previous-button'] {
+  [part="previous-button"] {
     inset-inline-start: var(--lr-space-s);
   }
-  [part='next-button'] {
+  [part="next-button"] {
     inset-inline-end: var(--lr-space-s);
   }
   /* Rotate the wrapping part element, not the icon itself -- rotate(180deg) matches
      pagination.styles.ts's existing previous-icon/next-icon recipe for a chevronIcon()-based
      prev/next pair (carousel's scaleX(-1) recipe is for its literal ‹/› glyphs, a different base
      case). */
-  [part='previous-glyph'] {
+  [part="previous-glyph"] {
     transform: rotate(180deg);
   }
-  [part='next-glyph'] {
+  [part="next-glyph"] {
     transform: rotate(0deg);
   }
-  :host(:dir(rtl)) [part='previous-glyph'] {
+  :host(:dir(rtl)) [part="previous-glyph"] {
     transform: rotate(0deg);
   }
-  :host(:dir(rtl)) [part='next-glyph'] {
+  :host(:dir(rtl)) [part="next-glyph"] {
     transform: rotate(180deg);
   }
-  [part='caption'] {
+  [part="caption"] {
     flex: 0 0 auto;
     margin: 0;
     max-inline-size: 100%;
     align-self: center;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius);
-    background: var(--lr-lightbox-control-bg);
-    color: var(--lr-lightbox-control-color);
+    background: var(--lr-lightbox-control-bg, var(--_lr-lightbox-control-bg));
+    color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
     text-align: center;
     overflow-wrap: anywhere;
   }
@@ -197,7 +207,7 @@ export const styles = css`
      narrow-allocation baseline expressed in root-relative units so it still follows the page's
      type scale -- mirrors pagination.styles.ts's identical container query. */
   @container (max-inline-size: 20rem) {
-    [part='counter'] {
+    [part="counter"] {
       max-inline-size: 45%;
     }
   }

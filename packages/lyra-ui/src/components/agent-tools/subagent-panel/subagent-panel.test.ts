@@ -109,6 +109,21 @@ it('renders an empty state and has an accessible populated state', async () => {
   await expect(populated).shadowDom.to.be.accessible();
 });
 
+it('omits blank run identities and keeps the first valid duplicate', async () => {
+  const el = await fixture<LyraSubagentPanel>(html`
+    <lr-subagent-panel .runs=${[
+      { id: '', label: 'Empty', status: 'done' },
+      { id: '   ', label: 'Blank', status: 'done' },
+      { id: 'run', label: 'First', status: 'done' },
+      { id: 'run', label: 'Later duplicate', status: 'error' },
+    ]}></lr-subagent-panel>
+  `);
+
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="run"]')];
+  expect(rows).to.have.length(1);
+  expect(rows[0]!.textContent).to.contain('First');
+});
+
 it('applies per-instance localized strings', async () => {
   const el = (await fixture(html`<lr-subagent-panel
     .runs=${runs}

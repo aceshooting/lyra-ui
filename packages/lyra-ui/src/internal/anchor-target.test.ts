@@ -3,7 +3,13 @@ import { html as litHtml } from 'lit';
 import { property } from 'lit/decorators.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from './announcer.js';
 import { LyraElement } from './lyra-element.js';
-import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from './anchor-target.js';
+import {
+  DocumentAnchorTarget,
+  HIGHLIGHT_CANDIDATE_LIMIT,
+  HIGHLIGHT_SNAPSHOT_LIMIT,
+  prioritizedHighlightCandidates,
+  type LyraAnchorTargetEventMap,
+} from './anchor-target.js';
 import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
 import { defineElement } from './prefix.js';
 
@@ -102,6 +108,59 @@ describe('DocumentAnchorTarget mixin', () => {
     expect(el.highlights[0]!.anchor).to.equal(anchor);
     expect(Object.isFrozen(el.highlights)).to.be.true;
     expect(Object.isFrozen(el.highlights[0])).to.be.true;
+  });
+
+  it('retains the first unique nonempty highlight id after trimming', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    const anchor: LyraAnchor = { kind: 'page', page: 1 };
+
+    el.highlights = [
+      { id: '', label: 'Empty', anchor },
+      { id: '   ', label: 'Blank', anchor },
+      { id: ' cite-1 ', label: 'First', anchor },
+      { id: 'cite-1', label: 'Duplicate', anchor },
+      { id: 'cite-2', label: 'Second', anchor },
+    ];
+
+    expect(el.highlights.map((highlight) => [highlight.id, highlight.label])).to.deep.equal([
+      ['cite-1', 'First'],
+      ['cite-2', 'Second'],
+    ]);
+  });
+
+  it('bounds snapshot admission while allowing one ignored entry to be replaced', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    let idReads = 0;
+    const source = Array.from({ length: HIGHLIGHT_SNAPSHOT_LIMIT + 1 }, (_, index) => ({
+      get id() {
+        idReads++;
+        return index === 0 ? '' : `highlight-${index}`;
+      },
+      anchor: { kind: 'page' as const, page: 1 },
+    }));
+
+    el.highlights = source;
+
+    expect(idReads).to.equal(HIGHLIGHT_SNAPSHOT_LIMIT + 1);
+    expect(el.highlights).to.have.length(HIGHLIGHT_SNAPSHOT_LIMIT);
+    expect(el.highlights.at(-1)?.id).to.equal(`highlight-${HIGHLIGHT_SNAPSHOT_LIMIT}`);
+  });
+
+  it('retains an active candidate at the end of the bounded snapshot', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    const anchor: LyraAnchor = { kind: 'page', page: 1 };
+    el.highlights = Array.from({ length: HIGHLIGHT_SNAPSHOT_LIMIT }, (_, index) => ({
+      id: `highlight-${index}`,
+      anchor,
+    }));
+
+    const candidates = prioritizedHighlightCandidates(
+      el.highlights,
+      `highlight-${HIGHLIGHT_SNAPSHOT_LIMIT - 1}`,
+    );
+
+    expect(candidates).to.have.length(HIGHLIGHT_CANDIDATE_LIMIT);
+    expect(candidates[0]?.id).to.equal(`highlight-${HIGHLIGHT_SNAPSHOT_LIMIT - 1}`);
   });
 
   it('scrollToAnchor retries until applyAnchor succeeds, then resolves true', async () => {

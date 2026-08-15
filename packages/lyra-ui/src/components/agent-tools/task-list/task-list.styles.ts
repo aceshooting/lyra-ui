@@ -1,14 +1,14 @@
-import { css } from 'lit';
-import { srOnly } from '../../../internal/a11y.js';
+import { css } from "lit";
+import { srOnly } from "../../../internal/a11y.js";
 
 export const styles = [
   srOnly,
   css`
     :host {
       display: block;
-      --lr-task-list-spin: var(--lr-transition-ambient);
+      --_lr-task-list-spin: var(--lr-transition-ambient);
     }
-    [part='base'] {
+    [part="base"] {
       border: var(--lr-border-width-thin) solid var(--lr-color-border);
       border-radius: var(--lr-radius);
       background: var(--lr-color-surface);
@@ -20,26 +20,35 @@ export const styles = [
        shadow any ancestor value) letting a transcript retune every list at once from the outside;
        header and body carry their own padding (unlike agent-run/source-card's single [part='base']
        padding) since that's where this component already puts it. */
-    :host([compact]) [part='header'] {
-      padding: var(--lr-task-list-compact-header-padding, var(--lr-space-2xs) var(--lr-space-s));
+    :host([compact]) [part="header"] {
+      padding: var(
+        --lr-task-list-compact-header-padding,
+        var(--lr-space-2xs) var(--lr-space-s)
+      );
       gap: var(--lr-task-list-compact-header-gap, var(--lr-space-2xs));
-      font-size: var(--lr-task-list-compact-header-font-size, var(--lr-font-size-sm));
+      font-size: var(
+        --lr-task-list-compact-header-font-size,
+        var(--lr-font-size-sm)
+      );
     }
-    :host([compact]) [part='body'] {
+    :host([compact]) [part="body"] {
       gap: var(--lr-task-list-compact-gap, var(--lr-space-2xs));
-      padding: var(--lr-task-list-compact-body-padding, var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s));
+      padding: var(
+        --lr-task-list-compact-body-padding,
+        var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s)
+      );
     }
     /* Chrome escape -- same convention as lr-agent-run/lr-source-card's frame="plain": drops
        the outer border/background/radius so a list nested inside a host container that already
        draws a border (an agent-run panel, a message bubble) doesn't double it. The header/body's
        own internal divider and padding are layout, not outer chrome, so they're untouched --
        matching how agent-run's plain rule leaves its own Cancel/Retry button chrome alone. */
-    :host([frame='plain']) [part='base'] {
+    :host([frame="plain"]) [part="base"] {
       border: 0;
       border-radius: 0;
       background: transparent;
     }
-    [part='header'] {
+    [part="header"] {
       display: flex;
       align-items: center;
       gap: var(--lr-space-xs);
@@ -54,114 +63,124 @@ export const styles = [
       font-size: var(--lr-font-size-md-sm);
       text-align: start;
     }
-    button[part='header'] {
+    button[part="header"] {
       cursor: pointer;
     }
     /* Pointer hover and press remain separate from the resting header treatment. */
-    :where(button[part='header']):hover {
+    :where(button[part="header"]):hover {
       background: var(--lr-color-brand-quiet);
       color: var(--lr-color-brand);
     }
     /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
        --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper
        step than hover in both light and dark themes rather than repeating it. */
-    :where(button[part='header']):active {
-      background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    :where(button[part="header"]):active {
+      background: color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      );
     }
-    button[part='header']:focus-visible {
+    button[part="header"]:focus-visible {
       outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
       outline-offset: calc(-1 * var(--lr-focus-ring-offset));
     }
-    [part='toggle'] {
+    [part="toggle"] {
       display: inline-flex;
       flex: 0 0 auto;
       transition: transform var(--lr-transition-fast);
     }
-    :host([expanded]) [part='toggle'] {
+    :host([expanded]) [part="toggle"] {
       transform: rotate(90deg);
     }
-    :host(:not([expanded]):dir(rtl)) [part='toggle'] {
+    :host(:not([expanded]):dir(rtl)) [part="toggle"] {
       transform: scaleX(-1);
     }
-    [part='label'] {
+    [part="label"] {
       flex: 1 1 auto;
       min-inline-size: 0;
       overflow-wrap: anywhere;
     }
-    [part='summary'] {
+    [part="summary"] {
       flex: 0 0 auto;
       font-weight: var(--lr-font-weight-normal);
       font-size: var(--lr-font-size-sm);
       color: var(--lr-color-text-quiet);
     }
-    [part='body'] {
+    [part="body"] {
       display: flex;
       flex-direction: column;
       min-inline-size: 0;
       max-inline-size: 100%;
       gap: var(--lr-space-s);
       padding: var(--lr-space-xs) var(--lr-space-m) var(--lr-space-m);
-      border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+      border-block-start: var(--lr-border-width-thin) solid
+        var(--lr-color-border);
     }
-    [part='body'][hidden] {
+    [part="body"][hidden] {
       display: none;
     }
-    [part='item'] {
+    [part="item"] {
       display: flex;
       flex-wrap: wrap;
       align-items: baseline;
       gap: var(--lr-space-xs);
     }
-    [part='item'][tabindex] {
+    [part="item"][tabindex] {
       border-radius: var(--lr-radius);
     }
-    :where([part='item'][tabindex]):hover {
+    :where([part="item"][tabindex]):hover {
       background: var(--lr-color-brand-quiet);
     }
-    :where([part='item'][tabindex]):active {
-      background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    :where([part="item"][tabindex]):active {
+      background: color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      );
     }
-    [part='item'][tabindex]:focus-visible {
+    [part="item"][tabindex]:focus-visible {
       outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
       outline-offset: calc(-1 * var(--lr-focus-ring-offset));
     }
-    [part='item'][data-depth='1'] {
+    [part="item"][data-depth="1"] {
       margin-inline-start: var(--lr-space-l);
     }
-    [part='item-children'] {
+    [part="item-children"] {
       display: flex;
       flex-direction: column;
       gap: var(--lr-space-s);
       flex-basis: 100%;
       margin-block-start: var(--lr-space-xs);
     }
-    [part='status-icon'] {
+    [part="status-icon"] {
       display: inline-flex;
       flex: 0 0 auto;
       color: var(--lr-task-list-pending-color, var(--lr-color-text-quiet));
     }
-    [part='status-icon'] svg {
+    [part="status-icon"] svg {
       display: block;
     }
-    [part='item'][data-status='running'] [part='status-icon'] {
+    [part="item"][data-status="running"] [part="status-icon"] {
       color: var(--lr-task-list-running-color, var(--lr-color-brand));
     }
-    [part='item'][data-status='running'] [part='status-icon'] svg {
-      animation: lr-task-list-spin var(--lr-task-list-spin) infinite;
+    [part="item"][data-status="running"] [part="status-icon"] svg {
+      animation: lr-task-list-spin
+        var(--lr-task-list-spin, var(--_lr-task-list-spin)) infinite;
     }
-    [part='item'][data-status='success'] [part='status-icon'] {
+    [part="item"][data-status="success"] [part="status-icon"] {
       color: var(--lr-task-list-success-color, var(--lr-color-success));
     }
-    [part='item'][data-status='error'] [part='status-icon'] {
+    [part="item"][data-status="error"] [part="status-icon"] {
       color: var(--lr-task-list-error-color, var(--lr-color-danger));
     }
-    [part='item-label'] {
+    [part="item-label"] {
       flex: 1 1 auto;
       min-inline-size: 0;
       max-inline-size: 100%;
       overflow-wrap: anywhere;
     }
-    [part='item-detail'] {
+    [part="item-detail"] {
       flex-basis: 100%;
       min-inline-size: 0;
       max-inline-size: 100%;
@@ -175,10 +194,10 @@ export const styles = [
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      [part='toggle'] {
+      [part="toggle"] {
         transition: none !important;
       }
-      [part='item'][data-status='running'] [part='status-icon'] svg {
+      [part="item"][data-status="running"] [part="status-icon"] svg {
         animation: none !important;
       }
     }

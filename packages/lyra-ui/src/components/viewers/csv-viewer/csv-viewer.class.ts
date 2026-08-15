@@ -22,6 +22,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
@@ -79,7 +80,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * @event lr-render-error - Fired when fetching or parsing fails, a parser is unavailable, the
  *   bounded parse exceeds a resource ceiling, or PapaParse returns recoverable diagnostics.
  * @event lr-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
- *   while focused. `detail: { id }`.
+ *   while focused. `detail: { highlightId }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
@@ -300,7 +301,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
           label: primary.highlight.label,
         })
       : this.localize('highlightWithLabel', undefined, { label: text });
-    const activate = (): void => { this.emit('lr-highlight-activate', { id: primary.highlight.id }); };
+    const activate = (): void => {
+      this.emit('lr-highlight-activate', { highlightId: primary.highlight.id });
+    };
     return html`<div
       part="cell cell-highlight"
       role=${role}
@@ -376,20 +379,26 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   async search(query: string): Promise<number> {
     this.searchQuery = query;
     this.lastSearchLocale = this.effectiveLocale;
-    const trimmed = query.trim().toLocaleLowerCase(this.effectiveLocale);
+    const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
+    const trimmed = boundedQuery.needle;
     const matches: { row: number; col: number }[] = [];
-    let matchCountExact = true;
-    if (trimmed && this.fetchState.kind === 'loaded') {
+    let matchCountExact = boundedQuery.accepted;
+    if (boundedQuery.accepted && trimmed && this.fetchState.kind === 'loaded') {
+      const budget = new ViewerSearchWorkBudget();
       const { rows } = this.fetchState;
       searchRows: for (let r = 0; r < rows.length; r++) {
         const row = rows[r]!;
         for (let c = 0; c < row.length; c++) {
-          if (cell(row[c]).toLocaleLowerCase(this.effectiveLocale).includes(trimmed)) {
+          if (budget.includes(cell(row[c]), trimmed, this.effectiveLocale)) {
             if (matches.length === MAX_SEARCH_MATCHES) {
               matchCountExact = false;
               break searchRows;
             }
             matches.push({ row: r + 1, col: c });
+          }
+          if (!budget.complete) {
+            matchCountExact = false;
+            break searchRows;
           }
         }
       }

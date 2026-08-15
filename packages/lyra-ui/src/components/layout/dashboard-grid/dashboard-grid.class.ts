@@ -108,20 +108,20 @@ interface CellResizeState {
 }
 
 export interface LyraDashboardCellMoveDetail {
-  readonly id: string;
+  readonly cellId: string;
   readonly position: Readonly<{ x: number; y: number }>;
   readonly previous: Readonly<{ x: number; y: number }>;
 }
 
 export interface LyraDashboardCellResizeDetail {
-  readonly id: string;
+  readonly cellId: string;
   readonly size: Readonly<{ w: number; h: number }>;
   readonly previous: Readonly<{ w: number; h: number }>;
 }
 
 export interface LyraDashboardCollisionDetail {
-  readonly id: string;
-  readonly collidedWith: readonly string[];
+  readonly cellId: string;
+  readonly collidedCellIds: readonly string[];
   readonly policy: LyraDashboardCollisionPolicy;
   readonly accepted: boolean;
 }
@@ -149,7 +149,7 @@ export interface LyraDashboardGridEventMap {
  *
  * Cell content: a `layout` entry with no matching light-DOM child (matched by `cell-id`) gets a
  * default `<lr-widget label="...">` wrapping a version-two `<lr-widget-renderer>` document
- * auto-created and adopted into `slot="cell-{id}"` -- this component's own job is the grid
+ * auto-created and adopted into `slot="cell-{cellId}"` -- this component's own job is the grid
  * layout/drag/resize/collision/persistence-event mechanics *around* that content, not widget
  * rendering itself (see `lr-widget-renderer`'s own doc for its declarative-tree contract). A
  * consumer wanting full control over one cell's markup can instead author
@@ -180,12 +180,12 @@ export interface LyraDashboardGridEventMap {
  * opt into `overflow: auto`/`white-space: nowrap` and contains its own extent.
  *
  * @customElement lr-dashboard-grid
- * @slot cell-{id} - A `layout` entry's cell content; auto-populated by a default composed
- *   `<lr-widget>`/`<lr-widget-renderer>` pair unless a light-DOM `[cell-id="{id}"]` child is
+ * @slot cell-{cellId} - A `layout` entry's cell content; auto-populated by a default composed
+ *   `<lr-widget>`/`<lr-widget-renderer>` pair unless a light-DOM `[cell-id="{cellId}"]` child is
  *   authored instead.
- * @event lr-cell-move - `detail: { id, position, previous }` — an accepted move committed.
- * @event lr-cell-resize - `detail: { id, size, previous }` — an accepted resize committed.
- * @event lr-collision - `detail: { id, collidedWith, policy, accepted }` — a move/resize request
+ * @event lr-cell-move - `detail: { cellId, position, previous }` — an accepted move committed.
+ * @event lr-cell-resize - `detail: { cellId, size, previous }` — an accepted resize committed.
+ * @event lr-collision - `detail: { cellId, collidedCellIds, policy, accepted }` — a move/resize request
  *   overlapped at least one other cell, regardless of whether `policy` ultimately accepted it.
  * @event lr-layout-change - `detail: { layout }` — the full proposed layout after any accepted
  *   move/resize (including a `'push'` cascade); the host's persistence hook.
@@ -434,7 +434,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       }
       const cells = this.sortedLayout;
       const retainedIndex = cells.findIndex(
-        (cell) => cell.id === this.activeCellId
+        (cell) => cell.cellId === this.activeCellId
       );
       const nextIndex =
         cells.length === 0
@@ -443,7 +443,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
           ? retainedIndex
           : Math.min(this.activeCellIndex, cells.length - 1);
       this.activeCellIndex = nextIndex;
-      this.activeCellId = cells[nextIndex]?.id ?? "";
+      this.activeCellId = cells[nextIndex]?.cellId ?? "";
     }
     if (
       this.cellDrag &&
@@ -483,7 +483,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   // ---------------------------------------------------------------------
 
   private cellLabel(cell: LyraDashboardCell): string {
-    return cell.label || cell.id;
+    return cell.label || cell.cellId;
   }
 
   private restoreAuthoredSlot(child: Element): void {
@@ -506,7 +506,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
    * cell; library defaults are tracked by identity rather than by a forgeable attribute. */
   private syncDefaultCells(): void {
     if (!this.isConnected) return;
-    const ids = new Set(this.effectiveLayout.map((cell) => cell.id));
+    const ids = new Set(this.effectiveLayout.map((cell) => cell.cellId));
     const authoredById = new Map<string, Element>();
     const ownedById = new Map<string, Element[]>();
 
@@ -556,20 +556,20 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     }
 
     for (const cell of this.effectiveLayout) {
-      const owned = ownedById.get(cell.id) ?? [];
-      if (authoredById.has(cell.id)) {
+      const owned = ownedById.get(cell.cellId) ?? [];
+      if (authoredById.has(cell.cellId)) {
         for (const defaultCell of owned) defaultCell.remove();
         continue;
       }
       const existing = owned.shift();
       if (existing) {
-        existing.setAttribute("slot", `cell-${cell.id}`);
+        existing.setAttribute("slot", `cell-${cell.cellId}`);
         this.updateDefaultCell(existing as DefaultCellEl, cell);
       } else {
         this.appendChild(this.createDefaultCell(cell));
       }
       for (const duplicate of owned) duplicate.remove();
-      ownedById.delete(cell.id);
+      ownedById.delete(cell.cellId);
     }
 
     for (const stale of ownedById.values()) {
@@ -580,9 +580,9 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private createDefaultCell(cell: LyraDashboardCell): Element {
     const ownerDocument = this.ownerDocument;
     const widget = ownerDocument.createElement(tag("widget")) as DefaultCellEl;
-    widget.setAttribute("cell-id", cell.id);
+    widget.setAttribute("cell-id", cell.cellId);
     widget.setAttribute("data-dashboard-grid-default-cell", "");
-    widget.setAttribute("slot", `cell-${cell.id}`);
+    widget.setAttribute("slot", `cell-${cell.cellId}`);
     this.ownedDefaultCells.add(widget);
     const renderer = ownerDocument.createElement(tag("widget-renderer"));
     widget.appendChild(renderer);
@@ -610,11 +610,11 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   // Roving focus / keyboard move & resize
   // ---------------------------------------------------------------------
 
-  private onCellFocus(id: string): void {
-    const index = this.sortedLayout.findIndex((c) => c.id === id);
+  private onCellFocus(cellId: string): void {
+    const index = this.sortedLayout.findIndex((cell) => cell.cellId === cellId);
     if (index >= 0) {
       if (this.activeCellIndex !== index) this.activeCellIndex = index;
-      if (this.activeCellId !== id) this.activeCellId = id;
+      if (this.activeCellId !== cellId) this.activeCellId = cellId;
     }
   }
 
@@ -647,7 +647,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     if (index < 0 || index >= cells.length) return;
     this.activeCellIndex = index;
     const cell = cells[index]!; // safe: bounds checked above (0 <= index < cells.length)
-    this.activeCellId = cell.id;
+    this.activeCellId = cell.cellId;
     const number = getNumberFormat(this.effectiveLocale);
     this.announcer.announce(
       this.localize("flowItemAnnouncement", undefined, {
@@ -657,7 +657,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       })
     );
     void this.updateComplete.then(() => {
-      this.cellElement(cell.id)?.focus();
+      this.cellElement(cell.cellId)?.focus();
     });
   }
 
@@ -673,7 +673,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       return;
     }
     const cells = this.sortedLayout;
-    const index = cells.findIndex((c) => c.id === cell.id);
+    const index = cells.findIndex((c) => c.cellId === cell.cellId);
     if (index < 0) return;
     const rtl = isRtl(this);
     const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
@@ -703,7 +703,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     else if (key === "ArrowUp") dy = -1;
     else return false;
     return this.commitPlacement(
-      cell.id,
+      cell.cellId,
       { x: cell.x + dx, y: cell.y + dy, w: cell.w, h: cell.h },
       "move"
     );
@@ -719,7 +719,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     else if (key === "ArrowUp") dh = -1;
     else return false;
     return this.commitPlacement(
-      cell.id,
+      cell.cellId,
       { x: cell.x, y: cell.y, w: cell.w + dw, h: cell.h + dh },
       "resize"
     );
@@ -730,26 +730,26 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   // ---------------------------------------------------------------------
 
   private commitPlacement(
-    id: string,
+    cellId: string,
     requested: { x: number; y: number; w: number; h: number },
     kind: "move" | "resize"
   ): boolean {
     const layout = this.effectiveLayout;
-    const cell = layout.find((c) => c.id === id);
+    const cell = layout.find((candidate) => candidate.cellId === cellId);
     if (!cell) return false;
     const result = resolveDashboardPlacement(
       layout,
-      id,
+      cellId,
       requested,
       this.safeColumns,
       this.collision
     );
-    if (result.collidedWith.length > 0) {
+    if (result.collidedCellIds.length > 0) {
       this.emit(
         "lr-collision",
         Object.freeze({
-          id,
-          collidedWith: result.collidedWith,
+          cellId,
+          collidedCellIds: result.collidedCellIds,
           policy: this.collision,
           accepted: result.accepted,
         })
@@ -763,7 +763,9 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       );
       return true;
     }
-    const updated = result.layout.find((c) => c.id === id)!;
+    const updated = result.layout.find(
+      (candidate) => candidate.cellId === cellId
+    )!;
     const number = getNumberFormat(this.effectiveLocale);
     // `requested` is clamped (bounds + this cell's own min/max) before ever reaching collision
     // resolution, so e.g. a shrink-past-minW request can come back byte-identical to `cell` --
@@ -777,7 +779,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       this.emit(
         "lr-cell-move",
         Object.freeze({
-          id,
+          cellId,
           position: Object.freeze({ x: updated.x, y: updated.y }),
           previous: Object.freeze({ x: cell.x, y: cell.y }),
         })
@@ -793,7 +795,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       this.emit(
         "lr-cell-resize",
         Object.freeze({
-          id,
+          cellId,
           size: Object.freeze({ w: updated.w, h: updated.h }),
           previous: Object.freeze({ w: cell.w, h: cell.h }),
         })
@@ -841,9 +843,11 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     };
   }
 
-  private resetCellInlineStyle(id: string, wrapper: HTMLElement): void {
+  private resetCellInlineStyle(cellId: string, wrapper: HTMLElement): void {
     wrapper.removeAttribute("data-collision");
-    const cell = this.effectiveLayout.find((candidate) => candidate.id === id);
+    const cell = this.effectiveLayout.find(
+      (candidate) => candidate.cellId === cellId
+    );
     if (cell) {
       const style = this.cellStyle(cell);
       wrapper.style.gridColumn = style["grid-column"];
@@ -851,15 +855,15 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     }
   }
 
-  private canDragCell(id: string): boolean {
-    const cell = this.layout.find((candidate) => candidate.id === id);
+  private canDragCell(cellId: string): boolean {
+    const cell = this.layout.find((candidate) => candidate.cellId === cellId);
     return (
       this.cellsDraggable && !this.locked && cell !== undefined && !cell.locked
     );
   }
 
-  private canResizeCell(id: string): boolean {
-    const cell = this.layout.find((candidate) => candidate.id === id);
+  private canResizeCell(cellId: string): boolean {
+    const cell = this.layout.find((candidate) => candidate.cellId === cellId);
     return (
       this.cellsResizable && !this.locked && cell !== undefined && !cell.locked
     );
@@ -968,7 +972,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     e.stopPropagation();
     this.cellDrag = {
       pointerId: e.pointerId,
-      cellId: cell.id,
+      cellId: cell.cellId,
       startClientX: e.clientX,
       startClientY: e.clientY,
       startX: cell.x,
@@ -1036,7 +1040,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     if (this.collision !== "overlap") {
       const collides =
         findDashboardCollisions(drag.spatialIndex, {
-          id: drag.cellId,
+          cellId: drag.cellId,
           x,
           y,
           w: drag.w,
@@ -1117,7 +1121,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     const captureTarget = e.currentTarget as HTMLElement;
     this.cellResize = {
       pointerId: e.pointerId,
-      cellId: cell.id,
+      cellId: cell.cellId,
       startClientX: e.clientX,
       startClientY: e.clientY,
       startW: cell.w,
@@ -1191,7 +1195,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     if (this.collision !== "overlap") {
       const collides =
         findDashboardCollisions(resize.spatialIndex, {
-          id: resize.cellId,
+          cellId: resize.cellId,
           x: resize.x,
           y: resize.y,
           w,
@@ -1295,15 +1299,15 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       role="group"
       tabindex=${active ? "0" : "-1"}
       aria-label=${this.cellLabel(cell)}
-      data-cell-id=${cell.id}
+      data-cell-id=${cell.cellId}
       ?data-resizable=${resizableHere}
       style=${styleMap(this.cellStyle(cell))}
       @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, cell)}
-      @focus=${() => this.onCellFocus(cell.id)}
+      @focus=${() => this.onCellFocus(cell.cellId)}
       @pointerdown=${(e: PointerEvent) => this.onCellPointerDown(e, cell)}
-      @click=${(e: MouseEvent) => this.onCellClick(e, cell.id)}
+      @click=${(e: MouseEvent) => this.onCellClick(e, cell.cellId)}
     >
-      <slot name=${`cell-${cell.id}`}></slot>
+      <slot name=${`cell-${cell.cellId}`}></slot>
       ${resizableHere
         ? html`<button
             part="resize-handle"
@@ -1326,7 +1330,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       </div>`;
     }
     const retainedIndex = cells.findIndex(
-      (cell) => cell.id === this.activeCellId
+      (cell) => cell.cellId === this.activeCellId
     );
     const activeIndex =
       retainedIndex >= 0
@@ -1344,7 +1348,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     >
       ${repeat(
         cells,
-        (cell) => cell.id,
+        (cell) => cell.cellId,
         (cell, i) => this.renderCell(cell, i === activeIndex)
       )}
       <div part="live-region" class="sr-only" aria-hidden="true">

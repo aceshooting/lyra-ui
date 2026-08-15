@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The top-level shell for one AgentRun: lifecycle-status badge, elapsed time, current step, model/cost summary, and built-in Cancel/Retry controls in a header, composing lr-generation-metrics, lr-usage-badge, and lr-task-list — plus four named slots (tasks/tools/reasoning/output) for the run\'s actual content.',
+          'The top-level shell for one AgentRun: lifecycle-status badge, elapsed time, current step, model/cost summary, and built-in Cancel/Retry controls in a header, composing lr-generation-metrics, lr-usage-badge, and lr-task-list — plus four named slots (tasks/tools/reasoning/output) for the run\'s actual content. Run steps, metrics, and status maps are bounded clone-owned frozen snapshots; create and reassign a new value after changes.',
       },
     },
   },

@@ -19,7 +19,9 @@ immediately) or multi-format (click opens a small menu).
   `LyraExportFormatOption` is the built-in `LyraExportFormat = 'csv' | 'json'` or a
   `LyraExportFormatDescriptor = { formatId: string; label: string; description?: string;
   extension?: string }`. Descriptor labels/descriptions are consumer-supplied, already-localized
-  copy. Custom format ids are event-only; no custom encoder is bundled
+  copy. `formatId` must be nonempty and unique; malformed options and later duplicates are omitted
+  first-wins before menu state, focus reconciliation, or export events. Custom format ids are
+  event-only; no custom encoder is bundled
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
@@ -1487,8 +1489,9 @@ without repainting every other component that reads the same shared danger token
 The two height knobs work as a pair on `[part='field-input']`, the same way
 `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input` expose theirs:
 
-- `--lr-known-date-field-min-height` is a **floor**, re-pointed per `size` tier through the shared
-  ladder. At the small tiers it exceeds the field's own padding/font-driven height and is what
+- `--lr-known-date-field-min-height` is a **floor** whose private default follows each `size` tier
+  through the shared ladder; an inherited or direct public value remains authoritative. At the
+  small tiers the default exceeds the field's own padding/font-driven height and is what
   actually pins the rendered box — that is how `2xs`/`xs` keep a 24px pointer target; at `l`/`xl`
   the content height already clears it, so it is inert there and only raising it changes anything.
 - `--lr-known-date-field-height` pins an **exact** height (both floors and caps), so the three

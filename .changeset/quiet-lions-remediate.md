@@ -35,6 +35,38 @@ Security and correctness:
 - guard `lr-code-block`'s async highlight continuations on `isConnected`;
 - ignore a non-primary pointer button when starting an `lr-image-viewer` annotation.
 
+Breaking contract normalization:
+
+- complete the v9 identity migrations from `lr-split`, `lr-query-builder`, `lr-playback`,
+  `lr-generation-status`, and `lr-flow-run-overlay` to `lr-multi-split`,
+  `lr-condition-builder`, `lr-sequence-playback`, `lr-generation-metrics`, and
+  `lr-flow-run-status`, including their class, type, event, CSS-hook, storage-key, registration,
+  and framework surfaces; the pre-v9 `lr-geojson-view` tag remains the documented compatibility
+  alias for canonical `lr-geojson-viewer`;
+- replace ambiguous generic public type aliases with the curated `Lyra*` vocabulary and remove
+  superseded root and granular aliases; the generated migration reference records each exact
+  replacement and every surface that now requires manual review;
+- use `CustomEvent<null>` for no-payload library events, frozen named detail objects for scalar
+  state, and cancelable before/invalid events only where vetoing changes the originating action;
+- unify model and voice catalogs on readonly `LyraCatalog<T>` and move their shared filtering,
+  popup, selection, form, and native-event behavior into one catalog-picker contract;
+- treat omitted localized labels as the only request for a default string: an explicit empty
+  string or the former English default is now caller-owned data and is never silently translated.
+
+Ownership, identity, and bounded work:
+
+- make public collection inputs and collection-bearing event details bounded readonly snapshots,
+  with clone/freeze admission for structured records and copy-on-write updates instead of retained
+  mutable aliases;
+- require stable, non-empty domain identifiers across collection-driven components, use
+  deterministic first-valid-wins duplicate handling, and carry those identifiers through state,
+  persistence, and event details rather than relying on array position or display text;
+- bound and cache text-quote indexing, search, DOM-range painting, and host highlight resolution;
+  `lr-search-change` now includes `matchCountExact`, so capped or partially loaded viewers report
+  a truthful lower bound instead of presenting it as a complete count;
+- reject or truncate hostile oversized string, tree, registry, schema, and traversal inputs at
+  documented ceilings while keeping valid siblings usable and async generation ownership intact.
+
 Internationalization and theming:
 
 - add `playbackStepPosition`, `phoneInputLabel`, and `emojiPickerLoadError`, translated into all ten
@@ -46,6 +78,9 @@ Internationalization and theming:
 - fix an RTL double-mirror in `lr-chart`'s DOM legend placement by removing a redundant mirror
   rather than adding a third;
 - stop re-mirroring MapLibre's physically-assigned popup anchors under `dir="rtl"`.
+- move documented per-component custom-property defaults to private fallback tokens and apply the
+  public hook at each use site, so values inherited from an ancestor are no longer shadowed by a
+  `:host` declaration.
 
 New opt-in surface:
 

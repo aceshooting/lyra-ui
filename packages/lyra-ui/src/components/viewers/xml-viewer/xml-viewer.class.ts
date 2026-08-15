@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
-import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
+import { DocumentAnchorTarget, prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
 import type {
   AnchorResultDetail,
   HighlightActivateDetail,
@@ -35,6 +35,7 @@ import {
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_xmlViewerChildCount, LYRA_DEFAULT_xmlViewerCollapseNode, LYRA_DEFAULT_xmlViewerCopyDocument, LYRA_DEFAULT_xmlViewerCopyNode, LYRA_DEFAULT_xmlViewerExpandNode, LYRA_DEFAULT_xmlViewerLabel, LYRA_DEFAULT_xmlViewerParseError, LYRA_DEFAULT_xmlViewerTooManyNodes } from '../../../internal/default-strings.generated.js';
@@ -45,7 +46,6 @@ const MAX_NODES = 50_000;
 const MAX_DEPTH = 256;
 const MAX_SEARCH_MATCHES = 10_000;
 const MAX_PAINTED_HIGHLIGHTS = 100;
-const MAX_HIGHLIGHT_CANDIDATES = 1_000;
 
 type PathSegment = number | string;
 
@@ -243,7 +243,7 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. Non-cancelable. `detail: { found }`.
  * @event lr-highlight-activate - A `highlights` entry's `[part="highlight-action"]` button was
- *   activated by click or Enter/Space. Non-cancelable. `detail: { id }`.
+ *   activated by click or Enter/Space. Non-cancelable. `detail: { highlightId }`.
  * @csspart base - The root scroll container.
  * @csspart toolbar - The whole-document copy button row (only when `copyable`).
  * @csspart copy-button - A copy-to-clipboard button -- the whole-document one (in `toolbar`) or a
@@ -555,7 +555,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
 
   private computeSearch(doc: Document): SearchState {
     const locale = this.effectiveLocale;
-    const query = this.searchQuery.trim().toLocaleLowerCase(locale);
+    const boundedQuery = boundedViewerSearchQuery(this.searchQuery, locale);
+    const query = boundedQuery.needle;
+    const budget = new ViewerSearchWorkBudget();
     const matches = new Set<string>();
     const tagMatches = new Set<string>();
     const attrMatches = new Set<string>();
@@ -563,7 +565,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const forceExpand = new Set<string>();
     const paths = new Set<string>();
     const ordered: string[] = [];
-    let matchCountExact = true;
+    let matchCountExact = boundedQuery.accepted;
 
     const markAncestors = (path: PathSegment[]): void => {
       for (let i = path.length - 1; i >= 0; i--) forceExpand.add(JSON.stringify(path.slice(0, i)));
@@ -574,34 +576,36 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       paths.add(pathKey);
       if (query && matchCountExact) {
         let hit = false;
-        if (el.tagName.toLocaleLowerCase(locale).includes(query)) {
+        if (budget.includes(el.tagName, query, locale)) {
           tagMatches.add(pathKey);
           hit = true;
         }
-        for (const attr of Array.from(el.attributes)) {
+        for (const attr of el.attributes) {
           if (
-            attr.name.toLocaleLowerCase(locale).includes(query) ||
-            attr.value.toLocaleLowerCase(locale).includes(query)
+            budget.includes(attr.name, query, locale) ||
+            budget.includes(attr.value, query, locale)
           ) {
             attrMatches.add(attrKey(pathKey, attr.name));
             hit = true;
           }
+          if (!budget.complete) break;
         }
-        const ownText = Array.from(el.childNodes)
-          .filter((n) => n.nodeType === Node.TEXT_NODE)
-          .map((n) => n.textContent ?? '')
-          .join('')
-          .toLocaleLowerCase(locale);
-        if (ownText.includes(query)) {
+        const ownTextParts = function* (): Generator<string> {
+          for (const child of el.childNodes) {
+            if (child.nodeType === Node.TEXT_NODE) yield child.textContent ?? '';
+          }
+        };
+        if (budget.complete && budget.includesJoined(ownTextParts(), query, locale)) {
           textMatches.add(pathKey);
           hit = true;
         }
+        if (!budget.complete) matchCountExact = false;
         if (hit) {
           if (ordered.length === MAX_SEARCH_MATCHES) {
             matchCountExact = false;
             tagMatches.delete(pathKey);
             textMatches.delete(pathKey);
-            for (const attr of Array.from(el.attributes)) {
+            for (const attr of el.attributes) {
               attrMatches.delete(attrKey(pathKey, attr.name));
             }
           } else {
@@ -656,15 +660,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     if (!root) return byPath;
     const seen = new Set<string>();
     const resolved: Array<{ highlight: LyraHighlight; pathKey: string }> = [];
-    const active = this.highlights.find((highlight) => highlight.id === this.activeHighlightId);
-    const candidates: LyraHighlight[] = active ? [active] : [];
-    let inspected = candidates.length;
-    for (const highlight of this.highlights) {
-      if (highlight === active) continue;
-      if (inspected >= MAX_HIGHLIGHT_CANDIDATES) break;
-      inspected++;
-      candidates.push(highlight);
-    }
+    const candidates = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId);
     for (const highlight of candidates) {
       if (seen.has(highlight.id)) continue;
       seen.add(highlight.id);
@@ -979,7 +975,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
               aria-label=${this.highlightActionLabel(highlight.highlight, highlight.index, highlight.total)}
               @click=${(e: Event) => {
                 e.stopPropagation();
-                this.emit('lr-highlight-activate', { id: highlight.highlight.id });
+                this.emit('lr-highlight-activate', { highlightId: highlight.highlight.id });
               }}
             >
               ${highlight.highlight.label

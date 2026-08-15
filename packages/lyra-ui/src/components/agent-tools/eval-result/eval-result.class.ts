@@ -11,7 +11,7 @@ import '../../data/table/table.class.js';
 import '../../utility/diff-view/diff-view.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -72,6 +72,9 @@ export interface LyraEvalResultEventMap {
  * `selectedRunId`/`baselineRunId` that doesn't match any entry in `runs` degrades gracefully: the
  * comparison grid still renders, and the review/diff sections simply don't (no error, no crash).
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-eval-result
  * @event lr-run-activate - A comparison-grid row was activated. `detail: { runId, run }`.
  * @event lr-review-input - The selected run's rubric value changed. `detail: { runId, value }`.
@@ -91,31 +94,44 @@ export interface LyraEvalResultEventMap {
  * @since 4.1.0
  */
 export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["runs", "columns", "rubricKeys"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
     evaluationDashboardRunsLabel: LYRA_DEFAULT_evaluationDashboardRunsLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+    remove: LYRA_DEFAULT_remove,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The runs (one per model or prompt version) being compared for this evaluation example.
-   *  Duplicate ids normalize first-wins before selection, diff, grid, and review events. */
-  @property({ attribute: false }) runs: EvalRunResult[] = EMPTY_RUNS;
+  /** The runs (one per model or prompt version) being compared for this evaluation example. Empty
+   *  ids are omitted and duplicates normalize first-wins before selection, diff, grid, and review
+   *  events. */
+  @property({ attribute: false }) runs: readonly EvalRunResult[] = EMPTY_RUNS;
 
-  /** Column definitions for the comparison grid -- forwarded to `<lr-table>` after duplicate keys
-   *  normalize first-wins.
+  /** Column definitions for the comparison grid -- forwarded to `<lr-table>` after empty keys are
+   *  omitted and duplicate keys normalize first-wins.
    *  Each column now needs a `cell(row)` accessor (`<lr-table>`'s `TableColumn` shape), not the old
    *  `<lr-data-grid>` `DataGridColumn`'s optional `value(row)`. */
-  @property({ attribute: false }) columns: TableColumn<EvalRunResult>[] = EMPTY_COLUMNS;
+  @property({ attribute: false }) columns: readonly TableColumn<EvalRunResult>[] = EMPTY_COLUMNS;
 
-  /** Rubric field definitions for the review form. Duplicate keys normalize first-wins before the
-   *  review form receives them. */
-  @property({ attribute: false }) rubricKeys: RubricKey[] = EMPTY_KEYS;
+  /** Rubric field definitions for the review form. Empty keys are omitted and duplicate keys
+   *  normalize first-wins before the review form receives them. */
+  @property({ attribute: false }) rubricKeys: readonly RubricKey[] = EMPTY_KEYS;
 
   private get normalizedRuns(): EvalRunResult[] {
     return firstByIdentity(Array.isArray(this.runs) ? this.runs : [], (run) => run.id);
@@ -127,12 +143,12 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
     return firstByIdentity(Array.isArray(this.rubricKeys) ? this.rubricKeys : [], (key) => key.key);
   }
 
-  /** The run currently open for review, and the diff's "new" side. `null` falls back to
-   *  `runs[0]?.id`; empty string remains a valid run identity. */
+  /** The run currently open for review, and the diff's "new" side. `null` falls back to the first
+   *  valid run; an unmatched identity selects no run. */
   @property({ attribute: 'selected-run-id' }) selectedRunId: string | null = null;
 
-  /** The run compared against, and the diff's "old" side. `null` falls back to `runs[0]?.id`;
-   *  empty string remains a valid run identity. */
+  /** The run compared against, and the diff's "old" side. `null` falls back to the first valid run;
+   *  an unmatched identity selects no baseline. */
   @property({ attribute: 'baseline-run-id' }) baselineRunId: string | null = null;
 
   /** Shows a Skip control on the review form (forwarded to `<lr-rubric-form>`'s own `skippable`). */

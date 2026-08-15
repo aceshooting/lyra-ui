@@ -12,7 +12,7 @@ const meta: Meta = {
   component: 'lr-page-rail',
   tags: ['autodocs'],
   parameters: {
-    docs: { description: { component: 'A virtualized vertical thumbnail rail for page-addressed documents.' } },
+    docs: { description: { component: 'A virtualized vertical thumbnail rail for page-addressed documents. Highlight IDs are trimmed, nonempty, and first-wins before per-page heat markers are counted.' } },
   },
 };
 export default meta;

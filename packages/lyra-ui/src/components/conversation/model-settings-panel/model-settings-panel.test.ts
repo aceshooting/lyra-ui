@@ -403,6 +403,17 @@ it('reports inCatalog false when catalog is empty/unset', async () => {
   expect(detail.inCatalog).to.be.false;
 });
 
+it('reports inCatalog from the normalized nonempty catalog projection', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel model="" .catalog=${['', '   ']}></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+
+  const listener = oneEvent(el, 'lr-change');
+  slider(el).dispatchEvent(new CustomEvent('lr-change', { detail: { value: 0.5 }, bubbles: true }));
+  const { detail } = (await listener) as CustomEvent<ModelSettingsChangeDetail>;
+  expect(detail.inCatalog).to.be.false;
+});
+
 it('recognizes an object-shaped catalog entry (id/label) for inCatalog', async () => {
   const objectCatalog = [
     { id: 'gpt-4.1', label: 'GPT-4.1' },

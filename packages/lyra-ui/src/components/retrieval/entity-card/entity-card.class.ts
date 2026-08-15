@@ -30,7 +30,7 @@ export interface LyraEntity {
   type?: string;
   description?: string;
   /** Key/value dossier rows, rendered in insertion order. */
-  properties?: Record<string, string | number>;
+  properties?: Readonly<Record<string, string | number>>;
   /** Relationship count (in + out). */
   degree?: number;
   communityId?: string;
@@ -67,6 +67,9 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * focuses a graph itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s
  * `focusNode(id, { zoom? })`.
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-entity-card
  * @slot - Extra body content below the property rows (e.g. a `lr-neighbor-list`).
  * @slot actions - Extra header actions alongside the built-in focus button.
@@ -91,6 +94,11 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * @since 4.0.0
  */
 export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "entity",
+    "types",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -107,10 +115,10 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** `null` renders the shared `lr-empty` `noData` state. */
-  @property({ attribute: false }) entity: LyraEntity | null = null;
+  @property({ attribute: false }) entity: Readonly<LyraEntity> | null = null;
   /** `lr-graph` `nodeTypes` pass-through used to resolve the type badge's label and swatch
    *  color; an unresolvable `entity.type` renders as its raw id in a neutral badge. */
-  @property({ attribute: false }) types: LyraNodeTypeStyle[] = [];
+  @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Display label for `entity.communityId`'s chip; falls back to the raw id. */
   @property({ attribute: "community-label" }) communityLabel = "";
   /** Hides the built-in focus action on pages with no graph. */

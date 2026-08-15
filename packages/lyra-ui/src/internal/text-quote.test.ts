@@ -2,6 +2,9 @@ import { expect } from '@open-wc/testing';
 import type { TextQuoteScope } from './text-quote.js';
 import {
   TEXT_QUOTE_LIMITS,
+  TEXT_SELECTION_RECT_LIMIT,
+  boundedSelectionRects,
+  boundedSelectionText,
   createTextQuoteIndex,
   findTextQuoteMatches,
   normalizeQuoteText,
@@ -188,6 +191,66 @@ describe('bounded text quote indexing', () => {
     } finally {
       root.remove();
     }
+  });
+
+  it('stores length-changing case-fold offsets in a packed typed array', () => {
+    const root = document.createElement('div');
+    root.textContent = `${'\u0130'.repeat(10_000)} target`;
+    document.body.appendChild(root);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root), 'en');
+      index.search('target');
+      const folded = (index as unknown as {
+        foldedScope?: { expansions: unknown };
+      }).foldedScope;
+      expect(folded?.expansions).to.be.instanceOf(Uint32Array);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('fails closed when context disambiguation cannot finish inside its work budget', () => {
+    const root = document.createElement('div');
+    root.textContent = 'first target second target';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const index = createTextQuoteIndex(scope, 'en');
+      const budget = index.createWorkBudget(scope.text.length);
+      expect(index.resolve({ quote: 'target', prefix: 'second ' }, budget)).to.equal(null);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('fails closed when a match ceiling omits context-disambiguation candidates', () => {
+    const root = document.createElement('div');
+    root.textContent = 'first target second target';
+    document.body.appendChild(root);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root), 'en', { maxMatches: 1 });
+      expect(index.resolve({ quote: 'target', prefix: 'second ' })).to.equal(null);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('bounds selection text and rect copies without materializing Range.toString()', () => {
+    const node = document.createTextNode('x'.repeat(TEXT_QUOTE_LIMITS.maxQueryCodeUnits + 100));
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    Object.defineProperty(range, 'toString', {
+      configurable: true,
+      value: () => { throw new Error('must not materialize the whole selection'); },
+    });
+    expect(boundedSelectionText(range)).to.have.lengthOf(TEXT_QUOTE_LIMITS.maxQueryCodeUnits);
+
+    const rect = new DOMRect(0, 0, 1, 1);
+    const rectRange = {
+      getClientRects: () => Array.from({ length: TEXT_SELECTION_RECT_LIMIT + 100 }, () => rect),
+    } as unknown as Range;
+    expect(boundedSelectionRects(rectRange)).to.have.lengthOf(TEXT_SELECTION_RECT_LIMIT);
+    expect(boundedSelectionRects(rectRange, Infinity)).to.have.lengthOf(TEXT_SELECTION_RECT_LIMIT);
   });
 });
 

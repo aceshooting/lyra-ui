@@ -1,28 +1,31 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: contents;
-    --lr-document-viewer-max-height: 70vh;
+    --_lr-document-viewer-max-height: 70vh;
   }
 
-  [part='body'] {
+  [part="body"] {
     display: flex;
     flex-direction: column;
     min-block-size: var(--lr-size-12rem);
-    max-block-size: var(--lr-document-viewer-max-height);
+    max-block-size: var(
+      --lr-document-viewer-max-height,
+      var(--_lr-document-viewer-max-height)
+    );
     overflow: auto;
     padding-inline: var(--lr-space-l);
     padding-block: var(--lr-space-l);
     min-inline-size: 0;
   }
 
-  [part='body'] img {
+  [part="body"] img {
     max-inline-size: 100%;
     block-size: auto;
   }
 
-  [part='download-link'] {
+  [part="download-link"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -37,8 +40,12 @@ export const styles = css`
     text-decoration: none;
   }
 
-  [part='download-link']:hover {
-    background: color-mix(in srgb, var(--lr-color-brand) 85%, var(--lr-color-shadow));
+  [part="download-link"]:hover {
+    background: color-mix(
+      in srgb,
+      var(--lr-color-brand) 85%,
+      var(--lr-color-shadow)
+    );
   }
 
   /* Pressed continues the hover's own axis (further toward --lr-color-shadow) rather than toward
@@ -46,11 +53,15 @@ export const styles = css`
      brand and the label is --lr-color-on-brand, so mixing toward the page text colour would lighten
      the fill under a dark theme and eat the label's contrast. --lr-color-mix-active still sets the
      amount, so the pressed step stays themeable with every other pressed state. */
-  [part='download-link']:active {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-shadow) var(--lr-color-mix-active));
+  [part="download-link"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-shadow) var(--lr-color-mix-active)
+    );
   }
 
-  [part='download-link']:focus-visible {
+  [part="download-link"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

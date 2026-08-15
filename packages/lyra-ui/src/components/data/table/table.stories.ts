@@ -28,7 +28,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A bounded sort/select-aware grid. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted. Built-in filter/loading/empty/more/column-toggle copy localizes only while its optional override is omitted; supplied strings, including empty strings, render verbatim.',
+          'A bounded sort/select-aware grid. Unique nonempty column and row keys are first-wins before render, counts, focus, actions, and events. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted. Built-in filter/loading/empty/more/column-toggle copy localizes only while its optional override is omitted; supplied strings, including empty strings, render verbatim.',
       },
     },
   },

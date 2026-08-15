@@ -3,7 +3,13 @@ import { property, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from './announcer.js';
 import { isAccessibilityVisible } from './accessibility-visibility.js';
 import { LyraElement } from './lyra-element.js';
-import { normalizeQuoteText, scopeFromElement, buildQuoteAnchor } from './text-quote.js';
+import { snapshotLyraHighlights } from './highlight-collection.js';
+import {
+  boundedSelectionRects,
+  boundedSelectionText,
+  scopeFromElement,
+  buildQuoteAnchor,
+} from './text-quote.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
@@ -21,7 +27,11 @@ type MixedConstructor<Base extends PublicConstructor<object>, Added> = Base & (
 
 export const ANCHOR_RETRY_INTERVAL_MS = 250;
 export const ANCHOR_TIMEOUT_MS = 5000;
-/** Maximum host-highlight records admitted into one immutable target snapshot. */
+export {
+  HIGHLIGHT_SNAPSHOT_LIMIT,
+  snapshotLyraHighlights,
+} from './highlight-collection.js';
+/** Maximum records a capped highlight renderer receives from one retained snapshot. */
 export const HIGHLIGHT_CANDIDATE_LIMIT = 1_000;
 
 export interface LyraAnchorTargetEventMap {
@@ -41,28 +51,26 @@ export interface LyraAnchorTarget {
   scrollToAnchor(target: LyraAnchor | string): Promise<boolean>;
 }
 
-const EMPTY_HIGHLIGHTS: readonly LyraHighlight[] = Object.freeze([]);
-
-function snapshotHighlights(value: unknown): readonly LyraHighlight[] {
-  if (!Array.isArray(value)) return EMPTY_HIGHLIGHTS;
-  const output: LyraHighlight[] = [];
-  const candidateCount = Math.min(value.length, HIGHLIGHT_CANDIDATE_LIMIT);
-  for (let index = 0; index < candidateCount; index++) {
-    try {
-      const highlight: unknown = value[index];
-      if (
-        highlight === null ||
-        typeof highlight !== 'object' ||
-        Array.isArray(highlight)
-      ) continue;
-      // The highlight record belongs to the target. Its anchor remains an opaque caller identity:
-      // several viewers deliberately support `scrollToAnchor(highlight.anchor)` by reference.
-      output.push(Object.freeze({ ...highlight }) as LyraHighlight);
-    } catch {
-      // Keep later valid records when an admitted entry has a hostile getter.
+/** Returns at most the candidate ceiling, reserving its first slot for an active entry anywhere
+ * in the already-owned, globally bounded immutable snapshot. */
+export function prioritizedHighlightCandidates<T extends LyraHighlight>(
+  highlights: readonly T[],
+  activeHighlightId: string | null,
+): T[] {
+  const ordinary: T[] = [];
+  let active: T | undefined;
+  for (let index = 0; index < highlights.length; index++) {
+    const highlight = highlights[index]!;
+    if (activeHighlightId !== null && highlight.id === activeHighlightId) {
+      active ??= highlight;
+    } else if (ordinary.length < HIGHLIGHT_CANDIDATE_LIMIT) {
+      ordinary.push(highlight);
     }
   }
-  return Object.freeze(output);
+  if (!active) return ordinary;
+  if (ordinary.length >= HIGHLIGHT_CANDIDATE_LIMIT) ordinary.length = HIGHLIGHT_CANDIDATE_LIMIT - 1;
+  ordinary.unshift(active);
+  return ordinary;
 }
 
 function selectionRange(root: LyraElement): Range | null {
@@ -136,12 +144,12 @@ export function DocumentAnchorTarget(
   renderAnchorLiveRegion(): unknown;
 }> {
   class DocumentAnchorTargetElement extends Base implements LyraAnchorTarget {
-    private _highlights: readonly LyraHighlight[] = EMPTY_HIGHLIGHTS;
+    private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
     @property({ attribute: false })
     get highlights(): readonly LyraHighlight[] { return this._highlights; }
     set highlights(value: readonly LyraHighlight[]) {
       const previous = this._highlights;
-      this._highlights = snapshotHighlights(value);
+      this._highlights = snapshotLyraHighlights(value);
       this.requestUpdate('highlights', previous);
     }
     @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
@@ -382,10 +390,10 @@ export function DocumentAnchorTarget(
         const range = selectionRange(this);
         if (!range) return;
         if (!contentRoot.contains(range.commonAncestorContainer) && range.commonAncestorContainer !== contentRoot) return;
-        const text = normalizeQuoteText(range.toString());
+        const text = boundedSelectionText(range);
         if (!text) return;
         const anchor = this.computeSelectionAnchor(range, text);
-        const rects = Array.from(range.getClientRects());
+        const rects = boundedSelectionRects(range);
         this.emit('lr-text-select', { text, anchor, rects });
       };
 

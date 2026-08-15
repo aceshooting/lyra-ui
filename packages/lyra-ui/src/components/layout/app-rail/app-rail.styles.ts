@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -12,13 +12,13 @@ export const styles = css`
        can retheme any of them without a raw literal leaking into the public
        API (same rationale as lr-dialog's --lr-dialog-overlay-color and
        lr-widget's --lr-widget-overlay-color). */
-    --lr-app-rail-width: var(--lr-size-15rem);
-    --lr-app-rail-icon-width: var(--lr-size-4rem);
-    --lr-app-rail-mobile-width: var(--lr-size-18rem);
-    --lr-app-rail-overlay-color: var(--lr-color-overlay);
+    --_lr-app-rail-width: var(--lr-size-15rem);
+    --_lr-app-rail-icon-width: var(--lr-size-4rem);
+    --_lr-app-rail-mobile-width: var(--lr-size-18rem);
+    --_lr-app-rail-overlay-color: var(--lr-color-overlay);
   }
 
-  [part='toggle'] {
+  [part="toggle"] {
     display: none;
     align-items: center;
     justify-content: center;
@@ -30,23 +30,23 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
   }
-  :host([mode='mobile']) [part='toggle'] {
+  :host([mode="mobile"]) [part="toggle"] {
     display: inline-flex;
   }
-  :host([hide-toggle][mode='mobile']) [part='toggle'] {
+  :host([hide-toggle][mode="mobile"]) [part="toggle"] {
     display: none;
   }
-  :host([mode='mobile'][open]) [part='toggle'] {
+  :host([mode="mobile"][open]) [part="toggle"] {
     position: relative;
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 2);
   }
-  [part='toggle']:hover {
+  [part="toggle"]:hover {
     background: var(--lr-app-rail-toggle-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-app-rail-toggle-hover-color, var(--lr-color-brand));
   }
   /* The fill hover already uses, mixed further toward --lr-color-mix-partner (the text colour), so
      the pressed step is always deeper than the hover step whichever way the theme runs. */
-  [part='toggle']:active {
+  [part="toggle"]:active {
     background: var(
       --lr-app-rail-toggle-active-bg,
       color-mix(
@@ -57,16 +57,19 @@ export const styles = css`
     );
     color: var(--lr-app-rail-toggle-active-color, var(--lr-color-brand));
   }
-  [part='toggle']:focus-visible {
+  [part="toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  [part='backdrop'] {
+  [part="backdrop"] {
     position: fixed;
     inset: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
-    background: var(--lr-app-rail-overlay-color);
+    background: var(
+      --lr-app-rail-overlay-color,
+      var(--_lr-app-rail-overlay-color)
+    );
   }
 
   /* [part="base"]/[part="panel"] are the SAME element -- this
@@ -76,12 +79,12 @@ export const styles = css`
      (a light-DOM node can only be assigned to one <slot> at a time). Its
      part attribute switches between the two names per render, so the two
      rulesets below are always mutually exclusive on it. */
-  [part='base'] {
+  [part="base"] {
     /* The resizer is anchored by :host (a sibling relationship), not by this element. */
     position: relative;
     display: flex;
     flex-direction: column;
-    inline-size: var(--lr-app-rail-width);
+    inline-size: var(--lr-app-rail-width, var(--_lr-app-rail-width));
     block-size: 100%;
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
@@ -92,10 +95,10 @@ export const styles = css`
     overflow-x: clip;
     transition: inline-size var(--lr-transition-base);
   }
-  :host([mode='icon-only']) [part='base'] {
-    inline-size: var(--lr-app-rail-icon-width);
+  :host([mode="icon-only"]) [part="base"] {
+    inline-size: var(--lr-app-rail-icon-width, var(--_lr-app-rail-icon-width));
   }
-  :host([dragging]) [part='base'] {
+  :host([dragging]) [part="base"] {
     transition: none;
   }
 
@@ -104,7 +107,7 @@ export const styles = css`
      [part='swatch']), centered on the same inset-inline-end edge the old 3px-wide box occupied --
      while the *visible* drag line stays a slim 3px bar, rendered on the separate [part='resizer-track']
      child below and centered via flex, not by resizing this element itself. */
-  [part='resizer'] {
+  [part="resizer"] {
     position: absolute;
     inset-block: 0;
     inset-inline-end: calc(var(--lr-icon-button-size) * -0.5);
@@ -118,17 +121,17 @@ export const styles = css`
     cursor: col-resize;
     touch-action: none;
   }
-  [part='resizer-track'] {
+  [part="resizer-track"] {
     inline-size: var(--lr-size-3px);
     background: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  [part='resizer']:hover [part='resizer-track'] {
+  [part="resizer"]:hover [part="resizer-track"] {
     background: var(--lr-app-rail-resizer-hover-bg, var(--lr-color-brand));
   }
   /* The drag itself: pointer capture keeps :active on the resizer for the whole gesture, so the
      track stays at the deeper mix until the pointer is released. */
-  [part='resizer']:active [part='resizer-track'] {
+  [part="resizer"]:active [part="resizer-track"] {
     background: var(
       --lr-app-rail-resizer-active-bg,
       color-mix(
@@ -138,19 +141,22 @@ export const styles = css`
       )
     );
   }
-  [part='resizer']:focus-visible {
+  [part="resizer"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  [part='panel'] {
+  [part="panel"] {
     position: fixed;
     inset-block: 0;
     inset-inline-start: 0;
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 1);
     display: flex;
     flex-direction: column;
-    inline-size: min(var(--lr-app-rail-mobile-width), 85vw);
+    inline-size: min(
+      var(--lr-app-rail-mobile-width, var(--_lr-app-rail-mobile-width)),
+      85vw
+    );
     /* [part="panel"] is the mobile OVERLAY promotion of this element (see the note above the
        [part="base"] rule) -- a modal drawer over a scrim, so it takes the modal-panel surface.
        [part="base"], the docked rail in the page's own layout flow, deliberately keeps
@@ -171,7 +177,7 @@ export const styles = css`
      :dir() rather than needing internal/rtl.ts's JS helper (that helper is
      for pointer/keyboard math that can't be expressed in CSS at all; this
      can). */
-  :host(:dir(rtl)) [part='panel'] {
+  :host(:dir(rtl)) [part="panel"] {
     transform: translateX(100%);
   }
   /* Settled-open state is transform: none, NOT translateX(0): a non-none transform (even the
@@ -180,25 +186,25 @@ export const styles = css`
      with position: fixed via Floating UI, not the top layer). Transitions between translateX(-100%)
      and none are well-defined (none interpolates as the identity matrix), so the slide-in still
      animates. */
-  :host([mode='mobile'][open]) [part='panel'] {
+  :host([mode="mobile"][open]) [part="panel"] {
     transform: none;
   }
 
-  [part='header'] {
+  [part="header"] {
     padding: var(--lr-space-m);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part='header'][hidden] {
+  [part="header"][hidden] {
     display: none;
   }
-  [part='footer'] {
+  [part="footer"] {
     padding: var(--lr-space-m);
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part='footer'][hidden] {
+  [part="footer"][hidden] {
     display: none;
   }
-  [part='nav'] {
+  [part="nav"] {
     flex: 1 1 auto;
     overflow-y: auto;
     /* Pin the cross axis (see [part="base"]): overflow-y alone forces overflow-x to auto. */
@@ -208,17 +214,20 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-xs);
   }
-  :host([mode='icon-only']) [part='nav'] {
+  :host([mode="icon-only"]) [part="nav"] {
     align-items: center;
   }
-  :host([mode='icon-only']) ::slotted(lr-app-rail-item) {
-    max-inline-size: var(--lr-app-rail-icon-width);
+  :host([mode="icon-only"]) ::slotted(lr-app-rail-item) {
+    max-inline-size: var(
+      --lr-app-rail-icon-width,
+      var(--_lr-app-rail-icon-width)
+    );
   }
 
   @media (prefers-reduced-motion: reduce) {
-    [part='base'],
-    [part='panel'],
-    [part='resizer-track'] {
+    [part="base"],
+    [part="panel"],
+    [part="resizer-track"] {
       transition: none !important;
     }
   }

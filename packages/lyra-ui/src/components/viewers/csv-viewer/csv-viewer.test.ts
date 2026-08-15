@@ -469,8 +469,8 @@ describe('lr-csv-viewer', () => {
         expect(action.getAttribute('aria-label')).to.equal('Highlight: Ada — First result');
         const listener = oneEvent(el, 'lr-highlight-activate');
         action.click();
-        const event = (await listener) as CustomEvent<{ id: string }>;
-        expect(event.detail).to.deep.equal({ id: 'h1' });
+        const event = (await listener) as CustomEvent<{ highlightId: string }>;
+        expect(event.detail).to.deep.equal({ highlightId: 'h1' });
       } finally {
         restore();
       }

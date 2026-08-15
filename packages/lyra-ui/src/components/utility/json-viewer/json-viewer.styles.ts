@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -7,30 +7,33 @@ export const styles = css`
        content, matching every other block-level component in this library
        until a caller opts into an internal scrollbar via the max-height
        attribute. */
-    --lr-json-viewer-max-height: none;
+    --_lr-json-viewer-max-height: none;
     /* Contained here (rather than left as a bare font-family literal) so a
        host page can retheme it, same rationale as --lr-widget-overlay-color
        in widget.styles.ts -- no shared --lr-* monospace token exists
        to resolve through. */
-    --lr-json-viewer-font: var(--lr-font-mono);
-    --lr-json-viewer-active-outline: var(--lr-focus-ring-color);
-    --lr-json-viewer-string-color: var(--lr-color-success);
-    --lr-json-viewer-number-color: var(--lr-color-brand);
-    --lr-json-viewer-boolean-color: var(--lr-color-warning);
-    --lr-json-viewer-null-color: var(--lr-color-text-quiet);
-    font-family: var(--lr-json-viewer-font);
+    --_lr-json-viewer-font: var(--lr-font-mono);
+    --_lr-json-viewer-active-outline: var(--lr-focus-ring-color);
+    --_lr-json-viewer-string-color: var(--lr-color-success);
+    --_lr-json-viewer-number-color: var(--lr-color-brand);
+    --_lr-json-viewer-boolean-color: var(--lr-color-warning);
+    --_lr-json-viewer-null-color: var(--lr-color-text-quiet);
+    font-family: var(--lr-json-viewer-font, var(--_lr-json-viewer-font));
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-loose);
   }
-  [part='base'] {
+  [part="base"] {
     display: block;
-    max-block-size: var(--lr-json-viewer-max-height);
+    max-block-size: var(
+      --lr-json-viewer-max-height,
+      var(--_lr-json-viewer-max-height)
+    );
     overflow: auto;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }
-  [part='toolbar'] {
+  [part="toolbar"] {
     position: sticky;
     inset-block-start: 0;
     z-index: var(--lr-layer-content);
@@ -40,7 +43,7 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
   }
-  [part='tree'] {
+  [part="tree"] {
     padding: var(--lr-space-s);
     /* A JSON tree's structure -- key, colon, value, brackets, indentation -- reads
        left-to-right regardless of the surrounding document direction, exactly like
@@ -65,11 +68,11 @@ export const styles = css`
      :focus-within themselves -- (0,1,0) total, so a consumer's own ::part(copy-button):hover
      override ((0,1,1)) wins without needing !important -- same fix shape as
      lr-attachment-trigger's/lr-copy-button's own :where()-wrapped hover rule. */
-  :where(.row):hover :where([part='copy-button']),
-  :where(.row):focus-within :where([part='copy-button']) {
+  :where(.row):hover :where([part="copy-button"]),
+  :where(.row):focus-within :where([part="copy-button"]) {
     opacity: 1;
   }
-  [part='toggle'] {
+  [part="toggle"] {
     /* Keep the glyph compact while giving the interactive box the shared
        minimum target size, even for deeply nested rows. */
     inline-size: var(--lr-size-1-25rem);
@@ -94,15 +97,15 @@ export const styles = css`
      involved -- so this only needs to add visibility, not re-declare
      display. Keeping the box (rather than display:none) preserves this
      leaf/empty row's alignment with sibling rows that do have a chevron. */
-  [part='toggle'][hidden] {
+  [part="toggle"][hidden] {
     visibility: hidden;
   }
-  [part='toggle'] .chevron {
+  [part="toggle"] .chevron {
     display: inline-flex;
     transform: rotate(0deg);
     transition: transform var(--lr-transition-fast);
   }
-  [part='toggle'][aria-expanded='true'] .chevron {
+  [part="toggle"][aria-expanded="true"] .chevron {
     transform: rotate(90deg);
   }
   /* No RTL chevron override: [part='tree'] above is pinned direction:ltr, so a collapsed
@@ -112,11 +115,11 @@ export const styles = css`
      -- (0,1,0) total, so a consumer's own ::part(toggle):hover override ((0,1,1)) wins without
      needing !important -- same fix shape as lr-attachment-trigger's/lr-copy-button's own
      :where()-wrapped hover rule. */
-  :where([part='toggle']):hover:where(:not([hidden])) {
+  :where([part="toggle"]):hover:where(:not([hidden])) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
-  :where([part='toggle']):active:where(:not([hidden])) {
+  :where([part="toggle"]):active:where(:not([hidden])) {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
@@ -124,8 +127,8 @@ export const styles = css`
     );
     color: var(--lr-color-brand);
   }
-  [part='toggle']:focus-visible,
-  [part='copy-button']:focus-visible {
+  [part="toggle"]:focus-visible,
+  [part="copy-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -136,7 +139,7 @@ export const styles = css`
     inline-size: var(--lr-icon-button-size);
     flex: 0 0 auto;
   }
-  [part='key'] {
+  [part="key"] {
     flex: 0 1 auto;
     min-inline-size: 0;
     overflow-wrap: anywhere;
@@ -148,43 +151,57 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     margin-inline-end: var(--lr-space-xs);
   }
-  [part='bracket'] {
+  [part="bracket"] {
     flex: 0 0 auto;
     color: var(--lr-color-text-quiet);
   }
   /* --lr-json-viewer-match-bg indirection (rather than the bare --lr-color-warning-quiet token)
      lets a consumer retheme just this component's search-match highlight without repainting
      every other warning-toned surface on the page that reads the same shared token. */
-  [part='key'][data-match],
-  [part='value'][data-match] {
+  [part="key"][data-match],
+  [part="value"][data-match] {
     background: var(--lr-json-viewer-match-bg, var(--lr-color-warning-quiet));
     border-radius: var(--lr-size-0-1875rem);
-    box-shadow: 0 0 0 var(--lr-size-0-125rem) var(--lr-json-viewer-match-bg, var(--lr-color-warning-quiet));
+    box-shadow: 0 0 0 var(--lr-size-0-125rem)
+      var(--lr-json-viewer-match-bg, var(--lr-color-warning-quiet));
   }
-  [part='value'] {
+  [part="value"] {
     min-inline-size: 0;
     overflow-wrap: anywhere;
     word-break: break-word;
     white-space: pre-wrap;
   }
-  [part='value'][data-type='string'] {
-    color: var(--lr-json-viewer-string-color);
+  [part="value"][data-type="string"] {
+    color: var(
+      --lr-json-viewer-string-color,
+      var(--_lr-json-viewer-string-color)
+    );
   }
-  [part='value'][data-type='number'] {
-    color: var(--lr-json-viewer-number-color);
+  [part="value"][data-type="number"] {
+    color: var(
+      --lr-json-viewer-number-color,
+      var(--_lr-json-viewer-number-color)
+    );
   }
-  [part='value'][data-type='boolean'] {
-    color: var(--lr-json-viewer-boolean-color);
+  [part="value"][data-type="boolean"] {
+    color: var(
+      --lr-json-viewer-boolean-color,
+      var(--_lr-json-viewer-boolean-color)
+    );
   }
-  [part='value'][data-type='null'],
-  [part='value'][data-type='undefined'],
-  [part='value'][data-type='circular'] {
-    color: var(--lr-json-viewer-null-color);
+  [part="value"][data-type="null"],
+  [part="value"][data-type="undefined"],
+  [part="value"][data-type="circular"] {
+    color: var(--lr-json-viewer-null-color, var(--_lr-json-viewer-null-color));
     font-style: italic;
   }
-  [part='key'][data-active],
-  [part='value'][data-active] {
-    outline: var(--lr-focus-ring-width) solid var(--lr-json-viewer-active-outline);
+  [part="key"][data-active],
+  [part="value"][data-active] {
+    outline: var(--lr-focus-ring-width) solid
+      var(
+        --lr-json-viewer-active-outline,
+        var(--_lr-json-viewer-active-outline)
+      );
     outline-offset: var(--lr-focus-ring-offset);
   }
   .preview {
@@ -193,7 +210,7 @@ export const styles = css`
     font-style: italic;
     margin-inline: var(--lr-space-xs);
   }
-  [part='copy-button'] {
+  [part="copy-button"] {
     flex: 0 0 auto;
     margin-inline-start: auto;
     border: none;
@@ -208,14 +225,14 @@ export const styles = css`
     border-radius: var(--lr-radius);
     cursor: pointer;
   }
-  [part='copy-button']:hover {
+  [part="copy-button"]:hover {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
   /* This is also the pressed state for the row-hover reveal rule further up: that rule only fades
      the button in when its row is hovered, it is not itself a hover treatment on the button, and the
      button's own held state belongs here next to its hover. */
-  [part='copy-button']:active {
+  [part="copy-button"]:active {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
@@ -226,19 +243,19 @@ export const styles = css`
   /* Per-node copy buttons stay out of the way until the row is actually
      being interacted with -- the toolbar's own top-level copy button is
      exempt (it has no ancestor .row, so this rule never matches it). */
-  .row [part='copy-button'] {
+  .row [part="copy-button"] {
     opacity: 0;
   }
-  .row [part='copy-button']:focus-visible {
+  .row [part="copy-button"]:focus-visible {
     opacity: 1;
   }
   @media (hover: none), (pointer: coarse) {
-    .row [part='copy-button'] {
+    .row [part="copy-button"] {
       opacity: 1;
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='toggle'] .chevron {
+    [part="toggle"] .chevron {
       transition: none !important;
     }
   }

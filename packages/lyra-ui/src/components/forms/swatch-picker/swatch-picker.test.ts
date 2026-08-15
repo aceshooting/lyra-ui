@@ -1,373 +1,550 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-import './swatch-picker.js';
-import type { LyraSwatchPicker } from './swatch-picker.js';
-import { styles } from './swatch-picker.styles.js';
+import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import "./swatch-picker.js";
+import type { LyraSwatchPicker } from "./swatch-picker.js";
+import { styles } from "./swatch-picker.styles.js";
 
 const options = () => [
-  { value: 'blue', color: '#0969da', label: 'Blue' },
-  { value: 'green', color: '#1a7f37', label: 'Green' },
-  { value: 'red', color: '#cf222e', label: 'Red' },
+  { value: "blue", color: "#0969da", label: "Blue" },
+  { value: "green", color: "#1a7f37", label: "Green" },
+  { value: "red", color: "#cf222e", label: "Red" },
 ];
 
 function swatches(el: LyraSwatchPicker): HTMLButtonElement[] {
-  return [...el.shadowRoot!.querySelectorAll('[part="swatch"]')] as HTMLButtonElement[];
+  return [
+    ...el.shadowRoot!.querySelectorAll('[part="swatch"]'),
+  ] as HTMLButtonElement[];
 }
 
-describe('lr-swatch-picker', () => {
-  it('uses the canonical readonly items/accessibility vocabulary while retaining aliases', async () => {
+describe("lr-swatch-picker", () => {
+  it("uses the canonical readonly items/accessibility vocabulary while retaining aliases", async () => {
     const palette = options();
     const el = (await fixture(html`
-      <lr-swatch-picker aria-label="Accent" .items=${palette}></lr-swatch-picker>
+      <lr-swatch-picker
+        aria-label="Accent"
+        .items=${palette}
+      ></lr-swatch-picker>
     `)) as LyraSwatchPicker;
     expect(el.items).to.deep.equal(palette);
     expect(el.items === palette).to.be.false;
     expect(el.options).to.equal(el.items);
     expect(Object.isFrozen(el.items)).to.be.true;
-    palette[0]!.label = 'Forged';
-    palette.push({ value: 'purple', color: '#8250df', label: 'Purple' });
-    expect(el.items.map((item) => item.label)).to.deep.equal(['Blue', 'Green', 'Red']);
-    palette[0]!.label = 'Blue';
+    palette[0]!.label = "Forged";
+    palette.push({ value: "purple", color: "#8250df", label: "Purple" });
+    expect(el.items.map((item) => item.label)).to.deep.equal([
+      "Blue",
+      "Green",
+      "Red",
+    ]);
+    palette[0]!.label = "Blue";
     palette.pop();
-    expect(el.accessibleLabel).to.equal('Accent');
-    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Accent');
+    expect(el.accessibleLabel).to.equal("Accent");
+    expect(
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+    ).to.equal("Accent");
 
     const replacement = palette.slice().reverse();
     el.options = replacement;
     await el.updateComplete;
     expect(el.items).to.deep.equal(replacement);
-    expect(swatches(el).map((swatch) => swatch.dataset['value'])).to.deep.equal(['red', 'green', 'blue']);
+    expect(swatches(el).map((swatch) => swatch.dataset["value"])).to.deep.equal(
+      ["red", "green", "blue"]
+    );
   });
-  it('rejects unsafe option colors from both CSS and gemstone SVG paint sinks', async () => {
-    const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker></lr-swatch-picker>`);
-    el.mode = 'gemstone';
+  it("rejects unsafe option colors from both CSS and gemstone SVG paint sinks", async () => {
+    const el = await fixture<LyraSwatchPicker>(
+      html`<lr-swatch-picker></lr-swatch-picker>`
+    );
+    el.mode = "gemstone";
     el.options = [
       {
-        value: 'unsafe',
-        label: 'Unsafe',
-        gemstone: 'ruby',
+        value: "unsafe",
+        label: "Unsafe",
+        gemstone: "ruby",
         color: 'url("data:image/svg+xml,<svg/>")',
       },
     ];
     await el.updateComplete;
     const swatch = swatches(el)[0]!;
-    expect(swatch.style.getPropertyValue('--lr-swatch-color')).to.equal('');
-    expect(swatch.querySelector('path')!.getAttribute('fill')).to.equal('currentColor');
+    expect(swatch.style.getPropertyValue("--lr-swatch-color")).to.equal("");
+    expect(swatch.querySelector("path")!.getAttribute("fill")).to.equal(
+      "currentColor"
+    );
 
-    el.options = [{ value: 'safe', label: 'Safe', gemstone: 'ruby', color: 'var(--lr-color-brand)' }];
+    el.options = [
+      {
+        value: "safe",
+        label: "Safe",
+        gemstone: "ruby",
+        color: "var(--lr-color-brand)",
+      },
+    ];
     await el.updateComplete;
-    expect(swatches(el)[0]!.style.getPropertyValue('--lr-swatch-color')).to.equal('var(--lr-color-brand)');
-    expect(swatches(el)[0]!.querySelector('path')!.getAttribute('fill')).to.equal('var(--lr-color-brand)');
+    expect(
+      swatches(el)[0]!.style.getPropertyValue("--lr-swatch-color")
+    ).to.equal("var(--lr-color-brand)");
+    expect(
+      swatches(el)[0]!.querySelector("path")!.getAttribute("fill")
+    ).to.equal("var(--lr-color-brand)");
   });
 
-  it('renders role=radiogroup with one role=radio per option, aria-checked on the selected one', async () => {
+  it("renders role=radiogroup with one role=radio per option, aria-checked on the selected one", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="green"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="green"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('role')).to.equal('radiogroup');
+    expect(base.getAttribute("role")).to.equal("radiogroup");
     const buttons = swatches(el);
     expect(buttons).to.have.lengthOf(3);
-    expect(buttons.map((b) => b.getAttribute('role'))).to.deep.equal(['radio', 'radio', 'radio']);
-    expect(buttons[1]!.getAttribute('aria-checked')).to.equal('true');
-    expect(buttons[0]!.getAttribute('aria-checked')).to.equal('false');
-    expect(buttons[2]!.getAttribute('aria-checked')).to.equal('false');
+    expect(buttons.map((b) => b.getAttribute("role"))).to.deep.equal([
+      "radio",
+      "radio",
+      "radio",
+    ]);
+    expect(buttons[1]!.getAttribute("aria-checked")).to.equal("true");
+    expect(buttons[0]!.getAttribute("aria-checked")).to.equal("false");
+    expect(buttons[2]!.getAttribute("aria-checked")).to.equal("false");
   });
 
-  it('names each swatch and applies the option color as its fill', async () => {
+  it("names each swatch and applies the option color as its fill", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="blue"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="blue"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const first = swatches(el)[0]!;
-    expect(first.getAttribute('aria-label')).to.equal('Blue');
-    expect(first.getAttribute('title')).to.equal('Blue');
-    expect(first.style.getPropertyValue('--lr-swatch-color')).to.equal('#0969da');
+    expect(first.getAttribute("aria-label")).to.equal("Blue");
+    expect(first.getAttribute("title")).to.equal("Blue");
+    expect(first.style.getPropertyValue("--lr-swatch-color")).to.equal(
+      "#0969da"
+    );
   });
 
-  it('uses roving tabindex -- only the selected swatch is tabbable', async () => {
+  it("uses roving tabindex -- only the selected swatch is tabbable", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="green"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="green"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
-    expect(swatches(el).map((b) => b.getAttribute('tabindex'))).to.deep.equal(['-1', '0', '-1']);
+    expect(swatches(el).map((b) => b.getAttribute("tabindex"))).to.deep.equal([
+      "-1",
+      "0",
+      "-1",
+    ]);
   });
 
-  it('makes the first swatch tabbable when nothing is selected, so the radiogroup stays keyboard-reachable', async () => {
-    const el = (await fixture(html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`)) as LyraSwatchPicker;
+  it("makes the first swatch tabbable when nothing is selected, so the radiogroup stays keyboard-reachable", async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`
+    )) as LyraSwatchPicker;
     expect(el.value).to.equal(null);
-    expect(swatches(el).map((b) => b.getAttribute('tabindex'))).to.deep.equal(['0', '-1', '-1']);
+    expect(swatches(el).map((b) => b.getAttribute("tabindex"))).to.deep.equal([
+      "0",
+      "-1",
+      "-1",
+    ]);
   });
 
-  it('moves focus and the roving tab stop to the nearest survivor when the focused option is removed', async () => {
+  it("moves focus and the roving tab stop to the nearest survivor when the focused option is removed", async () => {
     const palette = options();
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${palette} value="red"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${palette}
+        value="red"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     let changes = 0;
-    el.addEventListener('lr-change', () => (changes += 1));
+    el.addEventListener("lr-change", () => (changes += 1));
     swatches(el)[2]!.focus();
 
     el.options = palette.slice(0, 2);
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement?.getAttribute('data-value')).to.equal('green');
-    expect(swatches(el).map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
-    expect(el.value).to.equal('red');
+    expect(el.shadowRoot!.activeElement?.getAttribute("data-value")).to.equal(
+      "green"
+    );
+    expect(swatches(el).map((button) => button.tabIndex)).to.deep.equal([
+      -1, 0,
+    ]);
+    expect(el.value).to.equal("red");
     expect(changes).to.equal(0);
   });
 
-  it('keeps focus on the same option identity when a live palette is reordered', async () => {
+  it("keeps focus on the same option identity when a live palette is reordered", async () => {
     const palette = options();
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${palette} value="green"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${palette}
+        value="green"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     swatches(el)[1]!.focus();
 
     el.options = [palette[1]!, palette[2]!, palette[0]!];
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement?.getAttribute('data-value')).to.equal('green');
-    expect(swatches(el).map((button) => button.tabIndex)).to.deep.equal([0, -1, -1]);
-    expect(el.value).to.equal('green');
+    expect(el.shadowRoot!.activeElement?.getAttribute("data-value")).to.equal(
+      "green"
+    );
+    expect(swatches(el).map((button) => button.tabIndex)).to.deep.equal([
+      0, -1, -1,
+    ]);
+    expect(el.value).to.equal("green");
   });
 
-  it('selects on click and emits lr-change with the option value', async () => {
+  it("selects on click and emits lr-change with the option value", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="blue"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="blue"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const buttons = swatches(el);
     setTimeout(() => buttons[2]!.click());
-    const ev = await oneEvent(el, 'lr-change');
-    expect(ev.detail).to.deep.equal({ value: 'red' });
-    expect(el.value).to.equal('red');
+    const ev = await oneEvent(el, "lr-change");
+    expect(ev.detail).to.deep.equal({ value: "red" });
+    expect(el.value).to.equal("red");
     await el.updateComplete;
-    expect(buttons[2]!.getAttribute('aria-checked')).to.equal('true');
+    expect(buttons[2]!.getAttribute("aria-checked")).to.equal("true");
   });
 
-  it('forwards host focus()/blur() to the tabbable swatch', async () => {
+  it("forwards host focus()/blur() to the tabbable swatch", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="green"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="green"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const tabbable = swatches(el)[1]!;
     el.focus();
     expect(el.shadowRoot!.activeElement === tabbable).to.be.true;
     el.blur();
-    expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
+    expect(el.shadowRoot!.activeElement === null).to.equal(true);
   });
 
-  it('forwards host click() to the tabbable swatch, selecting its option', async () => {
-    const el = (await fixture(html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`)) as LyraSwatchPicker;
+  it("forwards host click() to the tabbable swatch, selecting its option", async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`
+    )) as LyraSwatchPicker;
     expect(el.value).to.equal(null);
-    const event = oneEvent(el, 'lr-change');
+    const event = oneEvent(el, "lr-change");
     el.click();
     const result = await event;
-    expect(result.detail.value).to.equal('blue');
-    expect(el.value).to.equal('blue');
+    expect(result.detail.value).to.equal("blue");
+    expect(el.value).to.equal("blue");
   });
 
-  it('does not emit lr-change when re-selecting the already-selected swatch', async () => {
+  it("does not emit lr-change when re-selecting the already-selected swatch", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="green"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="green"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     let fired = 0;
-    el.addEventListener('lr-change', () => (fired += 1));
+    el.addEventListener("lr-change", () => (fired += 1));
     swatches(el)[1]!.click();
     await el.updateComplete;
     expect(fired).to.equal(0);
-    expect(el.value).to.equal('green');
+    expect(el.value).to.equal("green");
   });
 
-  it('keeps duplicate-valued swatches as distinct occurrences for selection and navigation', async () => {
+  it("keeps duplicate-valued swatches as distinct occurrences for selection and navigation", async () => {
     const duplicateOptions = [
-      { value: 'same', color: '#0969da', label: 'First occurrence' },
-      { value: 'same', color: '#1a7f37', label: 'Second occurrence' },
-      { value: 'other', color: '#cf222e', label: 'Other' },
+      { value: "same", color: "#0969da", label: "First occurrence" },
+      { value: "same", color: "#1a7f37", label: "Second occurrence" },
+      { value: "other", color: "#cf222e", label: "Other" },
     ];
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${duplicateOptions}></lr-swatch-picker>`,
+      html`<lr-swatch-picker .options=${duplicateOptions}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const buttons = swatches(el);
     buttons[1]!.click();
     await el.updateComplete;
 
-    expect(buttons.map((button) => button.getAttribute('aria-checked'))).to.deep.equal([
-      'false',
-      'true',
-      'false',
-    ]);
+    expect(
+      buttons.map((button) => button.getAttribute("aria-checked"))
+    ).to.deep.equal(["false", "true", "false"]);
     expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, 0, -1]);
 
     buttons[1]!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
     );
     await el.updateComplete;
-    expect(el.value).to.equal('other');
-    expect(swatches(el)[2]!.getAttribute('aria-checked')).to.equal('true');
+    expect(el.value).to.equal("other");
+    expect(swatches(el)[2]!.getAttribute("aria-checked")).to.equal("true");
   });
 
-  it('starts arrow navigation from the focused duplicate occurrence when no value is selected', async () => {
+  it("starts arrow navigation from the focused duplicate occurrence when no value is selected", async () => {
     const duplicateOptions = [
-      { value: 'same', color: '#0969da', label: 'First occurrence' },
-      { value: 'same', color: '#1a7f37', label: 'Second occurrence' },
-      { value: 'other', color: '#cf222e', label: 'Other' },
+      { value: "same", color: "#0969da", label: "First occurrence" },
+      { value: "same", color: "#1a7f37", label: "Second occurrence" },
+      { value: "other", color: "#cf222e", label: "Other" },
     ];
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${duplicateOptions}></lr-swatch-picker>`,
+      html`<lr-swatch-picker .options=${duplicateOptions}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const second = swatches(el)[1]!;
     second.focus();
     second.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
     );
     await el.updateComplete;
 
-    expect(el.value).to.equal('other');
+    expect(el.value).to.equal("other");
     expect(el.shadowRoot!.activeElement === swatches(el)[2]).to.equal(true);
   });
 
-  it('uses the focused swatch rather than a newer controlled value as the arrow origin', async () => {
+  it("uses the focused swatch rather than a newer controlled value as the arrow origin", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="blue"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="blue"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     swatches(el)[2]!.focus();
-    el.value = 'green';
+    el.value = "green";
     await el.updateComplete;
 
     const focused = swatches(el)[2]!;
     focused.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
     );
     await el.updateComplete;
 
-    expect(el.value).to.equal('blue');
+    expect(el.value).to.equal("blue");
     expect(el.shadowRoot!.activeElement === swatches(el)[0]).to.equal(true);
   });
 
-  it('uses the focused swatch as the controlled origin under RTL', async () => {
+  it("uses the focused swatch as the controlled origin under RTL", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker dir="rtl" .options=${options()} value="blue"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        dir="rtl"
+        .options=${options()}
+        value="blue"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     swatches(el)[2]!.focus();
-    el.value = 'green';
+    el.value = "green";
     await el.updateComplete;
 
     const focused = swatches(el)[2]!;
     focused.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }),
+      new KeyboardEvent("keydown", {
+        key: "ArrowLeft",
+        bubbles: true,
+        cancelable: true,
+      })
     );
     await el.updateComplete;
 
-    expect(el.value).to.equal('blue');
+    expect(el.value).to.equal("blue");
     expect(el.shadowRoot!.activeElement === swatches(el)[0]).to.equal(true);
   });
 
-  it('selects on ArrowRight (automatic activation) and wraps cyclically at the end', async () => {
+  it("selects on ArrowRight (automatic activation) and wraps cyclically at the end", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="red"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="red"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const buttons = swatches(el);
     buttons[2]!.focus();
-    buttons[2]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    buttons[2]!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
     await el.updateComplete;
-    expect(el.value).to.equal('blue'); // wrapped from the last swatch back to the first
+    expect(el.value).to.equal("blue"); // wrapped from the last swatch back to the first
   });
 
-  it('moves selection backward with ArrowLeft and to the ends with Home/End', async () => {
+  it("moves selection backward with ArrowLeft and to the ends with Home/End", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="green"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="green"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    base.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowLeft",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
     await el.updateComplete;
-    expect(el.value).to.equal('blue');
-    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    expect(el.value).to.equal("blue");
+    base.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "End",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
     await el.updateComplete;
-    expect(el.value).to.equal('red');
-    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    expect(el.value).to.equal("red");
+    base.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Home",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
     await el.updateComplete;
-    expect(el.value).to.equal('blue');
+    expect(el.value).to.equal("blue");
   });
 
   it('treats ArrowLeft as "next" under RTL', async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker dir="rtl" .options=${options()} value="blue"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        dir="rtl"
+        .options=${options()}
+        value="blue"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    base.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowLeft",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
     await el.updateComplete;
-    expect(el.value).to.equal('green');
+    expect(el.value).to.equal("green");
   });
 
-  it('lets a forwarded host aria-label win on the radiogroup while retaining the label prop fallback', async () => {
+  it("lets a forwarded host aria-label win on the radiogroup while retaining the label prop fallback", async () => {
     const labeled = (await fixture(
-      html`<lr-swatch-picker label="Accent" .options=${options()}></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        label="Accent"
+        .options=${options()}
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(
-      (labeled.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label'),
-    ).to.equal('Accent');
+      (
+        labeled.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+      ).getAttribute("aria-label")
+    ).to.equal("Accent");
 
     const forwarded = (await fixture(
-      html`<lr-swatch-picker aria-label="Forwarded" .options=${options()}></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        aria-label="Forwarded"
+        .options=${options()}
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(
-      (forwarded.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label'),
-    ).to.equal('Forwarded');
+      (
+        forwarded.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+      ).getAttribute("aria-label")
+    ).to.equal("Forwarded");
 
     const hostOverride = (await fixture(
       html`<lr-swatch-picker
         label="Accent"
         aria-label="Author label"
         .options=${options()}
-      ></lr-swatch-picker>`,
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(
-      (hostOverride.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label'),
-    ).to.equal('Author label');
+      (
+        hostOverride.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+      ).getAttribute("aria-label")
+    ).to.equal("Author label");
   });
 
-  it('honors an explicit empty host aria-label instead of falling back to the label prop', async () => {
+  it("honors an explicit empty host aria-label instead of falling back to the label prop", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker label="Accent" aria-label="" .options=${options()}></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        label="Accent"
+        aria-label=""
+        .options=${options()}
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(
-      (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label'),
-    ).to.equal('');
+      (
+        el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+      ).getAttribute("aria-label")
+    ).to.equal("");
   });
 
-  it('renders a custom icon in place of the plain circle when the option provides one', async () => {
+  it("renders a custom icon in place of the plain circle when the option provides one", async () => {
     const withIcon = [
-      { value: 'blue', color: '#0969da', label: 'Blue' },
-      { value: 'green', color: '#1a7f37', label: 'Green', icon: html`<svg data-testid="gem-icon"></svg>` },
+      { value: "blue", color: "#0969da", label: "Blue" },
+      {
+        value: "green",
+        color: "#1a7f37",
+        label: "Green",
+        icon: html`<svg data-testid="gem-icon"></svg>`,
+      },
     ];
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${withIcon} value="blue"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${withIcon}
+        value="blue"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const buttons = swatches(el);
-    expect((buttons[0]!.querySelector('[part="swatch-icon"]')) === (null)).to.equal(true);
+    expect(buttons[0]!.querySelector('[part="swatch-icon"]') === null).to.equal(
+      true
+    );
     const iconSpan = buttons[1]!.querySelector('[part="swatch-icon"]');
-    expect((iconSpan) !== (null)).to.equal(true);
-    expect(iconSpan!.getAttribute('aria-hidden')).to.equal('true');
-    expect(iconSpan!.querySelector('[data-testid="gem-icon"]')).to.not.equal(null);
+    expect(iconSpan !== null).to.equal(true);
+    expect(iconSpan!.getAttribute("aria-hidden")).to.equal("true");
+    expect(iconSpan!.querySelector('[data-testid="gem-icon"]')).to.not.equal(
+      null
+    );
     // Still wired for currentColor: the option's color stays on the custom property the icon inherits.
-    expect(buttons[1]!.style.getPropertyValue('--lr-swatch-color')).to.equal('#1a7f37');
+    expect(buttons[1]!.style.getPropertyValue("--lr-swatch-color")).to.equal(
+      "#1a7f37"
+    );
   });
 
-  it('keeps arbitrary interactive option icons visible but inert beneath the radio owner', async () => {
-    const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker></lr-swatch-picker>`);
+  it("keeps arbitrary interactive option icons visible but inert beneath the radio owner", async () => {
+    const el = await fixture<LyraSwatchPicker>(
+      html`<lr-swatch-picker></lr-swatch-picker>`
+    );
     el.options = [
       {
-        value: 'hostile',
-        color: '#0969da',
-        label: 'Hostile icon probe',
-        icon: html`<a id="nested-swatch-icon" href="#nested-swatch-icon"><button type="button">Nested</button></a>`,
+        value: "hostile",
+        color: "#0969da",
+        label: "Hostile icon probe",
+        icon: html`<a id="nested-swatch-icon" href="#nested-swatch-icon"
+          ><button type="button">Nested</button></a
+        >`,
       },
     ];
     await el.updateComplete;
     const swatch = swatches(el)[0]!;
     const icon = swatch.querySelector<HTMLElement>('[part="swatch-icon"]')!;
-    const nested = icon.querySelector<HTMLAnchorElement>('#nested-swatch-icon')!;
+    const nested = icon.querySelector<HTMLAnchorElement>(
+      "#nested-swatch-icon"
+    )!;
 
-    expect(icon.getAttribute('aria-hidden')).to.equal('true');
-    expect(icon.hasAttribute('inert')).to.be.true;
+    expect(icon.getAttribute("aria-hidden")).to.equal("true");
+    expect(icon.hasAttribute("inert")).to.be.true;
     expect(nested.getBoundingClientRect().width).to.be.greaterThan(0);
 
     swatch.focus();
@@ -376,98 +553,139 @@ describe('lr-swatch-picker', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('renders the shared gemstone glyph automatically in gemstone mode', async () => {
+  it("renders the shared gemstone glyph automatically in gemstone mode", async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
         mode="gemstone"
         .options=${[
-          { value: 'ruby', color: '#e63950', label: 'Ruby', gemstone: 'ruby' as const },
-          { value: 'emerald', color: '#34d399', label: 'Emerald', gemstone: 'emerald' as const },
+          {
+            value: "ruby",
+            color: "#e63950",
+            label: "Ruby",
+            gemstone: "ruby" as const,
+          },
+          {
+            value: "emerald",
+            color: "#34d399",
+            label: "Emerald",
+            gemstone: "emerald" as const,
+          },
         ]}
         value="emerald"
       ></lr-swatch-picker>
     `)) as LyraSwatchPicker;
     const selected = swatches(el)[1]!;
-    expect((selected.querySelector('[part="swatch-fill"]')) === (null)).to.equal(true);
-    expect(selected.querySelector('[part="swatch-icon"] svg')).to.not.equal(null);
-    expect(selected.querySelector('[part="swatch-icon"] svg')?.getAttribute('viewBox')).to.equal('0 0 24 24');
+    expect(selected.querySelector('[part="swatch-fill"]') === null).to.equal(
+      true
+    );
+    expect(selected.querySelector('[part="swatch-icon"] svg')).to.not.equal(
+      null
+    );
+    expect(
+      selected
+        .querySelector('[part="swatch-icon"] svg')
+        ?.getAttribute("viewBox")
+    ).to.equal("0 0 24 24");
   });
 
-  it('sizes the gemstone glyph to the visible fill box instead of the button UA font size', async () => {
+  it("sizes the gemstone glyph to the visible fill box instead of the button UA font size", async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
         mode="gemstone"
         .options=${[
-          { value: 'ruby', color: '#e63950', label: 'Ruby', gemstone: 'ruby' as const },
+          {
+            value: "ruby",
+            color: "#e63950",
+            label: "Ruby",
+            gemstone: "ruby" as const,
+          },
         ]}
       ></lr-swatch-picker>
     `)) as LyraSwatchPicker;
-    const icon = swatches(el)[0]!.querySelector('[part="swatch-icon"]') as HTMLElement;
-    const glyph = icon.querySelector('svg') as SVGElement;
+    const icon = swatches(el)[0]!.querySelector(
+      '[part="swatch-icon"]'
+    ) as HTMLElement;
+    const glyph = icon.querySelector("svg") as SVGElement;
 
-    expect(getComputedStyle(icon).inlineSize).to.equal('24px');
+    expect(getComputedStyle(icon).inlineSize).to.equal("24px");
     expect(glyph.getBoundingClientRect().width).to.equal(24);
     expect(glyph.getBoundingClientRect().height).to.equal(24);
   });
 
-  it('resolves the option color through currentColor for a rendered custom glyph', async () => {
+  it("resolves the option color through currentColor for a rendered custom glyph", async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
         .options=${[
           {
-            value: 'blue',
-            color: '#0969da',
-            label: 'Blue',
-            icon: html`<svg viewBox="0 0 10 10"><path d="M0 0h10v10H0z" fill="currentColor"></path></svg>`,
+            value: "blue",
+            color: "#0969da",
+            label: "Blue",
+            icon: html`<svg viewBox="0 0 10 10">
+              <path d="M0 0h10v10H0z" fill="currentColor"></path>
+            </svg>`,
           },
         ]}
       ></lr-swatch-picker>
     `)) as LyraSwatchPicker;
     const swatch = swatches(el)[0]!;
     const icon = swatch.querySelector<HTMLElement>('[part="swatch-icon"]')!;
-    const path = icon.querySelector<SVGPathElement>('path')!;
+    const path = icon.querySelector<SVGPathElement>("path")!;
 
-    expect(getComputedStyle(swatch).color).to.equal('rgb(9, 105, 218)');
-    expect(getComputedStyle(icon).color).to.equal('rgb(9, 105, 218)');
-    expect(getComputedStyle(path).fill).to.equal('rgb(9, 105, 218)');
+    expect(getComputedStyle(swatch).color).to.equal("rgb(9, 105, 218)");
+    expect(getComputedStyle(icon).color).to.equal("rgb(9, 105, 218)");
+    expect(getComputedStyle(path).fill).to.equal("rgb(9, 105, 218)");
   });
 
-  it('actually paints the rendered fill circle background-color from the option color (not just declared in the stylesheet source)', async () => {
+  it("actually paints the rendered fill circle background-color from the option color (not just declared in the stylesheet source)", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="blue"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="blue"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
-    const fill = swatches(el)[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    const fill = swatches(el)[0]!.querySelector(
+      '[part="swatch-fill"]'
+    ) as HTMLElement;
     // options()[0].color === '#0969da' === rgb(9, 105, 218)
-    expect(getComputedStyle(fill).backgroundColor).to.equal('rgb(9, 105, 218)');
+    expect(getComputedStyle(fill).backgroundColor).to.equal("rgb(9, 105, 218)");
   });
 
-  it('gives the swatch hit target the shared minimum touch-target size without inflating the visible fill', async () => {
+  it("gives the swatch hit target the shared minimum touch-target size without inflating the visible fill", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()} value="blue"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${options()}
+        value="blue"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const swatch = swatches(el)[0]!;
     const fill = swatch.querySelector('[part="swatch-fill"]') as HTMLElement;
-    expect(getComputedStyle(swatch).minInlineSize).to.equal('40px');
-    expect(getComputedStyle(swatch).minBlockSize).to.equal('40px');
+    expect(getComputedStyle(swatch).minInlineSize).to.equal("40px");
+    expect(getComputedStyle(swatch).minBlockSize).to.equal("40px");
     // The visible fill itself stays compact (--lr-size-1-5rem = 24px), not blown up to 40px --
     // the button's own box grows around it via flex centering instead.
-    expect(getComputedStyle(fill).inlineSize).to.equal('24px');
-    expect(getComputedStyle(fill).blockSize).to.equal('24px');
+    expect(getComputedStyle(fill).inlineSize).to.equal("24px");
+    expect(getComputedStyle(fill).blockSize).to.equal("24px");
   });
 
-  it('inherits a theme-wide fill size while retaining its compact size tier', async () => {
+  it("inherits a theme-wide fill size while retaining its compact size tier", async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="--lr-theme-swatch-picker-fill-size: 19px">
-        <lr-swatch-picker size="xs" .options=${options()} value="blue"></lr-swatch-picker>
+        <lr-swatch-picker
+          size="xs"
+          .options=${options()}
+          value="blue"
+        ></lr-swatch-picker>
       </div>
     `);
-    const el = wrapper.querySelector('lr-swatch-picker') as LyraSwatchPicker;
+    const el = wrapper.querySelector("lr-swatch-picker") as LyraSwatchPicker;
     await el.updateComplete;
-    const fill = swatches(el)[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
-    expect(getComputedStyle(fill).inlineSize).to.equal('19px');
+    const fill = swatches(el)[0]!.querySelector(
+      '[part="swatch-fill"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(fill).inlineSize).to.equal("19px");
   });
 
-  it('lets an explicit component fill size override the inherited theme default', async () => {
+  it("lets an explicit component fill size override the inherited theme default", async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="--lr-theme-swatch-picker-fill-size: 19px">
         <lr-swatch-picker
@@ -478,58 +696,78 @@ describe('lr-swatch-picker', () => {
         ></lr-swatch-picker>
       </div>
     `);
-    const el = wrapper.querySelector('lr-swatch-picker') as LyraSwatchPicker;
+    const el = wrapper.querySelector("lr-swatch-picker") as LyraSwatchPicker;
     await el.updateComplete;
-    const fill = swatches(el)[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
-    expect(getComputedStyle(fill).inlineSize).to.equal('13px');
+    const fill = swatches(el)[0]!.querySelector(
+      '[part="swatch-fill"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(fill).inlineSize).to.equal("13px");
   });
 
-  it('draws the selected ring through the --lr-swatch-picker-selected-color token', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
+  it("draws the selected ring through the --lr-swatch-picker-selected-color token", () => {
+    const css = styles.cssText.replace(/\s+/g, " ");
     // The ring lives on [part='swatch-fill'], a descendant of the checked [part='swatch'] -- split
     // out of the interactive hit target so the hit box can grow to the shared minimum tappable size
     // without inflating the visible ring/fill (see [part='swatch']'s own styles.ts comment).
     expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*var\(--lr-swatch-picker-selected-color\)/,
+      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*var\(--lr-swatch-picker-selected-color, var\(--_lr-swatch-picker-selected-color\)\)/
     );
   });
 
-  it('actually draws the selected ring on the checked swatch\'s rendered fill via --lr-swatch-picker-selected-color, and not on an unchecked one', async () => {
-    const el = (await fixture(html`
-      <lr-swatch-picker
-        .options=${options()}
-        value="green"
-        style="--lr-swatch-picker-selected-color: rgb(10, 20, 30);"
-      ></lr-swatch-picker>
-    `)) as LyraSwatchPicker;
+  it("draws an inherited selected ring, keeps it off unchecked fills, and lets the host override win", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-swatch-picker-selected-color: rgb(10, 20, 30)">
+        <lr-swatch-picker
+          .options=${options()}
+          value="green"
+        ></lr-swatch-picker>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-swatch-picker") as LyraSwatchPicker;
     const buttons = swatches(el);
-    const checkedFill = buttons[1]!.querySelector('[part="swatch-fill"]') as HTMLElement;
-    const uncheckedFill = buttons[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
-    expect(getComputedStyle(checkedFill).boxShadow).to.contain('rgb(10, 20, 30)');
-    expect(getComputedStyle(uncheckedFill).boxShadow).to.equal('none');
+    const checkedFill = buttons[1]!.querySelector(
+      '[part="swatch-fill"]'
+    ) as HTMLElement;
+    const uncheckedFill = buttons[0]!.querySelector(
+      '[part="swatch-fill"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(checkedFill).boxShadow).to.contain(
+      "rgb(10, 20, 30)"
+    );
+    expect(getComputedStyle(uncheckedFill).boxShadow).to.equal("none");
+
+    el.style.setProperty(
+      "--lr-swatch-picker-selected-color",
+      "rgb(30, 40, 50)"
+    );
+    expect(getComputedStyle(checkedFill).boxShadow).to.contain(
+      "rgb(30, 40, 50)"
+    );
   });
 
-  it('defaults --lr-swatch-picker-shine-duration to 0s (no-op) and pulses brightness via a dedicated keyframe when set', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('--lr-swatch-picker-shine-duration: 0s;');
+  it("defaults --lr-swatch-picker-shine-duration to 0s (no-op) and pulses brightness via a dedicated keyframe when set", () => {
+    const css = styles.cssText.replace(/\s+/g, " ");
+    expect(css).to.include("--_lr-swatch-picker-shine-duration: 0s;");
     expect(css).to.include(
-      '--lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);',
+      "--_lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);"
     );
     expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine var\(--lr-swatch-picker-shine-duration\)/,
+      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine var\(--lr-swatch-picker-shine-duration, var\(--_lr-swatch-picker-shine-duration\)\)/
     );
-    expect(css).to.match(/@keyframes lr-swatch-picker-shine\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*brightness\(1\.4\)/);
+    expect(css).to.match(
+      /@keyframes lr-swatch-picker-shine\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*brightness\(1\.4\)/
+    );
     // An icon swatch runs a distinct keyframe that composes the selected glow with the brightness
     // pulse -- sharing the fill's brightness-only one would blank the glow out (see styles.ts).
     expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine-icon var\(--lr-swatch-picker-shine-duration\)/,
+      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine-icon var\(--lr-swatch-picker-shine-duration, var\(--_lr-swatch-picker-shine-duration\)\)/
     );
     expect(css).to.match(
-      /@keyframes lr-swatch-picker-shine-icon\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*drop-shadow\([^}]*brightness\(1\.4\)/,
+      /@keyframes lr-swatch-picker-shine-icon\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*drop-shadow\([^}]*brightness\(1\.4\)/
     );
   });
 
-  it('actually applies the lr-swatch-picker-shine animation to the checked swatch\'s rendered fill', async () => {
+  it("actually applies the lr-swatch-picker-shine animation to the checked swatch's rendered fill", async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
         .options=${options()}
@@ -538,33 +776,55 @@ describe('lr-swatch-picker', () => {
       ></lr-swatch-picker>
     `)) as LyraSwatchPicker;
     const buttons = swatches(el);
-    const checkedFill = buttons[1]!.querySelector('[part="swatch-fill"]') as HTMLElement;
-    const uncheckedFill = buttons[0]!.querySelector('[part="swatch-fill"]') as HTMLElement;
-    expect(getComputedStyle(checkedFill).animationName).to.equal('lr-swatch-picker-shine');
-    expect(getComputedStyle(checkedFill).animationDuration).to.equal('1.6s');
-    expect(getComputedStyle(uncheckedFill).animationName).to.equal('none');
+    const checkedFill = buttons[1]!.querySelector(
+      '[part="swatch-fill"]'
+    ) as HTMLElement;
+    const uncheckedFill = buttons[0]!.querySelector(
+      '[part="swatch-fill"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(checkedFill).animationName).to.equal(
+      "lr-swatch-picker-shine"
+    );
+    expect(getComputedStyle(checkedFill).animationDuration).to.equal("1.6s");
+    expect(getComputedStyle(uncheckedFill).animationName).to.equal("none");
   });
 
-  it('applies the lr-swatch-picker-shine-icon animation to a checked custom icon', async () => {
+  it("applies the lr-swatch-picker-shine-icon animation to a checked custom icon", async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
         .options=${[
-          { value: 'blue', color: '#0969da', label: 'Blue', icon: html`<svg></svg>` },
-          { value: 'green', color: '#1a7f37', label: 'Green', icon: html`<svg></svg>` },
+          {
+            value: "blue",
+            color: "#0969da",
+            label: "Blue",
+            icon: html`<svg></svg>`,
+          },
+          {
+            value: "green",
+            color: "#1a7f37",
+            label: "Green",
+            icon: html`<svg></svg>`,
+          },
         ]}
         value="green"
         style="--lr-swatch-picker-shine-duration: 1.6s;"
       ></lr-swatch-picker>
     `)) as LyraSwatchPicker;
     const buttons = swatches(el);
-    const checkedIcon = buttons[1]!.querySelector('[part="swatch-icon"]') as HTMLElement;
-    const uncheckedIcon = buttons[0]!.querySelector('[part="swatch-icon"]') as HTMLElement;
-    expect(getComputedStyle(checkedIcon).animationName).to.equal('lr-swatch-picker-shine-icon');
-    expect(getComputedStyle(checkedIcon).animationDuration).to.equal('1.6s');
-    expect(getComputedStyle(uncheckedIcon).animationName).to.equal('none');
+    const checkedIcon = buttons[1]!.querySelector(
+      '[part="swatch-icon"]'
+    ) as HTMLElement;
+    const uncheckedIcon = buttons[0]!.querySelector(
+      '[part="swatch-icon"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(checkedIcon).animationName).to.equal(
+      "lr-swatch-picker-shine-icon"
+    );
+    expect(getComputedStyle(checkedIcon).animationDuration).to.equal("1.6s");
+    expect(getComputedStyle(uncheckedIcon).animationName).to.equal("none");
   });
 
-  it('keeps the selected glow on a checked icon while the shine animation is running', async () => {
+  it("keeps the selected glow on a checked icon while the shine animation is running", async () => {
     // Regression: the shine keyframes and the selected-glow rule both target `filter` on
     // [part='swatch-icon']. A running animation wins the cascade over an author-normal
     // declaration, so a shared brightness-only keyframe silently blanked the glow out for every
@@ -572,146 +832,202 @@ describe('lr-swatch-picker', () => {
     const el = (await fixture(html`
       <lr-swatch-picker
         .options=${[
-          { value: 'blue', color: '#0969da', label: 'Blue', icon: html`<svg></svg>` },
-          { value: 'green', color: '#1a7f37', label: 'Green', icon: html`<svg></svg>` },
+          {
+            value: "blue",
+            color: "#0969da",
+            label: "Blue",
+            icon: html`<svg></svg>`,
+          },
+          {
+            value: "green",
+            color: "#1a7f37",
+            label: "Green",
+            icon: html`<svg></svg>`,
+          },
         ]}
         value="green"
         style="--lr-swatch-picker-selected-color: rgb(10, 20, 30); --lr-swatch-picker-selected-blur: 0.5rem; --lr-swatch-picker-shine-duration: 1.6s;"
       ></lr-swatch-picker>
     `)) as LyraSwatchPicker;
-    const checkedIcon = swatches(el)[1]!.querySelector('[part="swatch-icon"]') as HTMLElement;
+    const checkedIcon = swatches(el)[1]!.querySelector(
+      '[part="swatch-icon"]'
+    ) as HTMLElement;
     const filter = getComputedStyle(checkedIcon).filter;
-    expect(filter).to.contain('drop-shadow');
-    expect(filter).to.contain('rgb(10, 20, 30)');
-    expect(filter).to.contain('brightness');
+    expect(filter).to.contain("drop-shadow");
+    expect(filter).to.contain("rgb(10, 20, 30)");
+    expect(filter).to.contain("brightness");
   });
 
-  it('disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
+  it("disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule", () => {
+    const css = styles.cssText.replace(/\s+/g, " ");
     expect(css).to.match(
-      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\][^]*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/,
+      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\][^]*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/
     );
   });
 
-  it('is accessible', async () => {
+  it("is accessible", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker label="Accent" .options=${options()} value="blue"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        label="Accent"
+        .options=${options()}
+        value="blue"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     await expect(el).to.be.accessible();
   });
 
-  it('is accessible when nothing is selected', async () => {
+  it("is accessible when nothing is selected", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker label="Accent" .options=${options()}></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        label="Accent"
+        .options=${options()}
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     await expect(el).to.be.accessible();
   });
 
-  it('moves focus to the target swatch when its value contains a double-quote character', async () => {
+  it("moves focus to the target swatch when its value contains a double-quote character", async () => {
     const withQuote = [
-      { value: 'a', color: '#0969da', label: 'A' },
-      { value: 'b"c', color: '#1a7f37', label: 'B' },
-      { value: 'd', color: '#cf222e', label: 'D' },
+      { value: "a", color: "#0969da", label: "A" },
+      { value: 'b"c', color: "#1a7f37", label: "B" },
+      { value: "d", color: "#cf222e", label: "D" },
     ];
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${withQuote} value="a"></lr-swatch-picker>`,
+      html`<lr-swatch-picker
+        .options=${withQuote}
+        value="a"
+      ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const buttons = swatches(el);
     buttons[0]!.focus();
-    buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    buttons[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
     await el.updateComplete;
     expect(el.value).to.equal('b"c');
     // Without CSS.escape in the attribute-selector lookup, focusSwatch() throws before reaching
     // .focus(), so the target swatch never receives focus even though `value` updated.
-    expect(el.shadowRoot!.activeElement!.getAttribute('data-value')).to.equal('b"c');
+    expect(el.shadowRoot!.activeElement!.getAttribute("data-value")).to.equal(
+      'b"c'
+    );
   });
 
-  it('scales the swatch hit-area and fill diameter across every tier, hit-area floored at 24px', async () => {
+  it("scales the swatch hit-area and fill diameter across every tier, hit-area floored at 24px", async () => {
     const expectedHit: Record<string, string> = {
-      '2xs': '24px',
-      xs: '28px',
-      s: '32px',
-      m: '40px',
-      l: '48px',
-      xl: '56px',
+      "2xs": "24px",
+      xs: "28px",
+      s: "32px",
+      m: "40px",
+      l: "48px",
+      xl: "56px",
     };
     const expectedFill: Record<string, string> = {
-      '2xs': '12px',
-      xs: '16px',
-      s: '20px',
-      m: '24px',
-      l: '28px',
-      xl: '32px',
+      "2xs": "12px",
+      xs: "16px",
+      s: "20px",
+      m: "24px",
+      l: "28px",
+      xl: "32px",
     };
     for (const size of Object.keys(expectedHit)) {
       const el = await fixture(
-        html`<lr-swatch-picker size=${size} .options=${options()}></lr-swatch-picker>`,
+        html`<lr-swatch-picker
+          size=${size}
+          .options=${options()}
+        ></lr-swatch-picker>`
       );
-      const swatch = el.shadowRoot!.querySelector('[part="swatch"]') as HTMLElement;
-      const fill = el.shadowRoot!.querySelector('[part="swatch-fill"]') as HTMLElement;
-      expect(getComputedStyle(swatch).minBlockSize, `hit size=${size}`).to.equal(expectedHit[size]);
-      expect(getComputedStyle(fill).blockSize, `fill size=${size}`).to.equal(expectedFill[size]);
+      const swatch = el.shadowRoot!.querySelector(
+        '[part="swatch"]'
+      ) as HTMLElement;
+      const fill = el.shadowRoot!.querySelector(
+        '[part="swatch-fill"]'
+      ) as HTMLElement;
+      expect(
+        getComputedStyle(swatch).minBlockSize,
+        `hit size=${size}`
+      ).to.equal(expectedHit[size]);
+      expect(getComputedStyle(fill).blockSize, `fill size=${size}`).to.equal(
+        expectedFill[size]
+      );
     }
   });
 
-  it('accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l', async () => {
-  const pairs: ReadonlyArray<readonly [string, string]> = [
-      ['small', 's'],
-      ['medium', 'm'],
-      ['large', 'l'],
+  it("accepts the Web Awesome size spellings, rendering small/medium/large as s/m/l", async () => {
+    const pairs: ReadonlyArray<readonly [string, string]> = [
+      ["small", "s"],
+      ["medium", "m"],
+      ["large", "l"],
     ];
-    const swatchOf = (el: Element) => el.shadowRoot!.querySelector('[part="swatch"]') as HTMLElement;
-    const fillOf = (el: Element) => el.shadowRoot!.querySelector('[part="swatch-fill"]') as HTMLElement;
+    const swatchOf = (el: Element) =>
+      el.shadowRoot!.querySelector('[part="swatch"]') as HTMLElement;
+    const fillOf = (el: Element) =>
+      el.shadowRoot!.querySelector('[part="swatch-fill"]') as HTMLElement;
     for (const [alias, step] of pairs) {
       const aliasEl = await fixture(
-        html`<lr-swatch-picker size=${alias} .options=${options()}></lr-swatch-picker>`,
+        html`<lr-swatch-picker
+          size=${alias}
+          .options=${options()}
+        ></lr-swatch-picker>`
       );
       const stepEl = await fixture(
-        html`<lr-swatch-picker size=${step} .options=${options()}></lr-swatch-picker>`,
+        html`<lr-swatch-picker
+          size=${step}
+          .options=${options()}
+        ></lr-swatch-picker>`
       );
-      expect(getComputedStyle(swatchOf(aliasEl)).minBlockSize, `hit size for ${alias}`).to.equal(
-        getComputedStyle(swatchOf(stepEl)).minBlockSize,
-      );
-      expect(getComputedStyle(fillOf(aliasEl)).blockSize, `fill size for ${alias}`).to.equal(
-        getComputedStyle(fillOf(stepEl)).blockSize,
-      );
+      expect(
+        getComputedStyle(swatchOf(aliasEl)).minBlockSize,
+        `hit size for ${alias}`
+      ).to.equal(getComputedStyle(swatchOf(stepEl)).minBlockSize);
+      expect(
+        getComputedStyle(fillOf(aliasEl)).blockSize,
+        `fill size for ${alias}`
+      ).to.equal(getComputedStyle(fillOf(stepEl)).blockSize);
     }
   });
 
   it('defaults to size "m" and reflects a size attribute', async () => {
     const defaultEl = (await fixture(
-      html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`,
+      html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
-    expect(defaultEl.size).to.equal('m');
+    expect(defaultEl.size).to.equal("m");
     const el = (await fixture(
-      html`<lr-swatch-picker size="s" .options=${options()}></lr-swatch-picker>`,
+      html`<lr-swatch-picker size="s" .options=${options()}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
-    expect(el.getAttribute('size')).to.equal('s');
-    expect(el.size).to.equal('s');
+    expect(el.getAttribute("size")).to.equal("s");
+    expect(el.size).to.equal("s");
   });
 
-  describe('disabled', () => {
+  describe("disabled", () => {
     const disabledPicker = async () => {
       const el = (await fixture(
-        html`<lr-swatch-picker disabled value="blue" .options=${options()}></lr-swatch-picker>`,
+        html`<lr-swatch-picker
+          disabled
+          value="blue"
+          .options=${options()}
+        ></lr-swatch-picker>`
       )) as LyraSwatchPicker;
       await el.updateComplete;
       return el;
     };
 
-    it('defaults to enabled and reflects the attribute both ways', async () => {
+    it("defaults to enabled and reflects the attribute both ways", async () => {
       const el = (await fixture(
-        html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`,
+        html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`
       )) as LyraSwatchPicker;
       expect(el.disabled).to.equal(false);
       expect(swatches(el).every((button) => !button.disabled)).to.equal(true);
       el.disabled = true;
       await el.updateComplete;
-      expect(el.hasAttribute('disabled')).to.equal(true);
+      expect(el.hasAttribute("disabled")).to.equal(true);
       expect(swatches(el).every((button) => button.disabled)).to.equal(true);
     });
 
-    it('disables every rendered swatch button and removes them from the tab sequence', async () => {
+    it("disables every rendered swatch button and removes them from the tab sequence", async () => {
       const el = await disabledPicker();
       const buttons = swatches(el);
       expect(buttons.length).to.equal(3);
@@ -721,93 +1037,113 @@ describe('lr-swatch-picker', () => {
       expect(el.shadowRoot!.activeElement === buttons[0]).to.equal(false);
     });
 
-    it('ignores arrow/Home/End navigation while disabled', async () => {
+    it("ignores arrow/Home/End navigation while disabled", async () => {
       const el = await disabledPicker();
       const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
       let changes = 0;
-      el.addEventListener('lr-change', () => changes++);
-      for (const key of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) {
-        base.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
+      el.addEventListener("lr-change", () => changes++);
+      for (const key of ["ArrowRight", "ArrowLeft", "Home", "End"]) {
+        base.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true, composed: true })
+        );
       }
       await el.updateComplete;
-      expect(el.value).to.equal('blue');
+      expect(el.value).to.equal("blue");
       expect(changes).to.equal(0);
     });
 
-    it('makes host click() inert while disabled', async () => {
+    it("makes host click() inert while disabled", async () => {
       const el = await disabledPicker();
       let changes = 0;
-      el.addEventListener('lr-change', () => changes++);
+      el.addEventListener("lr-change", () => changes++);
       el.click();
       await el.updateComplete;
       expect(changes).to.equal(0);
-      expect(el.value).to.equal('blue');
+      expect(el.value).to.equal("blue");
     });
 
-    it('dims the swatches and shows a not-allowed cursor', async () => {
+    it("dims the swatches and shows a not-allowed cursor", async () => {
       const el = await disabledPicker();
       const button = swatches(el)[0]!;
       const style = getComputedStyle(button);
-      expect(Number(style.opacity) < 1, 'swatch must be dimmed').to.equal(true);
-      expect(style.cursor).to.equal('not-allowed');
+      expect(Number(style.opacity) < 1, "swatch must be dimmed").to.equal(true);
+      expect(style.cursor).to.equal("not-allowed");
     });
 
-    it('drops the hover lift while disabled', async () => {
+    it("drops the hover lift while disabled", async () => {
       // Rendered result, not stylesheet text: a hover rule that never fires is invisible to a
       // text match. The third (unselected) swatch is used so the aria-checked scale can't mask it.
       const enabled = (await fixture(
-        html`<lr-swatch-picker value="blue" .options=${options()}></lr-swatch-picker>`,
+        html`<lr-swatch-picker
+          value="blue"
+          .options=${options()}
+        ></lr-swatch-picker>`
       )) as LyraSwatchPicker;
       await enabled.updateComplete;
       const restingTransform = getComputedStyle(
-        swatches(enabled)[2]!.querySelector('[part="swatch-fill"]') as HTMLElement,
+        swatches(enabled)[2]!.querySelector(
+          '[part="swatch-fill"]'
+        ) as HTMLElement
       ).transform;
 
       const hoverFillTransform = async (el: LyraSwatchPicker) => {
         const button = swatches(el)[2]!;
         const box = button.getBoundingClientRect();
         await sendMouse({
-          type: 'move',
-          position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)],
+          type: "move",
+          position: [
+            Math.round(box.x + box.width / 2),
+            Math.round(box.y + box.height / 2),
+          ],
         });
         // Real timers (fake ones don't work under wtr): let the scale transition actually start
         // before sampling, with plenty of margin over --lr-transition-fast.
         await new Promise((resolve) => setTimeout(resolve, 300));
-        return getComputedStyle(button.querySelector('[part="swatch-fill"]') as HTMLElement)
-          .transform;
+        return getComputedStyle(
+          button.querySelector('[part="swatch-fill"]') as HTMLElement
+        ).transform;
       };
 
       try {
-        expect(await hoverFillTransform(enabled), 'enabled hover must lift').to.not.equal(
-          restingTransform,
-        );
+        expect(
+          await hoverFillTransform(enabled),
+          "enabled hover must lift"
+        ).to.not.equal(restingTransform);
         await resetMouse();
         const el = await disabledPicker();
-        expect(await hoverFillTransform(el), 'disabled hover must not lift').to.equal(
-          restingTransform,
-        );
+        expect(
+          await hoverFillTransform(el),
+          "disabled hover must not lift"
+        ).to.equal(restingTransform);
       } finally {
         await resetMouse();
       }
     });
 
-    it('unset-regression: an enabled picker still selects by keyboard and click', async () => {
+    it("unset-regression: an enabled picker still selects by keyboard and click", async () => {
       const el = (await fixture(
-        html`<lr-swatch-picker value="blue" .options=${options()}></lr-swatch-picker>`,
+        html`<lr-swatch-picker
+          value="blue"
+          .options=${options()}
+        ></lr-swatch-picker>`
       )) as LyraSwatchPicker;
       await el.updateComplete;
       const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
       base.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }),
+        new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          composed: true,
+        })
       );
       await el.updateComplete;
-      expect(el.value).to.equal('green');
+      expect(el.value).to.equal("green");
       swatches(el)[2]!.click();
       await el.updateComplete;
-      expect(el.value).to.equal('red');
+      expect(el.value).to.equal("red");
     });
 
-    it('is accessible while disabled', async () => {
+    it("is accessible while disabled", async () => {
       const el = await disabledPicker();
       await expect(el).to.be.accessible();
     });

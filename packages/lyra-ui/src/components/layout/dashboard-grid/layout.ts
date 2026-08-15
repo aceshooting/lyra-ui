@@ -24,12 +24,12 @@ export type {
 /**
  * Resolves one requested placement against an immutable, schema-normalized dashboard snapshot.
  * The input read is bounded to its first 1,000 positions; malformed entries are skipped and
- * duplicate ids use the first valid occurrence. The returned array and cell records are fresh
+ * duplicate cell IDs use the first valid occurrence. The returned array and cell records are fresh
  * frozen snapshots and never alias the input collection.
  */
 export function resolveLyraDashboardPlacement(
   layout: readonly LyraDashboardCell[],
-  candidateId: string,
+  candidateCellId: string,
   requested: Readonly<{ x: number; y: number; w: number; h: number }>,
   columns: number,
   policy: LyraDashboardCollisionPolicy
@@ -38,7 +38,7 @@ export function resolveLyraDashboardPlacement(
   const normalized = projectDashboardLayout(snapshot, columns);
   return resolveDashboardPlacement(
     normalized,
-    candidateId,
+    candidateCellId,
     requested,
     columns,
     normalizeLyraDashboardCollisionPolicy(policy)

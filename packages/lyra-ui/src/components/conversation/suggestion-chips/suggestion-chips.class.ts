@@ -44,6 +44,8 @@ interface PendingSuggestionFocus {
  * Streaming-friendly: chips render through a keyed `repeat()` on `suggestionId`, so replacing
  * follow-ups mid-conversation preserves focus on any chip whose identifier survives. Identifiers
  * must be nonempty and unique; invalid and later duplicate entries are omitted deterministically.
+ * Suggestions are a clone-owned, bounded readonly snapshot; create and reassign a new array after
+ * changing the sequence or a row.
  *
  * @customElement lr-suggestion-chips
  * @event lr-suggestion-select - `detail: { suggestionId, label }`.
@@ -62,6 +64,8 @@ interface PendingSuggestionFocus {
  * @since 4.0.0
  */
 export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(['suggestions']);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -72,8 +76,9 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The suggestions to render, in order. `suggestionId` must be unique and nonempty; the first
-   *  valid occurrence wins. Empty renders nothing at all. */
+  /** The clone-owned suggestions to render, in order. `suggestionId` must be unique and nonempty;
+   *  the first valid occurrence wins. Empty renders nothing at all. Reassign a new array after
+   *  changes. */
   @property({ attribute: false }) suggestions: readonly LyraChatSuggestion[] = [];
 
   /** Wraps into multiple rows instead of a single horizontally scrollable line. */

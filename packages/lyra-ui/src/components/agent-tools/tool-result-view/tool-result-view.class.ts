@@ -64,6 +64,10 @@ export interface LyraToolResultViewEventMap {
  * additive: a pre-existing 2-arg `render(result, args)` function stays assignable unchanged, and a
  * renderer that never calls `reportStatus` leaves `status` at its default, `'success'`.
  *
+ * Assigning `registry` synchronously copies at most 10,000 entries into a frozen readonly facade.
+ * Later `set()`/`delete()` calls on the source map are not observed; create and assign a new map to
+ * update dispatch. Renderer-definition identity is retained so lazy-render caches stay stable.
+ *
  * @customElement lr-tool-result-view
  * @event lr-render-error - `detail: { toolName, error }` — fired immediately
  * before falling back to `<lr-json-viewer>`, whether because no renderer
@@ -78,6 +82,12 @@ export interface LyraToolResultViewEventMap {
  * @since 4.0.0
  */
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "registry",
+  ]);
+  protected static override readonly identityCollectionProperties =
+    Object.freeze(["registry"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

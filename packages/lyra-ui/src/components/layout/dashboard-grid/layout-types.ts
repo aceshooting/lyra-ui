@@ -3,8 +3,8 @@ import type { LyraWidgetNode } from "../../conversation/widget-renderer/resolve.
 /** One widget's immutable position, size, and content within `<lr-dashboard-grid>`'s `layout`.
  * Coordinates are integer grid units (`x`/`y` 0-based, `w`/`h` a span count), never pixels. */
 export interface LyraDashboardCell {
-  /** Stable, non-empty identity. Duplicate ids are resolved first-valid-entry-wins. */
-  readonly id: string;
+  /** Stable, non-empty business identity. Duplicate cell IDs are resolved first-valid-entry-wins. */
+  readonly cellId: string;
   /** 0-based column index of the cell's leading edge. */
   readonly x: number;
   /** 0-based row index of the cell's leading edge. */
@@ -24,7 +24,7 @@ export interface LyraDashboardCell {
    * admission takes a bounded frozen structural snapshot and omits hostile or malformed roots.
    */
   readonly widget?: LyraWidgetNode | null;
-  /** Accessible name and default `<lr-widget>` title; falls back to `id` when absent or empty. */
+  /** Accessible name and default `<lr-widget>` title; falls back to `cellId` when absent or empty. */
   readonly label?: string;
 }
 
@@ -37,6 +37,6 @@ export interface LyraDashboardPlacementResult {
   readonly accepted: boolean;
   /** Full immutable proposed layout, including a push cascade when applicable. */
   readonly layout: readonly LyraDashboardCell[];
-  /** Stable layout-order ids that overlapped the requested placement before resolution. */
-  readonly collidedWith: readonly string[];
+  /** Stable layout-order cell IDs that overlapped the requested placement before resolution. */
+  readonly collidedCellIds: readonly string[];
 }

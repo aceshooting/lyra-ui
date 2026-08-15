@@ -41,7 +41,7 @@ const adaptedDefinition: LyraDocumentRendererDefinition = { adapter: avAdapter }
 const payload = snapshotLyraDocumentRendererPayload({
   kind: 'av',
   file,
-  cues: [{ id: 'cue-1', start: 0, text: 'Transcript' }],
+  cues: [{ cueId: 'cue-1', start: 0, text: 'Transcript' }],
   tracks: [],
 });
 

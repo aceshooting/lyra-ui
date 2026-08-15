@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -28,14 +29,19 @@ import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversa
 
 const MAX_RENDERED_MESSAGES = 500;
 
+interface EffectiveWorkspaceMessage {
+  message: ChatMessage;
+  sourceIndex: number;
+}
+
 export interface LyraAgentWorkspaceEventMap {
   'lr-input': CustomEvent<{ value: string }>;
   'lr-submit': CustomEvent<{ value: string }>;
   'lr-stop': CustomEvent<null>;
   'lr-message-retry': CustomEvent<{ messageId: string }>;
   'lr-follow-change': CustomEvent<{ following: boolean }>;
-  'lr-retrieval-select': CustomEvent<RetrievalResultsSelectDetail>;
-  'lr-citation-select': CustomEvent<CitationSelectEventDetail>;
+  'lr-retrieval-select': CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>;
+  'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-tool-approval-decide': CustomEvent<ToolTimelineApprovalDetail>;
   // Both of these bubble up unchanged from the composed `<lr-agent-run>`, so each has to carry
   // that element's own detail type -- `lr-cancel` is emitted there as `emit('lr-cancel', {})`,
@@ -54,12 +60,15 @@ export interface LyraAgentWorkspaceEventMap {
  * renders ordered `message.parts` through `<lr-message-parts>` when supplied, otherwise sanitized
  * Markdown from the legacy `message.text`; applications can replace the entire region with the
  * `messages` slot. The `details` slot similarly replaces the built-in details pane while keeping
- * the responsive shell. To keep the data-driven fallback bounded, at most the latest 500 messages
- * are materialized; applications needing a larger retained transcript can supply a virtualized
- * `messages` slot.
+ * the responsive shell. Empty and duplicate message ids normalize first-wins before the bounded
+ * window is chosen; at most the latest 500 valid messages are materialized. Applications needing
+ * a larger retained transcript can supply a virtualized `messages` slot.
  * Composer value, follow state, and retrieval selection are request-only:
  * child events are forwarded, but the workspace never writes those public
  * properties. The host applies accepted state back to the component.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-agent-workspace
  * @slot messages - Replaces the data-driven transcript message list.
@@ -96,6 +105,18 @@ export interface LyraAgentWorkspaceEventMap {
  * @since 4.2.0
  */
 export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "messages",
+    "run",
+    "metrics",
+    "tools",
+    "retrievalChunks",
+    "selectedRetrievalIds",
+    "groundingAssessment",
+    "citations",
+    "contextSegments",
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -121,24 +142,25 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   /** Host-level accessible-name override for the internal `role="region"` root. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  /** Conversation messages. The host owns ordering, updates, and persistence.
-   *  Ids are unique occurrence identities; later duplicates are ignored. */
-  @property({ attribute: false }) messages: ChatMessage[] = [];
+  /** Conversation messages. The host owns ordering, updates, and persistence. Ids are unique,
+   *  nonempty occurrence identities; malformed rows and later duplicates are ignored before the
+   *  bounded render window is chosen, with the first occurrence winning. */
+  @property({ attribute: false }) messages: readonly ChatMessage[] = [];
 
   /** Current agent run, rendered in the details pane when set. */
-  @property({ attribute: false }) run: AgentRun | null = null;
+  @property({ attribute: false }) run: Readonly<AgentRun> | null = null;
 
   /** Additional metrics forwarded to `<lr-agent-run>`, such as token counts or latency. */
-  @property({ attribute: false }) metrics: AgentRunMetric[] = [];
+  @property({ attribute: false }) metrics: readonly AgentRunMetric[] = [];
 
   /** Tool calls for the current run, rendered through `<lr-tool-timeline>`. */
-  @property({ attribute: false }) tools: ToolTimelineEntry[] = [];
+  @property({ attribute: false }) tools: readonly ToolTimelineEntry[] = [];
 
   /** Retrieval chunks for the current answer or query. */
-  @property({ attribute: false }) retrievalChunks: RetrievalChunk[] = [];
+  @property({ attribute: false }) retrievalChunks: readonly RetrievalChunk[] = [];
 
   /** Controlled retrieval selection, forwarded to `<lr-retrieval-results>`. */
-  @property({ attribute: false }) selectedRetrievalIds: string[] = [];
+  @property({ attribute: false }) selectedRetrievalIds: readonly string[] = [];
 
   /** Loading state for the built-in retrieval result list. */
   @property({ type: Boolean, attribute: 'retrieval-loading' }) retrievalLoading = false;
@@ -150,13 +172,13 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   @property({ attribute: 'retrieval-error-text' }) retrievalErrorText = '';
 
   /** Grounding assessment for the current assistant answer. */
-  @property({ attribute: false }) groundingAssessment: GroundingAssessment | null = null;
+  @property({ attribute: false }) groundingAssessment: Readonly<GroundingAssessment> | null = null;
 
   /** Citations displayed with the grounding summary. */
-  @property({ attribute: false }) citations: Citation[] = [];
+  @property({ attribute: false }) citations: readonly Citation[] = [];
 
   /** Final model-call context segments. */
-  @property({ attribute: false }) contextSegments: ContextInspectorSegment[] = [];
+  @property({ attribute: false }) contextSegments: readonly ContextInspectorSegment[] = [];
 
   /** Overall context-window token total. */
   @property({ type: Number, attribute: 'context-total' }) contextTotal = 0;
@@ -196,11 +218,27 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     return finiteCount(this.contextTotal);
   }
 
+  private get effectiveMessages(): readonly EffectiveWorkspaceMessage[] {
+    const seen = new Set<string>();
+    const messages: EffectiveWorkspaceMessage[] = [];
+    for (let sourceIndex = 0; sourceIndex < this.messages.length; sourceIndex++) {
+      const message = this.messages[sourceIndex];
+      if (!message) continue;
+      const id = message?.id;
+      if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
+      seen.add(id);
+      messages.push({ message, sourceIndex });
+    }
+    return messages;
+  }
+
   private get safeUnreadStartIndex(): number | null {
     if (this.unreadStartIndex == null) return null;
     const normalized = finiteCount(this.unreadStartIndex);
     if (this.hasSlotted('messages')) return normalized;
-    return Math.max(0, normalized - this.messageWindowOffset);
+    const messages = this.effectiveMessages;
+    const effectiveIndex = messages.filter(({ sourceIndex }) => sourceIndex < normalized).length;
+    return Math.max(0, effectiveIndex - this.messageWindowOffsetFor(messages));
   }
 
   private get safeComposerMinRows(): number {
@@ -242,20 +280,18 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   private renderMessages(): TemplateResult {
-    if (this.messages.length === 0) {
+    const effectiveMessages = this.effectiveMessages;
+    if (effectiveMessages.length === 0) {
       return html`<lr-empty part="messages-empty" heading=${this.localize('agentWorkspaceEmpty')}></lr-empty>`;
     }
-    const seen = new Set<string>();
-    const messages = this.messages.slice(this.messageWindowOffset).filter((message) => {
-      if (seen.has(message.id)) return false;
-      seen.add(message.id);
-      return true;
-    });
+    const messages = effectiveMessages
+      .slice(this.messageWindowOffsetFor(effectiveMessages))
+      .map(({ message }) => message);
     return html`${repeat(messages, (message) => message.id, (message) => this.renderMessage(message))}`;
   }
 
-  private get messageWindowOffset(): number {
-    return Math.max(0, this.messages.length - MAX_RENDERED_MESSAGES);
+  private messageWindowOffsetFor(messages: readonly EffectiveWorkspaceMessage[]): number {
+    return Math.max(0, messages.length - MAX_RENDERED_MESSAGES);
   }
 
   private onNamedSlotChange = (): void => {

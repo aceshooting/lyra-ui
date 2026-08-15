@@ -23,7 +23,7 @@ export function normalizeHistogramBinCount(binCount: unknown): number {
  *  `values` are dropped rather than corrupting bucket-index math. Pass a BCP 47
  *  `locale` to localize the generated range labels. */
 export function binValues(
-  values: number[],
+  values: readonly number[],
   binCount: number,
   locale?: string,
 ): HistogramBucket[] {

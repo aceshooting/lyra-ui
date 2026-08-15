@@ -912,12 +912,12 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   private onDocumentHighlightActivate(
     nodeId: string,
     documentId: string,
-    event: CustomEvent<{ id: string }>
+    event: CustomEvent<{ highlightId: string }>
   ): void {
     event.stopPropagation();
     this.emit(
       "lr-drilldown-document-highlight-activate",
-      Object.freeze({ nodeId, documentId, highlightId: event.detail.id })
+      Object.freeze({ nodeId, documentId, highlightId: event.detail.highlightId })
     );
   }
 
@@ -978,7 +978,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
           ) => this.onDocumentDownload(nodeId, document, event)}
           @lr-render-error=${(event: CustomEvent<{ error: unknown }>) =>
             this.onDocumentRenderError(nodeId, document.documentId, event)}
-          @lr-highlight-activate=${(event: CustomEvent<{ id: string }>) =>
+          @lr-highlight-activate=${(event: CustomEvent<{ highlightId: string }>) =>
             this.onDocumentHighlightActivate(
               nodeId,
               document.documentId,

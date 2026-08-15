@@ -41,7 +41,14 @@ const run: AgentRun = {
 const meta: Meta = {
   title: 'AI/Agent Workspace',
   component: 'lr-agent-workspace',
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    docs: {
+      description: {
+        component: 'Message ids are unique nonempty occurrence identities and normalize first-wins before the bounded transcript window.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

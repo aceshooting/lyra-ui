@@ -127,19 +127,22 @@ describe('lr-agent-eval-dashboard', () => {
     expect((await event).detail).to.deep.equal({ metricId: 'second' });
   });
 
-  it('distinguishes null fallback selection from a valid empty-string metric id', async () => {
+  it('omits empty metric identities and falls back to the first valid metric', async () => {
     const el = await fixture<LyraAgentEvalDashboard>(html`
       <lr-agent-eval-dashboard
         metric-id=""
         .metrics=${[
           { id: 'first', label: 'First', value: 1 },
           { id: '', label: 'Root metric', value: 2 },
+          { id: '   ', label: 'Blank metric', value: 3 },
         ]}
       ></lr-agent-eval-dashboard>
     `);
     const metrics = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="metric"]')];
     expect(el.metricId).to.equal('');
-    expect(metrics.map((metric) => metric.getAttribute('aria-pressed'))).to.deep.equal(['false', 'true']);
+    expect(metrics).to.have.length(1);
+    expect(metrics[0]!.getAttribute('aria-label')).to.contain('First');
+    expect(metrics[0]!.getAttribute('aria-pressed')).to.equal('true');
   });
 
   it('localizes the metric accessible value label with placeholders', async () => {

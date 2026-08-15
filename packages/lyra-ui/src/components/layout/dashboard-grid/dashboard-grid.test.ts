@@ -9,8 +9,8 @@ import { styles } from "./dashboard-grid.styles.js";
 
 function twoCells(): LyraDashboardCell[] {
   return [
-    { id: "a", x: 0, y: 0, w: 2, h: 1, label: "Alpha" },
-    { id: "b", x: 2, y: 0, w: 2, h: 1, label: "Beta" },
+    { cellId: "a", x: 0, y: 0, w: 2, h: 1, label: "Alpha" },
+    { cellId: "b", x: 2, y: 0, w: 2, h: 1, label: "Beta" },
   ];
 }
 
@@ -202,11 +202,25 @@ it("is accessible in the empty state", async () => {
 });
 
 describe("grid placement", () => {
+  it("uses cellId as the public dashboard-cell identity", async () => {
+    const el = await fixture<LyraDashboardGrid>(html`
+      <lr-dashboard-grid></lr-dashboard-grid>
+    `);
+    el.layout = [
+      { cellId: "revenue", x: 0, y: 0, w: 1, h: 1 },
+    ] as unknown as LyraDashboardCell[];
+    await el.updateComplete;
+
+    expect(
+      el.shadowRoot!.querySelector('[part="cell"]')?.getAttribute("data-cell-id")
+    ).to.equal("revenue");
+  });
+
   it("places a cell via grid-column/grid-row derived from x/y/w/h", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 1, y: 2, w: 3, h: 4 }];
+    el.layout = [{ cellId: "a", x: 1, y: 2, w: 3, h: 4 }];
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     expect(cellEl.style.gridColumn).to.equal("2 / span 3");
@@ -221,7 +235,7 @@ describe("grid placement", () => {
         gap="4"
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.style.getPropertyValue("--lr-dashboard-grid-columns")).to.equal(
@@ -255,8 +269,8 @@ describe("grid placement", () => {
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     el.layout = [
-      { id: "second", x: 0, y: 1, w: 1, h: 1 },
-      { id: "first", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "second", x: 0, y: 1, w: 1, h: 1 },
+      { cellId: "first", x: 0, y: 0, w: 1, h: 1 },
     ];
     await el.updateComplete;
     const ids = Array.from(
@@ -271,7 +285,7 @@ describe("grid placement", () => {
     )) as LyraDashboardGrid;
     el.layout = [
       {
-        id: "bad",
+        cellId: "bad",
         x: Number.NaN,
         y: Number.POSITIVE_INFINITY,
         w: Number.NEGATIVE_INFINITY,
@@ -290,23 +304,23 @@ describe("grid placement", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    const hostile = { id: "hostile", y: 1, w: 1, h: 1 };
+    const hostile = { cellId: "hostile", y: 1, w: 1, h: 1 };
     Object.defineProperty(hostile, "x", {
       get: () => {
         throw new Error("hostile x");
       },
     });
     (el as unknown as { layout: unknown }).layout = [
-      { id: "a", x: 1, y: 0, w: 1, h: 1, label: "first" },
+      { cellId: "a", x: 1, y: 0, w: 1, h: 1, label: "first" },
       null,
-      { id: "a", x: 4, y: 4, w: 1, h: 1, label: "duplicate" },
-      { id: 9, x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "a", x: 4, y: 4, w: 1, h: 1, label: "duplicate" },
+      { cellId: 9, x: 0, y: 0, w: 1, h: 1 },
       hostile,
-      { id: "tail", x: 2, y: 1, w: 1, h: 1 },
+      { cellId: "tail", x: 2, y: 1, w: 1, h: 1 },
     ];
     await el.updateComplete;
 
-    expect(el.layout.map((cell) => cell.id)).to.deep.equal(["a", "tail"]);
+    expect(el.layout.map((cell) => cell.cellId)).to.deep.equal(["a", "tail"]);
     expect(el.layout[0]).to.deep.include({ x: 1, label: "first" });
     expect(el.layout[1]).to.deep.include({ x: 2, y: 1 });
     expect(
@@ -336,7 +350,7 @@ describe("grid placement", () => {
     )) as LyraDashboardGrid;
     el.layout = [
       {
-        id: "bad",
+        cellId: "bad",
         x: Number.NaN,
         y: Number.POSITIVE_INFINITY,
         w: Number.NaN,
@@ -375,7 +389,7 @@ describe("grid placement", () => {
     );
 
     expect(move).to.deep.equal({
-      id: "bad",
+      cellId: "bad",
       position: { x: 1, y: 0 },
       previous: { x: 0, y: 0 },
     });
@@ -402,7 +416,7 @@ describe("default cell composition", () => {
     )) as LyraDashboardGrid;
     el.layout = [
       {
-        id: "a",
+        cellId: "a",
         x: 0,
         y: 0,
         w: 2,
@@ -451,7 +465,7 @@ describe("default cell composition", () => {
     frameDocument.adoptNode(el);
     el.layout = [
       {
-        id: "realm-cell",
+        cellId: "realm-cell",
         x: 0,
         y: 0,
         w: 1,
@@ -483,10 +497,10 @@ describe("default cell composition", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1, label: "First" }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "First" }];
     await el.updateComplete;
     const widget = el.querySelector('[cell-id="a"]') as HTMLElement;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1, label: "Renamed" }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "Renamed" }];
     await el.updateComplete;
     expect(el.querySelectorAll('[cell-id="a"]').length).to.equal(1);
     expect(
@@ -497,7 +511,7 @@ describe("default cell composition", () => {
 
   it("routes a user-authored child into its wrapper by cell-id instead of creating a default cell", async () => {
     const el = (await fixture(
-      html`<lr-dashboard-grid .layout=${[{ id: "a", x: 0, y: 0, w: 1, h: 1 }]}
+      html`<lr-dashboard-grid .layout=${[{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }]}
         ><div cell-id="a">Custom</div></lr-dashboard-grid
       >`
     )) as LyraDashboardGrid;
@@ -534,7 +548,7 @@ describe("default cell composition", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     expect(el.querySelector('[cell-id="a"]') !== null).to.be.true;
     el.layout = [];
@@ -546,7 +560,7 @@ describe("default cell composition", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const initialDefault = el.querySelector('[cell-id="a"]')!;
 
@@ -592,8 +606,8 @@ describe("default cell composition", () => {
     second.setAttribute("slot", "second-slot");
     el.append(first, second);
     el.layout = [
-      { id: "a", x: 0, y: 0, w: 1, h: 1 },
-      { id: "b", x: 1, y: 0, w: 1, h: 1 },
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
     ];
     await settleChildReconciliation(el);
 
@@ -625,7 +639,7 @@ describe("default cell composition", () => {
     )) as LyraDashboardGrid;
     el.remove();
     frameDocument.adoptNode(el);
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
 
     try {
       frameDocument.body.append(el);
@@ -678,7 +692,7 @@ describe("owner-realm pointer interactions", () => {
     el.layout = twoCells();
     for (const cell of el.layout) {
       const content = frameDocument.createElement("div");
-      content.setAttribute("cell-id", cell.id);
+      content.setAttribute("cell-id", cell.cellId);
       el.append(content);
     }
 
@@ -723,7 +737,7 @@ describe("owner-realm pointer interactions", () => {
     frameDocument.adoptNode(el);
     el.cellsDraggable = true;
     el.columns = 4;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     const content = frameDocument.createElement("div");
     content.setAttribute("cell-id", "a");
     el.append(content);
@@ -779,7 +793,7 @@ describe("owner-realm pointer interactions", () => {
     el.remove();
     frameDocument.adoptNode(el);
     el.cellsDraggable = true;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     const button = frameDocument.createElement("button");
     button.setAttribute("cell-id", "a");
     el.append(button);
@@ -816,7 +830,7 @@ describe("owner-realm pointer interactions", () => {
     frameDocument.adoptNode(el);
     el.cellsResizable = true;
     el.columns = 4;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     const content = frameDocument.createElement("div");
     content.setAttribute("cell-id", "a");
     el.append(content);
@@ -894,9 +908,9 @@ describe("roving keyboard navigation", () => {
   it("uses the adopted owner realm CSS escape when keyboard focus targets a special cell id", async () => {
     const specialId = 'target"] [data-cell-id="decoy';
     const layout: LyraDashboardCell[] = [
-      { id: "start", x: 0, y: 0, w: 1, h: 1 },
-      { id: specialId, x: 1, y: 0, w: 1, h: 1 },
-      { id: "decoy", x: 2, y: 0, w: 1, h: 1 },
+      { cellId: "start", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: specialId, x: 1, y: 0, w: 1, h: 1 },
+      { cellId: "decoy", x: 2, y: 0, w: 1, h: 1 },
     ];
     const { iframe, frameDocument, frameWindow } = createRealmFrame();
     const el = (await fixture(
@@ -942,9 +956,9 @@ describe("roving keyboard navigation", () => {
   it("falls back to an exact cell-id scan when adopted owner CSS escape is missing or throws", async () => {
     const specialId = 'target"] [data-cell-id="decoy';
     const layout: LyraDashboardCell[] = [
-      { id: "start", x: 0, y: 0, w: 1, h: 1 },
-      { id: specialId, x: 1, y: 0, w: 1, h: 1 },
-      { id: "decoy", x: 2, y: 0, w: 1, h: 1 },
+      { cellId: "start", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: specialId, x: 1, y: 0, w: 1, h: 1 },
+      { cellId: "decoy", x: 2, y: 0, w: 1, h: 1 },
     ];
     for (const mode of ["missing", "throwing"] as const) {
       const { iframe, frameDocument, frameWindow } = createRealmFrame();
@@ -999,7 +1013,7 @@ describe("roving keyboard navigation", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [...twoCells(), { id: "c", x: 0, y: 1, w: 1, h: 1 }];
+    el.layout = [...twoCells(), { cellId: "c", x: 0, y: 1, w: 1, h: 1 }];
     await el.updateComplete;
     const cells = Array.from(
       el.shadowRoot!.querySelectorAll('[part="cell"]')
@@ -1061,8 +1075,8 @@ describe("roving keyboard navigation", () => {
     ).to.equal("b");
 
     el.layout = [
-      { id: "b", x: 0, y: 0, w: 1, h: 1, label: "Beta" },
-      { id: "a", x: 2, y: 0, w: 1, h: 1, label: "Alpha" },
+      { cellId: "b", x: 0, y: 0, w: 1, h: 1, label: "Beta" },
+      { cellId: "a", x: 2, y: 0, w: 1, h: 1, label: "Alpha" },
     ];
     await el.updateComplete;
     expect(
@@ -1139,7 +1153,7 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 2, y: 2, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 2, y: 2, w: 1, h: 1 }];
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let moveDetail: unknown;
@@ -1161,11 +1175,11 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
       })
     );
     expect(moveDetail).to.deep.equal({
-      id: "a",
+      cellId: "a",
       position: { x: 3, y: 2 },
       previous: { x: 2, y: 2 },
     });
-    expect(layoutDetail!.layout.find((c) => c.id === "a")).to.deep.include({
+    expect(layoutDetail!.layout.find((c) => c.cellId === "a")).to.deep.include({
       x: 3,
       y: 2,
     });
@@ -1192,7 +1206,7 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
       </div>`
     )) as HTMLElement;
     const el = host.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 2, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 2, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let detail: { position: { x: number; y: number } } | undefined;
@@ -1215,7 +1229,7 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 2, y: 2, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 2, y: 2, w: 1, h: 1 }];
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let fired = false;
@@ -1235,7 +1249,7 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 2, y: 2, w: 1, h: 1, locked: true }];
+    el.layout = [{ cellId: "a", x: 2, y: 2, w: 1, h: 1, locked: true }];
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let fired = false;
@@ -1257,7 +1271,7 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 2 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 2, h: 2 }];
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let resizeDetail: unknown;
@@ -1280,11 +1294,11 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
       })
     );
     expect(resizeDetail).to.deep.equal({
-      id: "a",
+      cellId: "a",
       size: { w: 3, h: 2 },
       previous: { w: 2, h: 2 },
     });
-    expect(layoutDetail!.layout.find((c) => c.id === "a")).to.deep.include({
+    expect(layoutDetail!.layout.find((c) => c.cellId === "a")).to.deep.include({
       w: 3,
       h: 2,
     });
@@ -1294,7 +1308,7 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let resizeDetail: { size: { w: number; h: number } } | undefined;
@@ -1322,7 +1336,7 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
       </div>
     `)) as HTMLElement;
     const el = host.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 2, h: 1 }];
     await el.updateComplete;
     const cell = el.shadowRoot!.querySelector('[part="cell"]')!;
     const widths: number[] = [];
@@ -1358,7 +1372,7 @@ describe("keyboard resize (Ctrl/Cmd+Shift+Arrow)", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 2 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 2, h: 2 }];
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let fired = false;
@@ -1385,8 +1399,8 @@ describe("collision policy", () => {
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     const layout: LyraDashboardCell[] = [
-      { id: "a", x: 0, y: 0, w: 1, h: 1 },
-      { id: "b", x: 1, y: 0, w: 1, h: 1 },
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
     ];
     el.layout = layout;
     await el.updateComplete;
@@ -1395,7 +1409,7 @@ describe("collision policy", () => {
     ) as HTMLElement;
     let moveFired = false;
     let collisionDetail:
-      | { id: string; collidedWith: string[]; accepted: boolean }
+      | { cellId: string; collidedCellIds: string[]; accepted: boolean }
       | undefined;
     el.addEventListener("lr-cell-move", () => (moveFired = true));
     el.addEventListener(
@@ -1412,15 +1426,15 @@ describe("collision policy", () => {
     );
     expect(moveFired).to.be.false;
     expect(collisionDetail).to.deep.equal({
-      id: "a",
-      collidedWith: ["b"],
+      cellId: "a",
+      collidedCellIds: ["b"],
       policy: "reject",
       accepted: false,
     });
     expect(Object.isFrozen(collisionDetail)).to.be.true;
     expect(
       Object.isFrozen(
-        (collisionDetail as { collidedWith: readonly string[] }).collidedWith
+        (collisionDetail as { collidedCellIds: readonly string[] }).collidedCellIds
       )
     ).to.be.true;
     expect(el.layout).to.not.equal(layout);
@@ -1435,8 +1449,8 @@ describe("collision policy", () => {
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     el.layout = [
-      { id: "a", x: 0, y: 0, w: 1, h: 1 },
-      { id: "b", x: 1, y: 0, w: 1, h: 1 },
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
     ];
     await el.updateComplete;
     const cellA = el.shadowRoot!.querySelector(
@@ -1455,8 +1469,8 @@ describe("collision policy", () => {
         cancelable: true,
       })
     );
-    const a = layoutDetail!.layout.find((c) => c.id === "a")!;
-    const b = layoutDetail!.layout.find((c) => c.id === "b")!;
+    const a = layoutDetail!.layout.find((c) => c.cellId === "a")!;
+    const b = layoutDetail!.layout.find((c) => c.cellId === "b")!;
     expect(a).to.deep.include({ x: 1, y: 0 });
     expect(b).to.deep.include({ x: 1, y: 1 });
   });
@@ -1469,8 +1483,8 @@ describe("collision policy", () => {
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     el.layout = [
-      { id: "a", x: 0, y: 0, w: 1, h: 1 },
-      { id: "b", x: 1, y: 0, w: 1, h: 1 },
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
     ];
     await el.updateComplete;
     const cellA = el.shadowRoot!.querySelector(
@@ -1508,7 +1522,7 @@ describe("pointer drag", () => {
         gap="8"
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -1573,7 +1587,7 @@ describe("pointer drag", () => {
         gap="8"
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -1628,7 +1642,7 @@ describe("pointer drag", () => {
         gap="8"
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 2, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 2, w: 1, h: 1 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -1653,7 +1667,7 @@ describe("pointer drag", () => {
     );
     let detail:
       | {
-          id: string;
+          cellId: string;
           position: { x: number; y: number };
           previous: { x: number; y: number };
         }
@@ -1666,7 +1680,7 @@ describe("pointer drag", () => {
       new PointerEvent("pointerup", { pointerId: 1, clientX: 0, clientY: 116 })
     );
     expect(detail).to.deep.equal({
-      id: "a",
+      cellId: "a",
       position: { x: 0, y: 4 },
       previous: { x: 0, y: 2 },
     });
@@ -1683,7 +1697,7 @@ describe("pointer drag", () => {
           gap="8"
         ></lr-dashboard-grid>`
       )) as LyraDashboardGrid;
-      el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+      el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
       await el.updateComplete;
       const wrapper = el.shadowRoot!.querySelector(
         '[part="cell"]'
@@ -1731,7 +1745,7 @@ describe("pointer drag", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-draggable columns="4"></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 2, h: 1 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -1776,7 +1790,7 @@ describe("pointer drag", () => {
       </div>
     `)) as HTMLElement;
     const el = host.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 1, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 1, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -1824,8 +1838,8 @@ describe("pointer drag", () => {
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     const layout: LyraDashboardCell[] = [
-      { id: "a", x: 0, y: 0, w: 1, h: 1 },
-      { id: "b", x: 0, y: 2, w: 1, h: 1 },
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "b", x: 0, y: 2, w: 1, h: 1 },
     ];
     el.layout = layout;
     await el.updateComplete;
@@ -1852,8 +1866,8 @@ describe("pointer drag", () => {
     let moveFired = false;
     let collisionDetail:
       | {
-          id: string;
-          collidedWith: string[];
+          cellId: string;
+          collidedCellIds: string[];
           policy: string;
           accepted: boolean;
         }
@@ -1868,8 +1882,8 @@ describe("pointer drag", () => {
     );
     expect(moveFired).to.be.false;
     expect(collisionDetail).to.deep.equal({
-      id: "a",
-      collidedWith: ["b"],
+      cellId: "a",
+      collidedCellIds: ["b"],
       policy: "reject",
       accepted: false,
     });
@@ -1881,7 +1895,7 @@ describe("pointer drag", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -1940,7 +1954,7 @@ describe("pointer drag", () => {
       const el = (await fixture(
         html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
       )) as LyraDashboardGrid;
-      el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+      el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
       await el.updateComplete;
       const wrapper = el.shadowRoot!.querySelector(
         '[part="cell"]'
@@ -1983,7 +1997,7 @@ describe("pointer drag", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1, locked: true }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1, locked: true }];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="resize-handle"]') === null).to
       .be.true;
@@ -1998,7 +2012,7 @@ describe("pointer resize", () => {
         cells-resizable
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -2038,7 +2052,7 @@ describe("pointer resize", () => {
         gap="8"
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const handle = el.shadowRoot!.querySelector(
       '[part="resize-handle"]'
@@ -2063,7 +2077,7 @@ describe("pointer resize", () => {
     );
     let detail:
       | {
-          id: string;
+          cellId: string;
           size: { w: number; h: number };
           previous: { w: number; h: number };
         }
@@ -2076,7 +2090,7 @@ describe("pointer resize", () => {
       new PointerEvent("pointerup", { pointerId: 1, clientX: 0, clientY: 116 })
     );
     expect(detail).to.deep.equal({
-      id: "a",
+      cellId: "a",
       size: { w: 1, h: 3 },
       previous: { w: 1, h: 1 },
     });
@@ -2089,7 +2103,7 @@ describe("pointer resize", () => {
       </div>
     `)) as HTMLElement;
     const el = host.querySelector("lr-dashboard-grid") as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const handle = el.shadowRoot!.querySelector(
       '[part="resize-handle"]'
@@ -2138,7 +2152,7 @@ describe("pointer resize", () => {
           gap="8"
         ></lr-dashboard-grid>`
       )) as LyraDashboardGrid;
-      el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+      el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
       await el.updateComplete;
       const wrapper = el.shadowRoot!.querySelector(
         '[part="cell"]'
@@ -2214,7 +2228,7 @@ describe("pointer resize", () => {
       const el = (await fixture(
         html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
       )) as LyraDashboardGrid;
-      el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+      el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
       await el.updateComplete;
       const wrapper = el.shadowRoot!.querySelector(
         '[part="cell"]'
@@ -2388,7 +2402,7 @@ describe("accessibility", () => {
     )) as LyraDashboardGrid;
     el.layout = [
       {
-        id: "a",
+        cellId: "a",
         x: 0,
         y: 0,
         w: 2,
@@ -2397,7 +2411,7 @@ describe("accessibility", () => {
         widget: { type: "stat", props: { label: "Users", value: "12" } },
       },
       {
-        id: "b",
+        cellId: "b",
         x: 2,
         y: 0,
         w: 2,
@@ -2414,7 +2428,7 @@ describe("accessibility", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
@@ -2430,7 +2444,7 @@ describe("accessibility", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid aria-label=""></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
 
     expect(
@@ -2446,7 +2460,7 @@ describe("localized strings", () => {
         .strings=${{ dashboardGridLabel: "Tableau de bord" }}
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
@@ -2462,8 +2476,8 @@ describe("localized strings", () => {
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     el.layout = [
-      { id: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
-      { id: "b", x: 1, y: 0, w: 1, h: 1 },
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
+      { cellId: "b", x: 1, y: 0, w: 1, h: 1 },
     ];
     await el.updateComplete;
     const cellA = el.shadowRoot!.querySelector(
@@ -2495,8 +2509,8 @@ describe("localized strings", () => {
       ></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     el.layout = [
-      { id: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
-      { id: "b", x: 2, y: 0, w: 1, h: 1, label: "Beta" },
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
+      { cellId: "b", x: 2, y: 0, w: 1, h: 1, label: "Beta" },
     ];
     await el.updateComplete;
     const cellA = el.shadowRoot!.querySelector(
@@ -2532,8 +2546,8 @@ describe("localized strings", () => {
     );
 
     el.layout = [
-      { id: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
-      { id: "b", x: 1, y: 0, w: 1, h: 1, label: "Beta" },
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
+      { cellId: "b", x: 1, y: 0, w: 1, h: 1, label: "Beta" },
     ];
     await el.updateComplete;
     const updatedCellA = el.shadowRoot!.querySelector(
@@ -2669,7 +2683,7 @@ it("formats move and resize announcement coordinates with the effective locale",
       cells-resizable
     ></lr-dashboard-grid>`
   )) as LyraDashboardGrid;
-  el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" }];
+  el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" }];
   await el.updateComplete;
   const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
   const announcer = (
@@ -2714,7 +2728,7 @@ it("does not start a cell drag from a pointerdown on an interactive control insi
       cells-draggable
       row-height="50"
       gap="8"
-      .layout=${[{ id: "a", x: 0, y: 2, w: 1, h: 1 }]}
+      .layout=${[{ cellId: "a", x: 0, y: 2, w: 1, h: 1 }]}
     >
       <div cell-id="a"><button type="button">Refresh</button></div>
     </lr-dashboard-grid>
@@ -2772,7 +2786,7 @@ it("rejects drag admission through labels, disabled controls, editable content, 
   const el = (await fixture(html`
     <lr-dashboard-grid
       cells-draggable
-      .layout=${[{ id: "a", x: 0, y: 0, w: 1, h: 1 }]}
+      .layout=${[{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }]}
     >
       <div cell-id="a"></div>
     </lr-dashboard-grid>
@@ -2819,7 +2833,7 @@ describe("defensive edge cases", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -2857,7 +2871,7 @@ describe("defensive edge cases", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 2 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 2, h: 2 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -2895,7 +2909,7 @@ describe("defensive edge cases", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector(
       '[part="cell"]'
@@ -2930,7 +2944,7 @@ describe("defensive edge cases", () => {
       >`
     )) as LyraDashboardGrid;
     const plain = el.querySelector("p") as HTMLElement;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
 
     expect(plain.hasAttribute("slot")).to.be.false;
@@ -3004,7 +3018,7 @@ describe("defensive edge cases", () => {
       const el = (await fixture(
         html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
       )) as LyraDashboardGrid;
-      el.layout = [{ id: "a", x: 2, y: 2, w: 1, h: 1 }];
+      el.layout = [{ cellId: "a", x: 2, y: 2, w: 1, h: 1 }];
       await el.updateComplete;
       const cellEl = el.shadowRoot!.querySelector(
         '[part="cell"]'
@@ -3030,7 +3044,7 @@ describe("defensive edge cases", () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
-    el.layout = [{ id: "a", x: 0, y: 0, w: 2, h: 2 }];
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 2, h: 2 }];
     await el.updateComplete;
     const cellEl = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
     let detail: { size: { w: number; h: number } } | undefined;
@@ -3048,7 +3062,7 @@ describe("defensive edge cases", () => {
       })
     );
     expect(detail).to.deep.equal({
-      id: "a",
+      cellId: "a",
       size: { w: 2, h: 1 },
       previous: { w: 2, h: 2 },
     });
@@ -3059,8 +3073,8 @@ describe("defensive edge cases", () => {
       html`<lr-dashboard-grid></lr-dashboard-grid>`
     )) as LyraDashboardGrid;
     const authored = [
-      { id: "a", x: 0, y: 0, w: 2, h: 1, label: "Alpha" },
-      { id: "b", x: 2, y: 0, w: 2, h: 1, label: "Beta" },
+      { cellId: "a", x: 0, y: 0, w: 2, h: 1, label: "Alpha" },
+      { cellId: "b", x: 2, y: 0, w: 2, h: 1, label: "Beta" },
     ];
     el.layout = authored;
     await el.updateComplete;

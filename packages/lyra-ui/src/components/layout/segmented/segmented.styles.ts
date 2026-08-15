@@ -13,10 +13,10 @@ export const styles = css`
        built with same-size controls shows this control at a matching height beside them, per the
        class doc's own "flush beside those controls" promise. This component used to carry six
        :host([size=...]) blocks of its own, on a scale that had drifted from that one. */
-    --lr-segmented-track-min-height: var(--lr-form-control-height);
-    --lr-segmented-segment-padding: var(--lr-form-control-padding-block)
+    --_lr-segmented-track-min-height: var(--lr-form-control-height);
+    --_lr-segmented-segment-padding: var(--lr-form-control-padding-block)
       var(--lr-form-control-padding-inline);
-    --lr-segmented-font-size: var(--lr-form-control-font-size);
+    --_lr-segmented-font-size: var(--lr-form-control-font-size);
   }
   [part="base"] {
     display: inline-flex;
@@ -30,7 +30,10 @@ export const styles = css`
        valid value that always wins, silently making the per-size floor dead code. */
     min-block-size: var(
       --lr-segmented-track-height,
-      var(--lr-segmented-track-min-height)
+      var(
+        --lr-segmented-track-min-height,
+        var(--_lr-segmented-track-min-height)
+      )
     );
     block-size: var(--lr-segmented-track-height, auto);
     box-sizing: border-box;
@@ -68,8 +71,11 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text-quiet);
     font: inherit;
-    font-size: var(--lr-segmented-font-size);
-    padding: var(--lr-segmented-segment-padding);
+    font-size: var(--lr-segmented-font-size, var(--_lr-segmented-font-size));
+    padding: var(
+      --lr-segmented-segment-padding,
+      var(--_lr-segmented-segment-padding)
+    );
     cursor: pointer;
   }
   :host([size="2xs"]) [part="segment"],

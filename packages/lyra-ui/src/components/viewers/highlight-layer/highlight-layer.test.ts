@@ -142,24 +142,45 @@ describe('lr-highlight-layer', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="rect"]').length).to.equal(3);
   });
 
-  it('uses occurrence identity when duplicate public ids are supplied', async () => {
+  it('retains the first unique nonempty item id before rendering and activation', async () => {
     const duplicates: HighlightLayerItem[] = [
-      { id: 'same', label: 'First', rects: [{ x: 5, y: 5, width: 10, height: 5 }] },
+      { id: '', label: 'Empty', rects: [{ x: 5, y: 1, width: 10, height: 5 }] },
+      { id: ' same ', label: 'First', rects: [{ x: 5, y: 5, width: 10, height: 5 }] },
       { id: 'same', label: 'Second', rects: [{ x: 5, y: 20, width: 10, height: 5 }] },
     ];
     const el = await fixture<LyraHighlightLayer>(html`
       <lr-highlight-layer .items=${duplicates} active-id="same"></lr-highlight-layer>
     `);
-    let targets = itemActions(el);
-    expect(targets.map((target) => target.getAttribute('aria-current'))).to.deep.equal(['true', 'false']);
-    targets[0]!.focus();
-    targets[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
-    await el.updateComplete;
-    targets = itemActions(el);
-    expect(targets.map((target) => target.getAttribute('tabindex'))).to.deep.equal(['-1', '0']);
-    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('aria-label')).to.equal(
-      'Highlight: Second',
-    );
+    const targets = itemActions(el);
+    expect(targets).to.have.length(1);
+    expect(targets[0]!.getAttribute('aria-current')).to.equal('true');
+    expect(targets[0]!.getAttribute('aria-label')).to.equal('Highlight: First');
+    expect(el.items.map((item) => item.id)).to.deep.equal(['same']);
+
+    const activated = oneEvent(el, 'lr-highlight-activate');
+    targets[0]!.click();
+    expect((await activated).detail).to.deep.equal({ highlightId: 'same' });
+  });
+
+  it('owns recursively frozen item snapshots at assignment', async () => {
+    const source = [
+      { id: 'owned', label: 'Before', rects: [{ x: 5, y: 5, width: 10, height: 5 }] },
+    ];
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${source}></lr-highlight-layer>
+    `);
+
+    source[0]!.label = 'After';
+    source[0]!.rects[0]!.x = 95;
+    source.push({ id: 'later', label: 'Later', rects: [] });
+
+    expect(el.items).to.have.length(1);
+    expect(el.items[0]!.label).to.equal('Before');
+    expect(el.items[0]!.rects[0]!.x).to.equal(5);
+    expect(Object.isFrozen(el.items)).to.be.true;
+    expect(Object.isFrozen(el.items[0])).to.be.true;
+    expect(Object.isFrozen(el.items[0]!.rects)).to.be.true;
+    expect(Object.isFrozen(el.items[0]!.rects[0])).to.be.true;
   });
 
   it('focuses an item whose public id contains selector metacharacters', async () => {
@@ -212,7 +233,7 @@ describe('lr-highlight-layer', () => {
     const rect = itemActions(el)[1]!;
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     rect.click();
-    expect((await eventPromise).detail).to.deep.equal({ id: 'b' });
+    expect((await eventPromise).detail).to.deep.equal({ highlightId: 'b' });
   });
 
   it('emits lr-highlight-activate on Enter/Space when a rect is focused', async () => {
@@ -220,7 +241,7 @@ describe('lr-highlight-layer', () => {
     const rect = itemActions(el)[0]!;
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect((await eventPromise).detail).to.deep.equal({ id: 'a' });
+    expect((await eventPromise).detail).to.deep.equal({ highlightId: 'a' });
   });
 
   it('is one roving tab stop: only one rect has tabindex="0"', async () => {
@@ -450,7 +471,7 @@ describe('lr-highlight-layer', () => {
     expect(first.bottom).to.be.at.most(second.top);
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     actions[1]!.click();
-    expect((await eventPromise).detail).to.deep.equal({ id: 'second' });
+    expect((await eventPromise).detail).to.deep.equal({ highlightId: 'second' });
   });
 
   it('is accessible with items present', async () => {

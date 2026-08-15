@@ -2866,7 +2866,7 @@
         "direct": [
           "lr-badge",
           "lr-empty",
-          "lr-generation-status",
+          "lr-generation-metrics",
           "lr-live-region",
           "lr-task-list",
           "lr-usage-badge"
@@ -3540,14 +3540,10 @@
           "lr-context-meter",
           "lr-copy-button",
           "lr-details",
-          "lr-dialog",
-          "lr-document-preview",
-          "lr-document-viewer",
           "lr-export-button",
-          "lr-generation-status",
+          "lr-generation-metrics",
           "lr-json-viewer",
           "lr-live-region",
-          "lr-pan-zoom",
           "lr-skeleton",
           "lr-spinner",
           "lr-stat",
@@ -7120,14 +7116,8 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [
-          "lr-document-viewer"
-        ],
-        "transitive": [
-          "lr-dialog",
-          "lr-document-preview",
-          "lr-pan-zoom"
-        ],
+        "direct": [],
+        "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [],
@@ -7694,6 +7684,7 @@
       },
       "dependencies": {
         "direct": [
+          "lr-dropdown",
           "lr-menu",
           "lr-menu-item"
         ],
@@ -29034,16 +29025,27 @@
         "deprecations": []
       },
       "qualification": {
-        "status": "pending-generation",
+        "status": "incomplete",
         "humanReview": "pending",
         "reviewer": null,
         "reviewedAt": null,
-        "accessibility": "not-recorded",
+        "accessibility": "automated",
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [],
-        "transitive": [],
+        "direct": [
+          "lr-button",
+          "lr-combobox",
+          "lr-date-input",
+          "lr-icon-button",
+          "lr-input",
+          "lr-option",
+          "lr-select"
+        ],
+        "transitive": [
+          "lr-date-picker",
+          "lr-icon"
+        ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [],
@@ -42037,15 +42039,17 @@
         "direct": [
           "lr-breadcrumb",
           "lr-breadcrumb-item",
+          "lr-button",
           "lr-document-preview",
           "lr-empty",
           "lr-entity-card",
           "lr-source-card",
-          "lr-tab-group"
+          "lr-tab",
+          "lr-tab-group",
+          "lr-tab-panel"
         ],
         "transitive": [
           "lr-badge",
-          "lr-button",
           "lr-chip",
           "lr-pan-zoom",
           "lr-result-field"
@@ -45839,7 +45843,9 @@
           "lr-neighbor-list",
           "lr-provenance-panel",
           "lr-stat",
-          "lr-tab-group"
+          "lr-tab",
+          "lr-tab-group",
+          "lr-tab-panel"
         ],
         "transitive": [
           "lr-badge",
@@ -51382,11 +51388,11 @@
         "deprecations": []
       },
       "qualification": {
-        "status": "pending-generation",
+        "status": "incomplete",
         "humanReview": "pending",
         "reviewer": null,
         "reviewedAt": null,
-        "accessibility": "not-recorded",
+        "accessibility": "automated",
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
@@ -52703,11 +52709,11 @@
         "deprecations": []
       },
       "qualification": {
-        "status": "pending-generation",
+        "status": "incomplete",
         "humanReview": "pending",
         "reviewer": null,
         "reviewedAt": null,
-        "accessibility": "not-recorded",
+        "accessibility": "automated",
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
@@ -52910,6 +52916,7 @@
       },
       "dependencies": {
         "direct": [
+          "lr-geojson-viewer",
           "lr-json-viewer",
           "lr-map",
           "lr-skeleton"
@@ -53191,15 +53198,19 @@
         "deprecations": []
       },
       "qualification": {
-        "status": "pending-generation",
+        "status": "incomplete",
         "humanReview": "pending",
         "reviewer": null,
         "reviewedAt": null,
-        "accessibility": "not-recorded",
+        "accessibility": "automated",
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [],
+        "direct": [
+          "lr-json-viewer",
+          "lr-map",
+          "lr-skeleton"
+        ],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -62796,6 +62807,7 @@
         "direct": [
           "lr-badge",
           "lr-button",
+          "lr-dropdown",
           "lr-menu",
           "lr-menu-item",
           "lr-stat",
@@ -63064,6 +63076,7 @@
         "transitive": [
           "lr-badge",
           "lr-button",
+          "lr-dropdown",
           "lr-empty",
           "lr-menu",
           "lr-menu-item",
@@ -71938,10 +71951,6 @@
         ],
         "transitive": [
           "lr-copy-button",
-          "lr-dialog",
-          "lr-document-preview",
-          "lr-document-viewer",
-          "lr-pan-zoom",
           "lr-skeleton",
           "lr-tooltip"
         ],
@@ -73856,11 +73865,11 @@
         "deprecations": []
       },
       "qualification": {
-        "status": "pending-generation",
+        "status": "incomplete",
         "humanReview": "pending",
         "reviewer": null,
         "reviewedAt": null,
-        "accessibility": "not-recorded",
+        "accessibility": "automated",
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
@@ -88755,15 +88764,13 @@
         ],
         "transitive": [
           "lr-button",
-          "lr-dialog",
-          "lr-document-preview",
-          "lr-document-viewer",
+          "lr-checkbox",
+          "lr-dropdown",
           "lr-empty",
           "lr-file-icon",
           "lr-input",
           "lr-menu",
           "lr-menu-item",
-          "lr-pan-zoom",
           "lr-textarea"
         ],
         "ledger": "scripts/fixtures/component-integration.json"
@@ -103720,11 +103727,11 @@
         "deprecations": []
       },
       "qualification": {
-        "status": "pending-generation",
+        "status": "incomplete",
         "humanReview": "pending",
         "reviewer": null,
         "reviewedAt": null,
-        "accessibility": "not-recorded",
+        "accessibility": "automated",
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
@@ -106335,6 +106342,7 @@
       },
       "dependencies": {
         "direct": [
+          "lr-checkbox",
           "lr-empty",
           "lr-file-icon",
           "lr-input"
@@ -107816,7 +107824,9 @@
       },
       "dependencies": {
         "direct": [
+          "lr-tab",
           "lr-tab-group",
+          "lr-tab-panel",
           "lr-virtual-list"
         ],
         "transitive": [],
@@ -124080,6 +124090,7 @@
       "dependencies": {
         "direct": [
           "lr-details",
+          "lr-empty",
           "lr-tool-approval-dialog",
           "lr-tool-call-chip",
           "lr-tool-result-view"

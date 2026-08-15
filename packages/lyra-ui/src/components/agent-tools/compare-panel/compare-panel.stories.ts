@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'Observability/Compare Panel',
   component: 'lr-compare-panel',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'The allowed-vote sequence is a bounded clone-owned frozen snapshot; create and reassign a new array after changing the choices.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

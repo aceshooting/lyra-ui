@@ -923,6 +923,23 @@ it('fails persistence closed when panelId values are missing or duplicated', asy
   expect(localStorage.getItem(`lr-multi-split:${storageKey}:panels`)).to.equal(null);
 });
 
+it('fails persistence closed for a whitespace-unstable panelId instead of rewriting it', async () => {
+  const storageKey = 'test-split-whitespace-identity-' + Math.random();
+  const el = (await fixture(
+    html`<lr-multi-split storage-key=${storageKey}
+      ><div panel-id=" navigation ">Navigation</div>
+      <div panel-id="content">Content</div></lr-multi-split
+    >`
+  )) as LyraMultiSplit;
+  await elementUpdated(el);
+
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await elementUpdated(el);
+
+  expect(localStorage.getItem(`lr-multi-split:${storageKey}:panels`)).to.equal(null);
+});
+
 it('honors a valid pre-set sizes property at connect, without regenerating an equal split', async () => {
   const el = (await fixture(
     html`<lr-multi-split .sizes=${[30, 70]}

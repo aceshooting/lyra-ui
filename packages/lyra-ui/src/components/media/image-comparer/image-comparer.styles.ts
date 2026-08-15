@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -7,12 +7,18 @@ export const styles = css`
     /* Namespaced sizing surface, fed by the bare Shoelace-compat names. An unprefixed custom
        property inherits, so a single --handle-size anywhere up the tree would otherwise silently
        retune this component along with every other one reading a generically-named property.
-       Consumers override the --lr-image-comparer-* names on the host, which beats these :host
-       declarations; the compat names keep working as the fallback source. */
-    --lr-image-comparer-divider-width: var(--divider-width, var(--lr-size-1px));
-    --lr-image-comparer-handle-size: var(--handle-size, var(--lr-icon-button-size));
+       Consumers override the --lr-image-comparer-* names on an ancestor or the host; the compat
+       names remain the private defaults' fallback source. */
+    --_lr-image-comparer-divider-width: var(
+      --divider-width,
+      var(--lr-size-1px)
+    );
+    --_lr-image-comparer-handle-size: var(
+      --handle-size,
+      var(--lr-icon-button-size)
+    );
   }
-  [part~='base'] {
+  [part~="base"] {
     position: relative;
     isolation: isolate;
     min-inline-size: 0;
@@ -21,18 +27,18 @@ export const styles = css`
     overflow: hidden;
     background: var(--lr-color-surface-raised);
   }
-  [part='before'],
-  [part='after'] {
+  [part="before"],
+  [part="after"] {
     display: block;
     min-inline-size: 0;
   }
-  [part='before'] {
+  [part="before"] {
     position: absolute;
     inset: 0;
     z-index: var(--lr-layer-content);
     clip-path: inset(0 calc(100% - var(--lr-comparer-position, 50%)) 0 0);
   }
-  [part~='base'][data-orientation='vertical'] [part='before'] {
+  [part~="base"][data-orientation="vertical"] [part="before"] {
     clip-path: inset(0 0 calc(100% - var(--lr-comparer-position, 50%)) 0);
   }
   /* clip-path's inset() only accepts physical top/right/bottom/left offsets -- no logical
@@ -42,14 +48,14 @@ export const styles = css`
      direction, while the divider (and native range-input handle) move to the right under RTL,
      visibly desyncing the boundary from the line the user is dragging. Vertical orientation is a
      block-axis split, unaffected by inline direction, so it's excluded and keeps its own rule above. */
-  :host(:dir(rtl)) [part='before'] {
+  :host(:dir(rtl)) [part="before"] {
     clip-path: inset(0 0 0 calc(100% - var(--lr-comparer-position, 50%)));
   }
-  :host(:dir(rtl)) [part~='base'][data-orientation='vertical'] [part='before'] {
+  :host(:dir(rtl)) [part~="base"][data-orientation="vertical"] [part="before"] {
     clip-path: inset(0 0 calc(100% - var(--lr-comparer-position, 50%)) 0);
   }
-  [part='before'] ::slotted(*),
-  [part='after'] ::slotted(*) {
+  [part="before"] ::slotted(*),
+  [part="after"] ::slotted(*) {
     display: block;
     box-sizing: border-box;
     min-inline-size: 0;
@@ -57,26 +63,32 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='divider'] {
+  [part="divider"] {
     position: absolute;
     z-index: var(--lr-layer-popover);
     inset-block: 0;
     inset-inline-start: var(--lr-comparer-position, 50%);
-    inline-size: var(--lr-image-comparer-divider-width);
+    inline-size: var(
+      --lr-image-comparer-divider-width,
+      var(--_lr-image-comparer-divider-width)
+    );
     background: var(--lr-color-surface);
     /* Card step, not the overlay step: the shadow here only has to keep a hairline legible against
        arbitrary imagery on both sides -- a wider blur reads as a smudge along the seam. */
     box-shadow: var(--lr-shadow-s);
     pointer-events: none;
   }
-  [part~='base'][data-orientation='vertical'] [part='divider'] {
+  [part~="base"][data-orientation="vertical"] [part="divider"] {
     inset-block: auto;
     inset-inline: 0;
     inset-block-start: var(--lr-comparer-position, 50%);
     inline-size: auto;
-    block-size: var(--lr-image-comparer-divider-width);
+    block-size: var(
+      --lr-image-comparer-divider-width,
+      var(--_lr-image-comparer-divider-width)
+    );
   }
-  [part='handle'] {
+  [part="handle"] {
     position: absolute;
     /* --lr-layer-tooltip does not exist (no fallback -> z-index: auto, stacking the interaction
        wrapper BELOW [part='before']'s clipped pointer-events-enabled region and intercepting its
@@ -85,7 +97,7 @@ export const styles = css`
     z-index: var(--lr-layer-popover);
     inset: 0;
   }
-  [part='input'] {
+  [part="input"] {
     position: absolute;
     inset: 0;
     inline-size: 100%;
@@ -94,7 +106,7 @@ export const styles = css`
     opacity: 0;
     cursor: ew-resize;
   }
-  [part~='base'][data-orientation='vertical'] [part='input'] {
+  [part~="base"][data-orientation="vertical"] [part="input"] {
     /* A native <input type="range"> always maps pointer position along its own inline axis,
        which defaults to horizontal-tb -- so without this override, dragging up/down over the
        visibly vertical divider does nothing; only a horizontal drag (invisible, off to the
@@ -116,8 +128,14 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-image-comparer-handle-size);
-    block-size: var(--lr-image-comparer-handle-size);
+    inline-size: var(
+      --lr-image-comparer-handle-size,
+      var(--_lr-image-comparer-handle-size)
+    );
+    block-size: var(
+      --lr-image-comparer-handle-size,
+      var(--_lr-image-comparer-handle-size)
+    );
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface);
@@ -129,7 +147,7 @@ export const styles = css`
   :host(:dir(rtl)) .handle-visual {
     transform: translate(50%, -50%);
   }
-  [part~='base'][data-orientation='vertical'] .handle-visual {
+  [part~="base"][data-orientation="vertical"] .handle-visual {
     inset-block-start: var(--lr-comparer-position, 50%);
     inset-inline-start: 50%;
   }
@@ -147,29 +165,33 @@ export const styles = css`
   .handle-fallback svg:first-child {
     transform: rotate(180deg);
   }
-  [part~='base'][data-orientation='vertical'] .handle-fallback {
+  [part~="base"][data-orientation="vertical"] .handle-fallback {
     transform: rotate(90deg);
   }
-  [part='input']:hover {
+  [part="input"]:hover {
     opacity: 0.01;
   }
-  [part='input']:focus-visible {
+  [part="input"]:focus-visible {
     opacity: 0.01;
     outline: none;
   }
-  [part='handle']:has([part='input']:focus-visible) .handle-visual {
+  [part="handle"]:has([part="input"]:focus-visible) .handle-visual {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* [part='input'] is a fully-transparent full-bleed native <input type="range">. Keep hover
      feedback on the divider too, so the full drag surface responds even when the pointer isn't
      directly over the small visible handle. */
-  [part~='base']:has([part='input']:hover) [part='divider'] {
+  [part~="base"]:has([part="input"]:hover) [part="divider"] {
     background: var(--lr-color-brand);
   }
   /* Pressed rides the same :has() indirection as the hover rule above: the transparent full-bleed
      input has nothing of its own to tint, so mid-drag the seam deepens past its hover accent. */
-  [part~='base']:has([part='input']:active) [part='divider'] {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part~="base"]:has([part="input"]:active) [part="divider"] {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
 `;

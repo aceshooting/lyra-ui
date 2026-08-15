@@ -59,7 +59,11 @@ interface OrderedRuns {
 
 /**
  * `<lr-subagent-panel>` — a controlled hierarchy of nested agent runs with lifecycle status,
- * task/model context, progress, selection, cancellation, and retry intents.
+ * task/model context, progress, selection, cancellation, and retry intents. Runs with empty ids
+ * are omitted and later duplicate ids are ignored before hierarchy, focus, counts, and events.
+ *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-subagent-panel
  * @event lr-run-activate - A complete subagent run was activated. `detail: { runId, run }`.
@@ -88,6 +92,8 @@ interface OrderedRuns {
  * @since 7.0.0
  */
 export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["runs"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -112,7 +118,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property({ attribute: false }) runs: SubagentRun[] = [];
+  @property({ attribute: false }) runs: readonly SubagentRun[] = [];
   @property({ attribute: 'selected-run-id' }) selectedRunId: string | null = null;
   @property() label = '';
 
@@ -174,7 +180,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     const byId = new Map<string, SubagentRun>();
     let truncated = false;
     for (const run of this.runs) {
-      if (byId.has(run.id)) continue;
+      if (run.id.trim().length === 0 || byId.has(run.id)) continue;
       if (normalized.length >= MAX_RENDERED_RUNS) {
         truncated = true;
         break;

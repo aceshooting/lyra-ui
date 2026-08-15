@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A format-dispatching document/attachment viewer with a minimal built-in dispatch (`text/*`/`application/json` → plain `<pre>`, `image/*` → contained `<img>`, everything else → a generic "can\'t preview this" download fallback) plus an `unsupported` slot escape hatch for PDF/office-doc/etc. renderers this component intentionally doesn\'t bundle. `status="converting"` visualizes a host-owned, host-polled async server-side conversion — this component never fetches or polls a conversion API itself.',
+          'A format-dispatching document/attachment viewer with a minimal built-in dispatch (`text/*`/`application/json` → plain `<pre>`, `image/*` → contained `<img>`, everything else → a generic "can\'t preview this" download fallback) plus an `unsupported` slot escape hatch for PDF/office-doc/etc. renderers this component intentionally doesn\'t bundle. Image highlight IDs are trimmed, nonempty, and first-wins; activation emits `{ highlightId }`. `status="converting"` visualizes a host-owned, host-polled async server-side conversion — this component never fetches or polls a conversion API itself.',
       },
     },
   },

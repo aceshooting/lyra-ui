@@ -3,7 +3,7 @@ import { state } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
 import {
   DocumentAnchorTarget,
-  HIGHLIGHT_CANDIDATE_LIMIT,
+  prioritizedHighlightCandidates,
   type LyraAnchorTarget,
   type LyraAnchorTargetEventMap,
 } from './anchor-target.js';
@@ -552,19 +552,10 @@ export function TextViewerTarget(
         highlight.anchor.kind === 'text-quote';
       const highlightsToPaint: TextHighlight[] = [];
       let activeHighlight: TextHighlight | undefined;
-      const candidateCount = Math.min(this.highlights.length, HIGHLIGHT_CANDIDATE_LIMIT);
-      for (let candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++) {
-        const highlight = this.highlights[candidateIndex]!;
+      for (const highlight of prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)) {
         if (!isTextHighlight(highlight)) continue;
         highlightsToPaint.push(highlight);
         if (highlight.id === this.activeHighlightId) activeHighlight = highlight;
-      }
-      if (activeHighlight) {
-        const activeIndex = highlightsToPaint.indexOf(activeHighlight);
-        if (activeIndex > 0) {
-          highlightsToPaint.splice(activeIndex, 1);
-          highlightsToPaint.unshift(activeHighlight);
-        }
       }
 
       const searchGenerationIsCurrent = this.lastSearchGeneration === this.observedContentGeneration;

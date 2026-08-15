@@ -1,11 +1,11 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
-    --lr-ebook-viewer-max-height: none;
+    --_lr-ebook-viewer-max-height: none;
   }
-  [part='base'] {
+  [part="base"] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
@@ -15,7 +15,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }
-  [part='toolbar'] {
+  [part="toolbar"] {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -23,8 +23,8 @@ export const styles = css`
     padding: var(--lr-space-s) var(--lr-space-m);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part='previous-button'],
-  [part='next-button'] {
+  [part="previous-button"],
+  [part="next-button"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -41,47 +41,64 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
   }
-  [part='previous-button']:hover,
-  [part='next-button']:hover {
+  [part="previous-button"]:hover,
+  [part="next-button"]:hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part='previous-button']:active,
-  [part='next-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  [part="previous-button"]:active,
+  [part="next-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand-quiet),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
-  [part='previous-button']:disabled,
-  [part='next-button']:disabled {
+  [part="previous-button"]:disabled,
+  [part="next-button"]:disabled {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
-  [part='previous-button']:focus-visible,
-  [part='next-button']:focus-visible {
+  [part="previous-button"]:focus-visible,
+  [part="next-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='previous-icon'],
-  [part='next-icon'] {
+  [part="previous-icon"],
+  [part="next-icon"] {
     display: inline-flex;
   }
-  [part='previous-icon'] { transform: rotate(180deg); }
-  :host(:dir(rtl)) [part='previous-icon'] { transform: rotate(0deg); }
-  :host(:dir(rtl)) [part='next-icon'] { transform: rotate(180deg); }
-  [part='mount'] {
+  [part="previous-icon"] {
+    transform: rotate(180deg);
+  }
+  :host(:dir(rtl)) [part="previous-icon"] {
+    transform: rotate(0deg);
+  }
+  :host(:dir(rtl)) [part="next-icon"] {
+    transform: rotate(180deg);
+  }
+  [part="mount"] {
     flex: 1 1 auto;
     min-block-size: var(--lr-size-10rem);
-    max-block-size: var(--lr-ebook-viewer-max-height);
+    max-block-size: var(
+      --lr-ebook-viewer-max-height,
+      var(--_lr-ebook-viewer-max-height)
+    );
     overflow: hidden;
   }
-  [part='mount'] iframe {
+  [part="mount"] iframe {
     display: block;
     border: none;
   }
   .status-note,
-  [part='error'] {
+  [part="error"] {
     margin: 0;
     padding: var(--lr-space-l);
     text-align: center;
   }
-  .status-note { color: var(--lr-color-text-quiet); }
-  [part='error'] { color: var(--lr-color-danger); }
+  .status-note {
+    color: var(--lr-color-text-quiet);
+  }
+  [part="error"] {
+    color: var(--lr-color-danger);
+  }
 `;

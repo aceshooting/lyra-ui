@@ -1052,17 +1052,16 @@ which owns `role="tooltip"` whether currently shown or hidden.
 `index` (the citation number), `popover` (the floating preview panel, only meaningful while open).
 
 **Themeable custom properties:** `--lr-citation-badge-accent` / `--lr-citation-badge-bg` /
-`--lr-citation-badge-border` (internal per-status accent variables, not typically overridden
-directly — set instead by the `:host([status=...])` rules), plus shared tokens
+`--lr-citation-badge-border`. Their private defaults follow `status`, but an inherited or direct
+public value remains authoritative in every status. Shared tokens include
 `--lr-color-text-quiet`, `--lr-color-text`, `--lr-color-success` / `-success-quiet`,
 `--lr-color-warning` / `-warning-quiet`, `--lr-color-danger` / `-danger-quiet`, `--lr-radius`,
 `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`, `--lr-space-s`/`-m`,
 `--lr-transition-fast`, `--lr-focus-ring-*`.
 
-> Retheming a badge from outside `<lr-citation-badge>` (e.g. per-source or per-confidence colors)?
-> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
-> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
-> wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
+> Retheming a group of badges from outside `<lr-citation-badge>` (e.g. per-source or
+> per-confidence colors)? Set the component hooks above on their ancestor wrapper. Use
+> `--lr-theme-*` instead only when changing a shared semantic palette input for the entire subtree.
 
 **Optional peer deps:** none.
 
@@ -1921,8 +1920,8 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
   An authored host `aria-label` independently names the trace and is not cloned onto the timeline;
   explicit-empty/dynamic host changes preserve that single-owner distinction
 
-**Events:** `lr-stage-select` (`detail: { id: string }`, a stage's bar was activated — click, Enter,
-Space), `lr-stage-toggle` (`detail: { id: string; expanded: boolean }`, an evidence panel was
+**Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
+Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, an evidence panel was
 toggled, either by its own button or implicitly by selecting that stage in the timeline for the
 first time), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
 discriminated `{ stageId, action: 'open', id, sourceId, anchor? } | { stageId, action: 'expand', id,
@@ -2164,376 +2163,376 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-retrieval-chunk-inspector-chunk-inspector-contracts`** — Supporting data types and helpers for this component family.
   `LyraChunk {
-    id: unknown;
-    text: unknown;
-    score: unknown;
-    sourceId: unknown;
-    title: unknown;
-    page: unknown;
-    anchor: unknown;
-  }`
+  id: unknown;
+  text: unknown;
+  score: unknown;
+  sourceId: unknown;
+  title: unknown;
+  page: unknown;
+  anchor: unknown;
+}`
 
 - **`components-retrieval-citation-badge-citation-badge-contracts`** — Supporting data types and helpers for this component family.
   `CitationActivateDetail {
-    sourceId: unknown;
-    index: unknown;
-  }`
+  sourceId: unknown;
+  index: unknown;
+}`
   `CitationOpenDetail {
-    sourceId: unknown;
-    index: unknown;
-    href: unknown;
-  }`
+  sourceId: unknown;
+  index: unknown;
+  href: unknown;
+}`
 
 - **`components-retrieval-community-card-community-card-contracts`** — Supporting data types and helpers for this component family.
   `LyraCommunity {
-    id: unknown;
-    label: unknown;
-    summary: unknown;
-    memberCount: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  summary: unknown;
+  memberCount: unknown;
+}`
 
 - **`components-retrieval-embedding-explorer-embedding-explorer-contracts`** — Supporting data types and helpers for this component family.
   `EmbeddingPoint {
-    id: unknown;
-    x: unknown;
-    y: unknown;
-    label: unknown;
-    sourceId: unknown;
-    cluster: unknown;
-  }`
+  id: unknown;
+  x: unknown;
+  y: unknown;
+  label: unknown;
+  sourceId: unknown;
+  cluster: unknown;
+}`
 
 - **`components-retrieval-entity-card-entity-card-contracts`** — Supporting data types and helpers for this component family.
   `LyraEntity {
-    id: unknown;
-    label: unknown;
-    type: unknown;
-    description: unknown;
-    properties: unknown;
-    degree: unknown;
-    communityId: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  type: unknown;
+  description: unknown;
+  properties: unknown;
+  degree: unknown;
+  communityId: unknown;
+}`
 
 - **`components-retrieval-entity-dossier-entity-dossier-contracts`** — Supporting data types and helpers for this component family.
   `LyraEntityDossierConfidence {
-    label: unknown;
-    value: unknown;
-    unit: unknown;
-    variant: unknown;
-    exactValue: unknown;
-    caption: unknown;
-    rows: unknown;
-  }`
+  label: unknown;
+  value: unknown;
+  unit: unknown;
+  variant: unknown;
+  exactValue: unknown;
+  caption: unknown;
+  rows: unknown;
+}`
 
 - **`components-retrieval-graph-legend-graph-legend-contracts`** — Supporting data types and helpers for this component family.
   `LyraGraphLegendVisibilityDetail {
-    hiddenTypes: unknown;
-  }`
+  hiddenTypes: unknown;
+}`
 
 - **`components-retrieval-graph-graph-loader-contracts`** — Supporting data types and helpers for this component family.
   `D3DragBehavior {
-    on: unknown;
-    type: unknown;
-    listener: unknown;
-    event: unknown;
-    active: unknown;
-    x: unknown;
-    y: unknown;
-    sourceEvent: unknown;
-    subject: unknown;
-    container: unknown;
-  }`
+  on: unknown;
+  type: unknown;
+  listener: unknown;
+  event: unknown;
+  active: unknown;
+  x: unknown;
+  y: unknown;
+  sourceEvent: unknown;
+  subject: unknown;
+  container: unknown;
+}`
   `D3ForceCenter {
-    initialize: unknown;
-    nodes: unknown;
-  }`
+  initialize: unknown;
+  nodes: unknown;
+}`
   `D3ForceCollide {
-    radius: unknown;
-    value: unknown;
-    node: unknown;
-  }`
+  radius: unknown;
+  value: unknown;
+  node: unknown;
+}`
   `D3ForceLink {
-    distance: unknown;
-    value: unknown;
-    link: unknown;
-  }`
+  distance: unknown;
+  value: unknown;
+  link: unknown;
+}`
   `D3ForceManyBody {
-    strength: unknown;
-    value: unknown;
-    node: unknown;
-  }`
+  strength: unknown;
+  value: unknown;
+  node: unknown;
+}`
   `D3Modules {
-    forceSimulation: unknown;
-    nodes: unknown;
-    forceLink: unknown;
-    links: unknown;
-    forceManyBody: unknown;
-    forceCenter: unknown;
-    x: unknown;
-    y: unknown;
-    forceCollide: unknown;
-    drag: unknown;
-    zoom: unknown;
-    zoomIdentity: unknown;
-    zoomTransform: unknown;
-    node: unknown;
-    select: unknown;
-  }`
+  forceSimulation: unknown;
+  nodes: unknown;
+  forceLink: unknown;
+  links: unknown;
+  forceManyBody: unknown;
+  forceCenter: unknown;
+  x: unknown;
+  y: unknown;
+  forceCollide: unknown;
+  drag: unknown;
+  zoom: unknown;
+  zoomIdentity: unknown;
+  zoomTransform: unknown;
+  node: unknown;
+  select: unknown;
+}`
   `D3Selection {
-    call: unknown;
-    behavior: unknown;
-    node: unknown;
-    datum: unknown;
-  }`
+  call: unknown;
+  behavior: unknown;
+  node: unknown;
+  datum: unknown;
+}`
   `D3Simulation {
-    force: unknown;
-    name: unknown;
-    on: unknown;
-    type: unknown;
-    listener: unknown;
-    alphaTarget: unknown;
-    value: unknown;
-    restart: unknown;
-    stop: unknown;
-    alpha: unknown;
-    alphaMin: unknown;
-    tick: unknown;
-    iterations: unknown;
-  }`
+  force: unknown;
+  name: unknown;
+  on: unknown;
+  type: unknown;
+  listener: unknown;
+  alphaTarget: unknown;
+  value: unknown;
+  restart: unknown;
+  stop: unknown;
+  alpha: unknown;
+  alphaMin: unknown;
+  tick: unknown;
+  iterations: unknown;
+}`
   `D3SimulationLinkDatum {
-    source: unknown;
-    target: unknown;
-    index: unknown;
-  }`
+  source: unknown;
+  target: unknown;
+  index: unknown;
+}`
   `D3SimulationNodeDatum {
-    index: unknown;
-    x: unknown;
-    y: unknown;
-    vx: unknown;
-    vy: unknown;
-    fx: unknown;
-    fy: unknown;
-  }`
+  index: unknown;
+  x: unknown;
+  y: unknown;
+  vx: unknown;
+  vy: unknown;
+  fx: unknown;
+  fy: unknown;
+}`
   `D3ZoomBehavior {
-    scaleExtent: unknown;
-    extent: unknown;
-    on: unknown;
-    type: unknown;
-    listener: unknown;
-    event: unknown;
-    transform: unknown;
-    selection: unknown;
-  }`
+  scaleExtent: unknown;
+  extent: unknown;
+  on: unknown;
+  type: unknown;
+  listener: unknown;
+  event: unknown;
+  transform: unknown;
+  selection: unknown;
+}`
   `D3ZoomTransform {
-    k: unknown;
-    x: unknown;
-    y: unknown;
-    translate: unknown;
-    scale: unknown;
-    toString: unknown;
-  }`
+  k: unknown;
+  x: unknown;
+  y: unknown;
+  translate: unknown;
+  scale: unknown;
+  toString: unknown;
+}`
   `loadD3(): unknown`
   `loadD3Modules(/* public names: importForce, importDrag, importZoom, importSelection */): unknown`
 
 - **`components-retrieval-graph-graph-contracts`** — Supporting data types and helpers for this component family.
   `GraphCommunity {
-    id: unknown;
-    label: unknown;
-    memberIds: unknown;
-    color: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  memberIds: unknown;
+  color: unknown;
+}`
   `LyraGraphLink {
-    id: unknown;
-    source: unknown;
-    target: unknown;
-    width: unknown;
-    label: unknown;
-    accessibleLabel: unknown;
-    description: unknown;
-    directed: unknown;
-    color: unknown;
-    dash: unknown;
-  }`
+  id: unknown;
+  source: unknown;
+  target: unknown;
+  width: unknown;
+  label: unknown;
+  accessibleLabel: unknown;
+  description: unknown;
+  directed: unknown;
+  color: unknown;
+  dash: unknown;
+}`
   `LyraGraphNode {
-    id: unknown;
-    label: unknown;
-    accessibleLabel: unknown;
-    description: unknown;
-    radius: unknown;
-    color: unknown;
-    type: unknown;
-    expandable: unknown;
-    communityId: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  accessibleLabel: unknown;
+  description: unknown;
+  radius: unknown;
+  color: unknown;
+  type: unknown;
+  expandable: unknown;
+  communityId: unknown;
+}`
   `LyraScoreThresholds {
-    high: unknown;
-    medium: unknown;
-  }`
+  high: unknown;
+  medium: unknown;
+}`
 
 - **`components-retrieval-ingestion-queue-ingestion-queue-contracts`** — Supporting data types and helpers for this component family.
   `IngestionCancelEventDetail {
-    itemId: unknown;
-    reason: unknown;
-  }`
+  itemId: unknown;
+  reason: unknown;
+}`
   `IngestionQueueItem {
-    id: unknown;
-    document: unknown;
-    stage: unknown;
-    progress: unknown;
-    chunkCount: unknown;
-    embeddedChunkCount: unknown;
-    attempts: unknown;
-    error: unknown;
-  }`
+  id: unknown;
+  document: unknown;
+  stage: unknown;
+  progress: unknown;
+  chunkCount: unknown;
+  embeddedChunkCount: unknown;
+  attempts: unknown;
+  error: unknown;
+}`
   `IngestionRetryEventDetail {
-    itemId: unknown;
-    attempt: unknown;
-    messageId: unknown;
-  }`
+  itemId: unknown;
+  attempt: unknown;
+  messageId: unknown;
+}`
 
 - **`components-retrieval-knowledge-base-knowledge-base-contracts`** — Supporting data types and helpers for this component family.
   `KnowledgeSource {
-    id: unknown;
-    name: unknown;
-    type: unknown;
-    syncStatus: unknown;
-    indexingHealth: unknown;
-    permission: unknown;
-    documentCount: unknown;
-    lastSyncedAt: unknown;
-    errorMessage: unknown;
-  }`
+  id: unknown;
+  name: unknown;
+  type: unknown;
+  syncStatus: unknown;
+  indexingHealth: unknown;
+  permission: unknown;
+  documentCount: unknown;
+  lastSyncedAt: unknown;
+  errorMessage: unknown;
+}`
 
 - **`components-retrieval-memory-panel-memory-panel-contracts`** — Supporting data types and helpers for this component family.
   `LyraMemoryAddDetail {
-    item: unknown;
-  }`
+  item: unknown;
+}`
   `LyraMemoryExpandDetail {
-    id: unknown;
-    expanded: unknown;
-  }`
+  id: unknown;
+  expanded: unknown;
+}`
   `LyraMemoryItem {
-    id: unknown;
-    text: unknown;
-    confidence: unknown;
-    provenance: unknown;
-  }`
+  id: unknown;
+  text: unknown;
+  confidence: unknown;
+  provenance: unknown;
+}`
   `LyraMemoryRemoveDetail {
-    id: unknown;
-    scope: unknown;
-  }`
+  id: unknown;
+  scope: unknown;
+}`
 
 - **`components-retrieval-mind-map-mind-map-layout-contracts`** — Supporting data types and helpers for this component family.
   `LyraTopic {
-    id: unknown;
-    label: unknown;
-    children: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  children: unknown;
+}`
 
 - **`components-retrieval-neighbor-list-neighbor-list-contracts`** — Supporting data types and helpers for this component family.
   `LyraNeighborRow {
-    relation: unknown;
-    direction: unknown;
-    node: unknown;
-  }`
+  relation: unknown;
+  direction: unknown;
+  node: unknown;
+}`
 
 - **`components-retrieval-node-palette-node-palette-contracts`** — Supporting data types and helpers for this component family.
   `PaletteItem {
-    type: unknown;
-    label: unknown;
-    description: unknown;
-    category: unknown;
-    keywords: unknown;
-    icon: unknown;
-    disabled: unknown;
-  }`
+  type: unknown;
+  label: unknown;
+  description: unknown;
+  category: unknown;
+  keywords: unknown;
+  icon: unknown;
+  disabled: unknown;
+}`
 
 - **`components-retrieval-provenance-panel-provenance-panel-contracts`** — Supporting data types and helpers for this component family.
   `LyraProvenance {
-    entities: unknown;
-    relationships: unknown;
-    path: unknown;
-    communities: unknown;
-    chunks: unknown;
-  }`
+  entities: unknown;
+  relationships: unknown;
+  path: unknown;
+  communities: unknown;
+  chunks: unknown;
+}`
 
 - **`components-retrieval-rag-answer-rag-answer-contracts`** — Supporting data types and helpers for this component family.
   `LyraRagCitationSelectDetail {
-    section: unknown;
-    citation: unknown;
-  }`
+  section: unknown;
+  citation: unknown;
+}`
 
 - **`components-retrieval-rag-eval-dashboard-rag-eval-dashboard-contracts`** — Supporting data types and helpers for this component family.
   `RagEvaluationMetric {
-    id: unknown;
-    label: unknown;
-    category: unknown;
-    format: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  category: unknown;
+  format: unknown;
+}`
   `RagEvaluationRun {
-    id: unknown;
-    label: unknown;
-    metrics: unknown;
-    slice: unknown;
-    timestamp: unknown;
-    metadata: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  metrics: unknown;
+  slice: unknown;
+  timestamp: unknown;
+  metadata: unknown;
+}`
 
 - **`components-retrieval-retrieval-compare-retrieval-compare-contracts`** — Supporting data types and helpers for this component family.
   `RetrievalComparisonSet {
-    id: unknown;
-    label: unknown;
-    chunks: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  chunks: unknown;
+}`
 
 - **`components-retrieval-retrieval-results-retrieval-results-contracts`** — Supporting data types and helpers for this component family.
   `RetrievalResultsSelectDetail {
-    ids: unknown;
-    chunks: unknown;
-  }`
+  ids: unknown;
+  chunks: unknown;
+}`
 
 - **`components-retrieval-retrieval-search-retrieval-search-contracts`** — Supporting data types and helpers for this component family.
   `RetrievalFiltersChangeDetail {
-    filters: unknown;
-    scope: unknown;
-  }`
+  filters: unknown;
+  scope: unknown;
+}`
 
 - **`components-retrieval-retrieval-trace-retrieval-trace-contracts`** — Supporting data types and helpers for this component family.
   `RetrievalStageEvidence {
-    text: unknown;
-    chunks: unknown;
-    metadata: unknown;
-  }`
+  text: unknown;
+  chunks: unknown;
+  metadata: unknown;
+}`
   `RetrievalStage {
-    id: unknown;
-    kind: unknown;
-    label: unknown;
-    startMs: unknown;
-    endMs: unknown;
-    status: unknown;
-    detail: unknown;
-    evidence: unknown;
-  }`
+  id: unknown;
+  kind: unknown;
+  label: unknown;
+  startMs: unknown;
+  endMs: unknown;
+  status: unknown;
+  detail: unknown;
+  evidence: unknown;
+}`
 
 - **`components-retrieval-source-card-source-card-contracts`** — Supporting data types and helpers for this component family.
   `SourceCardExpandDetail {
-    sourceId: unknown;
-    expanded: unknown;
-  }`
+  sourceId: unknown;
+  expanded: unknown;
+}`
   `SourceCardOpenDetail {
-    sourceId: unknown;
-    href: unknown;
-  }`
+  sourceId: unknown;
+  href: unknown;
+}`
 
 - **`components-retrieval-source-list-source-list-contracts`** — Supporting data types and helpers for this component family.
   `SourceListToggleDetail {
-    expanded: unknown;
-  }`
+  expanded: unknown;
+}`
 
 - **`components-retrieval-source-picker-source-picker-contracts`** — Supporting data types and helpers for this component family.
   `LyraSourceEntry {
-    id: unknown;
-    label: unknown;
-    mimeType: unknown;
-    name: unknown;
-    children: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  mimeType: unknown;
+  name: unknown;
+  children: unknown;
+}`

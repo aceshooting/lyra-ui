@@ -151,7 +151,7 @@ it('does not mount heavy result views until an entry is disclosed', async () => 
   expect(el.shadowRoot!.querySelectorAll('lr-tool-result-view')).to.have.lengthOf(0);
 });
 
-it('defers redaction traversal until disclosure and memoizes it across unrelated updates', async () => {
+it('owns entry records once at assignment and avoids re-reading source proxies on disclosure', async () => {
   let ownKeyReads = 0;
   const args = new Proxy({ secret: 'hidden', visible: 'ok' }, {
     ownKeys(target) {
@@ -164,11 +164,11 @@ it('defers redaction traversal until disclosure and memoizes it across unrelated
     <lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>
   `);
 
-  expect(ownKeyReads).to.equal(0);
+  expect(ownKeyReads).to.equal(1);
   expect(el.shadowRoot!.querySelector('lr-tool-result-view') === null).to.be.true;
   expect(resultViewIn(await openEntry(el)).args).to.deep.equal({ secret: 'Value hidden', visible: 'ok' });
   const readsAfterOpen = ownKeyReads;
-  expect(readsAfterOpen).to.be.greaterThan(0);
+  expect(readsAfterOpen).to.equal(1);
 
   el.approvalEditable = false;
   await el.updateComplete;
@@ -434,6 +434,23 @@ it('uses deterministic first-wins duplicate identities and accepts duplicate ids
   const activated = oneEvent(distinct, 'lr-tool-activate');
   chipIn(entriesEl(distinct)[1]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
   expect((await activated).detail).to.deep.equal({ invocationId: 'reused', sourceKey: 'run-b' });
+});
+
+it('omits blank invocation identities and treats a blank source key as the absent scope', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[
+      makeEntry({ id: '', name: 'empty' }),
+      makeEntry({ id: '   ', name: 'blank' }),
+      makeEntry({ id: 'kept', sourceKey: '', name: 'first unscoped' }),
+      makeEntry({ id: 'kept', name: 'later unscoped duplicate' }),
+    ]}></lr-tool-timeline>
+  `);
+
+  expect(entriesEl(el)).to.have.length(1);
+  expect(chipIn(entriesEl(el)[0]!).name).to.equal('first unscoped');
+  const activated = oneEvent(el, 'lr-tool-activate');
+  chipIn(entriesEl(el)[0]).shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!.click();
+  expect((await activated).detail).to.deep.equal({ invocationId: 'kept' });
 });
 
 it('prunes disclosure state when an identity disappears so later reuse starts collapsed', async () => {

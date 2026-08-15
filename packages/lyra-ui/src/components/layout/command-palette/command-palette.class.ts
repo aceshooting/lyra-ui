@@ -1,3 +1,4 @@
+import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
@@ -9,10 +10,14 @@ import {
 import { styles } from "./command-palette.styles.js";
 import { resolveCssLength } from "../../../internal/css-length.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_commandPaletteEmpty,
+  LYRA_DEFAULT_commandPaletteLabel,
+  LYRA_DEFAULT_commandPalettePlaceholder,
+  LYRA_DEFAULT_commandPaletteResults,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** Fallbacks only. The rendered heights come from `--lr-command-palette-row-height` /
  *  `-group-height`, which default to `3rem`/`2rem` -- equal to these numbers at a 16px root font
@@ -48,11 +53,18 @@ const hotkeyOwners = new WeakMap<Window, LyraCommandPalette[]>();
 
 function registerHotkeyOwner(view: Window, palette: LyraCommandPalette): void {
   const owners = hotkeyOwners.get(view) ?? [];
-  hotkeyOwners.set(view, [...owners.filter((candidate) => candidate !== palette), palette]);
+  hotkeyOwners.set(view, [
+    ...owners.filter((candidate) => candidate !== palette),
+    palette,
+  ]);
 }
 
-function unregisterHotkeyOwner(view: Window, palette: LyraCommandPalette): void {
-  const owners = hotkeyOwners.get(view)?.filter((candidate) => candidate !== palette) ?? [];
+function unregisterHotkeyOwner(
+  view: Window,
+  palette: LyraCommandPalette
+): void {
+  const owners =
+    hotkeyOwners.get(view)?.filter((candidate) => candidate !== palette) ?? [];
   if (owners.length) hotkeyOwners.set(view, owners);
   else hotkeyOwners.delete(view);
 }
@@ -65,7 +77,7 @@ export interface LyraCommand {
   description?: string;
   group?: string;
   shortcut?: string;
-  keywords?: string[];
+  keywords?: readonly string[];
   disabled?: boolean;
   /** Optional leading TemplateResult glyph, rendered before `label` (`PaletteItem.icon`/
    *  `LyraSegmentedItem.icon` precedent -- not restricted to a square icon-only shape). */
@@ -73,7 +85,7 @@ export interface LyraCommand {
   onSelect?: () => void;
 }
 export interface LyraCommandPaletteEventMap {
-  "lr-select": CustomEvent<{ command: LyraCommand }>;
+  "lr-select": CustomEvent<LyraEventDetailSnapshot<{ command: LyraCommand }>>;
   "lr-open": CustomEvent<null>;
   "lr-close": CustomEvent<null>;
 }
@@ -81,6 +93,10 @@ export interface LyraCommandPaletteEventMap {
 /** `<lr-command-palette>` — searchable application command menu with keyboard navigation.
  * Shared overlay infrastructure (the same one `<lr-dialog>` uses) coordinates focus-trapping
  * Tab, Escape dismissal, and document scroll-locking for as long as the palette is open.
+ * The public command sequence is copied, bounded, and frozen while each command object's identity
+ * is retained for its imperative `onSelect` contract. Create and reassign a new command array after
+ * sequence or row changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-command-palette
  * @event lr-select - A command was chosen; detail is `{ command }`.
  * @event lr-open - Emitted before the palette opens. Cancelable: `preventDefault()` keeps it
@@ -120,15 +136,23 @@ export interface LyraCommandPaletteEventMap {
  * @since 4.0.0
  */
 export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    "commands",
+  ]);
+  /** Command objects are returned to `onSelect`; their identity is an explicit API contract. */
+  protected static override readonly identityCollectionProperties =
+    Object.freeze(["commands"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    commandPaletteEmpty: LYRA_DEFAULT_commandPaletteEmpty,
-    commandPaletteLabel: LYRA_DEFAULT_commandPaletteLabel,
-    commandPalettePlaceholder: LYRA_DEFAULT_commandPalettePlaceholder,
-    commandPaletteResults: LYRA_DEFAULT_commandPaletteResults,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      commandPaletteEmpty: LYRA_DEFAULT_commandPaletteEmpty,
+      commandPaletteLabel: LYRA_DEFAULT_commandPaletteLabel,
+      commandPalettePlaceholder: LYRA_DEFAULT_commandPalettePlaceholder,
+      commandPaletteResults: LYRA_DEFAULT_commandPaletteResults,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
@@ -148,9 +172,10 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     }
     this.requestOpen(normalized);
   }
-  /** Commands to search and activate. `commandId` must be unique and nonempty; malformed rows and
-   *  later duplicates from untyped boundaries are omitted deterministically. */
-  @property({ attribute: false }) commands: LyraCommand[] = [];
+  /** Commands to search and activate. The sequence is copied, bounded, and frozen while command
+   *  identity is retained. `commandId` must be unique and nonempty; malformed rows and later
+   *  duplicates from untyped boundaries are omitted deterministically. */
+  @property({ attribute: false }) commands: readonly LyraCommand[] = [];
   /** Exact global activation chord. `mod` resolves to Command on macOS and Control elsewhere. */
   @property() hotkey = "mod+k";
   @property({ attribute: "aria-label" }) accessibleLabel = "";
@@ -174,16 +199,16 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   /** The `commands` array `haystacks` was built from -- reference-keyed memo, since `commands`
    *  only ever changes by reassignment (it's `attribute: false`; in-place mutation wouldn't
    *  trigger a re-render either). */
-  private haystacksFor?: LyraCommand[];
+  private haystacksFor?: readonly LyraCommand[];
   private haystacksLocale = "";
   private haystacks: string[] = [];
-  private filteredForCommands?: LyraCommand[];
+  private filteredForCommands?: readonly LyraCommand[];
   private filteredForQuery = "";
   private filteredForLocale = "";
   private filteredRows: LyraCommand[] = [];
-  private normalizedForCommands?: LyraCommand[];
+  private normalizedForCommands?: readonly LyraCommand[];
   private normalizedRows: LyraCommand[] = [];
-  private resultModelFor?: LyraCommand[];
+  private resultModelFor?: readonly LyraCommand[];
   private resultModelRowPitch?: number;
   private resultModelGroupPitch?: number;
   private resultModelCache?: CommandResultModel;
@@ -192,7 +217,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   /** Canonical command collection consumed by search, focus, rendering, and activation. Keeping
    *  the first valid occurrence makes duplicate handling deterministic while retaining caller
    *  object identity in `lr-select` and `onSelect`. */
-  private get effectiveCommands(): LyraCommand[] {
+  private get effectiveCommands(): readonly LyraCommand[] {
     if (this.normalizedForCommands !== this.commands) {
       this.normalizedForCommands = this.commands;
       const seen = new Set<string>();
@@ -219,10 +244,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private get searchHaystacks(): string[] {
     const locale = this.effectiveLocale;
     const commands = this.effectiveCommands;
-    if (
-      this.haystacksFor !== commands ||
-      this.haystacksLocale !== locale
-    ) {
+    if (this.haystacksFor !== commands || this.haystacksLocale !== locale) {
       this.haystacksFor = commands;
       this.haystacksLocale = locale;
       this.haystacks = commands.map((command) =>
@@ -262,7 +284,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       if (nextIndex === -1) nextIndex = this.seekEnabled(rows, start - 1, -1);
     }
     this.activeIndex = nextIndex;
-    this.activeCommandId = nextIndex >= 0 ? rows[nextIndex]?.commandId : undefined;
+    this.activeCommandId =
+      nextIndex >= 0 ? rows[nextIndex]?.commandId : undefined;
   }
 
   // Runs after render so the manager can resolve the rendered [part="dialog"] panel -- mirrors
@@ -300,7 +323,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         // same reason <lr-virtual-list> defers its own initial container measurement). The
         // observer stays responsible for every later measurement.
         queueMicrotask(() => {
-          if (this.isConnected && this.observedList === list) this.measureRowPitch();
+          if (this.isConnected && this.observedList === list)
+            this.measureRowPitch();
         });
       }
     }
@@ -312,8 +336,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       this.renderRoot.querySelector<HTMLElement>('[part="command"]') ??
       undefined;
     const group =
-      this.renderRoot.querySelector<HTMLElement>('[part="group"]') ??
-      undefined;
+      this.renderRoot.querySelector<HTMLElement>('[part="group"]') ?? undefined;
     if (row !== this.observedRow) {
       if (this.observedRow)
         this.listResizeObserver?.unobserve(this.observedRow);
@@ -330,11 +353,11 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   private clearPitchSentinels(): void {
     if (this.observedRow) this.listResizeObserver?.unobserve(this.observedRow);
-    if (this.observedGroup) this.listResizeObserver?.unobserve(this.observedGroup);
+    if (this.observedGroup)
+      this.listResizeObserver?.unobserve(this.observedGroup);
     this.observedRow = undefined;
     this.observedGroup = undefined;
   }
-
 
   /** Resolves the two row pitches from their custom properties so the absolutely-positioned rows
    *  stay aligned with their painted heights. Hardcoding 48/32 matched only at a 16px root font;
@@ -344,15 +367,19 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     const style = this.ownerDocument.defaultView?.getComputedStyle(this);
     if (!style) return;
     const row = resolveCssLength(
-      style.getPropertyValue("--lr-command-palette-row-height").trim(),
+      style.getPropertyValue("--lr-command-palette-row-height").trim() ||
+        style.getPropertyValue("--_lr-command-palette-row-height").trim(),
       { host: this }
     );
     const group = resolveCssLength(
-      style.getPropertyValue("--lr-command-palette-group-height").trim(),
+      style.getPropertyValue("--lr-command-palette-group-height").trim() ||
+        style.getPropertyValue("--_lr-command-palette-group-height").trim(),
       { host: this }
     );
-    if (row !== undefined && row > 0 && row !== this.rowPitch) this.rowPitch = row;
-    if (group !== undefined && group > 0 && group !== this.groupPitch) this.groupPitch = group;
+    if (row !== undefined && row > 0 && row !== this.rowPitch)
+      this.rowPitch = row;
+    if (group !== undefined && group > 0 && group !== this.groupPitch)
+      this.groupPitch = group;
   }
 
   private scheduleRowPitchMeasurement(): void {
@@ -492,22 +519,35 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     };
   }
   private matchesShortcut(event: KeyboardEvent): boolean {
-    const parts = this.hotkey.toLowerCase().split("+").map((part) => part.trim());
+    const parts = this.hotkey
+      .toLowerCase()
+      .split("+")
+      .map((part) => part.trim());
     const key = parts.pop();
     if (!key || event.key.toLowerCase() !== key) return false;
     const modifiers = new Set(parts);
     if (
       modifiers.size !== parts.length ||
-      [...modifiers].some((part) => !["alt", "ctrl", "meta", "mod", "shift"].includes(part)) ||
+      [...modifiers].some(
+        (part) => !["alt", "ctrl", "meta", "mod", "shift"].includes(part)
+      ) ||
       (modifiers.has("mod") && (modifiers.has("ctrl") || modifiers.has("meta")))
-    ) return false;
-    const isMac = (this.runtimeWindow ?? this.ownerDocument.defaultView)?.navigator.platform.includes("Mac") ?? false;
-    const expectedCtrl = modifiers.has("ctrl") || (modifiers.has("mod") && !isMac);
-    const expectedMeta = modifiers.has("meta") || (modifiers.has("mod") && isMac);
-    return event.ctrlKey === expectedCtrl &&
+    )
+      return false;
+    const isMac =
+      (
+        this.runtimeWindow ?? this.ownerDocument.defaultView
+      )?.navigator.platform.includes("Mac") ?? false;
+    const expectedCtrl =
+      modifiers.has("ctrl") || (modifiers.has("mod") && !isMac);
+    const expectedMeta =
+      modifiers.has("meta") || (modifiers.has("mod") && isMac);
+    return (
+      event.ctrlKey === expectedCtrl &&
       event.metaKey === expectedMeta &&
       event.shiftKey === modifiers.has("shift") &&
-      event.altKey === modifiers.has("alt");
+      event.altKey === modifiers.has("alt")
+    );
   }
   private onGlobalKeyDown = (event: KeyboardEvent): void => {
     if (event.repeat || event.isComposing || event.keyCode === 229) return;
@@ -540,7 +580,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       this.filteredForQuery = query;
       this.filteredForLocale = locale;
       if (!query) {
-        this.filteredRows = commands;
+        this.filteredRows = [...commands];
       } else {
         const haystacks = this.searchHaystacks;
         this.filteredRows = commands.filter((_, index) =>
@@ -655,8 +695,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     let high = model.rows.length - 1;
     while (low < high) {
       const middle = (low + high) >> 1;
-      if (model.rows[middle]!.top + this.rowPitch < minimum)
-        low = middle + 1;
+      if (model.rows[middle]!.top + this.rowPitch < minimum) low = middle + 1;
       else high = middle;
     }
     const visibleIndexes = new Set<number>();

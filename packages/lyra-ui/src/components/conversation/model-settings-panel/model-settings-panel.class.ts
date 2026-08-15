@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { normalizeCatalog } from '../../../internal/catalog-picker.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange, decimalPlaces } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
@@ -53,6 +54,8 @@ const DEFAULT_TEMPERATURE = 1;
  * child control's own prop of the same/similar name; see the child
  * components themselves for the exact semantics of `catalog`/`allowCustom`
  * and `temperatureMin`/`temperatureMax`/`temperatureStep`.
+ * Array-valued catalogs are clone-owned, bounded readonly snapshots. Create and reassign a new
+ * catalog array after changing its rows.
  *
  * The panel's own `temperature` readout mirrors the slider's *live* value —
  * updated on every `lr-input` (drag/key-repeat), not just the committed
@@ -76,6 +79,8 @@ const DEFAULT_TEMPERATURE = 1;
  * @since 4.0.0
  */
 export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -91,7 +96,9 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
 
   /** Informational provider badge, passed straight through to the internal `lr-model-select`. */
   @property() provider = '';
-  /** The model list, passed straight through to the internal `lr-model-select`. */
+  /** The clone-owned model list, normalized to unique nonempty first-wins ids by the internal
+   *  `lr-model-select` and by this panel's `inCatalog` event computation. Reassign a new array
+   *  after changes. */
   @property({ attribute: false }) catalog?: LyraCatalog<LyraModelCatalogEntry>;
   /** The current model id. */
   @property() model = '';
@@ -130,9 +137,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
    *  `model` was assigned directly instead of via the child's own
    *  `lr-change`. */
   private get inCatalog(): boolean {
-    const catalog = this.catalog;
-    if (!catalog || catalog.length === 0) return false;
-    return catalog.some((entry) => (typeof entry === 'string' ? entry === this.model : entry.id === this.model));
+    return normalizeCatalog<LyraModelCatalogEntry>(this.catalog).some((entry) => entry.id === this.model);
   }
 
   private get temperatureDomain(): { min: number; max: number; lo: number; hi: number; step: number } {

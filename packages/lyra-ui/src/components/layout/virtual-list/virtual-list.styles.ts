@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -8,12 +8,12 @@ export const styles = css`
        a virtualized list is meaningless without a bounded scroll extent, so
        this ships a sane default rather than collapsing to 0 when a caller
        forgets to size the host. */
-    --lr-virtual-list-height: var(--lr-size-24rem);
+    --_lr-virtual-list-height: var(--lr-size-24rem);
   }
-  [part='base'] {
+  [part="base"] {
     position: relative;
     min-inline-size: 0;
-    block-size: var(--lr-virtual-list-height);
+    block-size: var(--lr-virtual-list-height, var(--_lr-virtual-list-height));
     /* Ordinary row content inherits overflow-wrap: anywhere below, while
        consumer content that explicitly opts out with white-space: nowrap
        remains reachable through this scrollport. */
@@ -23,7 +23,7 @@ export const styles = css`
        hits either end. */
     overscroll-behavior: contain;
   }
-  [part='base']:focus-visible {
+  [part="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     /* Negative (inward) so the ring isn't clipped by this element's own
        overflow:auto -- an outward ring (every other component's convention)
@@ -39,7 +39,7 @@ export const styles = css`
   /* no-pressed-state: this is the scroll port, not a target -- pressing it activates nothing, and
      :active matches the ancestors of whatever was pressed, so clicking any row (or a row action
      inside one) would flash this outline around the entire list. */
-  [part='base']:hover {
+  [part="base"]:hover {
     outline-width: var(
       --lr-virtual-list-hover-outline-width,
       var(--lr-border-width-thin)
@@ -54,12 +54,12 @@ export const styles = css`
       calc(-1 * var(--lr-border-width-thin))
     );
   }
-  [part='spacer'] {
+  [part="spacer"] {
     position: relative;
     min-inline-size: 0;
     inline-size: 100%;
   }
-  [part='row'] {
+  [part="row"] {
     position: absolute;
     inset-inline-start: 0;
     inset-block-start: 0;
@@ -92,7 +92,7 @@ export const styles = css`
      The value deliberately matches [part='group'] below rather than exceeding it, so the two land
      on the same layer and DOM order decides: groups render before the rows, so an active row wins
      while the group header remains non-interactive decoration. */
-  [part='row']:where(:focus-within, :has(lr-dropdown[open])) {
+  [part="row"]:where(:focus-within, :has(lr-dropdown[open])) {
     z-index: var(--lr-layer-content);
   }
   /* lr-thread-list's renderItem callback is rendered inside this shadow root, so descendant
@@ -100,7 +100,7 @@ export const styles = css`
      by a consumer rule following ::part(row-excerpt). Keep the selector pinned to the callback's
      dedicated part so marks in other virtualized row hooks retain their own semantics. The public
      properties inherit from lr-thread-list through this host and remain component-scoped. */
-  [part='row'] [part~='row-excerpt'] mark {
+  [part="row"] [part~="row-excerpt"] mark {
     background: var(
       --lr-thread-list-excerpt-highlight-background,
       var(--lr-color-warning-quiet)
@@ -112,7 +112,7 @@ export const styles = css`
     );
     padding: var(--lr-thread-list-excerpt-highlight-padding, 0);
   }
-  [part='group'] {
+  [part="group"] {
     position: absolute;
     inset-inline: 0;
     inset-block-start: 0;
@@ -138,7 +138,7 @@ export const styles = css`
 
      z-index matches [part='group'] and a focused [part='row'] rather than exceeding it: this layer
      is rendered after both, so DOM order already paints it on top. */
-  [part='sticky-group'] {
+  [part="sticky-group"] {
     position: sticky;
     inset-block-start: 0;
     z-index: var(--lr-layer-content);
@@ -149,10 +149,10 @@ export const styles = css`
   /* Scrolled above the first group there is nothing to pin. The band stays in the DOM anyway so its
      height remains measurable (the scroll inset is sized from it), but it must show nothing:
      visibility, not display, because a display: none box has no height to measure. */
-  [part='sticky-group'][data-inactive] {
+  [part="sticky-group"][data-inactive] {
     visibility: hidden;
   }
-  :host([loading]) [part='base'] {
+  :host([loading]) [part="base"] {
     cursor: progress;
   }
 `;

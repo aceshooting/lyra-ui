@@ -10,7 +10,7 @@ import { styles } from './span-waterfall.styles.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -78,7 +78,7 @@ interface ViewWindow {
 }
 
 export interface LyraSpanWaterfallEventMap {
-  'lr-span-select': CustomEvent<{ id: string }>;
+  'lr-span-select': CustomEvent<{ spanId: string }>;
 }
 
 /**
@@ -87,8 +87,11 @@ export interface LyraSpanWaterfallEventMap {
  * in start order, status-toned bars (Langfuse timeline / Temporal
  * event-history style).
  *
+ * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
+ * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
  * @customElement lr-span-waterfall
- * @event lr-span-select - `detail: { id }` — a bar/row was activated (click, Enter, Space).
+ * @event lr-span-select - `detail: { spanId }` — a bar/row was activated (click, Enter, Space).
  * @csspart base - The root wrapper.
  * @csspart axis - The time-ruler row, hidden when `hideAxis`.
  * @csspart tick - One axis tick mark.
@@ -122,6 +125,8 @@ export interface LyraSpanWaterfallEventMap {
  * @since 4.0.0
  */
 export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
+  protected static override readonly ownedCollectionProperties = Object.freeze(["spans"]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -134,6 +139,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
@@ -158,7 +164,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order).
    *  The controlled `activeSpanId` reserves a position inside the shared 500-row ceiling. Foreign
    *  runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. */
-  @property({ attribute: false }) spans: LyraSpan[] = [];
+  @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
   /** Visible time window in trace-relative ms (same non-negative, trace-relative vocabulary as
    *  `LyraSpan.startMs`/`endMs` -- never a wall-clock timestamp). Both `null` (the default) fits
@@ -170,7 +176,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   @property() label = '';
 
   private focusedId: string | null = null;
-  private sortedSource?: LyraSpan[];
+  private sortedSource?: readonly LyraSpan[];
   private sortedActiveSpanId: string | null = null;
   private sortedCache: LyraSpan[] = [];
   private sortedCacheTruncated = false;
@@ -292,7 +298,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   private selectRow(id: string): void {
     this.focusedId = id;
-    this.emit('lr-span-select', { id });
+    this.emit('lr-span-select', { spanId: id });
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {

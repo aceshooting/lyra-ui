@@ -47,6 +47,42 @@ it('defaults to empty nodes/edges, horizontal orientation, and default zoom/grid
   expect(el.nodeGap).to.equal(24);
 });
 
+it('keeps the first unique nonempty node and edge ids before render, focus, counts, and activation', async () => {
+  const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  el.nodes = [
+    { id: '', data: { label: 'Blank node' } },
+    { id: '   ', data: { label: 'Whitespace node' } },
+    { id: 'source', position: { x: 0, y: 0 }, data: { label: 'First source' } },
+    { id: 'source', position: { x: 50, y: 0 }, data: { label: 'Later source' } },
+    { id: 'target', position: { x: 100, y: 0 }, data: { label: 'Target' } },
+  ];
+  el.edges = [
+    { id: '', source: 'source', target: 'target' },
+    { id: '   ', source: 'source', target: 'target' },
+    { id: 'connection', source: 'source', target: 'target', label: 'First edge' },
+    { id: 'connection', source: 'target', target: 'source', label: 'Later edge' },
+  ];
+  await el.updateComplete;
+
+  expect(el.nodes.map((node) => [node.id, node.data?.['label']])).to.deep.equal([
+    ['source', 'First source'],
+    ['target', 'Target'],
+  ]);
+  expect(el.edges.map((edge) => [edge.id, edge.source, edge.target])).to.deep.equal([
+    ['connection', 'source', 'target'],
+  ]);
+  expect(el.shadowRoot!.querySelectorAll('[data-node-id]').length).to.equal(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="node-control"][tabindex="0"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part="edge"]').length).to.equal(1);
+
+  let detail: { edgeId: string; source: string; target: string } | undefined;
+  el.addEventListener('lr-edge-activate', (event) => {
+    detail = event.detail;
+  });
+  (el.shadowRoot!.querySelector('[part="edge"]') as SVGElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  expect(detail).to.deep.equal({ edgeId: 'connection', source: 'source', target: 'target' });
+});
+
 it('renders decorated edges without an owner document during SSR', () => {
   const el = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
   el.nodes = [{ id: 'source' }];
@@ -1050,12 +1086,12 @@ describe('selection & roving focus', () => {
     el.edges = edges;
     el.selectedEdgeIds = ['a-b'];
     await el.updateComplete;
-    let clickDetail: { id: string } | undefined;
+    let clickDetail: { nodeId: string } | undefined;
     let selectionDetail: { nodeIds: string[]; edgeIds: string[] } | undefined;
     el.addEventListener('lr-node-activate', (e) => (clickDetail = (e as CustomEvent).detail));
     el.addEventListener('lr-selection-change', (e) => (selectionDetail = (e as CustomEvent).detail));
     (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).click();
-    expect(clickDetail).to.deep.equal({ id: 'a' });
+    expect(clickDetail).to.deep.equal({ nodeId: 'a' });
     expect(selectionDetail).to.deep.equal({ nodeIds: ['a'], edgeIds: [] });
   });
 
@@ -1077,10 +1113,10 @@ describe('selection & roving focus', () => {
     el.edges = edges;
     el.selectedNodeIds = ['a'];
     await el.updateComplete;
-    let detail: { id: string; source: string; target: string } | undefined;
+    let detail: { edgeId: string; source: string; target: string } | undefined;
     el.addEventListener('lr-edge-activate', (e) => (detail = (e as CustomEvent).detail));
     (el.shadowRoot!.querySelector('[part="edge"]') as SVGElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(detail).to.deep.equal({ id: 'a-b', source: 'a', target: 'b' });
+    expect(detail).to.deep.equal({ edgeId: 'a-b', source: 'a', target: 'b' });
     expect(el.selectedEdgeIds).to.deep.equal(['a-b']);
     expect(el.selectedNodeIds).to.deep.equal([]);
   });
@@ -1308,10 +1344,10 @@ describe('node drag', () => {
     wrapper.setPointerCapture = () => {};
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 21, clientY: 5 }));
-    let detail: { id: string; position: { x: number; y: number }; previous: { x: number; y: number } } | undefined;
+    let detail: { nodeId: string; position: { x: number; y: number }; previous: { x: number; y: number } } | undefined;
     el.addEventListener('lr-node-move', (e) => (detail = (e as CustomEvent).detail));
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 21, clientY: 5 }));
-    expect(detail).to.deep.equal({ id: 'a', position: { x: 24, y: 8 }, previous: { x: 0, y: 0 } });
+    expect(detail).to.deep.equal({ nodeId: 'a', position: { x: 24, y: 8 }, previous: { x: 0, y: 0 } });
   });
 
   it('snaps the wrapper back to the data position when the host does not update nodes on release', async () => {
@@ -1464,14 +1500,14 @@ describe('node drag', () => {
     el.nodes = [{ id: 'a', position: { x: 40, y: 40 } }];
     await el.updateComplete;
     const wrapper = nodeControl(el, 'a');
-    let detail: { id: string; position: { x: number; y: number }; previous: { x: number; y: number } } | undefined;
+    let detail: { nodeId: string; position: { x: number; y: number }; previous: { x: number; y: number } } | undefined;
     el.addEventListener('lr-node-move', (e) => (detail = (e as CustomEvent).detail));
     wrapper.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, bubbles: true, cancelable: true }),
     );
     // `LyraFlowCanvasEventMap` and the sibling pointer-drag test require `previous` on every
     // lr-node-move emission, and `nudgeNode()` deliberately computes and includes it.
-    expect(detail).to.deep.equal({ id: 'a', position: { x: 48, y: 40 }, previous: { x: 40, y: 40 } });
+    expect(detail).to.deep.equal({ nodeId: 'a', position: { x: 48, y: 40 }, previous: { x: 40, y: 40 } });
   });
 
   it('Ctrl/Cmd+Arrow nudges the focused node in the remaining three directions', async () => {
@@ -1479,18 +1515,18 @@ describe('node drag', () => {
     el.nodes = [{ id: 'a', position: { x: 40, y: 40 } }];
     await el.updateComplete;
     const wrapper = nodeControl(el, 'a');
-    let detail: { id: string; position: { x: number; y: number }; previous: { x: number; y: number } } | undefined;
+    let detail: { nodeId: string; position: { x: number; y: number }; previous: { x: number; y: number } } | undefined;
     el.addEventListener('lr-node-move', (e) => (detail = (e as CustomEvent).detail));
     const fire = (key: string) =>
       wrapper.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey: true, bubbles: true, cancelable: true }));
     // Each nudge is computed fresh from the unchanged `node.position` data (the component never
     // mutates `nodes` itself), so every direction below is relative to the same { x: 40, y: 40 }.
     fire('ArrowLeft');
-    expect(detail).to.deep.equal({ id: 'a', position: { x: 32, y: 40 }, previous: { x: 40, y: 40 } });
+    expect(detail).to.deep.equal({ nodeId: 'a', position: { x: 32, y: 40 }, previous: { x: 40, y: 40 } });
     fire('ArrowDown');
-    expect(detail).to.deep.equal({ id: 'a', position: { x: 40, y: 48 }, previous: { x: 40, y: 40 } });
+    expect(detail).to.deep.equal({ nodeId: 'a', position: { x: 40, y: 48 }, previous: { x: 40, y: 40 } });
     fire('ArrowUp');
-    expect(detail).to.deep.equal({ id: 'a', position: { x: 40, y: 32 }, previous: { x: 40, y: 40 } });
+    expect(detail).to.deep.equal({ nodeId: 'a', position: { x: 40, y: 32 }, previous: { x: 40, y: 40 } });
   });
 
   it('rewrites an incident edge path live during a node drag without a Lit re-render', async () => {
@@ -2534,12 +2570,12 @@ describe('edge interaction target', () => {
     const hitArea = el.shadowRoot!.querySelector('[part="edge-hit-area"]') as SVGPathElement;
     expect((hitArea) != null).to.equal(true);
     expect(Number.parseFloat(getComputedStyle(hitArea).strokeWidth)).to.be.at.least(40);
-    let detail: { id: string } | undefined;
+    let detail: { edgeId: string } | undefined;
     el.addEventListener('lr-edge-activate', (event) => {
       detail = (event as CustomEvent).detail;
     });
     hitArea.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(detail?.id).to.equal('a-b');
+    expect(detail?.edgeId).to.equal('a-b');
   });
 });
 
