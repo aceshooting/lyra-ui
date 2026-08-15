@@ -94,6 +94,18 @@ export const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
     kind: 'pageError',
     message: /^(?:TypeError: )?Failed to fetch$/,
   },
+  // GeoJSON viewers embed the same maplibre-gl map as <lr-map>. The docs page's automated
+  // show-code click-through can trigger a style-diff attempt before the initial style finishes
+  // loading; maplibre-gl logs this as a console warning and falls back to a full style rebuild
+  // (harmless -- the map still renders correctly), not an error a consumer would ever see outside
+  // this specific automated-doc-interaction timing.
+  ...['documentviewer-geojsonview-legacy-tag--docs', 'documentviewer-geojsonviewer--docs'].map(
+    (pageId) => ({
+      pageId,
+      kind: 'console',
+      message: /^Unable to perform style diff: Style is not done loading\.\.\s+Rebuilding the style from scratch\.$/,
+    }),
+  ),
   // The autodocs page mounts every story's <lr-widget-renderer> together, each resolving to
   // several distinct mapped custom-element tags via lit-html's unsafeStatic/staticHtml dynamic-tag
   // path. Only that aggregate page reproduces this lit-html "invalid template strings array"

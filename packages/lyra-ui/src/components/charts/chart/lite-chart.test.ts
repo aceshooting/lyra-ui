@@ -1209,6 +1209,29 @@ it('keeps decimated date labels clear of each other and the y-axis ticks at narr
   }
 });
 
+it('widens the clip for a label max-labels keeps, instead of clipping it as if all n were still drawn (bug)', async () => {
+  const labels = Array.from({ length: 40 }, (_, i) => `Category ${String(i).padStart(2, '0')}`);
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    layout="fit"
+    max-labels="4"
+    style="width: 600px"
+    .labels=${labels}
+    .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
+  ></lr-lite-chart>`);
+  const axisLabels = [
+    ...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][text-anchor="middle"]'),
+  ];
+  expect(axisLabels.length).to.equal(4);
+  for (const label of axisLabels) {
+    expect(
+      label.textContent,
+      'a surviving decimated label must render its full text -- the space a survivor owns is the ' +
+        'decimation stride times the slot, not one bare slot sized as if all 40 categories rendered',
+    ).to.match(/^Category \d\d$/);
+  }
+});
+
 it('renders every label when maxLabels is unset, even for a long category list (regression)', async () => {
   const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
   const el = await mount(html`<lr-lite-chart

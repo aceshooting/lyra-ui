@@ -104,8 +104,7 @@ it("does not activate inherited modal infrastructure when opened while detached"
   parent.append(el);
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.equal("hidden");
-  el.close();
-  await el.updateComplete;
+  await el.close();
   expect(document.documentElement.style.overflow).to.equal("");
 });
 

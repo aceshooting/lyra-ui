@@ -1767,13 +1767,20 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         : this.renderLines(plotX, plotY, plotW, plotH, lo, hi, recordSample, selectedIndices);
 
     const visibleLabelIndexes = this.visibleLabelIndexes(n);
+    // A `max-labels` decimation keeps roughly n / visibleLabelIndexes.size slots of horizontal
+    // space per surviving label, not the one slot every one of the n samples would get if none
+    // were dropped -- size the clip to what a survivor actually owns. Labels are
+    // text-anchor="middle", so a survivor has half that stride clear on each side; nothing can
+    // collide. Stays 1 (byte-identical to the pre-decimation clip) when max-labels is unset.
+    const decimationStride = visibleLabelIndexes ? n / visibleLabelIndexes.size : 1;
     const categoryLabelWidth = Math.max(
       0,
-      (this.effectiveType === 'bar'
-        ? slot
-        : n > 1
-          ? plotW / (n - 1)
-          : plotW) - BAR_CORNER_RADIUS,
+      decimationStride *
+        (this.effectiveType === 'bar'
+          ? slot
+          : n > 1
+            ? plotW / (n - 1)
+            : plotW) - BAR_CORNER_RADIUS,
     );
     const categoryLabels = awaitingFitMeasurement ? [] : recordSample.rowIndexes.map((i) => {
       const label = this.labels[i] ?? '';

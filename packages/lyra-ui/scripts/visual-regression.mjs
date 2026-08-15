@@ -459,22 +459,19 @@ async function captureStory(page, baseUrl, story, axis) {
     });
   }
   if (id === 'layout-menu-label--default') {
-    // The label story composes labels inside a menu but intentionally has no trigger. A closed
-    // menu is visibility:hidden, so its resting screenshot is indistinguishable from an inert
-    // registration. Open the composed menu through its public state before accepting a baseline.
+    // The label story composes labels inside a standalone (non-dropdown-contained, non-submenu)
+    // menu. Since menu.class.ts's `cd4f2d22` refactor, that host is unconditionally visible --
+    // `:host { display: flex; ... }`, with visibility-gating only applying to `[data-contained]`/
+    // `[data-submenu]` hosts via the internal `.submenu-surface` class -- and `LyraMenu` no longer
+    // has a public `open` property at all (dropdown-open state now lives on the owning
+    // `lr-dropdown`). The generic `loadVisualStory` readiness wait already covers this story; no
+    // special interaction is needed before it settles.
     await page.evaluate(async () => {
       const menu = document.querySelector('lr-menu');
       if (!(menu instanceof HTMLElement)) {
         throw new Error('Menu Label visual fixture did not render its containing menu.');
       }
-      menu.open = true;
       await menu.updateComplete;
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    });
-    await page.waitForFunction(() => {
-      const menu = document.querySelector('lr-menu');
-      const popup = menu?.shadowRoot?.querySelector('[part~="popup"]');
-      return menu?.open === true && popup instanceof HTMLElement && getComputedStyle(popup).visibility === 'visible';
     });
   }
   if (id === 'threadlist--default') {

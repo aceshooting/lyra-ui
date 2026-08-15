@@ -14121,7 +14121,7 @@
       "module": "src/internal/overlay-manager.ts",
       "exportName": "activateOverlay",
       "kind": "function",
-      "fingerprint": "4be22dee6579210fc028",
+      "fingerprint": "8ae162f5182227c7eb3f",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/overlay-manager.ts"
@@ -14155,7 +14155,7 @@
       "module": "src/internal/overlay-manager.ts",
       "exportName": "OverlayDeactivateOptions",
       "kind": "interface",
-      "fingerprint": "dba3fd0e8294101d839b",
+      "fingerprint": "bf18b32cadf50134c574",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -14176,7 +14176,7 @@
       "module": "src/internal/overlay-manager.ts",
       "exportName": "OverlayHandle",
       "kind": "interface",
-      "fingerprint": "8b48ed2d8f1e27847a3f",
+      "fingerprint": "c77daa82f4a46cb9ae16",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/overlay-manager.ts"

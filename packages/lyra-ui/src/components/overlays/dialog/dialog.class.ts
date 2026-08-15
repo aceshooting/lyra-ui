@@ -395,8 +395,12 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.overlay?.suspend();
     // Transient exit-animation state never survives a detach: a reattached dialog re-runs its
     // own lifecycle from scratch, and a pending after-event must not fire for a transition the
-    // element is no longer part of.
+    // element is no longer part of. A scroll lock held past `willUpdate` to survive that
+    // now-abandoned animation has nothing left to visually protect either -- release it here
+    // rather than leaving it stranded forever (settleTransition()'s own release never runs, since
+    // the bumped token makes it return before reaching its `'lr-after-hide'` branch).
     this.transitionToken++;
+    this.flushPendingScrollLockRelease();
     this.cancelTransitionAnimations();
     this.removeAttribute('data-closing');
     if (this.open) {
@@ -690,6 +694,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     if (event === 'lr-after-hide') {
       this.removeAttribute('data-closing');
       this.leaveTopLayer();
+      this.flushPendingScrollLockRelease();
     }
     this.emit(event);
   }
@@ -792,9 +797,10 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     if (this.externalModalDepth > 0) this.overlay.suspend();
   }
 
-  protected deactivateOverlay(options?: OverlayDeactivateOptions): void {
-    this.overlay?.deactivate(options);
+  protected deactivateOverlay(options?: OverlayDeactivateOptions): (() => void) | undefined {
+    const overlay = this.overlay;
     this.overlay = undefined;
+    return overlay?.deactivate(options);
   }
 
   override render(): TemplateResult {
