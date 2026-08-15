@@ -64,7 +64,11 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** @internal */
+// Deliberately not tagged internal -- see MarkdownVariantContext's note below. This is the event
+// map of LyraMarkdownRuntimeElement, the un-exported base the public MarkdownRuntimeBase extends;
+// stripping it would leave that public class's inherited addEventListener overloads naming a type
+// absent from the shipped .d.ts, breaking the package's own build (surfaced as
+// `error TS2304: Cannot find name 'MarkdownRuntimeEventMap'` in a consumer's declaration check).
 export interface MarkdownRuntimeEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-link-click': CustomEvent<{ href: string }>;

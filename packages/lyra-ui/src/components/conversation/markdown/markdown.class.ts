@@ -301,12 +301,15 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
    *  default) renders `$...$` literally, unparsed -- today's exact output. */
   @property({ type: Boolean }) override math = false;
 
-  /** @internal */
+  // Deliberately not tagged internal -- these implement MarkdownRuntimeBase's own abstract
+  // markdownVariant/tokenizePendingHighlight members; stripping either leaves this concrete class's
+  // shipped .d.ts looking like it never implemented them, breaking the package's own build (a
+  // consumer's declaration check sees `error TS2654: Non-abstract class 'LyraMarkdown' is missing
+  // implementations for ... 'markdownVariant', 'tokenizePendingHighlight'`).
   protected override get markdownVariant(): MarkdownVariantContext {
     return LyraMarkdown.variant;
   }
 
-  /** @internal */
   protected override async tokenizePendingHighlight(
     pending: PendingHighlight,
     languages: Readonly<Record<string, ShikiLanguageInput>> | undefined,
