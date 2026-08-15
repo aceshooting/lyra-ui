@@ -25,7 +25,7 @@ native, non-bubbling `invalid` event. In 8.0.0 that alias is **cancelable**, and
 forwarded to the native event that produced it:
 
 ```ts
-form.addEventListener('lr-invalid', (event) => {
+form.addEventListener("lr-invalid", (event) => {
   event.preventDefault(); // suppresses the browser's own validation bubble,
   showMyOwnErrorSummary(event.target); // and reportValidity()'s focus/scroll of this control
 });
@@ -53,9 +53,9 @@ calling an entry projects the control's current `ValidityState` into `{ isValid,
 invalidKeys }` without mutating the control.
 
 ```ts
-import { LyraInput } from '@aceshooting/lyra-ui/components/forms/input/input.js';
+import { LyraInput } from "@aceshooting/lyra-ui/components/forms/input/input.js";
 
-const input = document.querySelector('lr-input')!;
+const input = document.querySelector("lr-input")!;
 const result = LyraInput.validators[0].checkValidity(input);
 ```
 
@@ -169,13 +169,15 @@ therefore cannot widen a 320px LTR or RTL picker.
 - `inputValue: string` — the live filter input text; programmatic writes are event-silent
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
   show before collapsing to `+N`)
-- `emptyText: string = ''` (attribute `empty-text`) — the empty IDL value displays localized
-  `comboboxEmpty` (`"No results"` in the built-in English locale)
-- `loadingText: string = ''` (attribute `loading-text`) — shown while a `source` fetch is in flight;
-  the empty IDL value displays localized `comboboxLoading` (`"Loading…"` in English)
-- `overflowText: string = ''` (attribute `overflow-text`) — shown when `maxRender` caps the rows;
-  the empty IDL value displays localized `comboboxOverflow`
-  (`"+{n} more — refine your search"` in English), replacing `{n}` with the hidden count
+- `emptyText?: string` (attribute `empty-text`) — omission displays localized `noMatches` (`"No
+  matches"` in the built-in English locale); any supplied string, including `''`, renders verbatim
+- `loadingText?: string` (attribute `loading-text`) — shown while a `source` fetch is in flight;
+  omission displays localized `loading` (`"Loading…"` in English), while any supplied string,
+  including `''`, renders verbatim
+- `overflowText?: string` (attribute `overflow-text`) — shown when `maxRender` caps the rows;
+  omission displays localized `comboboxOverflow` (`"+{n} more — refine your search"` in English).
+  A supplied template wins verbatim over `.strings`, including when it equals that English
+  template or is empty; `{n}` is still replaced with the locale-formatted hidden count
 - `filter: OptionFilter | null = null` (attribute: false — `(option, query) => boolean`; default
   matches `label`/`searchText` case-insensitively; ignored while `source` is set)
 - `source: ComboboxSource | null = null` (attribute: false — `(query: string, options: { signal:
@@ -274,7 +276,9 @@ ownership remain unchanged, so the host can defer dismissal without reconstructi
 `lr-after-hide` fire when the corresponding transition settles. `lr-create` carries
 `detail: { inputValue }` and is also cancelable: preventing it suppresses the default append/select
 action so the host can normalize and commit its own option.
-The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
+The internal input's `focus` and `blur` are relayed exactly once from the host as owner-realm
+native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`;
+`lr-focus` and `lr-blur` are no-detail prefixed aliases for the same transitions.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
 
@@ -439,7 +443,9 @@ by a custom owner.
   <lr-option value="de" search-text="deutschland">Germany</lr-option>
 </lr-combobox>
 <script type="module">
-  document.getElementById('cb').addEventListener('change', (e) => console.log(e.target.value));
+  document
+    .getElementById("cb")
+    .addEventListener("change", (e) => console.log(e.target.value));
 </script>
 ```
 
@@ -447,7 +453,7 @@ by a custom owner.
 <!-- Async data source instead of light-DOM <lr-option> children: -->
 <lr-combobox id="cb2" label="Fruit (async)" with-clear></lr-combobox>
 <script type="module">
-  document.getElementById('cb2').source = async (query) => {
+  document.getElementById("cb2").source = async (query) => {
     const rows = await fetchFruit(query); // your own lookup
     return rows.map((r) => ({
       value: r.id,
@@ -766,24 +772,34 @@ invalid CSS and never matches — which is exactly why these tokens exist.
   <lr-option value="b" selected>Banana</lr-option>
 </lr-select>
 <script type="module">
-  document.getElementById('sel').addEventListener('change', (e) => console.log(e.target.value));
+  document
+    .getElementById("sel")
+    .addEventListener("change", (e) => console.log(e.target.value));
 </script>
 ```
 
 ```html
 <!-- Multi-select with chips, a cap, and a clear button: -->
-<lr-select id="tags" label="Labels" multiple with-clear max-options-visible="2" appearance="filled" pill>
+<lr-select
+  id="tags"
+  label="Labels"
+  multiple
+  with-clear
+  max-options-visible="2"
+  appearance="filled"
+  pill
+>
   <lr-option value="bug">Bug</lr-option>
   <lr-option value="docs">Docs</lr-option>
   <lr-option value="perf">Performance</lr-option>
 </lr-select>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/select/select.js';
-  const sel = document.getElementById('tags');
+  import "@aceshooting/lyra-ui/components/forms/select/select.js";
+  const sel = document.getElementById("tags");
   // A custom chip: return a node, and re-declare part="tag" to keep the built-in styling hooks.
   sel.getTag = (option, index) => `${index + 1}. ${option.label}`; // a string renders as text
-  sel.addEventListener('change', (e) => console.log(e.currentTarget.value)); // string[] in multiple mode
-  sel.addEventListener('lr-clear', () => console.log('selection emptied'));
+  sel.addEventListener("change", (e) => console.log(e.currentTarget.value)); // string[] in multiple mode
+  sel.addEventListener("lr-clear", () => console.log("selection emptied"));
 </script>
 ```
 
@@ -853,7 +869,7 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `disabledDaysOfWeek: string = ''` (attribute `disabled-days-of-week`)
 - `disableFuture: boolean = false` and `disablePast: boolean = false` (reflected)
 - `firstDayOfWeek: LyraDatePickerFirstDayOfWeek = 'auto'` (`'auto'|'sun'|'mon'|'tue'|'wed'|
-  'thu'|'fri'|'sat'`; attribute
+'thu'|'fri'|'sat'`; attribute
   `first-day-of-week`, reflected)
 - `focusedDate: string = ''` (attribute `focused-date`, reflected)
 - `isDateDisabled?: (date: Date) => boolean` (JS only)
@@ -865,7 +881,7 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `months: 1|2 = 1` (reflected; finite values are truncated and clamped to `1..2`)
 - `pageBy: 'months'|'single' = 'months'` (attribute `page-by`, reflected)
 - `readonly: boolean = false` (reflected)
-- `size: LyraDatePickerSize = 'm'` (reflected; the shared `2xs`–`xl` ladder plus
+- `size: LyraSize = 'm'` (reflected; the shared `2xs`–`xl` ladder plus
   `small`/`medium`/`large` aliases)
 - `today: string = ''` (reflected ISO override for deterministic today styling/constraints)
 - `value: string = ''` (reflected)
@@ -945,7 +961,7 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `placement: LyraDateInputPlacement = 'bottom-start'` (reflected; all 12 side/alignment
   placements are accepted)
 - `readonly: boolean = false` and `required: boolean = false` (reflected)
-- `size: LyraDateInputSize = 'm'` (reflected; `2xs`–`xl` and aliases)
+- `size: LyraSize = 'm'` (reflected; `2xs`–`xl` and aliases)
 - `today: string = ''` (reflected ISO override)
 - `validationTarget: HTMLElement | undefined` (JS only) — writable native-validity focus anchor.
   It defaults to the internal input after first render; assign another element to override it, or
@@ -1040,6 +1056,12 @@ floor. All four are declared on `:host` and auto-swapped per `size`
 `lr-input` uses. `pill` re-assigns `--lr-date-input-radius` to `--lr-radius-pill`. Plus shared
 tokens. The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's
 enter and exit transitions; both default to `var(--lr-transition-fast)`.
+The clear and calendar actions expose point-of-use state hooks:
+`--lr-date-input-action-hover-color`, `--lr-date-input-action-hover-bg`, and
+`--lr-date-input-action-hover-radius` (defaults: text, transparent, and the input radius), plus
+`--lr-date-input-action-active-color`, `--lr-date-input-action-active-bg`, and
+`--lr-date-input-action-active-radius` for the pressed state. They inherit from theme ancestors;
+direct values on `lr-date-input` win without retuning library-wide tokens.
 
 `--lr-date-input-control-height` pins an **exact** `input-wrapper` height (both floors and caps it).
 It is **undeclared by default**, so the row grows to fit its content — see "exact-height hatches"
@@ -1064,11 +1086,16 @@ up exactly, either raise `lr-input`'s floor to meet the date input, or lower
 **Optional peer deps:** none.
 
 ```html
-<lr-date-input id="di" label="Start date" with-clear name="start"></lr-date-input>
+<lr-date-input
+  id="di"
+  label="Start date"
+  with-clear
+  name="start"
+></lr-date-input>
 <script type="module">
-  const di = document.getElementById('di');
-  di.value = '2026-07-10';
-  di.addEventListener('change', () => console.log(di.value)); // ISO string
+  const di = document.getElementById("di");
+  di.value = "2026-07-10";
+  di.addEventListener("change", () => console.log(di.value)); // ISO string
 </script>
 ```
 
@@ -1131,9 +1158,10 @@ and `dateTimeFormat(locale, options)`.
   `::part(previous):hover` still wins without `!important`.
 - `--lr-date-picker-nav-active-bg` — Pressed navigation background; defaults to the hover color
   mixed by `--lr-color-mix-active`.
-- `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`, and
-  `--lr-date-picker-title-active-bg` — Month-title hover/press paint; defaults to brand, brand, and
-  brand-quiet respectively.
+- `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`,
+  `--lr-date-picker-title-active-bg`, and `--lr-date-picker-title-active-radius` — Month-title
+  hover/press paint and pressed shape; defaults to brand, brand, brand-quiet, and
+  `var(--lr-date-picker-radius)` respectively.
 - `--lr-date-picker-day-hover-bg` and `--lr-date-picker-day-active-bg` — Day hover/press
   backgrounds; the pressed default mixes the hover hook by `--lr-color-mix-active`.
 - `--lr-date-picker-day-outside-color`, `--lr-date-picker-today-outline`,
@@ -1165,9 +1193,16 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 
 ```html
 <lr-textarea placeholder="Notes" rows="4"></lr-textarea>
-<lr-textarea label="Bio" maxlength="280" with-count appearance="outlined" size="s" resize="auto"></lr-textarea>
+<lr-textarea
+  label="Bio"
+  maxlength="280"
+  with-count
+  appearance="outlined"
+  size="s"
+  resize="auto"
+></lr-textarea>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/textarea/textarea.js';
+  import "@aceshooting/lyra-ui/components/forms/textarea/textarea.js";
   const bio = document.querySelector('lr-textarea[label="Bio"]');
   await bio.updateComplete; // both calls are no-ops before the first render
   bio.scrollPosition({ top: 0 }); // pin a restored draft back to the top
@@ -1388,10 +1423,13 @@ unsafe/unparseable `href` falls back to the native `<button>`.
   `aria-disabled="true"`), so a disabled link button cannot navigate. An unsafe/unparseable value
   falls back to the native `<button>`
 - `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
-  (e.g. `'_blank'`) automatically derives `rel="noopener noreferrer"` on the anchor. The public
-  `rel` getter and compatibility attribute expose that mapped surface, but an author value never
-  controls the rendered anchor: `target` alone derives the safe value (reverse-tabnabbing). Ignored
-  in `<button>` mode
+  (e.g. `'_blank'`) automatically force-adds `noopener noreferrer` to the rendered anchor's
+  relationship tokens. Ignored in `<button>` mode
+- `rel?: string` — independently settable native relationship tokens with no default. Author tokens
+  such as `nofollow`, `me`, `license`, `external`, and `tag` are preserved on same-tab and targeted
+  links. `opener` is always stripped, and whenever `target` is set the non-removable
+  `noopener noreferrer` floor is merged in. When neither `target` nor author tokens are present the
+  anchor omits `rel`
 - `download?: string` — native anchor `download` attribute, used only while `href` resolves to a
   link. Presence remains meaningful when the value is empty: `download=""` derives a filename and
   still selects the stricter downloadable-URL policy. Ignored in `<button>` mode
@@ -1625,16 +1663,35 @@ box no matter what tier or override is in play.
 <lr-button variant="brand">Save</lr-button>
 <!-- "filled" is the quiet tint of the same tone, for a secondary action beside it. -->
 <lr-button variant="brand" appearance="filled">Save a copy</lr-button>
-<lr-button appearance="plain" aria-label="Close dialog"><svg slot="start">...</svg></lr-button>
-<p>The message failed. <lr-button appearance="link" variant="brand">Retry</lr-button></p>
+<lr-button appearance="plain" aria-label="Close dialog"
+  ><svg slot="start">...</svg></lr-button
+>
+<p>
+  The message failed.
+  <lr-button appearance="link" variant="brand">Retry</lr-button>
+</p>
 
-<lr-button pill with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>
-<lr-button variant="primary" outline caret><span slot="prefix">★</span>Migrated</lr-button>
-<lr-button circle aria-label="Settings"><svg aria-hidden="true">...</svg></lr-button>
+<lr-button pill with-caret aria-haspopup="menu" aria-expanded="false"
+  >Actions</lr-button
+>
+<lr-button variant="primary" outline caret
+  ><span slot="prefix">★</span>Migrated</lr-button
+>
+<lr-button circle aria-label="Settings"
+  ><svg aria-hidden="true">...</svg></lr-button
+>
 
 <form action="/save" method="post">
   <lr-input name="title" label="Title" required></lr-input>
-  <lr-button type="submit" name="intent" value="draft" formnovalidate formaction="/save-draft"> Save draft </lr-button>
+  <lr-button
+    type="submit"
+    name="intent"
+    value="draft"
+    formnovalidate
+    formaction="/save-draft"
+  >
+    Save draft
+  </lr-button>
   <lr-button type="submit" name="intent" value="publish">Publish</lr-button>
 </form>
 ```
@@ -1799,7 +1856,7 @@ shared hit target (42px including the row border at the default theme); `l` and 
 
 - `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search' |
 'date' | 'datetime-local' | 'tel' | 'url'`. Unsupported attribute or direct-property strings
-normalize to reflected `text` before native validity and type-dependent chrome are projected
+  normalize to reflected `text` before native validity and type-dependent chrome are projected
 - `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
   (reflected) — the shared field-surface vocabulary. `outlined` (the mapped default) draws a border
@@ -2094,15 +2151,26 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 <lr-input type="email" label="Email" required></lr-input>
 <lr-input size="s" placeholder="Compact"></lr-input>
 <lr-input appearance="plain" pill placeholder="Pill, no chrome"></lr-input>
-<lr-input type="number" min="0" max="10" step="0.5" without-spin-buttons label="Weight"></lr-input>
-<lr-input type="search" clearable value="workflow" aria-label="Search"><span slot="start">⌕</span></lr-input>
+<lr-input
+  type="number"
+  min="0"
+  max="10"
+  step="0.5"
+  without-spin-buttons
+  label="Weight"
+></lr-input>
+<lr-input type="search" clearable value="workflow" aria-label="Search"
+  ><span slot="start">⌕</span></lr-input
+>
 <lr-input type="time" label="Reminder" id="reminder"></lr-input>
 <button type="button" id="open-picker">Pick a time</button>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/input/input.js';
-  const time = document.getElementById('reminder');
+  import "@aceshooting/lyra-ui/components/forms/input/input.js";
+  const time = document.getElementById("reminder");
   // showPicker() needs user activation, so drive it from a real click.
-  document.getElementById('open-picker').addEventListener('click', () => time.showPicker());
+  document
+    .getElementById("open-picker")
+    .addEventListener("click", () => time.showPicker());
 </script>
 ```
 
@@ -2230,11 +2298,21 @@ the numeric row and its steppers, so their state paint can be isolated from othe
 The exact-320px RTL story keeps long label/hint copy and both fixed-size steppers within the host.
 
 ```html
-<lr-number-input label="Quantity" min="0" max="99" step="1" value="1"></lr-number-input>
+<lr-number-input
+  label="Quantity"
+  min="0"
+  max="99"
+  step="1"
+  value="1"
+></lr-number-input>
 <!-- A bare numeric field: no steppers, and the browser's own spinners back: -->
-<lr-number-input label="Quantity" steppers="false" without-spin-buttons="false"></lr-number-input>
+<lr-number-input
+  label="Quantity"
+  steppers="false"
+  without-spin-buttons="false"
+></lr-number-input>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/input/number-input.js';
+  import "@aceshooting/lyra-ui/components/forms/input/number-input.js";
 </script>
 ```
 
@@ -2377,10 +2455,15 @@ undeclared on the host so ancestor themes work. The upstream-compatible
 `--hide-duration`, each with a Lyra design-token fallback.
 
 ```html
-<lr-time-input label="Start time" value="09:30" with-clear with-now></lr-time-input>
+<lr-time-input
+  label="Start time"
+  value="09:30"
+  with-clear
+  with-now
+></lr-time-input>
 <lr-time-input label="Precise time" step="15" value="09:30:15"></lr-time-input>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/input/time-input.js';
+  import "@aceshooting/lyra-ui/components/forms/input/time-input.js";
 </script>
 ```
 
@@ -2409,9 +2492,14 @@ wrapper without being shadowed by the subclass.
 `base` and `input-wrapper`.
 
 ```html
-<lr-native-time-input label="Start time" min="09:00" max="17:00" value="09:30"></lr-native-time-input>
+<lr-native-time-input
+  label="Start time"
+  min="09:00"
+  max="17:00"
+  value="09:30"
+></lr-native-time-input>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
+  import "@aceshooting/lyra-ui/components/forms/input/native-time-input.js";
 </script>
 ```
 
@@ -2424,7 +2512,8 @@ A form-associated, country-aware telephone field. The submitted `value` is eithe
 Numbering-plan metadata and national formatting stay outside Lyra's base bundle: supply a
 synchronous `LyraPhoneNumberAdapter`, or lazily create one from a `libphonenumber-js`-compatible module
 with `loadLibphonenumberAdapter()`. Without an adapter, already-international E.164 input still
-normalizes and validates; national input remains editable with `incomplete` validity.
+normalizes and validates; national input remains editable with `incomplete` validity. The loader
+returns its discovered country catalog as a frozen array of frozen records.
 
 The country selector keeps the real native `<select>` (localized full country names in its popup,
 native mobile pickers, keyboard type-ahead) but stretches it invisibly over a compact decorative
@@ -2440,7 +2529,7 @@ the same rendered action-height ladder as input, number-input, and segmented tim
 **Types:**
 
 ```ts
-type LyraPhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
+type LyraPhoneNumberStatus = "empty" | "incomplete" | "invalid" | "valid";
 
 interface LyraPhoneCountry {
   readonly code: string; // ISO 3166-1 alpha-2
@@ -2448,16 +2537,18 @@ interface LyraPhoneCountry {
   readonly label?: string; // overrides Intl.DisplayNames
 }
 
-type LyraPhoneNumberParseResult = {
-  status: 'empty' | 'incomplete' | 'invalid';
-  formatted?: string; // best-effort editable display text
-  country?: string; // detected ISO alpha-2 code
-} | {
-  status: 'valid';
-  e164: string; // required and E.164-shaped on the only successful branch
-  formatted?: string;
-  country?: string;
-};
+type LyraPhoneNumberParseResult =
+  | {
+      status: "empty" | "incomplete" | "invalid";
+      formatted?: string; // best-effort editable display text
+      country?: string; // detected ISO alpha-2 code
+    }
+  | {
+      status: "valid";
+      e164: string; // required and E.164-shaped on the only successful branch
+      formatted?: string;
+      country?: string;
+    };
 
 interface LyraPhoneNumberAdapter {
   readonly countries?: readonly LyraPhoneCountry[];
@@ -2607,11 +2698,13 @@ consumer-supplied lazy loader below. Because the import expression lives in cons
 numbering metadata enters a bundle that does not opt in.
 
 ```ts
-import '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js';
-import { loadLibphonenumberAdapter } from '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js';
+import "@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js";
+import { loadLibphonenumberAdapter } from "@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js";
 
-const phone = document.querySelector('lr-phone-input');
-phone.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'));
+const phone = document.querySelector("lr-phone-input");
+phone.adapter = await loadLibphonenumberAdapter(
+  () => import("libphonenumber-js/min")
+);
 ```
 
 ```html
@@ -2626,11 +2719,15 @@ phone.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/
 
 ```ts
 // Country flags in the trigger (optional): same peer contract as a standalone <lr-flag>.
-import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
+import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 ```
 
 ```html
-<lr-phone-input label="Mobile number" flags default-country="LU"></lr-phone-input>
+<lr-phone-input
+  label="Mobile number"
+  flags
+  default-country="LU"
+></lr-phone-input>
 ```
 
 **Known gotchas:**
@@ -2701,7 +2798,7 @@ into the shadow-root group. `startLabel` and `endLabel` continue to name the ind
   Leaving the property unset preserves the numeric-only contract
 - `presets: readonly TimeRangePreset[] = []` (attribute: false) — readonly `TimeRangePreset {
 label: string; start: number; end: number }`; a bounded frozen snapshot of optional discrete
-presets (e.g. "Last 7 days") rendered as a
+  presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
   native/prefixed input and change sequences a committed drag or keyboard step would. Preset
@@ -2819,10 +2916,13 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
 ```html
 <lr-time-range id="months" min="0" max="2" start="0" end="2"></lr-time-range>
 <script>
-  const months = ['April 2023', 'May 2023', 'June 2023'];
-  const range = document.getElementById('months');
-  range.valueFormatter = (value, handle) => `${handle === 'start' ? 'From' : 'Through'} ${months[value]}`;
-  range.addEventListener('lr-change', (e) => console.log(e.detail.start, e.detail.end));
+  const months = ["April 2023", "May 2023", "June 2023"];
+  const range = document.getElementById("months");
+  range.valueFormatter = (value, handle) =>
+    `${handle === "start" ? "From" : "Through"} ${months[value]}`;
+  range.addEventListener("lr-change", (e) =>
+    console.log(e.detail.start, e.detail.end)
+  );
 </script>
 ```
 
@@ -2962,14 +3062,14 @@ and the per-tier `--lr-size-*` tokens.
 ```html
 <lr-swatch-picker aria-label="Accent color"></lr-swatch-picker>
 <script type="module">
-  const picker = document.querySelector('lr-swatch-picker');
+  const picker = document.querySelector("lr-swatch-picker");
   picker.items = [
-    { value: 'blue', color: '#0969da', label: 'Blue' },
-    { value: 'green', color: '#1a7f37', label: 'Green' },
-    { value: 'purple', color: '#8250df', label: 'Purple' },
+    { value: "blue", color: "#0969da", label: "Blue" },
+    { value: "green", color: "#1a7f37", label: "Green" },
+    { value: "purple", color: "#8250df", label: "Purple" },
   ];
-  picker.value = 'green';
-  picker.addEventListener('lr-change', (e) => console.log(e.detail.value));
+  picker.value = "green";
+  picker.addEventListener("lr-change", (e) => console.log(e.detail.value));
 </script>
 ```
 
@@ -2979,18 +3079,18 @@ do not need to load Lit. The consumer still owns localized labels, display order
 value:
 
 ```ts
-import '@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js';
-import { GEMSTONES } from '@aceshooting/lyra-ui/theme/gemstones-data.js';
+import "@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js";
+import { GEMSTONES } from "@aceshooting/lyra-ui/theme/gemstones-data.js";
 
-const order = ['emerald', 'ruby', 'sapphire', 'hematite'] as const;
-picker.mode = 'gemstone';
+const order = ["emerald", "ruby", "sapphire", "hematite"] as const;
+picker.mode = "gemstone";
 picker.items = order.map((key) => ({
   value: key,
   color: GEMSTONES[key].fill,
   label: translateGemstone(key),
   gemstone: key,
 }));
-picker.value = 'ruby';
+picker.value = "ruby";
 ```
 
 **Known gotchas:**
@@ -3138,7 +3238,10 @@ substitute the one you actually use:
 ```css
 .checkbox-hint {
   padding-inline-start: calc(
-    min(var(--lr-theme-icon-button-size, 2.5rem), calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)) + var(--lr-theme-space-s, 0.5rem)
+    min(
+        var(--lr-theme-icon-button-size, 2.5rem),
+        calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)
+      ) + var(--lr-theme-space-s, 0.5rem)
   );
 }
 ```
@@ -3158,7 +3261,9 @@ checkmark/dash color and scale.
 ```html
 <lr-checkbox name="terms" required>Accept the terms and conditions</lr-checkbox>
 <script type="module">
-  document.querySelector('lr-checkbox').addEventListener('lr-change', (e) => console.log(e.detail.checked));
+  document
+    .querySelector("lr-checkbox")
+    .addEventListener("lr-change", (e) => console.log(e.detail.checked));
 </script>
 ```
 
@@ -3289,10 +3394,10 @@ these hooks touches the label text beside the track. Plus shared tokens
 ```html
 <lr-switch name="notifications" checked>Enable notifications</lr-switch>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/switch/switch.js';
-  const sw = document.querySelector('lr-switch');
-  sw.addEventListener('lr-change', (e) => console.log(e.detail.checked)); // prefixed alias
-  sw.addEventListener('change', (e) => console.log(e.target.checked)); // native-style, no detail
+  import "@aceshooting/lyra-ui/components/forms/switch/switch.js";
+  const sw = document.querySelector("lr-switch");
+  sw.addEventListener("lr-change", (e) => console.log(e.detail.checked)); // prefixed alias
+  sw.addEventListener("change", (e) => console.log(e.target.checked)); // native-style, no detail
 </script>
 ```
 
@@ -3631,6 +3736,8 @@ LTR and RTL while the indicator retains its fixed geometry; an exact-320px story
 **CSS parts:** default appearance: `base`, `circle` / `control` (with Shoelace's
 `control--checked` state token), `dot` / `checked-icon`, and `label`. Button appearance: `base`,
 `button`, `control`, `button--checked` while selected, and `label`.
+Every `<lr-radio-button>` size tier keeps its interactive base at least 24px in both axes, including
+an empty-label control; the visible density can still grow with the shared size ladder.
 
 **Themeable custom properties:**
 
@@ -3700,6 +3807,9 @@ chrome differs most visibly: the shared ladder drives the button's height (floor
 inline padding and font size, so a `size="small"` radio button sits at the same height as a
 `size="small"` `lr-button` beside it. `pill` is the one inherited property that does _more_ here
 than on a plain `lr-radio` — see the radius note below.
+
+The inherited derived reads `effectiveName` and `effectiveSize` expose the resolved group name and
+size used by the button's form and chrome logic.
 
 **Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
 then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
@@ -3916,10 +4026,25 @@ other Lyra form controls. `readonly` suspends intrinsic required/completeness va
 control cannot be edited and restores the current intrinsic result when editing is enabled again.
 
 ```html
-<lr-otp-input label="Verification code" required error-text="Enter the code we sent you."></lr-otp-input>
-<lr-otp-input label="License key" type="alphanumeric" case="upper" format="####-####-####"></lr-otp-input>
+<lr-otp-input
+  label="Verification code"
+  required
+  error-text="Enter the code we sent you."
+></lr-otp-input>
+<lr-otp-input
+  label="License key"
+  type="alphanumeric"
+  case="upper"
+  format="####-####-####"
+></lr-otp-input>
 <form>
-  <lr-otp-input name="code" label="PIN" length="4" appearance="contained" autosubmit></lr-otp-input>
+  <lr-otp-input
+    name="code"
+    label="PIN"
+    length="4"
+    appearance="contained"
+    autosubmit
+  ></lr-otp-input>
 </form>
 ```
 
@@ -4559,16 +4684,16 @@ the current colour and text direction). Read them if you need the resolved colou
   swatches="#e11d48;#2563eb;#16a34a"
 ></lr-color-picker>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/color-picker/color-picker.js';
-  const picker = document.querySelector('lr-color-picker');
+  import "@aceshooting/lyra-ui/components/forms/color-picker/color-picker.js";
+  const picker = document.querySelector("lr-color-picker");
   // Objects give each entry a real accessible name:
   picker.swatches = [
-    { color: '#e11d48', label: 'Rose' },
-    { color: '#2563eb', label: 'Blue' },
+    { color: "#e11d48", label: "Rose" },
+    { color: "#2563eb", label: "Blue" },
   ];
-  picker.addEventListener('change', () => {
+  picker.addEventListener("change", () => {
     console.log(picker.value); // e.g. "RGBA(225, 29, 72, 1.00)"
-    console.log(picker.getFormattedValue('hexa')); // e.g. "#E11D48FF"
+    console.log(picker.getFormattedValue("hexa")); // e.g. "#E11D48FF"
   });
   picker.show();
 </script>
@@ -4692,7 +4817,9 @@ frame.
 Emoji interaction states are separate: `--lr-emoji-picker-hover-bg`,
 `--lr-emoji-picker-keyboard-active-bg`, `--lr-emoji-picker-selected-bg`/
 `--lr-emoji-picker-selected-color`, and `--lr-emoji-picker-pressed-bg`, with matching
-`*-outline-color` hooks for active, selected, and pressed. The legacy
+`--lr-emoji-picker-keyboard-active-outline-color`,
+`--lr-emoji-picker-selected-outline-color`, and
+`--lr-emoji-picker-pressed-outline-color` hooks for active, selected, and pressed. The legacy
 `--lr-emoji-picker-active-bg` remains the fallback for hover and keyboard-active. These are inline
 `var()` fallbacks rather than host declarations, so values set on any ancestor remain effective.
 The committed form `value` alone drives `aria-selected`; roving focus and pointer navigation use
@@ -4751,8 +4878,9 @@ rejects malformed rows. `value: RubricValue = {}` is a defensive readonly snapsh
 boolean = false`, aggregate `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute
 `error-text`), SSR presence hints `withLabel: boolean = false` / `withHint: boolean = false`
 (attributes `with-label` / `with-hint`), and the shared form properties `name` and `disabled`.
-`errors: Record<string, string>` is the current per-key validation-message state. `customError:
-string | null` reflects through `custom-error` for a consumer-owned whole-form rejection.
+`errors: Readonly<Record<string, string>>` is a frozen effective validation-message snapshot:
+intrinsic messages use their rubric key and a consumer-owned whole-form rejection uses `base`.
+`customError: string | null` reflects through `custom-error` for that rejection.
 
 Every value path — direct writes, child edits, schema changes, state restoration, reset, events,
 rendering, validity, and FormData — uses one canonical object. Finite scores clamp and snap to the
@@ -4767,8 +4895,9 @@ live value but never overwrites a dirty edit.
 `error` — aggregate validation content; `actions` —
 extra host controls rendered in the footer beside Submit/Skip.
 
-**Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (`detail: { valid, errors }`,
-fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
+**Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (frozen
+`detail: { valid, errors }`, deduplicated on effective native validity including consumer custom
+errors and own/fieldset validation barring), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
 (`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,
 cancelable alias emitted when the complete rubric fails a native validity check; preventing it also
 suppresses the native event's default validation UI.
@@ -4777,9 +4906,9 @@ suppresses the native event's default validation UI.
 form-level error no per-key rule can
 express ("this item was already annotated by someone else"): a non-empty message raises
 `customError` and blocks submission, `''` restores the rubric's own computed validity — unanswered
-required keys, and any key with an unsupported `type`, still hold it invalid. It is independent of
-the per-key `errors` map, which stays a read-out of this rubric's own field rules, so a message set
-here is never attributed to one key. It survives every `value`/`keys` write and a form reset. When
+required keys, and any key with an unsupported `type`, still hold it invalid. It is whole-control
+state exposed as `errors.base`, rather than being attributed to one rubric key. It survives every
+`value`/`keys` write and a form reset. When
 `errorText` is empty, the current custom-validity message is rendered in the aggregate error region;
 clearing it hides that region unless the `error` slot supplies other content.
 `click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),
@@ -4880,7 +5009,7 @@ precisely so applying the direction is a one-liner instead of an application-mai
 tags:
 
 ```js
-picker.addEventListener('lr-change', (e) => {
+picker.addEventListener("lr-change", (e) => {
   document.documentElement.lang = e.detail.value;
   document.documentElement.dir = e.detail.direction;
 });
@@ -4931,9 +5060,11 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
 ```html
 <lr-locale-picker label="Language"></lr-locale-picker>
 <script type="module">
-  import { registerLyraLocale } from '@aceshooting/lyra-ui/localization.js';
-  registerLyraLocale('fr', { close: 'Fermer' });
-  document.querySelector('lr-locale-picker').addEventListener('lr-change', (e) => console.log(e.detail.value));
+  import { registerLyraLocale } from "@aceshooting/lyra-ui/localization.js";
+  registerLyraLocale("fr", { close: "Fermer" });
+  document
+    .querySelector("lr-locale-picker")
+    .addEventListener("lr-change", (e) => console.log(e.detail.value));
 </script>
 ```
 
@@ -4957,3 +5088,203 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
 - `--lr-locale-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
 - `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-forms-color-picker-color-core-contracts`** — Supporting data types and helpers for this component family.
+  `LyraColorHsva {
+    h: unknown;
+    s: unknown;
+    v: unknown;
+    a: unknown;
+  }`
+
+- **`components-forms-color-picker-color-picker-contracts`** — Supporting data types and helpers for this component family.
+  `LyraColorPickerSwatch {
+    color: unknown;
+    label: unknown;
+  }`
+
+- **`components-forms-combobox-combobox-contracts`** — Supporting data types and helpers for this component family.
+  `ComboboxFilterDetail {
+    value: unknown;
+  }`
+  `ComboboxSourceResult {
+    rows: unknown;
+    total: unknown;
+  }`
+  `ComboboxSourceRow {
+    value: unknown;
+    label: unknown;
+    sub: unknown;
+    icon: unknown;
+    badge: unknown;
+    accessibleLabel: unknown;
+    data: unknown;
+    dotColor: unknown;
+    group: unknown;
+    disabled: unknown;
+  }`
+  `LyraComboboxObjectValidator {
+    observedAttributes: unknown;
+    checkValidity: unknown;
+    input: unknown;
+    message: unknown;
+  }`
+  `LyraComboboxObjectValidatorResult {
+    message: unknown;
+    isValid: unknown;
+    invalidKeys: unknown;
+  }`
+
+- **`components-forms-date-picker-date-input-contracts`** — Supporting data types and helpers for this component family.
+  `LyraDateInputObjectValidator {
+    observedAttributes: unknown;
+    checkValidity: unknown;
+    input: unknown;
+    message: unknown;
+  }`
+  `LyraDateInputObjectValidatorResult {
+    message: unknown;
+    isValid: unknown;
+    invalidKeys: unknown;
+  }`
+
+- **`components-forms-date-picker-date-picker-contracts`** — Supporting data types and helpers for this component family.
+  `DateRange {
+    from: unknown;
+    to: unknown;
+  }`
+
+- **`components-forms-emoji-picker-emoji-types-contracts`** — Supporting data types and helpers for this component family.
+  `EmojiPickerGroup {
+    key: unknown;
+    label: unknown;
+    emojis: unknown;
+  }`
+  `EmojiPickerItem {
+    emoji: unknown;
+    name: unknown;
+    shortcodes: unknown;
+  }`
+
+- **`components-forms-form-validator-contracts`** — Supporting data types and helpers for this component family.
+  `LyraFormValidator {
+    observedAttributes: unknown;
+    checkValidity: unknown;
+    element: unknown;
+    message: unknown;
+  }`
+  `LyraFormValidatorResult {
+    isValid: unknown;
+    message: unknown;
+    invalidKeys: unknown;
+  }`
+
+- **`components-forms-locale-picker-locale-picker-contracts`** — Supporting data types and helpers for this component family.
+  `LyraLocaleChangeDetail {
+    value: unknown;
+    previousValue: unknown;
+    direction: unknown;
+  }`
+  `LyraLocaleEntry {
+    tag: unknown;
+    label: unknown;
+    country: unknown;
+  }`
+
+- **`components-forms-phone-input-phone-input-contracts`** — Supporting data types and helpers for this component family.
+  `LibphonenumberModuleLike {
+    getCountries: unknown;
+    getCountryCallingCode: unknown;
+    country: unknown;
+    parsePhoneNumberFromString: unknown;
+    input: unknown;
+    defaultCountry: unknown;
+    validatePhoneNumberLength: unknown;
+  }`
+  `loadLibphonenumberAdapter(/* public names: loader */): unknown`
+  `LyraPhoneCountry {
+    code: unknown;
+    callingCode: unknown;
+    label: unknown;
+  }`
+  `LyraPhoneInputEventDetail {
+    value: unknown;
+    inputValue: unknown;
+    country: unknown;
+    valid: unknown;
+    status: unknown;
+  }`
+  `LyraPhoneNumberAdapter {
+    countries: unknown;
+    parse: unknown;
+    input: unknown;
+    country: unknown;
+  }`
+
+- **`components-forms-rubric-form-rubric-form-contracts`** — Supporting data types and helpers for this component family.
+  `CategoryRubricKey {
+    type: unknown;
+    options: unknown;
+    multiple: unknown;
+    key: unknown;
+    label: unknown;
+    description: unknown;
+    required: unknown;
+  }`
+  `CommentRubricKey {
+    type: unknown;
+    placeholder: unknown;
+    key: unknown;
+    label: unknown;
+    description: unknown;
+    required: unknown;
+  }`
+  `RubricKeyOption {
+    value: unknown;
+    label: unknown;
+    description: unknown;
+  }`
+  `ScoreRubricKey {
+    type: unknown;
+    min: unknown;
+    max: unknown;
+    step: unknown;
+    key: unknown;
+    label: unknown;
+    description: unknown;
+    required: unknown;
+  }`
+
+- **`components-forms-slider-slider-contracts`** — Supporting data types and helpers for this component family.
+  `LyraSliderChangeDetail {
+    value: unknown;
+    minValue: unknown;
+    maxValue: unknown;
+    handle: unknown;
+  }`
+
+- **`components-forms-swatch-picker-swatch-picker-contracts`** — Supporting data types and helpers for this component family.
+  `SwatchPickerItem {
+    value: unknown;
+    color: unknown;
+    label: unknown;
+    icon: unknown;
+    gemstone: unknown;
+  }`
+
+- **`components-forms-textarea-textarea-contracts`** — Supporting data types and helpers for this component family.
+  `TextareaScrollPosition {
+    top: unknown;
+    left: unknown;
+  }`
+
+- **`components-forms-time-range-time-range-contracts`** — Supporting data types and helpers for this component family.
+  `TimeRangePreset {
+    label: unknown;
+    start: unknown;
+    end: unknown;
+  }`

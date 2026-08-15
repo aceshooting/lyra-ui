@@ -112,6 +112,11 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  *   `emphasis` is set. Independent of the headline's emphasis tint and `brand` variant.
  * @cssprop [--lr-stat-emphasis-value-color=var(--lr-color-brand)] - Headline value color when
  *   `emphasis` is set on a neutral stat. Independent of the accent edge and `brand` variant.
+ * @cssprop [--lr-stat-link-hover-border-color=var(--lr-color-brand)] - Linked-card border on hover.
+ * @cssprop [--lr-stat-link-hover-shadow=var(--lr-shadow-s)] - Linked-card shadow on hover.
+ * @cssprop [--lr-stat-link-active-border-color=var(--lr-stat-link-hover-border-color,var(--lr-color-brand))] - Linked-card border while pressed.
+ * @cssprop [--lr-stat-link-active-shadow=var(--lr-stat-link-hover-shadow,var(--lr-shadow-s))] - Linked-card shadow while pressed.
+ * @cssprop [--lr-stat-link-active-bg=color-mix(...)] - Linked-card background while pressed.
  * @status stable
  * @since 4.0.0
  */

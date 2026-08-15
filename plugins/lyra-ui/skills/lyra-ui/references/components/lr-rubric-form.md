@@ -25,31 +25,38 @@ and error chrome is linked to that same-shadow role. A host `aria-label` wins by
 Both score branches format visible numeric labels with the effective locale (including non-Latin
 digits); segmented item values and submitted rubric values remain stable raw numbers/strings.
 
-**Properties:** `keys: RubricKey[] = []` (attribute: false, each `{ key, type, label?, description?,
-required?, min?, max?, step?, options?, multiple?, placeholder? }`; `options?` contains
-`RubricKeyOption { value: string; label?: string; description?: string }`, `multiple?` selects the
-checkbox-group category route, and `placeholder?` customizes comment input), `value: RubricValue =
-{}` (attribute: false), `itemId: string = ''`
+**Properties:** `keys: readonly RubricKey[] = []` (attribute: false), where the exported immutable
+discriminated union is `ScoreRubricKey | CategoryRubricKey | CommentRubricKey`. Shared fields are
+`key`, `label?`, `description?`, and `required?`; only scores expose `min?`/`max?`/`step?`, only
+categories expose readonly `RubricKeyOption[]` plus `multiple?`, and only comments expose
+`placeholder?`. Runtime schema normalization retains the first occurrence of each nonempty key and
+rejects malformed rows. `value: RubricValue = {}` is a defensive readonly snapshot and
+`defaultValue: RubricValue = {}` is its explicit form-reset baseline (both attribute: false).
+`itemId: string = ''`
 (attribute `item-id`, reflected), `hasNext: boolean = false` (attribute `has-next`), `skippable:
-boolean = false`, aggregate `label: string = ''`, `hint: string = ''`, `helpText: string = ''`
-(attribute `help-text`, a compatibility alias for `hint`), `errorText: string = ''` (attribute
+boolean = false`, aggregate `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute
 `error-text`), SSR presence hints `withLabel: boolean = false` / `withHint: boolean = false`
 (attributes `with-label` / `with-hint`), and the shared form properties `name` and `disabled`.
-`errors: Record<string, string>` is the current per-key validation-message state. `customError:
-string | null` reflects through `custom-error` for a consumer-owned whole-form rejection.
+`errors: Readonly<Record<string, string>>` is a frozen effective validation-message snapshot:
+intrinsic messages use their rubric key and a consumer-owned whole-form rejection uses `base`.
+`customError: string | null` reflects through `custom-error` for that rejection.
 
-The `value` present before the component's first render is the native form-reset baseline. Later
-`value` assignments are live edits and do not rewrite it; `form.reset()` restores a fresh clone of
-the seeded object (including cloned array fields), clears touched/error-reveal state, and preserves
-any consumer `setCustomValidity()` message. An initially empty rubric therefore still resets to
-`{}`, while a rubric mounted with `.value=${{ accuracy: 5 }}` resets to that seeded score.
+Every value path — direct writes, child edits, schema changes, state restoration, reset, events,
+rendering, validity, and FormData — uses one canonical object. Finite scores clamp and snap to the
+current range/step; nonfinite scores are absent; categories retain only current option values (and
+their available occurrence counts); comments must be strings; undeclared keys are dropped. This
+prevents a rendered value, public readout, validity result, and submitted JSON from disagreeing.
+`form.reset()` restores a fresh clone of `defaultValue`, clears touched/error-reveal state, and
+preserves any consumer `setCustomValidity()` message. Changing `defaultValue` updates a pristine
+live value but never overwrites a dirty edit.
 
 **Slots:** `label` — aggregate rubric label before the fields; `hint` — aggregate supporting text;
-`help-text` — compatibility alias for `hint`; `error` — aggregate validation content; `actions` —
+`error` — aggregate validation content; `actions` —
 extra host controls rendered in the footer beside Submit/Skip.
 
-**Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (`detail: { valid, errors }`,
-fired only on an actual change), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
+**Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (frozen
+`detail: { valid, errors }`, deduplicated on effective native validity including consumer custom
+errors and own/fieldset validation barring), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
 (`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,
 cancelable alias emitted when the complete rubric fails a native validity check; preventing it also
 suppresses the native event's default validation UI.
@@ -58,9 +65,9 @@ suppresses the native event's default validation UI.
 form-level error no per-key rule can
 express ("this item was already annotated by someone else"): a non-empty message raises
 `customError` and blocks submission, `''` restores the rubric's own computed validity — unanswered
-required keys, and any key with an unsupported `type`, still hold it invalid. It is independent of
-the per-key `errors` map, which stays a read-out of this rubric's own field rules, so a message set
-here is never attributed to one key. It survives every `value`/`keys` write and a form reset. When
+required keys, and any key with an unsupported `type`, still hold it invalid. It is whole-control
+state exposed as `errors.base`, rather than being attributed to one rubric key. It survives every
+`value`/`keys` write and a form reset. When
 `errorText` is empty, the current custom-validity message is rendered in the aggregate error region;
 clearing it hides that region unless the `error` slot supplies other content.
 `click()` forwards to the active field (the same one a submit-and-next transition auto-focuses),

@@ -316,7 +316,7 @@ export const ClosableElementTabs: StoryObj = {
   render: () => html`
     <lr-tab-group
       aria-label="Open documents"
-      @lr-close=${(event: CustomEvent<undefined>) => {
+      @lr-close=${(event: CustomEvent<null>) => {
         const tab = event.target;
         const group = event.currentTarget;
         if (!(tab instanceof HTMLElement) || !(group instanceof HTMLElement))

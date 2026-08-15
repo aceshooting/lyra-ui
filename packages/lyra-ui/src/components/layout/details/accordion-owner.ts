@@ -1,89 +1,104 @@
-import type { LyraAccordion } from "./accordion.class.js";
 import type {
+  AccordionItemOwnerContext,
+  AccordionItemOwnerHost,
+  AccordionItemTransitionSource,
+} from "./accordion-types.js";
+
+export type {
+  AccordionItemOwnerContext,
+  AccordionItemTransitionSource,
   LyraAccordionAppearance,
   LyraAccordionHeadingLevel,
   LyraAccordionIconPlacement,
-  LyraAccordionItem,
-} from "./accordion-item.class.js";
+} from "./accordion-types.js";
 
-export interface AccordionItemOwnerContext {
-  readonly owner: LyraAccordion;
-  readonly appearance: LyraAccordionAppearance;
-  readonly headingLevel: LyraAccordionHeadingLevel;
-  readonly iconPlacement: LyraAccordionIconPlacement;
-  readonly requestTransition: (
-    item: LyraAccordionItem,
-    expanded: boolean,
-    source: AccordionItemTransitionSource
-  ) => boolean;
-  readonly transitionSettled: (
-    item: LyraAccordionItem,
-    expanded: boolean
-  ) => void;
-  readonly stateChanged: (item: LyraAccordionItem) => void;
+const owners = new WeakMap<object, unknown>();
+const stateControllers = new WeakMap<object, unknown>();
+
+function ownerContext<TItem extends AccordionItemOwnerHost, TOwner extends object>(
+  item: TItem
+): AccordionItemOwnerContext<TItem, TOwner> | undefined {
+  return owners.get(item) as
+    | AccordionItemOwnerContext<TItem, TOwner>
+    | undefined;
 }
 
-export type AccordionItemTransitionSource = "user" | "programmatic";
-
-const owners = new WeakMap<LyraAccordionItem, AccordionItemOwnerContext>();
-const stateControllers = new WeakMap<
-  LyraAccordionItem,
-  (expanded: boolean, announce: boolean) => Promise<void>
->();
-
-export function registerAccordionItemStateController(
-  item: LyraAccordionItem,
+export function registerAccordionItemStateController<
+  TItem extends AccordionItemOwnerHost
+>(
+  item: TItem,
   controller: (expanded: boolean, announce: boolean) => Promise<void>
 ): void {
   stateControllers.set(item, controller);
 }
 
-export function applyAccordionItemOwnerState(
-  item: LyraAccordionItem,
+export function applyAccordionItemOwnerState<
+  TItem extends AccordionItemOwnerHost
+>(
+  item: TItem,
   expanded: boolean,
   announce: boolean
 ): Promise<void> {
-  return stateControllers.get(item)?.(expanded, announce) ?? Promise.resolve();
+  const controller = stateControllers.get(item) as
+    | ((expanded: boolean, announce: boolean) => Promise<void>)
+    | undefined;
+  return controller?.(expanded, announce) ?? Promise.resolve();
 }
 
-export function bindAccordionItemOwner(
-  item: LyraAccordionItem,
-  context: AccordionItemOwnerContext
+export function bindAccordionItemOwner<
+  TItem extends AccordionItemOwnerHost,
+  TOwner extends object
+>(
+  item: TItem,
+  context: AccordionItemOwnerContext<TItem, TOwner>
 ): void {
   owners.set(item, context);
   item.requestUpdate();
 }
 
-export function releaseAccordionItemOwner(
-  item: LyraAccordionItem,
-  owner: LyraAccordion
+export function releaseAccordionItemOwner<
+  TItem extends AccordionItemOwnerHost,
+  TOwner extends object
+>(
+  item: TItem,
+  owner: TOwner
 ): void {
-  if (owners.get(item)?.owner !== owner) return;
+  if (ownerContext<TItem, TOwner>(item)?.owner !== owner) return;
   owners.delete(item);
   item.requestUpdate();
 }
 
-export function accordionItemOwnerContext(
-  item: LyraAccordionItem
-): AccordionItemOwnerContext | undefined {
-  return owners.get(item);
+export function accordionItemOwnerContext<TItem extends AccordionItemOwnerHost>(
+  item: TItem
+): AccordionItemOwnerContext<TItem> | undefined {
+  return ownerContext<TItem, object>(item);
 }
 
-export function requestAccordionItemTransition(
-  item: LyraAccordionItem,
+export function requestAccordionItemTransition<
+  TItem extends AccordionItemOwnerHost
+>(
+  item: TItem,
   expanded: boolean,
   source: AccordionItemTransitionSource
 ): boolean | undefined {
-  return owners.get(item)?.requestTransition(item, expanded, source);
+  return ownerContext<TItem, object>(item)?.requestTransition(
+    item,
+    expanded,
+    source
+  );
 }
 
-export function notifyAccordionItemTransitionSettled(
-  item: LyraAccordionItem,
+export function notifyAccordionItemTransitionSettled<
+  TItem extends AccordionItemOwnerHost
+>(
+  item: TItem,
   expanded: boolean
 ): void {
-  owners.get(item)?.transitionSettled(item, expanded);
+  ownerContext<TItem, object>(item)?.transitionSettled(item, expanded);
 }
 
-export function notifyAccordionItemStateChanged(item: LyraAccordionItem): void {
-  owners.get(item)?.stateChanged(item);
+export function notifyAccordionItemStateChanged<
+  TItem extends AccordionItemOwnerHost
+>(item: TItem): void {
+  ownerContext<TItem, object>(item)?.stateChanged(item);
 }

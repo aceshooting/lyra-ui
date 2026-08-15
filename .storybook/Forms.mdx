@@ -90,6 +90,9 @@ email.setCustomValidity('');    // clears it
 - The custom error **survives** every intrinsic recomputation in between — each `value` change
   re-runs the built-in constraints without touching it — and survives a form reset. Only another
   `setCustomValidity('')` clears it, exactly like a native control.
+- The method, `customError` property and reflected `custom-error` attribute are one state. A
+  non-empty method/property write reflects the message; `setCustomValidity('')`, `resetValidity()`,
+  `customError = ''` and `customError = null` all remove the attribute as they clear the error.
 - Clearing restores the control's own computed validity rather than forcing it valid: a
   required-and-empty field whose custom error you cleared is still `valueMissing`.
 - **The message is used verbatim and never localized.** It is your content, so pass a string you

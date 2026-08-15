@@ -319,6 +319,33 @@ describe('zoom controls and interaction', () => {
     }
   });
 
+  it('keeps a bound-disabled zoom control visually inert on hover and press', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame
+        zoom="0.25"
+        style="--lr-zoomable-frame-control-hover-background:rgb(1,2,3)"
+      ></lr-zoomable-frame>
+    `);
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-out-button"]')!;
+    expect(button.disabled).to.equal(true);
+    const rest = getComputedStyle(button).backgroundColor;
+    const rect = button.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await aTimeout(0);
+      expect(getComputedStyle(button).backgroundColor).to.equal(rest);
+      await sendMouse({ type: 'down' });
+      await aTimeout(0);
+      expect(getComputedStyle(button).backgroundColor).to.equal(rest);
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
   it('supports localized slotted icon controls and keyboard plus/minus shortcuts', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame zoom="1" zoom-levels="50% 100% 150%">

@@ -21,7 +21,9 @@ resolution and `Intl`-instance caching are as described under `lr-format-number`
 **Properties:**
 
 - `date: string | number | Date = new Date()` — unset means the construction-time current instant.
-  **Changed in 8.0.0:** the former empty-string default rendered fallback content
+  Numeric HTML attributes are epoch milliseconds, matching numeric property assignment (including
+  zero and negative epochs); nonnumeric strings retain ordinary date/ISO parsing. **Changed in
+  8.0.0:** the former empty-string default rendered fallback content
 - optional granular fields: `weekday`, `era`, `year`, `month`, `day`, `hour`, `minute`, `second`,
   and `timeZoneName` (attribute `time-zone-name`), each restricted to its corresponding published
   `Intl.DateTimeFormat` literal set

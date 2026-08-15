@@ -45,6 +45,8 @@ type TooltipElement = HTMLElement & {
   placement: string;
   trigger: string;
   updateComplete: Promise<unknown>;
+  show(): Promise<void>;
+  hide(): Promise<void>;
 };
 
 const tooltip = (el: LyraCopyButton): TooltipElement => el.shadowRoot!.querySelector('lr-tooltip') as TooltipElement;
@@ -152,6 +154,26 @@ describe('lr-copy-button', () => {
     await aTimeout(50);
     await tip.updateComplete;
     expect(tip.open).to.be.false;
+  });
+
+  it('contains every nested tooltip lifecycle event inside the copy-button boundary', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button value="hello"></lr-copy-button>
+    `)) as LyraCopyButton;
+    const tip = tooltip(el);
+    const leaked: string[] = [];
+    for (const type of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+      el.addEventListener(type, (event) => {
+        leaked.push(type);
+        if (event.cancelable) event.preventDefault();
+      });
+    }
+
+    await tip.show();
+    expect(tip.open).to.equal(true);
+    await tip.hide();
+    expect(tip.open).to.equal(false);
+    expect(leaked).to.deep.equal([]);
   });
 
   it('copies textContent, an attribute, or a property from the element named by from', async () => {
@@ -609,6 +631,17 @@ describe('lr-copy-button', () => {
     // outcome — it must still carry it.
     expect(feedbackText(el)).to.equal('Copied!');
     await expect(el).to.be.accessible();
+  });
+
+  it('preserves an explicit empty host aria-label and restores the localized fallback on removal', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button aria-label="" value="secret"></lr-copy-button>
+    `)) as LyraCopyButton;
+    expect(baseButton(el).getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy');
   });
 
   it('disables the internal button and suppresses activation', async () => {

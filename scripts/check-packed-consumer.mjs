@@ -621,10 +621,12 @@ import {
   type AutoloaderEventDetail,
   type AutoloaderEventMap,
   type AutoloaderOptions,
+  type AutoloaderTraversalErrorEventDetail,
 } from '@aceshooting/lyra-ui/autoloader.js';
-import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';
+import { allDefined, type AllDefinedOptions } from '@aceshooting/lyra-ui/utilities/defined.js';
 import type {
   LyraChartEventMap,
+  LyraGlobalEventMap,
   LyraGraphEventMap,
   LyraMarkedParser,
   LyraMapEventMap,
@@ -681,10 +683,25 @@ const hydrationDiagnostics: Promise<readonly LyraHydrationDiagnostic[]> = diagno
 const ssrImports: 'server-safe' = LYRA_SSR_SUPPORT_MATRIX.imports.root;
 const ssrHydratedTag: string | undefined = LYRA_SSR_RENDER_AND_HYDRATE_TAGS[0];
 const ssrFallbackTag: string | undefined = LYRA_SSR_CLIENT_RENDER_TAGS[0];
-const autoloaderOptions: AutoloaderOptions = { optionalPeers: ['dompurify'], events: true };
+const autoloaderOptions: AutoloaderOptions = {
+  optionalPeers: ['dompurify'],
+  events: true,
+  maxElements: 10_000,
+  maxRoots: 2_000,
+  maxDepth: 256,
+  maxWork: 100_000,
+  maxConcurrency: 16,
+};
 const autoloadedTags: Promise<readonly AutoloadableTagName[]> = discover(document, autoloaderOptions);
 const autoloaderStarted: Promise<readonly AutoloadableTagName[]> = start(document);
-const allDefinitions: Promise<void> = allDefined(document);
+const allDefinedOptions: AllDefinedOptions = {
+  maxElements: 10_000,
+  maxRoots: 2_000,
+  maxDepth: 256,
+  maxWork: 100_000,
+  maxPasses: 100,
+};
+const allDefinitions: Promise<void> = allDefined(document, allDefinedOptions);
 const autoloaderDetail: AutoloaderEventDetail = { tag: 'lr-button', optionalPeers: [] };
 const autoloaderErrorDetail: AutoloaderErrorEventDetail = {
   ...autoloaderDetail,
@@ -694,6 +711,19 @@ const autoloaderErrorEvent: AutoloaderEventMap['lr-autoload-error'] = new Custom
   'lr-autoload-error',
   { detail: autoloaderErrorDetail },
 );
+const traversalErrorDetail: AutoloaderTraversalErrorEventDetail = {
+  limit: 'maxElements',
+  maximum: 10_000,
+  error: new Error('packed traversal fixture'),
+};
+const traversalErrorEvent: LyraGlobalEventMap['lr-autoload-traversal-error'] = new CustomEvent(
+  'lr-autoload-traversal-error',
+  { detail: traversalErrorDetail },
+);
+document.addEventListener('lr-autoload-traversal-error', (event) => {
+  const maximum: number = event.detail.maximum;
+  void maximum;
+});
 const autoloaderMarker: string = AUTOLOADER_PENDING_ATTRIBUTE;
 stop();
 void [
@@ -722,9 +752,12 @@ void [
   autoloadedTags,
   autoloaderStarted,
   allDefinitions,
+  allDefinedOptions,
   autoloaderDetail,
   autoloaderErrorDetail,
   autoloaderErrorEvent,
+  traversalErrorDetail,
+  traversalErrorEvent,
   autoloaderMarker,
 ];
 `,

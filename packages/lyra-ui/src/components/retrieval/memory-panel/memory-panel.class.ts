@@ -72,7 +72,7 @@ export interface LyraMemoryExpandDetail {
 export interface LyraMemoryPanelEventMap {
   "lr-add": CustomEvent<LyraMemoryAddDetail>;
   "lr-remove": CustomEvent<LyraMemoryRemoveDetail>;
-  "lr-forget": CustomEvent<undefined>;
+  "lr-forget": CustomEvent<null>;
   "lr-expand": CustomEvent<LyraMemoryExpandDetail>;
 }
 

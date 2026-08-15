@@ -19,6 +19,7 @@ Provider-neutral agent/LLM trace view combining span-kind filters, handoff quick
 hierarchical trace tree from one shared `spans` array.
 
 **Properties:**
+
 - `spans: LyraSpan[] = []` (attribute: false) — the full, unfiltered array; identical contract to
   `lr-trace-tree.spans` (see `lr-span-waterfall` above for the `LyraSpan` shape). Controlled and
   never mutated
@@ -29,15 +30,20 @@ hierarchical trace tree from one shared `spans` array.
 - `hiddenKinds: LyraSpan['kind'][] = []` (attribute: false) — span kinds hidden from the tree
   (`'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other'`). Empty shows every kind;
   pre-settable (e.g. to hide `retriever`/`embedding` by default) and readable back after
-  `lr-visibility-change`
+  `lr-span-visibility-change`
 - `label: string = ''` — forwarded to the composed `lr-trace-tree`
 - `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
   `show-cost`), `hideBars: boolean = false` (attribute `hide-bars`) — all forwarded verbatim
 
 **Events:** `lr-span-select` (`detail: { id: string }`), `lr-span-toggle` (`detail: { id: string;
-expanded: boolean }`), `lr-visibility-change` (`detail: { hiddenTypes: LyraSpan['kind'][] }` — bubbles composed from the
-internal `lr-graph-legend`, so the detail key is `hiddenTypes` despite holding span *kinds*, not
-graph node-type ids).
+expanded: boolean }`), and `lr-span-visibility-change` (`detail: { hiddenKinds:
+LyraSpan['kind'][] }`). The internal graph legend's generic `lr-visibility-change` event is
+contained; consumers receive this trace-domain event instead.
+
+`spans` is normalized through the same at-most-500-record projection as `<lr-trace-tree>` before
+filtering, handoff lookup, and tree rendering. The controlled active span and its ancestor path
+reserve positions, and malformed records plus later duplicate ids are omitted, so the composed
+surfaces cannot disagree.
 
 **CSS parts:** `base`, `filter` (the composed `lr-graph-legend` filter row, only rendered while
 `spans` is non-empty), `handoffs` (the quick-jump list wrapper, only rendered while at least one

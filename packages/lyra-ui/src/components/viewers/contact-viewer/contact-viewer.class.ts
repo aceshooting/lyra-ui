@@ -2,7 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
+import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
@@ -23,7 +23,7 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'empty' } | { kind: 'error'; message: string };
 export interface LyraContactViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
 }
@@ -39,9 +39,9 @@ class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
  *
  * @customElement lr-contact-viewer
  * @event lr-render-error - Fired when fetching or parsing the document fails.
- * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
- *   Fired whenever search state changes. `detail: { query: string; matchCount: number;
- *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change -
+ *   Fired whenever search state changes. `matchCountExact=false` makes the retained count a lower
+ *   bound. Bubbling, composed, and non-cancelable.
  * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
  *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
  *   non-cancelable.

@@ -25,15 +25,22 @@ like a native control.
 
 Removing a focused relationship/node filter chip moves focus to the adjacent chip, or to that
 filter's add picker when no chips remain. `savedQueries` is controlled: when the host applies a
-focused `lr-query-delete` request, focus follows the adjacent saved-query delete action, or the
-stable save-name input when the list becomes empty. Updates that did not remove the focused control
-never move external focus.
+focused accepted `lr-query-delete` notification, focus follows the adjacent saved-query delete
+action, or the stable save-name input when the list becomes empty. Updates that did not remove the
+focused control never move external focus.
 
-**Properties:** `value`, `customError` (`custom-error`), `label`, `labels`, `name`, `disabled`,
-`effectiveDisabled`, `nodeTypeOptions`,
-`relationshipTypeOptions`, `hopLimit`, `savedQueries`, `errors`, `form`, `getForm`, `validity`,
-`validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `setCustomValidity`,
-`formDisabledCallback`, `formResetCallback`, `formStateRestoreCallback`.
+**Properties and getters:** clone-owned frozen `value: GraphQuery`; `customError` (`custom-error`),
+`label`, `labels`, `name`, `disabled`, `effectiveDisabled`; clone-owned frozen
+`nodeTypeOptions: readonly GraphQueryTypeOption[]`, `relationshipTypeOptions: readonly
+GraphQueryTypeOption[]`, and `savedQueries: readonly GraphQuerySavedItem[]`; `hopLimit`, frozen
+`errors`, `form`, `validity`, `validationMessage`, and `willValidate`. Type-option values and saved
+query ids are unique first-wins identities; malformed/hostile records are skipped, nested queries
+are normalized snapshots, collections are capped at 500 options / 200 saved queries, and strings
+at 256 characters.
+
+**Methods and form callbacks:** `getForm()`, `focus(options?)`, `blur()`, `click()`,
+`checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, `formDisabledCallback(disabled)`,
+`formResetCallback()`, and `formStateRestoreCallback(state, mode?)`.
 
 `setCustomValidity(message)` (new in 8.0.0) is the standard channel for a server-side rejection
 ("no graph is loaded for that tenant") that neither of the control's own constraints can express. A
@@ -43,14 +50,33 @@ restores the control's own computed validity rather than forcing it valid — a 
 `startId` stays `valueMissing` — and the custom error survives both intrinsic recomputation (every
 field edit) and `form.reset()`, exactly like a native control, where only another
 `setCustomValidity('')` clears it. The message is caller-supplied and is used verbatim, never
-localized, and it is whole-control state: it does not land in `errors`, which is keyed by the
-csspart of the field a message belongs to. `click()` forwards focus to the first rendered field
-(start/end/hop-limit/direction/save-name, in that order), so the host behaves like a single
-control rather than a no-op under a `<label>`-driven or programmatic click.
+localized, and it is whole-control state exposed as `errors.base`; intrinsic errors remain keyed
+by their field csspart. The start-ID `lr-input` is natively required, matching
+the aggregate `valueMissing` constraint. `focus(options?)` and `click()` target the first rendered
+field (start/end/hop-limit/direction/save-name, in that order), `blur()` releases whichever nested
+owner contains deep focus, and all entry actions are inert while directly or fieldset disabled.
 
-**Events:** `lr-input`, `lr-validity-change`, `lr-invalid` (no detail; one bubbling/composed alias
-when the complete builder fails a native validity check),
-`lr-query-run`, `lr-query-save`, `lr-query-load`, `lr-query-delete`. **Slots:** `actions`. **CSS
+The group is named by a host `aria-label` when present; otherwise `aria-labelledby` points to the
+visible label element, so slotted/property/localized label text is also the announced name.
+
+**Events:** all query/model details are readonly frozen snapshots. `lr-validity-change` publishes
+effective native validity, including custom errors and own/fieldset validation barring.
+`lr-invalid` is a cancelable bubbling/composed alias; vetoing it suppresses the native invalid
+default. Run, save, load, and delete share one two-phase contract: cancelable
+`lr-before-query-run`, `lr-before-query-save`, `lr-before-query-load`, and
+`lr-before-query-delete` requests precede any local effect; non-cancelable `lr-query-run`,
+`lr-query-save`, `lr-query-load`, and `lr-query-delete` notifications follow only when accepted.
+The matching before/accepted pair reuses one frozen payload: `{ query }` for run,
+`{ name, query }` for save, `{ id, query }` for load, and `{ id }` for delete.
+Run validates before its request. Save veto preserves the draft name. Load requests frozen
+`{ id, query }` before changing `value`, so veto preserves the current query; its accepted event
+fires after the new value is applied. Delete remains controlled, so the host removes the accepted
+id from `savedQueries`. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and those
+eight phased action events.
+
+Migration note: veto save in `lr-before-query-save`, not `lr-query-save`; the existing
+`lr-query-*` action events are accepted, non-cancelable notifications. **Slots:** `actions`,
+`label`, `hint`, `error`. **CSS
 parts:** `base`, `label`, `hint`, `error` (the three form-control chrome parts every
 form-associated control in this library exposes — see `lr-select`), `path-fields`, `start-input`,
 `end-input`, `relationship-picker`, `relationship-chips`, `node-type-picker`, `node-type-chips`,

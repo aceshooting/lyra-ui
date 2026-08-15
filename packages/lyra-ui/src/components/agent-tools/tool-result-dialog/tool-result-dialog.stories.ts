@@ -189,9 +189,9 @@ export const Events: Story = {
           const out = document.getElementById('tool-result-dialog-log');
           if (out) out.textContent = `lr-close: ${e.detail}`;
         }}
-        @lr-maximize-change=${(e: CustomEvent<boolean>) => {
+        @lr-maximize-change=${(e: CustomEvent<{ readonly maximized: boolean }>) => {
           const out = document.getElementById('tool-result-dialog-log');
-          if (out) out.textContent = `lr-maximize-change: ${e.detail}`;
+          if (out) out.textContent = `lr-maximize-change: ${e.detail.maximized}`;
         }}
       >
         ${toolCallPanels()}

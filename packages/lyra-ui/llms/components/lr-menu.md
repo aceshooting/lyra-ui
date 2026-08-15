@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu-item`, `lr-dropdown-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -16,367 +16,141 @@
 
 ## `lr-menu` / `lr-menu-item`
 
-An action menu that becomes an anchored dropdown when a consumer-supplied trigger element
-(typically an icon button) is assigned to the `trigger` slot. With no trigger or `anchor`, the
-exact mapped `<sl-menu>` authoring shape renders inline and always visible, with one roving
-keyboard entry point; adding a trigger switches it to the closed-by-default popup presentation.
-The pair mirrors `sl-menu` / `sl-menu-item`, and `<lr-dropdown-item>` below is the
-`wa-dropdown-item`-compatible name for the same item element. Web Awesome's `wa-dropdown` maps to
-`<lr-dropdown>` in the overlays family; that
-component keeps the distinct trigger/popup host while containing this same menu interaction engine,
-and accepts direct mapped items or a consumer-supplied `lr-menu`. Either way it is a close,
-drop-in-shaped replacement for reaching outside this library for a
-third-party dropdown to build a gear menu, an avatar menu, or a history row's overflow menu. Uses
-the WAI-ARIA "menu button" pattern —
-`role="menu"`/`role="menuitem"` with real roving DOM focus moving between actual focusable
-`<lr-menu-item>` rows — deliberately not a `role="listbox"`/`aria-activedescendant` shape (that's
-`<lr-select>`'s pattern instead).
+The inline semantic menu mapped from Shoelace's `sl-menu`, plus its action-row element. A root
+`<lr-menu>` is always visible and owns the named `role="menu"` list, real roving DOM focus,
+wrapping keyboard navigation, type-ahead, and one canonical selection event. It deliberately has no
+trigger, positioned popup, root open state, placement API, or overlay lifecycle.
+
+For a menu button or other anchored overlay, compose the semantic controller inside
+`<lr-dropdown>`:
+
+```html
+<lr-dropdown label="Row actions">
+  <button slot="trigger" aria-label="Row actions">⋮</button>
+  <lr-menu>
+    <lr-menu-item value="edit">Edit</lr-menu-item>
+    <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
+  </lr-menu>
+</lr-dropdown>
+```
+
+The dropdown shell owns trigger relationships, positioning, opening/closing, outside dismissal,
+focus return, and lifecycle events. The contained menu remains the sole semantic owner: its
+`header`/default/`footer` regions and named `role="menu"` list are preserved, while the outer popup
+is neutral. This is also the composition used for direct `<lr-dropdown-item>` children.
 
 ### `lr-menu`
 
 **Properties:**
-- `open: boolean = false` (reflected) — controls the anchored/trigger-owned popup. A triggerless,
-  unanchored standalone menu remains visible so an exact `sl-menu` → `lr-menu` tag rename keeps its
-  presentation
-- `placement?: Placement` (reflected — resolved through `rtlAwarePlacement()` (`internal/rtl.ts`),
-  then forwarded to `place()`; defaults to whatever `place()` itself defaults to. A `left`/`right`
-  side is mirrored under `dir="rtl"`, so e.g. `placement="left-start"` still anchors to the menu's
-  trailing edge instead of pinning to the physical left)
-- `label: string = 'Menu'` — accessible name for the `role="menu"` popup; override with something
-  specific (e.g. "Row actions") when a page has more than one menu. A host-level `aria-label`
-  attribute takes precedence over both this prop and the localized default (unset by default, so
-  a no-op for existing consumers), matching `lr-select`/`lr-model-select`'s
-  `this.getAttribute('aria-label') || <computed default>` precedence
 
-- `closeOnEscapeAnywhere: boolean = false` (attribute `close-on-escape-anywhere`) — lets Escape
-  close the menu when focus is on non-menu-item content slotted into the **default** slot, i.e.
-  rendered inside `[part="list"]`; item activation remains scoped to actual menu items. It has no
-  bearing on the `header`/`footer` slots, which sit outside the `role="menu"` list and always close
-  on Escape — so a menu that keeps its composed controls there never needs this property
-- `anchor: HTMLElement | null = null` (property only — an element reference has no attribute form;
-  new in 8.0.0) — positions the popup against this element instead of the `trigger` slot's assigned
-  element, and, when no `trigger` element is slotted, becomes the element
-  `hide({ focusTrigger: true })` returns focus to (a slotted trigger still wins for focus). An
-  `<lr-menu-item>` sets it to itself on the menu assigned to its `submenu` slot, which is what turns
-  that instance into a submenu: the anchor also switches the default placement from below the
-  trigger to beside the anchoring row, and keeps a pointerdown on that row from reading as an
-  outside click. Set it by hand to anchor a menu to a trigger this component cannot slot — a canvas
-  hit region, a table cell
+- `label?: string` — accessible name for the `role="menu"` list. A host `aria-label`
+  attribute is authoritative, including `aria-label=""`; any supplied `label` follows (including `"Menu"` or
+  `""`),
+  then a containing dropdown's supplied fallback, then the localized menu label. Omission,
+  not comparison with an English sentinel, is what selects localization.
+- `dropdownOpen: boolean = false` (attribute: false) — the containing dropdown's controlled open
+  state, used to synchronize the menu interaction engine while it is rendered inside a popup.
 
-**Methods:** `show(focus: 'first' | 'last' | 'none' = 'first')` opens the menu and moves roving focus
-to the first (or, with `'last'`, the last) non-disabled item; `'none'` opens without moving DOM focus
-at all, which is what pointer-driven opening needs. On an already-open menu it applies the focus
-target and nothing else, so an arrow key can step into a submenu the pointer opened a moment earlier.
-`hide(options?: { focusTrigger?: boolean })` closes it; a no-op when already closed. They are the
-imperative pair for the cases the slotted trigger can't express — a "Done"/"Apply" button *inside*
-the menu, a keyboard shortcut, a parent restoring UI state — without hand-reproducing the
-pending-focus bookkeeping. Both are deliberately thin: positioning, the outside-click listener, the
-`lr-show`/`lr-hide` events, and the initial focus move all stay in one place, so **writing `open`
-directly is fully supported and equivalent apart from the focus moves**. In particular the
-roving-tabindex reset is centralized, so a bare `el.open = false` also clears `activeIndex` and
-never leaves a stale `tabindex="0"` tab stop on the last active item. `hide()` never refocuses
-unless you ask: pass `{ focusTrigger: true }` for a dismissal with nowhere else for focus to land,
-and leave it off when the interaction that closed the menu already put focus somewhere the user
-chose (an outside click, a Tab out). Focus restoration lives in `hide()` rather than in the
-close branch precisely so teardown — disconnecting an open menu — can't steal focus.
+**Events:**
 
-**Events:** `lr-show` (no detail — fires only when `open` transitions to `true`, not for markup
-that renders `open` true from the start), `lr-hide` (same first-render guard, opposite
-transition), `lr-menu-select` (`detail: { value }` — a consolidated re-fire of the activated
-`<lr-menu-item>`'s own `lr-menu-item-select`; retained for Lyra compatibility), and `lr-select`
-(`detail: { item }` — the complete activated item; cancelable). Unless `lr-select` is prevented,
-selection closes the menu and returns focus to the trigger. A selection made inside a submenu
-arrives as the same single `lr-select` event — it is never translated or re-emitted by ancestors —
-while the legacy `lr-menu-select` likewise bubbles once to the outermost menu. There is no separate
-nested-selection name. A non-vetoed selection closes the whole chain behind it. A submenu's own
-`lr-show`/`lr-hide` deliberately stop at the row that owns it, so they are never mistaken for this
-menu opening or closing; listen on the nested `<lr-menu>` element itself for those.
-`lr-show` is cancelable. `lr-hide` is cancelable while the menu is connected and non-cancelable
-only for the disconnect-driven close, where the removed menu cannot honour a veto.
+- `lr-select` — cancelable, with `detail: { item }`. It originates exactly once at the menu that
+  owns the activated item, then bubbles unchanged through ancestor menus and a containing dropdown.
+  Preventing it anywhere keeps the current menu/submenu chain open. There are no
+  `lr-menu-select`, `lr-menu-item-select`, or nested-selection aliases.
 
-**Slots:** `trigger` (the consumer's own trigger element — first assigned element wins if several
-are assigned; enhanced imperatively with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`
-since those attributes belong on the actual interactive trigger, which lives outside this
-component's shadow root. `aria-controls` targets the `lr-menu` host, which receives a stable
-generated id only when the consumer did not provide one, rather than the shadow-private list id.
-`lr-button`/`lr-icon-button` forward the popup/expanded values to their focused shadow-internal
-native control and resolve the controls element-reference across their shadow boundary. In a
-supporting browser, the reflected `ariaControlsElements` list is the source of truth and its setter
-intentionally clears the internal control's serialized `aria-controls` value; browsers without the
-API retain the string as a best-effort fallback), default
-(`<lr-menu-item>` elements, plus optionally plain `<hr>` dividers — native `<hr>` already carries
-an implicit `separator` role),
-`header` and `footer` (composed, deliberately non-menu-item content — a filter/search field, a
-section title, an "Apply"/"Done" button, a count — rendered above/below the items inside
-`[part="popup"]` but **outside** the `role="menu"` list. Both collapse to no box at all while
-unfilled, so a menu that uses neither renders exactly as it did before they existed)
+**Slots:** default (`<lr-menu-item>`/`<lr-dropdown-item>` plus semantic separators), `header`, and
+`footer`. Header and footer are composed controls or explanatory regions outside the
+`role="menu"` list, so filters, counts, or footer actions do not violate the menu required-child
+contract. Arbitrary non-item content in the default slot still renders, but is not enrolled as a
+menu item.
 
-Put composed controls in `header`/`footer` rather than the default slot. Non-item content in the
-default slot still works and is not deprecated at runtime (no warning is emitted), but it sits
-inside `role="menu"`, where ARIA permits only
-`menuitem`/`menuitemradio`/`menuitemcheckbox`/`group`/`separator` children — anything else is an
-`aria-required-children` violation. It is also not Tab-reachable from an item, and needs
-`closeOnEscapeAnywhere` before Escape will close the menu. The named regions have none of those
-problems.
+**CSS parts:** `header`, `list`, and `footer`. Root `trigger` and `popup` parts do not exist;
+style those on `<lr-dropdown>` when using the overlay composition.
 
-**CSS parts:** `trigger` (wrapper around the `trigger` slot — the positioning anchor), `popup` (the
-positioned floating panel), `header` (wrapper around the `header` slot, above the list and outside
-`role="menu"`; `display: none` while that slot is unfilled), `list` (the `role="menu"` container
-wrapping the default slot), `footer` (wrapper around the `footer` slot, below the list and outside
-`role="menu"`; `display: none` while that slot is unfilled)
+**Themeable custom properties:** shared surface, border, radius, spacing, and motion tokens. Row
+chrome is controlled through the menu-item properties listed below.
 
-**Themeable custom properties:** shared tokens only (`--lr-color-surface`, `--lr-color-border`,
-`--lr-radius`, `--lr-shadow`, `--lr-space-xs`, `--lr-transition-fast`).
+**Methods:** no menu-specific public overlay methods. Use `<lr-dropdown>`'s `show()`/`hide()` and
+`open` state for an overlay. Menu-item submenu methods remain public because they drive a row's
+nested disclosure.
 
-**Optional peer deps:** none.
-
-**Which items arrow keys reach.** An item is navigable unless it is `disabled` (or `loading`),
-`hidden`, `aria-hidden="true"`, **`inert`, or has an `inert` ancestor** — the last two alongside the
-rest because an inert element *refuses* focus: stepping the roving `tabindex` onto one leaves
-`focus()` a silent no-op, so roving focus stays wherever it was (or falls to `<body>`) and every
-later arrow press dies. The state is observed live —
-`attributeFilter: ['disabled', 'hidden', 'aria-hidden', 'inert']` on every item — so marking the
-*currently active* item inert rehomes roving focus to the next reachable one instead of leaving a
-stale `tabindex="0"` on an unfocusable row. `lr-tab-group`, `lr-tree` and `lr-video-playlist` mirror
-the same rule for their own roving navigation, with one deliberate difference: those three read only
-a child's **own** inertness (plus, in `lr-tree`, an inert ancestor *inside* the tree), because a list
-inerted wholesale by an open modal must not lose its selection and its tab stop for as long as the
-dialog is up — focus cannot be inside it anyway. A menu is itself the overlay, so it takes the
-simpler ancestor-inclusive read.
+**Keyboard and focus:** exactly one navigable row has `tabindex="0"`. ArrowDown/ArrowUp wrap;
+Home/End move to the first/last navigable row; Enter/Space activate; printable input performs
+locale-aware type-ahead. Rows that are disabled, loading, hidden, `aria-hidden`, inert, or inside an
+inert subtree are skipped. Navigation is repaired live when those states or light-DOM membership
+change. A root inline menu does not consume Escape or turn Tab into overlay dismissal; a containing
+dropdown owns those root-level behaviors.
 
 ### `lr-menu-item`
 
-Not meaningful standalone — it exists purely as `<lr-menu>`'s light-DOM child, the same
-relationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`. `role="menuitem"` and the
-roving `tabindex` both live on the host element itself (mirroring `<lr-tree-item>`), not an
-internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tabIndex`.
+A focusable action row owned by `<lr-menu>`. The host itself carries `role="menuitem"` (or
+`menuitemcheckbox`) and roving `tabindex`; `[part="base"]` is only the visual row.
 
 **Properties:**
-- `value: string = ''` — an id/value echoed back in the parent `<lr-menu>`'s `lr-menu-select`
-  detail
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
-  in 8.0.0) — row density on the library's shared size ladder, the same one `<lr-input>`/
-  `<lr-select>`/`<lr-button>` use, so a menu sitting under a compact toolbar can match it. It scales
-  the row's height, inline/block padding, font size and corner radius together; both spellings of
-  every tier are accepted. Every tier still floors the row at the shared 24px pointer-target
-  minimum, so even `2xs` stays tappable. The size lives on the **item**, not on `<lr-menu>`, so a
-  single compact row inside an otherwise default menu needs no wrapper — and, conversely, sizing a
-  whole menu means setting it on every item
-- `disabled: boolean = false` (reflected — disables selection and excludes this item from
-  `<lr-menu>`'s roving-tabindex navigation entirely; the native `inert` attribute, `hidden`, and
-  `aria-hidden="true"` exclude it the same way — see "Which items arrow keys reach" above)
-- `destructive: boolean = false` (reflected — gives the row the dangerous treatment for an action
-  like "Delete"; its foreground defaults to `--lr-color-danger`; retained as a behavior-identical
-  alias)
-- `variant: LyraVariant | 'default' = 'default'` (reflected) — `danger` is the mapped dangerous
-  treatment; `default` is the WA spelling of Lyra's neutral item treatment
-- `type: 'normal' | 'checkbox' = 'normal'` — `'checkbox'` (mirroring `wa-dropdown-item`'s identical
-  `type` option) renders `role="menuitemcheckbox"` in place of `role="menuitem"`, with `aria-checked`
-  reflecting `checked` and a checkmark glyph shown once `checked` is `true`. `'normal'` (the default)
-  renders and behaves exactly as before this option existed.
-- `checked: boolean = false` (reflected) — whether a `type="checkbox"` item is checked; meaningless
-  (ignored) for `type="normal"`
-- `loading: boolean = false` (reflected) — renders the spinner parts, announces the row as
-  `aria-disabled="true"`, and excludes it from activation/roving focus until loading clears
-- `hasSubmenu: boolean` (read-only, new in 8.0.0) — whether an `<lr-menu>` or direct mapped items are
-  currently assigned to this item's `submenu` slot, making the row a submenu parent
-- `submenuOpen: boolean = false` (new in 8.0.0) — whether that submenu is open right now. Assigning
-  it drives the same panel as `openSubmenu('none')` / `closeSubmenu()` without moving focus, and is
-  a no-op until submenu content is connected. It also tracks the panel's own state however it
-  changed: the parent menu's keyboard or pointer handling, a dismissal, an ancestor closing, or a
-  direct `panel.open = false`. Transient, like every other open-state in this library — it resets
-  to `false` when the item is disconnected
 
-**Methods:** `click(): void` forwards a programmatic host click to the visual row, preserving the
-same normal, checkbox, and submenu behavior as pointer activation; it is a no-op while `disabled`
-or `loading`. `select(): void` fires `lr-menu-item-select` (also a no-op while `disabled` or
-`loading`). `<lr-menu>` calls `select()` from its Enter/Space keydown handling of the roving-focused
-item. For `type="checkbox"`, either activation path first emits a cancelable
-`lr-menu-item-change` with the proposed next `checked` value; the value commits only if no listener
-prevents that event, while `lr-menu-item-select` and ordinary parent-menu closing still follow.
-On a submenu parent it opens the submenu instead and fires neither event — see below.
+- `value: string = ''` — identifier available as `event.detail.item.value` on `lr-select`
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'`
+- `disabled: boolean = false`
+- `variant: 'default' | 'danger' = 'default'`
+- `type: 'normal' | 'checkbox' = 'normal'`
+- `checked: boolean = false` — meaningful only for `type="checkbox"`
+- `loading: boolean = false`
+- `hasSubmenu: boolean` (read-only)
+- `submenuOpen: boolean = false` — transient live state; assigning it drives an existing submenu
+  without moving focus and disconnect resets it
 
-`openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>` and
-`closeSubmenu(): Promise<void>` drive the assigned/generated panel and resolve after its matching
-state and update settle. `openSubmenu()` is a resolved no-op without a `submenu` slot or while
-`disabled`/`loading`; it uses the same focus vocabulary as `<lr-menu>`'s own `show()` — `'first'`
-for keyboard activation, `'none'` for pointer intent, which must not pull focus out from under the
-keyboard.
-Re-opening an already-open submenu still applies the focus target, so the into-submenu arrow key
-moves into a submenu the pointer opened a moment earlier. `closeSubmenu()` closes the panel and,
-through it, everything below it; it leaves focus alone, because the caller that moved focus knows
-where it belongs. The parent `<lr-menu>` owns the interaction policy (arrow keys, pointer intent,
-one-submenu-per-level) and drives it through exactly these two methods, so calling them by hand
-behaves identically.
-`getTextLabel(): string` returns the visible label used by type-ahead and Shoelace-compatible
-integrations, without including nested submenu text. Direct and flattened, forwarded default-slot
-labels are observed live: in-place text edits, forwarding-slot reassignments, and relevant
-visibility changes update type-ahead, the computed submenu-parent name, and the computed
-submenu-panel name together. Accessibility-hidden branches do not contribute. A real forwarding
-assignment stays authoritative even while hidden and therefore does not expose slot fallback;
-fallback contributes after the assignment is removed. A consumer-authored `aria-label` or
-`aria-labelledby` on the item remains authoritative for its host name; the latter does not change
-type-ahead or the computed submenu-panel name. `label`/`aria-label` on the submenu itself also wins.
-An explicitly empty item `aria-label` and a value supplied after Lyra initially computed the name
-both remain authoritative.
+**Methods:**
 
-**Events:** `lr-menu-item-select` (no detail payload — `this.emit('lr-menu-item-select')` is
-called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
-when the parent `<lr-menu>`'s own Enter/Space keydown handling calls `select()` on the currently
-roving-focused item; never fired by a submenu parent, which is a disclosure rather than an action),
-`lr-menu-item-change` (cancelable; `detail: { value, checked }` carries the proposed next value
-when a `type="checkbox"` item is activated. `preventDefault()` retains the current checked state,
-but does not suppress the usual `lr-menu-item-select` or parent-menu close. It is never fired for
-`type="normal"` or by a submenu parent, whose activation opens the panel instead of toggling
-`checked`),
-`lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
-state changes so the parent menu can repair its roving-tabindex state immediately)
+- `click(): void` forwards programmatic activation through the visual-row path
+- `select(): void` activates through the current owning menu; it is inert while disabled/loading
+- `openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>`
+- `closeSubmenu(): Promise<void>`
+- `getTextLabel(): string` returns the accessibility-visible label used by type-ahead
 
-**Slots:** default (the visual label), `icon` and Shoelace-compatible `prefix` (leading content),
-`details` (WA secondary text), `suffix` (Shoelace trailing content), and `submenu` (either a nested
-`<lr-menu>` or direct mapped menu items). The five display slots — default, `icon`, `prefix`,
-`details`, and `suffix` — are visual-only: their flattened content is inert and hidden from
-assistive technology, so it cannot create a second action inside the focusable menu item. The
-default slot's accessibility-visible text is mirrored to the host's accessible name and type-ahead
-label. Use ordinary text/glyph markup in display slots; use the dedicated `submenu` slot for nested
-interactive menu content.
+A checkbox activation first emits cancelable `lr-menu-item-change` with the proposed
+`detail: { value, checked }`. Preventing that event retains the current checked state; the owning
+menu's canonical `lr-select` still follows. A submenu parent is a disclosure instead of an action:
+activation opens its submenu and emits neither checkbox-change nor selection.
 
-**CSS parts:** `base`; `icon` and `prefix`; `label`; `details`; `suffix`; `checkmark` and its
-Shoelace-compatible `checked-icon` wrapper; `spinner spinner__base`; `submenu-icon`; and `submenu`.
-The role remains on the host, not `base`; the submenu chevron mirrors under RTL through its wrapper.
+**Events:**
 
-**Themeable custom properties:** `--lr-menu-item-gap` (default `var(--lr-space-xs)`) is the gap
-between the visual row's leading content, label, details, and state glyphs. `--lr-menu-item-radius`
-(default `var(--lr-form-control-radius)`) is its corner radius; its fallback follows the item's
-active size tier. Both are inline fallbacks rather than values declared on `:host`, so setting either
-on an item or any ancestor retunes the row without a `::part(base)` rule; `<lr-dropdown-item>`
-inherits both hooks. The same shape applies to a dangerous row's local state palette:
-`--lr-menu-item-danger-color` (default `var(--lr-color-danger)`) controls its foreground,
-`--lr-menu-item-danger-hover-bg` (default `var(--lr-color-danger-quiet)`) its hover background, and
-`--lr-menu-item-danger-active-bg` (default
-`color-mix(in oklab, var(--lr-color-danger-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`)
-its pressed background. Set those hooks on a destructive or `variant="danger"` item, or on a menu
-ancestor, to retheme only danger rows without replacing the shared danger palette. `--submenu-offset`
-(default `-2px`) is the final signed distance between a submenu and its parent row: negative values
-overlap the parent menu and positive values add separation. It updates live, mirrors along with the
-submenu under RTL, and applies to both the Shoelace-style nested-menu shape and Lyra's generated
-panel for direct mapped items. Shared tokens also include `--lr-radius`, `--lr-focus-ring-width`,
-`--lr-focus-ring-color`, `--lr-space-xs`, `--lr-space-s`, `--lr-color-brand-quiet`,
-`--lr-opacity-disabled`, `--lr-color-danger`, and `--lr-color-danger-quiet`.
+- `lr-menu-item-change` — cancelable checkbox-state proposal
+- `lr-menu-item-state-change` — internal navigation repair signal with
+  `detail: { disabled, hidden, inert }`; the owning menu consumes and contains it, so it does not
+  escape a menu or a composite wrapper as an apparent public event
 
-**Optional peer deps:** none.
+Item activation itself is private owner plumbing, not a public child event. Listen for `lr-select`
+on the owning menu.
 
-### `lr-dropdown-item`
+**Slots:** default label, `icon`, `prefix`, `details`, `suffix`, and `submenu`. Display slots are
+inert visual content; their accessibility-visible default-slot text names the focusable host. The
+submenu slot accepts either one nested `<lr-menu>` or direct mapped items. Long `details` and
+`suffix` content shrinks and ellipsizes within the allocated row in both directions rather than
+expanding the popup.
 
-Compatibility naming alias for `<lr-menu-item>`, mirroring `wa-dropdown-item`. It is a subclass of
-the same implementation, so `value`, `size` (including the `small`/`medium`/`large` spellings),
-`disabled`, `loading`, `variant="danger"`/`destructive`, `type`, `checked`, `click()`, `select()`,
-`getTextLabel()`, `hasSubmenu`/`submenuOpen`, async `openSubmenu()`/`closeSubmenu()`, checkbox events,
-and menu roving focus behave identically.
+**CSS parts:** `base`, `icon`, `prefix`, `label`, `details`, `suffix`, `checkmark`,
+`checked-icon`, `spinner`, `spinner__base`, `submenu-icon`, and `submenu`.
 
-On this mapped tag, `submenuOpen: boolean = false` also reflects to `submenu-open`, and changing the
-attribute drives the same submenu state as assigning the property. Web Awesome's published
-mixed-case `submenuOpen` attribute is normalized by HTML to `submenuopen`; that lowercase token is
-a permanent compatibility alias. It works in initial markup even when the submenu connects after
-the attribute callback. Removing `submenuopen` closes the submenu and clears the canonical
-reflection; removing only `submenu-open` while the upstream alias remains restores the canonical
-reflection because the authored upstream input still requests the open state. `openSubmenu()`
-defaults to focusing the first item; Lyra's optional `'first' | 'last' | 'none'` argument remains
-available, with `'none'` appropriate for pointer or declarative control that must not steal focus.
+**Themeable custom properties:** `--lr-menu-item-gap`, `--lr-menu-item-radius`,
+`--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
+`--lr-menu-item-danger-active-bg`, and `--submenu-offset`, plus shared size/focus/color/spacing
+tokens.
 
-**Events:** the focusable host emits the platform's native `focus` and `blur` `FocusEvent`s. They
-are non-bubbling, composed, and non-cancelable, with no prefixed duplicates. The inherited
-`lr-menu-item-select`, `lr-menu-item-change`, and `lr-menu-item-state-change` contracts are described
-under `<lr-menu-item>` above.
+### Nested submenus
 
-**Slots:** default, `icon`, `prefix`, `details`, `suffix`, and `submenu` — including WA's direct-item
-submenu shape and Shoelace's nested-menu shape. Default, `icon`, `prefix`, `details`, and `suffix`
-are visual-only inert, assistive-technology-hidden display slots; default-slot text still names the
-focusable host and drives type-ahead. Use `submenu`, rather than a display slot, for nested
-interactive menu content.
-
-**CSS parts:** identical to `<lr-menu-item>`'s, including all compatibility aliases above.
-
-**Themeable custom properties:** identical to `<lr-menu-item>`'s, including
-`--lr-menu-item-gap`, `--lr-menu-item-radius`, `--lr-menu-item-danger-color`,
-`--lr-menu-item-danger-hover-bg`, `--lr-menu-item-danger-active-bg`, and `--submenu-offset`.
+Both supported authoring shapes use the `submenu` slot:
 
 ```html
-<lr-menu>
-  <button slot="trigger">Actions</button>
-  <lr-dropdown-item value="archive">Archive</lr-dropdown-item>
-</lr-menu>
-```
-
-```html
-<lr-menu label="Row actions">
-  <button slot="trigger" aria-label="More actions">⋮</button>
-  <lr-menu-item value="edit">Edit</lr-menu-item>
-  <lr-menu-item value="duplicate">Duplicate</lr-menu-item>
-  <hr />
-  <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
-</lr-menu>
-<script type="module">
-  document.querySelector('lr-menu').addEventListener('lr-select', (e) => console.log(e.detail.item.value));
-</script>
-```
-
-The popup is always rendered in the DOM (never `display:none`) so `.focus()` calls on its content
-work synchronously the instant it opens — closed state is conveyed via `visibility`/`opacity`
-instead. `visibility` is an inherited CSS property that pierces the `<slot>` projection boundary, so
-every closed-state `<lr-menu-item>` is automatically excluded from sequential (Tab-key)
-navigation with no separate JS bookkeeping. ArrowDown/ArrowUp *on the trigger while closed* also
-opens the menu, focusing the first/last non-disabled item respectively (mirrors native `<select>`).
-Once open, ArrowDown/ArrowUp move the roving focus among non-disabled items and wrap past either end
-(unlike `<lr-select>`'s clamped listbox nav); Home/End jump to the first/last non-disabled item;
-Enter/Space activate the focused item; Escape closes and refocuses the trigger. The arrow keys,
-Home/End, Enter/Space and type-ahead only respond when the triggering keydown event's own target is
-an actual `<lr-menu-item>` element; a keydown bubbling up from any other node inside the popup is
-ignored rather than misread as list navigation. Escape and Tab are the two deliberate exceptions.
-Escape from `header`/`footer` content always closes the menu and refocuses the trigger (mirroring
-`lr-popover`'s handling of arbitrary popup content), while Escape from non-item content in the
-*default* slot closes it only with `closeOnEscapeAnywhere` set. Tab never traps focus and never
-calls `preventDefault()` — the browser's own Tab navigation always proceeds untouched — and closes
-the menu only when focus is on its way *out* of `[part="popup"]`: with a focusable in the
-`header`/`footer` region on the far side of the keypress the menu stays open so native Tab can carry
-focus there, and with neither region filled Tab closes exactly as it always has. Tabbing past the
-popup's last focusable in either direction closes the menu, including from slotted non-item content
-— which previously left the menu open while focus walked out of the popup entirely. A printable
-keypress runs type-ahead: roving focus jumps to the next non-disabled item whose text starts with the
-accumulated buffer (cycling from just after the active item, buffer resets ~500ms after the last
-keystroke) — mirrors `<lr-select>`'s identical listbox type-ahead. A click outside both the trigger
-and the open popup also closes it, but deliberately does *not* refocus the trigger — the outside
-click itself already moved focus somewhere the user chose.
-
-### Nested submenus (new in 8.0.0)
-
-Both upstream shapes use the same slot assignment. Shoelace-style markup puts an `<lr-menu>` inside
-an item with `slot="submenu"`; that nested menu needs no trigger because the row becomes its anchor.
-Web Awesome-style markup assigns one or more direct mapped items to `slot="submenu"`; Lyra creates
-the contained submenu panel around them. Both reach the same keyboard/pointer engine, and nesting is
-unbounded.
-
-```html
-<lr-menu label="Row actions">
-  <button slot="trigger" aria-label="More actions">⋮</button>
-  <lr-menu-item value="rename">Rename</lr-menu-item>
+<lr-menu label="Share actions">
   <lr-menu-item value="share">
     Share
-    <lr-menu slot="submenu">
+    <lr-menu slot="submenu" label="Share options">
       <lr-menu-item value="email">Email</lr-menu-item>
       <lr-menu-item value="link">Copy link</lr-menu-item>
     </lr-menu>
   </lr-menu-item>
 </lr-menu>
-<script type="module">
-  // One cancelable event for the whole tree, submenu selections included.
-  document
-    .querySelector('lr-menu')
-    .addEventListener('lr-select', (e) => console.log(e.detail.item.value));
-</script>
 ```
-
-The equivalent direct-item branch is:
 
 ```html
 <lr-dropdown-item>
@@ -386,86 +160,45 @@ The equivalent direct-item branch is:
 </lr-dropdown-item>
 ```
 
-**Semantics.** A row with a `submenu` slot gains `aria-haspopup="menu"` and an `aria-expanded` that
-renders `"true"` *and* `"false"` — never omitted, since the attribute is part of the role's state.
-The open state also reflects as `submenu-open`, and the chevron renders in
-`[part="submenu-icon"]`. Because such a row is a disclosure rather than an
-action, activating it opens the submenu and fires no `lr-menu-item-select`; activating one also
-never toggles `checked` or fires `lr-menu-item-change`, so `type="checkbox"` still renders
-`role="menuitemcheckbox"` (and a checkmark for a `checked` row) but nothing ever moves that state. The submenu's `role="menu"` is named from the row's own label text, and so is the row
-itself — otherwise name-from-content would walk into the open submenu and announce "Share Email Copy
-link". A host `aria-label` on the row, or a `label`/`aria-label` on the nested `<lr-menu>`, wins over
-both computed names.
+The submenu presentation is private to the parent row, not a second root-menu API. A submenu parent
+has `aria-haspopup="menu"`, explicit `aria-expanded="true|false"`, the transient
+`submenu-open` state, and a logical-direction chevron. Its submenu is named from the parent's
+accessible label unless the submenu supplies its own `aria-label` or non-default `label`.
 
-**Keyboard.** The into-submenu and back-out keys are inline-direction moves, so **both swap under
-RTL**: ArrowRight opens the submenu and focuses its first item under LTR while ArrowLeft closes it
-and returns focus to the parent row, and under `dir="rtl"` those two keys trade places exactly —
-ArrowRight then opens nothing at all on a submenu parent. Enter/Space open a submenu parent too,
-landing on the same first item. The back-out key acts only in a menu that has an `anchor` — a
-submenu always does; an ordinary trigger-slotted menu does not, and there the key is left untouched
-for the browser's own handling. Escape inside a submenu closes only that submenu and
-returns focus to its parent row — the innermost open menu is the one holding focus, so it handles
-the key and every ancestor declines; a second Escape then closes the level above it. ArrowUp/
-ArrowDown, Home/End and type-ahead inside a submenu stay inside that submenu and never disturb the
-outer menu's roving highlight. A selection anywhere in the chain closes every level and returns
-focus to the outermost trigger.
+The into-branch and back-out arrow keys swap under RTL. Enter/Space and the into key open and focus
+the first child; the back-out key and Escape close only the innermost branch and return focus to its
+parent row. Pointer hover uses an intent delay, outside pointer dismissal closes the branch, and at
+most one branch per level is open. Selection bubbles as the same single `lr-select`; a non-vetoed
+selection closes the full nested chain.
 
-**Pointer.** Hovering a submenu parent opens its submenu after a short intent delay (150 ms), so
-sweeping the cursor down a list opens nothing; leaving closes it after a deliberately longer one
-(300 ms), which is the tolerance that lets the cursor cut diagonally across the rows in between on
-its way to the panel — and, because the close delay outlasts the open delay, crossing a *sibling*
-submenu parent in transit neither dismisses the open submenu nor opens the sibling's. Hover never
-moves focus — the pointer opens a submenu, it does not claim the keyboard. A pointerdown on the row
-that owns an open submenu is not treated as an outside click. In a test, wait past both delays with
-real timers rather than stubbing them.
+### `lr-dropdown-item`
 
-**Placement and lifecycle.** A submenu prefers the inline-end side of its row, mirrored under RTL
-and flipped to the other side by the positioner when the preferred one would overflow. At most one
-submenu per level is open at a time — moving the roving highlight or the pointer to another row
-closes what the previous one had open — and closing a menu closes everything below it. A disabled
-row never opens its submenu, by keyboard or by pointer.
+The Web Awesome-compatible name for the same item implementation. It shares all menu-item
+properties, slots, parts, methods, checkbox/state events, roving focus, and canonical parent
+`lr-select` behavior. Its host also exposes native, non-bubbling, composed `focus` and `blur`
+events.
 
-**Known gotchas:**
-- A supporting browser reports `trigger.shadowRoot`'s focused control
-  `getAttribute('aria-controls') === ''` after the element-reference relationship is assigned.
-  Inspect `ariaControlsElements` instead. This is the platform's reflected-element-reference
-  contract, not a missing menu id; setting the string again would discard the cross-shadow
-  relationship. Browsers without that API keep the string fallback, and `aria-controls` itself is
-  optional for the menu-button pattern.
-- `.click()` on an `<lr-menu-item>` or `<lr-dropdown-item>` host forwards to its inner visual
-  `[part="base"]`, preserving the same selection, checkbox, and submenu behavior as a pointer
-  activation. Prefer the host `click()` or `select()` in tests and automation rather than reaching
-  into shadow DOM.
-- `lr-show`/`lr-hide` are suppressed on the very first render even if `open` is already `true`
-  in markup — only later `open` transitions fire them.
-- `lr-menu-item-select` carries no detail payload (`event.detail === null`); read
-  `event.target.value` instead. `<lr-menu>`'s own re-fired `lr-menu-select` is the one that
-  carries `detail: { value }`.
-- Tab never calls `preventDefault()` and never traps focus — the browser's own default Tab
-  navigation always proceeds untouched. It closes the menu only when Tab would leave
-  `[part="popup"]` entirely; when the `header`/`footer` region holds a focusable on the far side of
-  the keypress, the menu stays open instead and native Tab moves focus into it. With neither region
-  filled, Tab closes exactly as before.
-- Non-item content in the *default* slot is not Tab-reachable from an item — Tab from an
-  `<lr-menu-item>` still closes the menu when there is no `header`/`footer` focusable to move to,
-  even if a `<button>` is slotted alongside the items. Move such controls to `header`/`footer`.
-- `header`/`footer` emptiness is tracked from each slot's own `slotchange` and reflected on the host
-  as `data-has-header` / `data-has-footer` (plus `data-list-empty`, which suppresses the region
-  divider next to an empty list). They are internal styling hooks, not public API — don't set them
-  by hand — but they are why `[part="header"]`/`[part="footer"]` collapse cleanly: a
-  `[part]:empty` rule can never match a part that contains a slot, since Chromium counts the
-  whitespace-only text nodes Lit leaves there.
-- Only Escape and a committed selection refocus the trigger on close; a click outside does not.
-- A submenu's own `lr-show`/`lr-hide` stop at the `<lr-menu-item>` that owns it and never reach the
-  ancestor menu, where a listener would read them as *that* menu opening or closing. Add the
-  listener to the nested `<lr-menu>` element itself.
-- There is no nested-selection event. `lr-select` and the retained `lr-menu-select` each originate
-  once at the owning menu and bubble through ancestors; listening for a second, deeper name will
-  never fire. Preventing `lr-select` leaves the full chain open.
-- `submenuOpen` is transient state, not persisted: disconnecting an `<lr-menu-item>` (a drag-and-drop
-  reparent, a list re-render) resets it to `false`, so a reconnect never comes back already expanded.
-- The `submenu` slot confers submenu semantics on either one nested `<lr-menu>` or direct
-  `lr-menu-item`/`lr-dropdown-item` children. Other content still renders but gets no submenu
-  semantics.
+`submenuOpen` reflects to canonical `submenu-open`. HTML normalizes Web Awesome's documented
+mixed-case spelling to `submenuopen`, so that lowercase token is a permanent compatibility alias.
+Adding either spelling opens the submenu and synchronizes the other; removing either closes it and
+removes both. Internal close paths — `closeSubmenu()`, Escape, outside dismissal, selection,
+replacement, and disconnect — clear both spellings, preventing a persistent alias from reopening a
+dismissed branch. An authored initial open request remains pending until submenu content connects.
+
+### 9.0 migration
+
+Root overlay behavior moved from `<lr-menu>` to `<lr-dropdown>`. Migrate mechanically:
+
+- Move a former menu `trigger` slot and menu `open`, `placement`, `anchor`, or
+  `close-on-escape-anywhere` policy to an enclosing `<lr-dropdown>`.
+- Replace `menu.show()`/`menu.hide()` and menu `lr-show`/`lr-hide` listeners with the equivalent
+  dropdown APIs/events.
+- Replace `lr-menu-select` (`detail.value`) and `lr-menu-item-select` listeners with one
+  `lr-select` listener on the menu or dropdown and read `event.detail.item`.
+- Replace menu `::part(trigger)`/`::part(popup)` rules with dropdown part styling. Menu
+  `header`/`list`/`footer` parts remain on the semantic controller.
+
+Standalone mapped `<sl-menu>` markup needs no wrapper: the mechanical `sl-` → `lr-` tag rename
+continues to produce an inline menu.
 
 ---

@@ -839,8 +839,18 @@ describe('lr-spreadsheet-viewer', () => {
         sheets: [{ name: 'One', rows: Array.from({ length: 1_001 }, () => ['hit']) }],
       };
       await el.updateComplete;
+      let cappedDetail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { cappedDetail = event.detail; });
       expect(await el.search('hit')).to.equal(1_000);
       expect((el as unknown as { searchMatches: unknown[] }).searchMatches).to.have.lengthOf(1_000);
+      expect(cappedDetail).to.deep.include({ matchCount: 1_000, matchCountExact: false });
+
+      (el as unknown as { fetchState: unknown }).fetchState = {
+        kind: 'loaded',
+        sheets: [{ name: 'One', rows: Array.from({ length: 1_000 }, () => ['hit']) }],
+      };
+      expect(await el.search('hit')).to.equal(1_000);
+      expect(cappedDetail).to.deep.include({ matchCount: 1_000, matchCountExact: true });
     });
 
     it('case-folds with the effective locale and navigates a header match', async () => {
@@ -929,8 +939,8 @@ describe('lr-spreadsheet-viewer', () => {
         await el.search('ada');
         const listener = oneEvent(el, 'lr-search-change');
         el.clearSearch();
-        const event = (await listener) as CustomEvent<{ matchCount: number; activeIndex: number }>;
-        expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+        const event = (await listener) as CustomEvent<{ matchCount: number; matchCountExact: boolean; activeIndex: number }>;
+        expect(event.detail).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
       } finally {
         restore();
       }

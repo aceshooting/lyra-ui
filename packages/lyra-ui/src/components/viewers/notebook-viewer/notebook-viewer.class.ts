@@ -20,6 +20,7 @@ import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_notebookViewerCodeCell, LYRA_DEFAULT_notebookViewerCollapseOutput, LYRA_DEFAULT_notebookViewerErrorOutput, LYRA_DEFAULT_notebookViewerInPrompt, LYRA_DEFAULT_notebookViewerInPromptEmpty, LYRA_DEFAULT_notebookViewerInvalid, LYRA_DEFAULT_notebookViewerLabel, LYRA_DEFAULT_notebookViewerMarkdownCell, LYRA_DEFAULT_notebookViewerRawCell, LYRA_DEFAULT_notebookViewerShowAllOutput, LYRA_DEFAULT_notebookViewerTooManyCells, LYRA_DEFAULT_notebookViewerUnrenderedOutput, LYRA_DEFAULT_notebookViewerUnsupportedVersion } from '../../../internal/default-strings.generated.js';
@@ -175,7 +176,7 @@ export type LyraNotebookViewerSource = LyraViewerSource<NotebookDoc | string>;
 
 export interface LyraNotebookViewerEventMap {
   'lr-load': CustomEvent<{ cellCount: number; language: string }>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
 }
@@ -214,7 +215,8 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  *   language }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
- *   matchCount, activeIndex }`.
+ *   matchCount, matchCountExact, activeIndex }`. Notebook validation caps the corpus at 2,000
+ *   cells and search retains at most one match per cell, so completed counts are exact.
  * @event lr-render-error - Fired when fetching, parsing, or validating the notebook fails.
  *   `detail: { error }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -327,6 +329,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   @state() private activeCellIndex: number | null = null;
   @state() private searchQuery = '';
   @state() private searchMatches: number[] = [];
+  private searchMatchCountExact = true;
   @state() private activeSearchIndex = -1;
   @query('lr-virtual-list') private virtualListEl?: HTMLElement & {
     scrollToIndex(index: number, options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }): void;
@@ -513,9 +516,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     return true;
   }
 
-  /** Case-insensitive substring search over every cell's joined source text and text-bearing
-   *  outputs -- at most one match per cell. Resolves the match count and fires
-   *  `lr-search-change`. */
+  /** Case-insensitive substring search over every accepted cell's joined source text and
+   *  text-bearing outputs -- at most one match per cell. The accepted notebook's 2,000-cell
+   *  validation ceiling is applied before search, so the resolved count and emitted
+   *  `matchCount` are exact. */
   async search(query: string): Promise<number> {
     const q = query.trim().toLocaleLowerCase(this.effectiveLocale);
     this.searchQuery = query;
@@ -570,6 +574,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   private clearSearchState(): void {
     this.searchQuery = '';
     this.searchMatches = [];
+    this.searchMatchCountExact = true;
     this.activeSearchIndex = -1;
   }
 
@@ -586,7 +591,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   private emitSearchChange(): void {
-    this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.activeSearchIndex });
+    this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, matchCountExact: this.searchMatchCountExact, activeIndex: this.activeSearchIndex });
   }
 
   private toggleOutput(index: string): void {
@@ -784,7 +789,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       <div part="cell-gutter">${c.cell_type === 'code' ? inCount : ''}</div>
       <div part="cell-source">
         ${c.cell_type === 'markdown'
-          ? html`<lr-markdown .content=${joinSource(c.source)} escape-html sanitize></lr-markdown>`
+          ? html`<lr-markdown .content=${joinSource(c.source)} html-mode="sanitize"></lr-markdown>`
           : c.cell_type === 'code'
             ? html`<lr-code-block .code=${joinSource(c.source)} language=${this.notebookLanguage()} line-numbers></lr-code-block>`
             : html`<pre part="raw-source" tabindex="0">${joinSource(c.source)}</pre>`}

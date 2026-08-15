@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import "../../forms/input/input.js";
 import { tag } from "../../../internal/prefix.js";
 import "./widget-renderer.js";
-import { createWidgetDocument, type WidgetNode } from "./resolve.js";
+import { createWidgetDocument, type LyraWidgetNode } from "./resolve.js";
 import { createWidgetTypeRegistry } from "./registry.js";
 import type { LyraWidgetRenderer } from "./widget-renderer.js";
 
@@ -14,7 +14,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const dashboard: WidgetNode = {
+const dashboard: LyraWidgetNode = {
   type: "col",
   props: { gap: "m" },
   children: [
@@ -39,7 +39,7 @@ const dashboard: WidgetNode = {
   ],
 };
 const narrowUnbrokenWidgetText = "WidgetPayloadWithoutNaturalBreaks".repeat(10);
-const narrowRtlTree: WidgetNode = {
+const narrowRtlTree: LyraWidgetNode = {
   type: "row",
   props: { gap: "m" },
   children: [
@@ -54,7 +54,7 @@ const narrowRtlTree: WidgetNode = {
   ],
 };
 
-const unsafeTree: WidgetNode = {
+const unsafeTree: LyraWidgetNode = {
   type: "row",
   children: [
     { type: "evil-widget", props: { onclick: "alert(1)" } },
@@ -98,7 +98,7 @@ export const MalformedTreeFailsClosed: Story = {
             renderer.document = createWidgetDocument({
               type: "row",
               children: [null],
-            } as unknown as WidgetNode);
+            } as unknown as LyraWidgetNode);
         }}
       >
         Stream malformed tree

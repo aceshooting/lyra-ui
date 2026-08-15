@@ -153,9 +153,12 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.hasUpdated && this.open) void this.resolve();
   }
 
   override disconnectedCallback(): void {
+    this.generation++;
+    this.renderState = { kind: 'fallback' };
     this.announcements.disconnect();
     super.disconnectedCallback();
   }
@@ -174,17 +177,20 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       }
       return;
     }
-    if (
-      !this.hasUpdated ||
-      changed.has('open') ||
+    const legacyFileChanged = this.payload === undefined && (
       changed.has('name') ||
       changed.has('mimeType') ||
       changed.has('src') ||
-      changed.has('payload') ||
-      changed.has('registry') ||
       changed.has('anchor') ||
       changed.has('highlights') ||
       changed.has('alt')
+    );
+    if (
+      !this.hasUpdated ||
+      changed.has('open') ||
+      changed.has('payload') ||
+      changed.has('registry') ||
+      legacyFileChanged
     ) {
       void this.resolve();
     }
@@ -224,6 +230,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   }
 
   private async resolve(): Promise<void> {
+    if (!this.isConnected || !this.open) return;
     const generation = ++this.generation;
     const file = this.currentFile();
     const registry = this.registry ?? this.builtInRegistry;
@@ -238,7 +245,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     if (!def) {
       this.resolvedLazy = undefined;
       this.renderState = { kind: 'fallback' };
-      this.finishAnchorResult(undefined, file, generation);
+      this.finishAnchorResult(undefined, file, generation, true);
       return;
     }
 
@@ -268,13 +275,13 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     try {
       resolved = await loadDocumentRenderer(def);
     } catch {
-      if (generation === this.generation) {
+      if (generation === this.generation && this.isConnected && this.open) {
         this.renderState = { kind: 'error' };
         this.finishAnchorResult(undefined, file, generation);
       }
       return;
     }
-    if (generation !== this.generation) return;
+    if (generation !== this.generation || !this.isConnected || !this.open) return;
     this.resolvedLazy = { def, resolved };
     const capabilities = this.renderWith(resolved, file);
     if (capabilities === false) {
@@ -287,11 +294,11 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   /** Consumer registries are extension points, so a throwing matcher/renderer must fail like a
    * rejected lazy loader instead of escaping `resolve()` as an unhandled rejection. */
   private failResolution(file: DocumentFile, generation: number): void {
-    if (generation !== this.generation) return;
+    if (generation !== this.generation || !this.isConnected || !this.open) return;
     this.renderState = { kind: 'error' };
     if (file.anchor == null) return;
     this.scheduleAfterUpdate(() => {
-      if (generation !== this.generation) return;
+      if (generation !== this.generation || !this.isConnected || !this.open) return;
       this.emit('lr-anchor-result', { found: false });
     });
   }
@@ -306,14 +313,15 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     capabilities: AnchorTargetCapabilities | undefined,
     file: DocumentFile,
     generation: number,
+    fallback = false,
   ): void {
     if (file.anchor == null) return;
-    if (generation !== this.generation) return;
-    if (!capabilities) {
+    if (generation !== this.generation || !this.isConnected || !this.open) return;
+    if (fallback) {
       this.scheduleAfterUpdate(() => {
         void (async () => {
           const found = (await this.fallbackPreviewEl?.scrollToAnchor(file.anchor!)) ?? false;
-          if (generation !== this.generation) return;
+          if (generation !== this.generation || !this.isConnected || !this.open) return;
           this.emit('lr-anchor-result', { found });
         })();
       });
@@ -321,13 +329,16 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     }
     if (this.isAnchorCapable(capabilities, file.anchor)) return;
     this.scheduleAfterUpdate(() => {
-      if (generation !== this.generation) return;
+      if (generation !== this.generation || !this.isConnected || !this.open) return;
       this.emit('lr-anchor-result', { found: false });
     });
   }
 
-  private isAnchorCapable(capabilities: AnchorTargetCapabilities, anchor: LyraAnchor | string): boolean {
-    const anchors = capabilities.anchors;
+  private isAnchorCapable(
+    capabilities: AnchorTargetCapabilities | undefined,
+    anchor: LyraAnchor | string,
+  ): boolean {
+    const anchors = capabilities?.anchors;
     if (!anchors || anchors.length === 0) return false;
     if (typeof anchor === 'string') return true; // highlight id -- any declared anchor kind implies highlight support
     return anchors.includes(anchor.kind);

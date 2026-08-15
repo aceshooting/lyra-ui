@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 25 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,21 +28,24 @@ also accepted. Live elapsed time and Cancel are available for `running`, `collec
 cancelable. Retry is available for `error` and `cancelled`.
 
 **Properties:**
+
 - `run: AgentRun | null = null` (attribute: false) — **`AgentRun`, imported from
   `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; status: AgentStatus; startedAt?:
-  number; endedAt?: number; model?: string; costEstimate?: number; steps: AgentStep[] }`, where
+number; endedAt?: number; model?: string; costEstimate?: number; steps: AgentStep[] }`, where
   `AgentStatus { kind: AgentStatusKind; message?: string }` and `AgentStep { id: string; kind:
-  string; label: string; status: AgentStatus; startedAt?: number; endedAt?: number }`. All timestamps
+string; label: string; status: AgentStatus; startedAt?: number; endedAt?: number }`. All timestamps
   are epoch milliseconds; `AgentStep.kind` is deliberately free-form (an agent's own step taxonomy is
   application-defined) — unlike `LyraSpan['kind']`'s closed union. Controlled and never mutated —
   pass a new object to update it. `null` renders the shared `lr-empty` `noData` state
 - `metrics: AgentRunMetric[] = []` (attribute: false) — `AgentRunMetric { id: string; label: string;
-  value: string | number; variant?: BadgeVariant }` (exported here), e.g. prompt/completion token
-  counts; `variant` tones `[part="metric-value"]` via `data-variant`
+value: string | number; variant?: BadgeVariant }` (exported here), e.g. prompt/completion token
+  counts; `variant` tones `[part="metric-value"]` via `data-variant`, including the full
+  `neutral`/`brand`/`success`/`warning`/`danger` badge vocabulary. Later duplicate ids are omitted
+  before metric rendering
 - `formatCost?: (cost: number) => string` (attribute: false) — overrides the default plain
   `Intl.NumberFormat` rendering of `run.costEstimate` fed to the composed `lr-usage-badge`'s
   `cost-text`; use it to add a currency symbol, which this library never assumes on a host's behalf
-- `statusLabels: Record<string, string> = {}` (attribute: false) — labels for *application-defined*
+- `statusLabels: Record<string, string> = {}` (attribute: false) — labels for _application-defined_
   `AgentStatusKind` values; the nine built-in kinds stay localized by Lyra
 - `statusVariants: Record<string, BadgeVariant> = {}` (attribute: false) — badge variants for
   application-defined kinds; unknown kinds default to `neutral`
@@ -64,7 +67,7 @@ cancelable. Retry is available for `error` and `cancelled`.
   name for the same union
 
 **Events:** `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
-`@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-retry`
+`@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-run-retry`
 (`detail: RetryEventDetail` = `{ attempt: number; messageId?: string }`, same module — `attempt` is
 this component's own retry counter, reset when `run.id` changes).
 
@@ -83,11 +86,12 @@ current-step icon's rotation duration/timing. `--lr-agent-run-compact-padding` (
 `var(--lr-space-s)`) and `--lr-agent-run-compact-gap` (default `var(--lr-space-s)`) — `[part="base"]`'s
 padding, and the gap between its header and body, while `compact`; both are ignored while `compact`
 is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
-their point of use rather than `:host` declarations, so either can be set on the element *or on any
-ancestor* — one rule on a run list retunes every compact run inside it.
+their point of use rather than `:host` declarations, so either can be set on the element _or on any
+ancestor_ — one rule on a run list retunes every compact run inside it.
 
 **Additional API surface:**
 
+- `--lr-agent-run-metric-brand-color` — Brand metric value. Default: `var(--lr-color-brand)`.
 - `--lr-agent-run-metric-danger-color` — Danger metric value. Default: `var(--lr-color-danger)`.
 - `--lr-agent-run-metric-success-color` — Success metric value. Default: `var(--lr-color-success)`.
 - `--lr-agent-run-metric-warning-color` — Warning metric value. Default: `var(--lr-color-warning)`.

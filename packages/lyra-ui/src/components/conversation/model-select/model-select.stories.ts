@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './model-select.js';
-import type { LyraModelSelect } from './model-select.js';
+import type { LyraCatalog, LyraModelCatalogEntry, LyraModelSelect } from './model-select.js';
 
 const meta: Meta = {
   title: 'ModelSelect',
@@ -11,19 +11,19 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const OLLAMA_CATALOG = ['llama3.1', 'llama3.1:70b', 'mistral', 'qwen2.5-coder'];
+const OLLAMA_CATALOG = ['llama3.1', 'llama3.1:70b', 'mistral', 'qwen2.5-coder'] as const satisfies LyraCatalog;
 const LONG_PROVIDER = `provider-${'unbroken-model-provider-name-'.repeat(12)}`;
 
 const OPENAI_CATALOG = [
   { id: 'gpt-4.1', label: 'GPT-4.1' },
   { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
   { id: 'o3', label: 'o3' },
-];
+] as const satisfies LyraCatalog<LyraModelCatalogEntry>;
 const ICON_CATALOG = [
   { id: 'gpt-4.1', label: 'GPT-4.1', icon: '✦' },
   { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini', icon: '◈' },
   { id: 'o3', label: 'o3', icon: '◆' },
-];
+] as const satisfies LyraCatalog<LyraModelCatalogEntry>;
 
 /** A fixed catalog with `allow-custom` unset renders a plain closed dropdown, like `<lr-select>`. */
 export const ClosedDropdown: Story = {

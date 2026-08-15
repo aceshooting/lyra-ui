@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
+import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
   isAbortError,
   isResourceLimitError,
@@ -42,7 +42,7 @@ export interface ParsedCalendarEvent {
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: string };
 export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
 }
@@ -102,9 +102,9 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
  *
  * @customElement lr-calendar-viewer
  * @event lr-render-error - Fired when fetching or parsing the calendar fails.
- * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
- *   Fired whenever search state changes. `detail: { query: string; matchCount: number;
- *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change - Fired whenever search state
+ *   changes. `matchCountExact=false` makes the retained count a lower bound. Bubbling, composed,
+ *   and non-cancelable.
  * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
  *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
  *   non-cancelable.

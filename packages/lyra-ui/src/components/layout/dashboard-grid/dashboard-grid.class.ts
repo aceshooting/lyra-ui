@@ -602,7 +602,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       renderer.document =
         cell.widget == null
           ? null
-          : Object.freeze(createWidgetDocument(cell.widget));
+          : createWidgetDocument(cell.widget);
     }
   }
 

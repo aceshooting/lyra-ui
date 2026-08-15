@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './token-input.js'; import type { LyraTokenInput, LyraTokenInputSize } from './token-input.class.js';
+import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './token-input.js'; import type { LyraTokenInput } from './token-input.class.js'; import type { LyraSizeStep } from '../../../internal/variants.js';
 const meta: Meta = { title: 'Token Input', component: 'lr-token-input', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
 export const Default: Story = { render: () => html`<lr-token-input label="Recipients" placeholder="Add a recipient…" .value=${['Ada', 'Grace']}></lr-token-input>` };
 
@@ -28,7 +28,7 @@ export const BatchedPaste: Story = {
  */
 export const Sizes: Story = {
   render: () => {
-    const sizes: LyraTokenInputSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    const sizes: LyraSizeStep[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
     return html`
       <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
         ${sizes.map(

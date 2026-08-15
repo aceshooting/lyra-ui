@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 18 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -21,22 +21,25 @@ Composes `lr-provenance-panel` (per-item provenance, behind a disclosure toggle)
 (every confirmation).
 
 **Properties:**
+
 - `shortTerm: LyraMemoryItem[] = []` / `longTerm: LyraMemoryItem[] = []` (both attribute: false) —
   `LyraMemoryItem { id: string; text: string; confidence?: number; provenance?: LyraProvenance }`
   (exported here). `text` renders as plain text. `confidence` is 0–1; omit it and the confidence
   indicator is omitted entirely rather than showing 0%/unknown. `provenance` reuses
   `lr-provenance-panel`'s own `LyraProvenance` shape verbatim (`{ entities?; relationships?;
-  communities?; chunks? }`); omit it and the disclosure toggle is omitted entirely. Both arrays are
+communities?; chunks? }`); omit it and the disclosure toggle is omitted entirely. Both arrays are
   controlled and never mutated here — approving an action only fires the matching event
-- `types: NodeTypeStyle[] = []` (attribute: false) — `{ id: string; label: string; color?: string;
-  shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded item's
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — readonly `{ id: string; label: string; color?: string;
+shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded item's
   `lr-provenance-panel`
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   confidence-tier boundaries (reusing `lr-citation-badge`'s high/medium/low confidence vocabulary and
   success/warning/danger tones), also forwarded as the provenance relevance tiers
-- `label: string = ''` — overall accessible label override
+- `label: string = ''` — fallback name for the stable overall group. A non-empty host `aria-label`
+  makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:**
+
 - `lr-add` (`detail: LyraMemoryAddDetail` = `{ item: LyraMemoryItem }`) — a pending "promote to
   long-term" was approved; the short-term item as-is. Only offered on short-term items.
 - `lr-remove` (`detail: LyraMemoryRemoveDetail` = `{ id: string; scope: 'short-term' | 'long-term' }`)
@@ -76,6 +79,7 @@ its score bar). Plus shared tokens otherwise.
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - At most one confirmation is pending at a time — starting a new action (same item or not) silently
   cancels whichever confirmation was already open.
 - `remove` (one item, either list) and `forget` (the whole long-term list) are deliberately distinct

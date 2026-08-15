@@ -15,6 +15,7 @@ import {
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './chip.styles.js';
@@ -29,6 +30,15 @@ export type ChipVariant = LyraVariant;
 /** The shared six-step ladder plus one step below it: a chip is the library's smallest labelled
  *  surface and needs a tier that fits inside a table cell, which no other component does. */
 export type ChipSize = LyraSizeStep | '3xs';
+
+const CHIP_SIZE = literalSetConverter<ChipSize>(
+  ['3xs', '2xs', 'xs', 's', 'm', 'l', 'xl'],
+  'm',
+);
+const CHIP_VARIANT = literalSetConverter<ChipVariant>(
+  ['neutral', 'brand', 'success', 'warning', 'danger'],
+  'neutral',
+);
 
 export interface ChipRemoveDetail {
   value?: string;
@@ -204,11 +214,37 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   static override styles = [LyraElement.styles, variants, styles];
 
-  /** Visual density. `m` preserves the original chip dimensions. */
-  @property({ reflect: true }) size: ChipSize = 'm';
+  /** Visual density. `m` preserves the original chip dimensions and is the fallback for
+   *  unsupported values. */
+  private _size: ChipSize = 'm';
 
-  /** Status/emphasis color. `neutral` (the default) reads as plain/unstyled. */
-  @property({ reflect: true }) variant: ChipVariant = 'neutral';
+  @property({ reflect: true, converter: CHIP_SIZE })
+  get size(): ChipSize {
+    return this._size;
+  }
+  set size(next: ChipSize) {
+    const normalized = CHIP_SIZE.normalizeReflected(this, 'size', next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
+
+  /** Status/emphasis color. `neutral` (the default and unsupported-value fallback) reads as
+   *  plain/unstyled. */
+  private _variant: ChipVariant = 'neutral';
+
+  @property({ reflect: true, converter: CHIP_VARIANT })
+  get variant(): ChipVariant {
+    return this._variant;
+  }
+  set variant(next: ChipVariant) {
+    const normalized = CHIP_VARIANT.normalizeReflected(this, 'variant', next);
+    const old = this._variant;
+    if (old === normalized) return;
+    this._variant = normalized;
+    this.requestUpdate('variant', old);
+  }
 
   /** Shows the remove (×) button. */
   @property({ type: Boolean, reflect: true }) removable = false;

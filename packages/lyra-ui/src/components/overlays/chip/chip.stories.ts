@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A small, content-agnostic pill for a short label — a tag, an active-filter/scope indicator, etc. Distinct from `<lr-attachment-chip>` (specifically file-shaped). Controlled: the `removable` (×) button only fires `lr-remove` — the chip never removes itself.',
+          'A small, content-agnostic pill for a short label — a tag, an active-filter/scope indicator, etc. Distinct from `<lr-attachment-chip>` (specifically file-shaped). Controlled: the `removable` (×) button only fires `lr-remove` — the chip never removes itself. Unsupported `size`/`variant` values normalize to reflected `m`/`neutral`.',
       },
     },
   },

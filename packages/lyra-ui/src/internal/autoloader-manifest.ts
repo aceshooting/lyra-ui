@@ -34,7 +34,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/agent-tools/agent-trace/agent-trace.class.js').then((module) => module.LyraAgentTrace),
   },
   'lr-agent-workspace': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
     load: () => import('../components/conversation/agent-workspace/agent-workspace.class.js').then((module) => module.LyraAgentWorkspace),
   },
   'lr-alert': {
@@ -226,7 +226,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/forms/combobox/combobox.class.js').then((module) => module.LyraCombobox),
   },
   'lr-command-palette': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify'],
     load: () => import('../components/layout/command-palette/command-palette.class.js').then((module) => module.LyraCommandPalette),
   },
   'lr-commit-card': {
@@ -240,6 +240,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-compare-panel': {
     optionalPeers: [],
     load: () => import('../components/agent-tools/compare-panel/compare-panel.class.js').then((module) => module.LyraComparePanel),
+  },
+  'lr-condition-builder': {
+    optionalPeers: ['dompurify'],
+    load: () => import('../components/data/condition-builder/condition-builder.class.js').then((module) => module.LyraConditionBuilder),
   },
   'lr-confirm-bar': {
     optionalPeers: [],
@@ -274,7 +278,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/viewers/csv-viewer/csv-viewer.class.js').then((module) => module.LyraCsvViewer),
   },
   'lr-dashboard-grid': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
     load: () => import('../components/layout/dashboard-grid/dashboard-grid.class.js').then((module) => module.LyraDashboardGrid),
   },
   'lr-data-grid': {
@@ -394,11 +398,11 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/agent-tools/eval-dataset/eval-dataset.class.js').then((module) => module.LyraEvalDataset),
   },
   'lr-eval-result': {
-    optionalPeers: [],
+    optionalPeers: ['shiki'],
     load: () => import('../components/agent-tools/eval-result/eval-result.class.js').then((module) => module.LyraEvalResult),
   },
   'lr-evaluation-run': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
     load: () => import('../components/agent-tools/evaluation-run/evaluation-run.class.js').then((module) => module.LyraEvaluationRun),
   },
   'lr-export-button': {
@@ -469,6 +473,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: ['maplibre-gl'],
     load: () => import('../components/viewers/geojson-view/geojson-view.class.js').then((module) => module.LyraGeojsonView),
   },
+  'lr-geojson-viewer': {
+    optionalPeers: ['maplibre-gl'],
+    load: () => import('../components/viewers/geojson-view/geojson-viewer.class.js').then((module) => module.LyraGeoJsonViewer),
+  },
   'lr-graph': {
     optionalPeers: ['d3-drag', 'd3-force', 'd3-selection', 'd3-zoom'],
     load: () => import('../components/retrieval/graph/graph.class.js').then((module) => module.LyraGraph),
@@ -510,7 +518,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/utility/icon/icon.class.js').then((module) => module.LyraIcon),
   },
   'lr-icon-button': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify'],
     load: () => import('../components/forms/icon-button/icon-button.class.js').then((module) => module.LyraIconButton),
   },
   'lr-image-comparer': {
@@ -578,7 +586,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/utility/live-region/live-region.class.js').then((module) => module.LyraLiveRegion),
   },
   'lr-locale-picker': {
-    optionalPeers: [],
+    optionalPeers: ['@aceshooting/lyra-flags'],
     load: () => import('../components/forms/locale-picker/locale-picker.class.js').then((module) => module.LyraLocalePicker),
   },
   'lr-map': {
@@ -645,6 +653,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/conversation/model-settings-panel/model-settings-panel.class.js').then((module) => module.LyraModelSettingsPanel),
   },
+  'lr-multi-split': {
+    optionalPeers: [],
+    load: () => import('../components/layout/multi-split/multi-split.class.js').then((module) => module.LyraMultiSplit),
+  },
   'lr-mutation-observer': {
     optionalPeers: [],
     load: () => import('../components/utility/mutation-observer/mutation-observer.class.js').then((module) => module.LyraMutationObserver),
@@ -662,7 +674,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/retrieval/node-palette/node-palette.class.js').then((module) => module.LyraNodePalette),
   },
   'lr-notebook-viewer': {
-    optionalPeers: ['dompurify'],
+    optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
     load: () => import('../components/viewers/notebook-viewer/notebook-viewer.class.js').then((module) => module.LyraNotebookViewer),
   },
   'lr-number-input': {
@@ -708,10 +720,6 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
   'lr-pie-chart': {
     optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/pie-chart.class.js').then((module) => module.LyraPieChart),
-  },
-  'lr-sequence-playback': {
-    optionalPeers: [],
-    load: () => import('../components/media/sequence-playback/sequence-playback.class.js').then((module) => module.LyraSequencePlayback),
   },
   'lr-polar-area-chart': {
     optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
@@ -769,10 +777,6 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: ['qrcode'],
     load: () => import('../components/media/qr-code/qr-code.class.js').then((module) => module.LyraQrCode),
   },
-  'lr-condition-builder': {
-    optionalPeers: [],
-    load: () => import('../components/data/condition-builder/condition-builder.class.js').then((module) => module.LyraConditionBuilder),
-  },
   'lr-radar-chart': {
     optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/radar-chart.class.js').then((module) => module.LyraRadarChart),
@@ -790,7 +794,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/forms/radio/radio-group.class.js').then((module) => module.LyraRadioGroup),
   },
   'lr-rag-answer': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
     load: () => import('../components/retrieval/rag-answer/rag-answer.class.js').then((module) => module.LyraRagAnswer),
   },
   'lr-rag-eval-dashboard': {
@@ -881,6 +885,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/conversation/selection-toolbar/selection-toolbar.class.js').then((module) => module.LyraSelectionToolbar),
   },
+  'lr-sequence-playback': {
+    optionalPeers: [],
+    load: () => import('../components/media/sequence-playback/sequence-playback.class.js').then((module) => module.LyraSequencePlayback),
+  },
   'lr-sequence-strip': {
     optionalPeers: [],
     load: () => import('../components/data/sequence-strip/sequence-strip.class.js').then((module) => module.LyraSequenceStrip),
@@ -917,10 +925,6 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/overlays/spinner/spinner.class.js').then((module) => module.LyraSpinner),
   },
-  'lr-split': {
-    optionalPeers: [],
-    load: () => import('../components/layout/split/split.class.js').then((module) => module.LyraSplit),
-  },
   'lr-split-panel': {
     optionalPeers: [],
     load: () => import('../components/layout/split-panel/split-panel.class.js').then((module) => module.LyraSplitPanel),
@@ -946,7 +950,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/conversation/stream-status/stream-status.class.js').then((module) => module.LyraStreamStatus),
   },
   'lr-streaming-text': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify', 'katex', 'marked', 'shiki'],
     load: () => import('../components/conversation/streaming-text/streaming-text.class.js').then((module) => module.LyraStreamingText),
   },
   'lr-subagent-panel': {
@@ -1102,11 +1106,11 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/conversation/usage-badge/usage-badge.class.js').then((module) => module.LyraUsageBadge),
   },
   'lr-video': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify'],
     load: () => import('../components/media/video/video.class.js').then((module) => module.LyraVideo),
   },
   'lr-video-playlist': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify'],
     load: () => import('../components/media/video-playlist/video-playlist.class.js').then((module) => module.LyraVideoPlaylist),
   },
   'lr-virtual-list': {

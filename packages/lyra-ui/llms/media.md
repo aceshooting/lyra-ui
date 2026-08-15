@@ -351,7 +351,8 @@ exists and was hit)
 and the overlay is bounded to the map allocation with scrolling and long-label wrapping.
 `legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
 stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
-`popup-close-button` is the generated close control on an open marker popup. `error` is ordinary localized visible
+`marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic
+content size. `popup-close-button` is the generated close control on an open marker popup. `error` is ordinary localized visible
 text rendered in place of `container` for four distinct states: explicit style required, optional
 peer unavailable, owner-realm WebGL2 unavailable, or initialization failed. A post-mount failure is
 appended to the document's pre-mounted `[data-lr-live-region="assertive"]` sink rather than making
@@ -1284,6 +1285,8 @@ typical host response is opening `<lr-push-to-talk>` in an overlay, then handing
 blob to `<lr-attachment-chip>`). `focus`/`blur` from the active single- or multi-capability trigger
 are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
 `relatedTarget`), followed by `lr-focus`/`lr-blur`; the hidden file input is not the focus owner.
+The composed dropdown/menu implementation lifecycle, item-state, and selection events are
+contained inside the trigger. Only the attachment events listed above cross the host boundary.
 
 **Slots:** none — capabilities are configured entirely via the `capabilities` prop.
 
@@ -1824,7 +1827,7 @@ same pan/zoom surface — `rotation: LyraImageRotation = 0 | 90 | 180 | 270` (re
 writes round to the nearest right angle and wrap), and `annotatable: boolean = false` (reflected).
 `LyraImageRegionRect` is the public `{ x, y, width, height }` percentage-coordinate shape. The
 inherited anchor-target surface is
-`highlights: LyraHighlight[] = []` (property only; reassign after mutation),
+`highlights: readonly LyraHighlight[] = []` (property only; assign a new collection to update),
 `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
 `anchorKinds: readonly LyraAnchorKind[] = ['region']`.
@@ -1927,12 +1930,14 @@ consumer supplies `cues` directly.
 (attribute-backed auto-detection override), `mimeType: string = ''` (attribute `mime-type`), `poster: string =
 ''`, `loop: boolean = false`, `muted: boolean = false`, `preload: 'none' | 'metadata' | 'auto' =
 'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected),
+`volume: number = 1` (attribute `volume`, reflected; normalized to `0..1`),
 `rates: readonly number[] = [0.75, 1, 1.25, 1.5, 2]` (attribute: false),
 `cues: readonly LyraAvCue[] = []` (attribute: false), `peaks: readonly number[] = []`
 (attribute: false), and `tracks: readonly LyraAvTrack[] = []` (attribute: false). Each collection is
-normalized into a bounded, cloned, frozen snapshot; mutate by assigning a new collection. The inherited
-anchor-target surface is `highlights: LyraHighlight[] = []` (property only; reassign after
-mutation), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
+normalized synchronously on assignment into a bounded, cloned, frozen snapshot; mutate by assigning a
+new collection. The inherited
+anchor-target surface is `highlights: readonly LyraHighlight[] = []` (property only; assign a new
+collection to update), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
 `anchorKinds: readonly LyraAnchorKind[] = ['time-range']`.
 `LyraAvCue = { readonly id, readonly start, readonly end?, readonly text, readonly speaker? }`;
@@ -2251,3 +2256,320 @@ records the stopped state but never changes selection; recovery and retry remain
   </lr-video>
 </lr-video-playlist>
 ```
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-media-animation-animation-catalog-contracts`** — Supporting data types and helpers for this component family.
+  `getAnimationNames(): unknown`
+  `getEasingNames(): unknown`
+
+- **`components-media-attachment-chip-attachment-chip-contracts`** — Supporting data types and helpers for this component family.
+  `LyraAttachmentIdDetail {
+    attachmentId: unknown;
+  }`
+  `LyraAttachmentPreviewRequestDetail {
+    name: unknown;
+    mimeType: unknown;
+    src: unknown;
+    attachmentId: unknown;
+  }`
+
+- **`components-media-attachment-trigger-attachment-trigger-contracts`** — Supporting data types and helpers for this component family.
+  `LyraAttachmentFilesDetail {
+    capability: unknown;
+    files: unknown;
+  }`
+
+- **`components-media-av-player-av-metadata-contracts`** — Supporting data types and helpers for this component family.
+  `LyraAvCue {
+    id: unknown;
+    start: unknown;
+    end: unknown;
+    text: unknown;
+    speaker: unknown;
+  }`
+  `LyraAvTrack {
+    src: unknown;
+    kind: unknown;
+    srclang: unknown;
+    label: unknown;
+    default: unknown;
+  }`
+
+- **`components-media-av-player-av-player-contracts`** — Supporting data types and helpers for this component family.
+  `LyraAvCueChangeDetail {
+    cueId: unknown;
+    index: unknown;
+  }`
+
+- **`components-media-avatar-group-avatar-group-contracts`** — Supporting data types and helpers for this component family.
+  `LyraAvatarGroupOverflowDetail {
+    hiddenCount: unknown;
+    hiddenAvatars: unknown;
+  }`
+
+- **`components-media-avatar-avatar-contracts`** — Supporting data types and helpers for this component family.
+  `LyraAvatarErrorDetail {
+    image: unknown;
+  }`
+
+- **`components-media-file-icon-file-type-metadata-contracts`** — Supporting data types and helpers for this component family.
+  `createFileTypeMetadataRegistry(/* public names: entries */): unknown`
+  `getFileTypeMetadata(/* public names: mimeType, fileName */): unknown`
+  `LyraFileTypeMetadataEntry {
+    mimeTypes: unknown;
+    metadata: unknown;
+  }`
+  `LyraFileTypeMetadata {
+    label: unknown;
+    description: unknown;
+    icon: unknown;
+    category: unknown;
+    extensions: unknown;
+  }`
+  `LyraFileTypeMetadataRegistry {
+    resolve: unknown;
+    mimeType: unknown;
+    fileName: unknown;
+  }`
+  `LyraResolvedFileTypeMetadata {
+    provenance: unknown;
+    label: unknown;
+    description: unknown;
+    icon: unknown;
+    category: unknown;
+    extensions: unknown;
+  }`
+
+- **`components-media-file-input-file-input-contracts`** — Supporting data types and helpers for this component family.
+  `LyraFileInputFilesDetail {
+    files: unknown;
+    rejected: unknown;
+  }`
+  `LyraFileInputObjectValidator {
+    observedAttributes: unknown;
+    checkValidity: unknown;
+    input: unknown;
+    message: unknown;
+  }`
+  `LyraFileInputObjectValidatorResult {
+    message: unknown;
+    isValid: unknown;
+    invalidKeys: unknown;
+  }`
+  `LyraFileInputRejectedFile {
+    file: unknown;
+    reason: unknown;
+  }`
+
+- **`components-media-flag-flag-peer-contracts`** — Supporting data types and helpers for this component family.
+  `registerLyraFlagPeer(): unknown`
+
+- **`components-media-flag-flag-contracts`** — Supporting data types and helpers for this component family.
+  `loadFlagUrl(/* public names: importFlags */): unknown`
+  `setFlagUrlResolver(/* public names: value */): unknown`
+
+- **`components-media-flag-language-map-contracts`** — Supporting data types and helpers for this component family.
+  `languageToCountry(/* public names: language */): unknown`
+  `localeNativeName(/* public names: tag */): unknown`
+
+- **`components-media-image-viewer-image-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `LyraImageRegionRect {
+    x: unknown;
+    y: unknown;
+    width: unknown;
+    height: unknown;
+  }`
+
+- **`components-media-lightbox-lightbox-contracts`** — Supporting data types and helpers for this component family.
+  `LyraLightboxHideDetail {
+    source: unknown;
+  }`
+  `LyraLightboxImage {
+    src: unknown;
+    alt: unknown;
+    caption: unknown;
+  }`
+
+- **`components-media-map-map-loader-contracts`** — Supporting data types and helpers for this component family.
+  `loadMaplibre(): unknown`
+  `MapLibreGeoJsonSource {
+    setData: unknown;
+    data: unknown;
+  }`
+  `MapLibreMapCapability {
+    getCanvas: unknown;
+    getCenter: unknown;
+    lng: unknown;
+    lat: unknown;
+    getZoom: unknown;
+    setCenter: unknown;
+    center: unknown;
+    setZoom: unknown;
+    zoom: unknown;
+    resize: unknown;
+    remove: unknown;
+    on: unknown;
+    type: unknown;
+    listener: unknown;
+    event: unknown;
+    error: unknown;
+    point: unknown;
+    lngLat: unknown;
+    once: unknown;
+    setStyle: unknown;
+    style: unknown;
+    getSource: unknown;
+    id: unknown;
+    addSource: unknown;
+    source: unknown;
+    removeSource: unknown;
+    getLayer: unknown;
+    addLayer: unknown;
+    layer: unknown;
+    removeLayer: unknown;
+    setPaintProperty: unknown;
+    layerId: unknown;
+    name: unknown;
+    value: unknown;
+    queryRenderedFeatures: unknown;
+    options: unknown;
+    layers: unknown;
+  }`
+  `MapLibreMarkerCapability {
+    setLngLat: unknown;
+    lngLat: unknown;
+    setPopup: unknown;
+    popup: unknown;
+    getPopup: unknown;
+    addTo: unknown;
+    map: unknown;
+    remove: unknown;
+    getElement: unknown;
+  }`
+  `MaplibreModule {
+    Map: unknown;
+    Marker: unknown;
+    color: unknown;
+    Popup: unknown;
+    offset: unknown;
+  }`
+  `MapLibrePopupCapability {
+    setHTML: unknown;
+    html: unknown;
+    setText: unknown;
+    text: unknown;
+    on: unknown;
+    type: unknown;
+    listener: unknown;
+    isOpen: unknown;
+    getElement: unknown;
+  }`
+
+- **`components-media-map-map-contracts`** — Supporting data types and helpers for this component family.
+  `LyraMapChoroplethLayer {
+    sourceId: unknown;
+    geojson: unknown;
+    field: unknown;
+    stops: unknown;
+  }`
+  `LyraMapGeoJsonDataLayer {
+    sourceId: unknown;
+    geojson: unknown;
+    tone: unknown;
+  }`
+  `LyraMapInstance {
+    getCanvas: unknown;
+    getCenter: unknown;
+    lng: unknown;
+    lat: unknown;
+    getZoom: unknown;
+    setCenter: unknown;
+    center: unknown;
+    setZoom: unknown;
+    zoom: unknown;
+    resize: unknown;
+  }`
+  `LyraMapLegendEntry {
+    color: unknown;
+    label: unknown;
+    pattern: unknown;
+  }`
+  `LyraMapLegendProjection {
+    inputCount: unknown;
+    renderedCount: unknown;
+    omittedCount: unknown;
+    truncatedLabelCount: unknown;
+    truncated: unknown;
+  }`
+  `LyraMapMarker {
+    id: unknown;
+    lngLat: unknown;
+    color: unknown;
+    label: unknown;
+    unsafeHtml: unknown;
+  }`
+  `LyraMapStyleSpecification {
+    version: unknown;
+    sources: unknown;
+    layers: unknown;
+    name: unknown;
+    sprite: unknown;
+    id: unknown;
+    url: unknown;
+    glyphs: unknown;
+  }`
+
+- **`components-media-media-card-media-card-contracts`** — Supporting data types and helpers for this component family.
+  `LyraMediaCardOpenDetail {
+    src: unknown;
+    filename: unknown;
+  }`
+
+- **`components-media-sequence-playback-sequence-playback-contracts`** — Supporting data types and helpers for this component family.
+  `LyraSequencePlaybackStepDetail {
+    currentIndex: unknown;
+  }`
+
+- **`components-media-video-playlist-video-playlist-contracts`** — Supporting data types and helpers for this component family.
+  `LyraVideoPlaylistChangeDetail {
+    previousIndex: unknown;
+    currentIndex: unknown;
+    video: unknown;
+  }`
+  `LyraVideoPlaylistItem {
+    title: unknown;
+    poster: unknown;
+    duration: unknown;
+    unavailable: unknown;
+  }`
+  `LyraVideoPlaylistSource {
+    src: unknown;
+    type: unknown;
+    media: unknown;
+  }`
+  `LyraVideoPlaylistTrack {
+    src: unknown;
+    kind: unknown;
+    srclang: unknown;
+    label: unknown;
+    default: unknown;
+  }`
+  `LyraVideoPlaylistVideo {
+    title: unknown;
+    poster: unknown;
+    sources: unknown;
+    tracks: unknown;
+  }`
+
+- **`components-media-video-video-contracts`** — Supporting data types and helpers for this component family.
+  `VideoState {
+    playing: unknown;
+    currentTime: unknown;
+    duration: unknown;
+    volume: unknown;
+    muted: unknown;
+    playbackRate: unknown;
+  }`

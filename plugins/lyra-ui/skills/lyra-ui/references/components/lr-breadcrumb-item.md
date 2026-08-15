@@ -30,7 +30,8 @@ explicitly empty `aria-label=""`, which stays empty rather than falling back).
 non-link form; assigning `undefined` clears it and reads back as the canonical `''`),
 `target?: string`, and `current: boolean = false` (reflected — renders a
 `<span aria-current="page">` instead of an `<a>`, even when `href` is set). A target derives
-`rel="noopener noreferrer"`; there is intentionally no independently settable `rel`. Each item
+the mandatory `noopener noreferrer` floor. `rel: string = 'noreferrer noopener'` is independently
+settable: author tokens are preserved, `opener` is stripped, and any target force-adds the floor. Each item
 sets `role="listitem"` on itself. A non-current item without `href` renders a native button. A host
 `aria-label` is forwarded to either non-current native owner by attribute presence, including an
 explicitly empty value; when absent, the default slot supplies its name.
@@ -38,17 +39,26 @@ explicitly empty value; when absent, the default slot supplies its name.
 **`lr-breadcrumb-item` methods:** `click(): void` activates the internal native link or button. It
 is a no-op for the current-page label.
 
+Changing `href` or `current` while that native owner has focus transfers focus across the link,
+button, and programmatically focusable current-page label. External focus is preserved.
+
 **Slots:** breadcrumb's default slot takes `lr-breadcrumb-item` children and its `separator` slot is
 copied to every item without an item-level override. Both breadcrumb and item `separator` slots are
 decorative-only: their rendered content is inert and hidden from assistive technology, so it must not
 provide interactive behavior, a focus target, or form state. Generated shared copies omit identifiers,
-ID-reference relationships, form associations, and submission attributes. An item's default slot is
+ID-reference relationships, form associations, and submission attributes. Source text, attributes,
+and compatible subtrees update live; identity-compatible clone nodes are patched in place instead of
+being disconnected and recreated. The first owned breadcrumb item is determined independently of
+separator sources or other auxiliary siblings, so it never renders a leading separator. An item's default slot is
 its label; `start`/`prefix` and `end`/`suffix` are the two upstream adornment vocabularies, and
 `separator` overrides the `/` fallback.
 
 **CSS parts:** breadcrumb `base` and `breadcrumb` are aliases on the same `<nav>`; `list` is the
-`role="list"` flex row wrapping the slotted items; item `base` (the `<a>` or `<span>`), `label`,
+`role="list"` flex row wrapping the slotted items; item `base` (the `<a>`, `<button>`, or current
+`<span>`), `label`,
 `separator`, and the alias pairs `start`/`prefix` and `end`/`suffix`.
+Interactive link/button bases retain a 24px minimum target in both axes even with empty content;
+the inert current-page label remains content-sized.
 
 **Themeable custom properties:** `--lr-breadcrumb-current-color` (default
 `var(--lr-color-text-quiet)`) — text color of the current-page item (`current`/`aria-current="page"`).

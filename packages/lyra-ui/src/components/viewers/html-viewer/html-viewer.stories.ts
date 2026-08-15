@@ -2,7 +2,12 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './html-viewer.js';
 
-const meta: Meta = { title: 'DocumentViewer/HtmlViewer', component: 'lr-html-viewer', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'DocumentViewer/HtmlViewer',
+  component: 'lr-html-viewer',
+  tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'A nonempty host `aria-label` is the sole named semantic owner. With an absent or explicitly empty host label, the loaded shadow document owns the fallback or empty name.' } } },
+};
 export default meta;
 type Story = StoryObj;
 

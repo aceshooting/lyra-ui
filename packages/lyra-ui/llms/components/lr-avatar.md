@@ -15,10 +15,9 @@
 
 ## `lr-avatar`
 
-A small, fixed-size identity marker: default-slotted icon/glyph content, an image, an
-`icon`-slotted fallback glyph, or a fallback of initials text — in that priority order, whichever is
-set takes over from the next. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initials`, `loading`,
-`shape`, the `icon` slot, the image-load error event) and adds this library's shared `size` and
+A small, fixed-size identity marker: an image, an `icon`-slotted fallback glyph, or initials — in
+that priority order. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initials`, `loading`, `shape`, the
+named `icon` slot, label and image-load error event) and adds this library's shared `size` and
 `variant` vocabulary. Purely presentational, with no built-in interactivity; wrap it in a
 `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
@@ -26,32 +25,24 @@ set takes over from the next. Mirrors `wa-avatar` / `sl-avatar` (`image`, `initi
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no glyph and no
   image is set, or the image fails to load and no `icon` slot content is provided.
 - `image: string = ''` — image URL; takes priority over the `icon` slot and `initials` when set and
-  loads successfully (but never over default-slotted glyph content), falling back to them on a load
+  loads successfully, falling back to them on a load
   error. **Renamed from `src` in 8.0.0** to match `wa-avatar`: a mechanical `wa-` → `lr-` rename
   used to leave the property unset, so a migrated avatar silently dropped its photo and rendered
   initials instead.
-- `label: string = ''` — upstream-compatible accessible description. A host `aria-label` wins,
-  followed by `label`, then the older `alt` compatibility property.
-- `alt: string = ''` — compatibility image alt text; set alongside `image` for accessibility, and also the source
-  of the accessible name for the glyph and initials cases (the glyph is `aria-hidden`, and the
-  initials text is hidden from AT once `alt` supplies a name, so `[part="base"]` carries
-  `role="img"` + that name instead).
-- host `aria-label` — overrides `alt` as the image/fallback accessible name without changing the
+- `label: string = ''` — upstream-compatible accessible description. A host `aria-label` wins.
+  The same resolved name reaches the image `alt` and every fallback tier.
+- host `aria-label` — overrides `label` as the image/fallback accessible name without changing the
   visible initials or image
 - `loading: 'eager' | 'lazy' = 'eager'` (new in 8.0.0) — passthrough to the rendered `<img>`'s
   native `loading` attribute. `'lazy'` defers the request until the avatar approaches the viewport,
   which is worth setting for avatars far down a long list and never for one above the fold. It only
   reaches the DOM while the image tier is the one rendering; the default matches the native default,
   so an avatar that never sets it behaves exactly as it did before the property existed.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg'
-  = 'medium'` (reflected) — the library's shared six-step ladder, in either the `s`/`m`/`l` or the
-  `small`/`medium`/`large` spelling, plus this component's own older `sm`/`md`/`lg` shorthands.
-  Every one of the six tiers renders a distinct diameter — 1rem (`2xs`), 1.25rem (`xs`), 1.5rem
-  (`s`/`small`/`sm`), 2rem (`m`/`medium`/`md`, the default), 2.5rem (`l`/`large`/`lg`, which matches
-  `--lr-icon-button-size`), 3rem (`xl`) — and the initials font size steps alongside it. The three
-  spellings of a tier render identically, and the attribute reflects back whichever one was set
-  (`size="lg"` stays `"lg"`). **8.0.0 widened this from `sm`/`md`/`lg` to the full shared ladder**
-  and made `medium` the default.
+- `size: LyraSize = 'medium'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
+  'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
+  (`xs`), 2.5rem (`s`/`small`), 3rem (`m`/`medium`, the mirrored default), 4rem (`l`/`large`,
+  matching `--lr-icon-button-size`), and 5rem (`xl`). Invalid and removed `sm`/`md`/`lg` writes
+  normalize to `medium`.
 - `shape: 'circle' | 'rounded' | 'square' = 'circle'` (reflected) — three distinct corner radii:
   `circle` (the pill radius), `rounded` (the shared `--lr-radius`), `square` (no radius at all).
   **`rounded` is new in 8.0.0.**
@@ -66,25 +57,19 @@ composed, non-cancelable, and purely informational: by the time it fires the ava
 fallen back to the `icon` slot or the initials on its own. It never fires for an avatar with no
 `image` set, and fires once more for each replacement `image` that also fails.
 
-**Slots:** default slot — icon/glyph content (e.g. an inline SVG or non-whitespace text/emoji),
-shown in place of the image and initials, e.g. to mark a chat avatar as "AI" vs. "user" with a role
-glyph. Takes priority over `image`, the `icon` slot, and `initials`. `icon` (new in 8.0.0) — a
-fallback glyph shown only when there is no default-slotted content and no loadable `image`; that is
+**Slots:** `icon` — a
+fallback glyph shown only when there is no loadable `image`; that is
 the role `wa-avatar`'s `icon` slot fills, a stand-in for the `initials` text rather than an override
-of the photo. Content in either slot is treated as decorative (`aria-hidden`) — set `alt` alongside
-it for an accessible name.
+of the photo. Its content is decorative (`aria-hidden`) — set `label` alongside it for an
+accessible name. There is no default slot.
 
-**CSS parts:** `base` (the outer circle/rounded/square container), `icon` (wrapper around whichever
-glyph slot is currently winning the fallback order — both slots stay mounted so their `slotchange`
-handlers keep firing, so this wrapper carries the native `hidden` attribute whenever no glyph is the
-winning tier: with neither slot filled, and equally while a loadable `image` is showing over
-icon-slot content), `image` (the `<img>`, only rendered while `image` is set, hasn't failed to load, and no
-default-slot glyph is provided), `initials` (the initials text, only rendered once every glyph and
-image tier ahead of it in the priority order has been ruled out).
+**CSS parts:** `base` (the outer circle/rounded/square container), `icon` (wrapper around the named
+fallback slot while it is the winning tier), `image` (the `<img>`, only while a safe, non-failed
+`image` is usable), and `initials` (only once the image and icon tiers are unavailable).
 
 **Themeable custom properties:** `--size` is the upstream-compatible diameter and falls back to
-`--lr-avatar-size` (default `var(--lr-size-2rem)`, stepped across
-the ladder from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl` — every spelling of
+`--lr-avatar-size` (default `var(--lr-size-3rem)`, stepped across
+the ladder from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl` — every spelling of
 a tier selects the same declarations), `--lr-avatar-bg` (default `var(--lr-color-border)`, swapped
 per non-neutral `variant` to that variant's `-quiet` fill; there is no `--lr-color-surface-alt`
 token in this library, despite what older copies of this page claimed), `--lr-avatar-color`
@@ -104,13 +89,13 @@ variant's quiet tint.
 
 ```html
 <lr-avatar initials="JS" variant="brand"></lr-avatar>
-<lr-avatar image="/users/42/photo.jpg" alt="Jane Smith" size="large" shape="rounded"></lr-avatar>
-<lr-avatar alt="Assistant"><svg viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
+<lr-avatar image="/users/42/photo.jpg" label="Jane Smith" size="large" shape="rounded"></lr-avatar>
+<lr-avatar label="Assistant"><svg slot="icon" viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
 
 <!-- Far down a long list: defer the request, fall back to a glyph, and report a broken URL. -->
 <lr-avatar
   image="/users/7/photo.jpg"
-  alt="Ada Lovelace"
+  label="Ada Lovelace"
   loading="lazy"
   @lr-error=${(e) => reportBrokenAvatar(e.detail.image)}
 >
@@ -119,16 +104,14 @@ variant's quiet tint.
 ```
 
 **Known gotchas:**
-- a leftover `src="…"` from a pre-8.0.0 avatar is now inert: nothing errors, the attribute is simply
-  not observed, and the avatar renders the `icon` slot or the initials as though no image were set.
-  Grep migrated markup for `<lr-avatar` carrying `src`, and rename it to `image`. A leftover
-  `tone="…"` fails the same silent way — rename it to `variant`.
+- additive `alt`, default glyph content and `sm`/`md`/`lg` aliases were removed for exact mirrored
+  vocabulary: migrate `alt→label`, default glyph content to `slot="icon"`, and size aliases to
+  `small`/`medium`/`large`. The older `src→image` and `tone→variant` migrations still apply.
 - an image load failure falls back to the `icon` slot when it has content, otherwise to `initials`.
   Changing `image` clears the failure state so the replacement URL gets its own load attempt,
   including when a later transition returns to a URL that failed previously.
-- when `alt` or host `aria-label` supplies a name, the base preserves that name through the glyph
+- when `label` or host `aria-label` supplies a name, the base preserves that name through the glyph
   and initials fallbacks while hiding duplicate initials text from assistive technology.
-- the `icon` slot yields to a loadable `image`; the default slot does not. Put a role glyph that
-  must always win in the default slot, and a stand-in for a missing photo in `slot="icon"`.
+- the `icon` slot yields to a loadable `image` and becomes the fallback if the image fails.
 
 ---

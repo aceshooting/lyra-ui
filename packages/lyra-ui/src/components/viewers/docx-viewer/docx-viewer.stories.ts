@@ -8,7 +8,7 @@ const meta: Meta = {
   title: 'DocxViewer',
   component: 'lr-docx-viewer',
   tags: ['autodocs'],
-  parameters: { docs: { description: { component: 'A host `aria-label` names the rendered document by attribute presence, including an explicitly empty value; `name` and the localized label are fallbacks.' } } },
+  parameters: { docs: { description: { component: 'A nonempty host `aria-label` is the sole named semantic owner. With an absent or explicitly empty host label, the loaded shadow document owns the `name`/localized fallback or empty name.' } } },
 };
 
 export default meta;
@@ -31,6 +31,13 @@ export const Default: Story = {
 };
 
 export const ResolvedHighlightAction: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'DOCX quote painting retains at most 100 resolved entries after inspecting 1,000 highlight candidates. `activeHighlightId` is resolved first, so the active quote remains painted inside both ceilings.',
+      },
+    },
+  },
   render: () => html`
     <lr-docx-viewer
       style="max-inline-size: 32rem;"

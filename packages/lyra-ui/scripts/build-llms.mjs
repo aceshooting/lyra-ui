@@ -53,6 +53,17 @@ export const TYPE_ONLY_DECLARATION_PEERS = Object.freeze({
   vue: '@aceshooting/lyra-ui/vue',
 });
 
+/**
+ * Consumer-supplied child registrations needed by the compound markup documented for an owner.
+ * These are deliberately usage metadata, not component-dependency edges: importing a group stays
+ * granular, while a consumer copying its authored compound example gets every tag it uses.
+ */
+export const COMPOUND_USAGE_REGISTRATIONS = Object.freeze({
+  'lr-checkbox-group': Object.freeze(['lr-checkbox']),
+  'lr-radio-group': Object.freeze(['lr-radio', 'lr-radio-button']),
+  'lr-tab-group': Object.freeze(['lr-tab', 'lr-tab-panel']),
+});
+
 // ---------------------------------------------------------------------------------------------
 // Manifest facts: tag -> family, declaring module, and the registration entry point to import.
 // ---------------------------------------------------------------------------------------------
@@ -137,6 +148,48 @@ function firstSentence(section) {
   const flat = prose.replace(/\n/g, ' ').replace(/\s+/g, ' ');
   const cut = flat.match(/^(.+?\.)(?:\s|$)/);
   return (cut ? cut[1] : flat).trim();
+}
+
+export function validateCompoundUsageRegistrations(
+  registrations,
+  tagFacts,
+  sectionByTag,
+) {
+  const problems = [];
+  for (const [owner, relatedTags] of Object.entries(registrations)) {
+    if (!tagFacts.has(owner)) {
+      problems.push(`compound usage owner \`${owner}\` is not a public custom element`);
+      continue;
+    }
+    if (!Array.isArray(relatedTags) || relatedTags.length === 0) {
+      problems.push(`compound usage owner \`${owner}\` needs at least one related tag`);
+      continue;
+    }
+    const section = sectionByTag.get(owner);
+    const seen = new Set();
+    for (const relatedTag of relatedTags) {
+      if (typeof relatedTag !== 'string' || !/^lr-[a-z0-9-]+$/.test(relatedTag)) {
+        problems.push(`compound usage owner \`${owner}\` has an invalid related tag`);
+        continue;
+      }
+      if (relatedTag === owner) {
+        problems.push(`compound usage owner \`${owner}\` cannot list itself as a related tag`);
+      }
+      if (seen.has(relatedTag)) {
+        problems.push(`compound usage owner \`${owner}\` lists \`${relatedTag}\` more than once`);
+      }
+      seen.add(relatedTag);
+      if (!tagFacts.has(relatedTag)) {
+        problems.push(`compound usage owner \`${owner}\` refers to unknown tag \`${relatedTag}\``);
+      }
+      if (section && !new RegExp(`<${relatedTag}(?:\\s|/?>)`, 'u').test(section.text)) {
+        problems.push(
+          `compound usage owner \`${owner}\` does not use \`${relatedTag}\` in its authored section`,
+        );
+      }
+    }
+  }
+  return problems;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -677,12 +730,13 @@ function buildIndex(sectionsByFamily, tagFacts) {
   return out.join('\n');
 }
 
-function buildComponentFile(tag, section, tagFacts, peersByTag) {
+export function buildComponentFile(tag, section, tagFacts, peersByTag) {
   const facts = tagFacts.get(tag);
   const shares = section.tags.filter((t) => t !== tag && tagFacts.has(t));
   const peers = peersByTag.get(tag) ?? [];
   const cssPartNames = facts.cssParts?.map((p) => p.name) ?? [];
   const cssPropNames = facts.cssProperties?.map((p) => p.name) ?? [];
+  const compoundUsageRegistrations = COMPOUND_USAGE_REGISTRATIONS[tag] ?? [];
   const deprecationLines = facts.deprecations.map((entry) => {
     const subject = entry.kind === 'component'
       ? `\`${tag}\``
@@ -699,6 +753,17 @@ function buildComponentFile(tag, section, tagFacts, peersByTag) {
     '',
     `- **Import** \`import '@aceshooting/lyra-ui/components/${tag}.js';\` ` +
       '(stable tag alias; registers the tag)',
+    compoundUsageRegistrations.length
+      ? '- **Compound usage registrations** ' +
+        compoundUsageRegistrations
+          .map(
+            (relatedTag) =>
+              `\`import '@aceshooting/lyra-ui/components/${relatedTag}.js';\``,
+          )
+          .join(', ') +
+        ` — required by the consumer-supplied child tags in this reference; usage-only, not ` +
+        `registration dependencies of \`${tag}\``
+      : null,
     `- **Class** \`${facts.className}\`, also available unregistered from` +
       ` \`${facts.importPath.replace(/\.js$/, '.class.js')}\``,
     `- **Family** \`components/${facts.family}/\` — see \`llms/index.md\` for its siblings`,
@@ -777,6 +842,13 @@ export function build({ write = true } = {}) {
   for (const tag of tagFacts.keys()) {
     if (!sectionByTag.has(tag)) problems.push(`\`${tag}\` has no section in any llms/<family>.md.`);
   }
+  problems.push(
+    ...validateCompoundUsageRegistrations(
+      COMPOUND_USAGE_REGISTRATIONS,
+      tagFacts,
+      sectionByTag,
+    ),
+  );
   if (problems.length) {
     throw new Error(`Cannot build llms artifacts:\n  - ${problems.join('\n  - ')}`);
   }

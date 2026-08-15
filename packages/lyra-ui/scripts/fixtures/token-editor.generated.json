@@ -350,6 +350,13 @@
       "references": []
     },
     {
+      "name": "--lr-color-on-strong-overlay",
+      "description": "Canonical shared component token for color on strong overlay.",
+      "references": [
+        "--lr-theme-color-on-strong-overlay"
+      ]
+    },
+    {
       "name": "--lr-color-on-success",
       "description": "Canonical shared component token for color on success.",
       "references": []
@@ -2422,6 +2429,11 @@
     {
       "name": "--lr-theme-color-no-data",
       "description": "Canonical application theme input for color no data.",
+      "references": []
+    },
+    {
+      "name": "--lr-theme-color-on-strong-overlay",
+      "description": "Canonical application theme input for color on strong overlay.",
       "references": []
     },
     {

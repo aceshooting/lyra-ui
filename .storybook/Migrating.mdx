@@ -143,8 +143,9 @@ Some incompatibilities are deliberate and remain manual:
 
 - `<lr-include>` sanitizes every fragment, has no script-executing mode, and defaults to
   `mode="same-origin"` rather than `cors`. Cross-origin or script-dependent uses get a warning.
-- Link-like Lyra controls derive `rel="noopener noreferrer"` from `target`; they do not expose an
-  independently settable `rel` that could reopen reverse tabnabbing.
+- Link-like Lyra controls always add `noopener noreferrer` when `target` is set and always strip
+  `opener`. `<lr-button>` and `<lr-breadcrumb-item>` also preserve independently set author tokens
+  such as `nofollow`, `me`, and `license`; those tokens cannot remove the security floor.
 - `<lr-zoomable-frame>` rejects active/non-embeddable schemes, always carries a sandbox, and never
   combines `allow-scripts` with `allow-same-origin`.
 - Remote media/viewer inputs retain Lyra's URL validation, byte/entry/row caps, sanitization, and

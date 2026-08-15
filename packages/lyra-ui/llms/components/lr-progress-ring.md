@@ -19,8 +19,9 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
 (reflected), `label: string = ''` (the mapped accessible-name property), and
-`accessibleLabel: string = ''` (attribute `accessible-label`; the library-wide explicit
-accessible-name convention, not an upstream alias). Host
+`accessibleLabel: string = ''` (attribute `accessible-label`; a Lyra compatibility
+accessible-name spelling retained by this progress component, while several sibling components use
+`aria-label` directly). Host
 `aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
 visible default-slot text when supplied, then the localized "Progress". Non-finite/out-of-range
 `value`/`max` are normalized (`max <= 0` falls
@@ -29,6 +30,10 @@ back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 percentage (and nothing at all while `indeterminate`).
 Its accessible text uses the same visibility filtering, forwarding-slot mutation/reassignment
 tracking, and explicit-empty host-label precedence as `lr-progress-bar`.
+**Live members:** `indicator: SVGCircleElement | null` returns the rendered indicator circle (or
+`null` before rendering). `indicatorOffset: number` returns the normalized stroke offset used for
+that circle, including the indeterminate value. The indicator node remains stable across ordinary
+value updates and reconnection while the offset updates live.
 **CSS parts:** `base` and `progress-ring` are aliases on the same progressbar; `track`, `indicator`,
 `label`.
 **Themeable custom properties:** `--lr-progress-ring-size` (default `var(--lr-size-2-5rem)` — the

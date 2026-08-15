@@ -21,6 +21,8 @@ type MixedConstructor<Base extends PublicConstructor<object>, Added> = Base & (
 
 export const ANCHOR_RETRY_INTERVAL_MS = 250;
 export const ANCHOR_TIMEOUT_MS = 5000;
+/** Maximum host-highlight records admitted into one immutable target snapshot. */
+export const HIGHLIGHT_CANDIDATE_LIMIT = 1_000;
 
 export interface LyraAnchorTargetEventMap {
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
@@ -32,11 +34,35 @@ export interface LyraAnchorTargetEventMap {
  *  External registry authors who can't extend `LyraElement` implement this interface by hand
  *  instead of adopting the mixin. */
 export interface LyraAnchorTarget {
-  highlights: LyraHighlight[];
+  highlights: readonly LyraHighlight[];
   activeHighlightId: string | null;
   anchor: LyraAnchor | string | null;
   readonly anchorKinds: readonly LyraAnchorKind[];
   scrollToAnchor(target: LyraAnchor | string): Promise<boolean>;
+}
+
+const EMPTY_HIGHLIGHTS: readonly LyraHighlight[] = Object.freeze([]);
+
+function snapshotHighlights(value: unknown): readonly LyraHighlight[] {
+  if (!Array.isArray(value)) return EMPTY_HIGHLIGHTS;
+  const output: LyraHighlight[] = [];
+  const candidateCount = Math.min(value.length, HIGHLIGHT_CANDIDATE_LIMIT);
+  for (let index = 0; index < candidateCount; index++) {
+    try {
+      const highlight: unknown = value[index];
+      if (
+        highlight === null ||
+        typeof highlight !== 'object' ||
+        Array.isArray(highlight)
+      ) continue;
+      // The highlight record belongs to the target. Its anchor remains an opaque caller identity:
+      // several viewers deliberately support `scrollToAnchor(highlight.anchor)` by reference.
+      output.push(Object.freeze({ ...highlight }) as LyraHighlight);
+    } catch {
+      // Keep later valid records when an admitted entry has a hostile getter.
+    }
+  }
+  return Object.freeze(output);
 }
 
 function selectionRange(root: LyraElement): Range | null {
@@ -110,7 +136,14 @@ export function DocumentAnchorTarget(
   renderAnchorLiveRegion(): unknown;
 }> {
   class DocumentAnchorTargetElement extends Base implements LyraAnchorTarget {
-    @property({ attribute: false }) highlights: LyraHighlight[] = [];
+    private _highlights: readonly LyraHighlight[] = EMPTY_HIGHLIGHTS;
+    @property({ attribute: false })
+    get highlights(): readonly LyraHighlight[] { return this._highlights; }
+    set highlights(value: readonly LyraHighlight[]) {
+      const previous = this._highlights;
+      this._highlights = snapshotHighlights(value);
+      this.requestUpdate('highlights', previous);
+    }
     @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
     // `hasChanged: () => true` -- re-assigning the SAME anchor (e.g. re-clicking the same citation
     // badge twice) must still re-run scrollToAnchor/re-flash; Lit's default reference-equality

@@ -15,7 +15,10 @@ import {
   forcedColorsActive,
   type ForcedColorEncodingName,
 } from './chart-forced-colors.js';
-import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import {
+  literalSetConverter,
+  trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter,
+} from '../../../internal/converters.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
@@ -69,6 +72,8 @@ export type LyraLiteChartScale = 'linear' | 'sqrt';
  * host's, making the host horizontally scrollable.
  */
 export type LyraLiteChartLayout = 'fit' | 'scroll';
+
+const LITE_CHART_LAYOUT = literalSetConverter<LyraLiteChartLayout>(['fit', 'scroll'], 'fit');
 
 export type LyraLiteChartExportFormat = 'csv' | 'svg';
 
@@ -272,6 +277,7 @@ export interface LyraLiteChartEventMap {
  *   number, label: string | undefined, value: number | null }` — same shape
  *   as `lr-chart`'s `lr-point-click`.
  * @csspart base - The host's flex layout wrapper.
+ * @csspart description - The visually hidden accessible chart description, when set.
  * @csspart grid-line - Each horizontal gridline.
  * @csspart axis-label - Each axis tick label.
  * @csspart axis-title - The x/y axis title text, when set.
@@ -377,7 +383,19 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  content width exceed the host's — the host becomes horizontally scrollable
    *  (`overflow-x: auto`) so every bar stays exactly `barWidth` wide regardless of category count.
    *  Reflects to the `layout` attribute (e.g. for `:host([layout='scroll'])` host styling). */
-  @property({ reflect: true }) layout: LyraLiteChartLayout = 'fit';
+  private _layout: LyraLiteChartLayout = 'fit';
+
+  @property({ reflect: true, converter: LITE_CHART_LAYOUT })
+  get layout(): LyraLiteChartLayout {
+    return this._layout;
+  }
+  set layout(next: LyraLiteChartLayout) {
+    const normalized = LITE_CHART_LAYOUT.normalizeReflected(this, 'layout', next);
+    const old = this._layout;
+    if (old === normalized) return;
+    this._layout = normalized;
+    this.requestUpdate('layout', old);
+  }
   /** Fixed per-category bar width in px, used only when `layout="scroll"`. Ignored (as before this
    *  property existed) in `layout="fit"`, the default. Scroll content is capped at 1,000,000px,
    *  so an excessive requested width is reduced as needed to keep SVG and CSS geometry finite. */

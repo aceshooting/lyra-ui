@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,12 +19,19 @@ Chronological list of agent tool/function calls composed from tool-call, result,
 primitives, with retry counts and sensitive-field redaction.
 
 **Properties:**
+
 - `entries: ToolTimelineEntry[] = []` (attribute: false) — `ToolTimelineEntry` **extends
   `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; args:
-  Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
+Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
   `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied'`) with `{ startedAt?:
-  number; endedAt?: number; retryCount?: number; redactedFields?: string[]; needsApproval?: boolean;
-  approved?: boolean }`. Timestamps are epoch milliseconds; entries sort ascending by `startedAt`,
+number; endedAt?: number; retryCount?: number; redactedFields?: string[]; needsApproval?: boolean;
+approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies the owning run or
+  source generation when invocation ids can be reused; every expansion, activation, renderer error,
+  and approval draft is correlated by `(sourceKey, id)`. Duplicate occurrences of the same pair are
+  normalized before any lookup with a deterministic first-occurrence-wins policy. `icon` is a
+  literal hint forwarded to the composed tool-call chip. A foreign runtime `status` normalizes once
+  to `pending` before both the timeline row and its composed chip render.
+  Timestamps are epoch milliseconds; entries sort ascending by `startedAt`,
   and an entry with none sorts after every timed entry (keeping its relative position among other
   untimed ones) and renders no visible timestamp. `startedAt`+`endedAt` derive the `durationMs`
   handed to the per-entry `lr-tool-call-chip`. `retryCount: 2` means the call reached its current
@@ -50,9 +57,21 @@ applied its controlled `entries` update (it never mutates `entries` itself). `re
 void` releases a held dialog after persistence fails, retaining the reviewer’s current argument edit
 so they can retry. Both are no-ops when no decision is held.
 
-**Events:** `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
-`ToolApprovalEventDetail & { args?: unknown }` = `{ invocationId: string; approved: boolean; args?:
-unknown }`, extending the shared detail from `@aceshooting/lyra-ui/ai`). `args` is present only when
+At most 500 unique entries mount. Open disclosures and the entry under approval review reserve
+positions before later ordinary history is omitted; a localized `[part="limit"]` note exposes the
+bounded projection. Redaction is deferred until a disclosure opens and memoized while the entry's
+payload and path list are unchanged. It is bounded to 100 paths, 64 levels, 10,000 visited nodes,
+and 4,096 characters per path; crossing a ceiling masks the affected branch instead of exposing
+data or exhausting the page.
+
+**Events:** `lr-tool-activate` (`detail: { invocationId: string; sourceKey?: string }`) for a
+non-approval entry activation and `lr-tool-render-error` (`detail: { invocationId: string;
+sourceKey?: string; toolName: string; error: unknown }`) for a contained nested renderer failure.
+The raw child chip-selection, renderer-error, details, and dialog events do not leak across the
+timeline boundary. `lr-tool-approval-decide` (`detail: ToolTimelineApprovalDetail` =
+`ToolApprovalEventDetail & { args?: unknown; sourceKey?: string }` = `{ invocationId: string;
+approved: boolean; args?: unknown; sourceKey?: string }`, extending the shared detail from
+`@aceshooting/lyra-ui/ai`). `args` is present only when
 `approved` is `true`, and may differ from what the entry originally proposed — the dialog's inline
 edit step can hand back different arguments. A listener that only needs `{ invocationId, approved }`
 can ignore it; one actually executing the tool needs it. This is a cancelable veto point:
@@ -61,7 +80,7 @@ instead of closing/resetting them, sets `pendingApproval`, and requires the host
 `finalizePendingApproval()` after persistence succeeds or `revertPendingApproval()` after it fails.
 
 ```ts
-timeline.addEventListener('lr-tool-approval-decide', async (event) => {
+timeline.addEventListener("lr-tool-approval-decide", async (event) => {
   event.preventDefault();
   try {
     await persistDecision(event.detail);
@@ -76,7 +95,7 @@ timeline.addEventListener('lr-tool-approval-decide', async (event) => {
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
-`entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`.
+`entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`, `empty`, `limit`.
 Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
 repeated bare "Details" label.
 

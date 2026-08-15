@@ -36,7 +36,7 @@ it('keeps every text-viewer search API safe and eventful before content is loade
 
   for (const tagName of TEXT_VIEWER_TAGS) {
     const viewer = host.querySelector(tagName) as HTMLElement & LyraTextViewerTarget;
-    const changes: Array<{ query: string; matchCount: number; activeIndex: number }> = [];
+    const changes: Array<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }> = [];
     viewer.addEventListener('lr-search-change', (event) => {
       changes.push((event as CustomEvent).detail);
     });
@@ -47,17 +47,18 @@ it('keeps every text-viewer search API safe and eventful before content is loade
     viewer.clearSearch();
 
     expect(changes, tagName).to.deep.equal([
-      { query: '__definitely_absent__', matchCount: 0, activeIndex: -1 },
-      { query: '', matchCount: 0, activeIndex: -1 },
+      { query: '__definitely_absent__', matchCount: 0, matchCountExact: true, activeIndex: -1 },
+      { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 },
     ]);
   }
 });
 
-it('bounds retained live Ranges while still counting and navigating every match', async () => {
+it('bounds retained live Ranges while preserving exact counts below the match ceiling', async () => {
   // Each retained live `Range` must be revalidated by the engine on every DOM mutation in its
   // document, so holding one per match made a one-letter query over a large document degrade every
   // subsequent mutation. The mixin must keep matches as inert offsets and paint only a bounded
-  // window -- without capping what it *reports* or what the user can navigate to.
+  // window. This fixture stays below the independent retained-match ceiling, so its count remains
+  // exact while navigation can still reach matches outside the painted window.
   const body = 'the quick brown fox jumps over the lazy dog. '.repeat(400);
   const eml = [
     'From: Ada <ada@example.test>',

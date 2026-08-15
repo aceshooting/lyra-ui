@@ -18,8 +18,9 @@
 Comparison surface for two document versions, using `lr-diff-view` for textual diffs and
 `lr-document-preview` for side-by-side rendered content.
 
-A host `aria-label` names the comparison group by attribute presence, including an explicitly empty
-value; the localized comparison label is used only when that attribute is absent.
+A nonempty host `aria-label` makes the host the sole named semantic owner. With an explicitly empty
+host label, the shadow comparison group keeps `role="group"` and an empty name; when the attribute
+is absent, it uses the localized comparison label. Dynamic host-label changes update that ownership.
 
 **Properties:**
 
@@ -28,9 +29,11 @@ value; the localized comparison label is used only when that attribute is absent
   (`id`, `name`, `mimeType?`, `uri?`, `version?`) with `text?: string` for diff mode and
   `highlights?: LyraHighlight[]` for its own preview pane.
 - `view: 'diff' | 'side-by-side' = 'diff'` (reflected) — one inline text diff or two rendered
-  preview panes.
+  preview panes. Invalid property or attribute values normalize to `diff` and repair the reflected
+  attribute.
 - `diffLayout: 'unified' | 'split' = 'unified'` (attribute `diff-layout`, reflected) — forwarded
-  to `lr-diff-view` in diff mode.
+  to `lr-diff-view` in diff mode. Invalid property or attribute values normalize to `unified` and
+  repair the reflected attribute.
 - `copyable: boolean = false` — forwards the diff copy action.
 - `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
   attribute: false) — optional syntax highlighting forwarded to the diff.
@@ -48,8 +51,11 @@ scrolls that pane to its corresponding highlight, while the original `lr-highlig
 continues bubbling unchanged. The shared `anchor` property drives both panes. In diff mode, split
 columns already share one scroll container.
 
-**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { src, filename }`),
-`lr-highlight-activate` (`detail: { id }`), and `lr-render-error` (`detail: { error }`).
+**Events:** `lr-copy` fires only after clipboard fulfillment (`detail: { ok: true, text }`). A
+clipboard failure bubbles `lr-error` plus `lr-copy-error`
+(`detail: { ok: false, text, reason, error }`) unchanged from `lr-diff-view`. Also emits
+`lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { id }`), and
+`lr-render-error` (`detail: { error }`).
 
 **Slots:** none.
 

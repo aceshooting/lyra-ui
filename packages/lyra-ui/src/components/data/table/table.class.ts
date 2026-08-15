@@ -13,7 +13,10 @@ import { styles } from './table.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { minMax } from '../heatmap/heatmap-scale.js';
 import '../../overlays/empty/empty.class.js';
-import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import {
+  literalSetConverter,
+  trueDefaultSpellcheckConverter as spellcheckConverter,
+} from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -144,6 +147,8 @@ export type TableSelectionMode = 'none' | 'single' | 'multiple';
  *  `sortKey`/`sortDir`, `'server'` renders `rows` in the order given. Mirrors the
  *  `paginationMode` split of the same two names. */
 export type TableSortMode = 'client' | 'server';
+
+const TABLE_LAYOUT = literalSetConverter<'auto' | 'fixed'>(['auto', 'fixed'], 'auto');
 
 /** Canonical table sort direction. */
 export type TableSortDirection = 'asc' | 'desc';
@@ -384,14 +389,14 @@ function eventInteractiveTarget(event: Event, boundary: HTMLElement): Element | 
 }
 
 export interface LyraTableEventMap<T = unknown> {
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: CustomEvent<null>;
+  focus: CustomEvent<null>;
   'lr-priority-columns-visibility-change': CustomEvent<Readonly<{ visible: boolean }>>;
   'lr-sort-request': CustomEvent<TableSortRequestDetail>;
   'lr-sort': CustomEvent<TableSortCommitDetail>;
   'lr-row-click': CustomEvent<Readonly<{ row: T }>>;
   'lr-row-expand-toggle': CustomEvent<Readonly<{ row: T; key: string | number }>>;
-  'lr-load-more': CustomEvent<undefined>;
+  'lr-load-more': CustomEvent<null>;
   'lr-selection-change': CustomEvent<Readonly<{ keys: readonly (string | number)[] }>>;
   'lr-filter-change': CustomEvent<Readonly<{ text: string }>>;
   'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
@@ -622,7 +627,11 @@ export interface LyraTableEventMap<T = unknown> {
  * @cssprop [--lr-table-resize-min-width=var(--lr-size-3rem)] - Default minimum width for a
  *   resizable column without an explicit pixel `minWidth`. Inherits from theme ancestors.
  * @cssprop [--lr-table-resize-handle-opacity=0.12] - Hover/focus opacity of the resize handle.
- *   Inherits from theme ancestors.
+ *   Legacy shared-state hook; inherits from theme ancestors.
+ * @cssprop [--lr-table-resize-handle-hover-bg=var(--lr-color-brand)] - Resize-handle hover/focus background.
+ * @cssprop [--lr-table-resize-handle-hover-opacity=var(--lr-table-resize-handle-opacity,0.12)] - Resize-handle hover/focus opacity.
+ * @cssprop [--lr-table-resize-handle-active-bg=var(--lr-table-resize-handle-hover-bg,var(--lr-color-brand))] - Resize-handle pressed background.
+ * @cssprop [--lr-table-resize-handle-active-opacity=calc(var(--lr-table-resize-handle-hover-opacity,var(--lr-table-resize-handle-opacity,0.12))*2)] - Resize-handle pressed opacity.
  * @cssprop [--lr-table-max-height=none] - Cap on the scroll container's block size, past which the
  *   table body scrolls.
  * @cssprop [--lr-table-heat-tint-lo=var(--lr-color-brand-quiet)] - Low endpoint of the heat-tint
@@ -638,7 +647,7 @@ export interface LyraTableEventMap<T = unknown> {
  * @cssprop [--lr-table-row-stripe-bg=transparent] - Background of alternating body rows. The
  *   token is read only on rows carrying the internal stripe marker, so it can be set on the table
  *   or an ancestor without affecting group, expanded, hover, or selected rows.
- * @cssprop [--lr-table-header-sorted-bg=transparent] - Background of the currently-sorted column's
+ * @cssprop [--lr-table-header-sorted-bg=var(--lr-color-surface)] - Background of the currently-sorted column's
  *   header cell (`[aria-sort]` other than `none`). Same rationale as `--lr-table-row-selected-bg`:
  *   `::part(header-cell)[aria-sort]` is invalid CSS, so this token is the supported way to recolor
  *   the sorted header without hijacking a library-wide token.
@@ -708,7 +717,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  `priority`-hidden column via `[part='reveal-columns-button']` re-measures and changes all of
    *  them; and `columns[].minWidth`/`maxWidth` are silently ignored by `table-layout: fixed`
    *  (declare `width` instead when you need a specific column sized). */
-  @property({ reflect: true }) layout: 'auto' | 'fixed' = 'auto';
+  private _layout: 'auto' | 'fixed' = 'auto';
+
+  @property({ reflect: true, converter: TABLE_LAYOUT })
+  get layout(): 'auto' | 'fixed' {
+    return this._layout;
+  }
+  set layout(next: 'auto' | 'fixed') {
+    const normalized = TABLE_LAYOUT.normalizeReflected(this, 'layout', next);
+    const old = this._layout;
+    if (old === normalized) return;
+    this._layout = normalized;
+    this.requestUpdate('layout', old);
+  }
   @property({ attribute: 'sort-key' }) sortKey = '';
   @property({ attribute: 'sort-dir' }) sortDir: TableSortDirection = 'asc';
   /** `'client'` (the default) orders `rows` itself, in the browser, from `sortKey`/`sortDir` and
@@ -763,8 +784,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ type: Boolean, reflect: true }) filterable = false;
   @property({ attribute: 'filter-text' }) filterText = '';
   @property({ attribute: false }) filter?: (row: T, text: string) => boolean;
-  @property({ attribute: 'filter-label' }) filterLabel = '';
-  @property({ attribute: 'filter-placeholder' }) filterPlaceholder = '';
+  /** Optional filter-copy overrides. Omission localizes the matching message key; supplied
+   * strings, including the built-in English text or an empty string, render verbatim. */
+  @property({ attribute: 'filter-label' }) filterLabel?: string;
+  @property({ attribute: 'filter-placeholder' }) filterPlaceholder?: string;
   /** Forwarded to the filter input's, and (when the active column's `editType` is `'text'`, the
    *  default) the inline cell-editor input's, native `spellcheck`. Defaults to `true`, matching
    *  the native element's own default. `spellcheck="false"` is parsed as `false` (see
@@ -778,7 +801,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  to dodge a TS `lib.dom.d.ts` collision -- same fix as `<lr-textarea>`/`<lr-model-select>`. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   @property({ type: Boolean, reflect: true }) loading = false;
-  @property({ attribute: 'loading-label' }) loadingLabel = '';
+  /** Optional loading-copy override. Omission localizes `tableLoading`; a supplied string renders verbatim. */
+  @property({ attribute: 'loading-label' }) loadingLabel?: string;
   /** How `loading` renders. `'spinner'` (the default, unchanged output) replaces the whole grid
    *  with an indeterminate spinner. `'skeleton'` instead renders the real table — the same
    *  `<colgroup>` (declared *and* drag-resized widths included), the same `<thead>`, the filter
@@ -861,8 +885,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  row for it to occupy, and this renders nothing. */
   @property({ attribute: false }) grandTotal?: (rows: readonly T[]) => unknown;
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
-  @property({ attribute: 'more-label' }) moreLabel = '';
-  @property({ attribute: 'empty-heading' }) emptyHeading = '';
+  /** Optional copy overrides. Omission localizes the matching message key; supplied strings,
+   * including the built-in English text or an empty string, render verbatim. */
+  @property({ attribute: 'more-label' }) moreLabel?: string;
+  @property({ attribute: 'empty-heading' }) emptyHeading?: string;
   @property({ attribute: 'empty-description' }) emptyDescription = '';
   /** Overrides the built-in `[part='empty']` state's `compact` rendering. Leave `undefined` (the
    *  default) to keep each branch's own built-in behavior: the whole-table states (no columns, no
@@ -870,10 +896,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  the filter field inside `[part='base']` — renders compact. `empty-compact="false"` forces the
    *  spacious rendering everywhere. Has no effect once the `empty` slot is filled. */
   @property({ attribute: 'empty-compact', converter: optionalBooleanConverter }) emptyCompact?: boolean;
-  @property({ attribute: 'no-columns-heading' }) noColumnsHeading = '';
+  @property({ attribute: 'no-columns-heading' }) noColumnsHeading?: string;
   @property({ attribute: 'no-columns-description' }) noColumnsDescription = '';
-  @property({ attribute: 'reveal-columns-label' }) revealColumnsLabel = '';
-  @property({ attribute: 'hide-columns-label' }) hideColumnsLabel = '';
+  @property({ attribute: 'reveal-columns-label' }) revealColumnsLabel?: string;
+  @property({ attribute: 'hide-columns-label' }) hideColumnsLabel?: string;
 
   /** Whether the current rendered allocation actually hides at least one `priority` column. This
    * read-only state becomes false once `priorityColumnsVisible` reveals them; the toggle remains
@@ -1058,6 +1084,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       handle,
       previousWidth: this.resizedColumnWidths.get(key),
     };
+    // Firefox drops :active once pointer capture begins. Keep the rendered drag state explicit so
+    // the pressed hook remains visible for the entire gesture in every supported engine.
+    handle.toggleAttribute('data-resizing', true);
     event.preventDefault();
     event.stopPropagation();
     handle.setPointerCapture?.(event.pointerId);
@@ -1135,6 +1164,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private onResizePointerEnd = (event: PointerEvent): void => {
     const state = this.resizeState;
     if (!state || event.pointerId !== state.pointerId) return;
+    state.handle.removeAttribute('data-resizing');
     if (event.type === 'pointerup') {
       try {
         state.handle.releasePointerCapture?.(event.pointerId);
@@ -1193,6 +1223,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     this.resizeState = undefined;
     this.detachResizePointerListeners();
     if (!state) return;
+    state.handle.removeAttribute('data-resizing');
     try {
       state.handle.releasePointerCapture?.(state.pointerId);
     } catch {
@@ -1299,8 +1330,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     });
   }
 
+  private localizedOverride(key: string, override: string | undefined): string {
+    return override == null ? this.localize(key) : override;
+  }
+
   private loadingText(): string {
-    return this.localize('tableLoading', this.loadingLabel || undefined);
+    return this.localizedOverride('tableLoading', this.loadingLabel);
   }
 
   private observeBase(base: Element): void {
@@ -2387,7 +2422,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         part="empty"
         exportparts="base:empty-base, icon:empty-icon, heading:empty-heading, description:empty-description, actions:empty-actions"
         ?compact=${this.emptyCompact ?? false}
-        heading=${this.localize('noColumns', this.noColumnsHeading || undefined)}
+        heading=${this.localizedOverride('noColumns', this.noColumnsHeading)}
         description=${this.noColumnsDescription}
       ></lr-empty>`;
     }
@@ -2411,7 +2446,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           part="empty"
           exportparts="base:empty-base, icon:empty-icon, heading:empty-heading, description:empty-description, actions:empty-actions"
           ?compact=${this.emptyCompact ?? false}
-          heading=${this.localize('noData', this.emptyHeading || undefined)}
+          heading=${this.localizedOverride('noData', this.emptyHeading)}
           description=${this.emptyDescription}
         ></lr-empty
       ></slot>`;
@@ -2450,8 +2485,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       });
     }
     const hasPagination = skeletonLoading || this.pageCount > 1;
-    const filterLabel = this.localize('tableFilterLabel', this.filterLabel || undefined);
-    const filterPlaceholder = this.localize('tableFilterPlaceholder', this.filterPlaceholder || undefined);
+    const filterLabel = this.localizedOverride('tableFilterLabel', this.filterLabel);
+    const filterPlaceholder = this.localizedOverride('tableFilterPlaceholder', this.filterPlaceholder);
     const tableContent =
       renderedEntries.length === 0 && !skeletonLoading
         ? html`<slot name="empty"
@@ -2459,7 +2494,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               part="empty"
               exportparts="base:empty-base, icon:empty-icon, heading:empty-heading, description:empty-description, actions:empty-actions"
               ?compact=${this.emptyCompact ?? true}
-              heading=${this.localize('noData', this.emptyHeading || undefined)}
+              heading=${this.localizedOverride('noData', this.emptyHeading)}
               description=${this.emptyDescription}
             ></lr-empty
           ></slot>`
@@ -2672,13 +2707,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               @click=${this.toggleColumns}
             >
               ${this.priorityColumnsVisible
-                ? this.localize('showFewerColumns', this.hideColumnsLabel || undefined)
-                : this.localize('showAllColumns', this.revealColumnsLabel || undefined)}
+                ? this.localizedOverride('showFewerColumns', this.hideColumnsLabel)
+                : this.localizedOverride('showAllColumns', this.revealColumnsLabel)}
             </button>`
           : nothing}
         ${this.hasMore
           ? html`<button part="more-button" type="button" @click=${() => this.emit('lr-load-more')}>
-              ${this.localize('loadMore', this.moreLabel || undefined)}
+              ${this.localizedOverride('loadMore', this.moreLabel)}
             </button>`
           : nothing}
         ${hasPagination

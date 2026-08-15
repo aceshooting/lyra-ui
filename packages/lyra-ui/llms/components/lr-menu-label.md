@@ -23,7 +23,7 @@ already set a `role`, which is left alone. `<lr-menu>` enumerates its items by `
 LyraMenuItem`, so a label is never enrolled in the roving tabindex and can never become a focus
 stop; nothing on `<lr-menu>` has to know this element exists.
 
-To announce a *named group* rather than a caption, wrap the labelled items in an element with
+To announce a _named group_ rather than a caption, wrap the labelled items in an element with
 `role="group"` and give it a matching `aria-label`. `aria-labelledby` pointing at this element's
 internals would not resolve — idrefs do not cross a shadow boundary.
 

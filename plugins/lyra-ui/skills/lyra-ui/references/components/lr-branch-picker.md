@@ -24,7 +24,9 @@ on every message regardless of whether that message actually has multiple branch
 **Properties:** `index: number = 0` (reflected) and `count: number = 1` (reflected) — the current
 0-based branch and the total branch count. `label: string = ''`.
 
-**Methods:** `focus()` and `blur()` forward to the group wrapper.
+**Methods:** `focus(options?)` forwards to the currently enabled chevron (falling back to the first
+rendered chevron), `blur()` blurs both chevrons, `click()` activates that same enabled target, and
+`getToolbarActions()` returns the ordered logical actions used by an enclosing message toolbar.
 
 **Events:** `lr-branch-change` — a branch navigation was requested. `detail: { index }`, always a
 valid target (never past either bound); the consumer applies `index` after switching the displayed
@@ -33,7 +35,3 @@ branch content.
 **CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`,
 `previous-glyph` and `next-glyph` (the chevron inside each button — target these to swap the
 arrow without restyling the button), and `position` (the visible "2 / 5" text).
-
-**Additional API surface:**
-
-- `click()` — Activates the currently enabled chevron, matching a click on the shadow control.

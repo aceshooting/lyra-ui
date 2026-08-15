@@ -339,12 +339,12 @@ it('emits a cancelable resize request before the committed event and keeps direc
 
 it('lets listeners veto proposed pointer and keyboard resizes without committing or persisting', async () => {
   const storageKey = `split-vetoed-resize-${Math.random()}`;
-  const fullKey = `lr-multi-split:${storageKey}:2`;
+  const fullKey = `lr-multi-split:${storageKey}:panels`;
   localStorage.removeItem(fullKey);
   const el = (await fixture(
     html`<lr-multi-split storage-key=${storageKey}
-      ><div>A</div>
-      <div>B</div></lr-multi-split
+      ><div panel-id="first">A</div>
+      <div panel-id="second">B</div></lr-multi-split
     >`
   )) as LyraMultiSplit;
   await elementUpdated(el);
@@ -682,12 +682,12 @@ it('ends an in-flight drag when the effective orientation changes instead of rei
 
 it("ends an in-flight drag when collapse revokes that divider's capability", async () => {
   const storageKey = `test-split-capability-revocation-${Math.random()}`;
-  const fullKey = `lr-multi-split:${storageKey}:2`;
+  const fullKey = `lr-multi-split:${storageKey}:panels`;
   localStorage.removeItem(fullKey);
   const el = (await fixture(
     html`<lr-multi-split collapse="start" storage-key=${storageKey}
-      ><div>A</div>
-      <div>B</div></lr-multi-split
+      ><div panel-id="first">A</div>
+      <div panel-id="second">B</div></lr-multi-split
     >`
   )) as LyraMultiSplit;
   await elementUpdated(el);
@@ -717,13 +717,13 @@ it("ends an in-flight drag when collapse revokes that divider's capability", asy
 
 it('ends an in-flight drag when collapse moves rail capability to its divider', async () => {
   const storageKey = `test-split-capability-move-${Math.random()}`;
-  const fullKey = `lr-multi-split:${storageKey}:3`;
+  const fullKey = `lr-multi-split:${storageKey}:panels`;
   localStorage.removeItem(fullKey);
   const el = (await fixture(
     html`<lr-multi-split collapse="start" storage-key=${storageKey}
-      ><div>A</div>
-      <div>B</div>
-      <div>C</div></lr-multi-split
+      ><div panel-id="first">A</div>
+      <div panel-id="second">B</div>
+      <div panel-id="third">C</div></lr-multi-split
     >`
   )) as LyraMultiSplit;
   await elementUpdated(el);
@@ -820,8 +820,8 @@ it('persists sizes to localStorage when storageKey is set', async () => {
 
   const el = (await fixture(
     html`<lr-multi-split storage-key=${storageKey}
-      ><div>A</div>
-      <div>B</div></lr-multi-split
+      ><div panel-id="navigation">A</div>
+      <div panel-id="content">B</div></lr-multi-split
     >`
   )) as LyraMultiSplit;
   await elementUpdated(el);
@@ -835,11 +835,92 @@ it('persists sizes to localStorage when storageKey is set', async () => {
   );
   await elementUpdated(el);
 
-  const stored = localStorage.getItem(`lr-multi-split:${storageKey}:2`);
+  const stored = localStorage.getItem(`lr-multi-split:${storageKey}:panels`);
   expect(stored).to.not.be.null;
   const parsed = JSON.parse(stored!);
-  expect(parsed).to.be.an('array');
-  expect(parsed.length).to.equal(2);
+  expect(parsed).to.deep.equal({
+    version: 1,
+    panels: [
+      { panelId: 'navigation', size: 27 },
+      { panelId: 'content', size: 73 },
+    ],
+  });
+});
+
+it('restores and reconciles persisted sizes by panelId across a reordered panel sequence', async () => {
+  const storageKey = 'test-split-identity-' + Math.random();
+  localStorage.setItem(
+    `lr-multi-split:${storageKey}:panels`,
+    JSON.stringify({
+      version: 1,
+      panels: [
+        { panelId: 'navigation', size: 25 },
+        { panelId: 'content', size: 75 },
+      ],
+    })
+  );
+
+  const el = (await fixture(
+    html`<lr-multi-split storage-key=${storageKey}
+      ><div panel-id="content">Content</div>
+      <div panel-id="navigation">Navigation</div></lr-multi-split
+    >`
+  )) as LyraMultiSplit;
+  await elementUpdated(el);
+
+  expect(el.sizes).to.deep.equal([75, 25]);
+
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  const slotChanged = oneEvent(slot, 'slotchange');
+  el.prepend(el.lastElementChild!);
+  await slotChanged;
+  await elementUpdated(el);
+  expect(el.sizes).to.deep.equal([25, 75]);
+});
+
+it('restores surviving panel sizes by panelId when the persisted panel count changes', async () => {
+  const storageKey = 'test-split-identity-count-' + Math.random();
+  localStorage.setItem(
+    `lr-multi-split:${storageKey}:panels`,
+    JSON.stringify({
+      version: 1,
+      panels: [
+        { panelId: 'navigation', size: 25 },
+        { panelId: 'content', size: 75 },
+      ],
+    })
+  );
+
+  const el = (await fixture(
+    html`<lr-multi-split storage-key=${storageKey}
+      ><div panel-id="content">Content</div>
+      <div panel-id="navigation">Navigation</div>
+      <div panel-id="inspector">Inspector</div></lr-multi-split
+    >`
+  )) as LyraMultiSplit;
+  await elementUpdated(el);
+
+  expect(el.sizes[0]).to.be.closeTo(50, 0.001);
+  expect(el.sizes[1]).to.be.closeTo(100 / 6, 0.001);
+  expect(el.sizes[2]).to.be.closeTo(100 / 3, 0.001);
+});
+
+it('fails persistence closed when panelId values are missing or duplicated', async () => {
+  const storageKey = 'test-split-invalid-identity-' + Math.random();
+  const el = (await fixture(
+    html`<lr-multi-split storage-key=${storageKey}
+      ><div panel-id="same">First</div>
+      <div panel-id="same">Duplicate</div>
+      <div>Missing</div></lr-multi-split
+    >`
+  )) as LyraMultiSplit;
+  await elementUpdated(el);
+
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await elementUpdated(el);
+
+  expect(localStorage.getItem(`lr-multi-split:${storageKey}:panels`)).to.equal(null);
 });
 
 it('honors a valid pre-set sizes property at connect, without regenerating an equal split', async () => {
@@ -887,12 +968,22 @@ it('rejects invalid post-mount sizes and keeps the last valid public layout', as
 it('honors initialization-only properties assigned after connection but before the first update', async () => {
   const storageKey = 'test-split-late-initialization-' + Math.random();
   localStorage.setItem(
-    `lr-multi-split:${storageKey}:2`,
-    JSON.stringify([35, 65])
+    `lr-multi-split:${storageKey}:panels`,
+    JSON.stringify({
+      version: 1,
+      panels: [
+        { panelId: 'first', size: 35 },
+        { panelId: 'second', size: 65 },
+      ],
+    })
   );
   const container = await fixture(html`<div></div>`);
   const el = document.createElement('lr-multi-split');
-  el.append(document.createElement('div'), document.createElement('div'));
+  const first = document.createElement('div');
+  first.setAttribute('panel-id', 'first');
+  const second = document.createElement('div');
+  second.setAttribute('panel-id', 'second');
+  el.append(first, second);
 
   // Connecting schedules the first Lit update. A parent renderer may commit property parts later
   // in this same turn, so initialization must not become final inside connectedCallback().
@@ -931,13 +1022,19 @@ it('uses defaultSizes only for initialization, below valid persistence and above
 
   const restoredKey = 'test-split-default-restored-' + Math.random();
   localStorage.setItem(
-    `lr-multi-split:${restoredKey}:2`,
-    JSON.stringify([35, 65])
+    `lr-multi-split:${restoredKey}:panels`,
+    JSON.stringify({
+      version: 1,
+      panels: [
+        { panelId: 'first', size: 35 },
+        { panelId: 'second', size: 65 },
+      ],
+    })
   );
   const restored = (await fixture(
     html`<lr-multi-split storage-key=${restoredKey} .defaultSizes=${[20, 80]}
-      ><div>A</div>
-      <div>B</div></lr-multi-split
+      ><div panel-id="first">A</div>
+      <div panel-id="second">B</div></lr-multi-split
     >`
   )) as LyraMultiSplit;
   await elementUpdated(restored);
@@ -951,16 +1048,22 @@ it('uses defaultSizes only for initialization, below valid persistence and above
 it('falls back from invalid persisted sizes to defaultSizes through the initialization path', async () => {
   const storageKey = 'test-split-default-invalid-' + Math.random();
   localStorage.setItem(
-    `lr-multi-split:${storageKey}:2`,
-    JSON.stringify([5, 95])
+    `lr-multi-split:${storageKey}:panels`,
+    JSON.stringify({
+      version: 1,
+      panels: [
+        { panelId: 'first', size: 5 },
+        { panelId: 'second', size: 95 },
+      ],
+    })
   );
   const el = (await fixture(
     html`<lr-multi-split
       storage-key=${storageKey}
       min="10"
       .defaultSizes=${[25, 75]}
-      ><div>A</div>
-      <div>B</div></lr-multi-split
+      ><div panel-id="first">A</div>
+      <div panel-id="second">B</div></lr-multi-split
     >`
   )) as LyraMultiSplit;
   await elementUpdated(el);
@@ -1031,11 +1134,11 @@ it('rejects a pure-number defaultSizes array that does not sum to 100 without no
 
 it('falls back to an equal split when the persisted localStorage value is malformed JSON, without throwing', async () => {
   const storageKey = 'test-split-malformed-json-' + Math.random();
-  localStorage.setItem(`lr-multi-split:${storageKey}:2`, 'not-json{');
+  localStorage.setItem(`lr-multi-split:${storageKey}:panels`, 'not-json{');
   const el = (await fixture(
     html`<lr-multi-split storage-key=${storageKey}
-      ><div>A</div>
-      <div>B</div></lr-multi-split
+      ><div panel-id="first">A</div>
+      <div panel-id="second">B</div></lr-multi-split
     >`
   )) as LyraMultiSplit;
   await elementUpdated(el);
@@ -1650,8 +1753,8 @@ it('does not throw when localStorage.getItem/setItem are unavailable (e.g. block
   try {
     const el = (await fixture(
       html`<lr-multi-split storage-key="blocked-test"
-        ><div>A</div>
-        <div>B</div></lr-multi-split
+        ><div panel-id="first">A</div>
+        <div panel-id="second">B</div></lr-multi-split
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
@@ -1701,14 +1804,20 @@ it('lets a keyboard resize climb out of a sub-min starting size instead of getti
 it('rejects a stale persisted layout that violates a since-raised min, falling back to an equal split', async () => {
   const storageKey = 'test-split-min-raise-' + Math.random();
   localStorage.setItem(
-    `lr-multi-split:${storageKey}:2`,
-    JSON.stringify([5, 95])
+    `lr-multi-split:${storageKey}:panels`,
+    JSON.stringify({
+      version: 1,
+      panels: [
+        { panelId: 'first', size: 5 },
+        { panelId: 'second', size: 95 },
+      ],
+    })
   );
 
   const el = (await fixture(
     html`<lr-multi-split storage-key=${storageKey} min="10"
-      ><div>A</div>
-      <div>B</div></lr-multi-split
+      ><div panel-id="first">A</div>
+      <div panel-id="second">B</div></lr-multi-split
     >`
   )) as LyraMultiSplit;
   await elementUpdated(el);
@@ -2086,11 +2195,11 @@ it("routes an adopted divider drag through its owner window and removes that rea
 it('commits sizes to localStorage exactly once on pointerup, not just via keyboard commit', async () => {
   const storageKey = 'test-split-pointer-persist-' + Math.random();
   localStorage.clear();
-  const fullKey = `lr-multi-split:${storageKey}:2`;
+  const fullKey = `lr-multi-split:${storageKey}:panels`;
   const el = (await fixture(
     html`<lr-multi-split storage-key=${storageKey}
-      ><div>A</div>
-      <div>B</div></lr-multi-split
+      ><div panel-id="first">A</div>
+      <div panel-id="second">B</div></lr-multi-split
     >`
   )) as LyraMultiSplit;
   await elementUpdated(el);
@@ -2131,18 +2240,24 @@ it('commits sizes to localStorage exactly once on pointerup, not just via keyboa
 
   const stored = localStorage.getItem(fullKey);
   expect(stored).to.not.be.null;
-  expect(JSON.parse(stored!)).to.deep.equal(el.sizes);
+  expect(JSON.parse(stored!)).to.deep.equal({
+    version: 1,
+    panels: [
+      { panelId: 'first', size: el.sizes[0] },
+      { panelId: 'second', size: el.sizes[1] },
+    ],
+  });
   expect(persistenceCommits).to.equal(1);
 });
 
 it('suppresses resize events and persistence for clamped keyboard and pointer no-ops', async () => {
   const storageKey = `multi-split-noop-${Math.random()}`;
-  const fullKey = `lr-multi-split:${storageKey}:2`;
+  const fullKey = `lr-multi-split:${storageKey}:panels`;
   localStorage.removeItem(fullKey);
   const el = (await fixture(html`
     <lr-multi-split storage-key=${storageKey} .sizes=${[10, 90]} min="10">
-      <div>A</div>
-      <div>B</div>
+      <div panel-id="first">A</div>
+      <div panel-id="second">B</div>
     </lr-multi-split>
   `)) as LyraMultiSplit;
   await elementUpdated(el);
@@ -2182,12 +2297,12 @@ it('keeps live sizes but does not persist a pointercancel/lostpointercapture ges
     ['pointercancel', 'lostpointercapture'] as const
   ).entries()) {
     const storageKey = `test-split-canceled-persist-${endType}-${Math.random()}`;
-    const fullKey = `lr-multi-split:${storageKey}:2`;
+    const fullKey = `lr-multi-split:${storageKey}:panels`;
     localStorage.removeItem(fullKey);
     const el = (await fixture(
       html`<lr-multi-split storage-key=${storageKey}
-        ><div>A</div>
-        <div>B</div></lr-multi-split
+        ><div panel-id="first">A</div>
+        <div panel-id="second">B</div></lr-multi-split
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
@@ -4551,7 +4666,7 @@ describe('collapseBreakpointBasis', () => {
 describe('ordered panel ownership', () => {
   it('reconciles same-count replacement/reorder and restores the latest authored panel state', async () => {
     const storageKey = `multi-split-membership-${Math.random()}`;
-    const fullKey = `lr-multi-split:${storageKey}:2`;
+    const fullKey = `lr-multi-split:${storageKey}:panels`;
     localStorage.removeItem(fullKey);
     const el = (await fixture(html`
       <lr-multi-split
@@ -4560,8 +4675,8 @@ describe('ordered panel ownership', () => {
         .panelConstraints=${[{ minPx: 40 }, null]}
         style="inline-size:400px; block-size:120px"
       >
-        <div data-panel="a">A</div>
-        <div data-panel="b">B</div>
+        <div data-panel="a" panel-id="a">A</div>
+        <div data-panel="b" panel-id="b">B</div>
       </lr-multi-split>
     `)) as LyraMultiSplit;
     await elementUpdated(el);
@@ -4587,6 +4702,7 @@ describe('ordered panel ownership', () => {
 
     const replacement = el.ownerDocument.createElement('div');
     replacement.dataset['panel'] = 'replacement';
+    replacement.setAttribute('panel-id', 'a');
     replacement.textContent = 'Replacement';
     const replacementSlotChange = oneEvent(slot, 'slotchange');
     panelA.replaceWith(replacement);
@@ -4620,10 +4736,10 @@ describe('ordered panel ownership', () => {
     expect(panelB.style.order).to.equal('0');
     expect(replacement.style.order).to.equal('2');
     expect(panelB.style.flex).to.match(
-      /^0 1 clamp\(40px, 30%, (?:1e\+06|1000000)px\)$/
+      /^0 1 clamp\(40px, 70%, (?:1e\+06|1000000)px\)$/
     );
-    expect(replacement.style.flex).to.equal('0 1 70%');
-    expect(el.sizes).to.deep.equal([30, 70]);
+    expect(replacement.style.flex).to.equal('0 1 30%');
+    expect(el.sizes).to.deep.equal([70, 30]);
     expect(localStorage.getItem(fullKey)).to.equal(null);
 
     const reuseHost = el.ownerDocument.createElement('div');

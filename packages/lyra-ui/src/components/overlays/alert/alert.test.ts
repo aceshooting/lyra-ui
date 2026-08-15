@@ -58,6 +58,28 @@ it('accepts and reflects the complete public attribute vocabulary', async () => 
   expect(el.getAttribute('variant')).to.equal('success');
 });
 
+it('normalizes unsupported closed-set attributes and untyped property writes', async () => {
+  const el = (await fixture(html`
+    <lr-alert countdown="sideways" variant="brand"></lr-alert>
+  `)) as LyraAlert;
+  expect(el.countdown).to.equal(undefined);
+  expect(el.hasAttribute('countdown')).to.be.false;
+  expect(el.variant).to.equal('primary');
+  expect(el.getAttribute('variant')).to.equal('primary');
+
+  el.countdown = 'rtl';
+  el.variant = 'danger';
+  await el.updateComplete;
+  const foreign = el as unknown as Record<string, unknown>;
+  foreign.countdown = 'diagonal';
+  foreign.variant = 'loud';
+  await el.updateComplete;
+  expect(el.countdown).to.equal(undefined);
+  expect(el.hasAttribute('countdown')).to.be.false;
+  expect(el.variant).to.equal('primary');
+  expect(el.getAttribute('variant')).to.equal('primary');
+});
+
 it('renders exactly the documented slots and part aliases', async () => {
   const el = (await fixture(html`
     <lr-alert open closable>

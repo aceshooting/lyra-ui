@@ -58,7 +58,9 @@ function unregisterHotkeyOwner(view: Window, palette: LyraCommandPalette): void 
 }
 
 export interface LyraCommand {
-  id: string;
+  /** Stable business identity. Must be nonempty and unique within `commands`; the first command
+   *  wins when an untyped caller supplies duplicates. */
+  commandId: string;
   label: string;
   description?: string;
   group?: string;
@@ -66,7 +68,7 @@ export interface LyraCommand {
   keywords?: string[];
   disabled?: boolean;
   /** Optional leading TemplateResult glyph, rendered before `label` (`PaletteItem.icon`/
-   *  `SegmentedItem.icon` precedent -- not restricted to a square icon-only shape). */
+   *  `LyraSegmentedItem.icon` precedent -- not restricted to a square icon-only shape). */
   icon?: unknown;
   onSelect?: () => void;
 }
@@ -146,6 +148,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     }
     this.requestOpen(normalized);
   }
+  /** Commands to search and activate. `commandId` must be unique and nonempty; malformed rows and
+   *  later duplicates from untyped boundaries are omitted deterministically. */
   @property({ attribute: false }) commands: LyraCommand[] = [];
   /** Exact global activation chord. `mod` resolves to Command on macOS and Control elsewhere. */
   @property() hotkey = "mod+k";
@@ -158,7 +162,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   @state() private groupPitch = GROUP_ROW_HEIGHT;
   private listId = nextId("command-list");
   private overlay?: OverlayHandle;
-  private activeCommand?: LyraCommand;
+  private activeCommandId?: string;
   private listResizeObserver?: ResizeObserver;
   private observedList?: HTMLElement;
   private observedRow?: HTMLElement;
@@ -177,11 +181,36 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private filteredForQuery = "";
   private filteredForLocale = "";
   private filteredRows: LyraCommand[] = [];
+  private normalizedForCommands?: LyraCommand[];
+  private normalizedRows: LyraCommand[] = [];
   private resultModelFor?: LyraCommand[];
   private resultModelRowPitch?: number;
   private resultModelGroupPitch?: number;
   private resultModelCache?: CommandResultModel;
   private openRequestTarget?: boolean;
+
+  /** Canonical command collection consumed by search, focus, rendering, and activation. Keeping
+   *  the first valid occurrence makes duplicate handling deterministic while retaining caller
+   *  object identity in `lr-select` and `onSelect`. */
+  private get effectiveCommands(): LyraCommand[] {
+    if (this.normalizedForCommands !== this.commands) {
+      this.normalizedForCommands = this.commands;
+      const seen = new Set<string>();
+      this.normalizedRows = [];
+      for (const command of this.commands ?? []) {
+        const commandId = command?.commandId;
+        if (
+          typeof commandId !== "string" ||
+          commandId.trim() === "" ||
+          seen.has(commandId)
+        )
+          continue;
+        seen.add(commandId);
+        this.normalizedRows.push(command);
+      }
+    }
+    return this.normalizedRows;
+  }
 
   /** One lowercased searchable string per command, index-aligned with `commands`. `filtered`
    *  runs on every keystroke (and every ArrowUp/ArrowDown/Enter), so re-joining and lowercasing
@@ -189,13 +218,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
    *  command list itself does. */
   private get searchHaystacks(): string[] {
     const locale = this.effectiveLocale;
+    const commands = this.effectiveCommands;
     if (
-      this.haystacksFor !== this.commands ||
+      this.haystacksFor !== commands ||
       this.haystacksLocale !== locale
     ) {
-      this.haystacksFor = this.commands;
+      this.haystacksFor = commands;
       this.haystacksLocale = locale;
-      this.haystacks = this.commands.map((command) =>
+      this.haystacks = commands.map((command) =>
         [
           command.label,
           command.description ?? "",
@@ -220,7 +250,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       }
     }
     const rows = this.filtered;
-    let nextIndex = this.activeCommand ? rows.indexOf(this.activeCommand) : -1;
+    let nextIndex = this.activeCommandId
+      ? rows.findIndex((command) => command.commandId === this.activeCommandId)
+      : -1;
     if (nextIndex < 0 || rows[nextIndex]?.disabled) {
       const start = Math.min(
         Math.max(this.activeIndex, 0),
@@ -230,7 +262,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       if (nextIndex === -1) nextIndex = this.seekEnabled(rows, start - 1, -1);
     }
     this.activeIndex = nextIndex;
-    this.activeCommand = nextIndex >= 0 ? rows[nextIndex] : undefined;
+    this.activeCommandId = nextIndex >= 0 ? rows[nextIndex]?.commandId : undefined;
   }
 
   // Runs after render so the manager can resolve the rendered [part="dialog"] panel -- mirrors
@@ -498,19 +530,20 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private get filtered(): LyraCommand[] {
     const locale = this.effectiveLocale;
     const query = this.queryText.trim().toLocaleLowerCase(locale);
+    const commands = this.effectiveCommands;
     if (
-      this.filteredForCommands !== this.commands ||
+      this.filteredForCommands !== commands ||
       this.filteredForQuery !== query ||
       this.filteredForLocale !== locale
     ) {
-      this.filteredForCommands = this.commands;
+      this.filteredForCommands = commands;
       this.filteredForQuery = query;
       this.filteredForLocale = locale;
       if (!query) {
-        this.filteredRows = this.commands;
+        this.filteredRows = commands;
       } else {
         const haystacks = this.searchHaystacks;
-        this.filteredRows = this.commands.filter((_, index) =>
+        this.filteredRows = commands.filter((_, index) =>
           haystacks[index]!.includes(query)
         );
       }
@@ -535,7 +568,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   private setActiveIndex(rows: LyraCommand[], index: number): void {
     this.activeIndex = index;
-    this.activeCommand = index >= 0 ? rows[index] : undefined;
+    this.activeCommandId = index >= 0 ? rows[index]?.commandId : undefined;
   }
 
   private onKeyDown = (event: KeyboardEvent): void => {

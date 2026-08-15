@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -16,15 +16,60 @@
 ## `lr-drilldown-panel`
 
 Controlled navigation shell from a chart or table datum to related evidence, documents, entities,
-or agent runs. It renders a breadcrumb path and delegates category content to existing primitives.
+or agent runs. It renders a breadcrumb path and delegates the effective category to existing
+source-card, document-preview, and entity-card primitives.
 
-**Properties:** `path: DrilldownNode[] = []` and `types: NodeTypeStyle[] = []` (both attribute:
-false), `accessibleLabel: string | null = null` (attribute `aria-label` — names the current
-category owner: the nested `lr-tab-group` with multiple categories or the sole `role="region"`
-otherwise. `null` leaves the tab strip unnamed and falls back to the category label for a sole
-region; an explicit empty string is preserved),
-`communityLabel: string = ''` (attribute `community-label`), `showFocusButton: boolean = true`
-(attribute `show-focus-button`). **Events:**
-`lr-drilldown-navigate` (`detail: { id, index }`). **Slots:** `runs`. **CSS parts:** `base`,
-`breadcrumb`, `breadcrumb-item`, `breadcrumb-button`, `tabs`, `category`, `content`, `evidence-item`,
-`document-item`, `entity-item`, `empty`.
+**Properties:**
+
+- `path: readonly LyraDrilldownNode[] = []` (attribute: false) — host-owned breadcrumb trail. Each
+  node uses `nodeId` and may carry readonly `evidence`, `documents`, and `entities` collections.
+  Evidence records use `evidenceId`, documents use `documentId`, and entities use `entityId`.
+- `activeCategory: LyraDrilldownCategory | '' = ''` (attribute `active-category`, reflected) —
+  controlled category authority. Empty or unavailable values resolve to the first populated
+  category without mutating the property. A tab interaction emits a change request; the host
+  accepts it by assigning `event.detail.category`.
+- `types: readonly LyraNodeTypeStyle[] = []` (attribute: false) — shared node-type badge styles
+  forwarded to composed entity cards. The shape is structurally identical to the graph/entity
+  node-style vocabulary.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — names the nested tab group or
+  sole category region. `null` leaves a tab strip unnamed and falls back to the sole category
+  label; an explicit empty string is preserved.
+- `communityLabel: string = ''` (attribute `community-label`) and
+  `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to active entity
+  cards.
+
+Structured inputs cross a realm-neutral schema boundary. The component clones and freezes all
+accepted records, nested arrays, and entity property maps; ignores accessors, malformed records,
+whitespace-unstable identities, and later duplicate IDs; and bounds the retained model to 256 path
+nodes, 1,000 records per category, 256 type styles, and 128 entity properties. A localized range
+under `limit` truthfully reports source input omitted by a ceiling.
+
+Only the effective category's child components are mounted. Each category is paged eight records
+at a time, with a localized `start–end of total` summary and Previous/Next controls. Consequently an
+active document category owns at most eight simultaneous `lr-document-preview` lifecycles (and at
+most eight of that viewer's individually byte-capped text resources); hidden categories own no
+preview fetches. Paging, path replacement, category changes, and disconnect remove obsolete
+previews, which abort their owner-realm requests. The embedded tab group uses manual activation so
+arrowing across tabs does not request expensive categories until Enter/Space commits.
+
+**Events:**
+
+- `lr-drilldown-navigate` — frozen `{ nodeId, index }`; a request only, never a `path` mutation.
+- `lr-drilldown-category-change` — frozen `{ nodeId, category, previousCategory }`; a controlled
+  request only.
+- `lr-drilldown-evidence-expand`, `lr-drilldown-evidence-open`,
+  `lr-drilldown-document-download`, `lr-drilldown-document-render-error`,
+  `lr-drilldown-document-highlight-activate`, and `lr-drilldown-entity-activate` — correlated
+  wrapper events carrying the current `nodeId` and the relevant `evidenceId`, `documentId`, or
+  `entityId`. Raw events from owned source cards, previews, entity cards, and tabs are contained;
+  events from consumer-owned `runs` slot content continue bubbling normally.
+
+**Slots:** `runs`. **CSS parts:** `base`, `breadcrumb`, `breadcrumb-item`, `breadcrumb-button`,
+`tabs`, `category`, `content`, `evidence-item`, `document-item`, `entity-item`, `pagination`,
+`pagination-summary`, `previous-button`, `next-button`, `limit`, `empty`.
+
+**9.0 migration:** the generic `Drilldown*` authoring types are now `LyraDrilldown*`. Replace node
+`id` with `nodeId`, evidence `id` with `evidenceId`, document `id` with `documentId`, entity `id`
+with `entityId`, and read `lr-drilldown-navigate.detail.nodeId`. Hidden category DOM is no longer
+eagerly present; query the source data or accept `lr-drilldown-category-change` before accessing
+that category's composed children.

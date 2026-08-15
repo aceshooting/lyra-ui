@@ -909,6 +909,25 @@
           }
         }
       },
+      "strong": {
+        "overlay": {
+          "$type": "string",
+          "$value": "var(--lr-theme-color-on-strong-overlay, #fff)",
+          "$description": "Canonical shared component token for color on strong overlay.",
+          "$extensions": {
+            "com.aceshooting.lyra": {
+              "cssCustomProperty": "--lr-color-on-strong-overlay",
+              "cssType": "color",
+              "scope": "shared",
+              "group": "color",
+              "themeInput": "--lr-theme-color-on-strong-overlay"
+            },
+            "com.aceshooting.lyra.modes": {
+              "forcedColors": "CanvasText"
+            }
+          }
+        }
+      },
       "success": {
         "$type": "string",
         "$value": "var(--lr-color-success-on-loud)",
@@ -4246,7 +4265,7 @@
             "evidence": [
               "src/components/agent-tools/agent-run/agent-run.styles.ts",
               "src/components/agent-tools/tool-call-chip/tool-call-chip.styles.ts",
-              "src/components/conversation/generation-status/generation-status.styles.ts",
+              "src/components/conversation/generation-metrics/generation-metrics.styles.ts",
               "src/components/conversation/usage-badge/usage-badge.styles.ts"
             ]
           }
@@ -4326,7 +4345,7 @@
               "src/components/data/flow-canvas/flow-canvas.class.ts",
               "src/components/data/flow-canvas/flow-canvas.styles.ts",
               "src/components/data/flow-node/flow-node.styles.ts",
-              "src/components/data/flow-run-overlay/flow-run-overlay.styles.ts",
+              "src/components/data/flow-run-status/flow-run-status.styles.ts",
               "src/components/data/gauge/gauge.styles.ts",
               "src/components/data/heatmap/heatmap.styles.ts",
               "src/components/data/table/table.styles.ts",
@@ -4654,11 +4673,8 @@
               "src/components/forms/select/select.styles.ts",
               "src/components/forms/swatch-picker/swatch-picker.styles.ts",
               "src/components/layout/command-palette/command-palette.styles.ts",
-              "src/components/media/avatar/avatar.styles.ts",
-              "src/components/media/avatar-group/avatar-group.styles.ts",
               "src/components/overlays/badge/badge.class.ts",
               "src/components/overlays/badge/badge.styles.ts",
-              "src/components/overlays/chip/chip.styles.ts",
               "src/components/overlays/spinner/spinner.class.ts",
               "src/components/overlays/spinner/spinner.styles.ts",
               "src/components/retrieval/neighbor-list/neighbor-list.styles.ts",
@@ -5115,7 +5131,7 @@
           },
           "evidence": [
             "src/components/agent-tools/eval-dataset/eval-dataset.styles.ts",
-            "src/components/data/query-builder/query-builder.styles.ts",
+            "src/components/data/condition-builder/condition-builder.styles.ts",
             "src/components/retrieval/retrieval-compare/retrieval-compare.styles.ts",
             "src/components/utility/mention-popover/mention-popover.styles.ts"
           ]
@@ -5351,9 +5367,6 @@
             "src/components/forms/swatch-picker/swatch-picker.styles.ts",
             "src/components/layout/details/details.styles.ts",
             "src/components/media/attachment-chip/attachment-chip.styles.ts",
-            "src/components/media/avatar/avatar.class.ts",
-            "src/components/media/avatar/avatar.styles.ts",
-            "src/components/media/avatar-group/avatar-group.styles.ts",
             "src/components/overlays/badge/badge.styles.ts",
             "src/components/overlays/drawer/drawer.class.ts",
             "src/components/overlays/drawer/drawer.styles.ts",
@@ -5620,8 +5633,7 @@
             "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.styles.ts",
             "src/components/retrieval/neighbor-list/neighbor-list.styles.ts",
             "src/components/retrieval/node-palette/node-palette.styles.ts",
-            "src/components/retrieval/path-strip/path-strip.styles.ts",
-            "src/components/retrieval/source-picker/source-picker.styles.ts"
+            "src/components/retrieval/path-strip/path-strip.styles.ts"
           ]
         }
       }
@@ -5650,9 +5662,7 @@
             "src/components/layout/command-palette/command-palette.styles.ts",
             "src/components/layout/scroller/scroller.class.ts",
             "src/components/layout/scroller/scroller.styles.ts",
-            "src/components/media/avatar/avatar.class.ts",
             "src/components/media/avatar/avatar.styles.ts",
-            "src/components/media/avatar-group/avatar-group.class.ts",
             "src/components/media/avatar-group/avatar-group.styles.ts",
             "src/components/media/file-icon/file-icon.class.ts",
             "src/components/media/file-icon/file-icon.styles.ts",
@@ -5804,8 +5814,8 @@
             "src/components/layout/app-rail/app-rail.styles.ts",
             "src/components/layout/card/card.styles.ts",
             "src/components/layout/dock-panel/dock-panel.styles.ts",
-            "src/components/layout/split/split.class.ts",
-            "src/components/layout/split/split.styles.ts",
+            "src/components/layout/multi-split/multi-split.class.ts",
+            "src/components/layout/multi-split/multi-split.styles.ts",
             "src/components/retrieval/graph/graph-canvas.ts",
             "src/components/retrieval/graph/graph.styles.ts",
             "src/components/viewers/document-preview/document-preview.styles.ts"
@@ -6007,7 +6017,6 @@
           "evidence": [
             "src/components/forms/combobox/combobox.class.ts",
             "src/components/forms/combobox/combobox.styles.ts",
-            "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
             "src/components/layout/dashboard-grid/dashboard-grid.styles.ts",
             "src/components/media/video/video.styles.ts"
           ]
@@ -8492,6 +8501,44 @@
                 ],
                 "alpha": 0.3,
                 "hex": "#b4b4b4"
+              }
+            }
+          }
+        }
+      },
+      "on": {
+        "strong": {
+          "overlay": {
+            "$type": "color",
+            "$value": {
+              "colorSpace": "srgb",
+              "components": [
+                1,
+                1,
+                1
+              ],
+              "alpha": 1,
+              "hex": "#ffffff"
+            },
+            "$description": "Canonical application theme input for color on strong overlay.",
+            "$extensions": {
+              "com.aceshooting.lyra": {
+                "cssCustomProperty": "--lr-theme-color-on-strong-overlay",
+                "cssType": "color",
+                "scope": "theme-input",
+                "group": "color"
+              },
+              "com.aceshooting.lyra.modes": {
+                "dark": {
+                  "colorSpace": "srgb",
+                  "components": [
+                    1,
+                    1,
+                    1
+                  ],
+                  "alpha": 1,
+                  "hex": "#ffffff"
+                }
               }
             }
           }

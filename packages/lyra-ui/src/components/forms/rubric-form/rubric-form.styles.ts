@@ -106,18 +106,18 @@ export const styles = css`
      filter applies to the whole subtree -- it dragged the button's own label along with its
      background. Mixing the fill toward --lr-color-mix-partner (which follows the text colour)
      always moves, always in the direction the surface needs, and leaves the label alone. */
-  [part='submit']:hover {
+  [part='submit']:not(:disabled):hover {
     background: var(--lr-rubric-form-submit-hover-bg, color-mix(in oklab, var(--lr-rubric-form-submit-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
     border-color: var(--lr-rubric-form-submit-hover-border-color, color-mix(in oklab, var(--lr-rubric-form-submit-border-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
   }
-  [part='submit']:active {
+  [part='submit']:not(:disabled):active {
     background: var(--lr-rubric-form-submit-active-bg, color-mix(in oklab, var(--lr-rubric-form-submit-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
     border-color: var(--lr-rubric-form-submit-active-border-color, color-mix(in oklab, var(--lr-rubric-form-submit-border-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
-  [part='skip']:hover {
+  [part='skip']:not(:disabled):hover {
     background: var(--lr-rubric-form-skip-hover-bg, var(--lr-color-brand-quiet));
   }
-  [part='skip']:active {
+  [part='skip']:not(:disabled):active {
     background: var(--lr-rubric-form-skip-active-bg, color-mix(in oklab, var(--lr-rubric-form-skip-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
   [part='submit']:disabled,

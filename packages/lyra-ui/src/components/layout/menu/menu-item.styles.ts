@@ -122,9 +122,21 @@ export const styles = css`
   }
   [part='details'],
   [part='suffix'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
+  }
+  [part='details'] ::slotted(*),
+  [part='suffix'] ::slotted(*) {
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   [part='details'][hidden],
   [part='suffix'][hidden] {

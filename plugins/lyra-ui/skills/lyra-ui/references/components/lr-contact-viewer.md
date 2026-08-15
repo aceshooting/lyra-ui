@@ -21,10 +21,14 @@ but never rendered — the card's heading uses `FN` (falling back to a localized
 label when `FN` is absent).
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the contacts.
+`documentPreviewResourceTooLarge` message instead of the contacts. Parsing retains at most 250
+contacts and 2 MiB of rendered contact text, keeping the complete accepted model searchable and
+anchorable without a 10,000-card eager DOM tree.
 
-**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`); invalid CSS
+**Properties:** `src: string = ''`, `name: string = ''`,
+`headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose every
+rendered contact name at that semantic level, invalid untyped values retain level 3, and `none`
+keeps the names visual-only — and `maxHeight: string = ''` (attribute `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
 `activeHighlightId`, `anchor`, and
@@ -34,13 +38,14 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
 
 **Events:**
+
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-contact search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered contacts.
+DOMRect[] }`) — fired after a selection ends inside the rendered contacts.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted contact-text
 highlights are passive and cannot be activated.
@@ -53,5 +58,8 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 **Themeable custom properties:** `--lr-contact-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
 
-**Exports:** `parseVCards()` and the `VCardName`, `VCardTypedValue`, `VCardAddress`, and `VCardContact`
-types.
+**Exports:** `parseVCards(text, maxContactsOrOptions?)` and the `ParseVCardsOptions`, `VCardName`,
+`VCardTypedValue`, `VCardAddress`, and `VCardContact` types. The parser accepts vCard 2.1/3.0/4.0,
+line folding, 2.1 bare types, quoted parameters and quoted-printable charset values. Its numeric
+limit is floored and clamped to `0…250`; malformed framing/profiles/parameters fail closed, while an
+actually empty document returns no contacts.

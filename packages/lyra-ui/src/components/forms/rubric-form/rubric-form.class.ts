@@ -88,8 +88,10 @@ interface RuntimeRubricOptionInput {
 }
 
 function cloneRubricValue(value: RubricValue): RubricValue {
-  return Object.fromEntries(
-    Object.entries(value).map(([key, entry]) => [key, Array.isArray(entry) ? [...entry] : entry]),
+  return Object.freeze(
+    Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [key, Array.isArray(entry) ? Object.freeze([...entry]) : entry]),
+  )
   );
 }
 
@@ -151,7 +153,8 @@ function normalizeRubricKeys(next: readonly RubricKey[]): RubricKey[] {
   return normalized;
 }
 
-function scoreDomain(key: ScoreRubricKey): { min: number; max: number; step: number } {
+function scoreDomain(key: ScoreRubricKey): { min: number; max: number; step: number;
+} {
   const min = Number.isFinite(key.min) ? key.min! : 0;
   const rawMax = Number.isFinite(key.max) ? key.max! : 5;
   const max = Math.max(min, rawMax);
@@ -208,10 +211,13 @@ function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): Rubri
 }
 
 export interface LyraRubricFormEventMap {
-  'lr-invalid': CustomEvent<undefined>;
-  'lr-input': CustomEvent<{ value: RubricValue }>;
-  'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
-  'lr-submit': CustomEvent<{ value: RubricValue; itemId: string }>;
+  'lr-invalid': CustomEvent<null>;
+  'lr-input': CustomEvent<Readonly<{ value: RubricValue }>>;
+  'lr-validity-change': CustomEvent<{
+    readonly valid: boolean;
+    readonly errors: Readonly<Record<string, string>>;
+  }>;
+  'lr-submit': CustomEvent<Readonly<{ value: RubricValue; itemId: string }>>;
   'lr-skip': CustomEvent<{ itemId: string }>;
 }
 
@@ -394,7 +400,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     this.addEventListener('keydown', this.onFormKeyDown as EventListener);
     this.syncFormState();
   }
@@ -572,10 +578,27 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     return this.disabled || this._fieldsetDisabled;
   }
 
-  /** The current per-key validation errors (`{ [key]: message }`), mirroring the last
-   *  `lr-validity-change` event's `errors`. Independent of which fields have been visited. */
-  get errors(): Record<string, string> {
-    return { ...this._errors };
+  /** The current effective validation errors. Intrinsic errors are keyed by their rubric key;
+   *  a caller-supplied custom validity message is keyed by the whole-control `base` part. */
+  get errors(): Readonly<Record<string, string>> {
+    return this.publicValidityErrors();
+  }
+
+  private publicValidityErrors(): Readonly<Record<string, string>> {
+    const errors: Record<string, string> = { ...this._errors };
+    if (this.willValidate && this.validityController.customValidityMessage)
+      errors["base"] = this.validationMessage;
+    return Object.freeze(errors);
+  }
+
+  private publishValiditySnapshot(): void {
+    if (!this.isConnected) return;
+    const valid = !this.willValidate || this.validity.valid;
+    const errors = valid ? Object.freeze({}) : this.publicValidityErrors();
+    const key = JSON.stringify({ valid, errors });
+    if (key === this.lastValidityKey) return;
+    this.lastValidityKey = key;
+    this.emit("lr-validity-change", Object.freeze({ valid, errors }));
   }
 
   private fieldElement(key: string): HTMLElement | null {
@@ -604,7 +627,9 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     // fragment before it's inserted into the document) must not crash here.
     if (!firstInvalidKey || !this.renderRoot) return undefined;
     const field = this.fieldElement(firstInvalidKey);
-    return (field?.querySelector('.control') as HTMLElement | null) ?? undefined;
+    return (
+      (field?.querySelector('.control') as HTMLElement | null) ?? undefined
+    );
   }
 
   private isSegmentedScore(k: ScoreRubricKey): boolean {
@@ -620,10 +645,12 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     if (!this.isSegmentedScore(k)) return [];
     const { min, max, step } = scoreDomain(k);
     const count = Math.round((max - min) / step);
-    return Array.from({ length: count + 1 }, (_, index) => (index === count ? max : min + index * step));
+    return Array.from({ length: count + 1 }, (_, index) =>
+      index === count ? max : min + index * step);
   }
 
-  private computeValidation(): { errors: Record<string, string>; flags: ValidityStateFlags } {
+  private computeValidation(): { errors: Record<string, string>; flags: ValidityStateFlags;
+  } {
     const errors: Record<string, string> = {};
     const flags: ValidityStateFlags = {};
     for (const k of this._keys) {
@@ -664,6 +691,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       this.validityController.setValidity(flags, message);
     }
     this.syncCustomStates();
+    this.publishValiditySnapshot();
   }
 
   /**
@@ -731,14 +759,13 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
    * `syncFormState()`) and a form reset, exactly like a native control — only another
    * `setCustomValidity('')` clears it.
    *
-   * Independent of the per-key `errors` map, which stays a read-out of this rubric's own field
-   * rules: a message set here is form-level and is not attributed to any one key.
-   *
-   * The message is caller-supplied content, so it is used verbatim and never localized here.
+   * The message is form-level and is exposed as `errors.base`, keyed to this control's `base`
+   * part. It is caller-supplied content, so it is used verbatim and never localized here.
    */
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.syncCustomStates();
+    this.publishValiditySnapshot();
     this.requestUpdate();
   }
 
@@ -778,7 +805,9 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private setFieldValue(key: string, val: number | string | string[]): void {
     if (this.effectiveDisabled) return;
     this.value = { ...this._value, [key]: val };
-    this.emit('lr-input', { value: cloneRubricValue(this._value) });
+    this.emit('lr-input',
+      Object.freeze({ value: cloneRubricValue(this._value) })
+    );
   }
 
   private stopChildEvent = (event: Event): void => {
@@ -806,7 +835,9 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   private submit(): void {
     if (this.effectiveDisabled) return;
     if (!this.reportValidity()) return;
-    this.emit('lr-submit', { value: cloneRubricValue(this._value), itemId: this.itemId });
+    this.emit('lr-submit',
+      Object.freeze({ value: cloneRubricValue(this._value), itemId: this.itemId })
+    );
   }
 
   private skip(): void {
@@ -818,7 +849,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const firstKey = this._keys[0];
     if (!firstKey) return;
     const field = this.fieldElement(firstKey.key);
-    const control = field?.querySelector('.control') as (HTMLElement & { shadowRoot?: ShadowRoot | null }) | null;
+    const control = field?.querySelector('.control') as
+      | (HTMLElement & { shadowRoot?: ShadowRoot | null }) | null;
     if (!control) return;
     if (firstKey.type === 'score' && this.isSegmentedScore(firstKey)) {
       (control.shadowRoot?.querySelector('[part="segment"][tabindex="0"]') as HTMLElement | null)?.focus();
@@ -840,15 +872,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('value') || changed.has('keys') || changed.has('_errors')) {
-      const valid = Object.keys(this._errors).length === 0;
-      const key = JSON.stringify({ valid, errors: this._errors });
-      if (key !== this.lastValidityKey) {
-        this.lastValidityKey = key;
-        this.emit('lr-validity-change', { valid, errors: { ...this._errors } });
-      }
-    }
-    if (this.pendingFocusFirst) {
+    this.publishValiditySnapshot();
+      if (this.pendingFocusFirst) {
       this.pendingFocusFirst = false;
       this.focusFirstControl();
     }
@@ -914,7 +939,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const description = k.description ? html`<span slot="hint" part="description">${k.description}</span>` : nothing;
     const error = hasError ? html`<span slot="error" part="error">${this._errors[k.key]}</span>` : nothing;
     if (k.multiple) {
-      const selected: readonly string[] = Array.isArray(current) ? current as string[] : [];
+      const selected: readonly string[] = Array.isArray(current) ? (current as string[])
+        : [];
       return html`<lr-checkbox-group
         id=${fieldId}
         class="control"

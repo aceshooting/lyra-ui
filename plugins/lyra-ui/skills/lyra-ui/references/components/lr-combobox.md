@@ -39,8 +39,9 @@ therefore cannot widen a 320px LTR or RTL picker.
 - `placeholder: string = ''`
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
-  `aria-required` on `<input part="combobox-input">` immediately, and `aria-invalid` once the field
-  has been touched, see gotchas)
+  `aria-required` on `<input part="combobox-input">` immediately. That semantic input exposes
+  `aria-invalid="true"` whenever visible error chrome is present, or after interaction while
+  intrinsic/custom validity fails; it explicitly returns to `"false"` when neither applies)
 - `name: string = ''`
 - `label: string = ''`
 - `hint: string = ''`
@@ -89,15 +90,19 @@ therefore cannot widen a 320px LTR or RTL picker.
 - `inputValue: string` — the live filter input text; programmatic writes are event-silent
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
   show before collapsing to `+N`)
-- `emptyText: string = 'No results'` (attribute `empty-text`)
-- `loadingText: string = 'Loading…'` (attribute `loading-text` — listbox row shown while a `source`
-  fetch is in flight)
-- `overflowText: string = '+{n} more — refine your search'` (attribute `overflow-text` — listbox row
-  shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count)
+- `emptyText?: string` (attribute `empty-text`) — omission displays localized `noMatches` (`"No
+  matches"` in the built-in English locale); any supplied string, including `''`, renders verbatim
+- `loadingText?: string` (attribute `loading-text`) — shown while a `source` fetch is in flight;
+  omission displays localized `loading` (`"Loading…"` in English), while any supplied string,
+  including `''`, renders verbatim
+- `overflowText?: string` (attribute `overflow-text`) — shown when `maxRender` caps the rows;
+  omission displays localized `comboboxOverflow` (`"+{n} more — refine your search"` in English).
+  A supplied template wins verbatim over `.strings`, including when it equals that English
+  template or is empty; `{n}` is still replaced with the locale-formatted hidden count
 - `filter: OptionFilter | null = null` (attribute: false — `(option, query) => boolean`; default
   matches `label`/`searchText` case-insensitively; ignored while `source` is set)
 - `source: ComboboxSource | null = null` (attribute: false — `(query: string, options: { signal:
-AbortSignal }) => Promise<ComboboxSourceRow[]>`; when set, replaces the light-DOM `<lr-option>`
+AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, total? }>`; when set, replaces the light-DOM `<lr-option>`
   list with an async lookup, debounced by `sourceDelay` ms after each keystroke and re-run on
   clear/pick. Forward `options.signal` to `fetch(url, { signal })` to cancel the request when a
   newer query supersedes it or the element disconnects. `loadingText` is shown while a call is in
@@ -105,7 +110,10 @@ AbortSignal }) => Promise<ComboboxSourceRow[]>`; when set, replaces the light-DO
   via a monotonic token. The exported type requires the `options` parameter; an existing
   one-parameter `(query) => …` function remains assignable under TypeScript's ordinary function
   parameter compatibility, but consumers that need cancellation should accept and forward
-  `options.signal`. A current rejection clears stale rows and renders a localized disabled
+  `options.signal`; honor `options.limit` when practical and return `{ rows, total }` to report the
+  provider-side match count. The component independently clone-normalizes the result, retains at
+  most 2,000 rows/250,000 aggregate text units, skips malformed or hostile rows, and never trusts a
+  provider to enforce the ceiling. A current rejection clears stale rows and renders a localized disabled
   listbox row; that visible row is not a shadow live region. The same localized message is appended
   to `[data-lr-live-region="assertive"]` in the document for each fresh post-mount rejection,
   including an identical retry, while raw caught error text stays out of the UI.)
@@ -115,7 +123,10 @@ AbortSignal }) => Promise<ComboboxSourceRow[]>`; when set, replaces the light-DO
 - `maxRender: number = 200` (attribute `max-render` — caps how many rows render at once, always
   keeping the current selection visible even if it's outside the cap; the excess renders as one
   `overflowText` row instead of being dropped silently. See "Large option lists" below for how to
-  size it, and when `source` is the better answer)
+  size it, and when `source` is the better answer. Runtime writes are capped at 1,000)
+- `sourceTotal: number` (read-only) — provider-side total for the latest accepted response
+- `sourceTruncated: boolean` (read-only) — whether the response reported or contained more rows
+  than the bounded retained snapshot; the overflow row includes that hidden count
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
   `multiple` mode
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
@@ -141,11 +152,13 @@ every selection change and a `form.reset()` — like a native control, only anot
 **8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
 alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
 
-`ComboboxSourceRow = { value: string; label: string; sub?: string; icon?: unknown; badge?: string |
+`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
 boolean }` — the row shape used by the async `source` path. `icon` renders as a decorative leading
-visual, `badge` as trailing metadata, `accessibleLabel` can provide richer spoken text than the
-visible label, and `data` is retained without being rendered for retrieval through `selectedRows`.
+visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
+put independent actions outside it. `badge` renders as trailing metadata, `accessibleLabel` can
+provide richer spoken text than the visible label, and `data` is retained without being rendered
+for retrieval through `selectedRows`.
 `dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
 render a transparent dot.
 The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group fields to the same
@@ -171,9 +184,10 @@ keystroke — the live as-you-typed search string, deliberately _not_ `value`, w
 selection. It is the supported way to read that text; reaching into the shadow root for
 `[part="combobox-input"]`'s value is not. Named `lr-filter` rather than `lr-input` precisely because
 `lr-input`'s detail on `<lr-input>` is the committed value, and the two must not share a name while
-carrying different strings. It fires for user input only: picking a row, the clear button,
-`form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
-the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
+carrying different strings. It fires for user edits only. Picking a row, `form.reset()`, dismissing
+the listbox, a programmatic `value` write, and `setRangeText()` blank the filter silently.
+Activating the clear button is a user edit: when a query existed it emits `lr-filter` with
+`value: ''` before the clear transaction finishes.
 `lr-show` and `lr-hide` report the start of listbox visibility transitions. `lr-show` is a
 cancelable veto point; `lr-hide` is cancelable while connected, but the disconnect-driven close is
 non-cancelable because an already-removed control cannot honour a veto. Vetoing a connected close
@@ -183,7 +197,9 @@ ownership remain unchanged, so the host can defer dismissal without reconstructi
 `lr-after-hide` fire when the corresponding transition settles. `lr-create` carries
 `detail: { inputValue }` and is also cancelable: preventing it suppresses the default append/select
 action so the host can normalize and commit its own option.
-The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
+The internal input's `focus` and `blur` are relayed exactly once from the host as owner-realm
+native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`;
+`lr-focus` and `lr-blur` are no-detail prefixed aliases for the same transitions.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
 
@@ -246,10 +262,10 @@ adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`
 `group-label` (the heading of an option group — rows sharing a `group` — named as on `lr-select` and
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
-`option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the decorative
-leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
-is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
-indicator from `maxRender`), `error`, `hint`
+`option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the inert,
+aria-hidden decorative leading visual for an async row), `option-label`, `option-sub` (a row's
+secondary line, when `sub` is set), `option-badge` (an async row's trailing metadata),
+`option-overflow` (the "+N more" indicator from `maxRender`), `error`, `hint`
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
@@ -348,7 +364,9 @@ by a custom owner.
   <lr-option value="de" search-text="deutschland">Germany</lr-option>
 </lr-combobox>
 <script type="module">
-  document.getElementById('cb').addEventListener('change', (e) => console.log(e.target.value));
+  document
+    .getElementById("cb")
+    .addEventListener("change", (e) => console.log(e.target.value));
 </script>
 ```
 
@@ -356,7 +374,7 @@ by a custom owner.
 <!-- Async data source instead of light-DOM <lr-option> children: -->
 <lr-combobox id="cb2" label="Fruit (async)" with-clear></lr-combobox>
 <script type="module">
-  document.getElementById('cb2').source = async (query) => {
+  document.getElementById("cb2").source = async (query) => {
     const rows = await fetchFruit(query); // your own lookup
     return rows.map((r) => ({
       value: r.id,

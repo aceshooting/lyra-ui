@@ -1,7 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './callout.js';
-const meta: Meta = { title: 'Feedback/Callout', component: 'lr-callout', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'Feedback/Callout',
+  component: 'lr-callout',
+  tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'Unsupported closed-set values normalize consistently from markup and untyped property writes: `variant="brand"`, `size="m"`, `heading-level="3"`, and an omitted `appearance`.' } } },
+};
 export default meta;
 export const Default: StoryObj = {
   parameters: {

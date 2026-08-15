@@ -45,14 +45,19 @@ mark it as the active `aria-current` result, announce its position, and scroll i
 they resolve `false` when there are no matches. `clearSearch()` resets `search` to `''`, clearing all
 matches and the cursor.
 
-**Events:** `lr-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
-per-node one. Fires even when `navigator.clipboard` is unavailable or the write silently failed
-(a rejected `writeText()` is swallowed), so a consumer can still observe copy _intent_ — the event
-is not a confirmation that the OS clipboard was actually reached. Copying a circular `data` value
-serializes safely, substituting the same `Circular reference` marker the tree view renders, instead
-of throwing. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — fired whenever the
-search query, match count, or active-match cursor changes, from `runSearch()`/`searchNext()`/
-`searchPrevious()`/`clearSearch()`, or a direct `search`/`data` property write.
+**Events:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
+the top-level copy button or a per-node one only after the owning browsing context's clipboard write
+fulfills. `lr-error` (no detail) and `lr-copy-error` (`detail: LyraClipboardWriteFailure`) fire when
+serialization or clipboard writing fails; the detailed frozen outcome carries `ok: false`, the
+attempted text, a reason of `'unsupported' | 'denied' | 'failed'`, and the original error. Failures
+announce localized `copyFailed`; the raw platform error is never rendered. Copying a circular
+`data` value serializes safely, substituting the same `Circular reference` marker the tree view
+renders, instead of throwing. `lr-search-change`
+(`detail: { query, matchCount, matchCountExact, activeIndex }`) —
+fired whenever the search query, match count, or active-match cursor changes, from
+`runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct `search`/`data`
+property write. `matchCountExact` is `false` when the bounded traversal only proves a lower bound;
+the rendered count uses an “at least” prefix in the same case.
 
 **Slots:** none — the tree is rendered entirely from `data`.
 
@@ -70,6 +75,11 @@ present for row alignment on leaf/empty nodes),
 clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); only rendered when
 `copyable`), `limit` (the localized notice rendered below the tree when the depth/node traversal
 budget truncates rendering or search — absent entirely for any document within budget)
+
+Collapsed arrays retain their exact safe `.length`. A broad object whose key count itself exceeds
+the traversal budget uses an “at least” preview rather than presenting the retained prefix as a
+false total. Per-row copy actions remain visible by default on coarse-pointer/no-hover devices;
+fine-pointer users retain the hover/focus reveal.
 
 Active-match position changes are appended to Lyra's shared light-DOM polite announcement sink.
 The shadow tree keeps only an `aria-hidden` text mirror, so the same result is not announced twice;
@@ -119,7 +129,7 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
 
 - `data` is property-only (`attribute: false`) — it must be set via `.data = ...` or a lit-html `.data=${...}`
   binding, never as a plain HTML attribute.
-- Search highlighting auto-expands only the _ancestors_ of a match, not the whole tree — a
+- Search highlighting auto-expands only the *ancestors* of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
 - An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
   `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative

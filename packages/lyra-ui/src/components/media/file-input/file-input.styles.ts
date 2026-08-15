@@ -147,6 +147,20 @@ export const styles = css`
     border-color: var(--lr-file-input-reject-border-color, var(--lr-color-danger));
     background: var(--lr-file-input-reject-bg, color-mix(in srgb, var(--lr-color-danger) 8%, transparent));
   }
+  @media (forced-colors: active) {
+    [part~="base"][data-drag-state="accept"] {
+      border-color: Highlight;
+      border-style: double;
+      outline: var(--lr-border-width-thin) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
+    [part~="base"][data-drag-state="reject"] {
+      border-color: CanvasText;
+      border-style: dotted;
+      outline: var(--lr-border-width-medium) double CanvasText;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
+  }
   :host(:not(:disabled)) [part~='base']:hover {
     border-color: var(--lr-color-brand);
   }
@@ -157,7 +171,14 @@ export const styles = css`
      needs its own answer -- the hover border alone repeats what hover already said. Both selector
      shapes are mirrored because the pointer can be over the button itself or over the
      pointer-events: none content stacked on top of it in the same grid cell. */
-  :host(:not(:disabled)) [part~='base']:active,
+  :host(:not(:disabled)) [part~='base']:active {
+    border-color: var(--lr-color-brand);
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   :host(:not(:disabled)) .dropzone:active [part~='base'] {
     border-color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));

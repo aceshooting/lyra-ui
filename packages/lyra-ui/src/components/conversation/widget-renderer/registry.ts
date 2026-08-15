@@ -1,21 +1,21 @@
 /** A primitive property type accepted from an authored widget document. */
-export type WidgetPropType = "string" | "number" | "boolean";
+export type LyraWidgetPropType = "string" | "number" | "boolean";
 
 /** Semantic interaction classification, independent of event and binding plumbing. */
-export type WidgetInteraction = "none" | "control";
+export type LyraWidgetInteraction = "none" | "control";
 
 /** One allowlisted mapped widget type. Structural `text`/`row`/`col` nodes are not registered. */
-export interface WidgetTypeDefinition {
+export interface LyraWidgetTypeDefinition {
   /** Required custom-element render target. */
   readonly tag: string;
   /** Prop allowlist: name -> required primitive type. */
-  readonly props?: Readonly<Record<string, WidgetPropType>>;
+  readonly props?: Readonly<Record<string, LyraWidgetPropType>>;
   /** Always applied after the authored allowlist and never overridable by document input. */
   readonly forcedProps?: Readonly<Record<string, unknown>>;
   /** Allowlisted child slot names. */
   readonly slots?: readonly string[];
   /** Whether this element is semantically a control for nested-control content-model checks. */
-  readonly interaction: WidgetInteraction;
+  readonly interaction: LyraWidgetInteraction;
   /** Event that emits `lr-widget-action` when a node also supplies `actionId`. */
   readonly action?: Readonly<{ event: string }>;
   /** Controlled-state event mappings for allowlisted props. */
@@ -27,8 +27,8 @@ const WIDGET_TYPE_REGISTRY_BRAND: unique symbol = Symbol(
 );
 
 /** Immutable type-keyed registry snapshot accepted by each `<lr-widget-renderer>` instance. */
-export interface WidgetTypeRegistry
-  extends ReadonlyMap<string, Readonly<WidgetTypeDefinition>> {
+export interface LyraWidgetTypeRegistry
+  extends ReadonlyMap<string, Readonly<LyraWidgetTypeDefinition>> {
   readonly [WIDGET_TYPE_REGISTRY_BRAND]: true;
 }
 
@@ -97,12 +97,12 @@ function propertyName(value: string): string {
 
 function freezeProps(
   value: unknown
-): Readonly<Record<string, WidgetPropType>> | undefined {
+): Readonly<Record<string, LyraWidgetPropType>> | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError("A widget props allowlist must be an object.");
   }
-  const out: Record<string, WidgetPropType> = {};
+  const out: Record<string, LyraWidgetPropType> = {};
   for (const [key, type] of Object.entries(value)) {
     propertyName(key);
     if (type !== "string" && type !== "number" && type !== "boolean") {
@@ -132,7 +132,7 @@ function freezeForcedProps(
 
 function freezeBindings(
   value: unknown,
-  props: Readonly<Record<string, WidgetPropType>> | undefined
+  props: Readonly<Record<string, LyraWidgetPropType>> | undefined
 ): Readonly<Record<string, Readonly<{ event: string }>>> | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -166,11 +166,11 @@ function freezeBindings(
 /** Validates and freezes one factory input definition. */
 function validateWidgetTypeDefinition(
   value: unknown
-): Readonly<WidgetTypeDefinition> {
+): Readonly<LyraWidgetTypeDefinition> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError("A widget type definition must be an object.");
   }
-  const candidate = value as Partial<WidgetTypeDefinition>;
+  const candidate = value as Partial<LyraWidgetTypeDefinition>;
   if (
     typeof candidate.tag !== "string" ||
     !CUSTOM_ELEMENT_NAME.test(candidate.tag) ||
@@ -229,12 +229,12 @@ function validateWidgetTypeDefinition(
 }
 
 /** Read-only wrapper rather than a frozen `Map`, whose mutator methods remain callable. */
-class ImmutableWidgetTypeRegistry implements WidgetTypeRegistry {
+class ImmutableWidgetTypeRegistry implements LyraWidgetTypeRegistry {
   readonly [WIDGET_TYPE_REGISTRY_BRAND] = true as const;
-  readonly #entries: Map<string, Readonly<WidgetTypeDefinition>>;
+  readonly #entries: Map<string, Readonly<LyraWidgetTypeDefinition>>;
 
   constructor(
-    entries: Iterable<readonly [string, Readonly<WidgetTypeDefinition>]>
+    entries: Iterable<readonly [string, Readonly<LyraWidgetTypeDefinition>]>
   ) {
     this.#entries = new Map(entries);
     Object.freeze(this);
@@ -244,7 +244,7 @@ class ImmutableWidgetTypeRegistry implements WidgetTypeRegistry {
     return this.#entries.size;
   }
 
-  get(key: string): Readonly<WidgetTypeDefinition> | undefined {
+  get(key: string): Readonly<LyraWidgetTypeDefinition> | undefined {
     return this.#entries.get(key);
   }
 
@@ -252,7 +252,7 @@ class ImmutableWidgetTypeRegistry implements WidgetTypeRegistry {
     return this.#entries.has(key);
   }
 
-  entries(): MapIterator<[string, Readonly<WidgetTypeDefinition>]> {
+  entries(): MapIterator<[string, Readonly<LyraWidgetTypeDefinition>]> {
     return this.#entries.entries();
   }
 
@@ -260,15 +260,15 @@ class ImmutableWidgetTypeRegistry implements WidgetTypeRegistry {
     return this.#entries.keys();
   }
 
-  values(): MapIterator<Readonly<WidgetTypeDefinition>> {
+  values(): MapIterator<Readonly<LyraWidgetTypeDefinition>> {
     return this.#entries.values();
   }
 
   forEach(
     callbackfn: (
-      value: Readonly<WidgetTypeDefinition>,
+      value: Readonly<LyraWidgetTypeDefinition>,
       key: string,
-      map: WidgetTypeRegistry
+      map: LyraWidgetTypeRegistry
     ) => void,
     thisArg?: unknown
   ): void {
@@ -277,7 +277,7 @@ class ImmutableWidgetTypeRegistry implements WidgetTypeRegistry {
     }
   }
 
-  [Symbol.iterator](): MapIterator<[string, Readonly<WidgetTypeDefinition>]> {
+  [Symbol.iterator](): MapIterator<[string, Readonly<LyraWidgetTypeDefinition>]> {
     return this.entries();
   }
 }
@@ -286,20 +286,20 @@ class ImmutableWidgetTypeRegistry implements WidgetTypeRegistry {
  * rejected rather than retained by a renderer and allowed to leak mutations between instances. */
 export function isWidgetTypeRegistry(
   value: unknown
-): value is WidgetTypeRegistry {
+): value is LyraWidgetTypeRegistry {
   return Boolean(
     value &&
       typeof value === "object" &&
-      (value as Partial<WidgetTypeRegistry>)[WIDGET_TYPE_REGISTRY_BRAND] ===
+      (value as Partial<LyraWidgetTypeRegistry>)[WIDGET_TYPE_REGISTRY_BRAND] ===
         true
   );
 }
 
 /** Creates an immutable, validated registry snapshot owned by the assigning renderer/consumer. */
 export function createWidgetTypeRegistry(
-  entries: Iterable<readonly [string, WidgetTypeDefinition]> = []
-): WidgetTypeRegistry {
-  const validated = new Map<string, Readonly<WidgetTypeDefinition>>();
+  entries: Iterable<readonly [string, LyraWidgetTypeDefinition]> = []
+): LyraWidgetTypeRegistry {
+  const validated = new Map<string, Readonly<LyraWidgetTypeDefinition>>();
   for (const [type, definition] of entries) {
     const key = registryTypeKey(type);
     if (validated.has(key)) {

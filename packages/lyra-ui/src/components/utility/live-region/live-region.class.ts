@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteDuration } from '../../../internal/numbers.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import {
   Announcer,
   acquireAnnouncementSink,
@@ -12,6 +13,11 @@ import {
 import { styles } from './live-region.styles.js';
 
 export type LyraLiveRegionMode = 'polite' | 'assertive';
+
+const LIVE_REGION_MODE = literalSetConverter<LyraLiveRegionMode>(
+  ['polite', 'assertive'],
+  'polite',
+);
 
 /**
  * `<lr-live-region>` — a visually-hidden ARIA live region that throttles
@@ -82,8 +88,21 @@ export class LyraLiveRegion extends LyraElement {
    *  own update cycle) so a caller that sets `mode` and immediately
    *  force-announces in the same synchronous turn -- e.g. a stream-status
    *  transition -- gets the new urgency and the new text landing together,
-   *  rather than the text beating Lit's re-render to the DOM. */
-  @property({ reflect: true }) mode: LyraLiveRegionMode = 'polite';
+   *  rather than the text beating Lit's re-render to the DOM. Unsupported values normalize to
+   *  reflected `polite`. */
+  private _mode: LyraLiveRegionMode = 'polite';
+
+  @property({ reflect: true, converter: LIVE_REGION_MODE })
+  get mode(): LyraLiveRegionMode {
+    return this._mode;
+  }
+  set mode(next: LyraLiveRegionMode) {
+    const normalized = LIVE_REGION_MODE.normalizeReflected(this, 'mode', next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate('mode', old);
+  }
 
   /** Throttle window in ms — see `Announcer` in `internal/announcer.ts`. */
   @property({ type: Number, attribute: 'throttle-ms' }) throttleMs = 500;

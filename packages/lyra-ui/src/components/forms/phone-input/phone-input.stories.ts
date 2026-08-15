@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import '../../media/flag/flag-peer.js';
-import type { LyraPhoneInput, LyraPhoneNumberAdapter, LyraPhoneInputSize } from './phone-input.class.js';
+import type { LyraPhoneInput, LyraPhoneNumberAdapter } from './phone-input.class.js';
+import type { LyraSizeStep } from '../../../internal/variants.js';
 
 const demoAdapter: LyraPhoneNumberAdapter = {
   countries: [
@@ -103,7 +104,7 @@ export const WithFlags: Story = {
 /** Country-selector rows use the shared hit-floor-aware control ladder at every size. */
 export const Sizes: Story = {
   render: () => {
-    const sizes: LyraPhoneInputSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    const sizes: LyraSizeStep[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
     return html`
       <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
         ${sizes.map(

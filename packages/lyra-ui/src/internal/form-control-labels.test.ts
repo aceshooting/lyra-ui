@@ -171,6 +171,47 @@ async function settle(control: TestControl): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
+async function nextTask(): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+async function settleControls(controls: readonly TestControl[]): Promise<void> {
+  await Promise.all(controls.map((control) => control.updateComplete));
+  await nextTask();
+}
+
+interface LabelReadCounter {
+  readonly count: number;
+  reset(): void;
+}
+
+async function withLabelReadCounter(run: (counter: LabelReadCounter) => Promise<void>): Promise<void> {
+  const descriptor = Object.getOwnPropertyDescriptor(ElementInternals.prototype, 'labels');
+  const nativeGet = descriptor?.get;
+  expect(typeof nativeGet).to.equal('function');
+  let count = 0;
+  Object.defineProperty(ElementInternals.prototype, 'labels', {
+    ...descriptor,
+    configurable: true,
+    get(this: ElementInternals) {
+      count++;
+      return nativeGet!.call(this) as NodeList;
+    },
+  });
+  try {
+    await run({
+      get count() {
+        return count;
+      },
+      reset() {
+        count = 0;
+      },
+    });
+  } finally {
+    if (descriptor) Object.defineProperty(ElementInternals.prototype, 'labels', descriptor);
+  }
+}
+
 function mountFace(testCase: FaceCase, fieldsetDisabled = false): {
   container: HTMLDivElement;
   control: TestControl;
@@ -302,23 +343,10 @@ describe('external FACE label contract', () => {
     }
   });
 
-  it('targets root association refreshes by control id instead of broadcasting unrelated ids', async () => {
-    const descriptor = Object.getOwnPropertyDescriptor(ElementInternals.prototype, 'labels');
-    const nativeGet = descriptor?.get;
-    expect(typeof nativeGet).to.equal('function');
-    let labelReads = 0;
-    Object.defineProperty(ElementInternals.prototype, 'labels', {
-      ...descriptor,
-      configurable: true,
-      get(this: ElementInternals) {
-        labelReads++;
-        return nativeGet!.call(this) as NodeList;
-      },
-    });
-
+  it('targets explicit association changes among 500 controls', async () => {
     const container = document.createElement('div');
     const controls: TestControl[] = [];
-    for (let index = 0; index < 100; index++) {
+    for (let index = 0; index < 500; index++) {
       const control = document.createElement(tag('input')) as TestControl;
       control.id = `indexed-label-control-${index}`;
       controls.push(control);
@@ -326,32 +354,389 @@ describe('external FACE label contract', () => {
     }
     document.body.append(container);
     try {
-      await Promise.all(controls.map((control) => settle(control)));
-      labelReads = 0;
+      await settleControls(controls);
+      await withLabelReadCounter(async (reads) => {
+        const counts = {
+          unrelatedId: 0,
+          explicitInsertion: 0,
+          forReassociation: 0,
+          duplicateInsertion: 0,
+          duplicateRemoval: 0,
+          hostIdMutation: 0,
+          subtreeInsertion: 0,
+          subtreeRemoval: 0,
+        };
+        const unrelated = document.createElement('div');
+        unrelated.id = 'unrelated-association-id';
+        container.prepend(unrelated);
+        await nextTask();
+        counts.unrelatedId = reads.count;
 
-      const unrelated = document.createElement('div');
-      unrelated.id = 'unrelated-association-id';
-      container.prepend(unrelated);
-      await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
-      expect(labelReads, 'an unrelated id must refresh no form-associated control').to.equal(0);
+        const label = document.createElement('label');
+        label.htmlFor = controls[37]!.id;
+        label.textContent = 'Indexed target label';
+        reads.reset();
+        container.prepend(label);
+        await nextTask();
+        counts.explicitInsertion = reads.count;
 
-      const label = document.createElement('label');
-      label.htmlFor = controls[37]!.id;
-      label.textContent = 'Indexed target label';
-      labelReads = 0;
-      container.prepend(label);
-      await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
-      await settle(controls[37]!);
+        reads.reset();
+        label.htmlFor = controls[81]!.id;
+        await nextTask();
+        counts.forReassociation = reads.count;
 
-      expect(labelReads, 'one explicit target must not fan out to sibling controls').to.equal(1);
-      const semantic = composedElements(controls[37]!).find(
-        (element) => element !== controls[37] && element.tagName === 'INPUT',
-      );
-      expect(semantic?.getAttribute('aria-label') ?? null).to.equal(label.textContent);
+        const blocker = document.createElement('input');
+        blocker.id = controls[81]!.id;
+        reads.reset();
+        container.prepend(blocker);
+        await nextTask();
+        counts.duplicateInsertion = reads.count;
+
+        reads.reset();
+        blocker.remove();
+        await nextTask();
+        counts.duplicateRemoval = reads.count;
+
+        reads.reset();
+        controls[120]!.id = 'indexed-label-control-renamed';
+        await nextTask();
+        counts.hostIdMutation = reads.count;
+
+        const wrapper = document.createElement('div');
+        const nestedLabel = document.createElement('label');
+        nestedLabel.htmlFor = controls[203]!.id;
+        nestedLabel.textContent = 'Nested explicit label';
+        wrapper.append(nestedLabel);
+        reads.reset();
+        container.append(wrapper);
+        await nextTask();
+        counts.subtreeInsertion = reads.count;
+
+        reads.reset();
+        wrapper.remove();
+        await nextTask();
+        counts.subtreeRemoval = reads.count;
+
+        expect(counts).to.deep.equal({
+          unrelatedId: 0,
+          explicitInsertion: 1,
+          forReassociation: 2,
+          duplicateInsertion: 1,
+          duplicateRemoval: 1,
+          hostIdMutation: 1,
+          subtreeInsertion: 1,
+          subtreeRemoval: 1,
+        });
+        const semantic = composedElements(controls[81]!).find(
+          (element) => element !== controls[81] && element.tagName === 'INPUT',
+        );
+        expect(semantic?.getAttribute('aria-label') ?? null).to.equal(label.textContent);
+      });
     } finally {
       container.remove();
-      if (descriptor) Object.defineProperty(ElementInternals.prototype, 'labels', descriptor);
     }
+  });
+
+  it('targets implicit association shape changes among 500 controls', async () => {
+    const container = document.createElement('div');
+    const labels: HTMLLabelElement[] = [];
+    const controls: TestControl[] = [];
+    for (let index = 0; index < 500; index++) {
+      const label = document.createElement('label');
+      const control = document.createElement(tag('input')) as TestControl;
+      control.id = `implicit-label-control-${index}`;
+      label.append(`Implicit ${index}`, control);
+      labels.push(label);
+      controls.push(control);
+      container.append(label);
+    }
+    const unrelated = document.createElement('label');
+    unrelated.setAttribute('for', '');
+    unrelated.textContent = 'Unrelated empty for';
+    container.append(unrelated);
+    document.body.append(container);
+    try {
+      await settleControls(controls);
+      await withLabelReadCounter(async (reads) => {
+        const counts = {
+          unrelatedEmptyFor: 0,
+          implicitToExplicit: 0,
+          explicitRetarget: 0,
+          removedFor: 0,
+          precedingLabelableInsertion: 0,
+          precedingLabelableRemoval: 0,
+        };
+
+        unrelated.htmlFor = 'not-a-control';
+        await nextTask();
+        counts.unrelatedEmptyFor = reads.count;
+
+        reads.reset();
+        labels[123]!.htmlFor = controls[123]!.id;
+        await nextTask();
+        counts.implicitToExplicit = reads.count;
+
+        reads.reset();
+        labels[123]!.htmlFor = controls[124]!.id;
+        await nextTask();
+        counts.explicitRetarget = reads.count;
+
+        reads.reset();
+        labels[123]!.removeAttribute('for');
+        await nextTask();
+        counts.removedFor = reads.count;
+
+        const predecessor = document.createElement('input');
+        reads.reset();
+        labels[300]!.insertBefore(predecessor, controls[300]!);
+        await nextTask();
+        counts.precedingLabelableInsertion = reads.count;
+
+        reads.reset();
+        predecessor.remove();
+        await nextTask();
+        counts.precedingLabelableRemoval = reads.count;
+
+        expect(counts).to.deep.equal({
+          unrelatedEmptyFor: 0,
+          implicitToExplicit: 1,
+          explicitRetarget: 2,
+          removedFor: 2,
+          precedingLabelableInsertion: 1,
+          precedingLabelableRemoval: 1,
+        });
+        const restored = composedElements(controls[123]!).find(
+          (element) => element !== controls[123] && element.tagName === 'INPUT',
+        );
+        const reacquired = composedElements(controls[300]!).find(
+          (element) => element !== controls[300] && element.tagName === 'INPUT',
+        );
+        expect(restored?.getAttribute('aria-label') ?? null).to.equal('Implicit 123');
+        expect(reacquired?.getAttribute('aria-label') ?? null).to.equal('Implicit 300');
+      });
+    } finally {
+      container.remove();
+    }
+  });
+
+  it('bounds association-candidate traversal across wide text-only mutations', async () => {
+    const container = document.createElement('div');
+    const control = document.createElement(tag('input')) as TestControl;
+    control.id = 'bounded-association-traversal';
+    container.append(control);
+    document.body.append(container);
+    await settle(control);
+
+    const descriptor = Object.getOwnPropertyDescriptor(NodeList.prototype, Symbol.iterator);
+    const nativeIterator = descriptor?.value as (() => IterableIterator<Node>) | undefined;
+    expect(typeof nativeIterator).to.equal('function');
+    let visitedTextNodes = 0;
+    Object.defineProperty(NodeList.prototype, Symbol.iterator, {
+      ...descriptor,
+      configurable: true,
+      *value(this: NodeList) {
+        for (const node of nativeIterator!.call(this)) {
+          if (node.nodeType === Node.TEXT_NODE && node.parentNode === container) visitedTextNodes++;
+          yield node;
+        }
+      },
+    });
+    try {
+      const textNodes = Array.from({ length: 10_000 }, (_, index) => document.createTextNode(String(index)));
+      container.append(...textNodes);
+      await nextTask();
+      expect(visitedTextNodes, 'all node types share the mutation traversal ceiling').to.be.at.most(2_048);
+    } finally {
+      Object.defineProperty(NodeList.prototype, Symbol.iterator, descriptor!);
+      container.remove();
+    }
+  });
+
+  it('reacquires an implicit label through the partial-DOM fallback', async () => {
+    const label = document.createElement('label');
+    const host = document.createElement('div') as unknown as ExternalLabelHost & ReactiveControllerHost;
+    const shadow = host.attachShadow({ mode: 'open' });
+    const target = document.createElement('input');
+    shadow.append(target);
+    Object.defineProperty(host, 'renderRoot', { configurable: true, value: shadow });
+    label.append('Fallback label', host);
+    document.body.append(label);
+    const controller = new ExternalLabelController(host);
+    try {
+      controller.hostConnected();
+      expect(target.getAttribute('aria-label')).to.equal('Fallback label');
+
+      const predecessor = document.createElement('input');
+      label.insertBefore(predecessor, host);
+      await nextTask();
+      expect(target.getAttribute('aria-label')).to.equal(null);
+
+      predecessor.remove();
+      await nextTask();
+      expect(target.getAttribute('aria-label')).to.equal('Fallback label');
+    } finally {
+      controller.hostDisconnected();
+      label.remove();
+    }
+  });
+
+  it('yields a 500-control fallback after 256 refreshes without delaying exact targets', async () => {
+    const container = document.createElement('div');
+    const controls = Array.from({ length: 500 }, (_, index) => {
+      const control = document.createElement(tag('input')) as TestControl;
+      control.id = `fallback-label-control-${index}`;
+      return control;
+    });
+    container.append(...controls);
+    document.body.append(container);
+    let laterObserver: MutationObserver | undefined;
+    try {
+      await settleControls(controls);
+      await withLabelReadCounter(async (reads) => {
+        const semantic = composedElements(controls[499]!).find(
+          (element) => element !== controls[499] && element.tagName === 'INPUT',
+        );
+        let nameSeenByLaterObserver: string | null | undefined;
+        laterObserver = new MutationObserver(() => {
+          nameSeenByLaterObserver = semantic?.getAttribute('aria-label');
+        });
+        laterObserver.observe(container, { childList: true });
+
+        const large = document.createElement('div');
+        const exactLabel = document.createElement('label');
+        exactLabel.htmlFor = controls[499]!.id;
+        exactLabel.textContent = 'Exact target before truncation';
+        large.append(exactLabel, ...Array.from({ length: 2_049 }, () => document.createElement('span')));
+        container.append(large);
+        const firstTaskReads = await new Promise<number>((resolve) => {
+          setTimeout(() => resolve(reads.count), 0);
+        });
+        await nextTask();
+        expect(nameSeenByLaterObserver ?? null).to.equal(exactLabel.textContent);
+        expect({ firstTaskReads, finalReads: reads.count }).to.deep.equal({
+          firstTaskReads: 256,
+          finalReads: 500,
+        });
+      });
+    } finally {
+      laterObserver?.disconnect();
+      container.remove();
+    }
+  });
+
+  it('refreshes a targeted label before later mutation observers run', async () => {
+    const container = document.createElement('div');
+    const control = document.createElement(tag('input')) as TestControl;
+    control.id = 'association-observer-order';
+    container.append(control);
+    document.body.append(container);
+    try {
+      await settle(control);
+      const semantic = composedElements(control).find(
+        (element) => element !== control && element.tagName === 'INPUT',
+      );
+      let nameSeenByLaterObserver: string | null | undefined;
+      const laterObserver = new MutationObserver(() => {
+        nameSeenByLaterObserver = semantic?.getAttribute('aria-label');
+      });
+      laterObserver.observe(container, { childList: true });
+
+      const label = document.createElement('label');
+      label.htmlFor = control.id;
+      label.textContent = 'Synchronous observer label';
+      container.prepend(label);
+      await nextTask();
+      laterObserver.disconnect();
+
+      expect(nameSeenByLaterObserver ?? null).to.equal(label.textContent);
+    } finally {
+      container.remove();
+    }
+  });
+
+  it('keeps 500-control shadow, adoption, and disconnect indexes exact', async () => {
+    const owner = document.createElement('div');
+    const shadow = owner.attachShadow({ mode: 'open' });
+    const controls = Array.from({ length: 500 }, (_, index) => {
+      const control = document.createElement(tag('input')) as TestControl;
+      control.id = `shadow-label-control-${index}`;
+      return control;
+    });
+    shadow.append(...controls);
+    const frame = document.createElement('iframe');
+    document.body.append(owner, frame);
+    try {
+      await settleControls(controls);
+      await withLabelReadCounter(async (reads) => {
+        const counts = {
+          shadowUnrelated: 0,
+          shadowExplicit: 0,
+          disconnected: 0,
+          adoptedExplicit: 0,
+        };
+        const unrelated = document.createElement('div');
+        unrelated.id = 'unrelated-shadow-id';
+        shadow.prepend(unrelated);
+        await nextTask();
+        counts.shadowUnrelated = reads.count;
+
+        const label = document.createElement('label');
+        label.htmlFor = controls[200]!.id;
+        label.textContent = 'Shadow label';
+        reads.reset();
+        shadow.prepend(label);
+        await nextTask();
+        counts.shadowExplicit = reads.count;
+
+        controls[200]!.remove();
+        await nextTask();
+        reads.reset();
+        label.setAttribute('for', controls[200]!.id);
+        await nextTask();
+        counts.disconnected = reads.count;
+
+        const foreignDocument = frame.contentDocument!;
+        foreignDocument.body.append(controls[201]!);
+        await nextTask();
+        reads.reset();
+        const foreignLabel = foreignDocument.createElement('label');
+        foreignLabel.htmlFor = controls[201]!.id;
+        foreignLabel.textContent = 'Adopted label';
+        foreignDocument.body.prepend(foreignLabel);
+        await nextTask();
+        counts.adoptedExplicit = reads.count;
+
+        expect(counts).to.deep.equal({
+          shadowUnrelated: 0,
+          shadowExplicit: 1,
+          disconnected: 0,
+          adoptedExplicit: 1,
+        });
+        const adoptedSemantic = composedElements(controls[201]!).find(
+          (element) => element !== controls[201] && element.tagName === 'INPUT',
+        );
+        expect(adoptedSemantic?.getAttribute('aria-label') ?? null).to.equal(foreignLabel.textContent);
+      });
+    } finally {
+      frame.remove();
+      owner.remove();
+    }
+  });
+
+  it('restores the ElementInternals labels getter when instrumentation throws', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(ElementInternals.prototype, 'labels');
+    const marker = new Error('expected instrumentation failure');
+    let caught: unknown;
+    try {
+      await withLabelReadCounter(async () => {
+        throw marker;
+      });
+    } catch (error) {
+      caught = error;
+    }
+    const restored = Object.getOwnPropertyDescriptor(ElementInternals.prototype, 'labels');
+    expect(caught === marker).to.be.true;
+    expect(restored?.get === descriptor?.get).to.be.true;
   });
 
   it('withdraws a removed label and discovers its replacement without a control render', async () => {

@@ -262,6 +262,66 @@ it('emits lr-validity-change again once the required field is filled, and not on
   expect(fired, 'validity did not actually change, so the event must not re-fire').to.be.false;
 });
 
+it('publishes custom, own-disabled, and fieldset-disabled validity as frozen deduplicated snapshots', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>(html`
+    <fieldset>
+      <lr-tool-param-form
+        .schema=${basicSchema}
+        .value=${{ city: 'Paris' }}
+      ></lr-tool-param-form>
+    </fieldset>
+  `);
+  const el = fieldset.querySelector('lr-tool-param-form') as LyraToolParamForm;
+  await el.updateComplete;
+  const snapshots: CustomEvent<{ valid: boolean; errors: Record<string, string> }>[] = [];
+  el.addEventListener('lr-validity-change', (event) => snapshots.push(event));
+
+  el.setCustomValidity('Rejected by policy.');
+  expect(snapshots).to.have.lengthOf(1);
+  expect(snapshots[0]!.detail).to.deep.equal({
+    valid: false,
+    errors: { base: 'Rejected by policy.' },
+  });
+  expect(Object.isFrozen(snapshots[0]!.detail)).to.equal(true);
+  expect(Object.isFrozen(snapshots[0]!.detail.errors)).to.equal(true);
+  expect(el.errors).to.deep.equal({ base: 'Rejected by policy.' });
+  expect(Object.isFrozen(el.errors)).to.equal(true);
+
+  el.setCustomValidity('Rejected by policy.');
+  expect(snapshots, 'an identical effective snapshot is deduplicated').to.have.lengthOf(1);
+
+  el.disabled = true;
+  expect(snapshots[1]!.detail).to.deep.equal({ valid: true, errors: {} });
+  expect(el.willValidate).to.equal(false);
+  el.disabled = false;
+  expect(snapshots[2]!.detail.valid).to.equal(false);
+
+  fieldset.disabled = true;
+  await el.updateComplete;
+  expect(snapshots[3]!.detail).to.deep.equal({ valid: true, errors: {} });
+  expect(el.willValidate).to.equal(false);
+  fieldset.disabled = false;
+  await el.updateComplete;
+  expect(snapshots[4]!.detail.valid).to.equal(false);
+});
+
+it('emits a cancelable lr-invalid alias and forwards its veto to the native invalid event', async () => {
+  const el = (await fixture(
+    html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+  let alias: CustomEvent | undefined;
+  el.addEventListener('lr-invalid', (event) => {
+    alias = event;
+    event.preventDefault();
+  });
+  const native = new Event('invalid', { cancelable: true });
+
+  expect(el.dispatchEvent(native)).to.equal(false);
+  expect(alias?.cancelable).to.equal(true);
+  expect(alias?.defaultPrevented).to.equal(true);
+  expect(native.defaultPrevented).to.equal(true);
+});
+
 it('does not render an inline error until the field has been visited (focusout)', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   expect((field(el, 'city').querySelector('[part="error"]')) === null).to.be.true;
@@ -816,7 +876,7 @@ it('handles circular and BigInt values without throwing, omits unsafe FormData, 
   expect(JSON.parse(new FormData(form).get('args') as string)).to.deep.equal({ amount: 1 });
 });
 
-it('emits serialization-only validity transitions without fabricating a field error', async () => {
+it('publishes serialization-only validity under base without fabricating a field-key error', async () => {
   const el = (await fixture(html`<lr-tool-param-form></lr-tool-param-form>`)) as LyraToolParamForm;
   await el.updateComplete;
   const circular: Record<string, unknown> = {};
@@ -826,7 +886,7 @@ it('emits serialization-only validity transitions without fabricating a field er
   el.value = circular;
   let event = await changed;
   expect(event.detail.valid).to.be.false;
-  expect(event.detail.errors).to.deep.equal({});
+  expect(event.detail.errors).to.deep.equal({ base: 'Value must be JSON-serializable.' });
   expect(el.formError).to.equal('Value must be JSON-serializable.');
 
   changed = oneEvent(el, 'lr-validity-change');

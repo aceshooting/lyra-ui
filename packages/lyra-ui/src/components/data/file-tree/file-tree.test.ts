@@ -99,6 +99,10 @@ describe('lr-file-tree', () => {
     await el.updateComplete;
     expect(tree.label).to.equal('Changed files');
 
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(tree.label).to.equal('');
+
     el.removeAttribute('aria-label');
     await el.updateComplete;
     expect(tree.label).to.equal('Files');

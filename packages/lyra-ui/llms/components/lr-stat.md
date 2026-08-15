@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,18 +35,19 @@ attribute now, so a stat left on `appearance="plain"` silently renders full card
   so public slots remain semantic siblings rather than interactive descendants of the link
 - `target?: string` — forwarded to the anchor while `href` is active; a nonempty target derives
   `rel="noopener noreferrer"` rather than exposing a separately settable `rel`
-- `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'neutral'` (reflected) — the library's
+- `variant: LyraVariant = 'neutral'` (reflected) — the library's shared
   one semantic-tone vocabulary, tinting `[part="value"]`. **`brand` is new in 8.0.0**, so a stat
   whose headline is the primary metric no longer has to borrow `emphasis` (which is a card-chrome
   accent) to read as branded
-- `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
-  show it)
+- `deltaPercent: number | null = null` (attribute `delta-percent`) — a finite percentage delta;
+  `null` hides the trend pill and any non-finite assignment normalizes to `null`
 - `caption: string = ''`
 - `goodDirection: 'up'|'down' = 'up'` (attribute `good-direction`) — which trend direction counts
   as "good"; inverts arrow/color polarity for cost/latency/error-rate-style metrics where a
   _decrease_ is the win.
-- `rows: StatRow[] = []` (attribute: false) — `StatRow { label: string; value: string; exactValue?:
-string }`; rendered as a simple label/value breakdown list (`[part="rows"]`/`[part="row"]`/
+- `rows: readonly StatRow[] = []` (attribute: false) — `StatRow { readonly label: string; readonly
+value: string; readonly exactValue?: string }`; snapshotted at assignment and rendered as a simple
+  label/value breakdown list (`[part="rows"]`/`[part="row"]`/
   `[part="row-label"]`/`[part="row-value"]`) beneath the caption, hidden entirely when empty. A row's
   optional `exactValue` mirrors the headline `exactValue`/`exact-value` pattern: rendered as a `title`
   tooltip on that row's `[part="row-value"]` and gives it `tabindex="0"`, independently per row —
@@ -94,7 +95,8 @@ and is collapsed, whenever `label` is empty — a label-less stat leaves no blan
 value), `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
 `caption`, `rows`, `row`, `row-label`, `row-value` — `[part="value"]` gets `aria-labelledby` pairing
 it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbing straight to the
-`exactValue`-focusable value still announces e.g. "Revenue $1.2K", not just the bare value); each
+`exactValue`-focusable value still announces e.g. "Revenue $1.2K USD", including the visible unit,
+not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
 **Themeable custom properties:** `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
@@ -111,11 +113,17 @@ so retinting the trend pill doesn't also recolor the value, and vice versa.
 value for each non-neutral `variant`. `--lr-stat-emphasis-border-color` and
 `--lr-stat-emphasis-value-color` (both default `var(--lr-color-brand)`) independently color the
 emphasis accent edge and a neutral emphasized headline without retinting `variant="brand"`.
+Linked-card interaction paint is independently themeable through
+`--lr-stat-link-hover-border-color` (default `var(--lr-color-brand)`),
+`--lr-stat-link-hover-shadow` (default `var(--lr-shadow-s)`),
+`--lr-stat-link-active-border-color`/`--lr-stat-link-active-shadow` (defaulting to their hover
+counterparts), and `--lr-stat-link-active-bg` (defaulting to the existing active color mix). These
+are point-of-use fallbacks, so values inherit from a theme ancestor and a value on `lr-stat` wins.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-stat label="Active users" value="1,204" trend="4.2" variant="success">
+<lr-stat label="Active users" value="1,204" delta-percent="4.2" variant="success">
   <svg slot="start">...</svg>
 </lr-stat>
 <lr-stat label="Memories" value="128" href="/memories"></lr-stat>
@@ -128,11 +136,15 @@ emphasis accent edge and a neutral emphasized headline without retinting `varian
 - Slotted buttons, links, and other controls are outside the stretched whole-card anchor. Their
   actions never also navigate the stat; use a host `aria-label` when the link destination needs a
   more specific name than the visible label/value/unit.
-- no `aria-live` region wraps `value`/`trend` — an in-place update after first render still isn't
+- no `aria-live` region wraps `value`/`deltaPercent` — an in-place update after first render still isn't
   proactively announced to screen readers. The trend pill's direction/polarity is no longer
   conveyed by icon rotation/color alone, though: a visually-hidden span now spells it out in plain
   language (e.g. "increased 4.2%, good" / "decreased 2%, bad" / "unchanged"), so a screen reader
   landing on the pill (rather than being live-notified of a change) gets the full meaning, not just
   an `aria-hidden` arrow glyph.
+- **9.0 migration:** rename `trend`/`trend=` to `deltaPercent`/`delta-percent`; replace the `NaN`
+  absence sentinel with `null`. Import shared `LyraVariant` and `LyraFrame` directly; the redundant
+  `StatVariant` and stale `StatAppearance` aliases were removed. Calling `click()` on a linked stat
+  now activates its whole-card anchor exactly once.
 
 ---

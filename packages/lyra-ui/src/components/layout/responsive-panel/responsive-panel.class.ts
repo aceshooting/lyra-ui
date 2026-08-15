@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { resolveCssLength } from "../../../internal/css-length.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
+import { literalSetConverter } from "../../../internal/converters.js";
 import {
   activateOverlay,
   deepActiveElement,
@@ -19,6 +20,11 @@ const DEFAULT_OVERLAY_BREAKPOINT = "768px";
 /** The `mode` property's literal value -- `'auto'` tracks the allocation
  * breakpoint live; `'inline'`/`'overlay'` force that presentation. */
 export type LyraResponsivePanelMode = "inline" | "overlay" | "auto";
+
+const RESPONSIVE_PANEL_MODE = literalSetConverter<LyraResponsivePanelMode>(
+  ["inline", "overlay", "auto"],
+  "auto"
+);
 
 /** What `mode` actually resolves to once the breakpoint is taken into
  *  account -- `'auto'` never appears here. */
@@ -160,11 +166,27 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   /** `'auto'` (default) tracks `overlay-breakpoint` against this element's allocation;
    * `'inline'`/`'overlay'` force that presentation. */
-  @property({ reflect: true }) mode: LyraResponsivePanelMode = "auto";
+  private _mode: LyraResponsivePanelMode = "auto";
+
+  @property({ reflect: true, converter: RESPONSIVE_PANEL_MODE })
+  get mode(): LyraResponsivePanelMode {
+    return this._mode;
+  }
+  set mode(next: LyraResponsivePanelMode) {
+    const normalized = RESPONSIVE_PANEL_MODE.normalizeReflected(
+      this,
+      "mode",
+      next
+    );
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate("mode", old);
+  }
 
   /** Only affects the overlay presentation's visual treatment -- `'fullscreen'` (default) covers
-   *  the whole viewport; `'bottom-sheet'` slides up from the bottom and doesn't cover the full
-   *  height. */
+   *  the whole viewport; `'bottom-sheet'` anchors to the block-end edge and doesn't cover the full
+   *  height. No entrance motion is implied by the variant. */
   @property({ reflect: true }) variant: LyraResponsivePanelVariant = "fullscreen";
 
   /** Accessible name for the overlay presentation's `role="dialog"`. Unused in the inline

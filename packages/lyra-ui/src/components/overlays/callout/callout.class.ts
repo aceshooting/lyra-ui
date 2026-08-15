@@ -17,7 +17,10 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import type { LyraAppearance, LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { contextualSizes, contextualVariants } from '../../../internal/contextual-vocabulary.styles.js';
 import { styles } from './callout.styles.js';
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import {
+  literalSetConverter,
+  presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter,
+} from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_calloutAnnouncementWithContext, LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.js';
@@ -30,9 +33,37 @@ export type CalloutVariant = LyraVariant;
 export type CalloutAppearance = LyraAppearance;
 /** The library's one size ladder, in either spelling. */
 export type CalloutSize = LyraSize;
-export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
+export interface LyraCalloutEventMap { 'lr-close': CustomEvent<null>; }
 
+const CALLOUT_VARIANT = literalSetConverter<CalloutVariant>(
+  ['brand', 'neutral', 'success', 'warning', 'danger'],
+  'brand',
+);
 const CALLOUT_VARIANTS = new Set<CalloutVariant>(['brand', 'neutral', 'success', 'warning', 'danger']);
+const CALLOUT_SIZE = literalSetConverter<CalloutSize>(
+  ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
+  'm',
+);
+const CALLOUT_HEADING_LEVEL = literalSetConverter<LyraHeadingLevel>(
+  ['1', '2', '3', '4', '5', '6', 'none'],
+  '3',
+);
+const CALLOUT_APPEARANCES = new Set<CalloutAppearance>([
+  'accent',
+  'filled',
+  'outlined',
+  'filled-outlined',
+  'plain',
+]);
+const normalizeCalloutAppearance = (value: unknown): CalloutAppearance | undefined =>
+  typeof value === 'string' && CALLOUT_APPEARANCES.has(value as CalloutAppearance)
+    ? value as CalloutAppearance
+    : undefined;
+const calloutAppearanceConverter = {
+  fromAttribute: normalizeCalloutAppearance,
+  toAttribute: (value: CalloutAppearance | undefined): string | null =>
+    normalizeCalloutAppearance(value) ?? null,
+};
 
 function isComposedWithin(owner: Element, candidate: Element): boolean {
   let current: Element | null = candidate;
@@ -130,25 +161,76 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
 
   /** Semantic palette. The property defaults to `brand` without forcing an attribute, allowing an
    *  unset nested callout to inherit its containing semantic context. Explicitly assigning
-   *  `brand` reflects it, making the standalone default an intentional local override. */
-  @property({ reflect: true, useDefault: true })
-  variant: CalloutVariant = 'brand';
+   *  `brand` reflects it, making the standalone default an intentional local override. Unsupported
+   *  values normalize to `brand`. */
+  private _variant: CalloutVariant = 'brand';
+
+  @property({ reflect: true, useDefault: true, converter: CALLOUT_VARIANT })
+  get variant(): CalloutVariant {
+    return this._variant;
+  }
+  set variant(next: CalloutVariant) {
+    const normalized = CALLOUT_VARIANT.normalizeReflected(this, 'variant', next);
+    const old = this._variant;
+    if (old === normalized) return;
+    this._variant = normalized;
+    this.requestUpdate('variant', old);
+  }
 
   /** How much of the active `variant` palette is spent on fill, border, and text. Unset preserves
-   *  the established callout treatment; every explicit Web Awesome appearance is reflected. */
-  @property({ reflect: true }) appearance!: CalloutAppearance;
+   *  the established callout treatment; every explicit Web Awesome appearance is reflected and
+   *  unsupported values normalize back to the omitted state. */
+  private _appearance?: CalloutAppearance;
+
+  @property({ reflect: true, converter: calloutAppearanceConverter })
+  get appearance(): CalloutAppearance {
+    return this._appearance as CalloutAppearance;
+  }
+  set appearance(next: CalloutAppearance) {
+    const normalized = normalizeCalloutAppearance(next);
+    if (this.hasAttribute('appearance') && this.getAttribute('appearance') !== normalized) {
+      if (normalized === undefined) this.removeAttribute('appearance');
+      else this.setAttribute('appearance', normalized);
+    }
+    const old = this._appearance;
+    if (old === normalized) return;
+    this._appearance = normalized;
+    this.requestUpdate('appearance', old);
+  }
 
   /** Visual density, on the library's shared ladder. The `m` property default is not reflected,
    *  so an unset nested callout inherits its containing size context. Both Web Awesome spellings
-   *  are accepted (`s`/`small`, `m`/`medium`, `l`/`large`). */
-  @property({ reflect: true, useDefault: true })
-  size: CalloutSize = 'm';
+   *  are accepted (`s`/`small`, `m`/`medium`, `l`/`large`); unsupported values normalize to `m`. */
+  private _size: CalloutSize = 'm';
+
+  @property({ reflect: true, useDefault: true, converter: CALLOUT_SIZE })
+  get size(): CalloutSize {
+    return this._size;
+  }
+  set size(next: CalloutSize) {
+    const normalized = CALLOUT_SIZE.normalizeReflected(this, 'size', next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
 
   @property() heading = '';
   /** Semantic level of the visible property/slotted heading. Use `none` for visual-only text;
-   *  invalid untyped values use level 3. */
-  @property({ attribute: 'heading-level', reflect: true })
-  headingLevel: LyraHeadingLevel = '3';
+   *  invalid attributes and untyped writes normalize to reflected level 3. */
+  private _headingLevel: LyraHeadingLevel = '3';
+
+  @property({ attribute: 'heading-level', reflect: true, converter: CALLOUT_HEADING_LEVEL })
+  get headingLevel(): LyraHeadingLevel {
+    return this._headingLevel;
+  }
+  set headingLevel(next: LyraHeadingLevel) {
+    const normalized = CALLOUT_HEADING_LEVEL.normalizeReflected(this, 'heading-level', next);
+    const old = this._headingLevel;
+    if (old === normalized) return;
+    this._headingLevel = normalized;
+    this.requestUpdate('headingLevel', old);
+  }
   @property({ type: Boolean, reflect: true }) closable = false;
   @property({ type: Boolean, reflect: true }) inline = false;
 
@@ -358,7 +440,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   }
   private close = (): void => {
     const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
-    const event = this.emit('lr-close', undefined, { cancelable: true });
+    const event = this.emit('lr-close', null, { cancelable: true });
     if (!event.defaultPrevented) {
       if (repair) applyComposedFocusRepair(repair);
       this.open = false;

@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A closed-by-default inline alert whose host serializes `role="alert"` for SSR/no-JS output; an explicitly authored alternate role remains authoritative.',
+          'A closed-by-default inline alert whose host serializes `role="alert"` for SSR/no-JS output; an explicitly authored alternate role remains authoritative. Unsupported `variant` values normalize to `primary`, while unsupported `countdown` values normalize to omission.',
       },
       source: {
         type: 'code',

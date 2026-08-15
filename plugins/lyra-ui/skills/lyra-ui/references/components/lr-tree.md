@@ -22,10 +22,16 @@ An expand/collapse hierarchy (document/graph navigation tree). Mirrors `wa-tree`
 **Renamed in 8.0.0 — breaking:** the child element is `<lr-tree-item>` (class `LyraTreeItem`), not
 `<lr-tree-node>`/`LyraTreeNode`. It was the only child element in the library whose tag diverged
 from both upstreams, so `wa-tree-item`/`sl-tree-item` markup had nothing to rename to. The shared
-data types (`TreeItem`, `TreeBadge`, `TreeBadgeTone`) moved to `tree-types.ts` to free the name and
-are still re-exported from `tree.js`. A leftover `<lr-tree-node>` is an unregistered tag: it never
+data types moved to `tree-types.ts` to free the name and are still re-exported from `tree.js`. A
+leftover `<lr-tree-node>` is an unregistered tag: it never
 upgrades, `<lr-tree>` does not count it as an item at all, and the tree renders its empty state
 with the stale markup sitting inert in the light DOM — no error anywhere.
+
+**9.0 type/API cleanup:** rename the structured-data type `TreeItem` to `LyraTreeNodeData`, use
+`LyraVariant` for `TreeBadge.tone` instead of `TreeBadgeTone`, and replace a singular `badge` value
+with `badges: [{ text: String(value) }]`. The former item-controller fields (`activeId`, `ancestry`,
+`depth`, `setSize`, `posInSet`) and context setters were never consumer state; they are now private
+owner context maintained by `<lr-tree>`.
 
 **Two child models are accepted, and they never interleave.**
 
@@ -33,11 +39,11 @@ with the stale markup sitting inert in the light DOM — no error anywhere.
   nested `<lr-tree-item>` elements as light-DOM children, each carrying its own
   `label`/`expanded`/`disabled`/`selected` attributes. `<lr-tree-item>` moves its nested children
   onto an internal `children` slot itself, so you never write `slot=`.
-- **Data**: leave `<lr-tree>` empty and assign `data`, a `TreeItem[]` of plain objects. This is this
+- **Data**: leave `<lr-tree>` empty and assign `data`, a `LyraTreeNodeData[]` of plain objects. This is this
   library's own original shape and is where per-row icons, secondary descriptions and badges live —
   the declarative model has none of those. `<lr-tree>` creates and reconciles the
   `<lr-tree-item>` children by `id`, and each item renders its own subtree into its own shadow root.
-  Every reachable `TreeItem.id` must be globally unique. For invalid duplicate input, the first
+  Every reachable `LyraTreeNodeData.id` must be globally unique. For invalid duplicate input, the first
   depth-first occurrence owns the public id; later occurrences remain visible but render disabled
   and cannot receive focus, selection, expansion, or reorder requests. Supplying unique refreshed
   data releases that fail-closed state.
@@ -47,25 +53,34 @@ and `data` is ignored. The empty state renders only when neither model has any i
 
 Both child models use the same selection, roving-focus, checkbox-cascade, icon, and lazy-loading
 engine. The upstream lifecycle names are normalized to the library-wide `lr-` prefix;
-`lr-node-toggle` and `lr-node-select` remain as additive Lyra notifications.
+`lr-node-toggle` and `lr-node-select` remain as additive Lyra notifications. In multiple modes the
+tree role explicitly exposes `aria-multiselectable="true"` (and explicit `"false"` otherwise),
+while each treeitem host is the sole selected/checked/mixed semantic owner; checkbox-shaped chrome
+is decorative and cannot duplicate the row's accessible name.
 
 ### `lr-tree`
 
-Implements the full WAI-ARIA treeitem keyboard pattern: a single roving `tabindex` (tracked as
-`activeId`, pushed down to every `<lr-tree-item>` including nested ones) and
+Implements the full WAI-ARIA treeitem keyboard pattern: a single owner-controlled roving `tabindex`
+across every reachable `<lr-tree-item>` and
 ArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated `keydown` listener (native
 `KeyboardEvent`s are `composed: true` and bubble across shadow-DOM boundaries, so a press inside a
 deeply-nested node's own shadow root still reaches it).
 
 **Properties:**
 
-- `data: TreeItem[] = []` (attribute: false) — the object child model; ignored while any
-  author-written `<lr-tree-item>` child is present. `TreeItem { id: string; label: string; children?:
-TreeItem[]; selected?: boolean; disabled?: boolean; lazy?: boolean; badge?: string | number; badges?: TreeBadge[];
-icon?: unknown; description?: string; accessibleLabel?: string }`. `TreeBadge` is `{ text:
-string; tone?: TreeBadgeTone; label?: string }`, where `TreeBadgeTone` is
-  `'neutral'|'brand'|'success'|'warning'|'danger'`. The legacy singular `badge` renders first;
-  `badges` adds tone-mapped chips after it and each chip's accessible name uses `label ?? text`.
+- `data: readonly LyraTreeNodeData[] = []` (attribute: false) — the object child model; ignored
+  while any author-written `<lr-tree-item>` child is present. Assignment installs a detached,
+  recursively frozen snapshot: mutate caller data only before assignment, then reassign after
+  changes. Normalization accepts at most 1,000 valid nodes and 64 descendant levels, never invokes
+  caller accessors, and exposes `dataTruncated = true` when malformed or over-budget input was
+  omitted. Collapsed branches do not instantiate descendants; disclosure projects only normalized
+  children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
+  `{ readonly id: string; readonly label: string; readonly children?: readonly LyraTreeNodeData[];
+  readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
+  badges?: readonly TreeBadge[]; readonly icon?: unknown; readonly description?: string; readonly
+  accessibleLabel?: string }`. `TreeBadge` is `{ readonly text: string; readonly tone?:
+  LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in order and each
+  chip's accessible name uses `label ?? text`.
   `icon` renders as a decorative leading visual, `description` as secondary visible row text, and
   `accessibleLabel` names the `role="treeitem"` host without changing its visible label. An
   author-supplied host `aria-label` takes precedence by presence and is never overwritten or
@@ -84,8 +99,9 @@ string; tone?: TreeBadgeTone; label?: string }`, where `TreeBadgeTone` is
   is ever emitted, Ctrl/Cmd+Arrow behaves exactly like a plain Arrow press, and the internal live
   region is not rendered at all.
 
-**Read-only getter:** `selectedItems: LyraTreeItem[]` returns selected item elements in document
-order, including derived fully-selected parents in either multiple mode.
+**Read-only getters:** `selectedItems: readonly LyraTreeItem[]` returns a new frozen snapshot of
+selected item elements in document order, including derived fully-selected parents in either
+multiple mode. `dataTruncated: boolean` reports bounded/malformed normalization as described above.
 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous _visible_ node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
@@ -114,11 +130,11 @@ roving stop to the next reachable row instead of stranding it, and the state is 
   `selectedItems` and the multiple-mode cascade are unchanged and a modal that inerts the page can
   never silently wipe a tree's selection.
 
-**Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
-cycle).
+**Methods:** `expandAll(): Promise<void>`, `collapseAll(): Promise<void>` (both iterative, bounded,
+and resolved only after the affected rendered item cascade settles).
 
-**Events:** `lr-selection-change` (`detail: { selection }`, where `selection` is the current
-`selectedItems` array) and `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
+**Events:** `lr-selection-change` (`detail: { selection }`, where both the detail and selection
+snapshot are frozen) and `lr-reorder` (`detail: { id, parentId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
 component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
 moved node. The live region likewise announces a completed move only after the rendered sibling
@@ -171,25 +187,16 @@ when assigned):
 
 **Properties — data model:**
 
-- `item: TreeItem` (attribute: false) — the whole subtree as one object, normally assigned by
+- `item?: LyraTreeNodeData` (attribute: false) — the whole subtree as one object, normally assigned by
   `<lr-tree>` from its `data`. An assigned `item` **wins** for label/disabled/children and seeds
   `selected`/`lazy`; a refreshed object identity re-seeds those values. Light-DOM children are
   ignored while `item` is assigned. Outside an owning tree, an omitted `item.selected` leaves
-  `aria-selected` off the host; an owning tree always publishes explicit true/false state
-- `ancestry: TreeItem[] = []` (attribute: false) — the ancestor object identities used to stop a
-  cyclic `TreeItem` graph before it recurses; pushed down by the parent item
+  `aria-selected` off the host; an owning tree always publishes explicit true/false state. Assign
+  `undefined` to return safely to the declarative model and reset data-seeded selected/lazy state
 
 **Properties — shared:**
 
 - `expanded: boolean = false` (reflected)
-- `depth: number = 0` — nesting depth, `0` at top level; feeds `aria-level` (`depth + 1`) and the
-  `--lr-tree-depth` indent. Clamped to a finite integer `>= 0`
-- `activeId: string | null = null` (attribute: false) — the id of the tree's roving-tabindex-focused
-  item, pushed down from `<lr-tree>`; normally set internally, not by consumers
-- `setSize: number = 1`, `posInSet: number = 1` (attribute: false) — this node's `aria-setsize`/
-  `aria-posinset` values among its siblings, pushed down from `<lr-tree>`; normally set internally,
-  not by consumers. `setSize` passes `-1` through unchanged (ARIA's "set size unknown" sentinel) and
-  clamps everything else to a finite integer `>= 1`
 - `loading: boolean` (read-only) — a lazy expansion is waiting for children
 - `indeterminate: boolean` (read-only) — an enabled branch has some but not all selectable
   descendants selected
@@ -210,11 +217,12 @@ when assigned):
   text/ARIA/visibility mutations update the name
 - `hasChildren: boolean` — whether this node has at least one child in whichever model is in use.
   Leaf nodes never expose `aria-expanded` and cannot expand or collapse. It also reports `false`
-  past a nesting depth of 64, which is what stops a runaway recursion; a `TreeItem` graph that
-  contains itself is caught earlier by `ancestry`
+  past the owner controller's 64-level bound, which stops runaway recursion; cyclic object graphs
+  are detected by private ancestry identity
 
 **Methods:** `expand()`, `collapse()` (each a no-op if already in that state, disabled, loading, or a leaf),
-`select()` (fires `lr-node-select`; a no-op while disabled). `childItems(): LyraTreeItem[]` returns
+`select()` (fires `lr-node-select`; a no-op while disabled), and host `click()` (forwards exactly
+once to the same selection path and is likewise disabled-gated). `childItems(): LyraTreeItem[]` returns
 this node's **direct** child `<lr-tree-item>` elements — from its own shadow root in the data model,
 from its own light-DOM children in the declarative one. A grandchild is not included; it lives under
 its own parent. `getChildrenItems({ includeDisabled = true } = {})` is the upstream-compatible
@@ -225,7 +233,10 @@ the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { id }`, 
 — via clicking anywhere in the row or Enter/Space) — dispatched from `lr-tree-item`,
 bubble/compose up through `lr-tree`'s light DOM. `lr-expand`/`lr-collapse` fire when a transition
 begins; `lr-after-expand`/`lr-after-collapse` fire after the matching themeable duration. Rapid
-opposite transitions and disconnects invalidate stale after-events. `lr-lazy-load` requests data
+opposite transitions and disconnects invalidate stale after-events. Collapse keeps the subtree
+mounted through its real opacity animation and removes it only when the animation completes;
+reduced motion settles immediately, and duration parsing is finite/nonnegative/timer-capped.
+`lr-lazy-load` requests data
 with `detail: { item, generation }`; `lr-lazy-change` reports `detail: { item, loading }` when the
 pending state starts or ends. Disabling or disconnecting an item invalidates the pending generation.
 
@@ -245,7 +256,7 @@ group; `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `gro
 `expand-button`, `spinner`, `spinner__base`, `children`, `checkbox`, `checkbox__base`,
 `checkbox__control`, `checkbox__control--checked`, `checkbox__control--indeterminate`,
 `checkbox__checked-icon`, `checkbox__indeterminate-icon`, and `checkbox__label`. `badge`
-is applied to the legacy singular `item.badge` and to every `item.badges` chip; additive chips carry
+is applied to every `item.badges` chip; chips carry
 `data-tone="neutral|brand|success|warning|danger"`. `icon` is `aria-hidden="true"`; `content`
 groups the primary label and optional wrapping secondary description while preserving one
 interactive treeitem per row. `icon`, `description` and `badge` render only in the data model —
@@ -288,7 +299,7 @@ The data model — icons, descriptions and badges live here:
       icon: document.createTextNode("◇"),
       children: [
         { id: "1a", label: "Child A" },
-        { id: "1b", label: "Child B", badge: 3 },
+        { id: "1b", label: "Child B", badges: [{ text: "3" }] },
       ],
     },
   ];
@@ -315,15 +326,15 @@ The declarative model — the same shape a renamed `wa-tree`/`sl-tree` subtree l
   host rather than a shadow-DOM sibling; by-id reconciliation (preserving `expanded` state across
   data reassignment) now applies at every depth via a keyed `repeat()`, not just depth 0; and
   `role="tree"` now has an accessible name via the new `label` property.
-- `lr-tree`'s `getUpdateComplete()` cascades into every currently-known descendant
+- `lr-tree`'s `getUpdateComplete()` cascades through owner-controlled descendants
   `<lr-tree-item>`'s own `updateComplete` (see `update-cascade.ts`) so that code awaiting the
-  tree's `updateComplete` (e.g. after `focusNode()`) doesn't run before an arbitrarily-nested node has
-  actually finished rendering its pushed-down `activeId`/`tabIndex` — one more pending update per
-  depth level, otherwise.
+  tree's `updateComplete` does not run before a reachable nested node has finished rendering its
+  roving `tabIndex`. The same 64-level/1,000-node work bounds apply to context, focus, selection,
+  and disclosure walks.
 - row enrichment is intentionally structured rather than an unrestricted renderer: use `icon`,
-  `label`, `description`, `badge`, and `accessibleLabel`. This keeps the host as the single
+  `label`, `description`, `badges`, and `accessibleLabel`. This keeps the host as the single
   `role="treeitem"` interaction target and preserves the APG keyboard model.
-- `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `TreeItem[]` is derived
+- `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `LyraTreeNodeData[]` is derived
   from `nodes` on every render and keyed by filesystem path, an order it does not own.
 - in the declarative model, appending a child while the parent is collapsed still registers: a
   `childList` MutationObserver assigns the `children` slot and requests an update, because

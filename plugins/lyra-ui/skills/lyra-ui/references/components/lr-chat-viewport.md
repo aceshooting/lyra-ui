@@ -55,7 +55,20 @@ range; does not re-engage `follow`.
 **Events:** `lr-follow-change` — `detail: { following }`, fired whenever `follow` flips (user
 scroll-up release, or reaching the bottom again). Never fired for the initial mount state.
 
+Activating a focused jump-to-latest pill, or directly setting `follow = true`, transfers focus to
+the transcript's stable scroll owner after the pill disappears: `[part="scroll"]` in slotted mode,
+or the nested virtual list's real focus owner in virtual mode. Focus that moved elsewhere before the
+update is preserved.
+
 **Slots:** default — the transcript: ordinary element children, or exactly one `lr-virtual-list`.
+
+Only a direct child `lr-virtual-list` selects virtual mode; bubbled list events from nested message
+content are ignored. In slotted mode the visual unread divider remains an absolutely positioned
+paint layer while a separate hidden semantic boundary is inserted immediately before the first
+unread child, so DOM/accessibility order matches the visible boundary. Reordering an existing child
+does not announce it again; only genuinely appended complete-message nodes do. A primary
+`pointerdown` begins scrollbar-drag tracking only when the scroll container itself is the event
+target, never for arbitrary descendant controls.
 
 **CSS parts:** `base` (the positioning root), `scroll` (the scroll container, non-live `role="log"`,
 `tabindex="0"`; in virtual mode it stops scrolling itself, keeps the role, and drops its tab stop), `content` (the
@@ -81,8 +94,8 @@ inline style) still wins over the built-in one.
 
 ```html
 <lr-chat-viewport unread-start-index="12" @lr-follow-change=${(e) => console.log(e.detail.following)}>
-  <lr-chat-message data-role="user">…</lr-chat-message>
-  <lr-chat-message data-role="assistant" status="streaming">
+  <lr-chat-message message-role="user">…</lr-chat-message>
+  <lr-chat-message message-role="assistant" status="streaming">
     <lr-streaming-text streaming .content=${partial}></lr-streaming-text>
   </lr-chat-message>
 </lr-chat-viewport>

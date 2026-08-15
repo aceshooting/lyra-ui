@@ -37,7 +37,7 @@ describe("lr-card", () => {
   });
   it("renders as a div by default, an <a> when href is set", async () => {
     const plain = (await fixture(html`<lr-card>body</lr-card>`)) as LyraCard;
-    expect((plain.shadowRoot!.querySelector('a[part="base"]')) == null).to.be.true;
+    expect(plain.shadowRoot!.querySelector('a[part="base"]') == null).to.be.true;
     expect(plain.shadowRoot!.querySelector('div[part="base"]')).to.exist;
 
     const linked = (await fixture(
@@ -46,14 +46,15 @@ describe("lr-card", () => {
     const anchor = linked.shadowRoot!.querySelector(
       'a[part="base"]'
     ) as HTMLAnchorElement;
-    expect((anchor) != null).to.equal(true);
+    expect(anchor != null).to.equal(true);
     expect(anchor.getAttribute("href")).to.equal("/x");
   });
 
   it('does not inspect an unavailable render root during the server-side first update', () => {
     const el = document.createElement('lr-card') as LyraCard;
     el.actionable = true;
-    const access = el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void };
+    const access = el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void;
+    };
 
     expect(() => access.willUpdate(new Map([['actionable', false]]))).not.to.throw();
   });
@@ -103,7 +104,7 @@ describe("lr-card", () => {
     const el = (await fixture(
       html`<lr-card href="java	script:alert(1)">body</lr-card>`
     )) as LyraCard;
-    expect((el.shadowRoot!.querySelector('a[part="base"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('a[part="base"]') == null).to.be.true;
   });
 
   it('derives rel="noopener noreferrer" whenever target is set on a linked card', async () => {
@@ -378,7 +379,7 @@ describe("lr-card", () => {
     const content = el.querySelector<HTMLElement>("#content")!;
     let outwardClicks = 0;
     let anchorClicks = 0;
-    el.addEventListener("click", () => outwardClicks += 1);
+    el.addEventListener("click", () => (outwardClicks += 1));
     anchor.addEventListener("click", (event) => {
       anchorClicks += 1;
       event.preventDefault();
@@ -794,6 +795,17 @@ describe("lr-card", () => {
       await expect(el).to.be.accessible();
     });
   });
+});
+
+it("restores the declared appearance and orientation defaults when attributes are removed", async () => {
+  const el = (await fixture(
+    html`<lr-card appearance="accent" orientation="horizontal"></lr-card>`
+  )) as LyraCard;
+  el.removeAttribute("appearance");
+  el.removeAttribute("orientation");
+  await el.updateComplete;
+  expect(el.appearance).to.equal("outlined");
+  expect(el.orientation).to.equal("vertical");
 });
 
 it('inherits independent appearance and interactive-state paint from an ancestor', async () => {

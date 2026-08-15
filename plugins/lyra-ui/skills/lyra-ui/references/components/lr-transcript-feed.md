@@ -21,8 +21,9 @@ with in-place upgrades keyed by `id`, and a stick-to-bottom auto-scroll with rel
 transcript sync is a separate concern.
 
 **Properties:** `entries: LyraTranscriptEntry[] = []` (attribute: false) — `LyraTranscriptEntry { id:
-string; speaker?: string; text: string; interim?: boolean; timestamp?: number }` (exported by this
-module; `timestamp` is epoch **milliseconds**). Reconciled keyed by `id` via Lit's `repeat()`: a
+string; speaker?: string; text: string; interim?: boolean; timestamp?: LyraTimestamp }` (exported by
+this module; `LyraTimestamp = Date | string | number`, normalized through Date/TimeClip). Reconciled
+keyed by nonempty, first-wins `id` via Lit's `repeat()`: a
 same-`id` entry with new `text` replaces in place, and a same-`id` entry whose `interim` flips from
 `true` to unset/`false` moves from the interim area into the `role="log"` region and announces
 exactly once. Interim entries render _after_ the log container — visible, but structurally outside
@@ -31,19 +32,20 @@ from the shadow `role="log"` region, which is explicitly `aria-live="off"`: a li
 component's own shadow root is not reliably announced (JAWS with Firefox ignores one outright).
 Each newly final entry's `text` is announced once through the shared light-DOM polite live region
 instead, the same route `<lr-chat-viewport>` and `<lr-terminal>` take. The entries a feed is
-*mounted* with are treated as existing transcript rather than newly spoken captions, so the first
+_mounted_ with are treated as existing transcript rather than newly spoken captions, so the first
 render only records them. `follow: boolean = true`
 (reflected), `showTimestamps: boolean = false` (attribute `show-timestamps`), `formatTimestamp?:
-(epochMs: number) => string` (attribute: false), `maxRenderedEntries: number = 0` (attribute
-`max-rendered-entries`) — `0` renders every entry; a positive value keeps only the newest N,
+(date: Date) => string` (attribute: false), `maxRenderedEntries: number = 500` (attribute
+`max-rendered-entries`) — `0` explicitly renders every entry; a positive value keeps only the newest N,
+`sessionId: string = ''` (attribute `session-id`) — changing session identity clears finalized-ID
+announcement history and treats the new session's current entries as a silent baseline,
 `label: string = ''` — accessible name for the `role="log"` region
 (default: the localized `transcriptFeedLabel`), and `accessibleLabel: string | null = null`
 (attribute `aria-label`) — overrides the log's computed accessible name, winning over `label` and
 the localized default; attribute-reflects from a host-level `aria-label`.
 
-**Methods:** `scrollToBottom()` performs an instant scroll to the current latest entry without
-changing `follow`. Set `follow = true` (or activate the built-in jump button) when the caller also
-wants to re-engage automatic following.
+**Methods:** `scrollToBottom()` re-engages `follow` and instantly scrolls to the current latest
+entry. The built-in jump action delegates to this method.
 
 **Slots:** `empty` — custom empty state (default: the localized "No transcript yet").
 

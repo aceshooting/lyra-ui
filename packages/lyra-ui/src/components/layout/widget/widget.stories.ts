@@ -251,11 +251,13 @@ export const CustomCollapseAndFullscreenIcons: Story = {
   },
   render: () => html`
     <lr-widget label="Load profile" sublabel="Last 7 days" collapsible expandable style="max-width: 28rem;">
-      <span slot="collapse-icon">▾</span>
+      <span slot="collapse-icon">›</span>
       <span slot="fullscreen-icon">⤢</span>
       <div style="padding: 1rem;">
         The <code>collapse-icon</code> and <code>fullscreen-icon</code> slots override the built-in
-        chevron/expand glyphs entirely. They are decorative, so omit either to keep the library
+        chevron/expand glyphs entirely. The collapse
+        button rotates its complete visual while expanded, so directional
+        overrides start right-facing in the collapsed state. They are decorative, so omit either to keep the library
         default and keep interactive controls outside the slots.
       </div>
     </lr-widget>

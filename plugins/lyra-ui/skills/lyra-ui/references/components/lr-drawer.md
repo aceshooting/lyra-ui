@@ -40,6 +40,9 @@ the slide animation are its own.
   `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
   dismissal options. A plain `aria-label` attribute on the host is honored too, with the same
   wins-over-everything semantics documented under `lr-dialog` below.
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — semantic level of
+  the generated title, from `1` through `6`, or `none` for visual-only title text. A direct slotted
+  heading retains its own native level.
 
 **Methods:** `show(): Promise<void>`, `hide(): Promise<void>`,
 `close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each

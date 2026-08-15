@@ -12,9 +12,10 @@ async function twoFrames(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
-it('defaults to label="Thinking", expanded=false, mode="live", follow=true, no duration', async () => {
+it('defaults to a localized Thinking label, expanded=false, mode="live", follow=true, no duration', async () => {
   const el = (await fixture(html`<lr-thinking-panel></lr-thinking-panel>`)) as LyraThinkingPanel;
-  expect(el.label).to.equal('Thinking');
+  expect(el.label).to.be.undefined;
+  expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Thinking');
   expect(el.expanded).to.be.false;
   expect(el.hasAttribute('expanded')).to.be.false;
   expect(el.mode).to.equal('live');
@@ -188,6 +189,21 @@ describe('label localization', () => {
     )) as LyraThinkingPanel;
     expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Raisonnement');
     expect(el.shadowRoot!.querySelector('[part="body"]')!.getAttribute('aria-label')).to.equal('Raisonnement');
+  });
+
+  it('keeps explicit English and empty label overrides verbatim', async () => {
+    const labels: string[] = [];
+    for (const template of [
+      html`<lr-thinking-panel
+        label="Thinking"
+        .strings=${{ thinkingPanelLabel: 'Raisonnement' }}
+      ></lr-thinking-panel>`,
+      html`<lr-thinking-panel label="" .strings=${{ thinkingPanelLabel: 'Raisonnement' }}></lr-thinking-panel>`,
+    ]) {
+      const el = (await fixture(template)) as LyraThinkingPanel;
+      labels.push(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim());
+    }
+    expect(labels).to.deep.equal(['Thinking', '']);
   });
 });
 

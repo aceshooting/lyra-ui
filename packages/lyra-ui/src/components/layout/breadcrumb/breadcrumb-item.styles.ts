@@ -37,6 +37,11 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
+  :where(a, button)[part="base"] {
+    justify-content: center;
+    min-inline-size: var(--lr-size-1-5rem);
+    min-block-size: var(--lr-size-1-5rem);
+  }
   [part~="start"],
   [part~="end"] {
     display: inline-flex;

@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "`<lr-live-region>` is invisible by design (screen-reader only) and throttles/coalesces announcements instead of relaying every `announce()` call verbatim. Announcements land in a shared, visually hidden region in the page's light DOM (a live region inside a shadow root is not reliably announced); these stories mirror that region into a visible log so the throttling/coalescing behavior is observable without a screen reader running.",
+          "`<lr-live-region>` is invisible by design (screen-reader only) and throttles/coalesces announcements instead of relaying every `announce()` call verbatim. Announcements land in a shared, visually hidden region in the page's light DOM (a live region inside a shadow root is not reliably announced); these stories mirror that region into a visible log so the throttling/coalescing behavior is observable without a screen reader running. Unsupported `mode` values normalize to reflected `polite`.",
       },
     },
   },

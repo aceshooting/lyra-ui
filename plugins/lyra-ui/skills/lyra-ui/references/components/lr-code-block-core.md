@@ -41,7 +41,7 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   key in `languages`, the code renders as plain unhighlighted text — this component has no
   default/full-table highlighter to fall back to.
 - `filename: string = ''` — shown in the header, when set.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — names the internal focusable code-body
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — names the internal focusable code-body
   region; otherwise a localized filename/language description is generated.
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button.
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
@@ -56,11 +56,11 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `highlightLines: string = ''` (attribute `highlight-lines`) — comma-separated 1-based inclusive
   line ranges (e.g. `"3-5,7"`) to visually emphasize. Declarative sugar over `highlights` — merges
   with, and renders identically to, any `line-range` entries there.
-- `interactiveLines: boolean = false` (attribute `interactive-lines`) — turns the
-  (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-click`.
+- `activatableLines: boolean = false` (attribute `activatable-lines`) — turns the
+  (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-activate`.
   Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
   focus, focus follows the clamped surviving line; moving focus elsewhere during that update wins.
-- `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
   code. Only `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its lines).
@@ -72,19 +72,19 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   Replacing the map while connected starts a new loading generation; an older map that settles
   later cannot clear the current map's loading state or replace its highlighted output. For a
   TypeScript annotation, use `import type { ShikiLanguageInput } from
-  '@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
+'@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js'`; the type-only
   granular import emits no registration side effect.
 
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
+`refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
+`refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
 Identical behavior to `<lr-code-block>`'s own method.
 
-**Events:** `lr-copy` (`detail: { text: string }` — always the raw `code` value, never the
-highlighted HTML, and always fires regardless of whether the actual OS clipboard write succeeded),
-`lr-toggle` (`detail: { collapsed: boolean }` — fired when the built-in collapse/expand header
-button is activated), `lr-line-click` (`detail: { line: number }` — a gutter line number was
-activated while `interactiveLines` is set), `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code
+**Events:** the same fulfilled-only `lr-copy`, generic `lr-error`, full `lr-copy-error`, cancelable
+`lr-toggle-request`, committed `lr-toggle`, and `lr-line-activate` contracts as `<lr-code-block>`;
+`lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code
 body ended; `anchor` is a `line-range` anchor covering the selected lines).
 
 **Slots:** none.
@@ -92,7 +92,8 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `toggle`, `body`, `pre`,
 `code`, `line-highlight`, `line-button` — identical set to `<lr-code-block>`.
 
-**Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`,
+**Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`
+(independently settable; an authored `max-height` attribute wins inline),
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
 `--lr-code-block-active-line-outline-color` (default `var(--lr-color-brand)`),
 `--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`), plus the same shared
@@ -107,15 +108,17 @@ which is what carries the ~200-language table this component exists to avoid). B
 fine-grained highlighter is cached per `languages` object identity (a `WeakMap`), so passing the same
 module-level `languages` constant on every render builds it only once.
 
-```html
-<script type="module">
-  import jsonGrammar from 'shiki/langs/json.mjs';
-</script>
-<lr-code-block-core
+```ts
+import { html } from "lit";
+import jsonGrammar from "shiki/langs/json.mjs";
+import "@aceshooting/lyra-ui/components/conversation/code-block/code-block-core.js";
+
+const languages = { json: jsonGrammar };
+const view = html`<lr-code-block-core
   language="json"
-  .languages=${{ json: jsonGrammar }}
+  .languages=${languages}
   .code=${'{"ok": true}'}
-></lr-code-block-core>
+></lr-code-block-core>`;
 ```
 
 **Known gotchas:**

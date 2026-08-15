@@ -30,7 +30,12 @@ line; `children` is exactly **one** level of sub-steps — a child's own `childr
 `id`; duplicate data stays visible but fails closed, with no row keyboard stops or reorder requests.
 `reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
 It emits a request only; the host must assign a new reordered `items` array before the task visibly
-moves or an announcement is made. `label: string = 'Tasks'`, `expanded: boolean = true` (reflected), and
+moves or an announcement is made. `label?: string` omits into localized `taskListLabel` (`'Tasks'`
+in the built-in English catalog); any supplied value is an explicit verbatim override, including
+`'Tasks'` under a non-English `.strings` catalog and `''`. `headingLevel: LyraHeadingLevel = '3'`
+(attribute `heading-level`, reflected) — `1`–`6` expose the visible header as that semantic heading
+level around either its disclosure button or static content, invalid untyped values retain level 3,
+and `none` is the explicit visual-only opt-out — `expanded: boolean = true` (reflected), and
 `collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
 and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
 convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
@@ -50,7 +55,8 @@ top-level task and indices are sibling-scoped. It fires only while `reorderable`
 A boundary key is a silent no-op, so it never reparents a child; the component announces success only
 after the host's rendered array confirms the exact requested swap.
 
-**CSS parts:** `base`, `header` (a `<button>` when `collapsible`, a plain heading otherwise), `label`,
+**CSS parts:** `base`, `header` (a `<button>` when `collapsible`, plain content otherwise, within
+the configured semantic heading), `label`,
 `summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
 indicator, only rendered when `collapsible`), `body` (the list of items, `hidden` while collapsed),
 `item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
@@ -63,7 +69,7 @@ icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (de
 `var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `compact`;
 `--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
 label/summary/toggle while `compact`, one step tighter than the header's uncompacted
-`--lr-space-xs`, so `compact` tightens the header's *interior* spacing and not just its padding;
+`--lr-space-xs`, so `compact` tightens the header's _interior_ spacing and not just its padding;
 `--lr-task-list-compact-header-font-size` (default `var(--lr-font-size-sm)`) — `[part="header"]`
 font size while `compact`, completing the compact header's typography alongside its padding and
 gap;

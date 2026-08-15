@@ -63,7 +63,7 @@ export interface LyraCommitCardEventMap {
   'lr-file-select': CustomEvent<{ path: string }>;
   'lr-toggle': CustomEvent<{ collapsed: boolean }>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
-  'lr-error': CustomEvent<undefined>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 

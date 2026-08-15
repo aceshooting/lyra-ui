@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 15 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -32,14 +32,13 @@ can override size-tier fallbacks; a value set directly on the element still wins
 
 **Properties:** the shared form properties `name`, `value`, `defaultValue`, `customError`
 (`custom-error`), `disabled`, and `required`, plus
-`groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, labelKey?,
-emojis: EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches
-`name` and every `shortcodes` entry, case-insensitively. `labelKey` is an optional `LyraMessageKey`
-naming `label`'s localized form — set only by the built-in `emoji-picker-element-data` adapter, whose
-headings come from emojibase's fixed group ids, so an auto-loaded emoji set's group headings follow
-`registerLyraLocale()`/`.strings` instead of staying English. A hand-authored group leaves it unset
-and its `label` renders verbatim, because a consumer-supplied heading is caller-owned content this
-library never translates. Empty (the default, before the auto-loader
+`groups: readonly EmojiPickerGroup[] = []` (attribute: false) — readonly `EmojiPickerGroup { key,
+label, emojis: readonly EmojiPickerItem[] }`, readonly `EmojiPickerItem { emoji, name,
+shortcodes? }`; assignment captures a bounded frozen owned snapshot. The search field matches
+`name` and every `shortcodes` entry, case-insensitively. Consumer group labels render verbatim.
+Groups returned by the built-in loader carry private provenance, letting their fixed emojibase
+headings follow `registerLyraLocale()`/`.strings` without exposing localization keys as consumer
+data. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
 forwards a host-supplied accessible name to the internal `role="listbox"` grid; empty falls back to
 the localized default grid label. `label: string = ''` — visible label rendered above the
@@ -52,17 +51,19 @@ supporting text rendered below the search/grid; unset renders no hint chrome. `e
 visual size; scales the glyph and preferred emoji box while every interactive option remains
 floored at the shared `--lr-icon-button-size`.
 
-**Methods:** `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
+**Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the search input/current owned
+focus target, plus `getForm()`, `checkValidity()`, `reportValidity()`, `setCustomValidity(message)`, and
 `resetValidity()` provide the shared form-validation surface. `resetValidity()` clears only
 consumer-supplied custom validity and recomputes current intrinsic constraints; it does not change
 `value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
 
-**Events:** a pick emits native-style composed `input`, then `change` (both with no detail), then
-`lr-change` with `detail: { emoji }` (click, or Enter/Space on the active grid cell; also sets
-`value`). The internal search input's `focus` and `blur` are re-dispatched as bubbling, composed
-host events. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
-fails; preventing it also prevents the native `invalid` event that produced it. Programmatic
-`value` changes are silent.
+**Events:** a pick emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
+`lr-change`; both aliases carry `detail: { value }`. The internal search input's `focus` and `blur`
+are relayed once as native `FocusEvent`s preserving `relatedTarget`, followed by
+`lr-focus`/`lr-blur`. All four native events use the picker's current owner-document realm, including
+after adoption. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
+fails; preventing it also prevents the native `invalid` event that produced it. Programmatic `value`
+changes are silent.
 
 **Keyboard:** the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji is
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
@@ -114,14 +115,17 @@ and re-derived only when the resolved pixels can actually change (a token overri
 first render, a theme swap, a root or host font-size change feeding a `rem`/`em` value), never per
 frame.
 
-`--lr-emoji-picker-active-bg` recolors the highlight behind the active/hovered emoji, falling back
-to `--lr-color-brand-quiet` when unset — so the default rendering is unchanged. Hover and
-keyboard-active deliberately share one declaration, so this single hook retints both consistently.
-It exists because `::part(emoji)[data-active]` is **invalid CSS** (an attribute selector cannot
-follow `::part()`), which previously left hijacking the shared `--lr-color-brand-quiet` token — and
-repainting everything else that reads it — as the only way in. Like `lr-time-range`'s preset
-properties, it is written as an inline `var()` fallback at the point of use rather than declared on
-`:host`, so a value set on **any ancestor** reaches it instead of being shadowed.
+Emoji interaction states are separate: `--lr-emoji-picker-hover-bg`,
+`--lr-emoji-picker-keyboard-active-bg`, `--lr-emoji-picker-selected-bg`/
+`--lr-emoji-picker-selected-color`, and `--lr-emoji-picker-pressed-bg`, with matching
+`--lr-emoji-picker-keyboard-active-outline-color`,
+`--lr-emoji-picker-selected-outline-color`, and
+`--lr-emoji-picker-pressed-outline-color` hooks for active, selected, and pressed. The legacy
+`--lr-emoji-picker-active-bg` remains the fallback for hover and keyboard-active. These are inline
+`var()` fallbacks rather than host declarations, so values set on any ancestor remain effective.
+The committed form `value` alone drives `aria-selected`; roving focus and pointer navigation use
+`data-active`, so moving through the grid never falsely changes selection. Forced-colors mode also
+distinguishes hover (dashed), active (dotted), selected (solid), and pressed (double) outlines.
 
 Two constraints remain. `--lr-emoji-picker-item-size` is held at the shared
 `--lr-icon-button-size` minimum: smaller `size` tier values can still shrink the glyph, but never
@@ -139,14 +143,10 @@ grid renders a distinct localized `[part="load-error"]` surface instead of the o
 `[part="empty"]` message, so a skipped install is distinguishable at a glance from a genuine
 zero-match search or a deliberate `groups = []` opt-out, and announces the same message once
 through the document's shared assertive live region (not a shadow-root `role="alert"`, which
-announces unreliably). Assigning `groups` afterwards clears it. The adapter buckets the peer's flat entry list by
-its numeric `group` id and tags each bucket with both the English `label` and the matching
-`labelKey` — `emojiPickerGroupSmileysEmotion`, `emojiPickerGroupPeopleBody`,
-`emojiPickerGroupComponent`, `emojiPickerGroupAnimalsNature`, `emojiPickerGroupFoodDrink`,
-`emojiPickerGroupTravelPlaces`, `emojiPickerGroupActivities`, `emojiPickerGroupObjects`,
-`emojiPickerGroupSymbols`, `emojiPickerGroupFlags` (group ids 0–9, in that order). Override any of
-them through `registerLyraLocale()` or a `.strings` object to translate the headings. An unknown
-future group id gets no `labelKey` and falls back to a generated `Group {id}` label.
+announces unreliably). Assigning `groups` afterwards clears it. The adapter buckets the peer's flat
+entry list by numeric group id and returns only the public `{ key, label, emojis }` shape. The picker
+privately maps auto-loaded group ids 0–9 to the existing `emojiPickerGroup*` locale strings; override
+those through `registerLyraLocale()` or `.strings`. An unknown future group id uses `Group {id}`.
 
 **Additional API surface:**
 

@@ -16,11 +16,12 @@
 ## `lr-split-panel`
 
 Accessible two-pane resizing with the public `wa-split-panel` / `sl-split-panel` contract. Use this
-component when migrated markup has named `start` and `end` panes. The separate `<lr-split>` is
+component when migrated markup has named `start` and `end` panes. The separate `<lr-multi-split>` is
 Lyra's multi-panel layout: its direct default-slot children, responsive collapse modes, and
 multi-divider events are intentionally a different API.
 
 **Properties:**
+
 - `position: number = 50` (reflected) — divider position from the selected `primary` pane's edge,
   as a percentage from 0–100. With no `primary`, the logical `start` pane is the reference.
 - `positionInPixels: number` (attribute `position-in-pixels`) — the same position in pixels.
@@ -37,7 +38,8 @@ multi-divider events are intentionally a different API.
   resize. Position values are always measured from the selected primary edge.
 - `snap: string | SnapFunction = ''` — pointer-drag snap behavior. A string accepts space-separated
   pixels, percentages, and repeat expressions (`'160px 50% repeat(100px)'`) and reflects to the
-  `snap` attribute. A property-bound
+  `snap` attribute. It parses and caches the numeric value/unit projection from at most the first
+  16,384 UTF-16 code units and 256 finite valid tokens; later source text cannot affect snapping. A property-bound
   `SnapFunction` receives `{ pos, size, snapThreshold }` in pixels and returns the desired pixel
   position; callback code decides how to use the supplied threshold. The setter also accepts
   `undefined` for mapped source compatibility, clearing the configuration to the canonical `''`
@@ -79,7 +81,7 @@ cleans up on pointer up, cancellation, capture loss, disconnect, and orientation
 **Optional peer deps:** none.
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js';
+import "@aceshooting/lyra-ui/components/layout/split-panel/split-panel.js";
 ```
 
 ```html

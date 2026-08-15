@@ -20,20 +20,28 @@ overlay infrastructure as `lr-dialog` (focus-trapping Tab, Escape dismissal, bac
 dismissal, ref-counted document scroll lock).
 
 **Properties:**
-- `open: boolean = false` (reflected)
-- `commands: LyraCommand[] = []` (attribute: false) — `{ id, label, description?, group?, shortcut?,
-  keywords?, disabled?, icon?, onSelect? }`. `icon` is an optional leading glyph (a `TemplateResult`,
+
+- `open: boolean = false` (reflected) — after the initial silent render, property and attribute
+  writes use the same synchronous cancelable transaction as `openPalette()`/`close()`; a veto
+  restores reflection and prevents query/active-row opening side effects
+- `commands: LyraCommand[] = []` (attribute: false) — `{ commandId, label, description?, group?,
+shortcut?, keywords?, disabled?, icon?, onSelect? }`. `commandId` is a stable business identity and
+must be nonempty and unique; invalid rows are omitted and the first duplicate wins. Replacing or
+reordering the array preserves the active command by `commandId`. `icon` is an optional leading glyph (a `TemplateResult`,
   an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
   label; a command with no `icon` renders no `icon` part at all. Filtering is case-insensitive
   substring matching over `label` + `description` + `group` + `keywords` joined together (not
   fuzzy/subsequence), memoized per `commands` array identity — reassign the array, never mutate it
   in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
   by group yourself.
-- `shortcut: string = 'mod+k'` — global toggle chord parsed as `+`-separated parts; `mod` resolves to
-  Cmd on Mac and Ctrl elsewhere. The listener is on `window`, added in `connectedCallback`.
+- `hotkey: string = 'mod+k'` — exact global activation chord parsed as `+`-separated parts; `mod`
+  resolves to Cmd on Mac and Ctrl elsewhere. Repeats, composition keys, and extra modifiers do not
+  match. If several connected palettes use the same chord, the last connected palette owns it;
+  activation is idempotently open rather than a toggle.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
 
-**Methods:** `openPalette()` (clears the query and resets the active row; no-op if already open),
+**Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
+no-op if already open),
 `close()`, `registerCommand(command)` — appends to `commands` and returns an unregister function.
 
 **Keyboard:** ArrowUp/ArrowDown move the active option, skipping `disabled` rows and clamping (not
@@ -60,7 +68,7 @@ heading), `command-group` (a labeled ARIA group of commands), `command` (a `role
 `--lr-command-palette-list-max-block-size` (default `50vh` — the scrolling result list), and
 `--lr-command-palette-active-bg` (default `var(--lr-color-brand-quiet)` — the background of the
 active, keyboard-highlighted command row). That last one is an inline `var()` fallback at the point
-of use rather than a `:host` declaration, so it can be set on the element *or on any ancestor*:
+of use rather than a `:host` declaration, so it can be set on the element _or on any ancestor_:
 `::part(command)[data-active='true']` is invalid CSS (Shadow Parts forbids an attribute selector
 after `::part()`), so highlighting the active row previously required hijacking the library-wide
 `--lr-color-brand-quiet` token and repainting everything else that read it. Unset, it falls back to

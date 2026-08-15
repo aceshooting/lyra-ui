@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 32 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -32,18 +32,30 @@ focus. Home/End always resolve the first/last thread from that complete model, e
 starts in a middle window; group records, collapsed-group contents, and unavailable endpoint rows
 are skipped rather than becoming false boundaries.
 
-**Properties:** `threads: ChatThread[] = []` (attribute: false) — `ChatThread { id: string; title:
-string; excerpt?: string; timestamp?: Date | string; pinned?: boolean; archived?: boolean }`
-(exported here). `activeId: string = ''` (attribute `active-id`) — data mode:
+**Exported types:** `LyraChatThread { id: string; title: string; excerpt?: string; timestamp?: Date |
+string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pin' | 'archive' |
+'delete'`; `ThreadListGrouping = 'date' | 'custom' | 'none'`; `ThreadBucketKey = 'pinned' |
+'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`; and
+`ThreadGroupContext { id: string; threads: readonly LyraChatThread[]; bucket?: ThreadBucketKey;
+date?: Date }`. `LyraThreadList` and `LyraThreadListEventMap` are exported alongside them. The class
+module, normal and stable tag-shaped registration entries, conversation family entry, and package
+root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
+Data-mode thread ids must be nonempty and unique; invalid rows and later duplicates are omitted with
+the first valid occurrence winning, so focus, actions, and emitted `conversationId` values remain
+unambiguous.
+
+**Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeId: string = ''`
+(attribute `active-id`) — data mode:
 marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
 false` (reflected) — shows the built-in search field. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
-`grouping: 'date' | 'custom' | 'none' = 'date'` — data mode: bucket rows under localized date headers
+`grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
-arbitrary grouping callbacks below, or render a flat list. `groupBy?: (thread: ChatThread) => string`
+arbitrary grouping callbacks below, or render a flat list. `groupBy?: (thread: LyraChatThread) => string`
 (attribute: false) derives each group id in `grouping="custom"`; omitting it leaves the custom mode
-flat. `formatGroup?: (id: string, threads: ChatThread[]) => string | TemplateResult` (attribute:
-false) renders non-interactive custom group-label content. `groupOrder?: string[] | ((a: string, b:
+flat. `getGroupLabel?: (context: ThreadGroupContext) => string` (attribute: false) supplies the
+plain-text accessible/visible label; `renderGroupAdornment?: (context) => TemplateResult` supplies
+separate rich content beside the toggle without nesting it inside the button. `groupOrder?: string[] | ((a: string, b:
 string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an
 array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
 controlled collapsed state for both date and custom groups. A collapsed group's header remains in
@@ -54,7 +66,7 @@ internal key namespaces, so every public `activeId` remains a raw thread id — 
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
 = false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
-trailing group). `editable: boolean = true` (reflected) — forwarded to each data-mode row's inline
+trailing group). `renamable: boolean = true` (reflected) — forwarded to each data-mode row's inline
 rename. `compact: boolean = false` (reflected) — data mode only: forwarded to each row
 `lr-conversation-item`'s own `compact`, tightening every row's padding and gaps from one attribute
 (the density itself lives on the row item; retune it through
@@ -69,29 +81,28 @@ the real row keeps the `role="heading"`/`aria-level` semantics and the tab order
 is not a second tab stop), while the pinned copy stays clickable and requests the same
 `lr-group-toggle` collapse. Default `false` renders exactly as before; `grouping="none"` has no
 headers to pin, so it is a no-op there. `label: string = ''` — accessible name for the list region,
-defaults to the localized `threadListLabel`. `wrapRow?: (thread: ChatThread, row: TemplateResult) =>
+defaults to the localized `threadListLabel`. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
 TemplateResult` (attribute: false) — data mode only: wraps each row's built-in
-`lr-conversation-item` with host-supplied content that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
+`lr-conversation-item` with host-supplied content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
-`renderActions?: (thread: ChatThread) => TemplateResult` (attribute: false) — data mode only:
-appends host-supplied content (re-invoked per row on every render, e.g. a `lr-menu` with custom
+`renderActions?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — data mode only:
+appends host-supplied content (re-invoked per row on every render, e.g. an `lr-dropdown` containing `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
-the host normally and never trigger `lr-select`. An open nested `lr-menu` keeps its virtual row
+the host normally and never trigger `lr-select`. An open nested `lr-dropdown` keeps its virtual row
 above later rows even if focus temporarily leaves the menu. Unset renders only the built-in
 `rowActions`.
-`renderLeading?: (thread: ChatThread) => TemplateResult` (attribute: false) — renders non-interactive
-leading content in each virtualized row. `renderExcerpt?: (thread: ChatThread) => TemplateResult`
+`renderStart?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — renders non-interactive
+start-side content in each virtualized row. `renderExcerpt?: (thread: LyraChatThread) => TemplateResult`
 (attribute: false) — renders rich content into the row item's own `excerpt` slot, winning over the
 plain-string `excerpt` property (e.g. a server-highlighted search-match snippet), while leaving the
-built-in title layout and inline-rename affordance untouched. `<mark>` descendants returned by this
+built-in label layout and inline-rename affordance untouched. `<mark>` descendants returned by this
 hook receive the default, component-themeable highlight treatment documented below.
-`renderMeta?: (thread: ChatThread) => TemplateResult` (attribute: false) — appends structured
+`renderMeta?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — appends structured
 metadata in the row's meta region.
-`renderRowContent?: (thread: ChatThread) => TemplateResult` (attribute: false) — replaces the
-conversation item's title/excerpt/meta content area with custom non-interactive row content.
-`formatGroupLabel?: (key: ThreadBucketKey, date?: Date) => string` (attribute: false) — overrides
-built-in date-group labels (use `formatGroup` for custom groups). `formatDate?: (date: Date) =>
-string` (attribute: false) — overrides month-group date formatting. When `wrapRow` is set, its
+`renderRowContent?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — replaces the
+conversation item's label/excerpt/meta content area with custom non-interactive row content.
+`formatDate?: (date: Date) => string` (attribute: false) — overrides month-group date formatting.
+Use `getGroupLabel` for every date/custom group label. When `wrapRow` is set, its
 returned content is placed inside the library-owned `row-wrapper` part; that wrapper surrounds the
 complete built-in row, including built-in `rowActions` and appended `renderActions` content inside
 the conversation item's `actions` slot. Use `row-wrapper` for whole-row layout, `row-actions` for
@@ -101,11 +112,13 @@ With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 **Slots:** default — slotted mode only: host-supplied `lr-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.
 
-**Events:** (data mode; slotted mode only ever fires `lr-filter-change`) `lr-select` (`detail: {
-id }`), `lr-thread-pin` (`detail: { id, pinned }` — the requested new state), `lr-thread-archive`
-(`detail: { id, archived }`), `lr-thread-delete` (`detail: { id }`, no built-in confirmation),
-`lr-thread-rename` (`detail: { id, title }`, re-emitted from the row's `lr-rename`),
-`lr-filter-change` (`detail: { text, matchCount }`), `lr-group-toggle` (`detail: { id, collapsed }` —
+**Events:** data mode: `lr-select` (`detail: { conversationId }`), `lr-thread-pin`
+(`detail: { conversationId, pinned }` — the requested new state), `lr-thread-archive`
+(`detail: { conversationId, archived }`), `lr-thread-delete` (`detail: { conversationId }`, no
+built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
+re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
+instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
+`lr-group-toggle` (`detail: { id, collapsed }` —
 controlled intent; native group buttons provide Enter/Space activation and explicit
 `aria-expanded="true"|"false"`). `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
@@ -115,21 +128,21 @@ which are neither.
 type="search">`), `list` (the list region), `empty`, `viewport` (the actual internal virtual-list
 scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle`,
-`group-label`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
+`group-label`, `group-adornment`, `group-icon`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
 group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
-the `group-header`/`group-toggle`/`group-label`/`group-icon` markup, so those parts style the real
+the `group-header`/`group-toggle`/`group-label`/`group-adornment`/`group-icon` markup, so those parts style the real
 header row and the pinned copy alike, and the band itself is where a shadow or bottom border
 belongs), `row` (all exported across the internal `lr-virtual-list` shadow
 boundary), `row-wrapper` (the wrapper around `wrapRow` output, only present when `wrapRow` is set;
 row-only — group headers are never passed through `wrapRow`, so they never carry it), and
-`row-leading`/`row-excerpt`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
+`row-start`/`row-excerpt`/`row-content`/`row-meta`/`row-actions` (the library-owned wrappers around
 their corresponding render-hook output; inherited fonts, layout values, and theme custom properties
 reach callback-rendered descendants through these parts). `row-excerpt` wraps `renderExcerpt`
 output, which is slotted into the row item's own `excerpt` slot.
 
 Data mode additionally forwards each row `<lr-conversation-item>`'s own parts under a `row-item-`
-prefix: `row-item-base`, `row-item-active-indicator`, `row-item-option`, `row-item-leading`, `row-item-content`,
-`row-item-title`, `row-item-title-input`, `row-item-rename-button`, `row-item-excerpt`,
+prefix: `row-item-base`, `row-item-active-indicator`, `row-item-select-button`, `row-item-start`, `row-item-content`,
+`row-item-label`, `row-item-label-input`, `row-item-rename-button`, `row-item-excerpt`,
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
 
 **Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
@@ -141,10 +154,10 @@ internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancest
 marks returned by `renderRowContent` or any other hook.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap _this_
-component's own render-callback output (`wrapRow`, `renderLeading`, `renderExcerpt`,
+component's own render-callback output (`wrapRow`, `renderStart`, `renderExcerpt`,
 `renderRowContent`, `renderMeta`, `renderActions`); the `row-item-*` parts are the row item's
 _internals_. Row density
-in particular lives in `row-item-base`'s padding and `row-item-title`'s font size, so
+in particular lives in `row-item-base`'s padding and `row-item-label`'s font size, so
 `::part(row-item-base)` is the supported way to build a dense sidebar.
 
 For plain row density, prefer the `compact` property above — it forwards straight to the row item's
@@ -155,7 +168,7 @@ size, a different padding ratio):
 lr-thread-list::part(row-item-base) {
   padding-block: 0.25rem;
 }
-lr-thread-list::part(row-item-title) {
+lr-thread-list::part(row-item-label) {
   font-size: 0.8125rem;
 }
 ```
@@ -185,9 +198,9 @@ style the pinned band with `lr-thread-list::part(group-sticky)`.
   .threads=${threads}
   active-id=${activeThreadId}
   .rowActions=${['pin', 'archive', 'delete']}
-  @lr-select=${(e) => openThread(e.detail.id)}
+  @lr-select=${(e) => openThread(e.detail.conversationId)}
 ></lr-thread-list>
 ```
 
-Composed with `lr-split` (or `lr-app-rail` + `lr-responsive-panel`): thread-list in the start
+Composed with `lr-multi-split` (or `lr-app-rail` + `lr-responsive-panel`): thread-list in the start
 pane driving `activeId`, `lr-chat-viewport` + `lr-chat-composer` in the main pane.

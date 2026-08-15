@@ -6,9 +6,9 @@
 - **Class** `LyraHistogram`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/histogram.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated method** `appendData` since `8.2.3`; use method `.appendSamples(values, maxSamples)`; removal not before `10.0.0` — appendSamples describes the histogram's numeric sample stream directly while appendData remains a compatibility adapter.
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 15 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,29 +22,28 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 - `bins: number = 10` — finite values are floored and clamped to 0–1,000 before allocation;
   non-finite values produce no buckets
 - `values: number[] = []` (attribute: false)
-- `label: string = ''` — dataset label used for the legend/tooltip/accessible summary; empty (the
-  default) falls back to the localized "Frequency" string
+- `seriesLabel: string = ''` (attribute `series-label`) — dataset label used for the
+  legend/tooltip/table; empty falls back to localized "Frequency". Inherited `label` keeps its
+  chart-wide accessible-name meaning.
 - `labels`/`datasets`/`type` are **derived, read-only** (installed as getter/setter pairs on the
   prototype; direct writes are silently ignored) — `labels`/`datasets` are computed from
   `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the
-  normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. The `type`
-  lock is the same `lockChartType()` accessor pair the typed `lr-*-chart` subclasses use (e.g.
-  `llms/components/lr-bar-chart.md`) — `el.type = 'line'` is a genuine no-op here too.
+  normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
+  specialist owns its controller because a non-bar type would contradict the derived distribution.
 - All other `LyraChart` properties are inherited and usable: `description`, `grid`, `indexAxis`
   (`index-axis`), `hiddenDatasets`, `legend`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
-  (`without-tooltip`), `valueFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
+  (`without-tooltip`), `valueFormatter`, `formatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
   `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
   (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
   (`show-data-table`), `chartArea` (readonly).
 
-**Methods:** `resetZoom()`, `refreshTheme()` — both inherited; plus
-`appendData(_label, values, maxPoints?)`, which appends finite raw samples to `values` and
-optionally retains only the newest `maxPoints`. The label argument is ignored because bucket
-labels are regenerated from the rebinned sample range.
+**Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
+maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
+`appendData()` remains a deprecated compatibility adapter.
 
-**Events:** `lr-zoom`, `lr-point-click`, `lr-before-legend-visibility-change` (cancelable), and
+**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-legend-visibility-change` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
 
@@ -62,7 +61,7 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
-`--lr-chart-pattern-step` — inherited from `LyraChart`, identical in meaning, together with the
+`--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
 mirrored `--border-color-1`,
 `--border-color-2`,
 `--border-color-3`, `--border-color-4`, `--border-color-5`, `--border-color-6`, `--fill-color-1`,
@@ -89,8 +88,10 @@ their semantics, defaults, and gotchas.
 - excessively large finite bin counts are capped at 1,000, preventing an attribute or direct
   property write from requesting an unbounded bucket array.
 - non-finite samples in `values` are dropped before bucketing rather than corrupting bucket-index
-  math; constant data (every sample equal) lands wholly in the **first** bucket, not the last.
-- `values`/`bins`/`label` changes join the inherited connected-and-visible redraw path. There is no
+  math; a constant domain produces one truthful single-value bucket, including at numeric extremes.
+- raw `config.options` and plugins remain available, but `config.type` and `config.data` are ignored:
+  the histogram owns its bar controller and derives all categories from `values`/`bins`.
+- `values`/`bins`/`seriesLabel` changes join the inherited connected-and-visible redraw path. There is no
   second post-update refresh, so a same-tick disconnect cannot recreate Chart.js on a detached
   canvas and off-screen sample updates do not repaint it.
 

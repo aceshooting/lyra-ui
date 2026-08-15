@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { GEMSTONE_KEYS, GEMSTONES } from '../../../theme/gemstones-data.js';
-import type { LyraSwatchPicker, LyraSwatchPickerSize } from './swatch-picker.js';
+import type { LyraSwatchPicker } from './swatch-picker.js';
+import type { LyraSizeStep } from '../../../internal/variants.js';
 import './swatch-picker.js';
 
 const accents = () => [
@@ -108,7 +109,7 @@ export const Default: Story = {
 /** `size` spans the same `2xs`–`xl` scale as `lr-input`, default `m`. */
 export const Sizes: Story = {
   render: () => {
-    const sizes: LyraSwatchPickerSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    const sizes: LyraSizeStep[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
     return html`
       <div style="display: flex; flex-direction: column; gap: 1rem">
         ${sizes.map((size) => html`<lr-swatch-picker size=${size} label=${`Size "${size}"`} .options=${accents()} value="purple"></lr-swatch-picker>`)}

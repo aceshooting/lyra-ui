@@ -58,7 +58,7 @@ type Internals = {
   selectionCleanup?: () => void;
   searchHandle?: {
     release(): void;
-    setRanges: unknown;
+    setRanges(tone: string, ranges: Range[]): void;
     setActive(range: Range | null): void;
     flash: unknown;
   };
@@ -318,6 +318,30 @@ describe('TextViewerTarget mixin', () => {
       expect(internals(el).textScopeBuildCount()).to.equal(builds);
     });
 
+    it('does not rebuild fallback scope/index state on unrelated stable updates', async () => {
+      const originalHighlight = Object.getOwnPropertyDescriptor(window, 'Highlight');
+      let el: StubTextViewer | undefined;
+      try {
+        Object.defineProperty(window, 'Highlight', { configurable: true, value: undefined });
+        el = await stubFixture();
+        await el.search('fox');
+        const builds = internals(el).textScopeBuildCount();
+        const scans = internals(el).textQuoteScanCount();
+
+        for (let index = 0; index < 3; index++) {
+          el.requestUpdate();
+          await el.updateComplete;
+        }
+
+        expect(internals(el).textScopeBuildCount()).to.equal(builds);
+        expect(internals(el).textQuoteScanCount()).to.equal(scans);
+      } finally {
+        el?.remove();
+        if (originalHighlight) Object.defineProperty(window, 'Highlight', originalHighlight);
+        else Reflect.deleteProperty(window, 'Highlight');
+      }
+    });
+
     it('invalidates the cached scope and active search after an external DOM mutation', async () => {
       const el = await stubFixture();
       await el.search('fox');
@@ -327,11 +351,72 @@ describe('TextViewerTarget mixin', () => {
         latest = event.detail;
       });
 
-      el.shadowRoot!.querySelector('#section-one')!.textContent = 'No animal remains.';
+      const paragraph = el.shadowRoot!.querySelector('#section-one')!;
+      const walker = paragraph.ownerDocument.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+      let textNode: Text | null = null;
+      while (walker.nextNode()) {
+        const candidate = walker.currentNode as Text;
+        if (candidate.data.includes('fox')) {
+          textNode = candidate;
+          break;
+        }
+      }
+      expect(textNode !== null).to.be.true;
+      textNode!.data = textNode!.data.replace('fox', 'cat');
       await waitUntil(() => latest?.matchCount === 1);
 
       expect(latest!.matchCountExact).to.be.true;
       expect(internals(el).textScopeBuildCount()).to.be.greaterThan(builds);
+    });
+
+    it('drains a same-task DOM mutation before search navigation emits state', async () => {
+      const el = await stubFixture();
+      await el.search('fox');
+      const details: Array<{
+        query: string;
+        matchCount: number;
+        matchCountExact: boolean;
+        activeIndex: number;
+      }> = [];
+      el.addEventListener('lr-search-change', (event) => details.push(event.detail));
+      const body = el.shadowRoot!.querySelector('[part="body"]')!;
+      const walker = body.ownerDocument.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const textNode = walker.currentNode as Text;
+        textNode.data = textNode.data.replaceAll('fox', 'cat');
+      }
+
+      expect(await el.searchNext()).to.be.false;
+      expect(details).to.deep.equal([{ query: 'fox', matchCount: 0, matchCountExact: true, activeIndex: -1 }]);
+      await Promise.resolve();
+      await el.updateComplete;
+      await Promise.resolve();
+      expect(details).to.have.length(1);
+    });
+
+    it('refreshes node mappings without emitting when an external mutation preserves normalized text', async () => {
+      const el = await stubFixture();
+      await el.search('fox');
+      const builds = internals(el).textScopeBuildCount();
+      let eventCount = 0;
+      el.addEventListener('lr-search-change', () => { eventCount++; });
+      const paragraph = el.shadowRoot!.querySelector('#section-one')!;
+      const walker = paragraph.ownerDocument.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+      let textNode: Text | null = null;
+      while (walker.nextNode()) {
+        const candidate = walker.currentNode as Text;
+        if (candidate.data.length > 2) {
+          textNode = candidate;
+          break;
+        }
+      }
+      expect(textNode !== null).to.be.true;
+      textNode!.splitText(1);
+
+      await waitUntil(() => internals(el).textScopeBuildCount() > builds);
+      await Promise.resolve();
+      expect(eventCount).to.equal(0);
+      expect(internals(el).searchMatches).to.have.length(2);
     });
 
     it('reuses identical quote occurrences and bounds distinct highlight scan work', async () => {
@@ -356,7 +441,23 @@ describe('TextViewerTarget mixin', () => {
       expect(internals(el).highlightPaintedRangeCount()).to.be.at.most(100);
     });
 
-    it('resolves the active host highlight even when it lies beyond the paint cardinality cap', async () => {
+    it('stops looking for an active host highlight at the candidate ceiling', async () => {
+      const el = await stubFixture();
+      let idReads = 0;
+      el.highlights = Array.from({ length: 50_000 }, (_, index) => ({
+        get id() {
+          idReads++;
+          return index === 49_999 ? 'outside-cap' : `ordinary-${index}`;
+        },
+        anchor: { kind: 'text-quote' as const, quote: 'fox' },
+      }));
+      el.activeHighlightId = 'outside-cap';
+      await el.updateComplete;
+
+      expect(idReads).to.be.at.most(1_000);
+    });
+
+    it('bounds active-id inspection and retains an active host highlight inside the candidate cap', async () => {
       const el = await stubFixture();
       const handle = internals(el).searchHandle!;
       let activeText = '';
@@ -365,18 +466,45 @@ describe('TextViewerTarget mixin', () => {
         activeText = range?.toString() ?? '';
         originalSetActive.call(handle, range);
       }) as typeof handle.setActive;
-      el.highlights = [
-        ...Array.from({ length: 100 }, (_, index) => ({
-          id: `ordinary-${index}`,
-          anchor: { kind: 'text-quote' as const, quote: 'fox' },
-        })),
-        { id: 'active-after-cap', anchor: { kind: 'text-quote', quote: 'İzmir' } },
-      ];
-      el.activeHighlightId = 'active-after-cap';
+      let idReads = 0;
+      el.highlights = Array.from({ length: 50_000 }, (_, index) => ({
+        get id() {
+          idReads++;
+          return index === 999 ? 'active-at-cap' : `ordinary-${index}`;
+        },
+        anchor: { kind: 'text-quote' as const, quote: index === 999 ? 'İzmir' : 'fox' },
+      }));
+      el.activeHighlightId = 'active-at-cap';
       await el.updateComplete;
 
       expect(activeText).to.equal('İzmir');
+      expect(idReads).to.be.at.most(1_000);
       expect(internals(el).highlightPaintedRangeCount()).to.be.at.most(100);
+    });
+
+    it('does not retain a separate 201st Range for the active search match', async () => {
+      const el = await stubFixture();
+      const handle = internals(el).searchHandle!;
+      let accentRanges: Range[] = [];
+      let activeRange: Range | null = null;
+      const originalSetRanges = handle.setRanges.bind(handle);
+      const originalSetActive = handle.setActive.bind(handle);
+      handle.setRanges = (tone, ranges) => {
+        if (tone === 'accent') accentRanges = ranges;
+        originalSetRanges(tone, ranges);
+      };
+      handle.setActive = (range) => {
+        activeRange = range;
+        originalSetActive(range);
+      };
+      el.bodyText = 'x '.repeat(300);
+      await el.updateComplete;
+
+      expect(await el.search('x')).to.equal(300);
+      expect(accentRanges).to.have.length(200);
+      expect(activeRange).to.not.be.null;
+      expect(accentRanges.includes(activeRange!)).to.be.true;
+      expect(new Set([...accentRanges, activeRange!]).size).to.equal(200);
     });
 
     it('reports a retained lower bound when the shared match ceiling is exceeded', async () => {
@@ -485,6 +613,37 @@ describe('TextViewerTarget mixin', () => {
       expect(internals(el).searchQuery).to.equal('fox');
       expect(internals(el).searchMatches).to.have.length(2);
       expect(internals(el).searchHandle).to.not.be.undefined;
+    });
+
+    it('rebinds scope observation and search painting after cross-document adoption', async () => {
+      const iframe = document.createElement('iframe');
+      document.body.append(iframe);
+      const el = await stubFixture();
+      await el.search('fox');
+      try {
+        const adopted = iframe.contentDocument!.adoptNode(el);
+        iframe.contentDocument!.body.append(adopted);
+        await Promise.resolve();
+        await el.updateComplete;
+        expect(internals(el).selectionRoot?.ownerDocument === iframe.contentDocument).to.be.true;
+
+        let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+        el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
+        const paragraph = el.shadowRoot!.querySelector('#section-one')!;
+        const walker = iframe.contentDocument!.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          const candidate = walker.currentNode as Text;
+          if (candidate.data.includes('fox')) {
+            candidate.data = candidate.data.replace('fox', 'cat');
+            break;
+          }
+        }
+        await waitUntil(() => detail?.matchCount === 1);
+        expect(detail!.matchCountExact).to.be.true;
+      } finally {
+        el.remove();
+        iframe.remove();
+      }
     });
   });
 

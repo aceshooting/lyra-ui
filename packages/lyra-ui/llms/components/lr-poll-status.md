@@ -32,8 +32,8 @@ accessible phase-transition announcements.
   freezes and `lr-poll-due` never fires.
 
 **Events:** `lr-poll-due` (no detail — fired once when the countdown reaches zero, not fired while
-`paused`), `lr-pause-change` (`detail: boolean` — fired when `paused` changes via the built-in
-button).
+`paused`), `lr-pause-change` (`detail: { paused: boolean }` — fired when `paused` changes via the
+built-in button).
 
 **Methods:** `restart(): void` — restarts the currently configured `nextInMs` delay from now,
 including after its previous deadline fired. With `nextInMs` unset it simply clears the due state.
@@ -58,18 +58,21 @@ repainting every other component that reuses the same shared success token. Plus
 <script type="module">
   const status = document.querySelector('lr-poll-status');
   status.addEventListener('lr-poll-due', () => refreshData());
-  status.addEventListener('lr-pause-change', (e) => console.log('paused:', e.detail));
+  status.addEventListener('lr-pause-change', (e) => console.log('paused:', e.detail.paused));
 </script>
 ```
 
-Internally, a 1-second ticker re-derives the remaining time from a captured target timestamp (rather
-than a naive per-tick decrement), so the countdown stays accurate even if the tab was backgrounded
-and timers were throttled. Assigning a _changed_ `nextInMs` value starts a fresh deadline; assigning
-the same value is a normal Lit no-op, so use `restart()` for a new cycle with the same delay.
-Pausing/resuming, toggling `active`, disconnecting/reconnecting, or toggling either after the due
-event stops/starts only an unconsumed ticker: a consumed deadline never replays until `nextInMs`
-changes or `restart()` is called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are
-announced via an internal `<lr-live-region>` in polite mode.
+Internally, owner-window timeouts schedule both the exact deadline and the next displayed-second
+boundary from a captured target timestamp, so a zero/short delay does not wait for a one-second
+poll and the countdown stays accurate after background throttling. Assigning a *changed*
+`nextInMs` value starts a fresh deadline; assigning the same value is a normal Lit no-op, so use
+`restart()` for a new cycle with the same delay. Entering `paused` captures the bounded remaining
+duration; every resume establishes a new deadline from that frozen value. Changing `nextInMs` or
+calling `restart()` while paused replaces the frozen duration without starting time. Toggling
+`active`, disconnecting/reconnecting, or toggling either after the due event stops/starts only an
+unconsumed ticker: a consumed deadline never replays until `nextInMs` changes or `restart()` is
+called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announced via an internal
+`<lr-live-region>` in polite mode.
 
 **Known gotchas:**
 

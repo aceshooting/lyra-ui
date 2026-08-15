@@ -6,9 +6,11 @@
 - **Class** `LyraLiteChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/lite-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
-- **Optional peers** none
-- **Themeable via** 15 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Deprecated property** `hideAxis` / `hide-axis` since `8.2.3`; use property `without-value-axis`; removal not before `10.0.0` — withoutValueAxis identifies the affected axis precisely while hideAxis remains a compatibility alias.
+- **Deprecated property** `padLeft` / `pad-left` since `8.2.3`; use property `value-axis-gutter="…"`; removal not before `10.0.0` — valueAxisGutter uses logical purpose-based naming while padLeft remains a compatibility alias for the same allocation.
+- **Deprecated property** `selectedIndex` since `8.2.3`; use property `.selectedIndices = […]`; removal not before `10.0.0` — selectedIndices accurately names the plural controlled selection while selectedIndex remains a compatibility alias.
+- **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
+- **Themeable via** 17 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,10 +27,16 @@ passthrough). Not a subclass of `LyraChart`.
 **Properties:**
 - `type: LyraLiteChartType = 'bar'` — `'bar' | 'line'`
 - `labels: string[] = []` (attribute: false)
-- `datasets: LiteSeries[] = []` (attribute: false) — `LiteSeries { label: string; data:
-  (number|null)[]; color?: string }`; `color` accepts a valid CSS `color`, while invalid values,
+- `datasets: readonly LyraLiteChartSeries[] = []` (attribute: false) —
+  `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
+  readonly color?: string }`; the deprecated `LiteSeries` name remains an alias for migration.
+  `color` accepts a valid CSS `color`, while invalid values,
   declaration-breaking input, and `url()` paint servers fall back to the built-in palette
 - `legend: boolean = false`
+- `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical
+  placement for the DOM legend; side positions are bounded and stack responsively in narrow hosts
+- `label: string | null = null`, `description: string | null = null` — canonical accessible name
+  and description; host `aria-label` wins. `accessibleLabel` remains a deprecated migration alias
 - `height: string = '280px'` — accepts a valid CSS `height` as a private fallback. A consumer-set
   `--lr-chart-height` always wins; invalid values, declaration-breaking input, and `url()` remove
   the fallback and leave the public token/default in control.
@@ -40,6 +48,9 @@ passthrough). Not a subclass of `LyraChart`.
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
   display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
   Falls back to the built-in "nice numbers" formatter when unset.
+- `formatter?: LyraChartFormatter` (attribute: false) — family-wide context-object formatter used
+  by visual/tooltips, spoken text, legends, tables, and CSV export. It takes precedence over the
+  older surface-specific hooks, which remain available as compatibility fallbacks.
 - `tableCellFormatter?: LyraLiteChartTableCellFormatter` (attribute: false) — formats each finite
   numeric cell in the built-in multi-series accessible table. The callback receives `(value,
   context)`, where `context` is `{ kind: 'value' | 'total'; datasetIndex: number | null; index:
@@ -59,11 +70,12 @@ passthrough). Not a subclass of `LyraChart`.
   mode; ignored in the default `'fit'` mode. An excessive value is reduced as needed by the
   1,000,000px scroll-content ceiling.
 - `maxLabels?: number` (attribute `max-labels`, type Number) — decimates which category axis labels
-  actually render *text* when `labels.length > maxLabels` (bars themselves are never decimated, only
-  their axis `<text>` labels): always shows the first and last label, and roughly evenly distributes
+  actually render *text* when `labels.length > maxLabels`: always shows the first and last label,
+  and roughly evenly distributes
   the rest between them. Works in either `layout` mode. Unset (the default) renders every label.
   Each rendered category label is allocation-aware: narrow/long text is ellipsized before paint,
-  with the complete caller label retained as its accessible name.
+  with the complete caller label retained as its accessible name. Independently, the global
+  1,000-record safety sampler may bound both marks and labels for very large category×series input.
 - `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
   consumer can pixel-align this chart's bars with a sibling `<lr-heatmap>` calendar's week columns
@@ -85,8 +97,8 @@ passthrough). Not a subclass of `LyraChart`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no
   mark/tabindex/tooltip) for a value that is exactly `0`; `null`/non-finite values are always
   skipped regardless.
-- `padLeft?: number` (attribute `pad-left`) — overrides the internal 36px `PAD_LEFT` plot-left-
-  padding constant. Unset keeps the fixed 36px.
+- `valueAxisGutter?: number` (attribute `value-axis-gutter`) — value-axis gutter width. The former
+  `padLeft` / `pad-left` spelling remains a deprecated migration alias.
 - `barGapRatio?: number` (attribute `bar-gap-ratio`) — overrides the internal 0.2 `BAR_GROUP_GAP`
   fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2.
 - `scale: 'linear' | 'sqrt' = 'linear'` (bar type only) — `'sqrt'` maps a bar's value to height via
@@ -94,12 +106,13 @@ passthrough). Not a subclass of `LyraChart`.
   `lr-heatmap`'s matrix-mode `sqrt` scale), so a skewed dataset's smaller bars aren't washed out
   by one dominant value; gridlines/tick labels stay on the linear domain either way, and `type="line"`
   ignores it entirely.
-- `hideAxis: boolean = false` (attribute `hide-axis`) — suppresses gridlines/y-axis tick labels
-  altogether; x-axis category labels (rendered separately) are unaffected.
-- `selectedIndex: number[] = []` (attribute: false) — applies to every interactive data mark for
+- `withoutValueAxis: boolean = false` (attribute `without-value-axis`) — suppresses gridlines and
+  value-axis tick labels; x-axis category labels remain. `hideAxis` / `hide-axis` is a deprecated alias.
+- `selectedIndices: readonly number[] = []` (attribute: false) — applies to every interactive data mark for
   both `type="bar"` and `type="line"`: matching bars and line points receive `data-selected` and
   explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`. For a multi-series
-  chart, the category index selects the matching mark in every dataset. Empty is the default.
+  chart, the category index selects the matching mark in every dataset. Empty is the default;
+  `selectedIndex` remains a deprecated alias.
   Style the built-in highlight through `--lr-lite-chart-selected-outline-color` and
   `--lr-lite-chart-selected-outline-width`. Note
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
@@ -108,19 +121,20 @@ passthrough). Not a subclass of `LyraChart`.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values; finite input is capped at 1,000,000px before derived SVG geometry is
   calculated
-- `accessibleLabel?: string` (attribute `accessible-label`) — SVG accessible-name override; a host
-  `aria-label` wins
 - `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
   oldest categories
 
-**Events:** `lr-point-click` — fired for bars and line points on pointer activation or Enter/Space
-while focused. `detail: { datasetIndex: number, index: number, label: string | undefined, value:
-number | null }` — same shape as `lr-chart`'s `lr-point-click`. When different series' expanded
+**Events:** `lr-datum-activate` — canonical family activation with `kind: 'bar'|'point'`,
+`datasetIndex`, `index`, `label`, and `value`. The compatibility `lr-point-click` event is emitted
+for the same pointer or Enter/Space activation. When different series' expanded
 line-point targets overlap, pointer activation selects the closest rendered point in two-dimensional
 screen space; an exact distance tie retains the point whose target received the click.
 
 **Methods:** `exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the current SVG
-markup. The method does not download a file; pair it with `lr-export-button` for download UX.
+markup. CSV rows cover the canonical record count — the maximum of `labels.length` and every
+`dataset.data.length` — and use empty cells for missing labels/values, so a longer or ragged series
+is never truncated or shifted. The method does not download a file; pair it with
+`lr-export-button` for download UX.
 
 The axis gutter/title and y-axis labels mirror to logical start under RTL. Built-in mark summaries
 are complete localized templates and format values with `effectiveLocale`.
@@ -135,13 +149,14 @@ instead of materializing an unbounded hidden DOM or SVG tree.
 **Slots:** `data-table` — optional consumer-provided complete, paginated, or virtualized accessible
 data alternative.
 
-**CSS parts:** `base`, `grid-line`, `axis-label`, `axis-title`, `bar` and `point` (each carries
-`data-selected` when its category index is in `selectedIndex`, with explicit pressed state on every
+**CSS parts:** `base`, `description`, `grid-line`, `axis-label`, `axis-title`, `bar` and `point` (each carries
+`data-selected` when its category index is in `selectedIndices`, with explicit pressed state on every
 mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
 announcement for keyboard users), `data-list` (a visually hidden sampled list of plotted data
-points — single-series only), `data-table` (a visually hidden sampled category×series data table,
-rendered instead of `data-list` when there is more than one dataset), and `data-truncation` (the
+points — single-series only), `data-table` (the generated/slotted alternative container), `table`
+(the generated semantic category×series table rendered when there is more than one dataset), and
+`data-truncation` (the
 visible/announced sampling notice).
 
 **Screen-reader data alternative:** a single dataset renders the flat `data-list` (one `<li>` per
@@ -163,11 +178,13 @@ suppresses the generated sample and notice.
 as `lr-chart`; it always wins over the `height` property's private fallback);
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
-`--lr-chart-color-1` … `--lr-chart-color-8` (each defaulting to the matching
-`var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
-without moving the library-wide ramp; `--lr-lite-chart-selected-outline-color` (default
+`--lr-chart-color-1`, `--lr-chart-color-2`, `--lr-chart-color-3`, `--lr-chart-color-4`,
+`--lr-chart-color-5`, `--lr-chart-color-6`, `--lr-chart-color-7`, and `--lr-chart-color-8` (each
+defaulting to the matching `var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
+without moving the library-wide ramp; `--lr-chart-legend-side-max` (default
+`var(--lr-size-15rem)`) caps side legend allocation; `--lr-lite-chart-selected-outline-color` (default
 `var(--lr-color-brand)`) — the stroke drawn on
-selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndex`;
+selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndices`;
 `--lr-lite-chart-selected-outline-width` (default `var(--lr-size-2px)`) — that stroke's width.
 Unlike `lr-chart` (canvas-rendered, needs `getComputedStyle`-based re-theming on every draw), this
 is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution step, and no

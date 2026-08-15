@@ -25,6 +25,9 @@ positioning opinion of its own.
 - `value: string = ''` — the plain text to copy.
 - `from: string = ''` — source expression that takes precedence over `value`. `id` copies the
   element's `textContent`, `id[attribute]` copies an attribute, and `id.property` copies a property.
+  Resolution prefers an element in the button's own root, then falls back to the owner document;
+  a duplicate same-root id therefore wins without preventing a shadow-contained button from
+  targeting an otherwise valid document-owned source.
 - `copyLabel: string = ''` (attribute `copy-label`) — built-in button accessible name and resting
   tooltip text; empty uses localized `copy`.
 - `successLabel: string = ''` (attribute `success-label`) — confirmation name/tooltip text; empty
@@ -45,19 +48,28 @@ positioning opinion of its own.
   `1000` rather than leaving the state stuck; a negative one clamps to `0`.
 
 **Methods:** `focus(options?)`, `blur()` and `click()` forward to the active built-in or custom
-trigger.
+trigger. `getToolbarActions(): readonly LyraToolbarAction[]` implements the public logical-toolbar
+provider protocol with one stable action whose id is `copy`; its focus, roving tab index, disabled
+state, and composed-event matching follow the active trigger without exposing that node.
 
 **Events:**
 
-- `lr-copy` (`detail: { text: string }`) — fires on every activation with the resolved source text,
-  before the clipboard write and regardless of its outcome. On a source-resolution failure,
-  `text` is empty. This preserves the existing Lyra activation convention.
+- `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fires only after
+  the owning browsing context's clipboard write fulfills. The detail is a frozen shared outcome.
 - `lr-error` (no detail) — bubbling, composed, non-cancelable notification that source resolution
   or clipboard writing failed.
-- `lr-copy-error` (`detail: { text: string; reason: LyraCopyErrorReason; error: unknown }`) — the
-  retained detailed Lyra alias. `reason` is `'unsupported'` (no Clipboard API), `'denied'`
+- `lr-copy-error` (`detail: LyraClipboardWriteFailure`,
+  `{ ok: false; text: string; reason: LyraCopyErrorReason; error: unknown }`) — the frozen detailed
+  failure outcome. `reason` is `'unsupported'` (no Clipboard API), `'denied'`
   (`NotAllowedError`/`SecurityError`) or `'failed'` (including a missing/empty source and other
   platform failures); the error field contains the original platform or component-created error.
+- `lr-toolbar-actions-change` (no detail) — bubbling/composed coordination event emitted when the
+  logical action's disabled state or backing trigger changes, so an enclosing
+  `<lr-message-actions>` can repair its roving tab stop.
+
+The nested tooltip's `lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide` lifecycle is internal
+implementation detail and is contained at the copy-button boundary; it is not part of this event
+surface and cannot be canceled through an ancestor of `<lr-copy-button>`.
 
 **Slots:** default custom trigger, plus `copy-icon`, `success-icon`, and `error-icon` overrides for
 the built-in button. Exactly one named icon is rendered at a time.
@@ -109,7 +121,7 @@ for an application-level fallback:
   import '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js';
 
   const button = document.getElementById('copy');
-  button.addEventListener('lr-copy', () => trackCopyAttempt()); // your own instrumentation
+  button.addEventListener('lr-copy', (event) => trackCopySuccess(event.detail.text));
   button.addEventListener('lr-error', () => showCopyFallback());
   button.addEventListener('lr-copy-error', (event) => {
     // event.detail.reason is 'unsupported' | 'denied' | 'failed'
@@ -122,6 +134,9 @@ The closed-set and error-reason types are exported alongside the class:
 
 ```ts
 import type {
+  LyraClipboardWriteFailure,
+  LyraClipboardWriteOutcome,
+  LyraClipboardWriteSuccess,
   LyraCopyButtonTooltip,
   LyraCopyButtonTooltipPlacement,
   LyraCopyErrorReason,
@@ -134,9 +149,8 @@ import type {
   not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
   rejection renders the failure glyph instead, announces the localized failure text through the
   shared polite region mirrored by `[part="feedback"]`, and emits `lr-error` plus `lr-copy-error`.
-  `lr-copy` still fires for every
-  activation, so code that treated it as proof the text reached the clipboard must pair it with an
-  error event.
+  `lr-copy` is now the success-only fulfilled outcome; code that tracked activation attempts from
+  that event should instead track the initiating click separately.
 - An empty `value`, missing `from` target/member, or empty resolved source is an error; no clipboard
   write is attempted. `from` always wins over `value`, including when it is invalid.
 - `navigator.clipboard` is absent in insecure contexts/older browsers, and some engines throw

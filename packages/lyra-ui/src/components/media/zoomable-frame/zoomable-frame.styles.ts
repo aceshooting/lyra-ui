@@ -74,16 +74,16 @@ export const styles = css`
     cursor: pointer;
   }
 
-  [part='zoom-in-button']:hover,
-  [part='zoom-out-button']:hover {
+  [part='zoom-in-button']:not(:disabled):hover,
+  [part='zoom-out-button']:not(:disabled):hover {
     background: var(
       --lr-zoomable-frame-control-hover-background,
       var(--lr-color-brand-quiet)
     );
   }
 
-  [part='zoom-in-button']:active,
-  [part='zoom-out-button']:active {
+  [part='zoom-in-button']:not(:disabled):active,
+  [part='zoom-out-button']:not(:disabled):active {
     background: color-mix(
       in oklab,
       var(

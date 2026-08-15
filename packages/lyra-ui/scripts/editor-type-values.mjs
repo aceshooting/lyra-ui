@@ -230,6 +230,12 @@ function splitTopLevel(value, delimiter = '|') {
   return parts.every(Boolean) ? parts : undefined;
 }
 
+function literalComparisonKey(value) {
+  if (STRING_LITERAL.test(value)) return `string:${value.slice(1, -1)}`;
+  if (NUMBER_LITERAL.test(value)) return `number:${value}`;
+  return `other:${value}`;
+}
+
 function resolveExpression(typeText, registry, resolving) {
   const expression = stripOuterParens(typeText);
   const union = splitTopLevel(expression);
@@ -263,9 +269,12 @@ function resolveExpression(typeText, registry, resolving) {
     const source = resolveExpression(parameters[0], registry, resolving);
     const filter = resolveExpression(parameters[1], registry, resolving);
     if (!source || !filter || source.open || filter.open) return undefined;
-    const filterSet = new Set(filter.values);
+    const filterSet = new Set(filter.values.map(literalComparisonKey));
     return {
-      values: source.values.filter((value) => utility[1] === 'Extract' ? filterSet.has(value) : !filterSet.has(value)),
+      values: source.values.filter((value) =>
+        utility[1] === 'Extract'
+          ? filterSet.has(literalComparisonKey(value))
+          : !filterSet.has(literalComparisonKey(value))),
       open: false,
     };
   }

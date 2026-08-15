@@ -7,8 +7,8 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 23 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom`, `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
+- **Themeable via** 24 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,20 +19,28 @@ Evaluation-batch progress view with overall progress and one disclosure per exam
 outputs may render as Markdown or code, with optional grounding and tool-trace sections.
 
 **Properties:**
+
 - `examples: EvaluationExampleResult[] = []` (attribute: false) — `EvaluationExampleResult { id:
-  string; label?: string; status: AgentStatus; input: string; inputFormat?: EvaluationContentFormat;
-  inputLanguage?: string; output: string; outputFormat?: EvaluationContentFormat; outputLanguage?:
-  string; grounding?: GroundingAssessment; citations?: Citation[]; toolTrace?: ToolTimelineEntry[] }`
-  (exported here). `status` reuses **`AgentStatus` from `@aceshooting/lyra-ui/ai`** (`{ kind:
-  AgentStatusKind; message? }`) — the same run-lifecycle vocabulary an agent step uses — rather than a
-  parallel pass/fail enum; rubric scoring is `lr-eval-result`'s job, not this one's.
-  `EvaluationContentFormat = 'markdown' | 'code'` — `'markdown'` (the default when unset) renders via
-  `lr-markdown`, `'code'` via `lr-code-block` consulting the matching `*Language` field for shiki.
+string; label?: string; status: AgentStatusPresentation; input: EvaluationContent; output:
+EvaluationContent; grounding?: GroundingAssessment; citations?: Citation[]; toolTrace?:
+ToolTimelineEntry[] }`
+  (exported here). `AgentStatusPresentation` extends the shared **`AgentStatus` from
+  `@aceshooting/lyra-ui/ai`** with optional caller presentation `{ label?, variant?, terminal?,
+active? }`. `label` and `variant` customize application-defined lifecycle display, `message`
+  renders as status detail, and `terminal` controls completion counting (falling back to the built-in
+  `done`/`error`/`cancelled` map). This preserves the shared run-lifecycle vocabulary rather than
+  inventing a parallel pass/fail enum; rubric scoring is `lr-eval-result`'s job, not this one's.
+  `EvaluationContent { text: string; format?: EvaluationContentFormat; language?: string }` keeps
+  each payload's rendering metadata together. `EvaluationContentFormat = 'markdown' | 'code'` —
+  `'markdown'` (the default when unset) renders via `lr-markdown`; `'code'` uses `lr-code-block`
+  and consults that payload's `language` for shiki.
   `grounding`/`citations` (both from `@aceshooting/lyra-ui/ai`) compose directly into
   `lr-grounding-summary`'s `assessment`/`citations`, and `toolTrace` directly into
   `lr-tool-timeline.entries` — no adapters. `citations` is consulted only while `grounding` is also
   set; an omitted `grounding` or empty `toolTrace` renders no such section for that example. `label`
-  falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated
+  falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated;
+  later duplicate example ids are omitted before progress, disclosure state, and correlated child
+  events are derived
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
   already known. An explicit total below the current observed count is raised to `examples.length`,
@@ -40,18 +48,22 @@ outputs may render as Markdown or code, with optional grounding and tool-trace s
 - `label: string = ''` — header label and accessible-name source; falls back to a localized
   "Evaluation run"
 
-**Events:** `lr-example-toggle` (`detail: EvaluationExampleToggleDetail` = `{ id: string; expanded:
+**Events:** `lr-example-toggle` (`detail: EvaluationExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvaluationCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated
 with the example it came from, so a host needn't walk the DOM), `lr-example-tool-approval-decide`
 (`detail: EvaluationToolApprovalDetail` = `ToolTimelineApprovalDetail & { exampleId: string }` =
-`{ invocationId: string; approved: boolean; args?: unknown; exampleId: string }`). The approval
+`{ invocationId: string; approved: boolean; args?: unknown; sourceKey?: string; exampleId: string
+}`). The approval
 event is cancelable: calling `preventDefault()` propagates the veto to the nested
 `lr-tool-approval-decide`, preserving its pending dialog and current edited arguments while the
-host resolves asynchronous validation.
+host resolves asynchronous validation. The component also contains and correlates other composed
+child events as `lr-example-claim-select` (`{ exampleId, claim }`),
+`lr-example-tool-activate` (`{ exampleId, invocationId, sourceKey? }`), and
+`lr-example-tool-render-error` (`{ exampleId, invocationId, sourceKey?, toolName, error }`).
 
 **CSS parts:** `base`, `header`,
 `header-label`, `progress`, `summary`, `counts`, `count`, `examples`, `example`, `example-summary`,
-`example-label`, `example-status`, `input-section`, `input`, `output-section`, `output`,
+`example-label`, `example-status`, `example-status-message`, `input-section`, `input`, `output-section`, `output`,
 `grounding-section`, `grounding-summary`, `tool-trace-section`, `tool-trace`, `section-heading`,
 `live-region`, `empty`.

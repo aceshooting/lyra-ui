@@ -7,8 +7,8 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
-- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
+- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,15 +22,21 @@ history. It never launches or scores evaluations.
 `{ id, label, value, format?: 'number' | 'percent' | 'milliseconds' | 'currency' }`; `currency:
 string = 'USD'` is the ISO 4217 code used by currency-formatted metrics (invalid codes safely fall
 back to USD). `runs:
-AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id, label, status,
-metrics?: Record<string, number> }`; `metricId: string = ''`; `label: string = ''`; `showChart:
-boolean = true`; `chartHeight: string = '220px'`.
+AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id, label, status:
+AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accepts either a compact
+`AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
+variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
+`metricId: string | null = null`; `label: string = ''`; `showChart: boolean = true`; `chartHeight: string =
+'220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
+both the run list and the chart projection.
+Metric ids and run ids each use deterministic first-occurrence-wins normalization before cards,
+selectors, chart series, row lookup, and emitted events are derived.
 
 **Events:** `lr-metric-change` (`{ metricId }`, emitted when a metric selector is activated) and
-`lr-run-select` (`{ runId }`).
+`lr-run-activate` (`{ runId, run }`).
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
-`run-label`, `run-meta`, `run-status`, `empty`.
+`run-label`, `run-meta`, `run-status`, `run-status-message`, `empty`.
 
 **Additional API surface:**
 

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 29 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,48 +17,62 @@
 
 A pannable/zoomable DAG workflow canvas: positions HTML node cards, draws SVG edges between their
 handles, runs a shared layered auto-layout for unpositioned nodes, and owns all selection/drag/
-connect interaction as controlled events. Readonly (viewer) by default; opt into editor gestures
-individually via `nodes-draggable`, `connectable`, `droppable`. Never mutates `nodes` or `edges`
-itself — every edit intent is an event the host applies, mirroring `lr-stepper`/`lr-table`'s
-controlled-component contract.
+connect interaction. It is readonly by default; opt into editor gestures with `nodes-draggable`,
+`connectable`, and `droppable`. The component snapshots model inputs instead of retaining mutable
+caller aliases, and reports edit intent for the host to apply.
+
+Flow records and companion payloads are readonly public contracts. Consumers that need the types
+without registering a component can import them from the side-effect-free module:
+
+```ts
+import type {
+  FlowEdge,
+  FlowHandle,
+  FlowLayoutChangeDetail,
+  FlowNode,
+  FlowRunDecoration,
+  FlowRunDecorations,
+  FlowStructureSnapshot,
+} from '@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js';
+```
 
 **Properties:**
 
-- `nodes: FlowNode[] = []` (attribute: false) — `FlowNode { id: string; type?: string; position?: {
-x, y }; data?: Record<string, unknown>; accessibleLabel?: string; inputs?: FlowHandle[]; outputs?:
-FlowHandle[] }`; a node with no `position` is placed by the layered auto-layout, and `data.label`/
-  `data.description` feed the default `<lr-flow-node>` card when no matching light-DOM child exists.
-  Replacing the array retires any active node drag or pointer/keyboard connection, rolls its preview
-  back, and removes global listeners before a captured id can outlive the controlled model. An
-  independent background pan continues.
-- `edges: FlowEdge[] = []` (attribute: false) — `FlowEdge { id: string; source: string; target:
-string; sourceHandle?: string; targetHandle?: string; label?: string; tone?: 'accent' | 'success' |
-'warning' | 'danger' | 'neutral' }` (source/target are node ids; `label` draws at the edge midpoint,
-  unlike `lr-graph`'s spoken-only `GraphLink.label`)
+- `nodes: readonly FlowNode[] = []` (attribute: false) — each record has readonly `id`, optional
+  `type`, `position`, `data`, `accessibleLabel`, `inputs`, and `outputs`. A missing `position` opts
+  into layered layout. String `data.label` and `data.description` feed the declarative fallback
+  card. Assignment takes a detached, deeply frozen snapshot of plain arrays/records. Replacing the
+  model cancels node-drag and connect gestures whose ids belonged to the old model and silently
+  prunes selected ids that no longer exist.
+- `edges: readonly FlowEdge[] = []` (attribute: false) — readonly `id`, `source`, `target`, optional
+  handle ids, optional drawn `label`, and optional `tone: LyraVariant`. The canonical brand value is
+  `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — downstream layout/handle axis
 - `nodesDraggable: boolean = false` (attribute `nodes-draggable`)
 - `connectable: boolean = false`
 - `droppable: boolean = false` — accepts drops carrying the `FLOW_PALETTE_MIME_TYPE` payload a
-  `lr-node-palette` drag sets, emitting `lr-node-add`
+  `lr-node-palette` drag sets, emitting `lr-node-add`. The decoded payload must be a plain record
+  with a non-empty string `type`; text fields and total payload size are bounded.
 - `locked: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
   window pointer listeners so a later release cannot commit.
-- `selectedNodeIds: string[] = []`, `selectedEdgeIds: string[] = []` (attribute: false) — seed or
-  replace selection state. Node/edge activation and clear-selection gestures also update these
-  arrays internally before emitting `lr-selection-change`; a host may assign its own authoritative
-  state back.
+- `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
+  false) — seed or replace selection. Activation and clear-selection gestures update frozen arrays
+  before emitting `lr-selection-change`; model shrinkage prunes stale ids without claiming a user
+  selection gesture occurred.
 - `minZoom: number = 0.25` (attribute `min-zoom`), `maxZoom: number = 2` (attribute `max-zoom`)
 - `grid: number = 8` — snap step in content px for drags/nudges/drop positions (`0` disables
   snapping); also the dotted background's base spacing
 - `layerGap: number = 64` (attribute `layer-gap`), `nodeGap: number = 24` (attribute `node-gap`) —
-  auto-layout layer/sibling spacing
-- `decorations: FlowRunDecorations | null = null` (attribute: false) — `Record<nodeOrEdgeId,
-FlowRunDecoration>`, `FlowRunDecoration { status: 'pending'|'running'|'success'|'error'|'denied';
-progress?: number; durationMs?: number; detail?: string }`; pushed onto adopted `lr-flow-node`
-  cards, typically supplied via a `lr-flow-run-overlay`
+  auto-layout layer/sibling spacing. The canvas measures rendered cards in layout space before its
+  first pass; live changes to orientation, gaps, or card size trigger a new pass.
+- `decorations: FlowRunDecorations | null = null` (attribute: false) —
+  `Record<nodeOrEdgeId, FlowRunDecoration>`, where `FlowRunDecoration` has `status` plus optional
+  `progress`, `durationMs`, and `detail`; assignment is detached and deeply frozen,
+  and invalid status entries are omitted. Usually supplied by `lr-flow-run-status`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
-- `viewport` (read-only getter) — `{ x, y, zoom }`, the current pan/zoom state
+- `viewport` (readonly getter) — a frozen `{ x, y, zoom }` snapshot
 
 **Methods:** `setViewport({ x, y, zoom })`, `zoomIn()`, `zoomOut()`, `resetZoom()`,
 `fit(options?: { padding?: number })` (frames every node), `focusNode(id, options?: { zoom? })`
@@ -68,30 +82,36 @@ FlowStructureSnapshot) => void): () => void` — the subscription `lr-flow-minim
 live node/edge/viewport geometry without this canvas ever importing the minimap.
 All viewport-mutating methods, including `focusNode()`, are inert while `locked`; coordinate mapping
 and companion subscription remain available because neither mutates viewport or edit state.
-`FlowStructureSnapshot.viewport` contains `{ x, y, zoom, width, height, minZoom, maxZoom }`; its
-`minZoom`/`maxZoom` are finite, positive, and sorted even when the corresponding public inputs are
-invalid or reversed. Bound changes publish a fresh coalesced snapshot.
+Each companion observer receives its own deeply frozen `FlowStructureSnapshot`: readonly node and
+edge geometry/status arrays, viewport `{ x, y, zoom, width, height, minZoom, maxZoom }`, and the
+effective `locked`, `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
+sorted even when public inputs are invalid or reversed.
 
-**Events:** `lr-node-click` (`detail: { id }`), `lr-edge-click` (`detail: { id, source, target
+**Events:** `lr-node-activate` (`detail: { id }`), `lr-edge-activate` (`detail: { id, source, target
 }`), `lr-selection-change` (`detail: { nodeIds, edgeIds }`), `lr-node-move` (`detail: { id,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
 (`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),
-`lr-layout-change` (`detail: { positions }`, fired after an auto-layout pass places previously
-unpositioned nodes).
+`lr-layout-change` (`detail: { positions, truncated }`, fired after an auto-layout pass places
+previously unpositioned nodes). Every detail and nested coordinate/array is readonly and frozen.
 
-**Slots:** default (`lr-flow-node` children adopted by `node-id`; a non-matching child is ignored
-with a console warning). Adoption reads the `node-id` **attribute** and runs only when `nodes`
-changes, so a child must carry its id (declaratively, or via `lr-flow-node`'s reflected `nodeId`
-property) before the canvas is given the matching `nodes` array. `top-start`, `top-end` (floating top-rail content), `bottom-start` (e.g.
-`lr-flow-controls`), `bottom-end` (e.g. `lr-flow-minimap`). Opposite-side slots share wrapping top
-and bottom rails, so wide companions stack without intersecting in narrow allocations.
+**Slots:** default (consumer-authored cards matched by `node-id` and assigned to generated
+`node-{id}` slots), `top-start`, `top-end`, `bottom-start`, `bottom-end`. Each node always has a
+declarative shadow-DOM fallback card, so SSR and hydration do not depend on imperative light-DOM
+card creation. An authored card replaces only its matching fallback; unmatched cards are unslotted
+with a warning. Opposite-side companion slots share wrapping rails in narrow allocations.
 
 **CSS parts:** `base`, `viewport`, `background`, `edges`, `edge`, `edge-label`, `edge-hit-area`,
 `arrowhead`, `stub`
 (a dangling-edge stub line), `connection-line` (in-progress connect gesture), `node`, `empty`,
 `node-control` (the native per-node roving/activation control), `live-region`, `edge-list` (a
-visually hidden list of every edge), `overlay-rail` (the wrapping top/bottom companion rail).
+visually hidden list only for dangling/unrenderable edges), `layout-limit` (a visible notice whose
+announcement uses the shared light-DOM polite sink), `overlay-rail`, and the
+fallback-card parts `node-card`, `node-card-base`, `node-card-surface`, `node-card-header`,
+`node-card-heading`, `node-card-status`, `node-card-progress`, `node-card-body`, `node-card-toolbar`,
+`node-card-handle`, `node-card-handle-input`, and `node-card-handle-output`. A node whose `type`
+normalizes to a safe part token also exposes `node-type-{value}`. A selected node wrapper carries
+`data-selected`; its hidden `node-control` exposes the state as `aria-pressed`.
 
 `live-region` is a visually hidden, `aria-hidden` mirror of the latest item/gesture message. The
 actual messages are flushed to the document's shared light-DOM polite sink; mount is silent, and
@@ -101,7 +121,7 @@ identical repeated messages are appended as separate announcements.
 or `8px`; dotted background spacing). Set it on the canvas or a theme ancestor to override that
 property-derived fallback. Each edge tone colors its stroke and the arrowhead marker it references:
 `--lr-flow-canvas-edge-neutral-color` (default `var(--lr-color-border)`),
-`--lr-flow-canvas-edge-accent-color` (default `var(--lr-color-brand)`),
+`--lr-flow-canvas-edge-brand-color` (default `var(--lr-color-brand)`),
 `--lr-flow-canvas-edge-success-color` (default `var(--lr-color-success)`),
 `--lr-flow-canvas-edge-warning-color` (default `var(--lr-color-warning)`), and
 `--lr-flow-canvas-edge-danger-color` (default `var(--lr-color-danger)`).
@@ -109,13 +129,9 @@ property-derived fallback. Each edge tone colors its stroke and the arrowhead ma
 `var(--lr-duration-ambient)`, running-edge march animation duration; this is a time-only value, not
 the `--lr-transition-ambient` duration/easing shorthand, because the animation supplies its own
 `linear` timing function), and
-`--lr-flow-canvas-node-selected-outline-color` (default `var(--lr-color-brand)`) — the outline color
-of the current (`aria-current`) node. Like every state-scoped custom property in this library it is
-an inline `var()` fallback at its point of use rather than a `:host` declaration, so it can be set on
-the element _or any ancestor_. It exists because Shadow Parts forbids an attribute selector after
-`::part()` — `::part(node)[aria-current='true']` is invalid CSS — so the current node could otherwise
-only be restyled by overriding the library-wide `--lr-color-brand` token, repainting everything else
-that reads it. The same restriction motivates three more state-scoped outline colors:
+`--lr-flow-canvas-node-selected-outline-color` (default `var(--lr-color-brand)`) controls the
+selected-node outline. It is an inherited inline fallback, so it can be set on the canvas or a theme
+ancestor without retinting the library-wide brand token. The same pattern applies to:
 `--lr-flow-canvas-node-connect-invalid-outline-color` (default `var(--lr-color-danger)`) — outline of
 a node that is an invalid connect-gesture drop target; `--lr-flow-canvas-node-connect-target-outline-color`
 (default `var(--lr-color-brand)`) — outline of a node that is a valid connect-gesture drop target; and
@@ -123,10 +139,7 @@ a node that is an invalid connect-gesture drop target; `--lr-flow-canvas-node-co
 viewport itself while a palette item is dragged over it (`droppable`). A fifth,
 `--lr-flow-canvas-node-hover-outline-color` (default `var(--lr-color-border-strong)`) — the
 mouse-hover preview of a node's own `:focus-visible` ring — exists for a different reason than the
-four above: it is `:hover`-gated rather than attribute-gated, so `::part(node):hover` _is_ valid
-CSS here, but the internal `[part='node']:hover` rule still out-specifies it ((0,2,0) vs. (0,1,1)),
-which this custom property sidesteps the same way. Set it to `transparent` to opt out of the hover
-treatment entirely.
+four above. Set it to `transparent` to opt out of the hover treatment.
 
 **Optional peer deps:** none.
 
@@ -140,6 +153,7 @@ treatment entirely.
 >
   <lr-flow-controls slot="bottom-start" for="canvas"></lr-flow-controls>
   <lr-flow-minimap slot="bottom-end" for="canvas"></lr-flow-minimap>
+  <lr-flow-run-status slot="top-start" for="canvas"></lr-flow-run-status>
 </lr-flow-canvas>
 <script>
   const canvas = document.getElementById("canvas");
@@ -164,7 +178,10 @@ treatment entirely.
   emit `lr-selection-change`.
 - Auto-layout (via the dependency-free `layeredLayout()` util) only ever positions nodes that are
   missing an explicit `position`; a node the host has already positioned is left exactly where it is
-  and used as a fixed anchor for the rest of the layout pass.
+  and used as a fixed anchor for the rest of the layout pass. The utility bounds virtual ordering
+  work. If that ceiling is reached, the canvas renders a localized `layout-limit` status and sets
+  `lr-layout-change.detail.truncated` to `true`; positions remain usable. Call the public utility
+  directly with `maxVirtualWaypoints` when an application needs a different work ceiling.
 - `droppable` only accepts drags carrying the exact `FLOW_PALETTE_MIME_TYPE` MIME type a
   `lr-node-palette` drag sets — the two components can never disagree on the payload shape because
   they share one exported constant.

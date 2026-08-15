@@ -57,8 +57,8 @@ export type ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | (strin
 export interface LyraToolSelectDialogEventMap {
   'lr-change': CustomEvent<ToolSelectionChangeDetail>;
   'lr-close': CustomEvent<ToolSelectDialogCloseReason>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: CustomEvent<null>;
+  focus: CustomEvent<null>;
 }
 
 const UNCATEGORIZED = null;
@@ -195,15 +195,18 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   /** Whether the conversation is using the default tool set (`true`) or a custom selection (`false`) — see the class doc for the exact interaction with `selected`/per-tool editing. */
   @property({ type: Boolean, reflect: true, attribute: 'use-defaults' }) useDefaults = false;
 
-  /** The dialog's visible heading and accessible name. */
-  @property() label = 'Select tools';
+  /** The dialog's visible heading and accessible name. Omission uses the localized default; any
+   *  supplied string, including `"Select tools"` or an empty string, remains literal. */
+  @property() label?: string;
 
   /** Accessible name for the component. When assigned directly as a property without a host
    *  attribute it names the dialog panel; a host `aria-label` remains on the host and the panel
    *  stays labelled by its visible heading to avoid cloning the same owner. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  @property({ attribute: 'search-placeholder' }) searchPlaceholder = 'Search tools…';
+  /** Search placeholder and accessible name. Omission uses the localized default; supplied text
+   *  remains literal even when it matches the former English default or is empty. */
+  @property({ attribute: 'search-placeholder' }) searchPlaceholder?: string;
   /** Native editing-assistance and virtual-keyboard hints forwarded to the search input. */
   @property() autocomplete = '';
   @property({ converter: spellcheckConverter }) override spellcheck = true;
@@ -477,9 +480,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
           <span part="tool-name">
             ${tool.icon ? html`<span part="tool-icon" aria-hidden="true">${tool.icon}</span>` : nothing}${tool.name}
           </span>
-          ${tool.description ? html`<span part="tool-description">${tool.description}</span>` : nothing}
+          ${tool.description ? html`<span slot="hint" part="tool-description">${tool.description}</span>` : nothing}
           ${tool.disabled && tool.disabledReason
-            ? html`<span part="tool-disabled-reason">${tool.disabledReason}</span>`
+            ? html`<span slot="hint" part="tool-disabled-reason">${tool.disabledReason}</span>`
             : nothing}
         </lr-checkbox>
       </li>
@@ -515,11 +518,10 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     const groups = projection.groups;
     const uniqueTools = this.uniqueTools;
     const hasTools = uniqueTools.length > 0;
-    const label = this.localize('selectTools', this.label === 'Select tools' ? undefined : this.label);
-    const searchPlaceholder = this.localize(
-      'searchToolsPlaceholder',
-      this.searchPlaceholder === 'Search tools…' ? undefined : this.searchPlaceholder,
-    );
+    const label = this.label === undefined ? this.localize('selectTools') : this.label;
+    const searchPlaceholder = this.searchPlaceholder === undefined
+      ? this.localize('searchToolsPlaceholder')
+      : this.searchPlaceholder;
     const knownIds = new Set(uniqueTools.map((tool) => tool.id));
     const selectedCount = new Set(this.selected.filter((id) => knownIds.has(id))).size;
     const number = getNumberFormat(this.effectiveLocale);

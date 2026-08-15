@@ -139,13 +139,25 @@ describe('lr-span-waterfall', () => {
     expect(first.getAttribute('tabindex')).to.equal('-1');
   });
 
-  it('keeps every bar at or above the 24px WCAG 2.5.8 pointer-target floor', async () => {
-    const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`)) as LyraSpanWaterfall;
+  it('keeps even a tiny-duration bar at or above the 24px WCAG 2.5.8 floor in both axes', async () => {
+    const spans: LyraSpan[] = [
+      { id: 'tiny', name: 'Tiny span', kind: 'tool', startMs: 10, endMs: 11, status: 'success' },
+    ];
+    const el = (await fixture(html`
+      <lr-span-waterfall
+        style="inline-size: 320px"
+        .spans=${spans}
+        .viewStartMs=${0}
+        .viewEndMs=${10_000}
+      ></lr-span-waterfall>
+    `)) as LyraSpanWaterfall;
     await el.updateComplete;
     const bars = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="bar"]')];
     expect(bars.length).to.be.greaterThan(0);
     for (const bar of bars) {
-      expect(bar.getBoundingClientRect().height, bar.getAttribute('data-id') ?? '').to.be.at.least(24);
+      const rect = bar.getBoundingClientRect();
+      expect(rect.width, `${bar.dataset.id ?? ''} width`).to.be.at.least(24);
+      expect(rect.height, `${bar.dataset.id ?? ''} height`).to.be.at.least(24);
     }
   });
 

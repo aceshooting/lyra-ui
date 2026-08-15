@@ -16,6 +16,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
+import { declaredDefaultConverter } from "../../../internal/converters.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_otpInputIncomplete, LYRA_DEFAULT_otpInputLabel } from '../../../internal/default-strings.generated.js';
@@ -28,7 +29,8 @@ export type OtpInputCase = 'preserve' | 'upper' | 'lower';
 /** Direction of the native compact-string selection exposed by the host editing facade. */
 export type OtpInputSelectionDirection = 'forward' | 'backward' | 'none';
 /** Segment fill treatment, including the OTP-specific joined `contained` treatment. */
-export type OtpInputAppearance = Extract<LyraAppearance, 'outlined' | 'filled' | 'filled-outlined'> | 'contained';
+export type OtpInputAppearance =
+  | Extract<LyraAppearance, 'outlined' | 'filled' | 'filled-outlined'> | 'contained';
 
 const ACCEPTED: Record<OtpInputType, RegExp> = {
   numeric: /[0-9]/,
@@ -51,10 +53,10 @@ export interface LyraOtpInputEventMap {
   change: Event;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-clear': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
+  'lr-clear': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
   'lr-complete': CustomEvent<{ value: string }>;
 }
 
@@ -194,7 +196,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
    *  state; rich `error`-slot content takes precedence when supplied. */
   @property({ attribute: 'error-text' }) errorText = '';
   /** Visual fill treatment for each segment, or a single joined `contained` field. */
-  @property({ reflect: true }) appearance: OtpInputAppearance = 'outlined';
+  @property({ reflect: true,
+    converter: declaredDefaultConverter<OtpInputAppearance>("outlined"),
+  }) appearance: OtpInputAppearance = 'outlined';
   /** Automatically focus the real input after the first client render. */
   @property({ type: Boolean }) override autofocus = false;
   /** Submit the owning form after an un-canceled `lr-complete`, one task later so an asynchronous
@@ -205,7 +209,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
    *  standalone rendering falls back to `m`. */
   @property({ reflect: true, useDefault: true }) size: LyraSize = 'm';
   /** Number of character segments. Ignored when `format` is set. */
-  @property({ type: Number, reflect: true }) length = DEFAULT_LENGTH;
+  @property({ type: Number, reflect: true,
+    converter: declaredDefaultConverter(DEFAULT_LENGTH),
+  }) length = DEFAULT_LENGTH;
   /**
    * Segment layout with literal separators — `#` marks a segment, any other character becomes a
    * separator. `format="###-###"` renders two groups of three joined by a dash. Overrides `length`
@@ -215,9 +221,13 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
    */
   @property() format = '';
   /** Which characters are accepted; also drives the mobile keyboard through `inputmode`. */
-  @property({ reflect: true }) type: OtpInputType = 'numeric';
+  @property({ reflect: true,
+    converter: declaredDefaultConverter<OtpInputType>("numeric"),
+  }) type: OtpInputType = 'numeric';
   /** Case transform applied as characters are entered. */
-  @property({ reflect: true }) case: OtpInputCase = 'preserve';
+  @property({ reflect: true,
+    converter: declaredDefaultConverter<OtpInputCase>("preserve"),
+  }) case: OtpInputCase = 'preserve';
   /** Show entered characters as the mask glyph instead of their real value. Display-only. */
   @property({ type: Boolean, reflect: true }) mask = false;
   /**
@@ -229,7 +239,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
    *  intrinsic required/completeness validity is suspended until editing is enabled again. */
   @property({ type: Boolean, reflect: true }) readonly = false;
   /** Native autofill hint. Defaults to the SMS one-time-code value. */
-  @property({ reflect: true }) autocomplete = 'one-time-code';
+  @property({ reflect: true,
+    converter: declaredDefaultConverter("one-time-code"),
+  }) autocomplete = 'one-time-code';
 
   @state() private focused = false;
   @state() private hasLabelSlot = false;
@@ -331,7 +343,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   private get cells(): Cell[] {
-    return this.formattedCells ?? Array.from({ length: this.renderedSegmentCount }, () => ({ kind: 'segment' as const }));
+    return (
+      this.formattedCells ?? Array.from({ length: this.renderedSegmentCount }, () => ({ kind: 'segment' as const }))
+    );
   }
 
   /** Scans a bounded source prefix, drops characters the current `type` rejects, applies `case`,
@@ -434,7 +448,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
 
   /** Maps the real input's compact-string selection back to the occupied visual cells. Empty
    * fixed cells have no public-string offset, so they are deliberately skipped. */
-  private get selectedSegmentRange(): { indices: number[]; first: number } | null {
+  private get selectedSegmentRange(): { indices: number[]; first: number;
+  } | null {
     const start = this.control?.selectionStart;
     const end = this.control?.selectionEnd;
     if (start === undefined || start === null || end === undefined || end === null || start === end) {

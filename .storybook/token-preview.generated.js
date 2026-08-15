@@ -511,6 +511,15 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-color-on-strong-overlay",
+        "type": "color",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-theme-color-on-strong-overlay, #fff)",
+          "forcedColors": "CanvasText"
+        }
+      },
+      {
         "name": "--lr-color-on-success",
         "type": "color",
         "scope": "shared",
@@ -1974,6 +1983,15 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "values": {
           "light": "rgb(128 128 128 / 25%)",
           "dark": "rgb(180 180 180 / 30%)"
+        }
+      },
+      {
+        "name": "--lr-theme-color-on-strong-overlay",
+        "type": "color",
+        "scope": "theme-input",
+        "values": {
+          "light": "#ffffff",
+          "dark": "#ffffff"
         }
       },
       {

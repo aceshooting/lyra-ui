@@ -7,6 +7,7 @@ import { styles } from './image-viewer.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const PNG_SRC = 'https://example.test/photo.png';
 
@@ -133,7 +134,7 @@ describe('image loading', () => {
 
   it('renders the empty state and never sets an img src for an unsafe src', async () => {
     const el = (await fixture(html`<lr-image-viewer src="javascript:alert(1)"></lr-image-viewer>`)) as LyraImageViewer;
-    expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('img') == null).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
     expect(assertiveAnnouncements(), 'an already-invalid mount is not a live transition').to.deep.equal([]);
   });
@@ -349,7 +350,7 @@ describe('region highlights', () => {
     expect(box.style.getPropertyValue('inset-inline-start')).to.equal('');
   });
 
-  it('anchors a highlight label to its parent box\'s physical left edge in both ltr and rtl', async () => {
+  it("anchors a highlight label to its parent box's physical left edge in both ltr and rtl", async () => {
     // The parent [part="highlight"] box is deliberately physically positioned (left/top, never
     // inset-inline-start) because the underlying raster never mirrors under RTL. The label used
     // to use inset-inline-start:0, which under dir="rtl" resolves to the box's physical *right*
@@ -433,7 +434,7 @@ describe('annotation', () => {
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     await el.updateComplete;
     let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
-    expect((box) != null).to.equal(true);
+    expect(box != null).to.equal(true);
     expect(box.style.left).to.equal('37.5%');
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
@@ -445,7 +446,7 @@ describe('annotation', () => {
     expect(event.detail.anchor.kind).to.equal('region');
     expect(event.detail.anchor.rect.x).to.be.closeTo(39.5, 0.01);
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
   });
 
   it('keeps annotation ArrowLeft/ArrowRight physical under RTL', async () => {
@@ -490,7 +491,7 @@ describe('annotation', () => {
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
   });
 
   it('moves the draft box with ArrowLeft/ArrowUp/ArrowDown and ignores unrecognized keys', async () => {
@@ -554,7 +555,7 @@ describe('annotation', () => {
     const viewport = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
   });
 
   it('clears a keyboard-created draft on source change, annotation disable, and reconnect', async () => {
@@ -572,12 +573,12 @@ describe('annotation', () => {
     await startKeyboardDraft();
     el.src = `${PNG_SRC}?replacement`;
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
 
     await startKeyboardDraft();
     el.annotatable = false;
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
 
     el.annotatable = true;
     await el.updateComplete;
@@ -585,7 +586,7 @@ describe('annotation', () => {
     el.remove();
     document.body.append(el);
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
   });
 });
 
@@ -606,7 +607,7 @@ function stubWrapperRect(el: LyraImageViewer, width = 200, height = 100): HTMLEl
       toJSON() {
         return {};
       },
-    }) as DOMRect;
+    } as DOMRect);
   wrapper.setPointerCapture = () => {}; // real setPointerCapture throws for a synthetic pointerId in tests
   return wrapper;
 }
@@ -655,7 +656,7 @@ describe('pointer-driven annotation', () => {
     wrapper.dispatchEvent(primaryPointerEvent('pointerdown', { pointerId: 1, clientX: 20, clientY: 10, bubbles: true }));
     await el.updateComplete;
     let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
-    expect((box) != null).to.equal(true);
+    expect(box != null).to.equal(true);
     expect(box.style.left).to.equal('10%'); // 20 / 200 * 100
     expect(box.style.top).to.equal('10%'); // 10 / 100 * 100
 
@@ -673,7 +674,7 @@ describe('pointer-driven annotation', () => {
     expect(event.detail.anchor.kind).to.equal('region');
     expect(event.detail.anchor.rect.width).to.be.closeTo(40, 0.01);
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
   });
 
   it('cancels the pointer-drawn draft on release if the dragged region stays too small', async () => {
@@ -689,7 +690,7 @@ describe('pointer-driven annotation', () => {
     wrapper.dispatchEvent(primaryPointerEvent('pointerup', { pointerId: 2, bubbles: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
   });
 
   it('maps the pointer position through the rotated coordinate space for 90/180/270 rotations', async () => {
@@ -766,7 +767,7 @@ describe('pointer-driven annotation', () => {
     const wrapper = stubWrapperRect(el);
     wrapper.dispatchEvent(primaryPointerEvent('pointerdown', { pointerId: 3, clientX: 20, clientY: 10, bubbles: true }));
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
   });
 
   it('ignores a pointermove/pointerup that never had a matching pointerdown', async () => {
@@ -782,7 +783,7 @@ describe('pointer-driven annotation', () => {
     wrapper.dispatchEvent(primaryPointerEvent('pointerup', { pointerId: 4, bubbles: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect((el.shadowRoot!.querySelector('[part="annotation-box"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]') == null).to.be.true;
   });
 });
 
@@ -835,6 +836,36 @@ describe('accessibility', () => {
     }
   });
 
+  it("keeps toolbar hover and pressed-toggle states visible without color", async () => {
+    await setForcedColors("active");
+    try {
+      const el = (await fixture(
+        html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`
+      )) as LyraImageViewer;
+      await stubImageLoad(el);
+      const rotate = el.shadowRoot!.querySelector(
+        '[part="rotate-button"]'
+      ) as HTMLButtonElement;
+      const annotate = el.shadowRoot!.querySelector(
+        '[part="annotate-toggle"]'
+      ) as HTMLButtonElement;
+      annotate.click();
+      await el.updateComplete;
+
+      expect(getComputedStyle(annotate).borderStyle).to.equal("double");
+      const box = rotate.getBoundingClientRect();
+      await sendMouse({
+        type: "move",
+        position: [box.left + box.width / 2, box.top + box.height / 2],
+      });
+      await waitUntil(() => getComputedStyle(rotate).outlineStyle === "dashed");
+      expect(getComputedStyle(rotate).outlineStyle).to.equal("dashed");
+    } finally {
+      await resetMouse();
+      await setForcedColors("none");
+    }
+  });
+
   it('is accessible with highlights and annotation on', async () => {
     const el = await fixture(html`<lr-image-viewer src=${PNG_SRC} name="Chart" annotatable .highlights=${[
       { id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 15 } }, label: 'Zone A' },
@@ -884,7 +915,7 @@ describe('active-state cssprop escape hatches', () => {
     const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
     await stubImageLoad(el);
     const toggle = el.shadowRoot!.querySelector('[part="annotate-toggle"][aria-pressed="true"]') as HTMLElement;
-    expect((toggle) != null, 'the annotate toggle renders pressed').to.equal(true);
+    expect(toggle != null, 'the annotate toggle renders pressed').to.equal(true);
     return { el, toggle };
   }
 
@@ -896,7 +927,7 @@ describe('active-state cssprop escape hatches', () => {
     const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
     await stubImageLoad(el);
     const box = el.shadowRoot!.querySelector('[part="highlight"][data-active]') as HTMLElement;
-    expect((box) != null, 'the active highlight box renders').to.equal(true);
+    expect(box != null, 'the active highlight box renders').to.equal(true);
     return { el, box };
   }
 
@@ -977,7 +1008,7 @@ describe('native control theming', () => {
     const select = el.shadowRoot!.querySelector('[part="fit-control"]') as HTMLSelectElement;
     expect(getComputedStyle(select).appearance).to.equal('none');
     const wrapper = select.closest('.fit-control-wrapper');
-    expect((wrapper) != null).to.equal(true);
+    expect(wrapper != null).to.equal(true);
     expect(wrapper!.querySelector('.fit-control-chevron svg')).to.exist;
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='fit-control'\] option[^{]*\{[^}]*background:/);

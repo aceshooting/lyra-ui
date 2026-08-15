@@ -37,6 +37,10 @@ const included = [
   target({ component: 'lr-graph', part: 'node', renderer: 'canvas', cameraScale: 0.25 }),
   target({ component: 'lr-graph', part: 'link', renderer: 'svg', cameraScale: 0.25 }),
   target({ component: 'lr-graph', part: 'link', renderer: 'canvas', cameraScale: 0.25 }),
+  target({ component: 'lr-span-waterfall', part: 'bar' }),
+  target({ component: 'lr-radio-button', part: 'base' }),
+  target({ component: 'lr-breadcrumb-item', part: 'base' }),
+  target({ component: 'lr-map', part: 'marker' }),
   target({
     component: 'lr-graph',
     part: 'hull',
@@ -55,14 +59,15 @@ const included = [
 
 assert.deepEqual(
   included.map((fixture) => targetHitAreaContract(fixture)?.minimumPx),
-  [40, 40, 40, 40, 40, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24],
+  [40, 40, 40, 40, 40, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24],
   'the approved compact and physical-target states participate at their exact floors',
 );
 
 const violations = findMeasuredHitAreaViolations(included);
 assert.equal(violations.length, included.length, 'every undersized approved target is rejected');
 assert.match(violations[0], /lr-avatar-group::part\(overflow-badge\).*40px/);
-assert.match(violations.at(-1), /lr-graph::part\(hull\).*24px/);
+assert.ok(violations.some((finding) => /lr-graph::part\(hull\).*24px/.test(finding)));
+assert.ok(violations.some((finding) => /lr-map::part\(marker\).*24px/.test(finding)));
 
 const repaired = included.map((fixture) => {
   const minimumPx = targetHitAreaContract(fixture).minimumPx;
@@ -76,6 +81,20 @@ assert.deepEqual(
   findMeasuredHitAreaViolations(repaired),
   [],
   'targets meeting their applicable 40px or 24px floor pass',
+);
+
+assert.equal(
+  findMeasuredHitAreaViolations([
+    target({
+      component: 'lr-span-waterfall',
+      part: 'bar',
+      widthPx: 24,
+      heightPx: 8,
+      nearestTargetCenterDistancePx: Number.POSITIVE_INFINITY,
+    }),
+  ]).length,
+  1,
+  'an explicitly physical floor must pass in both axes and cannot rely on target spacing',
 );
 
 assert.deepEqual(

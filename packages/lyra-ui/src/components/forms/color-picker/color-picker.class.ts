@@ -85,19 +85,19 @@ function isElementValue(value: unknown): value is Element {
 }
 
 export interface LyraColorPickerEventMap {
-  'lr-invalid': CustomEvent<undefined>;
-  'lr-input': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
+  'lr-input': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
   focus: FocusEvent;
   'lr-change': CustomEvent<{ value: string }>;
-  'lr-show': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-after-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
 }
 class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
 
@@ -139,11 +139,11 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @event lr-show - The colour panel is about to open, however `open` became true. Cancelable —
  *   `preventDefault()` leaves it closed. Initial markup, disconnect cleanup, and a close forced
  *   by disablement apply without emitting this request event.
- * @event {CustomEvent<undefined>} lr-after-show - The colour panel finished opening. There is no animated
+ * @event {CustomEvent<null>} lr-after-show - The colour panel finished opening. There is no animated
  *   delay, so it follows `lr-show` in the same completed update.
  * @event lr-hide - The colour panel is about to close. Cancelable on the same terms as
  *   `lr-show`.
- * @event {CustomEvent<undefined>} lr-after-hide - The colour panel finished closing; follows `lr-hide` in the
+ * @event {CustomEvent<null>} lr-after-hide - The colour panel finished closing; follows `lr-hide` in the
  *   same update.
  * @event lr-focus - Shoelace-compatible alias emitted when focus enters the control.
  * @event lr-blur - Shoelace-compatible alias emitted when focus leaves the control.
@@ -333,7 +333,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       this.applyOpenState(normalized);
       return;
     }
-    if (this.emit(normalized ? 'lr-show' : 'lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+    if (this.emit(normalized ? 'lr-show' : 'lr-hide', null, { cancelable: true }).defaultPrevented) {
       // A veto reached through the reflected attribute would otherwise leave `open` present on an
       // element whose property says closed.
       this.toggleAttribute('open', this._open);
@@ -924,6 +924,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   // -------------------------------------------------------------------------
 
   private onFieldInput = (event: Event): void => {
+    // The text field is a draft editor. Its native composed InputEvent must not escape as if the
+    // color-picker's serialized public value changed; commitColor() emits the one public input
+    // after parsing succeeds.
+    event.stopPropagation();
     this.pendingInput = (event.target as HTMLInputElement).value;
   };
 

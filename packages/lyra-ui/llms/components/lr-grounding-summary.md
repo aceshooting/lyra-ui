@@ -7,8 +7,8 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
-- **Themeable via** 15 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
+- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,38 +22,45 @@ event conduit — never fetches or computes an assessment. Composes `lr-stat` fo
 and `lr-citation-badge` for each evidence entry.
 
 **Properties:**
+
 - `assessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`,
   imported from `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ supportedClaims: number;
-  unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[];
-  claims?: GroundedClaim[] }`, where `coverage` and `confidence` are 0–1 fractions. `null` renders
+unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[];
+claims?: GroundedClaim[] }`, where `coverage` and `confidence` are 0–1 fractions. `null` renders
   the empty state
 - `citations: Citation[] = []` (attribute: false) — **`Citation` from `@aceshooting/lyra-ui/ai`**:
   `{ id: string; chunkId?: string; sourceId?: string; span?: { start: number; end: number };
-  label?: string }`. Independent of `assessment`; empty omits the whole evidence section. Each entry
+label?: string }`. Independent of `assessment`; empty omits the whole evidence section. Each entry
   renders as an `lr-citation-badge` whose `index` is its 1-based position and whose `source-id` is
   `citation.sourceId ?? ''`
-- `thresholds: GroundingSummaryThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
-  `GroundingSummaryThresholds { high: number; medium: number }` (exported here), both 0–1 fractions,
+- `thresholds: LyraScoreThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
+  readonly `LyraScoreThresholds { high: number; medium: number }`, with both
+  0–1 fractions,
   applied to both `coverage` and `confidence`: `>= high` → `success` tone, `>= medium` → `warning`,
   below → `danger`
-- `label: string = ''` — accessible group label. A host `aria-label` takes precedence, followed by
-  `label`, then the localized `groundingSummaryLabel`
+- `label: string = ''` — fallback name for the stable group, using localized
+  `groundingSummaryLabel` when empty. A non-empty host `aria-label` makes the host the sole overall
+  owner (the group omits its duplicate role/name); an explicitly empty host label stays empty
 - `showClaims: boolean = true` (attribute `show-claims`) — renders `assessment.claims` through
   `lr-claim-evidence`; set false to keep the aggregate scorecard only
+- `headingLevel: 1 | 2 | 3 | 4 | 5 | 6 = 3` (attribute `heading-level`) — real heading level used
+  by both warnings and evidence sections, clamped to the HTML outline range
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
-The inner `lr-citation-badge`'s own `lr-citation-activate` (`detail: { sourceId, index }`) still
-bubbles through unmodified; this richer event exists because a bare `sourceId`/`index` pair can't
-tell a host which exact evidence *span* to jump to. The composed `lr-claim-evidence` also surfaces
+The inner `lr-citation-badge`'s generic activation is stopped at this composition boundary; this
+richer event exists because a bare `sourceId`/`index` pair can't tell a host which exact evidence
+_span_ to jump to. The composed `lr-claim-evidence` also surfaces
 `lr-claim-select` (`detail: { claim }`) unchanged when a claim is activated.
 
 **Slots:** none.
 
-**CSS parts:** `base` (`role="group"` root), `stats` (the claim-count/coverage/confidence `lr-stat`
+**CSS parts:** `base` (the `role="group"` root unless a non-empty host label owns the component),
+`stats` (the claim-count/coverage/confidence `lr-stat`
 row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-count`,
 `warnings-list` (a `<ul>`), `warning` (one `<li>`), `evidence` (omitted when `citations` is empty),
-`evidence-heading`, `evidence-count`, `evidence-item` (badge + always-visible label/span text),
+`evidence-heading` (a real `h1`–`h6`), `evidence-count`, `evidence-list` (a `<ul>`),
+`evidence-item` (one `<li>` containing a badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
 `Citation.span` range, omitted when unset), `claims` (the composed claim-evidence audit), `empty`
 (shown when `assessment` is `null`).

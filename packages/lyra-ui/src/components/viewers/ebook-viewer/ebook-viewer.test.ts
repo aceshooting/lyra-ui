@@ -808,9 +808,12 @@ describe('lr-ebook-viewer search', () => {
     try {
       const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await aTimeout(20);
+      let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
       expect(await el.search('needle')).to.equal(10_000);
       const state = el as unknown as { searchMatches: unknown[] };
       expect(state.searchMatches.length).to.equal(10_000);
+      expect(detail).to.deep.include({ matchCount: 10_000, matchCountExact: false });
     } finally {
       restore();
     }
@@ -885,8 +888,8 @@ describe('lr-ebook-viewer search', () => {
       await aTimeout(20);
       const listener = oneEvent(el, 'lr-search-change');
       await el.search('treasure');
-      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
-      expect(event.detail).to.deep.equal({ query: 'treasure', matchCount: 1, activeIndex: 0 });
+      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }>;
+      expect(event.detail).to.deep.equal({ query: 'treasure', matchCount: 1, matchCountExact: true, activeIndex: 0 });
       expect(fake.highlightCalls.some((call) => call.className === 'lr-ebook-search')).to.be.true;
     } finally {
       restore();
@@ -903,8 +906,8 @@ describe('lr-ebook-viewer search', () => {
       await el.search('treasure');
       const listener = oneEvent(el, 'lr-search-change');
       el.clearSearch();
-      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
-      expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }>;
+      expect(event.detail).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
     } finally {
       restore();
     }

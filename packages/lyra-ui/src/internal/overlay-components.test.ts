@@ -24,7 +24,7 @@ interface ReactiveOverlay extends HTMLElement {
   toolName?: string;
   expandable?: boolean;
   images?: LyraLightboxImage[];
-  commands?: Array<{ id: string; label: string }>;
+  commands?: Array<{ commandId: string; label: string }>;
   collapse?: string;
   collapseState?: string;
   steps?: Array<{ id: string; target: string; heading: string; content: string }>;
@@ -89,7 +89,7 @@ const adapters: OverlayAdapter[] = [
   },
   {
     tag: 'lr-command-palette',
-    setup: (element) => (element.commands = [{ id: 'command', label: 'Command' }]),
+    setup: (element) => (element.commands = [{ commandId: 'command', label: 'Command' }]),
     activate: (element) => (element.open = true),
     deactivate: (element) => (element.open = false),
   },

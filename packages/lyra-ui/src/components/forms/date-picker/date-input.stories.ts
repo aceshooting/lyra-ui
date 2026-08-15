@@ -187,6 +187,25 @@ export const PinnedControlHeight: Story = {
   `,
 };
 
+export const ThemedActionStates: Story = {
+  name: 'Themed clear/calendar states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The clear and calendar actions share inherited hover and pressed-state hooks without requiring a global token override.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-date-input-action-hover-color: var(--lr-color-warning); --lr-date-input-action-hover-bg: var(--lr-color-warning-quiet); --lr-date-input-action-hover-radius: var(--lr-radius-pill); --lr-date-input-action-active-color: var(--lr-color-danger); --lr-date-input-action-active-bg: var(--lr-color-danger-quiet); --lr-date-input-action-active-radius: var(--lr-radius-pill)"
+    >
+      <lr-date-input label="Departure" with-clear value="2026-07-15" style="max-width: 22rem"></lr-date-input>
+    </div>
+  `,
+};
+
 export const RangeConstraintsAndLifecycle: Story = {
   name: 'Range constraints, delegated slots, and lifecycle',
   render: () => html`

@@ -23,6 +23,13 @@ it('normalizes finite ranges without leaking non-finite input', () => {
   expect(finiteRange(3, Number.NaN, 0, 10)).to.equal(3);
 });
 
+it("orders inverted finite range endpoints before clamping values and fallbacks", () => {
+  expect(finiteRange(5, 0, 10, 2)).to.equal(5);
+  expect(finiteRange(-4, 0, 10, 2)).to.equal(2);
+  expect(finiteRange(99, 0, 10, 2)).to.equal(10);
+  expect(finiteRange(Number.NaN, 50, 10, 2)).to.equal(10);
+});
+
 it('normalizes integer counts and caps huge values', () => {
   expect(finiteInteger(3.9, 0)).to.equal(3);
   expect(finiteInteger(Number.NaN, 7)).to.equal(7);

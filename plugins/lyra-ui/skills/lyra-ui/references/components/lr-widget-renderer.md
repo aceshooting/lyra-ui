@@ -15,12 +15,12 @@
 
 ## `lr-widget-renderer`
 
-Renders an agent-streamed declarative JSON widget tree through an allowlisted `type -> lyra tag`
-registry: safe generative UI with exactly one action event out. A mapped node's real element is
-created via `document.createElement()` with every prop assigned as a plain JS property (never
-`setAttribute`, never `innerHTML`), and reused by key across a re-resolve so a mapped widget's own
-internal state (an open `<details>`, focus, scroll position) survives a streamed `tree` update.
-Built-in `row`/`col`/`text` structural nodes render through ordinary nested templates instead. Not a
+Renders an agent-streamed version-two declarative JSON widget document through an immutable,
+allowlisted `type -> lyra tag` registry. Mapped tags and children render declaratively, so populated
+documents work during SSR without a global `document`; primitive mapped props remain property-only
+and are assigned during hydration. Keyed reconciliation preserves the mapped element's focus,
+scroll position, and internal state across streamed document updates. Built-in `row`/`col`/`text`
+structural nodes render through ordinary nested templates. Not a
 form runtime (no input/select/form types in the default registry), no expression language or
 implicit state mutation, no remote widget/schema fetching, and it never renders arbitrary HTML or
 navigates (no `href` props are allowlisted anywhere). Controlled state binding is deliberately
@@ -29,92 +29,132 @@ must apply every requested change itself.
 
 **Exported types:**
 
-- `WidgetNode { type: string; id?: string; props?: Record<string, unknown>; children?: (WidgetNode |
-string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is a stable
-  reconciliation key (falling back to a structural path), `slot` is honored only when the parent
+- `LyraWidgetNode { readonly type: string; readonly id?: string; readonly props?:
+Readonly<Record<string, unknown>>; readonly children?: readonly (LyraWidgetNode | string)[];
+readonly slot?: string; readonly actionId?: string; readonly payload?: unknown }` — `id` is a stable public
+  identity and reconciliation key. Bound/actionable nodes require a unique, nonempty id; other
+  nodes fall back to a deterministic structural `nodePath`. `slot` is honored only when the parent
   type allowlists it, `actionId` arms the type's declared action trigger, and `payload` is echoed
   back in `lr-widget-action`.
-- `WidgetBinding { $bind: string; fallback?: string | number | boolean | null }` — an explicit JSON
+- `LyraWidgetBinding { $bind: string; fallback?: string | number | boolean | null }` — an explicit JSON
   Pointer lookup used as an allowlisted prop value. `fallback` is used only when the pointer cannot
   resolve.
-- `LyraWidgetDocument { version: '1'; root: WidgetNode; state?: unknown }` — versioned root plus its
-  optional controlled binding state.
+- `LyraWidgetDocument { readonly version: '2'; readonly root: LyraWidgetNode }` — the sole versioned tree source.
+- `createWidgetDocument(root: LyraWidgetNode): LyraWidgetDocument` — creates an immediate frozen
+  version-two snapshot for former unversioned tree assignments. Traversal uses the renderer's depth,
+  node, and per-node prop ceilings; malformed, cyclic, duplicate-id, or hostile structure throws
+  `TypeError`. Node records, child arrays, and prop records are copied and frozen, while opaque prop
+  values and action payloads intentionally retain caller identity.
+
+The package root and the normal `widget-renderer.js` registration entry expose the renderer
+`LyraWidgetRenderer`/`LyraWidgetRendererEventMap` together with the complete stable authoring
+surface: `LyraWidgetNode`, `LyraWidgetBinding`, `LyraWidgetDocument`, `createWidgetDocument`,
+`LyraWidgetPropType`, `LyraWidgetInteraction`, `LyraWidgetTypeDefinition`,
+`LyraWidgetTypeRegistry`, `createWidgetTypeRegistry`, `isWidgetTypeRegistry`, and
+`DEFAULT_WIDGET_TYPE_REGISTRY`. Advanced consumers that need `resolveTree`, `ResolveContext`,
+`ResolvedNode`, `ResolvedText`, or `ResolvedElement` import the explicit expert route
+`@aceshooting/lyra-ui/components/conversation/widget-renderer/resolve.js`. Pointer-reading helpers
+and the resolver's hard safety ceilings remain internal implementation details.
+
+The expert route's exact resolver contracts are `ResolvedText { nodeKey: string; nodePath: string;
+kind: 'text'; text: string; slot?: string }`, `ResolvedElement { nodeId?: string; nodeKey: string;
+nodePath: string; kind: 'builtin-row' | 'builtin-col' | 'builtin-text' | 'mapped'; tag?: string;
+interactive: boolean; props: Record<string, unknown>; actionEvent?: string; actionId?: string;
+payload?: unknown; bindings: Array<{ prop: string; path: string; event?: string }>; children:
+ResolvedNode[]; slot?: string }`, and `ResolveContext { registry: LyraWidgetTypeRegistry;
+bindingState: unknown; warned: Set<string>; warn?: (message: string) => void }`.
+`resolveTree(root: LyraWidgetNode | null | undefined, ctx: ResolveContext): ResolvedNode | null`
+resolves one bounded snapshot; invalid structure returns `null`.
 
 **Properties:**
 
-- `tree: WidgetNode | null = null` (property only) — the unversioned declarative widget tree;
-  `null` renders an empty base. A malformed root or reachable nested node fails closed, clears any
-  prior rendered tree, and emits exactly one `lr-render-error` for that update.
-- `document: LyraWidgetDocument | null = null` (property only) — versioned document form; when set,
-  its `root` takes precedence over `tree`. A version other than `'1'` fails closed with
-  `lr-render-error`.
-- `state?: unknown` (property only) — controlled binding-state override; when unset,
-  `document.state` is used.
-- `registry?: WidgetTypeRegistry` (property only) — per-instance override of the module-level
-  default registry.
+- `document: LyraWidgetDocument | null = null` (property only) — the sole tree source. `null`
+  renders an empty base; a present document with an invalid/missing root fails closed, clears prior
+  output, and emits exactly one `lr-render-error`.
+- `bindingState?: unknown` (property only) — explicit controlled binding state. `null` is a real
+  state value, not an absence sentinel.
+- `registry: LyraWidgetTypeRegistry = DEFAULT_WIDGET_TYPE_REGISTRY` (property only) — immutable
+  per-instance registry; mutable structural `Map` values are rejected.
 
-**Registry module (`widget-renderer/registry.js`):** `registerWidgetType(type, def)` registers (or
-overwrites) a type in the default registry; `def: WidgetTypeDefinition { tag?: string; props?:
+**Registry module (`widget-renderer/registry.js`):**
+`createWidgetTypeRegistry(entries?: Iterable<readonly [string, LyraWidgetTypeDefinition]>):
+LyraWidgetTypeRegistry` validates, snapshots, and freezes a unique-key registry;
+`isWidgetTypeRegistry(value: unknown): value is LyraWidgetTypeRegistry` is its untyped-boundary
+guard. `LyraWidgetTypeRegistry extends ReadonlyMap<string,
+Readonly<LyraWidgetTypeDefinition>> {}` is an opaque branded snapshot, so a mutable structural
+`Map` is not assignable. `LyraWidgetTypeDefinition { tag: string; interaction:
+'none' | 'control'; props?:
 Record<string, 'string' | 'number' | 'boolean'>; forcedProps?: Record<string, unknown>; slots?:
 string[]; action?: { event: string }; bindings?: Record<string, { event: string }> }` — `tag` is
 resolved prefix-aware, `props` is a prop allowlist (a prop absent here, or whose runtime type doesn't
 match, is silently skipped — never assigned),
-`forcedProps` always apply and are never overridable by `WidgetNode.props`, `slots` allowlists child
+`forcedProps` always apply and are never overridable by `LyraWidgetNode.props`, `slots` allowlists child
 `slot` names (a disallowed one renders unslotted rather than being dropped), and `action.event` is
 the native/custom DOM event that arms `lr-widget-action` when a node also sets `actionId`.
 `bindings?: Record<string, { event: string }>` maps an allowlisted prop to the control event that
-requests its controlled update.
-`getDefaultWidgetTypeRegistry()` returns the module-level registry `registerWidgetType()` writes to.
+requests its controlled update. `interaction` is explicit: actions/bindings require `control`, and
+a control descendant under another control fails closed. `DEFAULT_WIDGET_TYPE_REGISTRY` is the
+frozen built-in snapshot; there are no module-global register/clear/get mutation APIs.
 
-**Default registry** (populated by the side-effect entry's `registerDefaultWidgetTypes()`): `text`
-(plain text node), `row`/`col` (internal flex wrappers; props `gap: 's'|'m'|'l'`, `align:
-'start'|'center'|'end'|'stretch'`, `justify: 'start'|'center'|'end'|'between'`), `card` →
+**Built-in schema:** `text` (plain text node) and `row`/`col` (internal flex wrappers; props `gap:
+'s'|'m'|'l'`, `align: 'start'|'center'|'end'|'stretch'`, `justify:
+'start'|'center'|'end'|'between'`) are structural and cannot be registered. The immutable
+`DEFAULT_WIDGET_TYPE_REGISTRY` maps `card` →
 `lr-card` (`appearance`), `badge` → `lr-badge` (`variant`), `button` → `lr-button` (`variant`,
 `appearance`, `size`, `disabled`, `loading`; action: `click`), `stat` → `lr-stat` (`label`,
 `value`, `unit`, `variant`, `caption`, `sub`), `result-card` → `lr-result-card` (`title`),
-`result-field` → `lr-result-field` (`label`, `value`), `markdown` → `lr-markdown` (`content`;
-forced `{ sanitize: true }`), `image` → `lr-media-card` (`src`, `alt`, `filename`; forced `{ kind:
-'image' }`).
+`result-field` → `lr-result-field` (`label`, `value`), `markdown` → `lr-markdown` (`content`),
+`image` → `lr-media-card` (`src`, `alt`, `filename`; forced `{ kind: 'image' }`). The registration
+entry defines those eight mapped custom elements and `lr-widget-renderer`; it installs no mutable
+module-global registry state.
 
-**Events:** `lr-widget-action` — `detail: { actionId, payload }`, the single bubbling action
+**Events:** `lr-widget-action` — `detail: { actionId, payload, nodeId, nodeKey, nodePath }`, the single bubbling action
 channel. `lr-render-error` — `detail: { error }`, the root or a reachable nested node was
 structurally unusable (including a non-object node, invalid `props`/`children` shape, or a tree the
 depth/size caps made empty). The rejected update clears prior rendered content and emits this event
-once rather than throwing. `lr-widget-state-change` — `detail: { path, value, nodeId, prop }`,
-emitted when a state-bound mapped control requests a controlled update. The renderer never mutates
-`state` or `document.state`; assign a new `state` value to complete the controlled update.
+once rather than throwing. `lr-widget-state-change` —
+`detail: { path, value, nodeId, nodeKey, nodePath, prop }`, emitted when a bound mapped control
+requests a controlled update. The renderer never mutates caller data; assign a new `bindingState`
+value to complete the update.
 
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).
 
-Caps: depth 32, 5,000 nodes — excess is skipped with a deduped `console.warn` per type/prop within
-the current effective root/registry generation. Re-resolving that same root for a controlled
-`state` update stays quiet; assigning a different streamed root or registry releases the prior
-generation's arbitrary warning keys before resolving the replacement, so a long-lived renderer
-cannot accumulate attacker-chosen type/prop names forever. Reconciliation is keyed by `id ??
-structural path`, so a streamed re-send patches in place and user state (an open `<details>`, focus,
-scroll) survives.
+Caps: depth 32, 5,000 nodes, 100 visited props per node, and 100 unique warning keys plus one
+deterministic suppression warning. The current document/registry generation deduplicates warnings;
+binding-state-only re-resolution stays quiet, while replacing the root or registry releases prior
+keys. Exported deterministic `nodeKey`/`nodePath` identity drives reconciliation. One bounded input
+snapshot is shared by traversal, identity validation, pointer resolution, and rendering, so getters
+beyond an admitted cap are never dereferenced.
 
 ```ts
-import "@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js";
+import { html } from "lit";
+import {
+  createWidgetDocument,
+  createWidgetTypeRegistry,
+  DEFAULT_WIDGET_TYPE_REGISTRY,
+} from "@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.js";
 import "@aceshooting/lyra-ui/components/data/sparkline/sparkline.js";
-import { registerWidgetType } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/registry.js";
 import { tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
 
-registerWidgetType("sparkline", {
-  tag: tag("sparkline"),
-  props: { data: "string" },
-});
-```
-
-```html
-<lr-widget-renderer .tree=${msg.widget}
-  @lr-widget-action=${(e) => sendToAgent(e.detail.actionId, e.detail.payload)}
-></lr-widget-renderer>
+const registry = createWidgetTypeRegistry([
+  ...DEFAULT_WIDGET_TYPE_REGISTRY,
+  [
+    "sparkline",
+    { tag: tag("sparkline"), interaction: "none", props: { data: "string" } },
+  ],
+]);
+const widgetDocument = createWidgetDocument(msg.widget);
+const view = html`<lr-widget-renderer
+  .document=${widgetDocument}
+  .registry=${registry}
+  @lr-widget-action=${(event: CustomEvent) =>
+    sendToAgent(event.detail.actionId, event.detail.payload)}
+></lr-widget-renderer>`;
 ```
 
 For a controlled binding, use a per-instance registry and apply the event's requested value back to
-`state` (this one-field example binds `/name`). This is also the lean registration route: it imports
+`bindingState` (this one-field example binds `/name`). This is also the lean registration route: it imports
 the side-effect-free renderer class, defines only `lr-widget-renderer`, and imports only the mapped
 input registration. Do not import `widget-renderer.js` on this route; that entry intentionally
 installs the full default registry.
@@ -125,33 +165,33 @@ installs the full default registry.
 
 ```js
 import { LyraWidgetRenderer } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/widget-renderer.class.js";
+import { createWidgetDocument } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/resolve.js";
+import { createWidgetTypeRegistry } from "@aceshooting/lyra-ui/components/conversation/widget-renderer/registry.js";
 import { defineElement, tag } from "@aceshooting/lyra-ui/utilities/prefix.js";
 import "@aceshooting/lyra-ui/components/forms/input/input.js";
 
 defineElement("widget-renderer", LyraWidgetRenderer);
 
 const renderer = document.querySelector("#bound-widget");
-renderer.registry = new Map([
+renderer.registry = createWidgetTypeRegistry([
   [
     "bound-input",
     {
       tag: tag("input"),
+      interaction: "control",
       props: { label: "string", value: "string" },
       bindings: { value: { event: "lr-input" } },
     },
   ],
 ]);
-renderer.document = {
-  version: "1",
-  state: { name: "Ada" },
-  root: {
-    type: "bound-input",
-    id: "name",
-    props: { label: "Name", value: { $bind: "/name", fallback: "" } },
-  },
-};
+renderer.document = createWidgetDocument({
+  type: "bound-input",
+  id: "name",
+  props: { label: "Name", value: { $bind: "/name", fallback: "" } },
+});
+renderer.bindingState = { name: "Ada" };
 renderer.addEventListener("lr-widget-state-change", (event) => {
-  renderer.state = { name: event.detail.value };
+  renderer.bindingState = { name: event.detail.value };
 });
 ```
 

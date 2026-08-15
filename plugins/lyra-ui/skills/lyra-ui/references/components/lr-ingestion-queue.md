@@ -19,26 +19,29 @@ Controlled list of documents moving through an ingestion pipeline: stage badge, 
 embedding counts, retry attempts, errors, and retry/cancel requests. Never ingests anything itself.
 
 **Properties:**
+
 - `items: IngestionQueueItem[] = []` (attribute: false) — `IngestionQueueItem { id: string;
-  document: DocumentRef; stage: IngestionStage; progress?: number; chunkCount?: number;
-  embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here). `document` is
+document: DocumentRef; stage: IngestionStage; progress?: number; chunkCount?: number;
+embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here). `document` is
   **`DocumentRef` from `@aceshooting/lyra-ui/ai`** (`{ id, name, mimeType?, uri?, version? }`), not a
   divergent name/mimeType pair, so a caller can reuse the same list a `DocumentRef`-typed
   knowledge-base view already holds. `IngestionStage = 'queued' | 'uploading' | 'extracting' |
-  'chunking' | 'embedding' | 'indexing' | 'done' | 'failed' | 'cancelled'` — the first six are
-  in-flight (in pipeline order), the last three terminal. `progress` is 0–100 *within the current
-  stage* (omitted/non-finite renders an indeterminate indicator, and it is only meaningful during an
+'chunking' | 'embedding' | 'indexing' | 'done' | 'failed' | 'cancelled'` — the first six are
+  in-flight (in pipeline order), the last three terminal. `progress` is 0–100 _within the current
+  stage_ (omitted/non-finite renders an indeterminate indicator, and it is only meaningful during an
   active non-`'queued'` stage). `embeddedChunkCount` renders only alongside a defined `chunkCount`.
   `error` renders only while `stage === 'failed'`. Controlled — pass a new array to update
-- `label: string = ''` — accessible name for the region; defaults to the localized
-  `ingestionQueueLabel`
+- `label: string = ''` — fallback name for the stable region; defaults to localized
+  `ingestionQueueLabel`. A non-empty host `aria-label` makes the host the sole overall owner (the
+  region omits its duplicate role/name); an explicitly empty host label stays empty
 - `virtualizeAt: number = 100` (attribute `virtualize-at`) — item count above which the list renders
   through an internal `lr-virtual-list`. Exclusive, like every other `virtualize-at` in this family:
   exactly this many items still render as a plain list. Before 9.0.0 this was spelled
-  `virtualizeThreshold`/`virtualize-threshold` *and* compared inclusively (`>=`), so a migration
+  `virtualizeThreshold`/`virtualize-threshold` _and_ compared inclusively (`>=`), so a migration
   that only renames the attribute shifts the switchover point by one item
 
 **Events:**
+
 - `lr-retry` (`detail: IngestionRetryEventDetail` = `RetryEventDetail & { itemId: string }` =
   `{ attempt: number; messageId?: string; itemId: string }`) — `attempt` is the attempt about to be
   made: the displayed nonnegative finite-integer `item.attempts` value plus one (invalid, negative,
@@ -63,7 +66,7 @@ per-item stage label), `item-progress`,
 announcement itself goes to the library's shared **light-DOM** assertive region, appended to the
 consumer's `<body>` and marked `data-lr-live-region="assertive"`, because a live region inside a
 shadow root is not reliably announced (JAWS with Firefox ignores one outright). What is announced
-is unchanged: only failures added or transitioned *after* mount, so historical failed rows stay
+is unchanged: only failures added or transitioned _after_ mount, so historical failed rows stay
 visible without being re-announced. Assert against that document-level region rather than
 `::part(failure-live)`.
 

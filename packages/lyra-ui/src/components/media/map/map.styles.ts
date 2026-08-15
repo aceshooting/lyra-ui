@@ -59,6 +59,9 @@ export const styles = css`
     inset-block-start: 0;
     inset-inline-start: 0;
     inline-size: max-content;
+    min-inline-size: var(--lr-size-1-5rem);
+    min-block-size: var(--lr-size-1-5rem);
+    box-sizing: border-box;
     will-change: transform;
   }
   .maplibregl-popup {

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,47 +24,55 @@ its own tab stop would be a poor keyboard experience. Instead, like `lr-heatmap`
 `[part="svg"]` is **one tab stop with roving arrow-key focus**: `ArrowRight`/`ArrowDown` move the
 focus cursor to the next word in **declaration order** (not weight/placement order),
 `ArrowLeft`/`ArrowUp` to the previous, `Home`/`End` to the first/last, and `Enter`/`Space` fires
-`lr-word-click` for the currently-focused word. A `[part="focus-ring"]` `<rect>` is drawn around
-the focused word (absent until a word has actually been focused via keyboard or click), and a
+`lr-word-activate` for the currently-focused word. Tab focus silently establishes the first word,
+so immediate Enter/Space always works without requiring a preparatory arrow key. A
+`[part="focus-ring"]` `<rect>` is drawn around the focused word, and a
 shared light-DOM polite sink announces `"${text}, ${weight}"` on every focus move. Mount is silent,
 and repeated edge movements append repeated announcements even when their text is identical.
 `[part="live-region"]` mirrors the latest text for styling/inspection but is `aria-hidden` and has
-no live-region role of its own.
+no live-region role of its own. Pointer input resolves the nearest word from the adequately-sized
+SVG surface; the potentially tiny text glyphs are not independent hit targets.
 
 **Properties:**
 
-- `words: WordCloudWord[] = []` (attribute: false) — `{ text: string, weight: number, color?:
-string, group?: string }`; `weight` drives font size (a negative/non-finite `weight` is clamped to
-  `0` for sizing purposes only — the original value is still echoed verbatim in `lr-word-click`'s
-  `detail`), a valid CSS `color` overrides the palette for that word (invalid values,
+- `words: readonly WordCloudWord[] = []` (attribute: false) — readonly `{ text: string, weight:
+  number, color?: string, group?: string }` snapshots; malformed/hostile records are skipped while
+  later valid records survive. `weight` is normalized once to a finite nonnegative value used by
+  font sizing, announcements, and `lr-word-activate` detail. A valid CSS `color` overrides the
+  palette for that word (invalid values,
   declaration-breaking input, and `url()` fall back to the palette), and `group` shares one palette
-  color across every word with the same `group` value
+  color across every word with the same `group` value. The component scans at most 10,000 input
+  records, bounds each string to 256 characters and all retained word strings to 16,384 characters,
+  marking shortened strings with an ellipsis and disclosing omitted input through `[part="limit"]`.
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
   layout clamps positive finite values to at most 512px and uses 1px for invalid/non-positive values
 - `maxFontSize: number = 48` (attribute `max-font-size`) — px, applied to the highest-weight word;
   normalized by the same 1–512px layout bound (reversed min/max bounds are swapped)
 - `scale: 'linear'|'sqrt' = 'linear'` — `sqrt` compresses the weight→font-size mapping so one heavy
   word doesn't dwarf the rest, matching `lr-heatmap`'s `scale` property
-- `orientations: 'horizontal'|'mixed' = 'horizontal'` — `mixed` lets ~25% of words render rotated
-  90° for denser packing
-- `palette?: string[]` (attribute: false) — custom categorical colors, cycled by word index (or by
+- `wordRotation: 'none'|'mixed' = 'none'` (attribute `word-rotation`, reflected) — `mixed` lets
+  ~25% of words render rotated 90° for denser packing
+- `palette?: readonly string[]` (attribute: false) — clone-owned custom categorical colors (at
+  most 64), cycled by word index (or by
   `group`); invalid CSS colors, declaration-breaking input, and `url()` entries are skipped, and an
   all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens
-- `legend: WordCloudLegendItem[] = []` (attribute: false) — optional named `{ label, color }`
-  entries for explaining explicit `words[].color`/group color overrides; when omitted, the
-  component derives entries from grouped and explicitly colored words. An invalid legend color
-  renders a transparent swatch.
+- `legend: readonly WordCloudLegendItem[] = []` (attribute: false) — clone-owned, frozen named
+  readonly `{ label, color }` entries for explaining explicit `words[].color`/group color
+  overrides; when omitted, the component derives entries from grouped and explicitly colored
+  words. Explicit legends retain at most 100 entries and 8,192 aggregate characters; malformed
+  records are skipped, overlong strings end in an ellipsis, invalid colors render transparent, and
+  `[part="legend-limit"]` truthfully exposes the localized rendered/received count.
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection
 
 **Methods:** `refreshTheme(): void` — forces a relayout so the `--lr-font` custom property is
-re-read from computed style (font-family affects the canvas text measurement layout depends on);
-call this from your own theme-toggle handler, since there's no global theme-change event to
-subscribe to automatically (mirrors `lr-chart`'s `refreshTheme()`).
+re-read from computed style (font-family affects the canvas text measurement layout depends on).
+The component's theme watcher calls it automatically when inherited theme typography changes; the
+method remains available for a host theme system that needs an explicit synchronous refresh.
 
-**Events:** `lr-word-click` (`detail: { text, weight, group }`, fires on click, or Enter/Space on
-the currently-focused word — a no-op if nothing is focused yet)
+**Events:** `lr-word-activate` (frozen readonly `detail: { text, weight, group }`; fires from the
+single SVG pointer surface, or Enter/Space on the current word)
 
 **Slots:** none.
 
@@ -72,7 +80,8 @@ the currently-focused word — a no-op if nothing is focused yet)
 cursor's word), `live-region` (visually-hidden, `aria-hidden` mirror of the latest announcement;
 the actual announcement uses the shared light-DOM polite sink),
 `legend`/`legend-item`/`legend-swatch`/`legend-label` (the optional static color key), and `empty`
-(the no-data placeholder)
+(the no-data placeholder), `limit` (localized rendered/received word count), and `legend-limit`
+(localized rendered/received explicit-legend count)
 
 **Themeable custom properties:** `--lr-word-cloud-color-1`, `--lr-word-cloud-color-2`,
 `--lr-word-cloud-color-3`, `--lr-word-cloud-color-4`, `--lr-word-cloud-color-5`,
@@ -95,37 +104,33 @@ through the normal cascade), plus shared tokens (`--lr-font`,
   ];
   document
     .getElementById("cloud")
-    .addEventListener("lr-word-click", (e) => console.log(e.detail));
+    .addEventListener("lr-word-activate", (e) => console.log(e.detail));
 </script>
 ```
 
-The host itself gets `role="group"` and an auto-computed `aria-label` (e.g. `"Word cloud of 12
-words"` / `"Word cloud of 1 word"`, counting only words actually rendered — post `MAX_WORDS`-cap and
-post-drop, not the raw `words.length`) **unless** the host already carried its own `role`/`aria-label`
-attribute at first render. That opt-out check runs exactly once (the very first update) and is never
-re-checked afterwards, so setting `role`/`aria-label` yourself _after_ the component has already
-rendered at least once only sticks until the next `words`-driven relayout, which overwrites it back
-to the auto default — set it in the initial markup (or before first paint) to opt out permanently.
+The focusable SVG is the single semantic owner: `role="application"` plus an auto-computed
+`aria-label` such as `"Word cloud of 12 words"` / `"Word cloud of 1 word"`, counting only words
+actually rendered. An authored host `role`/`aria-label` stays on the host and is never copied onto
+the nested focus owner. When records are omitted, the SVG references the visible localized
+`[part="limit"]` rendered/received summary.
 
 **Known gotchas:**
 
 - capped at 150 words (`MAX_WORDS` in `word-cloud-layout.ts`, mirroring `lr-sparkline`'s
-  `MAX_BARS` DOM-node-count guard) — over the cap, the **heaviest** 150 survive and the rest are
-  dropped, regardless of where they fell in the input array (it is not simply "first 150 in, rest
-  dropped"). A pathological input (e.g. one huge word repeated many times) can also exhaust the
+  `MAX_POINTS` input-sample guard) — a one-pass bounded top-K scan retains the **heaviest** 150 and
+  counts the rest without cloning/sorting/spreading the full input. A pathological input can exhaust the
   spiral search's radius bound and get dropped the same way; blank/whitespace-only `text` is dropped
-  too. Every drop reason logs one deduplicated `console.warn` per distinct skipped-count (not one
-  warning per word, and not repeated twice for the same count) — nothing throws.
+  during boundary normalization. Omitted diagnostics retain at most 32 records, while a separate
+  complete count drives one deduplicated `console.warn` and the rendered disclosure — nothing throws.
 - each word's spiral search tests at most 4,096 candidate positions. Together with the 150-word and
   512px font-size caps, this bounds placement work even for dense or adversarial layouts; a word
   that exhausts the search budget is reported through the same skipped-word path.
-- text width is measured via a detached `<canvas>` 2D context (`ctx.measureText`) at a hardcoded
-  `font-weight: 600` matching `[part='word']`'s own default CSS — close enough for
-  collision-avoidance spacing, but not pixel-exact, and overriding `[part='word']`'s `font-weight` via
-  `::part()` desyncs measurement from what's actually painted (looser/denser packing, not a crash).
-- rotation (`orientations="mixed"`) is genuinely random per layout (`Math.random()`, not seeded), so
+- text width is measured via a detached `<canvas>` 2D context (`ctx.measureText`) using the live
+  `--lr-font-weight-semibold` and `--lr-font` token values. A consumer-only `::part(word)` font
+  override can still desynchronize measurement from the painted glyph.
+- rotation (`word-rotation="mixed"`) is genuinely random per layout (`Math.random()`, not seeded), so
   which words render rotated changes on every re-layout (any `words`/`minFontSize`/`maxFontSize`/
-  `scale`/`orientations` change) — don't rely on rotation being stable across renders.
+  `scale`/`wordRotation` change) — don't rely on rotation being stable across renders.
 - only one word is ever in the page's tab sequence at a time (the roving cursor on `[part="svg"]`) —
   there's no way to Tab directly to the Nth word; arrow-key/Home/End your way there, or click it.
 

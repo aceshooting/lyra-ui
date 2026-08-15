@@ -2,6 +2,7 @@ import { AUTOLOADER_TAG_SET } from '../internal/autoloader-tags.js';
 import { registryForRoot, type LyraDefinitionRoot } from '../internal/definition-registry.js';
 import {
   collectRenderedTree,
+  nativeElementLocalName,
   renderedTreeTraversalLimits,
   type RenderedTreeTraversalOptions,
   type RenderedTreeTraversalState,
@@ -32,10 +33,7 @@ function maxPasses(value: number | undefined): number {
   return resolved;
 }
 
-function whenDefined(
-  registry: CustomElementRegistry,
-  tagName: string
-): Promise<CustomElementConstructor> | undefined {
+function whenDefined(registry: CustomElementRegistry, tagName: string): Promise<CustomElementConstructor> | undefined {
   try {
     const method = registry.whenDefined;
     if (typeof method !== 'function') return undefined;
@@ -75,31 +73,34 @@ function updateCompleteFor(element: Element): Promise<unknown> | undefined {
  */
 export async function allDefined(
   root: LyraDefinitionRoot | undefined = defaultRoot(),
-  options: AllDefinedOptions = {}
+  options: AllDefinedOptions = {},
 ): Promise<void> {
   const limits = renderedTreeTraversalLimits(options, 'allDefined()');
   const passLimit = maxPasses(options.maxPasses);
   if (!root) return;
 
-  const seenElements = new Set<Element>();
-  const traversalState: RenderedTreeTraversalState = { work: 0 };
+  const traversalState: RenderedTreeTraversalState = {
+    work: 0,
+    elements: new Set(),
+    roots: new Set(),
+  };
   let pass = 0;
 
   while (true) {
+    const collected = collectRenderedTree(root, limits, traversalState, 'allDefined()');
+    const elements = collected.elements;
+    if (elements.length === 0) return;
     pass += 1;
     if (pass > passLimit) {
       throw new Error(`allDefined() exceeded maxPasses (${passLimit})`);
     }
-    const collected = collectRenderedTree(root, limits, traversalState, 'allDefined()');
-    const elements = collected.elements.filter((element) => !seenElements.has(element));
-    if (elements.length === 0) return;
-    for (const element of elements) seenElements.add(element);
 
     const definitions = new Map<CustomElementRegistry, Set<string>>();
     const pendingDefinitions: Promise<unknown>[] = [];
 
     for (const element of elements) {
-      if (!AUTOLOADER_TAG_SET.has(element.localName)) continue;
+      const tagName = nativeElementLocalName(element);
+      if (!tagName || !AUTOLOADER_TAG_SET.has(tagName)) continue;
       const registry = registryForRoot(element);
       if (!registry) continue;
       let tags = definitions.get(registry);
@@ -107,9 +108,9 @@ export async function allDefined(
         tags = new Set();
         definitions.set(registry, tags);
       }
-      if (tags.has(element.localName)) continue;
-      tags.add(element.localName);
-      const pending = whenDefined(registry, element.localName);
+      if (tags.has(tagName)) continue;
+      tags.add(tagName);
+      const pending = whenDefined(registry, tagName);
       if (pending) pendingDefinitions.push(pending);
     }
 
@@ -117,9 +118,10 @@ export async function allDefined(
 
     const pendingUpdates: Promise<unknown>[] = [];
     for (const element of elements) {
-      if (!AUTOLOADER_TAG_SET.has(element.localName)) continue;
+      const tagName = nativeElementLocalName(element);
+      if (!tagName || !AUTOLOADER_TAG_SET.has(tagName)) continue;
       const registry = registryForRoot(element);
-      if (!registry || !isDefined(registry, element.localName)) continue;
+      if (!registry || !isDefined(registry, tagName)) continue;
       const updateComplete = updateCompleteFor(element);
       if (updateComplete) pendingUpdates.push(updateComplete);
     }

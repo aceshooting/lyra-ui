@@ -25,7 +25,7 @@ import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext } from '../../../in
 
 
 export interface LyraTagEventMap {
-  'lr-remove': CustomEvent<undefined>;
+  'lr-remove': CustomEvent<null>;
 }
 
 /** Badge tones plus Shoelace's tag-only plain-text treatment. */

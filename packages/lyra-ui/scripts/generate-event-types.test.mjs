@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { generateEventTypeSource } from "./generate-event-types.mjs";
+import { collectEventMaps, generateEventTypeSource } from "./generate-event-types.mjs";
 
 const manifest = {
   schemaVersion: "1.0.0",
@@ -63,4 +63,39 @@ test("generation fails closed when an effective manifest event has no typed owne
     () => generateEventTypeSource({ prefix: "lr", manifest, maps: [] }),
     /no Lyra\*EventMap declares/
   );
+});
+
+test("free-function event maps contribute aliases and normal global listener types", () => {
+  const source = generateEventTypeSource({
+    prefix: "lr",
+    manifest: { schemaVersion: "1.0.0", modules: [] },
+    maps: [
+      {
+        name: "AutoloaderEventMap",
+        specifier: "./autoloader.js",
+        events: ["lr-autoload-loaded", "lr-autoload-traversal-error"],
+      },
+    ],
+  });
+
+  assert.match(source, /import type \{ AutoloaderEventMap \} from '\.\/autoloader\.js';/);
+  assert.match(
+    source,
+    /export type LyraAutoloadTraversalErrorEvent = AutoloaderEventMap\['lr-autoload-traversal-error'\];/,
+  );
+  assert.match(source, /'lr-autoload-loaded': LyraAutoloadLoadedEvent;/);
+});
+
+test("the production source census enrolls the free-function autoloader map", () => {
+  const autoloader = collectEventMaps().find(({ name }) => name === "AutoloaderEventMap");
+  assert.deepEqual(autoloader, {
+    name: "AutoloaderEventMap",
+    specifier: "./autoloader.js",
+    events: [
+      "lr-autoload-preload",
+      "lr-autoload-loaded",
+      "lr-autoload-error",
+      "lr-autoload-traversal-error",
+    ],
+  });
 });

@@ -31,23 +31,26 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
-localized show/hide toggle. `false` (the default) preserves the full body rendering. A host
-`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+localized show/hide toggle. `false` (the default) preserves the full body rendering. A nonempty
+host `aria-label` makes the host the sole named semantic owner; an explicitly empty host label
+keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
+localized label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
 
 **Events:**
+
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
   `Uint8Array` of the decoded attachment — an attachment button was activated.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-message search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered message.
+DOMRect[] }`) — fired after a selection ends inside the rendered message.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted text highlights are
 passive and cannot be activated.

@@ -36,14 +36,14 @@ export interface EvalExample {
 
 export interface LyraEvalDatasetEventMap {
   'lr-example-select': CustomEvent<{ exampleId: string | null }>;
-  'lr-example-add-request': CustomEvent<undefined>;
+  'lr-example-add-request': CustomEvent<null>;
   'lr-example-remove-request': CustomEvent<{ exampleId: string }>;
   'lr-import-request': CustomEvent<{ files: File[] }>;
   'lr-export-request': CustomEvent<{ format: string }>;
   /** Deliberate pass-through from the controlled comparison table. */
   'lr-sort': LyraTableEventMap<EvalExample>['lr-sort'];
-  focus: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
+  focus: CustomEvent<null>;
+  blur: CustomEvent<null>;
 }
 
 /**

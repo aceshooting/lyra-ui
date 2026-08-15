@@ -462,17 +462,28 @@ it('selecting the files menu item clicks the hidden native input', async () => {
   expect(clicked).to.be.true;
 });
 
-it('does not leak the internal menu selection/open/close events from the wrapper', async () => {
+it('does not leak internal menu selection, state, or lifecycle events from the wrapper', async () => {
   const el = (await fixture(html`
     <lr-attachment-trigger .capabilities=${['files', 'camera']}></lr-attachment-trigger>
   `)) as LyraAttachmentTrigger;
   const leaked: string[] = [];
-  for (const type of ['lr-select', 'lr-show', 'lr-hide']) {
+  for (const type of [
+    'lr-select',
+    'lr-menu-item-state-change',
+    'lr-show',
+    'lr-after-show',
+    'lr-hide',
+    'lr-after-hide',
+  ]) {
     el.addEventListener(type, () => leaked.push(type));
   }
   clickItem(menuItems(el).find((item) => item.value === 'camera')!);
-  dropdownEl(el).dispatchEvent(new CustomEvent('lr-show', { bubbles: true, composed: true }));
-  dropdownEl(el).dispatchEvent(new CustomEvent('lr-hide', { bubbles: true, composed: true }));
+  const firstItem = menuItems(el)[0]!;
+  firstItem.disabled = true;
+  await firstItem.updateComplete;
+  for (const type of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+    dropdownEl(el).dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true }));
+  }
   expect(leaked).to.deep.equal([]);
 });
 

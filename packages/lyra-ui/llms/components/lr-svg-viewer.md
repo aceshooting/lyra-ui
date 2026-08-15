@@ -16,7 +16,8 @@
 ## `lr-svg-viewer`
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
-The inline profile removes author `<style>`/`style`, SVG animation elements, and external
+The shared `passive-svg` profile (the same post-sanitization engine used for embedded viewer markup)
+removes author `<style>`/`style`, SVG animation elements, and external
 resource or paint-server references before insertion, preventing fetched SVG content from escaping
 the viewer's paint box or starting secondary requests. Local `url(#id)` paint servers and embedded
 raster data remain available.
@@ -37,7 +38,7 @@ inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable 
 an inspection surface opts in. `anchor: LyraAnchor | string | null = null` (attribute: false) —
 declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry's `id`). Assigning it
 calls `scrollToAnchor()` and fires `lr-anchor-result`; re-assigning the same value re-triggers the
-scroll, it is not reference-gated. `highlights: LyraHighlight[] = []` (attribute: false) —
+scroll, it is not reference-gated. `highlights: readonly LyraHighlight[] = []` (attribute: false) —
 display-only `region` highlights painted over the rendered SVG; unchanged behavior, now inherited
 from `DocumentAnchorTarget` rather than declared locally. A region rectangle renders/resolves only
 when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
@@ -72,6 +73,9 @@ rendered region highlight), `region-highlight` (one region highlight, `data-tone
 (one action in that list),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
 (forwarded from the internal `<lr-pan-zoom>` while `zoomable`).
+The passive rendered image owns `role="img"`; the body upgrades to a named `region` only when zoom
+controls or interactive region highlights are present. The spinner always includes visible
+localized loading text alongside its decorative ring, and the ring stops under reduced motion.
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -79,7 +83,7 @@ of `[part="body"]`; also settable via the `max-height` property, which writes th
 border color of the `[part='region-highlight']` matching `activeHighlightId`, distinct from the
 resting highlight border so the active region can be recolored without touching the rest. It is an
 inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
-the element *or on any ancestor*: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
+the element _or on any ancestor_: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
 Parts forbids an attribute selector after `::part()` — so re-pointing a shared `--lr-color-*` token,
 and repainting everything else reading it, was previously the only way. Unset, it falls back to
 exactly the tokens the rule used before. The tone-specific resting border and hover tint use

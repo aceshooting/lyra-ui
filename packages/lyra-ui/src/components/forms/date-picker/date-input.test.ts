@@ -1,9 +1,48 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './date-input.js';
 import '../button/button.js';
 import type { LyraDateInput } from './date-input.js';
 import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-input.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+it('renders inherited action hover/pressed hooks while direct host values still win', async () => {
+  const wrapper = await fixture(html`
+    <div
+      style="--lr-date-input-action-hover-color: rgb(1, 2, 3); --lr-date-input-action-hover-bg: rgb(4, 5, 6); --lr-date-input-action-hover-radius: 11px; --lr-date-input-action-active-color: rgb(7, 8, 9); --lr-date-input-action-active-bg: rgb(10, 11, 12); --lr-date-input-action-active-radius: 13px"
+    >
+      <lr-date-input with-clear value="2026-07-15"></lr-date-input>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-date-input') as LyraDateInput;
+  const action = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement;
+  const rect = action.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+
+  try {
+    await sendMouse({ type: 'move', position });
+    await waitUntil(() => getComputedStyle(action).backgroundColor === 'rgb(4, 5, 6)');
+    expect(getComputedStyle(action).color).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(action).borderRadius).to.equal('11px');
+
+    el.style.setProperty('--lr-date-input-action-hover-bg', 'rgb(13, 14, 15)');
+    await waitUntil(() => getComputedStyle(action).backgroundColor === 'rgb(13, 14, 15)');
+
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(action).backgroundColor === 'rgb(10, 11, 12)');
+    expect(getComputedStyle(action).color).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(action).borderRadius).to.equal('13px');
+
+    el.style.setProperty('--lr-date-input-action-active-radius', '17px');
+    await waitUntil(() => getComputedStyle(action).borderRadius === '17px');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
 
 it('rejects direct open writes while readonly or synchronously fieldset-disabled', async () => {
   const fieldset = await fixture<HTMLFieldSetElement>(html`

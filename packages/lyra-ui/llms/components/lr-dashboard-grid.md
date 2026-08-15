@@ -18,7 +18,7 @@
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
 move, resize, collision, and layout-change requests; the host owns persistence and applies updates.
 
-**Properties:** `layout: DashboardCell[] = []` (attribute: false, never mutated by the component),
+**Properties:** `layout: readonly LyraDashboardCell[] = []` (attribute: false, never mutated by the component),
 `columns: number = 12`, `rowHeight: number = 80` (px, also the row snap pitch), `gap: number = 8`
 (px, both axes), `collision: 'reject' | 'push' | 'overlap' = 'reject'`, `cellsDraggable: boolean = false`
 (attribute `cells-draggable` — pointer drag plus Ctrl/Cmd+Arrow), `cellsResizable: boolean = false`
@@ -34,6 +34,24 @@ sink only while the grid and its composed ancestors remain exposed to the access
 **Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
 
+`layout` is normalized into an immutable snapshot before rendering. Reads are bounded to the first
+1,000 positions; foreign-realm arrays are accepted; malformed records, hostile accessors, and later
+duplicate ids are skipped without discarding valid neighbors. Geometry and min/max constraints are
+finite and consistent, and neither the returned array nor its cells alias caller-owned objects.
+Each admitted `cell.widget` is also copied immediately through the canonical bounded widget-document
+factory: its node records, child arrays, and prop records are frozen without cloning opaque prop or
+payload leaves. A hostile or malformed widget is omitted while its otherwise-valid cell remains.
+Direct light-DOM children with `cell-id` remain the authored source of truth across insertion,
+removal, id retargeting, reconnect, and document adoption. The first authored child for an id wins;
+when it disappears, the default cell is restored without mistaking a forged marker attribute for a
+library-owned node.
+
+The default content assigns a version-two document created from `cell.widget` to
+`<lr-widget-renderer>.document`; it never uses the legacy `tree` input. Pointer gestures admit only
+the primary button/pointer and ignore controls, links, labels, editable content, and interactive
+roles in the composed path. Keyboard resizing uses physical directions in both LTR and RTL:
+Right/Down grow and Left/Up shrink, while pointer resizing retains the logical inline-end handle.
+
 In the narrow stacked layout, a cell that currently owns a resize handle keeps at least the shared
 interactive-action block-size (`--lr-icon-button-size`). The handle is absolutely positioned and
 cannot contribute intrinsic size itself; the state-aware floor prevents it from overlapping the
@@ -45,13 +63,22 @@ stack. This does not seize overflow from child-owned widgets: custom content can
 
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
 and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-auto-rows`/`gap`.
-The `columns`/`rowHeight`/`gap` properties write them inline on `[part='base']` on every render, so
-overriding them from a stylesheet has no effect — set the properties instead. `--lr-dashboard-grid-cell-hover-outline-color`
+They are real cascade-authoritative public hooks: the `columns`/`rowHeight`/`gap` properties supply
+private computed fallbacks rather than overwriting these public variables inline.
+`--lr-dashboard-grid-cell-hover-outline-color`
 (default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
 preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
 draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.
 
 **Additional API surface:**
 
+- `LyraDashboardCell`, `LyraDashboardCollisionPolicy`, and
+  `LyraDashboardPlacementResult` — readonly public authoring/result types.
+- `resolveLyraDashboardPlacement(layout, candidateId, requested, columns, policy)` — the only public
+  runtime layout utility. It returns an immutable normalized result; collision indexing,
+  clamping, sorting, and push-cascade helpers are intentionally implementation-private.
+- `LyraDashboardCellMoveDetail`, `LyraDashboardCellResizeDetail`,
+  `LyraDashboardCollisionDetail`, and `LyraDashboardLayoutChangeDetail` — readonly event-detail
+  interfaces used by `LyraDashboardGridEventMap`.
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
 - `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow)`.

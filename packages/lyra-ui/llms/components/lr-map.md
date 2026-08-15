@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,36 +22,47 @@ operations. Its runtime value is the underlying MapLibre map.
 **Properties:**
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2`
-- `mapStyle: LyraMapStyleSpecification | string = DEFAULT_STYLE` (attribute: false) —
-  `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from MapLibre's
-  `StyleSpecification`, including its string or multi-sprite form. The default is a
-  basic OSM raster tile style pointing at **OpenStreetMap's shared demo tile server**. Fine for
-  local development, but its usage policy forbids bulk/production traffic, requires an identifying
-  User-Agent, and rate-limits or IP-blocks non-compliant clients
-  (https://operations.osmfoundation.org/policies/tiles/). **Production apps must pass their own
-  `mapStyle`** — a hosted vector/raster style from a tile provider you have a plan with.
-- `legend: LegendEntry[] = []` (attribute: false) — `LegendEntry { color: string; label: string }`
-  (discrete swatch rows only, no continuous gradient bar)
-- `choropleth?: ChoroplethLayer` (attribute: false) — `ChoroplethLayer { sourceId: string; geojson:
-  GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
+- `mapStyle?: LyraMapStyleSpecification | string` (attribute: false) — required before a map is
+  constructed. `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from
+  MapLibre's `StyleSpecification`, including its string or multi-sprite form. No provider or style
+  is selected implicitly: an unset, empty, or whitespace-only value renders the localized
+  style-required failure and makes no tile/style request. Assign a hosted vector/raster style from
+  a provider whose terms fit your application, or an explicitly network-silent style for local
+  geometry.
+- `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
+  of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
+  LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
+  'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
+  rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
+  bounded before validation. The overlay scrolls within the map allocation.
+- readonly `legendProjection: LyraMapLegendProjection` — frozen `{ inputCount, renderedCount,
+  omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
+  projection renders a localized visible `1–N of M items` summary rather than silently claiming
+  the bounded rows are complete.
+- `choropleth?: LyraMapChoroplethLayer` (attribute: false) — `LyraMapChoroplethLayer { sourceId:
+  string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
   fill-color expression from `field`'s value against `stops`; `stops` must contain at least one
   `[value, color]` pair — an empty array is ignored, leaving whatever fill layer already exists, if
   any, untouched, rather than being applied)
-- `markers: MapMarker[] = []` (attribute: false) — `MapMarker { id?: string; lngLat: [number,
-  number]; color?: string; label?: string; unsafeHtml?: string }`; reconciled by `id` (falling back
+- `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
+  [number, number]; color?: string; label?: string; unsafeHtml?: string }`; reconciled by `id` (falling back
   to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
   when `id` is omitted) so an unchanged marker isn't torn down and recreated on every `markers`
   reassignment — its `lngLat` **and** its popup content (`unsafeHtml`/`label`, in that precedence)
   are both updated in place, and the popup is removed if a later update sets neither. `unsafeHtml` is
   rendered via `Popup.setHTML()` — **raw markup, inline event handlers included** — only pass trusted
   content, sanitize anything derived from user input first; prefer `label` (`Popup.setText()`,
-  escaped) when the content is plain text. A marker whose `color` changes for a persisting `id`
+  escaped) when the content is plain text. For marker/popup naming, visible text is extracted from
+  trusted markup while `script`, `style`, `template`, `[hidden]`, and `aria-hidden="true"` subtrees
+  are excluded; an explicitly supplied `label` remains the more predictable accessible name. A
+  marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
   gotchas. Entries with non-finite coordinates or latitude outside `[-90, 90]` are skipped without
   aborting valid siblings. `color` is used only when the browser accepts it as CSS `color`;
   declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
-- `dataLayers: GeoJsonDataLayer[] = []` (attribute: false) — `GeoJsonDataLayer { sourceId: string;
-  geojson: GeoJSON.Feature | GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
+- `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
+  `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
+  GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
   matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`). The component
@@ -63,9 +74,15 @@ operations. Its runtime value is the underlying MapLibre map.
   persists across a `dataLayers` reassignment gets its GeoJSON updated in place (`setData()`), one
   that's dropped has its private source/layers removed, and a genuinely new `sourceId` gets new
   resources — nothing leaks on removal, style change, or disconnect.
-- `label: string = ''` — accessible-name fallback for MapLibre's actual focusable canvas. A plain
-  host `aria-label` takes precedence over `label`; with neither set, the canvas uses the localized
-  `'map'` message. The non-semantic `[part="base"]` wrapper is not named instead.
+- `label: string = ''` — purpose-specific accessible name for MapLibre's actual focusable canvas.
+  A nonempty host `aria-label` remains on the host and is not duplicated onto the canvas; the canvas
+  uses `label` or the localized map name. An explicitly empty host `aria-label` is preserved as an
+  empty canvas name. The non-semantic `[part="base"]` wrapper is not named instead.
+
+**Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
+`LyraMapGeoJsonDataLayer`, `LyraMapMarker`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
+The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
+in v9 rather than retained as aliases.
 
 **Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
 through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and
@@ -84,11 +101,19 @@ exists and was hit)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `popup-close-button`, `error`.
-`popup-close-button` is the MapLibre-generated close control on an open marker popup. `error` is
-ordinary localized visible text rendered in place of `container` if the optional `maplibre-gl` peer
-dependency fails to load, e.g. not installed. The post-mount failure is appended to the document's
-pre-mounted `[data-lr-live-region="assertive"]` sink rather than making shadow chrome live.
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-limit`, `marker`, `popup`,
+`popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `error`.
+`legend` is a localized `role="group"` containing a real list associated to the map canvas with
+`aria-describedby`; each entry is a `listitem`, decorative swatches are inert/accessibility-hidden,
+and the overlay is bounded to the map allocation with scrolling and long-label wrapping.
+`legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
+stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
+`marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic
+content size. `popup-close-button` is the generated close control on an open marker popup. `error` is ordinary localized visible
+text rendered in place of `container` for four distinct states: explicit style required, optional
+peer unavailable, owner-realm WebGL2 unavailable, or initialization failed. A post-mount failure is
+appended to the document's pre-mounted `[data-lr-live-region="assertive"]` sink rather than making
+shadow chrome live; raw caught errors are never exposed.
 
 **Themeable custom properties:**
 - `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
@@ -119,13 +144,17 @@ Vite with v6:
   setWorkerUrl(workerUrl);
 
   const m = document.querySelector('lr-map');
+  m.mapStyle = { version: 8, sources: {}, layers: [] }; // explicit, network-silent baseline
   m.choropleth = {
     sourceId: 'regions',
     geojson: myGeoJson,
     field: 'value',
     stops: [[0, '#cde2fb'], [100, '#0969da']],
   };
-  m.legend = [{ color: '#cde2fb', label: 'Low' }, { color: '#0969da', label: 'High' }];
+  m.legend = [
+    { color: '#cde2fb', label: 'Low', pattern: 'solid' },
+    { color: '#0969da', label: 'High', pattern: 'diagonal' },
+  ];
   m.markers = [{ lngLat: [2.29, 48.86], label: 'Eiffel Tower' }];
   m.addEventListener('lr-map-click', (e) => console.log(e.detail.feature?.properties));
 </script>
@@ -136,6 +165,12 @@ installation guide for the matching setup:
 https://maplibre.org/maplibre-gl-js/docs/#esm.
 
 **Known gotchas:**
+- Construction is transactional. A constructor/setup/get-canvas failure removes any partially
+  created peer instance, renders only the localized initialization failure, and can retry after a
+  new style or reconnect without an unhandled promise rejection. Capability probes and error
+  constructors come from the current owner document, including after same-origin adoption.
+- A marker with a popup handles Space at its focus boundary: one activation toggles the peer popup
+  and suppresses the page-scroll default. Markers without a popup do not consume Space.
 - clearing or swapping the choropleth no longer leaks the old layer: setting `choropleth =
   undefined`, or changing `choropleth.sourceId` to a different value, now calls `removeLayer`/
   `removeSource` on whatever was previously applied before adding the new one (or nothing, if
@@ -147,8 +182,9 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
 - Point markers now have a declarative API (`markers`, above) with popup support — narrowing the
   runtime `.map` value and manually constructing `new maplibregl.Marker()` are no longer the only
   way to place pins.
-- A marker uses `label` as its accessible name, falling back to the localized map label. Popup
-  ownership is exposed through `aria-controls`/`aria-expanded`; an open popup is a named
+- A marker uses `label` as its accessible name, then visible text extracted from trusted
+  `unsafeHtml`, and only then the localized map label. Popup ownership is exposed through
+  `aria-controls`/`aria-expanded`; an open popup is a named
   `role="dialog"` and its localized close button exposes `part="popup-close-button"`. The map
   canvas, markers, popups, and MapLibre's own control strings all follow the component's effective
   locale.
@@ -163,12 +199,13 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   only fires the event, no built-in visual feedback. Popups are still only reachable declaratively
   through `markers`' `unsafeHtml`/`label` — a choropleth-feature click still has no built-in popup,
   only the raw `lr-map-click` event.
-- `LegendEntry.color` is validated against a strict CSS-color-syntax allowlist before being applied
-  to the legend swatch's `background`, rejecting anything that isn't recognizable color syntax
+- `LyraMapLegendEntry.color` is validated against a strict CSS-color-syntax allowlist before being applied
+  to the legend swatch's `background-color`, rejecting anything that isn't recognizable color syntax
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
-  swatch renders).
+  swatch renders). The required `pattern` remains distinct in forced colors through solid, dashed,
+  dotted, and double border/shape encodings.
 - while the `maplibre-gl` peer is resolving, the host/base expose `aria-busy="true"` and show a
-  decorative `<lr-skeleton variant="rect" announce="false">` in place of the map container.
+  decorative `<lr-skeleton shape="rect" announce="false">` in place of the map container.
   Ordinary sr-only text preserves the localized `loading` label without creating a shadow live
   region.
 - construction of the real `maplibregl.Map` (and its WebGL context) is additionally gated on this

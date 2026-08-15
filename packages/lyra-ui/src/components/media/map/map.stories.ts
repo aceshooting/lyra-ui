@@ -63,7 +63,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Requires an explicit `mapStyle`; the deterministic default story uses a network-silent inlined raster tile, while the opt-in live story demonstrates OpenStreetMap tiles.',
+          'Requires an explicit `mapStyle`; the deterministic default story uses a network-silent inlined raster tile, while the opt-in live story demonstrates OpenStreetMap tiles. Peer/custom markers retain a 24px minimum target in both axes even without intrinsic content size.',
       },
     },
   },

@@ -490,7 +490,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   }
 
   private readLabelSlotText(assigned: readonly Element[]): string | undefined {
-    return composedAccessibilityText(assigned).replace(/\s+/g, " ").trim() || undefined;
+    return (
+      composedAccessibilityText(assigned).replace(/\s+/g, " ").trim() || undefined
+    );
   }
 
   private resetLabelSlotObserver(): void {

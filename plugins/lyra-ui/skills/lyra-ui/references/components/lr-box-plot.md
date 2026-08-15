@@ -6,9 +6,11 @@
 - **Class** `LyraBoxPlot`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
-- **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 11 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Deprecated property** `accessibleDescription` / `accessible-description` since `8.2.3`; use property `description="…"`; removal not before `10.0.0` — description follows the mirrored chart vocabulary while accessibleDescription remains a compatibility alias.
+- **Deprecated property** `accessibleLabel` / `accessible-label` since `8.2.3`; use property `label="…"`; removal not before `10.0.0` — label follows the mirrored chart vocabulary while accessibleLabel remains a compatibility alias.
+- **Deprecated property** `boxes` since `8.2.3`; use property `.datasets = […]`; removal not before `10.0.0` — datasets follows the chart-family vocabulary while boxes remains a compatibility alias over the same immutable data.
+- **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
+- **Themeable via** 11 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,8 +22,11 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 
 **Properties:**
 - `labels: string[] = []` (attribute: false)
-- `boxes: BoxPlotSeries[] = []` (attribute: false) — `BoxPlotSeries { label: string; data:
-  BoxPlotPoint[]; color?: string }`, `BoxPlotPoint { min, q1, median, q3, max }`
+- `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly
+  `LyraBoxPlotSummary { min, q1, median, q3, max }` values. `boxes`, `BoxPlotSeries`, and
+  `BoxPlotPoint` remain deprecated migration aliases. Summaries must be finite and ordered
+  `min <= q1 <= median <= q3 <= max`; invalid entries are omitted and caller objects are never
+  passed to the mutating peer.
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled visibility snapshot
   for the DOM legend. `undefined` leaves every box series visible; `[]` likewise explicitly makes
   every series visible, while a defined canonical list of zero-based indexes hides those series.
@@ -29,22 +34,28 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
   write their complete next snapshot back to this property; programmatic writes reconcile silently.
 - `legend: boolean = false` — renders a wrapping DOM legend whose buttons toggle box-series
   visibility without clipping long labels.
+- `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical,
+  responsive DOM legend placement
 - `height: string = '280px'` — valid CSS height used as a private fallback only. A consumer-set
   `--lr-chart-height` always wins; invalid values remove the fallback and leave the public
   token/default in control.
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — canvas name override; host
-  `aria-label` wins
-- `accessibleDescription: string = ''` (attribute `accessible-description`) — overrides the
-  localized five-number summary
+- `label: string | null = null`, `description: string | null = null` — canonical accessible name
+  and description; host `aria-label` wins by presence, including an explicit empty string. The
+  `accessibleLabel` (attribute `accessible-label`) and `accessibleDescription` (attribute
+  `accessible-description`) remain nullable deprecated aliases with the same explicit-empty behavior
+- `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
+  tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
 
-**Methods:** `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme
+**Methods:** `exportData('csv'|'png')` returns spreadsheet-safe summary rows or the current canvas
+PNG data URL. `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme
 change. Canvas work remains connected/visible-gated, while a rendered DOM legend also refreshes
 its computed color swatches.
 
-**Events:** `lr-point-click`, `lr-before-legend-visibility-change` (cancelable proposed legend
+**Events:** `lr-datum-activate` (canonical detail with `kind: 'box'`), `lr-point-click`
+(compatibility), `lr-before-legend-visibility-change` (cancelable proposed legend
 toggle) and `lr-legend-visibility-change` (accepted commit). The two legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`, where
 `hiddenDatasets` is the complete sorted, valid next snapshot. Calling `preventDefault()` on the
@@ -52,9 +63,9 @@ proposal leaves state untouched and suppresses the commit event.
 
 `lr-point-click` fires when pointer input lands on a box, or when Enter/Space activates the
 keyboard-current box — the same event name and role `lr-chart` and `lr-lite-chart` expose. Its
-`detail` is `{ datasetIndex: number, index: number, label: string | undefined, value: BoxPlotPoint |
+`detail` is `{ datasetIndex: number, index: number, label: string | undefined, value: LyraBoxPlotSummary |
 null }`, where `value` is a fresh copy of that box's five-number summary (never the object you
-passed in `boxes`, which the underlying peer annotates in place). A pointer click that misses every
+passed in `datasets`, which the underlying peer may annotate in place). A pointer click that misses every
 box emits nothing rather than reporting the nearest one.
 
 **Per-box keyboard access:** the `canvas` part is a focusable `role="application"` surface.
@@ -90,7 +101,9 @@ that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` 
 so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-pattern-step`
 (default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
-hover outline — both the same tokens, with the same defaults, as `lr-chart`.
+hover outline, `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
+pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
+`lr-chart`.
 
 **Forced colors:** under `forced-colors: active` the eight-color ramp is remapped onto the small
 repeating system-color cycle the platform exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise
@@ -99,15 +112,15 @@ swatch carries the matching CSS texture — the same eight-way encoding `lr-char
 repeated colors. Box-and-whisker elements expose no border-dash or point-style option, so texture is
 the only channel here; nothing is opt-in and no author color is substituted.
 
-**Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` plus `chart.js`; Chart.js is obtained
-through the same cached `chart-loader.ts` used by `lr-chart`.
+**Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` plus `chart.js`; both validated capability
+loads are memoized per page.
 
 ```html
 <lr-box-plot y-label="Latency (ms)"></lr-box-plot>
 <script>
   const bp = document.querySelector('lr-box-plot');
   bp.labels = ['Run A', 'Run B'];
-  bp.boxes = [{ label: 'p50–p99', data: [{ min: 10, q1: 20, median: 30, q3: 45, max: 90 }, { min: 12, q1: 18, median: 25, q3: 35, max: 60 }] }];
+  bp.datasets = [{ label: 'p50–p99', data: [{ min: 10, q1: 20, median: 30, q3: 45, max: 90 }, { min: 12, q1: 18, median: 25, q3: 35, max: 60 }] }];
 </script>
 ```
 

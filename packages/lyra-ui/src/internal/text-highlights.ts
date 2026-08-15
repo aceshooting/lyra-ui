@@ -1,7 +1,10 @@
 import type { LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
+import { TEXT_QUOTE_LIMITS } from './text-quote.js';
 
 const TONE_NAMES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
 const DEFAULT_FLASH_MS = 1800; // mirrors --lr-transition-ambient's default duration (see tokens.styles.ts)
+/** The fallback mutates the DOM once per retained Range, so it shares the viewer search paint cap. */
+const FALLBACK_RANGE_LIMIT = 200;
 
 /** Minimal shape of the CSS Custom Highlight API's `Highlight` this module needs -- declared locally
  *  (not as a global augmentation) since this toolchain's DOM lib typings don't yet include it. */
@@ -132,6 +135,16 @@ function splitTextNodeAtRange(range: Range, textNode: Text): Text {
   return target;
 }
 
+function nextNodeWithin(node: Node, root: Node): Node | null {
+  if (node.firstChild) return node.firstChild;
+  let cursor: Node | null = node;
+  while (cursor && cursor !== root) {
+    if (cursor.nextSibling) return cursor.nextSibling;
+    cursor = cursor.parentNode;
+  }
+  return null;
+}
+
 /** Wraps the text covered by `range` in one or more `<mark>` elements. `name` is the highlight's
  *  identity (`lr-highlight-accent|success|...`, `lr-highlight-active`, or `lr-highlight-flash`)
  *  and is written to `data-lr-highlight-name` -- the fallback-path equivalent of the CSS Custom
@@ -142,13 +155,23 @@ function wrapRangeInMarks(range: Range, name: string, tone: LyraHighlightTone, d
   const ancestor = range.commonAncestorContainer;
   const view = doc.defaultView;
   const textNodeType = view?.Node.TEXT_NODE ?? 3;
-  const showText = view?.NodeFilter.SHOW_TEXT ?? 4;
-  const walkRoot = ancestor.nodeType === textNodeType ? ancestor.parentNode! : ancestor;
-  const walker = doc.createTreeWalker(walkRoot, showText);
   const covered: Text[] = [];
-  let node: Node | null;
-  while ((node = walker.nextNode())) {
-    if (range.intersectsNode(node) && (node as Text).data.length > 0) covered.push(node as Text);
+  let traversed = 0;
+  let inspectedCodeUnits = 0;
+  let node: Node | null = ancestor;
+  while (node && traversed < TEXT_QUOTE_LIMITS.maxTraversalNodes) {
+    traversed++;
+    if (node.nodeType === textNodeType) {
+      const textNode = node as Text;
+      if (inspectedCodeUnits + textNode.data.length > TEXT_QUOTE_LIMITS.maxCorpusCodeUnits) break;
+      inspectedCodeUnits += textNode.data.length;
+      try {
+        if (textNode.data.length > 0 && range.intersectsNode(textNode)) covered.push(textNode);
+      } catch {
+        // A stale host Range is simply unpaintable; keep the fallback fail-closed.
+      }
+    }
+    node = nextNodeWithin(node, ancestor);
   }
   const marks: HTMLElement[] = [];
   for (const textNode of covered) {
@@ -185,7 +208,10 @@ function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
   function paint(name: string, tone: LyraHighlightTone, ranges: Range[]): void {
     clear(name);
     const marks: HTMLElement[] = [];
-    for (const range of ranges) marks.push(...wrapRangeInMarks(range, name, tone, doc));
+    const count = Math.min(ranges.length, FALLBACK_RANGE_LIMIT);
+    for (let index = 0; index < count; index++) {
+      marks.push(...wrapRangeInMarks(ranges[index]!, name, tone, doc));
+    }
     marksByName.set(name, marks);
   }
 

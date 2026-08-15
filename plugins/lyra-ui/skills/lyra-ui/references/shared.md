@@ -25,13 +25,15 @@ experimental public APIs.
 Three members whose recorded removal window had genuinely opened were removed normally
 (`lr-tool-call-chip`/`lr-message-parts`' `lr-tool-chip-select`, and `lr-flow-canvas`'
 `--lr-flow-canvas-node-current-outline-color`). Alongside them, a small set of members that had
-*never* been deprecated were renamed and their old spellings removed in the same release, without the
+_never_ been deprecated were renamed and their old spellings removed in the same release, without the
 customary M+1 warning period — `lr-usage-badge`'s `compact`, `lr-chart`'s `horizontal`,
-`lr-rag-answer`/`lr-retrieval-results`' `error`, `lr-ingestion-queue`'s `virtualizeThreshold`,
+`lr-rag-answer`/`lr-retrieval-results`' `error`, `lr-ingestion-queue`'s
+`virtualizeThreshold` → `virtualizeAt`,
 `lr-knowledge-base`'s `lr-kb-*` events, `lr-data-grid`'s `columns`/`filename` option fields, and
-`lr-test-results`' two legacy detail-slot spellings. Every one has a mechanical one-token migration,
-listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward the M+2 rule applies as
-written; treat the above as a documented exception, not a precedent.
+`lr-test-results`' two legacy detail-slot spellings, plus the component-specific
+`LyraModelCatalog`/`LyraVoiceCatalog` aliases in favor of the shared `LyraCatalog<T>`. Every one has
+a mechanical migration listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward
+the M+2 rule applies as written; treat the above as a documented exception, not a precedent.
 
 ### The support window
 
@@ -53,8 +55,8 @@ Every component has a stable, tag-shaped side-effect entry point that registers 
 `components/<tag>.js`; this public boundary stays unchanged if the internal family folders move:
 
 ```js
-import '@aceshooting/lyra-ui/components/lr-combobox.js'; // registers <lr-combobox>
-import '@aceshooting/lyra-ui/components/lr-table.js';    // registers <lr-table>
+import "@aceshooting/lyra-ui/components/lr-combobox.js"; // registers <lr-combobox>
+import "@aceshooting/lyra-ui/components/lr-table.js"; // registers <lr-table>
 ```
 
 The older family-shaped registration paths remain supported for compatibility. Class-only
@@ -64,13 +66,13 @@ organization and do not register a tag.
 Principal v8 and compatibility registrations use the same exact shape:
 
 ```js
-import '@aceshooting/lyra-ui/components/lr-page.js';
-import '@aceshooting/lyra-ui/components/lr-video.js';
-import '@aceshooting/lyra-ui/components/lr-video-playlist.js';
-import '@aceshooting/lyra-ui/components/lr-native-time-input.js';
-import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';
-import '@aceshooting/lyra-ui/components/lr-split-panel.js';
-import '@aceshooting/lyra-ui/components/lr-alert.js';
+import "@aceshooting/lyra-ui/components/lr-page.js";
+import "@aceshooting/lyra-ui/components/lr-video.js";
+import "@aceshooting/lyra-ui/components/lr-video-playlist.js";
+import "@aceshooting/lyra-ui/components/lr-native-time-input.js";
+import "@aceshooting/lyra-ui/components/lr-pan-zoom.js";
+import "@aceshooting/lyra-ui/components/lr-split-panel.js";
+import "@aceshooting/lyra-ui/components/lr-alert.js";
 ```
 
 `llms/index.md` lists every tag and its owning implementation module. The stable tag-shaped alias
@@ -84,22 +86,22 @@ its eager bundle. The root is now a pure, side-effect-free export surface, and t
 moved to an explicit entry:
 
 ```js
-import '@aceshooting/lyra-ui/all.js'; // exactly the pre-8 root behaviour, opted into by name
+import "@aceshooting/lyra-ui/all.js"; // exactly the pre-8 root behaviour, opted into by name
 ```
 
-*Nothing was removed from the root's named surface.* Every class, helper, and type it exported in
+_Nothing was removed from the root's named surface._ Every class, helper, and type it exported in
 7.x is still exported, from the same specifier; `all.js` re-exports that identical surface, so
 `import { LyraTable } from '@aceshooting/lyra-ui';` and the `@aceshooting/lyra-ui/all.js` form of it
 both keep working. Only the registration side effect changed.
 
-*Migrating.* If a bare `import '@aceshooting/lyra-ui';` (or a bundler entry that relied on it) was
+_Migrating._ If a bare `import '@aceshooting/lyra-ui';` (or a bundler entry that relied on it) was
 how your tags got defined, add the `/all.js` specifier — a one-line change with identical behaviour.
 If instead the root was only ever imported for values or types, delete nothing: those imports now
 cost what they should. The symptom of a missed migration is an unupgraded element — the tag renders
 as an empty inert box with its light DOM visible — not a module error, because the specifier still
 resolves and still hands back everything it used to.
 
-*Granular imports remain the recommendation.* `all.js` is a compatibility and prototyping
+_Granular imports remain the recommendation._ `all.js` is a compatibility and prototyping
 convenience, not the intended production shape: it is side-effectful by definition and cannot be
 tree-shaken down to the handful of elements a page actually renders.
 
@@ -120,15 +122,15 @@ The entry points, then:
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
 - **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 268
-  root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
+  root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
   `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
-  `lr-knowledge-graph-explorer`, and `lr-geojson-view`. Those always need their own subpath import,
+  `lr-knowledge-graph-explorer`, `lr-geojson-view`, and `lr-geojson-viewer`. Those always need their own subpath import,
   from `all.js` exactly as from the root — the entry deliberately preserves the optional-peer
   isolation contract rather than putting `chart.js`, `maplibre-gl`, or the `d3-*` set on the
   critical path of every install. It is the one import that defeats tree-shaking.
-  (Server-side, `@aceshooting/lyra-ui/ssr/all.js` is the counterpart that *does* register the
+  (Server-side, `@aceshooting/lyra-ui/ssr/all.js` is the counterpart that _does_ register the
   complete inventory, optional-peer families included; see "SSR and declarative shadow DOM".)
 - **Document anchor/highlight types.** The granular document-viewer entry owns and exports
   `LyraAnchor`, `LyraAnchorKind`, `LyraHighlight`, `LyraHighlightTone`,
@@ -140,7 +142,7 @@ The entry points, then:
     LyraAnchor,
     LyraHighlight,
     AnchorTargetCapabilities,
-  } from '@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js';
+  } from "@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js";
   ```
   Prefer the granular entry for component-local imports; use the root export when an application
   deliberately shares the contracts across several viewer integrations.
@@ -170,25 +172,35 @@ Importing this entry alone has no side effect and registers nothing.
   Turbo-style replacement subtrees; a later `start()` stops the previous watcher. `stop()` is
   idempotent, disconnects it, invalidates pending definitions, and removes loader-owned markers.
 - The optional root is a `Document`, `DocumentFragment`/open `ShadowRoot`, or `Element`; the default
-  is `document`. Caller-owned open shadow roots are traversed recursively. Each element resolves
+  is `document`. Caller-owned open shadow roots are traversed iteratively. Each element resolves
   against its owning/scoped custom-element registry rather than an unrelated global registry.
+- `maxElements` (default `10_000`), `maxRoots` (`2_000`), `maxDepth` (`256`), and `maxWork`
+  (`100_000`) bound one complete discovery operation. `maxConcurrency` (`16`) bounds concurrent
+  definition and first-update tasks. Invalid limits throw `RangeError`; an initial `discover()` or
+  `start()` preflights its currently rendered tree and rejects a traversal-limit failure before
+  loading it. Newly rendered shadow content remains under the same cumulative ceilings, but a
+  failure found there necessarily follows the parent definition that rendered it.
 - A discovered element carries `data-lr-autoload-pending` until its class is defined and its first
   `updateComplete` settles. The exported `AUTOLOADER_PENDING_ATTRIBUTE` is that exact string. A
   pre-existing consumer-owned marker is never removed by the loader.
-- `{ events: true }` emits bubbling/composed `lr-autoload-preload`, `lr-autoload-loaded`, and
-  `lr-autoload-error` events on the supplied root. Detail is
+- `{ events: true }` emits bubbling/composed `lr-autoload-preload`, `lr-autoload-loaded`,
+  `lr-autoload-error`, and `lr-autoload-traversal-error` events on the supplied root. Detail is
   `{ tag, optionalPeers }`, plus the caught `error` for the error event. `loaded` means the registry
-  definition exists; the pending marker remains authoritative until first render finishes.
+  definition exists; the pending marker remains authoritative until first render finishes. A
+  watched insertion that exceeds a traversal ceiling emits the traversal event with
+  `{ limit, maximum, error }`. A statically over-limit insertion launches no definitions from that
+  insertion; a later failure in its first-update shadow content leaves the already loaded parent
+  intact. Later work can still retry.
 - Optional-peer tags are skipped by default. `optionalPeers: ['dompurify', 'postal-mime']` enables
   a tag only when the allowlist contains **all** packages recorded for it; `optionalPeers: 'all'`
   is for an installation that deliberately provides the entire peer set. A failed import clears
   its marker and in-flight cache, so a later scan or insertion can retry it.
 
 ```ts
-import { start, stop } from '@aceshooting/lyra-ui/autoloader.js';
+import { start, stop } from "@aceshooting/lyra-ui/autoloader.js";
 
 await start(document, {
-  optionalPeers: ['dompurify', 'postal-mime'],
+  optionalPeers: ["dompurify", "postal-mime"],
   events: true,
 });
 // Later, when this application no longer owns the rendered subtree:
@@ -224,9 +236,9 @@ through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` o
   `LyraElement<Events>` declares a typed `addEventListener` overload — so `event.detail` is inferred
   with no cast:
   ```ts
-  import { LyraTable } from '@aceshooting/lyra-ui/components/data/table/table.class.js';
-  const table = document.querySelector('lr-table') as LyraTable;
-  table.addEventListener('lr-sort', (event) => event.detail.key); // typed
+  import { LyraTable } from "@aceshooting/lyra-ui/components/data/table/table.class.js";
+  const table = document.querySelector("lr-table") as LyraTable;
+  table.addEventListener("lr-sort", (event) => event.detail.key); // typed
   ```
 - **`HTMLElementTagNameMap`** is augmented in the `.class.d.ts` files. `document.querySelector('lr-table')`
   is only typed as `LyraTable` when that class module is in the type graph — importing just the
@@ -238,29 +250,32 @@ through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` o
 - **Framework template declarations are opt-in.** Import exactly the declaration entry your
   compiler uses once in its type graph:
   ```ts
-  import type {} from '@aceshooting/lyra-ui/custom-elements-jsx'; // React 19 / JSX
-  import type {} from '@aceshooting/lyra-ui/vue';
-  import type {} from '@aceshooting/lyra-ui/svelte';
+  import type {} from "@aceshooting/lyra-ui/custom-elements-jsx"; // React 19 / JSX
+  import type {} from "@aceshooting/lyra-ui/vue";
+  import type {} from "@aceshooting/lyra-ui/svelte";
   ```
   All three are generated from `custom-elements.json` and type the documented properties,
   attribute aliases, events, element refs, and CSS custom properties. Their emitted JavaScript is
   empty: they are declaration merging, not runtime wrappers, and they do not register any tag.
 - **Delegated, `document` and `window` listeners: `@aceshooting/lyra-ui/events`.** Component events
   bubble and are composed, so they reach ancestors, `document`, and `window` — but a listener
-  attached *there* has no element type to key off and would otherwise receive a bare `Event`. This
+  attached _there_ has no element type to key off and would otherwise receive a bare `Event`. This
   subpath declares `LyraGlobalEventMap` (all generated Lyra event names) and mixes it into
   `GlobalEventHandlersEventMap`, which types `element`, `document` and `window`
   `addEventListener` calls alike:
-  ```ts
-  import '@aceshooting/lyra-ui/events';
 
-  document.addEventListener('lr-sort', (event) => event.detail); // typed on document
+  ```ts
+  import "@aceshooting/lyra-ui/events";
+
+  document.addEventListener("lr-sort", (event) => event.detail); // typed on document
   ```
+
   It is **opt-in**: the augmentation only applies once that import is somewhere in the project's
   type graph, so add it once (a root `main.ts`, or a `.d.ts` in the project's `include`). A direct
   element reference never needs it — `LyraElement` overrides `addEventListener`, so
   `table.addEventListener('lr-sort', …)` resolves through `LyraTableEventMap` first either way.
   `LyraGlobalEventMap` is exported as well, for writing your own typed helper over it.
+
 - **The surface is per-event type aliases, not runtime event classes.** `LyraSortEvent` and its
   generated siblings are `type` aliases over the owning component's own map entry
   (`LyraTableEventMap['lr-sort']`) — there is nothing to `new`, and `instanceof LyraSortEvent` is
@@ -269,13 +284,15 @@ through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` o
   costs zero.
 - **A shared event name narrows to the union of its dispatchers.** One name can come from several
   components with different details — `lr-select` from five, `lr-selection-change` from five — so
-  its global entry is the *union* of their entries, and `event.detail` there exposes only what all
+  its global entry is the _union_ of their entries, and `event.detail` there exposes only what all
   of them share. Index the owning component's own map when you need one component's exact detail:
-  ```ts
-  import type { LyraCommandPaletteEventMap } from '@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js';
 
-  type PaletteSelect = LyraCommandPaletteEventMap['lr-select']; // the precise detail
+  ```ts
+  import type { LyraCommandPaletteEventMap } from "@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js";
+
+  type PaletteSelect = LyraCommandPaletteEventMap["lr-select"]; // the precise detail
   ```
+
   Native-named events some form controls re-emit (`blur`, `change`, `focus`, `input`) are
   deliberately **absent** from the global map — they already exist in the DOM's own event maps with
   their standard types, and redeclaring them globally would widen a built-in. Those stay typed
@@ -338,11 +355,16 @@ activation.
   `:invalid`; `''` clears it. Every value-carrying form-associated control in the library exposes
   it, mixin-based or not.
   ```ts
-  const email = document.querySelector('lr-input')!;
-  email.setCustomValidity('That address is already registered.');
-  form.requestSubmit();          // blocked; the browser reveals this message
-  email.setCustomValidity('');   // cleared
+  const email = document.querySelector("lr-input")!;
+  email.setCustomValidity("That address is already registered.");
+  form.requestSubmit(); // blocked; the browser reveals this message
+  email.setCustomValidity(""); // cleared
   ```
+  The method, reflected `customError` property, and `custom-error` attribute are one atomic state:
+  a non-empty method/property write reflects the same message, while `setCustomValidity('')`,
+  `resetValidity()`, `customError = ''`, or `customError = null` clears validity and removes the
+  attribute. Serialized or cloned markup therefore cannot resurrect a message already cleared at
+  runtime.
   Two behaviors are inherited verbatim from native controls and are the ones worth knowing.
   **Clearing restores computed validity rather than forcing the control valid** — a
   required-and-empty field whose custom error is cleared is still `valueMissing`. And **the custom
@@ -362,15 +384,18 @@ activation.
   invalid control. That is what lets an app render its own error banner from `lr-invalid` without the
   native UI appearing alongside it. Nothing else changes: the control is still invalid, still fails
   `checkValidity()`, and still blocks submission.
+
   ```ts
-  form.addEventListener('lr-invalid', (event) => {
-    event.preventDefault();          // no native bubble, no auto-scroll
+  form.addEventListener("lr-invalid", (event) => {
+    event.preventDefault(); // no native bubble, no auto-scroll
     showMyOwnErrorSummary(event.target as HTMLElement);
   });
   ```
+
   Leave it uncancelled to keep the platform behavior. The listener has to be attached before the
   validity check runs (`lr-invalid` bubbles and composes, so the form or `document` is a fine place);
   a `preventDefault()` after the fact does nothing.
+
 - **Validation anchoring.** An internal controller passes
   `internals.setValidity(flags, message, anchor)` with `anchor` = the first focusable descendant in
   the shadow root (`input:not([type='hidden']), textarea, select, button, [tabindex]:not([tabindex='-1'])`),
@@ -396,7 +421,7 @@ activation.
 ### Enter submits the form
 
 A native `<input>` submits its form owner when the user presses Enter. The `<input>` these controls
-render has no form owner at all — it lives in a shadow tree, and only the *host* element
+render has no form owner at all — it lives in a shadow tree, and only the _host_ element
 participates in the light-DOM `<form>` — so the platform can never run implicit submission for it,
 and Enter in a text field would silently do nothing, which reads as a broken form. Text-entry
 controls implement it themselves, to the platform's rules rather than an approximation of them:
@@ -438,10 +463,10 @@ lr-input:state(user-invalid)::part(input-wrapper) {
 
 Six states, in three pairs:
 
-| State | Matches when |
-| --- | --- |
-| `required` / `optional` | the control's `required` is set / is not set |
-| `valid` / `invalid` | `validity.valid` is `true` / `false` |
+| State                         | Matches when                                           |
+| ----------------------------- | ------------------------------------------------------ |
+| `required` / `optional`       | the control's `required` is set / is not set           |
+| `valid` / `invalid`           | `validity.valid` is `true` / `false`                   |
 | `user-valid` / `user-invalid` | the same, **and** the control has been interacted with |
 
 Exactly one of the first two pairs matches at any moment. The third is the one that differs:
@@ -461,7 +486,7 @@ therefore neither `user-valid` nor `user-invalid`. "Barred" is the platform's ow
 platform's own list: the control's own `disabled`, an ancestor `<fieldset disabled>`, `readonly`
 where the control has it, or anything else that makes `willValidate` false. A native
 `<input required disabled>` matches neither `:valid` nor `:invalid`, and these states match native.
-This matters because the idiomatic rule is written against the *tag*:
+This matters because the idiomatic rule is written against the _tag_:
 
 ```css
 lr-input:state(user-invalid)::part(input-wrapper) {
@@ -489,8 +514,8 @@ A labelled control with `required` set paints a marker after its label text — 
 `--lr-color-danger`. It is **one shared rule**, rendered as an `::after` on the `form-control-label`
 part, so it looks and sits identically on every control that has that part, in every family: the
 labelled form controls, plus `lr-file-input`, `lr-model-select`, `lr-voice-picker`, and
-`lr-tool-param-form`, which marks its *per-field* labels the same way. A control with no
-`form-control-label` part — `lr-checkbox`, `lr-switch`, `lr-radio`, whose default slot *is* the
+`lr-tool-param-form`, which marks its _per-field_ labels the same way. A control with no
+`form-control-label` part — `lr-checkbox`, `lr-switch`, `lr-radio`, whose default slot _is_ the
 visible label — has no label box to hang a marker on and paints none; a control that renders the
 part with no label text set paints none either, so no stray glyph is ever orphaned.
 
@@ -498,22 +523,24 @@ Three custom properties control it. Each is read as an inline `var()` fallback a
 never declared on `:host`, so setting one on **any ancestor** of the control reaches it — and one
 declaration on `:root` retunes every marker in the application at once:
 
-| Property | Default | What it does |
-| --- | --- | --- |
-| `--lr-form-control-required-content` | `' *'` | The marker itself, as a CSS `content` string. Must be *quoted*. |
-| `--lr-form-control-required-color` | `var(--lr-color-danger)` | The marker's colour, independent of every other danger surface. |
-| `--lr-form-control-required-offset` | `0` | Inline space between the label text and the marker (a logical `margin-inline-start`, so it flips under RTL). |
+| Property                             | Default                  | What it does                                                                                                 |
+| ------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `--lr-form-control-required-content` | `' *'`                   | The marker itself, as a CSS `content` string. Must be _quoted_.                                              |
+| `--lr-form-control-required-color`   | `var(--lr-color-danger)` | The marker's colour, independent of every other danger surface.                                              |
+| `--lr-form-control-required-offset`  | `0`                      | Inline space between the label text and the marker (a logical `margin-inline-start`, so it flips under RTL). |
 
 ```css
 /* mark the requirement in words, in the page's language */
 :root {
-  --lr-form-control-required-content: ' (required)';
+  --lr-form-control-required-content: " (required)";
   --lr-form-control-required-color: var(--lr-color-text-quiet);
   --lr-form-control-required-offset: var(--lr-space-2xs);
 }
 
 /* or suppress the marker entirely and rely on your own label copy */
-lr-input.no-marker { --lr-form-control-required-content: ''; }
+lr-input.no-marker {
+  --lr-form-control-required-content: "";
+}
 ```
 
 Three things follow from `content` being a consumer-supplied string:
@@ -546,7 +573,7 @@ defaults to; the meanings are fixed here.
   - `filled-outlined` — both, for a control that must read as bounded on a busy surface
   - `plain` — neither; text and icon only
 - **`frame` — how a container draws its own bounds.** `card | plain`: a bounded, elevated card, or
-  dissolved into the surrounding layout. This is a *separate* property from `appearance` on
+  dissolved into the surrounding layout. This is a _separate_ property from `appearance` on
   purpose — the two used to share one name for two unrelated jobs, so `appearance="plain"` meant
   "no fill" on a control and "no card chrome" on a panel.
 - **`size` — one ladder: `2xs | xs | s | m | l | xl`, defaulting to `m`.** `small`/`medium`/`large`
@@ -563,11 +590,11 @@ without touching a component.
 
 These are exported TypeScript **type aliases**, never `enum`s: an `enum` is nominal, so
 `el.variant = 'brand'` would stop type-checking, and it emits a runtime object that costs bytes in a
-library whose delivery promise is tree-shaking. Each component re-exports the vocabulary it accepts
-under a local alias from its own class module (`ButtonVariant`, `MediaCardFrame`, …), so a consumer
-never needs a separate types import.
+library whose delivery promise is tree-shaking. Each component's class module re-exports the exact
+vocabulary it accepts (for example, `ButtonVariant` or the shared `LyraFrame`), so a consumer never
+needs a separate types import.
 
-A small number of components use `variant` for a rendering *mode* rather than a tone — the shape a
+A small number of components use `variant` for a rendering _mode_ rather than a tone — the shape a
 visualizer draws, the skeleton a placeholder mimics. Those unions are component-specific and are
 spelled out in that component's own section; the tone vocabulary above is what `variant` means
 everywhere a tone is what the property is for.
@@ -593,7 +620,7 @@ Colour has two layers beneath the `--lr-*` tokens you normally read.
 **The ramp — `--lr-ramp-<variant>-<step>`.** Five variants (`brand`, `success`, `warning`,
 `danger`, `neutral`) × eleven steps (`05 10 20 30 40 50 60 70 80 90 95`). The step number is
 approximate perceptual lightness: `-05` is nearly black, `-95` nearly white, `-50` the mid tone. The
-ramp is generated in OKLCH, so the same step number reads as the same *apparent* lightness across
+ramp is generated in OKLCH, so the same step number reads as the same _apparent_ lightness across
 every variant — which is what makes the grid above it predictable rather than 45 separate
 decisions.
 
@@ -603,11 +630,11 @@ on white and unreadable on a dark surface, so a rule written against it looks co
 switches modes. And the ramp carries no `--lr-theme-*` hook and is re-declared on every `lr-*`
 element's own `:host`, so a `:root { --lr-ramp-brand-50: … }` in an application stylesheet is
 shadowed at the first component it reaches and changes nothing at all. Read the grid instead; it
-picks the right step per mode for you, and it is the layer that *is* overridable.
+picks the right step per mode for you, and it is the layer that _is_ overridable.
 
 **The grid — `--lr-color-<variant>-<role>-<emphasis>`.** `{brand|success|warning|danger|neutral}` ×
 `{fill|border|on}` × `{quiet|normal|loud}` = 45 slots. This is the layer components consume and the
-layer to build on. Its *shape* is identical in light and dark; only which ramp step each slot
+layer to build on. Its _shape_ is identical in light and dark; only which ramp step each slot
 resolves to changes, so a rule written against it is mode-independent for free.
 
 - `fill` — a background. `on` — text and icons that sit **on** the matching `fill`. `border` — an
@@ -616,7 +643,7 @@ resolves to changes, so a rule written against it is mode-independent for free.
   light mode it descends the ramp and in dark mode it climbs it.
 
 **The contrast guarantee is what makes the grid usable without thinking.** For every variant, in
-both modes: `on-<e>` clears WCAG 1.4.3's 4.5:1 against `fill-<e>` at the *same* emphasis — so
+both modes: `on-<e>` clears WCAG 1.4.3's 4.5:1 against `fill-<e>` at the _same_ emphasis — so
 `background: var(--lr-color-danger-fill-loud); color: var(--lr-color-danger-on-loud)` is legible by
 construction, and no other pairing is promised. `border-normal` and `border-loud` clear 1.4.11's
 3:1 against the page surface, so a control's visible bounds are always discernible. `border-quiet`
@@ -629,7 +656,9 @@ rethemed without forking anything beneath it:
 
 ```css
 /* Both the grid slot and the flat alias below now resolve to this. */
-.invoice-panel { --lr-theme-color-brand-fill-loud: #7c3aed; }
+.invoice-panel {
+  --lr-theme-color-brand-fill-loud: #7c3aed;
+}
 ```
 
 The full chain for one colour is therefore: your `--lr-theme-*` input, else the grid slot's default,
@@ -678,7 +707,7 @@ Two knobs plus a partner colour describe every hover and press in the library:
 **Hover and press are a colour mix, not a brightness filter.** The distinction is the whole design:
 `filter: brightness()` multiplies every channel, so it lightens a dark control and darkens a light
 one only by coincidence, does nothing whatsoever to a pure white or pure black fill, and — because a
-filter applies to the element *and its descendants* — drags the control's text and icons along with
+filter applies to the element _and its descendants_ — drags the control's text and icons along with
 its background. Mixing toward a partner colour has none of those properties: it is defined on the
 fill alone, it always moves, and it moves in the direction the surface actually needs.
 
@@ -694,7 +723,7 @@ background: color-mix(
 );
 ```
 
-where the first argument is the colour the surface moves *away from* — the fill that tier actually
+where the first argument is the colour the surface moves _away from_ — the fill that tier actually
 paints. A chrome-less tier (outlined, plain, link) paints no fill of its own and mixes from the page
 surface it sits on instead, which is why hovering one still moves.
 
@@ -707,12 +736,12 @@ override the follow-the-text behaviour where a surface needs a fixed direction.
 
 Five shadow steps, so elevation carries information instead of one shadow serving every surface:
 
-| Token | For |
-| --- | --- |
-| `--lr-shadow-xs` | a raised affordance inside a control — a segmented control's selected thumb |
-| `--lr-shadow-s` | a small floating handle or a card lifted off the page — slider thumb, stat card |
-| `--lr-shadow-m` | an anchored, transient surface — menus, dropdowns, popovers, tooltips |
-| `--lr-shadow-l` | a persistent panel that owns its own region — dialog, drawer, toast, app rail |
+| Token            | For                                                                              |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `--lr-shadow-xs` | a raised affordance inside a control — a segmented control's selected thumb      |
+| `--lr-shadow-s`  | a small floating handle or a card lifted off the page — slider thumb, stat card  |
+| `--lr-shadow-m`  | an anchored, transient surface — menus, dropdowns, popovers, tooltips            |
+| `--lr-shadow-l`  | a persistent panel that owns its own region — dialog, drawer, toast, app rail    |
 | `--lr-shadow-xl` | the topmost surface on screen — command palette, fullscreen widget, tool dialogs |
 
 `--lr-shadow` is an alias for `--lr-shadow-m`.
@@ -720,15 +749,17 @@ Five shadow steps, so elevation carries information instead of one shadow servin
 **The steps are mode-aware, and that is not cosmetic.** Elevation is a luminance difference, and a
 12%-alpha black shadow against a near-black surface is not one — so in dark mode the alphas roughly
 triple and the geometry of the two largest steps grows, because a wider, softer shadow is what still
-reads as depth when the surface underneath is already dark. The shadow *colour* is its own token,
+reads as depth when the surface underneath is already dark. The shadow _colour_ is its own token,
 `--lr-shadow-color` (a bare `R G B` triple, not a full colour, so each step can apply its own
 alpha), which lets a theme tint every shadow in the library from one place:
 
 ```css
-:root { --lr-theme-shadow-color: 30 27 75; } /* every step now casts an indigo shadow */
+:root {
+  --lr-theme-shadow-color: 30 27 75;
+} /* every step now casts an indigo shadow */
 ```
 
-Reach for the tier that matches what the surface *is*, not the one that happens to look right on the
+Reach for the tier that matches what the surface _is_, not the one that happens to look right on the
 page you are on — that is what keeps two overlapping surfaces reading in the correct order.
 
 ### Cascade layers
@@ -747,10 +778,10 @@ page you are on — that is what keeps two overlapping surfaces reading in the c
 - **`lr-overrides`** — named so an application can opt its own rules into a defined position
   relative to Lyra's rather than inventing one.
 
-**The consequence, stated plainly: any *unlayered* declaration you write beats *every* layered one,
+**The consequence, stated plainly: any _unlayered_ declaration you write beats _every_ layered one,
 whatever its specificity and whatever the load order.** So a plain
 `:root { --lr-theme-color-brand-fill-loud: … }` in your own stylesheet wins even when your file is
-loaded *before* `theme.css`, and it needs no `!important` and no extra specificity. That is the
+loaded _before_ `theme.css`, and it needs no `!important` and no extra specificity. That is the
 point of layering the theme at all: before this, `theme.css` declared its tokens unlayered at
 `:root` — specificity (0,1,0), identical to a consumer's own `:root` rule — so whether your
 override won came down to which stylesheet the bundler, the `<link>` and the `@import` happened to
@@ -761,12 +792,14 @@ To place your overrides deliberately rather than relying on being unlayered:
 
 ```css
 @layer lr-overrides {
-  :root { --lr-theme-color-brand-fill-loud: #7c3aed; }
+  :root {
+    --lr-theme-color-brand-fill-loud: #7c3aed;
+  }
 }
 ```
 
 **Breaking in 8.0.0 — if you wrapped your Lyra overrides in a layer of your own, re-check them.**
-That rule used to be compared against an *unlayered* `theme.css`, which meant it lost
+That rule used to be compared against an _unlayered_ `theme.css`, which meant it lost
 unconditionally, whatever its specificity. Now both sides are layered, so the winner is decided by
 **layer order** — and layer order is fixed by whichever name the browser saw first. Import
 `theme.css` before your own `@layer` statement and your layer sorts after Lyra's and wins; declare
@@ -777,12 +810,16 @@ looking wrong. Two fixes, either is fine:
 ```css
 /* 1. Unlayer them — an unlayered rule outranks all four Lyra layers unconditionally,
       whatever the load order. This is the one that cannot be broken by an import move. */
-:root { --lr-theme-color-brand-fill-loud: #7c3aed; }
+:root {
+  --lr-theme-color-brand-fill-loud: #7c3aed;
+}
 
 /* 2. Or keep your layer and pin it after Lyra's, once, before anything else loads. */
 @layer lr-base, lr-theme, lr-utilities, lr-overrides, app-theme;
 @layer app-theme {
-  :root { --lr-theme-color-brand-fill-loud: #7c3aed; }
+  :root {
+    --lr-theme-color-brand-fill-loud: #7c3aed;
+  }
 }
 ```
 
@@ -805,10 +842,14 @@ direct children.
 
 ```css
 /* Reaches everything in the subtree, however deeply nested. */
-.invoice-panel { --lr-theme-color-brand-fill-loud: #7c3aed; }
+.invoice-panel {
+  --lr-theme-color-brand-fill-loud: #7c3aed;
+}
 
 /* Reaches direct lr-* children only — shadowed at the first nested lr-* host. */
-.invoice-panel { --lr-color-brand: #7c3aed; }
+.invoice-panel {
+  --lr-color-brand: #7c3aed;
+}
 ```
 
 Layer 3 is the exception that proves the rule: a handful of `--lr-<component>-*` escape hatches are
@@ -827,10 +868,10 @@ passes just as happily when the token is being shadowed at a nested host. Verify
 `getComputedStyle` on the real element in the real state, and perturb the value deliberately to
 confirm the assertion actually bites.
 
-The same trap has a second form inside a component's own styles: a *declared* value always wins
+The same trap has a second form inside a component's own styles: a _declared_ value always wins
 over a `var()` fallback arm, and `auto` is a declared value. That is why the exact-height escape
 hatches (`--lr-input-control-height`, `--lr-select-trigger-height`, `--lr-chip-height`, …) are
-undeclared by default rather than set to `auto`. Setting one *to* `auto` is therefore not the same
+undeclared by default rather than set to `auto`. Setting one _to_ `auto` is therefore not the same
 as leaving it alone: it wins over the fallback arm and makes the per-size minimum-height floor dead
 code. See each control's own reference page for its exact pair.
 
@@ -839,11 +880,11 @@ code. See each control's own reference page for its exact pair.
 - **`--lr-theme-icon-button-size`** (default `2.5rem`) backs `--lr-icon-button-size`, the tappable
   box of **every** icon-only control in the library — `lr-icon-button` itself, and the
   expand/clear/toggle affordances inside `lr-date-input`, `lr-combobox`, `lr-input`, and
-  `lr-select`. It is a *floor*, not a fixed size. Keep the resolved value **at or above 24px**
+  `lr-select`. It is a _floor_, not a fixed size. Keep the resolved value **at or above 24px**
   (WCAG 2.2 SC 2.5.8 target size); the default leaves headroom. Lowering it below that shrinks
   every affordance in the library at once.
 - **Aligning your own content next to a checkbox or radio.** `--lr-checkbox-label-indent` /
-  `--lr-radio-label-indent` publish the label offset, but custom properties inherit *down*, not
+  `--lr-radio-label-indent` publish the label offset, but custom properties inherit _down_, not
   sideways, so a sibling node in your tree cannot read them off the control. Compute the same
   formula from the `--lr-theme-*` inputs you control:
   ```css
@@ -857,8 +898,10 @@ fallback for themeable tokens, and the resolved alias, ramp, or fixed value for 
 consult it rather than guessing a token name.
 
 ```css
-@import '@aceshooting/lyra-ui/theme.css'; /* optional ready-made light + dark base */
-:root { --lr-theme-color-brand-fill-loud: #7c3aed; }
+@import "@aceshooting/lyra-ui/theme.css"; /* optional ready-made light + dark base */
+:root {
+  --lr-theme-color-brand-fill-loud: #7c3aed;
+}
 ```
 
 With `theme.css` imported, switch modes by putting `class="lr-light"`/`class="lr-dark"` (or
@@ -872,11 +915,11 @@ dark palette. Two things switch that fallback off:
   surface/text/border defaults — does too, so `<lr-card data-lr-theme="light">` on a dark machine is
   light throughout rather than light chrome over a dark colour grid. The mirror-image
   `data-lr-theme="dark"` pins dark on a light machine the same way, and a `.lr-dark` /
-  `data-lr-theme="dark"` *ancestor* is followed as well (through `:host-context()` where the engine
+  `data-lr-theme="dark"` _ancestor_ is followed as well (through `:host-context()` where the engine
   has it, and through `theme.css`'s inheriting custom properties everywhere else).
 
-Note the asymmetry: the *light* pin is read on the component itself (`:host([data-lr-theme='light'])`),
-while a *dark* ancestor is followed through `:host-context()`. Putting `data-lr-theme="light"` on
+Note the asymmetry: the _light_ pin is read on the component itself (`:host([data-lr-theme='light'])`),
+while a _dark_ ancestor is followed through `:host-context()`. Putting `data-lr-theme="light"` on
 `<html>` — what `theme.js`'s `setLyraTheme({ mode: 'light' })` does — pins the page through
 `theme.css`'s real `--lr-theme-*` values, which inherit into every shadow root. Without `theme.css`
 there are no such values to inherit, so put the attribute on the components you actually need
@@ -894,13 +937,13 @@ side effects on import**, so an app can persist and apply a theme without pullin
 graph into its first-paint bundle.
 
 ```ts
-import { setLyraTheme, getLyraTheme } from '@aceshooting/lyra-ui/theme.js';
+import { setLyraTheme, getLyraTheme } from "@aceshooting/lyra-ui/theme.js";
 
-setLyraTheme({ mode: 'dark' });                  // unspecified fields keep their current value
-setLyraTheme({ accent: '#7c3aed' });             // mode stays 'dark'
-getLyraTheme();                                  // → { mode: 'dark', accent: '#7c3aed' }
-setLyraTheme({ mode: 'auto' });                  // follows the OS, including later changes
-setLyraTheme({ mode: 'unset', accent: null });   // removes Lyra's override and accent
+setLyraTheme({ mode: "dark" }); // unspecified fields keep their current value
+setLyraTheme({ accent: "#7c3aed" }); // mode stays 'dark'
+getLyraTheme(); // → { mode: 'dark', accent: '#7c3aed' }
+setLyraTheme({ mode: "auto" }); // follows the OS, including later changes
+setLyraTheme({ mode: "unset", accent: null }); // removes Lyra's override and accent
 ```
 
 - **`setLyraTheme({ mode?, accent? })`** persists to `localStorage['lyra-theme']`, applies to
@@ -946,18 +989,24 @@ runtime when the preset is applied:
 import {
   applyLyraThemePreset,
   defineLyraThemePreset,
-} from '@aceshooting/lyra-ui/theme/presets.js';
+} from "@aceshooting/lyra-ui/theme/presets.js";
 
-applyLyraThemePreset('sapphire');
-applyLyraThemePreset(defineLyraThemePreset({
-  id: 'application-ocean',
-  theme: { mode: 'dark', accent: '#22d3ee' },
-}));
+applyLyraThemePreset("sapphire");
+applyLyraThemePreset(
+  defineLyraThemePreset({
+    id: "application-ocean",
+    theme: { mode: "dark", accent: "#22d3ee" },
+  })
+);
 ```
 
-Applying a preset uses the production runtime, reflects the id to `data-lr-theme-preset`, and emits
-`lr-theme-preset-change` on `window` with `{ id, theme }`. A direct `setLyraTheme()` call removes
-the preset marker because the resulting state is no longer exactly that named preset.
+Applying a preset uses the production runtime. When every explicitly requested field survives its
+runtime validation, Lyra reflects the id to `data-lr-theme-preset` and emits
+`lr-theme-preset-change` on `window` with `{ id, theme }`, where `theme` is the complete applied
+snapshot. If runtime validation changes a field (for example, an invalid accent fails closed to
+`null`), only the ordinary `lr-theme-change` event is emitted and no preset marker is written,
+because the resulting state is not exactly that named preset. A direct `setLyraTheme()` call also
+removes the preset marker.
 
 **No-flash bootstrap.** `lyraThemeBootstrap` is a self-contained IIFE **string** (not a function),
 meant to be inlined into a `<script>` in `<head>` **before any stylesheet**, so the persisted theme
@@ -972,7 +1021,9 @@ inline script the nonce or hash required by the application:
 
 ```html
 <head>
-  <script>/* server-inlines lyraThemeBootstrap here */</script>
+  <script>
+    /* server-inlines lyraThemeBootstrap here */
+  </script>
   <link rel="stylesheet" href="/theme.css" />
 </head>
 ```
@@ -990,10 +1041,10 @@ sheets, or relevant media-query results change. If an application theme engine c
 tokens through another mechanism, call the explicit realm-level invalidation hook afterwards:
 
 ```ts
-import { invalidateLyraTheme } from '@aceshooting/lyra-ui/utilities/theme.js';
+import { invalidateLyraTheme } from "@aceshooting/lyra-ui/utilities/theme.js";
 
-invalidateLyraTheme();            // the global document realm
-invalidateLyraTheme(shadowRoot);  // the realm owning this root/element/document
+invalidateLyraTheme(); // the global document realm
+invalidateLyraTheme(shadowRoot); // the realm owning this root/element/document
 ```
 
 `invalidateLyraTheme(root?: Document | ShadowRoot | Element): void` coalesces each connected
@@ -1008,8 +1059,8 @@ barrel, a component entry, or `theme.css`, so applications that do not opt in ke
 native-element and utility conventions unchanged.
 
 ```css
-@import '@aceshooting/lyra-ui/native.css';
-@import '@aceshooting/lyra-ui/utilities.css';
+@import "@aceshooting/lyra-ui/native.css";
+@import "@aceshooting/lyra-ui/utilities.css";
 ```
 
 `native.css` places its rules in `lr-base` and styles native elements only when they are
@@ -1033,20 +1084,20 @@ application rule therefore beats them regardless of load order.
 
 ### Utility class inventory
 
-| Group | Exact classes |
-| --- | --- |
-| Display and composition | `lr-block`, `lr-inline-block`, `lr-flex`, `lr-inline-flex`, `lr-grid`, `lr-flow-root`, `lr-stack`, `lr-cluster`, `lr-grid-auto` |
-| Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0` |
-| Item alignment | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
-| Distribution | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around` |
-| Gaps | `lr-gap-0`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-2xl` |
-| Logical sizing | `lr-inline-full`, `lr-block-full`, `lr-size-full`, `lr-min-inline-0`, `lr-min-block-0`, `lr-max-inline-full`, `lr-max-inline-prose`, `lr-center` |
-| Overflow | `lr-overflow-auto`, `lr-overflow-hidden` |
-| Text alignment and size | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-quiet` |
-| Font | `lr-font-normal`, `lr-font-medium`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono` |
-| Text flow | `lr-text-break`, `lr-text-nowrap`, `lr-truncate`, `lr-text-balance`, `lr-text-pretty`, `lr-prose` |
-| Visibility and focus | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden` |
-| Page allocation | `lr-page-mobile-only`, `lr-page-desktop-only` |
+| Group                       | Exact classes                                                                                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display and composition     | `lr-block`, `lr-inline-block`, `lr-flex`, `lr-inline-flex`, `lr-grid`, `lr-flow-root`, `lr-stack`, `lr-cluster`, `lr-grid-auto`                                   |
+| Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
+| Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
+| Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`                                                              |
+| Gaps                        | `lr-gap-0`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-2xl`                                                                                         |
+| Logical sizing              | `lr-inline-full`, `lr-block-full`, `lr-size-full`, `lr-min-inline-0`, `lr-min-block-0`, `lr-max-inline-full`, `lr-max-inline-prose`, `lr-center`                  |
+| Overflow                    | `lr-overflow-auto`, `lr-overflow-hidden`                                                                                                                          |
+| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-quiet`                         |
+| Font                        | `lr-font-normal`, `lr-font-medium`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono`                                                                            |
+| Text flow                   | `lr-text-break`, `lr-text-nowrap`, `lr-truncate`, `lr-text-balance`, `lr-text-pretty`, `lr-prose`                                                                 |
+| Visibility and focus        | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden`                                                                              |
+| Page allocation             | `lr-page-mobile-only`, `lr-page-desktop-only`                                                                                                                     |
 
 `lr-fouce-hidden` hides only an opted-in custom element while it matches `:not(:defined)`, then
 reveals it automatically after registration. `lr-visually-hidden-focusable` becomes visible on
@@ -1061,32 +1112,32 @@ The Page helpers key off the reflected `view` state of their containing `<lr-pag
 The bundles consume the ordinary shared color, typography, spacing, border, radius, focus, size,
 and opacity tokens first. These additional hooks customize only the light-DOM bundle behavior:
 
-| Hook | Default/fallback and use |
-| --- | --- |
-| `--lr-layout-gap` | `--lr-space-m`; default gap for `lr-stack`, `lr-cluster`, and `lr-grid-auto` |
-| `--lr-grid-min-inline-size` | `--lr-size-14rem`; minimum auto-grid item inline size |
-| `--lr-content-max-inline-size` | `--lr-size-48rem`; `lr-center` content measure |
-| `--lr-prose-max-inline-size` | `65ch`; `lr-prose` and `lr-max-inline-prose` measure |
-| `--lr-prose-flow-space` | `--lr-space-l`; flow spacing between direct prose blocks |
-| `--lr-prose-quote-padding` | `--lr-space-l`; logical quote inset |
-| `--lr-prose-quote-border-width` | `--lr-border-width-thick`; logical quote edge |
-| `--lr-visually-hidden-size` | `--lr-border-width-thin`; retained hidden box size |
-| `--lr-native-link-decoration-width` | `--lr-border-width-thin`; resting underline thickness |
-| `--lr-native-link-underline-offset` | `--lr-space-2xs`; underline offset |
-| `--lr-native-link-hover-decoration-width` | `--lr-border-width-medium`; hovered underline thickness |
-| `--lr-native-pre-padding` | `--lr-space-m`; preformatted block padding |
-| `--lr-native-tab-size` | `2`; preformatted tab width |
-| `--lr-native-quote-padding` | `--lr-space-l`; native blockquote logical inset |
-| `--lr-native-quote-border-width` | `--lr-border-width-thick`; native blockquote logical edge |
-| `--lr-native-control-min-block-size` | `--lr-icon-button-size`; native control hit-area floor |
-| `--lr-native-control-padding-block` | `--lr-space-s`; native control block padding |
-| `--lr-native-control-padding-inline` | `--lr-space-m`; native control inline padding |
-| `--lr-native-placeholder-opacity` | `1`; native input/textarea placeholder opacity |
-| `--lr-native-summary-min-block-size` | `--lr-icon-button-size`; native summary hit-area floor |
-| `--lr-native-fieldset-padding` | `--lr-space-l`; fieldset padding |
-| `--lr-native-legend-padding` | `--lr-space-xs`; legend inline padding |
-| `--lr-native-table-cell-padding` | `--lr-space-s`; caption and table-cell padding |
-| `--lr-native-rule-space` | `--lr-space-l`; horizontal-rule block margin |
+| Hook                                      | Default/fallback and use                                                     |
+| ----------------------------------------- | ---------------------------------------------------------------------------- |
+| `--lr-layout-gap`                         | `--lr-space-m`; default gap for `lr-stack`, `lr-cluster`, and `lr-grid-auto` |
+| `--lr-grid-min-inline-size`               | `--lr-size-14rem`; minimum auto-grid item inline size                        |
+| `--lr-content-max-inline-size`            | `--lr-size-48rem`; `lr-center` content measure                               |
+| `--lr-prose-max-inline-size`              | `65ch`; `lr-prose` and `lr-max-inline-prose` measure                         |
+| `--lr-prose-flow-space`                   | `--lr-space-l`; flow spacing between direct prose blocks                     |
+| `--lr-prose-quote-padding`                | `--lr-space-l`; logical quote inset                                          |
+| `--lr-prose-quote-border-width`           | `--lr-border-width-thick`; logical quote edge                                |
+| `--lr-visually-hidden-size`               | `--lr-border-width-thin`; retained hidden box size                           |
+| `--lr-native-link-decoration-width`       | `--lr-border-width-thin`; resting underline thickness                        |
+| `--lr-native-link-underline-offset`       | `--lr-space-2xs`; underline offset                                           |
+| `--lr-native-link-hover-decoration-width` | `--lr-border-width-medium`; hovered underline thickness                      |
+| `--lr-native-pre-padding`                 | `--lr-space-m`; preformatted block padding                                   |
+| `--lr-native-tab-size`                    | `2`; preformatted tab width                                                  |
+| `--lr-native-quote-padding`               | `--lr-space-l`; native blockquote logical inset                              |
+| `--lr-native-quote-border-width`          | `--lr-border-width-thick`; native blockquote logical edge                    |
+| `--lr-native-control-min-block-size`      | `--lr-icon-button-size`; native control hit-area floor                       |
+| `--lr-native-control-padding-block`       | `--lr-space-s`; native control block padding                                 |
+| `--lr-native-control-padding-inline`      | `--lr-space-m`; native control inline padding                                |
+| `--lr-native-placeholder-opacity`         | `1`; native input/textarea placeholder opacity                               |
+| `--lr-native-summary-min-block-size`      | `--lr-icon-button-size`; native summary hit-area floor                       |
+| `--lr-native-fieldset-padding`            | `--lr-space-l`; fieldset padding                                             |
+| `--lr-native-legend-padding`              | `--lr-space-xs`; legend inline padding                                       |
+| `--lr-native-table-cell-padding`          | `--lr-space-s`; caption and table-cell padding                               |
+| `--lr-native-rule-space`                  | `--lr-space-l`; horizontal-rule block margin                                 |
 
 ## Localization: `locale`, `strings`, and the locale runtime
 
@@ -1100,16 +1151,18 @@ in the per-component sections:
 - **`locale: string = ''`** (reflected attribute) — per-instance locale override. Empty means "use
   the nearest `locale`/`lang` ancestor".
 - **`strings: LyraLocaleStrings = {}`** (property only, no attribute) — per-instance message
-  overrides, merged over the registered catalog.
+  overrides, merged over the registered catalog. Assignment takes an immutable snapshot of up to
+  4,096 own enumerable data properties. Mutating the assigned object later has no effect; assign a
+  new object to update it. Accessors and malformed entries are ignored per key without being run.
 
 ```ts
 import {
   registerLyraLocale,
   setLyraLocale,
-} from '@aceshooting/lyra-ui/localization.js';
+} from "@aceshooting/lyra-ui/localization.js";
 
-registerLyraLocale('fr', { close: 'Fermer', retry: 'Réessayer' }); // app-wide, partial catalogs fine
-setLyraLocale('fr'); // page-level selection; see the precedence order below
+registerLyraLocale("fr", { close: "Fermer", retry: "Réessayer" }); // app-wide, partial catalogs fine
+setLyraLocale("fr"); // page-level selection; see the precedence order below
 ```
 
 ```html
@@ -1120,7 +1173,7 @@ setLyraLocale('fr'); // page-level selection; see the precedence order below
 
 1. **The component's own `locale`, then its own `lang`.**
 2. **The nearest ancestor declaring `locale` or `lang`** (crossing shadow boundaries), except that
-   `lang` on `<html>` is not read here — see 4. A `locale` attribute on `<html>` *is*, since that
+   `lang` on `<html>` is not read here — see 4. A `locale` attribute on `<html>` _is_, since that
    attribute is this library's own and can only be a deliberate opt-in.
 3. **`setLyraLocale(tag)`**, the page-level selection.
 4. **`<html lang>`**, the document default.
@@ -1129,11 +1182,11 @@ setLyraLocale('fr'); // page-level selection; see the precedence order below
 **Breaking in 9.0.0:** steps 3 and 4 were the other way round, which made `setLyraLocale()` inert on
 any page that declares `<html lang>` — i.e. essentially every well-formed page. `setLyraLocale('fr')`
 under `<html lang="en">` silently kept rendering English. It now wins. Two consequences: an
-application that switched locale by *rewriting* `<html lang>` still works only if it never also
+application that switched locale by _rewriting_ `<html lang>` still works only if it never also
 called `setLyraLocale()` (the explicit call now pins the locale until changed or cleared with
 `setLyraLocale('')`), and a per-subtree `lang`/`locale` override is unaffected — it still beats both.
 
-To keep `<html lang>`/`dir` in step with `setLyraLocale()` — which everything *outside* this library
+To keep `<html lang>`/`dir` in step with `setLyraLocale()` — which everything _outside_ this library
 reads, from `:lang()` rules to spellcheck to a screen reader's pronunciation — use
 `bridgeLyraLocale()` from `@aceshooting/lyra-ui/utilities/localization.js` (see
 [Shared helpers](#shared-helpers-utilities)).
@@ -1150,38 +1203,51 @@ application only needs locale setup and the narrower import graph.
 read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
 calendar output goes through `Intl`.
 
+**Locale-tag identity.** Registration, active selection, `getLyraLocale()`, registry enumeration,
+component resolution and `bridgeLyraLocale()` all use the same public spelling. `_` remains an input
+alias, and structurally valid BCP-47 tags go through the platform canonicalizer, so `PT_BR` becomes
+`pt-BR` and deprecated aliases collapse onto their current tag. Private-use-only and short legacy
+application tags that the platform canonicalizer rejects remain supported as bounded lowercase
+identities. `registerLyraLocale()` and `setLyraLocale()` reject values that are neither valid BCP-47
+nor bounded alphanumeric custom tags; an inherited invalid over-complex `locale`/`lang` safely
+resolves to English. Structurally valid long BCP-47 tags remain accepted.
+
 **Lookup order for a tag.** Every message resolves through one chain, and `Intl.PluralRules`
 category selection walks the same chain, so the two can never disagree:
 
-1. **The full BCP-47 truncation walk, most specific first** — `zh-Hans-CN` → `zh-Hans` → `zh`.
-   Casing and `_` separators are normalized, so `pt_BR` and `pt-br` are the same key.
-2. **Then any registered catalog sharing the base language**, which is how a *regional-only*
-   catalog is reached from a less specific tag: `lang="zh"` and `lang="zh-Hans"` both find the
-   shipped `zh-CN` catalog, and `lang="pt"`/`lang="pt-PT"` both find `pt-BR`. Order within this
+1. **The BCP-47 truncation walk, most specific first** — `zh-Hans-CN` → `zh-Hans` → `zh`.
+   Casing and `_` separators are normalized, so `pt_BR` and `pt-br` are the same key. Lookup chains
+   are memoized and capped at 64 candidates. A structurally valid tag beyond the normal complexity
+   ceiling retains its exact tag, base language and English fallback without constructing an
+   unbounded prefix ladder; malformed over-complex inherited input goes directly to English.
+2. **Then any registered, well-formed BCP-47 catalog sharing the base language**, which is how a
+   _regional-only_ catalog is reached from a less specific tag: `lang="zh"` and `lang="zh-Hans"`
+   both find the shipped `zh-CN` catalog, and `lang="pt"`/`lang="pt-PT"` both find `pt-BR`. Order within this
    step is deterministic and independent of import order — most shared subtags first
    (`zh-Hant-TW` prefers a registered `zh-TW` over `zh-CN`), then alphabetically as the tie-break
    (bare `zh` with both registered picks `zh-CN`). Register the regional tag you actually mean if
-   the tie-break isn't the answer you want.
+   the tie-break isn't the answer you want. Legacy/custom tags are exact/truncation-addressable
+   only and do not become regional siblings accidentally.
 3. **Then `en`**, always available through the built-in English defaults.
 
 Step 1 always beats step 2: with both `zh` and `zh-CN` registered, `zh-Hans-CN` resolves to `zh`.
 
 ```ts
-import { getLyraLocaleDirection } from '@aceshooting/lyra-ui/localization.js';
+import { getLyraLocaleDirection } from "@aceshooting/lyra-ui/localization.js";
 
-getLyraLocaleDirection('ar-EG'); // 'rtl' — declared by the shipped `ar` catalog, inherited by the region
-getLyraLocaleDirection('de');    // 'ltr'
+getLyraLocaleDirection("ar-EG"); // 'rtl' — declared by the shipped `ar` catalog, inherited by the region
+getLyraLocaleDirection("de"); // 'ltr'
 ```
 
 `getLyraLocaleDirection(tag): 'ltr' | 'rtl'` answers "does this locale need `dir="rtl"`?" without
 an application keeping its own tag table. It reads a `dir` declared by `registerLyraLocale()`'s
 optional third argument first (walked through the same chain above, so a region inherits its base
 language's declaration), then `Intl.Locale`'s text-info surface where the engine has it, and
-finally `'ltr'`. It only *reports* a direction — nothing in the library applies one; see
+finally `'ltr'`. It only _reports_ a direction — nothing in the library applies one; see
 [RTL and direction](#rtl-and-direction).
 
 ```ts
-registerLyraLocale('ar', { close: 'إغلاق' }, { dir: 'rtl', name: 'العربية' });
+registerLyraLocale("ar", { close: "إغلاق" }, { dir: "rtl", name: "العربية" });
 ```
 
 `registerLyraLocale(tag, strings, meta?)`'s third argument is optional catalog metadata —
@@ -1190,14 +1256,27 @@ feeds `getLyraLocaleDirection()`, `name` is the locale's endonym for an applicat
 list. It merges the same way `strings` does, so a later two-argument call adding messages never
 drops metadata, and the two-argument call remains the normal way to register a catalog.
 
-`getRegisteredLyraLocales(): string[]` lists every locale with strings registered via
+Registration snapshots at most 4,096 own enumerable catalog properties before publishing them.
+Each accepted value is either a string or a plain/null-prototype CLDR plural record whose own data
+properties are string categories and which includes `other`. Nested plural records are cloned and
+frozen. Arrays, `null`, inherited properties, accessors and malformed records are ignored per key:
+they never execute and never replace that key's last valid translation, while valid sibling keys
+still merge. Empty strings remain intentional translations. Per-instance `.strings` overrides use
+the same validation, so `resolveLyraString()` always returns a string and malformed overrides fall
+through to the next valid tier.
+
+`getRegisteredLyraLocales(): readonly string[]` returns a fresh frozen list of every locale with strings registered via
 `registerLyraLocale()`, plus `'en'` (always available through the built-in English fallback),
-sorted and deduped. `subscribeLyraLocaleRegistry(listener: () => void): () => void` fires whenever
-`registerLyraLocale()` registers *any* locale — including one that isn't the currently active
-locale — unlike `subscribeLyraLocale()` (on `@aceshooting/lyra-ui/utilities/localization.js`),
-the page-level locale-change subscription every component uses, which fires for the active
-locale's own changes. Both return an idempotent unsubscribe. `<lr-locale-picker>` is the built-in
-consumer of the registry one; see `llms/components/lr-locale-picker.md`.
+sorted, deduped and canonically spelled. `subscribeLyraLocaleRegistry(listener: () => void): () =>
+void` fires when registry membership grows, including for a newly registered locale that is not
+active; extending an existing catalog does not change membership and does not fire it.
+`subscribeLyraLocale()` (on `@aceshooting/lyra-ui/utilities/localization.js`) instead fires when the
+active selection changes or a registration can alter the active locale's messages/direction, and
+filters unrelated registrations. Both return an idempotent unsubscribe. Delivery uses the eligible
+starting listener snapshots: one callback failure cannot prevent later active, component or
+registry listeners from running. State commits first, then the mutator throws one `AggregateError`
+containing all callback failures after delivery completes. `<lr-locale-picker>` is the built-in
+consumer of the registry subscription; see `llms/components/lr-locale-picker.md`.
 
 Gotcha: `localize()`'s optional second argument is a fallback string. Passing a defined literal there
 silently defeats a registered catalog — omit it, or pass `undefined`.
@@ -1209,17 +1288,17 @@ Ten full catalogs ship with the package — **`ar`, `de`, `es`, `fa`, `fr`, `he`
 modules**: import one bare, read nothing from it, and it calls `registerLyraLocale()` for you.
 
 ```ts
-import '@aceshooting/lyra-ui/translations/de.js';
-import '@aceshooting/lyra-ui/translations/ar.js'; // declares dir: 'rtl'; direction still comes from dir
-import '@aceshooting/lyra-ui/translations/fa.js'; // fa-IR falls back to this base catalog
-import '@aceshooting/lyra-ui/translations/he.js'; // he-IL falls back to this base catalog
-import '@aceshooting/lyra-ui/translations/pt-BR.js'; // also serves pt and pt-PT
-import '@aceshooting/lyra-ui/translations/zh-CN.js'; // also serves zh, zh-Hans and zh-Hans-CN
+import "@aceshooting/lyra-ui/translations/de.js";
+import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
+import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
+import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
+import "@aceshooting/lyra-ui/translations/pt-BR.js"; // also serves pt and pt-PT
+import "@aceshooting/lyra-ui/translations/zh-CN.js"; // also serves zh, zh-Hans and zh-Hans-CN
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
 `one`/`two`/`other`). `ar`, `fa` and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
-answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not *force*
+answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
 `pt-BR` and `zh-CN` are the only Portuguese and Chinese catalogs, and they are regional tags. Step 2
@@ -1230,7 +1309,7 @@ needed. They are still listed under their real tags in `getRegisteredLyraLocales
 Import only the locales the application can actually offer — each is a separate module, so unimported
 ones cost nothing. A catalog registered this way is merged like any other, so a later
 `registerLyraLocale('de', { close: '…' })` still overrides individual keys, and a per-instance
-`.strings` still wins over both. Importing a catalog registers it; it does not *select* it —
+`.strings` still wins over both. Importing a catalog registers it; it does not _select_ it —
 `setLyraLocale()` or `<html lang>` still chooses. What the import does do is make the locale show up
 in `getRegisteredLyraLocales()`, and therefore in `<lr-locale-picker>`, so the set you import is the
 set a user can switch between.
@@ -1241,17 +1320,17 @@ A message may be a plain string or a **`LyraPluralMessage`** — an object keyed
 category, one string per category the language needs:
 
 ```ts
-import { registerLyraLocale } from '@aceshooting/lyra-ui/localization.js';
+import { registerLyraLocale } from "@aceshooting/lyra-ui/localization.js";
 
-registerLyraLocale('en', {
-  viewerSearchMatchCount: { one: '{count} match', other: '{count} matches' },
+registerLyraLocale("en", {
+  viewerSearchMatchCount: { one: "{count} match", other: "{count} matches" },
 });
-registerLyraLocale('ru', {
+registerLyraLocale("ru", {
   viewerSearchMatchCount: {
-    one: '{count} совпадение',
-    few: '{count} совпадения',
-    many: '{count} совпадений',
-    other: '{count} совпадения',
+    one: "{count} совпадение",
+    few: "{count} совпадения",
+    many: "{count} совпадений",
+    other: "{count} совпадения",
   },
 });
 ```
@@ -1285,7 +1364,7 @@ and no component forces its own. Pair an RTL locale with `dir="rtl"` — ask
 `<lr-locale-picker>`'s `lr-change` detail already carries the picked locale's `direction`, so
 applying it is `document.documentElement.dir = event.detail.direction`. Layout mirrors through CSS
 logical properties. Where physical math is unavoidable — drag ratios, arrow-key direction, anchored
-placement — components share one internal direction helper: `isRtl(el)` (used by `lr-split`,
+placement — components share one internal direction helper: `isRtl(el)` (used by `lr-multi-split`,
 `lr-time-range`, `lr-dock-panel`), plus `rtlAwareSide(side, el)` and `rtlAwarePlacement(placement,
 el)`, which swap the `left`/`right` component of a value under RTL and pass it through unchanged
 under LTR (`lr-menu` resolves its `placement` this way). These are implementation detail, not a
@@ -1304,14 +1383,14 @@ adapter layer:
 import {
   createAgentStreamState,
   reduceAgentStream,
-  adaptAiSdkStream,
-  adaptAgUiEvents,
+  adaptAiSdkMessage,
+  AgUiStreamAdapter,
   adaptA2UiSurface,
   type AgentRun,
   type ChatMessage,
   type MessagePart,
   type RetrievalChunk,
-} from '@aceshooting/lyra-ui/ai';
+} from "@aceshooting/lyra-ui/ai";
 ```
 
 - **Run/step state** — `AgentStatusKind`, `AgentStatus`, `AgentStep`, `AgentRun`
@@ -1319,20 +1398,33 @@ import {
 - **Documents & grounding** — `DocumentRef`, `Citation`, `RetrievalQuery`, `RetrievalChunk`,
   `RetrievalScoreBreakdown`, `GroundedClaim`, `GroundingAssessment`, `DocumentLocator`
 - **Streaming runtime** — `AgentStreamEvent`, `AgentStreamState`, `createAgentStreamState()`,
-  `reduceAgentStream()`, `reduceAgentStreamEvents()`; event ids make replay/duplicate delivery
-  deterministic, and JSON Patch application rejects prototype-mutating paths
-- **Protocol adapters** — `adaptAiSdkStream()`, `adaptAgUiEvents()`, and `adaptA2UiSurface()` map
-  structural provider events/documents onto the neutral runtime without pulling vendor SDKs into
-  the package
+  `reduceAgentStream()`, `reduceAgentStreamEvents()`; every event carries a monotonic `generation`
+  and strictly increasing `sequence`. A newer generation atomically retires the previous run, while
+  an older or replayed cursor is ignored. JSON Patch input is structurally validated and rejects
+  prototype-mutating paths.
+- **Protocol adapters** — `adaptAiSdkMessage()`, `AgUiStreamAdapter`, and `adaptA2UiSurface()` map
+  structural provider messages, events, and documents onto the neutral runtime without pulling
+  vendor SDKs into the package. Feed AG-UI events through `new AgUiStreamAdapter().push(event)`.
+  Adapter inputs are treated as untrusted data, recursively snapshotted, and rejected without
+  throwing when malformed, non-serializable, or over their configured budgets.
+- **Resource limits** — pass a partial `AgentStreamLimits` to `createAgentStreamState()`, or adapter
+  limit options to the relevant adapter. The exported `DEFAULT_AGENT_STREAM_LIMITS`,
+  `DEFAULT_AI_SDK_ADAPTER_LIMITS`, `DEFAULT_AG_UI_ADAPTER_LIMITS`, and
+  `DEFAULT_A2UI_ADAPTER_LIMITS` constants document the defaults; invalid limit values fall back to
+  them. Runtime breaches become an explicit error state/event, while snapshot/A2UI rejection
+  returns `null` or an empty adapter result as documented by that boundary.
+- **Message-part invariants** — `MessagePartState` is transport-only (`'streaming' | 'complete'`):
+  failures use an `ErrorMessagePart` or the owning domain error. Tool results are a success/error
+  union, and a `type: 'data'` part contains exactly one of `data` or `widget`.
 - **Event payloads** — `RunLifecycleEventDetail`, `RetrievalProgressEventDetail`,
   `CitationSelectEventDetail`, `ToolApprovalEventDetail`, `CancelEventDetail`, `RetryEventDetail`,
   `ExportEventDetail`
 
-`src/ai/types.contract.ts` holds compile-time assertions that each type still matches the property it
-feeds on `lr-chat-message`, `lr-tool-call-chip`, `lr-tool-result-view`, `lr-source-card`,
-`lr-attachment-chip`, and `lr-document-preview` — the binding is enforced by `tsc`, not by
-convention. The types are structural and provider-agnostic: map any vendor's payload onto them once,
-at the edge.
+The package's no-emit type-test program asserts that each type still matches the property it feeds
+on `lr-chat-message`, `lr-tool-call-chip`, `lr-tool-result-view`, `lr-source-card`,
+`lr-attachment-chip`, and `lr-document-preview`. The binding is enforced by `tsc` without shipping
+an importable contract module. The types are structural and provider-agnostic: map any vendor's
+payload onto them once, at the edge.
 
 ### Task-first AI composition guide
 
@@ -1407,9 +1499,9 @@ browser-bundle argument for excluding them does not apply to a server render. Us
 Server setup (the fallback must precede Lit's renderer):
 
 ```ts
-import { lyraSsrElementRenderers } from '@aceshooting/lyra-ui/ssr-loader.js';
-import { render, LitElementRenderer } from '@lit-labs/ssr';
-import { html } from 'lit';
+import { lyraSsrElementRenderers } from "@aceshooting/lyra-ui/ssr-loader.js";
+import { render, LitElementRenderer } from "@lit-labs/ssr";
+import { html } from "lit";
 
 const result = render(html`<lr-page><main>Dashboard</main></lr-page>`, {
   elementRenderers: lyraSsrElementRenderers(LitElementRenderer),
@@ -1419,9 +1511,12 @@ const result = render(html`<lr-page><main>Dashboard</main></lr-page>`, {
 In the browser, import `@aceshooting/lyra-ui/ssr-loader.js` before any other module that can import
 Lit. This installs `@lit-labs/ssr-client/lit-element-hydrate-support.js` before component
 registration. `getLyraSsrMode(tagName)` reads one tag's tier, and
-`diagnoseLyraHydration(document)` inspects current Lyra hosts, awaits registered hosts' current
-updates, and reports `hydrated`, `client-rendered`, `unregistered`, `missing-shadow-root`, or
-`update-failed`.
+`diagnoseLyraHydration(document)` inspects current Lyra hosts in the supplied tree and every
+reachable open shadow root, awaits registered hosts' current updates, and reports `ready`,
+`unregistered`, `missing-shadow-root`, or `update-failed`. `ready` means the current update finished
+and a shadow root exists; it does not claim that server markup was observed or hydrated. Read each
+diagnostic's separate `mode` to distinguish the declared `render-and-hydrate` and `client-render`
+tiers.
 
 The loader preserves optional-peer isolation: import a root-excluded component's granular
 registration after the loader. A fallback cannot serialize JS property bindings, so put initial
@@ -1494,11 +1589,12 @@ member/default/import rewrite. Only the first two classifications are automatic;
 location-aware report rather than treating a README relationship as a rename allowlist.
 
 Security-motivated differences remain explicit. `lr-include` sanitizes every fragment, omits a
-script-executing mode, and defaults to same-origin fetches; link-like controls derive safe `rel`
-from `target`; iframe/media/viewer inputs keep their URL validation, sandbox, size caps, and
-generation guards. A use that depends on weaker behavior is left unchanged with a warning. For a
-staged theme migration, map existing values onto `--lr-theme-*` explicitly in application CSS
-rather than expecting an implicit compatibility layer.
+script-executing mode, and defaults to same-origin fetches; link-like controls strip `opener` and
+force-add `noopener noreferrer` whenever `target` is set while preserving other settable author
+tokens where the component exposes `rel`; iframe/media/viewer inputs keep their URL validation,
+sandbox, size caps, and generation guards. A use that depends on weaker behavior is left unchanged
+with a warning. For a staged theme migration, map existing values onto `--lr-theme-*` explicitly in
+application CSS rather than expecting an implicit compatibility layer.
 
 ## Family barrels
 
@@ -1519,8 +1615,8 @@ component moves between Lyra's internal family folders; existing family-shaped r
 remain supported.
 
 ```js
-import '@aceshooting/lyra-ui/components/forms';        // every form control
-import '@aceshooting/lyra-ui/components/lr-input.js';  // just <lr-input>
+import "@aceshooting/lyra-ui/components/forms"; // every form control
+import "@aceshooting/lyra-ui/components/lr-input.js"; // just <lr-input>
 ```
 
 ---
@@ -1529,22 +1625,22 @@ import '@aceshooting/lyra-ui/components/lr-input.js';  // just <lr-input>
 
 Not custom elements — infrastructure the components compose, curated into a supported public
 surface. Importable one module per helper, e.g.
-`@aceshooting/lyra-ui/utilities/positioner.js` — the `.js` is required, since `./utilities/*` maps
-straight onto `./dist/utilities/*` — or as a whole from the extensionless
+`@aceshooting/lyra-ui/utilities/positioner.js` — the `.js` is required — or as a whole from the extensionless
 `@aceshooting/lyra-ui/utilities`.
 
 **This replaced `@aceshooting/lyra-ui/internal/*` in 8.0.0. `@aceshooting/lyra-ui/internal/*` is no
 longer a published subpath** — the import fails to resolve rather than degrading. The whole
 `internal/` tree used to be exported with no stability statement, which made every internal
-refactor potentially breaking for someone. The helpers below are the supported surface; they
-are re-exported from `utilities/` unchanged and are covered by semver. Rewriting an existing import
-is a path swap and nothing more:
+refactor potentially breaking for someone. The helpers below are the supported surface and are
+covered by semver. Each subpath and the extensionless barrel use explicit named exports, so an
+implementation helper added to `internal/` does not silently become public. Rewriting an existing
+supported import is a path swap and nothing more:
 
 ```ts
 // before 8.0.0
-import { place } from '@aceshooting/lyra-ui/internal/positioner.js';
+import { place } from "@aceshooting/lyra-ui/internal/positioner.js";
 // 8.0.0
-import { place } from '@aceshooting/lyra-ui/utilities/positioner.js';
+import { place } from "@aceshooting/lyra-ui/utilities/positioner.js";
 ```
 
 If you were importing something from `internal/` that is not listed below, it was never a supported
@@ -1555,86 +1651,240 @@ feature-request API described in "When no component fits" so it can be promoted 
   subclasses prepend `LyraElement.styles` to their own `static styles`. Supplies `emit()` (see
   "Events"), the typed `addEventListener` overload (see "TypeScript"), `locale`/`strings` (see
   "Localization"), and protected `localize()` / `effectiveLocale` / `effectiveDirection`, all
-  memoized once per update cycle.
+  memoized once per update cycle. `LyraEmitOptions { cancelable?: boolean }` is the public options
+  object accepted by `emit()`; set `cancelable` only for a real, branch-on-veto operation.
+- **`catalog` → `LyraCatalogEntry` and `LyraCatalog<T>`** — type-only shared vocabulary for model,
+  voice, and future catalog-backed controls. Import it from
+  `@aceshooting/lyra-ui/utilities/catalog.js`; both types are also available from the package root
+  and the model-select/voice-picker granular entries. The exact contracts are `LyraCatalogEntry {
+  id: string; label: string }` and `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> =
+  readonly string[] | readonly T[]`. A catalog is homogeneous: use string shorthand (the same
+  string becomes both id and label) or typed object rows, never a mixed array. Readonly tuples and
+  arrays are accepted, and object catalogs retain an extended row type such as
+  `LyraModelCatalogEntry` or `LyraVoiceCatalogEntry`.
 - **`anchor-target` → `LyraAnchorTarget` and `LyraAnchorTargetEventMap`** — type-only structural
   contracts for viewers that expose Lyra's shared document-anchor surface. Import them from
   `@aceshooting/lyra-ui/utilities/anchor-target.js` when a host, adapter, or external viewer needs
   to accept or implement `highlights`, `activeHighlightId`, `anchor`, `anchorKinds`, and
-  `scrollToAnchor()` without importing the internal mixin. The event map types the shared
+  `scrollToAnchor(target)` without importing the internal mixin. The event map types the shared
   `lr-highlight-activate`, `lr-text-select`, and `lr-anchor-result` listener vocabulary; a concrete
   viewer can support only the events it actually emits, as documented on that component.
-- **`positioner` → `place(anchor, popup, opts?): () => void`** — thin wrapper over
-  `@floating-ui/dom`'s `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (matching the
+  The exact structural contract is `LyraAnchorTarget { highlights: readonly LyraHighlight[];
+  activeHighlightId: string | null; anchor: LyraAnchor | string | null; readonly anchorKinds:
+  readonly LyraAnchorKind[]; scrollToAnchor(target: LyraAnchor | string): Promise<boolean> }`.
+  Assigning `highlights` synchronously creates a frozen array of copied, frozen highlight records;
+  each record's opaque `anchor` retains caller identity so reference-based anchor jumps still work.
+- **`positioner` → `place(anchor, popup, opts?): () => void`, `trackRect(target, onUpdate(rect)): () =>
+  void`, and `virtualAnchorFromRect()`** — thin wrapper over `@floating-ui/dom`'s
+  `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (matching the
   popup's own `position: fixed` CSS — otherwise it lands offset by the page scroll), middleware
   `offset(opts.offset ?? 4)`, `flip()`, `shift({ padding: 8 })`, default `placement: 'bottom-start'`.
   Returns a cleanup function that stops the `autoUpdate` loop — call it in `disconnectedCallback()`.
+  `trackRect()` reports the target's initial viewport rect exactly once before returning, follows
+  later layout/viewport changes, and returns the same cleanup shape.
+  `virtualAnchorFromRect()` adapts a live rectangle provider to the exported `VirtualAnchor`
+  contract; `PlaceOptions` and its closed-set placement/sizing types are exported for typed wrappers.
+  The structural result is `PlacementResult { placement: Placement; arrow?: { x?: number;
+  y?: number } }`, where `arrow`
+  contains its resolved coordinates when supplied. `VirtualAnchor` exposes
+  `getBoundingClientRect()` and optional `contextElement`; `virtualAnchorFromRect({ x, y, width?,
+  height?, contextElement? })` builds one. `PlaceOptions` exposes `placement`, `strategy`, `offset`,
+  `skidding`, `boundary`, `flip`, `flipFallbackPlacements`, `flipFallbackStrategy`, `flipBoundary`,
+  `flipPadding`, `shift`, `shiftBoundary`, `shiftPadding`, `padding`, `autoSize`,
+  `autoSizeBoundary`, `autoSizePadding`, `sync`, `arrow`, `arrowPadding`, `hoverBridge`, and
+  `onPlaced(result)`.
+  Exact authoring contracts are `VirtualAnchor { getBoundingClientRect(): DOMRect;
+  contextElement?: Element }`, `virtualAnchorFromRect(rect: { x: number; y: number; width?: number;
+  height?: number; contextElement?: Element }): VirtualAnchor`, and `PlaceOptions { placement?:
+  Placement; strategy?: PlaceStrategy; offset?: number; skidding?: number; boundary?:
+  PlaceBoundary; flip?: boolean; flipFallbackPlacements?: Placement[]; flipFallbackStrategy?:
+  PlaceFlipFallbackStrategy; flipBoundary?: PlaceBoundary; flipPadding?: number; shift?: boolean;
+  shiftBoundary?: PlaceBoundary; shiftPadding?: number; padding?: number; autoSize?: PlaceAutoSize;
+  autoSizeBoundary?: PlaceBoundary; autoSizePadding?: number; sync?: PlaceSync; arrow?: HTMLElement;
+  arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementResult) => void }`.
+  `place()` and `virtualAnchorFromRect()` throw `RangeError` before registering observers, invoking
+  callbacks, or writing styles when coordinates/options are non-finite, dimensions or padding are
+  negative; finite signed `offset`/`skidding` stay valid. If a previously valid live anchor later
+  returns invalid geometry, positioning stops and rolls back without publishing partial state or a
+  placement callback.
   Used by `lr-combobox`, `lr-select`, `lr-date-input`, `lr-export-button`, `lr-model-select`,
   `lr-mention-popover`, `lr-tool-call-chip`, `lr-citation-badge`, and `lr-menu`.
 - **`prefix`** — `LYRA_PREFIX = 'lr'`; `tag(name)` → `` `lr-${name}` ``; `defineElement(name, ctor)`,
   an idempotent `customElements.define` that is safe if a module is evaluated twice.
+  Exact callable contracts are `tag(name: string): string` and
+  `defineElement(name: string, ctor: CustomElementConstructor): void`.
 - **`a11y`** — `nextId(scope)`, a monotonic id generator (`nextId('combobox-list')` →
-  `"lr-combobox-list-3"`); `srOnly`, a visually-hidden-but-AT-visible class.
-- **`icons`** — the shared inline-SVG set (`chevronIcon`, `closeIcon`, `playIcon`, `pauseIcon`,
-  `calendarIcon`, `expandIcon`). One 24×24 viewBox per icon, rendered at `1em` so each inherits the
+  `"lr-combobox-list-3"`); `srOnly`, a visually-hidden-but-AT-visible class. The callable contract
+  is `nextId(scope: string): string`.
+- **`icons`** — the shared inline-SVG set (`calendarIcon`, `chevronIcon`, `closeIcon`, `expandIcon`,
+  `eyeIcon`, `eyeOffIcon`, `fileIcon`, `folderIcon`, `pauseIcon`, `playIcon`, and `spinnerIcon`).
+  One 24×24 viewBox per icon, rendered at `1em` so each inherits the
   caller's font size; none bakes in a direction — callers rotate the wrapping `part` via CSS.
-- **`scroll-lock` → `lockScroll(): () => void`** — ref-counted `document.documentElement` scroll
-  lock (used by `lr-widget`'s fullscreen mode); safe to acquire/release concurrently, restores the
-  original `overflow` only when the last lock releases.
+  Each is a zero-argument template factory: `calendarIcon(): SVGTemplateResult`,
+  `chevronIcon(): SVGTemplateResult`, `closeIcon(): SVGTemplateResult`,
+  `expandIcon(): SVGTemplateResult`, `eyeIcon(): SVGTemplateResult`,
+  `eyeOffIcon(): SVGTemplateResult`, `fileIcon(): SVGTemplateResult`,
+  `folderIcon(): SVGTemplateResult`, `pauseIcon(): SVGTemplateResult`,
+  `playIcon(): SVGTemplateResult`, and `spinnerIcon(): SVGTemplateResult`.
+- **`scroll-lock` → `lockScroll(doc = document): () => void`** — ref-counted
+  `doc.documentElement` scroll lock (used by `lr-widget`'s fullscreen mode); safe to acquire/release
+  concurrently, restores the original `overflow` only when the last lock releases.
 - **`form-associated` → `FormAssociated(Base)`**, plus `attachInternalsSafely()` and
   `createFallbackInternals()` — the mixin documented under "Form association" above, exposed so an
   application can build its **own** form-associated control alongside Lyra's and have it
   participate in a form, restore on reset, and report validity the same way every `lr-` control
   does. Reach for it instead of hand-rolling `attachInternals()` when a bespoke control has to sit
   in the same `<form>` as these.
+  The free-function signatures are `attachInternalsSafely(host)`,
+  `createStringArrayFormDataState(name, values)`, `readStringArrayFormDataState(state)`, and
+  `FormAssociated(Base, valueAdapter?)`. For a non-string value, pass a typed
+  `FormValueAdapter<T>` as that `valueAdapter`;
+  `FormSubmissionValue`, `createStringArrayFormDataState()`,
+  `readStringArrayFormDataState()`, `isEmptyFormValue()`, and `stringFormValueAdapter` are the
+  retained adapter-building seams. Form-owner mutation, validity barring, anchor installation, and
+  other mixin implementation helpers are deliberately not exported.
+  `FormValueAdapter<T>` has readonly `empty`, required `toFormValue(value)`, and optional
+  `toFormState(value)`, `isEmpty(value)`, `fromAttribute(attribute)`, `toAttribute(value)`, and
+  `fromFormState(state)`. `FormAssociatedInterface<T>` exposes `internals`; the `name` getter/setter
+  (`next`); `value`; `defaultValue`; `customError`; `disabled`; `required`; readonly
+  `effectiveDisabled`; the `form` getter/setter (`owner`); readonly `labels`, `validity`,
+  `validationMessage`, and `willValidate`; `setFormValue(next)`; `getForm()`; `checkValidity()`;
+  `reportValidity()`; `setCustomValidity(message)`; `resetValidity()`; `formResetCallback()`; and
+  `formStateRestoreCallback(state, reason)`.
+  The exact callable signatures are `attachInternalsSafely(host: HTMLElement): ElementInternals`,
+  `createFallbackInternals(): ElementInternals`, `createStringArrayFormDataState(name: string,
+  values: readonly string[]): FormData`, `readStringArrayFormDataState(state: string | File |
+  FormData | null): string[]`, `isEmptyFormValue(value: unknown): boolean`, and
+  `FormAssociated<T, TValue = string>(Base: T, valueAdapter?:
+  FormValueAdapter<TValue>): T & Constructor<FormAssociatedInterface<TValue> &
+  FormAssociatedSubclassInterface<TValue>>`.
+  The exact adapter records are `FormValueAdapter<TValue> { readonly empty: TValue;
+  toFormValue(value: TValue): FormSubmissionValue; toFormState?(value: TValue):
+  FormSubmissionValue; isEmpty?(value: TValue): boolean; fromAttribute?(attribute: string): TValue;
+  toAttribute?(value: TValue): string | null; fromFormState?(state: FormSubmissionValue): TValue }`
+  and `FormAssociatedInterface<TValue> { internals: ElementInternals; get name(): string; set
+  name(next: string | null); value: TValue; defaultValue: TValue; customError: string | null;
+  disabled: boolean; required: boolean; readonly effectiveDisabled: boolean; get form():
+  HTMLFormElement | null; set form(owner: FormOwnerValue); readonly labels: NodeList; readonly
+  validity: ValidityState; readonly validationMessage: string; readonly willValidate: boolean;
+  setFormValue(next: TValue): void; getForm(): HTMLFormElement | null; checkValidity(): boolean;
+  reportValidity(): boolean; setCustomValidity(message: string): void; resetValidity(): void;
+  formResetCallback(): void; formStateRestoreCallback(state: FormSubmissionValue, reason:
+  'autocomplete' | 'restore'): void }`. The exported subclass seam is
+  `FormAssociatedSubclassInterface<TValue> { protected captureLiveValueCheckpoint(): { readonly
+  value: TValue; readonly dirty: boolean }; protected restoreLiveValueCheckpoint(checkpoint: {
+  readonly value: TValue; readonly dirty: boolean }): void }`.
 - **`group-by-recency` → `groupByRecency(items, options?)`** — buckets dated items into
   Today / Yesterday / Previous 7 Days / Older, on **local calendar-day boundaries** ("yesterday" is
   the previous calendar date, not 24–48 hours ago). Plain data in, plain data out — no DOM.
-  `getTimestamp` extracts the date (default: the item *is* a `Date`; a returned number is epoch
+  `getTimestamp` extracts the date (default: the item _is_ a `Date`; a returned number is epoch
   **milliseconds**), `now` fixes the reference instant for deterministic tests or an "as of" report,
   and `labels` overrides any of the four English defaults — the strings are yours, so localize them
   through your own catalog. Empty buckets are omitted, order within a bucket is the input's, a
   future timestamp lands in Today and an unparseable one in Older. Exposed because an application
   rendering its own list beside `lr-thread-list` needs bucketing that agrees with the component's;
   reimplementing "this week" is how two lists on one page start disagreeing about what day it is.
-- **`defined` → `allDefined(root?): Promise<void>`** — waits for every currently rendered,
-  inventory-known Lyra tag below a `Document`, `DocumentFragment`/open `ShadowRoot`, or `Element` to
-  be defined in its owning/scoped registry. It also waits for each available `updateComplete`, then
-  repeats so tags created by that first render are included. Open shadow roots are traversed;
-  unknown `lr-*` names are ignored instead of hanging. With no browser document or registry it
-  resolves immediately. It **does not import or define components**: pair it with explicit
-  registration imports, `discover()`, or `start()` when bootstrap/tests need a readiness barrier.
+  The typed records are `RecencyLabels { today?; yesterday?; previousWeek?; older? }`,
+  `GroupByRecencyOptions<T> { getTimestamp?(item); now?; labels? }`, and
+  `RecencyBucket<T> { label; items }`.
+  The callable signature is `groupByRecency<T>(items: T[], options?:
+  GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
+- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
+  currently rendered, inventory-known Lyra tag below a `Document`, `DocumentFragment`/open
+  `ShadowRoot`, or `Element` to be defined in its owning/scoped registry. It also waits for each
+  available `updateComplete`, then repeats so tags created by that first render are included. Open
+  shadow roots are traversed without recursive calls; unknown `lr-*` names are ignored instead of
+  hanging. `AllDefinedOptions` bounds the complete operation with `maxElements` (default `10_000`),
+  `maxRoots` (`2_000`), `maxDepth` (`256`), `maxWork` (`100_000`), and `maxPasses` (`100`). Invalid
+  limits throw `RangeError`; exceeding a limit rejects instead of resolving with a partial
+  readiness result. Consumer-owned elements with throwing registry or update-completion accessors
+  are treated as unavailable while valid siblings continue. With no browser document or registry
+  it resolves immediately. It **does not import or define components**: pair it with explicit
+  registration imports, `discover()`, or
+  `start()` when bootstrap/tests need a readiness barrier.
+  The exact options record is `AllDefinedOptions { readonly maxPasses?: number; readonly
+  maxElements?: number; readonly maxRoots?: number; readonly maxDepth?: number; readonly maxWork?:
+  number }`.
+- **`css-length` → `resolveCssLength(value, options?)`** — resolves finite numbers and CSS
+  `px`/`rem`/`em`/`%`/`vw`/`vh` lengths to pixels without allocating DOM. Supply `host` for live
+  font and owner-realm context, `percentBase` for percentages, and an optional `viewportBasis` for
+  deterministic viewport-unit resolution: either a `Window` or `{ inlineSize, blockSize }`.
+  Unsupported expressions and unavailable context return `undefined`; range policy remains the
+  caller's responsibility.
+  Its exact signatures are `resolveCssLength(value: number | string | undefined, options?:
+  ResolveCssLengthOptions): number | undefined` and `ResolveCssLengthOptions { readonly host?:
+  Element; readonly percentBase?: number; readonly viewportBasis?: Window | Readonly<{
+  inlineSize: number; blockSize: number }> }`.
 - **`layered-layout` → `layeredLayout()`** — the deterministic, dependency-free layered-DAG
   ("Sugiyama-lite") layout `lr-flow-canvas` draws with: cycle handling, longest-path layering,
   barycenter crossing reduction, and coordinates assigned along the block axis so the result is
-  RTL-neutral. `fixedPositions` entries keep their given coordinates while still occupying a slot
-  for spacing. It returns raw box centers with layer 0 at `y = 0`; centering the drawing in your own
+  RTL-neutral. `fixedPositions` entries keep their given coordinates: their combined inline extent
+  is reserved before computed boxes, and a fixed layer's block extent advances every later layer,
+  so fixed and computed boxes retain `gapX`/`gapY` separation without moving the anchors. Two
+  conflicting caller-fixed boxes are deliberately kept verbatim. Node dimensions, gaps, and fixed
+  coordinates must be finite, non-negative values no greater than `Number.MAX_SAFE_INTEGER`; bad
+  geometry throws `RangeError` before graph traversal. Traversal is iterative, and
+  `maxVirtualWaypoints` sets the nonnegative integer routing budget (default 10,000; invalid values
+  use the default, negative values clamp to zero, and fractions truncate). The returned
+  `LayeredLayoutResult` contains readonly `positions`, `virtualWaypointCount`, and `truncated`;
+  when truncated, long edges influence ordering through their real endpoints instead of allocating
+  every intermediate layer. Positions are raw box centers; the first computed layer starts at
+  `y = 0`, so its centers are offset by half that layer's height. Centering the drawing in your own
   canvas is yours.
-- **`animation-registry` → `setDefaultAnimation(name, animation)`,
-  `setAnimation(element, name, animation)`, and `getAnimation(element, name, options?)`** — public
+  Its exact data contracts are `LayeredLayoutNode { id; width; height }`,
+  `LayeredLayoutEdge { source; target }`, `LayeredLayoutOptions { fixedPositions?:
+  ReadonlyMap<string, Readonly<{ x: number; y: number }>>; gapX?: number; gapY?: number;
+  maxVirtualWaypoints?: number }`, and `LayeredLayoutResult { readonly positions:
+  ReadonlyMap<string, Readonly<{ x: number; y: number }>>; readonly truncated: boolean; readonly
+  virtualWaypointCount: number }`. The callable contract is `layeredLayout(input: { nodes: readonly
+  LayeredLayoutNode[]; edges: readonly LayeredLayoutEdge[]; options?: LayeredLayoutOptions }):
+  LayeredLayoutResult`. Call `layeredLayout(input)` with `input.nodes`, `input.edges`, and
+  optional `input.options`; the result's `positions` map contains readonly `{ x, y }` coordinates.
+- **`animation-registry` → `setDefaultAnimation(animationName, animation)`,
+  `setAnimation(element, animationName, animation)`, and
+  `getAnimation(element, animationName, options?)`** — public
   motion overrides in native Web Animations API vocabulary. Resolution is per-element first,
   page-wide default second, then the component's token-derived fallback. `rtlKeyframes` supplies a
   logical-direction alternative; `getAnimation()` infers computed direction unless `options.dir`
   is explicit. Passing `null` disables visible motion without skipping the owning component's
   events or promise lifecycle. Each setter returns an idempotent cleanup that restores the previous
   stacked registration; element registrations live in a `WeakMap`, so neither the registry nor a
-  retained cleanup keeps a detached element alive. Reduced motion is respected by default by
+  retained cleanup keeps a detached element alive. Each registration takes a bounded shallow
+  frozen snapshot of its readonly keyframe arrays, keyframe records, and options, so later caller
+  mutation cannot alter another component's motion; `getAnimation()` returns a fresh readonly
+  frozen snapshot. Each logical direction retains at most 512 keyframes, a keyframe may carry at
+  most 256 enumerable own fields, and the options record may carry at most 64. An oversized or
+  getter-throwing JavaScript record is retained as an inert override: resolution uses the caller's
+  valid bounded fallback, or the zero-duration disabled result when no valid fallback exists.
+  Reduced motion is respected by default by
   flattening delay/duration/end-delay to zero and iterations to one while preserving the resolved
   end frame; only a caller with a stronger policy should pass `respectReducedMotion: false`.
+  The exact records are `LyraElementAnimation { readonly keyframes: readonly Readonly<Keyframe>[];
+  readonly rtlKeyframes?: readonly Readonly<Keyframe>[]; readonly options?:
+  Readonly<KeyframeAnimationOptions> }`, `LyraResolvedElementAnimation { readonly keyframes:
+  readonly Readonly<Keyframe>[]; readonly options: Readonly<KeyframeAnimationOptions> }`, and
+  `LyraGetAnimationOptions { readonly dir?: 'ltr' | 'rtl'; readonly fallback?:
+  LyraElementAnimation | null; readonly respectReducedMotion?: boolean }`. The callable contracts are
+  `setDefaultAnimation(animationName: string, animation: LyraElementAnimation | null):
+  LyraAnimationCleanup`, `setAnimation(element: Element, animationName: string, animation:
+  LyraElementAnimation | null): LyraAnimationCleanup`, and `getAnimation(element: Element,
+  animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAnimation`.
 
   ```ts
   import {
     setAnimation,
-    type ElementAnimation,
-  } from '@aceshooting/lyra-ui/utilities/animation-registry.js';
+    type LyraElementAnimation,
+  } from "@aceshooting/lyra-ui/utilities/animation-registry.js";
 
-  const dialog = document.querySelector('lr-dialog');
-  const enter: ElementAnimation = {
+  const dialog = document.querySelector("lr-dialog");
+  const enter: LyraElementAnimation = {
     keyframes: [{ opacity: 0 }, { opacity: 1 }],
     options: { duration: 180 },
   };
-  const release = setAnimation(dialog, 'dialog.show', enter);
+  const release = setAnimation(dialog, "dialog.show", enter);
   // release() restores the previous registration.
   ```
+
 - **`overlay-manager` → `activateOverlay(options): OverlayHandle` and
   `suspendLyraModalsFor(externalModal): () => void`** — per-`Document` coordination used by Lyra's
   modal and focus-returning overlay surfaces, including dialogs/drawers, Page/app navigation,
@@ -1651,13 +1901,28 @@ feature-request API described in "When no component fits" so it can be promoted 
   including because `display: none` is set on the host or an ancestor — releases inerting,
   focus-trap/stack ownership, and manager-owned scroll lock without changing the component's logical
   open state. It resumes in its original stack order when rendered again.
+  `OverlayActivationOptions` exposes `host`, `panel`, optional `modalRoot`, `modal`, `lockScroll`,
+  `suspendWhenUnrendered`, `onEscape`, `onBackdrop`, `preferredInitialFocus`,
+  `beforeInitialFocus`, `restoreFocusTo`, `trapFocus`, and `onTab`. `OverlayHandle` exposes
+  `focusInitial()`, `focusAutofocus()`, `updateRestoreFocusTo(target)`, `deactivate({ restoreFocus }?)`,
+  `suspend()`, `resume()`, `isTopmost()`, `isActive()`, and `dismissBackdrop()`; the deactivate
+  argument is the exported `OverlayDeactivateOptions` record.
+  Exact records are `OverlayActivationOptions { host: HTMLElement; panel: () => HTMLElement |
+  null; modalRoot?: () => HTMLElement | null; onEscape: () => void; onBackdrop?: () => void;
+  preferredInitialFocus?: () => HTMLElement | null; beforeInitialFocus?: () => boolean;
+  restoreFocusTo?: OverlayRestoreFocusTarget; modal?: boolean; trapFocus?: boolean; onTab?: () =>
+  void; suspendWhenUnrendered?: boolean; lockScroll?: boolean }`, `OverlayDeactivateOptions {
+  restoreFocus?: boolean }`, and `OverlayHandle { focusInitial(): void; focusAutofocus(): boolean;
+  updateRestoreFocusTo(target: OverlayRestoreFocusTarget): void; deactivate(options?:
+  OverlayDeactivateOptions): void; suspend(): void; resume(): void; isTopmost(): boolean;
+  isActive(): boolean; dismissBackdrop(): boolean }`.
   When a third-party modal must open above a Lyra modal, call the public helper after its root is
   connected, then release it when that modal closes:
 
   ```ts
-  import { suspendLyraModalsFor } from '@aceshooting/lyra-ui/utilities/overlay-manager.js';
+  import { suspendLyraModalsFor } from "@aceshooting/lyra-ui/utilities/overlay-manager.js";
 
-  const externalModal = document.querySelector<HTMLElement>('#vendor-modal')!;
+  const externalModal = document.querySelector<HTMLElement>("#vendor-modal")!;
   const release = suspendLyraModalsFor(externalModal);
   release(); // idempotent
   ```
@@ -1665,6 +1930,7 @@ feature-request API described in "When no component fits" so it can be promoted 
   The handle is document-scoped and nestable. While any
   such handle is active, Lyra yields Escape/Tab ownership and keeps only the external modal paths
   non-inert; disconnecting or adopting the external root releases its handle automatically.
+
 - **`announcer` → `Announcer` and `acquireAnnouncementSink()`** — throttled live-region
   announcements, paired with `lr-live-region`. `Announcer` is the DOM-free coalescing engine;
   `acquireAnnouncementSink(politeness, options?)` hands back the ref-counted, visually hidden region
@@ -1673,37 +1939,55 @@ feature-request API described in "When no component fits" so it can be promoted 
   the `data-lr-live-region` marker those regions carry — so a consumer's DOM diffing, snapshot
   testing, or `MutationObserver` can recognize and ignore them. Both are documented in full in
   `llms/components/lr-live-region.md`.
+  The constructor accepts `AnnouncerOptions { throttleMs?; onFlush(text); timerHost? }`; each call
+  accepts `AnnounceOptions { force? }`; and `AnnouncerTimerHost` provides `setTimeout(handler,
+  timeout)` plus `clearTimeout(handle)`. `AnnouncementSinkOptions` exposes `document`, `source`, and
+  `messageTtlMs`; its `AnnouncementSink` handle exposes readonly `element` and `politeness`, mutable
+  `messageTtlMs`, `announce(text)`, and `release()`.
+  Exact sink contracts are `acquireAnnouncementSink(politeness: AnnouncementPoliteness, options?:
+  AnnouncementSinkOptions): AnnouncementSink`, `AnnouncementSinkOptions { document?: Document;
+  source?: Element; messageTtlMs?: number }`, `AnnouncementSink { readonly element: HTMLElement;
+  readonly politeness: AnnouncementPoliteness; messageTtlMs: number; announce(text: string): void;
+  release(): void }`, and `AnnouncerTimerHost { setTimeout(handler: () => void, timeout: number):
+  number; clearTimeout(handle: number): void }`.
 - **`localization` → `subscribeLyraLocale(listener): () => void` and
-  `bridgeLyraLocale(options?): () => void`** — the *active-locale* half of the locale runtime,
+  `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime,
   which the side-effect-free `@aceshooting/lyra-ui/localization.js` entry does not carry (that one
   has `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization").
-  `subscribeLyraLocale()` fires whenever the locale in force changes, so an application can
-  re-render its **own** locale-dependent output in step with the components.
+  `subscribeLyraLocale()` fires whenever the active selection changes, and when a newly registered
+  or extended catalog can alter that selection's messages or direction. Registrations unrelated to
+  the active lookup chain are filtered. An application can therefore re-render its **own**
+  locale-dependent output in step with the components without reacting to every lazy catalog.
 
-  `bridgeLyraLocale()` mirrors the active locale onto an element's `lang` and — unless
-  `direction: false` — its `dir`, resolved through `getLyraLocaleDirection()`. `setLyraLocale()`
-  only tells *this library* which locale is in force; `:lang()` selectors, hyphenation and quote
+  `bridgeLyraLocale()` mirrors the active locale's canonical public tag onto an element's `lang`
+  and — unless `direction: false` — its `dir`, resolved through `getLyraLocaleDirection()`.
+  `setLyraLocale()`
+  only tells _this library_ which locale is in force; `:lang()` selectors, hyphenation and quote
   marks, spelling dictionaries, a screen reader's pronunciation of untranslated prose and every
   third-party widget all read the platform `lang`/`dir` cascade instead, so an application that
   switches locale at runtime has to write those attributes itself. This is that glue, in one
   supported place. `target` defaults to `document.documentElement`; pass an application root to
   scope it to a subtree. It is strictly opt-in — importing the module does nothing, and the library
   never calls it for you. While no locale is active it leaves the target's authored `lang`/`dir`
-  alone rather than blanking them, and the returned idempotent disposer restores exactly what it
-  found, including an attribute that was absent.
+  alone rather than blanking them. Multiple bridges on the same target share one subscription and
+  authored-state snapshot; cleanup handles can release in any order, and the last release restores
+  exactly what the target carried before the first bridge, including an attribute that was absent.
+  Direction remains mirrored while any active handle leaves `direction` enabled.
+  Its exact options record is `LyraLocaleBridgeOptions { target?: Element; direction?: boolean }`.
 
   ```ts
-  import { bridgeLyraLocale } from '@aceshooting/lyra-ui/utilities/localization.js';
-  import { setLyraLocale } from '@aceshooting/lyra-ui/localization.js';
-  import '@aceshooting/lyra-ui/translations/ar.js';
+  import { bridgeLyraLocale } from "@aceshooting/lyra-ui/utilities/localization.js";
+  import { setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
+  import "@aceshooting/lyra-ui/translations/ar.js";
 
-  const stop = bridgeLyraLocale();  // mirrors onto <html>
-  setLyraLocale('ar');              // <html lang="ar" dir="rtl">
-  stop();                           // restores whatever <html> carried before
+  const stop = bridgeLyraLocale(); // mirrors onto <html>
+  setLyraLocale("ar"); // <html lang="ar" dir="rtl">
+  stop(); // restores whatever <html> carried before
   ```
 
 **Known gotchas:**
-- `formResetCallback()` restores the *content attribute* default, so `el.value = 'x'` never redefines
+
+- `formResetCallback()` restores the _content attribute_ default, so `el.value = 'x'` never redefines
   what `form.reset()` restores to (native `defaultValue`/`defaultSelected` semantics).
 
 ## Packaging
@@ -1776,3 +2060,1669 @@ Keep the report short and concrete:
 - **Say what it had to do** in a sentence or two — the behaviour, not your implementation.
 - **List the `lr-*` components you actually checked** and why each fell short. This is what separates
   a real gap from a naming mismatch, and it is the part only you can supply.
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`ai-adapters-a2ui-contracts`** — AI adapter and runtime contracts.
+  `A2UiAdapterLimits {
+    maxComponents: unknown;
+    maxDepth: unknown;
+    maxOutputNodes: unknown;
+    maxChildrenPerComponent: unknown;
+    maxNodes: unknown;
+    maxBytes: unknown;
+    maxStringCharacters: unknown;
+  }`
+  `A2UiLikeAction {
+    id: unknown;
+    payload: unknown;
+  }`
+  `A2UiLikeComponent {
+    id: unknown;
+    type: unknown;
+    props: unknown;
+    text: unknown;
+    children: unknown;
+    action: unknown;
+  }`
+  `A2UiLikeSurface {
+    surfaceId: unknown;
+    rootId: unknown;
+    components: unknown;
+    data: unknown;
+  }`
+  `adaptA2UiSurface(/* public names: surface, typeMap, limits */): unknown`
+
+- **`ai-adapters-ag-ui-contracts`** — AI adapter and runtime contracts.
+  `AgUiAdapterLimits {
+    maxBufferedTools: unknown;
+    maxToolArgumentBytes: unknown;
+    maxTextDeltaCharacters: unknown;
+    maxDepth: unknown;
+    maxNodes: unknown;
+    maxBytes: unknown;
+    maxStringCharacters: unknown;
+  }`
+  `AgUiLikeEvent {
+    type: unknown;
+    eventId: unknown;
+    runId: unknown;
+    messageId: unknown;
+    role: unknown;
+    delta: unknown;
+    toolCallId: unknown;
+    toolCallName: unknown;
+    result: unknown;
+    message: unknown;
+    code: unknown;
+    snapshot: unknown;
+    messages: unknown;
+  }`
+
+- **`ai-adapters-ai-sdk-contracts`** — AI adapter and runtime contracts.
+  `adaptAiSdkMessage(/* public names: message, limits */): unknown`
+  `AiSdkAdapterLimits {
+    maxParts: unknown;
+    maxDepth: unknown;
+    maxNodes: unknown;
+    maxBytes: unknown;
+    maxStringCharacters: unknown;
+  }`
+  `AiSdkLikeMessage {
+    id: unknown;
+    role: unknown;
+    parts: unknown;
+    metadata: unknown;
+  }`
+
+- **`ai-runtime-contracts`** — AI adapter and runtime contracts.
+  `AgentStreamLimits {
+    maxMessages: unknown;
+    maxPartsPerMessage: unknown;
+    maxTools: unknown;
+    maxDeltaCharacters: unknown;
+    maxTextCharactersPerPart: unknown;
+    maxIdentifierCharacters: unknown;
+    maxStatusMessageCharacters: unknown;
+    maxPatchOperations: unknown;
+    maxSnapshotDepth: unknown;
+    maxSnapshotNodes: unknown;
+    maxSnapshotBytes: unknown;
+    maxRetainedBytes: unknown;
+  }`
+  `AgentStreamState {
+    generation: unknown;
+    cursor: unknown;
+    limits: unknown;
+    runId: unknown;
+    status: unknown;
+    messages: unknown;
+    tools: unknown;
+    sharedState: unknown;
+    error: unknown;
+    message: unknown;
+    code: unknown;
+  }`
+  `applySharedStatePatch(/* public names: value, patch */): unknown`
+  `createAgentStreamState(/* public names: limits */): unknown`
+  `parseJsonPatch(/* public names: value, limits */): unknown`
+  `reduceAgentStreamEvents(/* public names: state, events */): unknown`
+  `reduceAgentStream(/* public names: state, event */): unknown`
+
+- **`ai-snapshot-contracts`** — AI adapter and runtime contracts.
+  `createProviderSnapshotBudget(/* public names: limits */): unknown`
+  `ProviderSnapshotBudget {
+    limits: unknown;
+    bytes: unknown;
+    nodes: unknown;
+  }`
+  `ProviderSnapshotLimits {
+    maxDepth: unknown;
+    maxNodes: unknown;
+    maxBytes: unknown;
+    maxStringCharacters: unknown;
+  }`
+  `resolveProviderSnapshotLimits(/* public names: limits */): unknown`
+  `snapshotProviderValue(/* public names: value, budget */): unknown`
+
+- **`ai-types-contracts`** — AI adapter and runtime contracts.
+  `AgentRun {
+    id: unknown;
+    status: unknown;
+    startedAt: unknown;
+    endedAt: unknown;
+    model: unknown;
+    costEstimate: unknown;
+    steps: unknown;
+  }`
+  `AgentStatus {
+    kind: unknown;
+    message: unknown;
+  }`
+  `AgentStep {
+    id: unknown;
+    kind: unknown;
+    label: unknown;
+    status: unknown;
+    startedAt: unknown;
+    endedAt: unknown;
+  }`
+  `AttachmentMessagePart {
+    type: unknown;
+    document: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `AudioMessagePart {
+    type: unknown;
+    src: unknown;
+    transcript: unknown;
+    mimeType: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `CancelEventDetail {
+    reason: unknown;
+  }`
+  `ChatMessage {
+    id: unknown;
+    role: unknown;
+    status: unknown;
+    timestamp: unknown;
+    text: unknown;
+    attachments: unknown;
+    parts: unknown;
+    metadata: unknown;
+  }`
+  `Citation {
+    id: unknown;
+    chunkId: unknown;
+    sourceId: unknown;
+    span: unknown;
+    start: unknown;
+    end: unknown;
+    label: unknown;
+    locator: unknown;
+    answerRange: unknown;
+    quote: unknown;
+    metadata: unknown;
+  }`
+  `CitationMessagePart {
+    type: unknown;
+    citation: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `CitationSelectEventDetail {
+    citation: unknown;
+  }`
+  `DataMessagePart {
+    type: unknown;
+    name: unknown;
+    data: unknown;
+    widget: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `DocumentRef {
+    id: unknown;
+    name: unknown;
+    mimeType: unknown;
+    uri: unknown;
+    version: unknown;
+  }`
+  `ErrorMessagePart {
+    type: unknown;
+    message: unknown;
+    code: unknown;
+    retryable: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `ExportEventDetail {
+    format: unknown;
+  }`
+  `GroundedClaim {
+    id: unknown;
+    text: unknown;
+    status: unknown;
+    citationIds: unknown;
+    answerRange: unknown;
+    start: unknown;
+    end: unknown;
+    confidence: unknown;
+    explanation: unknown;
+  }`
+  `GroundingAssessment {
+    supportedClaims: unknown;
+    unsupportedClaims: unknown;
+    coverage: unknown;
+    confidence: unknown;
+    warnings: unknown;
+    claims: unknown;
+  }`
+  `MessagePartBase {
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `ReasoningMessagePart {
+    type: unknown;
+    text: unknown;
+    collapsed: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `RetrievalChunk {
+    id: unknown;
+    text: unknown;
+    score: unknown;
+    source: unknown;
+    metadata: unknown;
+    rank: unknown;
+    locator: unknown;
+    queryId: unknown;
+    stage: unknown;
+    traceId: unknown;
+    scores: unknown;
+  }`
+  `RetrievalProgressEventDetail {
+    queryId: unknown;
+    stage: unknown;
+    progress: unknown;
+  }`
+  `RetrievalQuery {
+    text: unknown;
+    filters: unknown;
+    mode: unknown;
+    scope: unknown;
+  }`
+  `RetrievalScoreBreakdown {
+    dense: unknown;
+    sparse: unknown;
+    rerank: unknown;
+    final: unknown;
+  }`
+  `RetryEventDetail {
+    attempt: unknown;
+    messageId: unknown;
+  }`
+  `RunLifecycleEventDetail {
+    runId: unknown;
+    status: unknown;
+  }`
+  `TextMessagePart {
+    type: unknown;
+    text: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `ToolApprovalEventDetail {
+    invocationId: unknown;
+    approved: unknown;
+  }`
+  `ToolCallMessagePart {
+    type: unknown;
+    invocation: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `ToolInvocation {
+    id: unknown;
+    name: unknown;
+    args: unknown;
+    status: unknown;
+    result: unknown;
+    error: unknown;
+  }`
+  `ToolResultErrorMessagePart {
+    error: unknown;
+    result: unknown;
+    type: unknown;
+    invocationId: unknown;
+    name: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `ToolResultSuccessMessagePart {
+    result: unknown;
+    error: unknown;
+    type: unknown;
+    invocationId: unknown;
+    name: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+  `WidgetMessagePart {
+    type: unknown;
+    name: unknown;
+    data: unknown;
+    widget: unknown;
+    id: unknown;
+    state: unknown;
+    metadata: unknown;
+  }`
+
+- **`autoloader-contracts`** — Shared utility contracts.
+  `AutoloaderErrorEventDetail {
+    error: unknown;
+    tag: unknown;
+    optionalPeers: unknown;
+  }`
+  `AutoloaderEventDetail {
+    tag: unknown;
+    optionalPeers: unknown;
+  }`
+  `AutoloaderOptions {
+    optionalPeers: unknown;
+    events: unknown;
+    maxConcurrency: unknown;
+    maxElements: unknown;
+    maxRoots: unknown;
+    maxDepth: unknown;
+    maxWork: unknown;
+  }`
+  `AutoloaderTraversalErrorEventDetail {
+    limit: unknown;
+    maximum: unknown;
+    error: unknown;
+  }`
+  `discover(root?: LyraDefinitionRoot, options?: AutoloaderOptions): Promise<readonly AutoloadableTagName[]>`
+  `start(root?: LyraDefinitionRoot, options?: AutoloaderOptions): Promise<readonly AutoloadableTagName[]>`
+  `stop(): unknown`
+
+- **`custom-elements-jsx-contracts`** — Framework integration type contracts.
+  `LyraReactIntrinsicElements {
+    "lr-accordion": unknown;
+    "lr-accordion-item": unknown;
+    "lr-activity-feed": unknown;
+    "lr-agent-eval-dashboard": unknown;
+    "lr-agent-run": unknown;
+    "lr-agent-trace": unknown;
+    "lr-agent-workspace": unknown;
+    "lr-alert": unknown;
+    "lr-animated-image": unknown;
+    "lr-animation": unknown;
+    "lr-app-rail": unknown;
+    "lr-app-rail-item": unknown;
+    "lr-approval-queue": unknown;
+    "lr-archive-viewer": unknown;
+    "lr-artifact-panel": unknown;
+    "lr-attachment-chip": unknown;
+    "lr-attachment-trigger": unknown;
+    "lr-audio-visualizer": unknown;
+    "lr-av-player": unknown;
+    "lr-avatar": unknown;
+    "lr-avatar-group": unknown;
+    "lr-badge": unknown;
+    "lr-bar-chart": unknown;
+    "lr-box-plot": unknown;
+    "lr-branch-picker": unknown;
+    "lr-breadcrumb": unknown;
+    "lr-breadcrumb-item": unknown;
+    "lr-browser-frame": unknown;
+    "lr-bubble-chart": unknown;
+    "lr-button": unknown;
+    "lr-button-group": unknown;
+    "lr-calendar": unknown;
+    "lr-calendar-viewer": unknown;
+    "lr-callout": unknown;
+    "lr-card": unknown;
+    "lr-carousel": unknown;
+    "lr-carousel-item": unknown;
+    "lr-chart": unknown;
+    "lr-chat-composer": unknown;
+    "lr-chat-message": unknown;
+    "lr-chat-viewport": unknown;
+    "lr-checkbox": unknown;
+    "lr-checkbox-group": unknown;
+    "lr-checkpoint": unknown;
+    "lr-chip": unknown;
+    "lr-chip-group": unknown;
+    "lr-chunk-inspector": unknown;
+    "lr-citation-badge": unknown;
+    "lr-claim-evidence": unknown;
+    "lr-code-block": unknown;
+    "lr-code-block-core": unknown;
+    "lr-code-editor": unknown;
+    "lr-color-picker": unknown;
+    "lr-combobox": unknown;
+    "lr-command-palette": unknown;
+    "lr-commit-card": unknown;
+    "lr-community-card": unknown;
+    "lr-compare-panel": unknown;
+    "lr-condition-builder": unknown;
+    "lr-confirm-bar": unknown;
+    "lr-contact-viewer": unknown;
+    "lr-context-inspector": unknown;
+    "lr-context-meter": unknown;
+    "lr-control-group": unknown;
+    "lr-conversation-item": unknown;
+    "lr-copy-button": unknown;
+    "lr-csv-viewer": unknown;
+    "lr-dashboard-grid": unknown;
+    "lr-data-grid": unknown;
+    "lr-dataset-viewer": unknown;
+    "lr-date-input": unknown;
+    "lr-date-picker": unknown;
+    "lr-details": unknown;
+    "lr-dialog": unknown;
+    "lr-diff-view": unknown;
+    "lr-divider": unknown;
+    "lr-dock-panel": unknown;
+    "lr-document-compare": unknown;
+    "lr-document-library": unknown;
+    "lr-document-preview": unknown;
+    "lr-document-viewer": unknown;
+    "lr-docx-viewer": unknown;
+    "lr-doughnut-chart": unknown;
+    "lr-drawer": unknown;
+    "lr-drilldown-panel": unknown;
+    "lr-dropdown": unknown;
+    "lr-dropdown-item": unknown;
+    "lr-ebook-viewer": unknown;
+    "lr-email-viewer": unknown;
+    "lr-embedding-explorer": unknown;
+    "lr-emoji-picker": unknown;
+    "lr-empty": unknown;
+    "lr-entity-card": unknown;
+    "lr-entity-chip": unknown;
+    "lr-entity-dossier": unknown;
+    "lr-env-list": unknown;
+    "lr-eval-dataset": unknown;
+    "lr-eval-result": unknown;
+    "lr-evaluation-run": unknown;
+    "lr-export-button": unknown;
+    "lr-file-icon": unknown;
+    "lr-file-input": unknown;
+    "lr-file-tree": unknown;
+    "lr-filter-bar": unknown;
+    "lr-flag": unknown;
+    "lr-flow-canvas": unknown;
+    "lr-flow-controls": unknown;
+    "lr-flow-minimap": unknown;
+    "lr-flow-node": unknown;
+    "lr-flow-run-status": unknown;
+    "lr-format-bytes": unknown;
+    "lr-format-date": unknown;
+    "lr-format-number": unknown;
+    "lr-gauge": unknown;
+    "lr-generation-metrics": unknown;
+    "lr-geojson-view": unknown;
+    "lr-geojson-viewer": unknown;
+    "lr-graph": unknown;
+    "lr-graph-legend": unknown;
+    "lr-graph-query-builder": unknown;
+    "lr-grounding-summary": unknown;
+    "lr-handoff-divider": unknown;
+    "lr-heatmap": unknown;
+    "lr-highlight-layer": unknown;
+    "lr-histogram": unknown;
+    "lr-html-viewer": unknown;
+    "lr-icon": unknown;
+    "lr-icon-button": unknown;
+    "lr-image-comparer": unknown;
+    "lr-image-viewer": unknown;
+    "lr-include": unknown;
+    "lr-ingestion-queue": unknown;
+    "lr-input": unknown;
+    "lr-intersection-observer": unknown;
+    "lr-json-viewer": unknown;
+    "lr-kbd": unknown;
+    "lr-knowledge-base": unknown;
+    "lr-knowledge-base-admin": unknown;
+    "lr-knowledge-graph-explorer": unknown;
+    "lr-known-date": unknown;
+    "lr-lightbox": unknown;
+    "lr-line-chart": unknown;
+    "lr-lite-chart": unknown;
+    "lr-live-region": unknown;
+    "lr-locale-picker": unknown;
+    "lr-map": unknown;
+    "lr-markdown": unknown;
+    "lr-markdown-core": unknown;
+    "lr-mcp-app": unknown;
+    "lr-media-card": unknown;
+    "lr-memory-panel": unknown;
+    "lr-mention-popover": unknown;
+    "lr-menu": unknown;
+    "lr-menu-item": unknown;
+    "lr-menu-label": unknown;
+    "lr-message-actions": unknown;
+    "lr-message-feedback": unknown;
+    "lr-message-parts": unknown;
+    "lr-mind-map": unknown;
+    "lr-model-select": unknown;
+    "lr-model-settings-panel": unknown;
+    "lr-multi-split": unknown;
+    "lr-mutation-observer": unknown;
+    "lr-native-time-input": unknown;
+    "lr-neighbor-list": unknown;
+    "lr-node-palette": unknown;
+    "lr-notebook-viewer": unknown;
+    "lr-number-input": unknown;
+    "lr-option": unknown;
+    "lr-otp-input": unknown;
+    "lr-page": unknown;
+    "lr-page-rail": unknown;
+    "lr-pagination": unknown;
+    "lr-pan-zoom": unknown;
+    "lr-path-strip": unknown;
+    "lr-pdf-viewer": unknown;
+    "lr-phone-input": unknown;
+    "lr-pie-chart": unknown;
+    "lr-polar-area-chart": unknown;
+    "lr-policy-summary": unknown;
+    "lr-poll-status": unknown;
+    "lr-popover": unknown;
+    "lr-popup": unknown;
+    "lr-pptx-viewer": unknown;
+    "lr-progress-bar": unknown;
+    "lr-progress-ring": unknown;
+    "lr-prompt-input": unknown;
+    "lr-prompt-queue": unknown;
+    "lr-prompt-studio": unknown;
+    "lr-provenance-panel": unknown;
+    "lr-push-to-talk": unknown;
+    "lr-qr-code": unknown;
+    "lr-radar-chart": unknown;
+    "lr-radio": unknown;
+    "lr-radio-button": unknown;
+    "lr-radio-group": unknown;
+    "lr-rag-answer": unknown;
+    "lr-rag-eval-dashboard": unknown;
+    "lr-random-content": unknown;
+    "lr-rating": unknown;
+    "lr-realtime-session": unknown;
+    "lr-relative-time": unknown;
+    "lr-reorder-item": unknown;
+    "lr-reorder-list": unknown;
+    "lr-resize-observer": unknown;
+    "lr-responsive-panel": unknown;
+    "lr-result-card": unknown;
+    "lr-result-field": unknown;
+    "lr-retrieval-compare": unknown;
+    "lr-retrieval-results": unknown;
+    "lr-retrieval-search": unknown;
+    "lr-retrieval-trace": unknown;
+    "lr-rubric-form": unknown;
+    "lr-scatter-chart": unknown;
+    "lr-schema-viewer": unknown;
+    "lr-scroller": unknown;
+    "lr-segmented": unknown;
+    "lr-select": unknown;
+    "lr-selection-toolbar": unknown;
+    "lr-sequence-playback": unknown;
+    "lr-sequence-strip": unknown;
+    "lr-skeleton": unknown;
+    "lr-slider": unknown;
+    "lr-source-card": unknown;
+    "lr-source-list": unknown;
+    "lr-source-picker": unknown;
+    "lr-span-waterfall": unknown;
+    "lr-sparkline": unknown;
+    "lr-spinner": unknown;
+    "lr-split-panel": unknown;
+    "lr-spreadsheet-viewer": unknown;
+    "lr-stack-trace": unknown;
+    "lr-stat": unknown;
+    "lr-stepper": unknown;
+    "lr-stream-status": unknown;
+    "lr-streaming-text": unknown;
+    "lr-subagent-panel": unknown;
+    "lr-suggestion-chips": unknown;
+    "lr-svg-viewer": unknown;
+    "lr-swatch-picker": unknown;
+    "lr-switch": unknown;
+    "lr-tab": unknown;
+    "lr-tab-group": unknown;
+    "lr-tab-panel": unknown;
+    "lr-table": unknown;
+    "lr-tag": unknown;
+    "lr-task-list": unknown;
+    "lr-terminal": unknown;
+    "lr-test-results": unknown;
+    "lr-textarea": unknown;
+    "lr-thinking-panel": unknown;
+    "lr-thread-list": unknown;
+    "lr-time-input": unknown;
+    "lr-time-range": unknown;
+    "lr-timeline": unknown;
+    "lr-timeline-item": unknown;
+    "lr-toast": unknown;
+    "lr-toast-item": unknown;
+    "lr-token-input": unknown;
+    "lr-tool-approval-dialog": unknown;
+    "lr-tool-call-chip": unknown;
+    "lr-tool-param-form": unknown;
+    "lr-tool-result-dialog": unknown;
+    "lr-tool-result-view": unknown;
+    "lr-tool-select-dialog": unknown;
+    "lr-tool-timeline": unknown;
+    "lr-tooltip": unknown;
+    "lr-tour": unknown;
+    "lr-trace-tree": unknown;
+    "lr-transcript-feed": unknown;
+    "lr-tree": unknown;
+    "lr-tree-item": unknown;
+    "lr-typing-indicator": unknown;
+    "lr-usage-badge": unknown;
+    "lr-video": unknown;
+    "lr-video-playlist": unknown;
+    "lr-virtual-list": unknown;
+    "lr-visually-hidden": unknown;
+    "lr-voice-picker": unknown;
+    "lr-widget": unknown;
+    "lr-widget-renderer": unknown;
+    "lr-word-cloud": unknown;
+    "lr-xml-viewer": unknown;
+    "lr-zoomable-frame": unknown;
+  }`
+
+- **`internal-ansi-contracts`** — Shared utility contracts.
+  `AnsiStyles {
+    bold: unknown;
+    dim: unknown;
+    italic: unknown;
+    underline: unknown;
+    inverse: unknown;
+    fg: unknown;
+    bg: unknown;
+  }`
+
+- **`internal-canvas-color-contracts`** — Shared utility contracts.
+  `resolveCanvasColor(/* public names: scope, color, fallback */): unknown`
+
+- **`internal-localization-runtime-contracts`** — Shared utility contracts.
+  `getLyraLocaleDirection(/* public names: locale */): unknown`
+  `getLyraLocale(): unknown`
+  `getRegisteredLyraLocales(): unknown`
+  `registerLyraLocale(/* public names: locale, strings, meta */): unknown`
+  `resolveLyraDirection(/* public names: host */): unknown`
+  `resolveLyraLocale(/* public names: host */): unknown`
+  `setLyraLocale(/* public names: locale */): unknown`
+  `subscribeLyraLocaleRegistry(/* public names: listener */): unknown`
+
+- **`internal-localization-types-contracts`** — Shared utility contracts.
+  `LyraLocaleMeta {
+    dir: unknown;
+    name: unknown;
+  }`
+
+- **`internal-localization-contracts`** — Shared utility contracts.
+  `resolveLyraString(/* public names: host, key, overrides, fallback, values */): unknown`
+
+- **`internal-node-type-style-contracts`** — Shared utility contracts.
+  `LyraNodeTypeStyle {
+    id: unknown;
+    label: unknown;
+    color: unknown;
+    shape: unknown;
+  }`
+
+- **`internal-registered-animation-contracts`** — Shared utility contracts.
+  `RegisteredAnimationSpec {
+    keyframes: unknown;
+    rtlKeyframes: unknown;
+    durationProperties: unknown;
+    easingProperties: unknown;
+    fallbackDuration: unknown;
+    fallbackEasing: unknown;
+    options: unknown;
+  }`
+
+- **`internal-text-viewer-target-contracts`** — Shared utility contracts.
+  `LyraSearchChangeDetail {
+    query: unknown;
+    matchCount: unknown;
+    matchCountExact: unknown;
+    activeIndex: unknown;
+  }`
+  `LyraTextViewerTarget {
+    search: unknown;
+    query: unknown;
+    searchNext: unknown;
+    searchPrevious: unknown;
+    clearSearch: unknown;
+    highlights: unknown;
+    activeHighlightId: unknown;
+    anchor: unknown;
+    anchorKinds: unknown;
+    scrollToAnchor: unknown;
+    target: unknown;
+  }`
+
+- **`ssr-contracts`** — Shared utility contracts.
+  `diagnoseLyraHydration(/* public names: root */): unknown`
+  `getLyraSsrMode(/* public names: tagName */): unknown`
+  `LyraHydrationDiagnostic {
+    element: unknown;
+    tag: unknown;
+    mode: unknown;
+    status: unknown;
+    error: unknown;
+  }`
+  `LyraLitElementRendererConstructor {
+    prototype: unknown;
+    matchesClass: unknown;
+    constructor: unknown;
+    tagName: unknown;
+    attributes: unknown;
+  }`
+  `LyraSsrClientRenderReason {
+    code: unknown;
+    detail: unknown;
+  }`
+  `lyraSsrElementRenderers(/* public names: litElementRenderer */): unknown`
+
+- **`svelte-contracts`** — Framework integration type contracts.
+  `LyraElementTagNameMap {
+    "lr-accordion": unknown;
+    "lr-accordion-item": unknown;
+    "lr-activity-feed": unknown;
+    "lr-agent-eval-dashboard": unknown;
+    "lr-agent-run": unknown;
+    "lr-agent-trace": unknown;
+    "lr-agent-workspace": unknown;
+    "lr-alert": unknown;
+    "lr-animated-image": unknown;
+    "lr-animation": unknown;
+    "lr-app-rail": unknown;
+    "lr-app-rail-item": unknown;
+    "lr-approval-queue": unknown;
+    "lr-archive-viewer": unknown;
+    "lr-artifact-panel": unknown;
+    "lr-attachment-chip": unknown;
+    "lr-attachment-trigger": unknown;
+    "lr-audio-visualizer": unknown;
+    "lr-av-player": unknown;
+    "lr-avatar": unknown;
+    "lr-avatar-group": unknown;
+    "lr-badge": unknown;
+    "lr-bar-chart": unknown;
+    "lr-box-plot": unknown;
+    "lr-branch-picker": unknown;
+    "lr-breadcrumb": unknown;
+    "lr-breadcrumb-item": unknown;
+    "lr-browser-frame": unknown;
+    "lr-bubble-chart": unknown;
+    "lr-button": unknown;
+    "lr-button-group": unknown;
+    "lr-calendar": unknown;
+    "lr-calendar-viewer": unknown;
+    "lr-callout": unknown;
+    "lr-card": unknown;
+    "lr-carousel": unknown;
+    "lr-carousel-item": unknown;
+    "lr-chart": unknown;
+    "lr-chat-composer": unknown;
+    "lr-chat-message": unknown;
+    "lr-chat-viewport": unknown;
+    "lr-checkbox": unknown;
+    "lr-checkbox-group": unknown;
+    "lr-checkpoint": unknown;
+    "lr-chip": unknown;
+    "lr-chip-group": unknown;
+    "lr-chunk-inspector": unknown;
+    "lr-citation-badge": unknown;
+    "lr-claim-evidence": unknown;
+    "lr-code-block": unknown;
+    "lr-code-block-core": unknown;
+    "lr-code-editor": unknown;
+    "lr-color-picker": unknown;
+    "lr-combobox": unknown;
+    "lr-command-palette": unknown;
+    "lr-commit-card": unknown;
+    "lr-community-card": unknown;
+    "lr-compare-panel": unknown;
+    "lr-condition-builder": unknown;
+    "lr-confirm-bar": unknown;
+    "lr-contact-viewer": unknown;
+    "lr-context-inspector": unknown;
+    "lr-context-meter": unknown;
+    "lr-control-group": unknown;
+    "lr-conversation-item": unknown;
+    "lr-copy-button": unknown;
+    "lr-csv-viewer": unknown;
+    "lr-dashboard-grid": unknown;
+    "lr-data-grid": unknown;
+    "lr-dataset-viewer": unknown;
+    "lr-date-input": unknown;
+    "lr-date-picker": unknown;
+    "lr-details": unknown;
+    "lr-dialog": unknown;
+    "lr-diff-view": unknown;
+    "lr-divider": unknown;
+    "lr-dock-panel": unknown;
+    "lr-document-compare": unknown;
+    "lr-document-library": unknown;
+    "lr-document-preview": unknown;
+    "lr-document-viewer": unknown;
+    "lr-docx-viewer": unknown;
+    "lr-doughnut-chart": unknown;
+    "lr-drawer": unknown;
+    "lr-drilldown-panel": unknown;
+    "lr-dropdown": unknown;
+    "lr-dropdown-item": unknown;
+    "lr-ebook-viewer": unknown;
+    "lr-email-viewer": unknown;
+    "lr-embedding-explorer": unknown;
+    "lr-emoji-picker": unknown;
+    "lr-empty": unknown;
+    "lr-entity-card": unknown;
+    "lr-entity-chip": unknown;
+    "lr-entity-dossier": unknown;
+    "lr-env-list": unknown;
+    "lr-eval-dataset": unknown;
+    "lr-eval-result": unknown;
+    "lr-evaluation-run": unknown;
+    "lr-export-button": unknown;
+    "lr-file-icon": unknown;
+    "lr-file-input": unknown;
+    "lr-file-tree": unknown;
+    "lr-filter-bar": unknown;
+    "lr-flag": unknown;
+    "lr-flow-canvas": unknown;
+    "lr-flow-controls": unknown;
+    "lr-flow-minimap": unknown;
+    "lr-flow-node": unknown;
+    "lr-flow-run-status": unknown;
+    "lr-format-bytes": unknown;
+    "lr-format-date": unknown;
+    "lr-format-number": unknown;
+    "lr-gauge": unknown;
+    "lr-generation-metrics": unknown;
+    "lr-geojson-view": unknown;
+    "lr-geojson-viewer": unknown;
+    "lr-graph": unknown;
+    "lr-graph-legend": unknown;
+    "lr-graph-query-builder": unknown;
+    "lr-grounding-summary": unknown;
+    "lr-handoff-divider": unknown;
+    "lr-heatmap": unknown;
+    "lr-highlight-layer": unknown;
+    "lr-histogram": unknown;
+    "lr-html-viewer": unknown;
+    "lr-icon": unknown;
+    "lr-icon-button": unknown;
+    "lr-image-comparer": unknown;
+    "lr-image-viewer": unknown;
+    "lr-include": unknown;
+    "lr-ingestion-queue": unknown;
+    "lr-input": unknown;
+    "lr-intersection-observer": unknown;
+    "lr-json-viewer": unknown;
+    "lr-kbd": unknown;
+    "lr-knowledge-base": unknown;
+    "lr-knowledge-base-admin": unknown;
+    "lr-knowledge-graph-explorer": unknown;
+    "lr-known-date": unknown;
+    "lr-lightbox": unknown;
+    "lr-line-chart": unknown;
+    "lr-lite-chart": unknown;
+    "lr-live-region": unknown;
+    "lr-locale-picker": unknown;
+    "lr-map": unknown;
+    "lr-markdown": unknown;
+    "lr-markdown-core": unknown;
+    "lr-mcp-app": unknown;
+    "lr-media-card": unknown;
+    "lr-memory-panel": unknown;
+    "lr-mention-popover": unknown;
+    "lr-menu": unknown;
+    "lr-menu-item": unknown;
+    "lr-menu-label": unknown;
+    "lr-message-actions": unknown;
+    "lr-message-feedback": unknown;
+    "lr-message-parts": unknown;
+    "lr-mind-map": unknown;
+    "lr-model-select": unknown;
+    "lr-model-settings-panel": unknown;
+    "lr-multi-split": unknown;
+    "lr-mutation-observer": unknown;
+    "lr-native-time-input": unknown;
+    "lr-neighbor-list": unknown;
+    "lr-node-palette": unknown;
+    "lr-notebook-viewer": unknown;
+    "lr-number-input": unknown;
+    "lr-option": unknown;
+    "lr-otp-input": unknown;
+    "lr-page": unknown;
+    "lr-page-rail": unknown;
+    "lr-pagination": unknown;
+    "lr-pan-zoom": unknown;
+    "lr-path-strip": unknown;
+    "lr-pdf-viewer": unknown;
+    "lr-phone-input": unknown;
+    "lr-pie-chart": unknown;
+    "lr-polar-area-chart": unknown;
+    "lr-policy-summary": unknown;
+    "lr-poll-status": unknown;
+    "lr-popover": unknown;
+    "lr-popup": unknown;
+    "lr-pptx-viewer": unknown;
+    "lr-progress-bar": unknown;
+    "lr-progress-ring": unknown;
+    "lr-prompt-input": unknown;
+    "lr-prompt-queue": unknown;
+    "lr-prompt-studio": unknown;
+    "lr-provenance-panel": unknown;
+    "lr-push-to-talk": unknown;
+    "lr-qr-code": unknown;
+    "lr-radar-chart": unknown;
+    "lr-radio": unknown;
+    "lr-radio-button": unknown;
+    "lr-radio-group": unknown;
+    "lr-rag-answer": unknown;
+    "lr-rag-eval-dashboard": unknown;
+    "lr-random-content": unknown;
+    "lr-rating": unknown;
+    "lr-realtime-session": unknown;
+    "lr-relative-time": unknown;
+    "lr-reorder-item": unknown;
+    "lr-reorder-list": unknown;
+    "lr-resize-observer": unknown;
+    "lr-responsive-panel": unknown;
+    "lr-result-card": unknown;
+    "lr-result-field": unknown;
+    "lr-retrieval-compare": unknown;
+    "lr-retrieval-results": unknown;
+    "lr-retrieval-search": unknown;
+    "lr-retrieval-trace": unknown;
+    "lr-rubric-form": unknown;
+    "lr-scatter-chart": unknown;
+    "lr-schema-viewer": unknown;
+    "lr-scroller": unknown;
+    "lr-segmented": unknown;
+    "lr-select": unknown;
+    "lr-selection-toolbar": unknown;
+    "lr-sequence-playback": unknown;
+    "lr-sequence-strip": unknown;
+    "lr-skeleton": unknown;
+    "lr-slider": unknown;
+    "lr-source-card": unknown;
+    "lr-source-list": unknown;
+    "lr-source-picker": unknown;
+    "lr-span-waterfall": unknown;
+    "lr-sparkline": unknown;
+    "lr-spinner": unknown;
+    "lr-split-panel": unknown;
+    "lr-spreadsheet-viewer": unknown;
+    "lr-stack-trace": unknown;
+    "lr-stat": unknown;
+    "lr-stepper": unknown;
+    "lr-stream-status": unknown;
+    "lr-streaming-text": unknown;
+    "lr-subagent-panel": unknown;
+    "lr-suggestion-chips": unknown;
+    "lr-svg-viewer": unknown;
+    "lr-swatch-picker": unknown;
+    "lr-switch": unknown;
+    "lr-tab": unknown;
+    "lr-tab-group": unknown;
+    "lr-tab-panel": unknown;
+    "lr-table": unknown;
+    "lr-tag": unknown;
+    "lr-task-list": unknown;
+    "lr-terminal": unknown;
+    "lr-test-results": unknown;
+    "lr-textarea": unknown;
+    "lr-thinking-panel": unknown;
+    "lr-thread-list": unknown;
+    "lr-time-input": unknown;
+    "lr-time-range": unknown;
+    "lr-timeline": unknown;
+    "lr-timeline-item": unknown;
+    "lr-toast": unknown;
+    "lr-toast-item": unknown;
+    "lr-token-input": unknown;
+    "lr-tool-approval-dialog": unknown;
+    "lr-tool-call-chip": unknown;
+    "lr-tool-param-form": unknown;
+    "lr-tool-result-dialog": unknown;
+    "lr-tool-result-view": unknown;
+    "lr-tool-select-dialog": unknown;
+    "lr-tool-timeline": unknown;
+    "lr-tooltip": unknown;
+    "lr-tour": unknown;
+    "lr-trace-tree": unknown;
+    "lr-transcript-feed": unknown;
+    "lr-tree": unknown;
+    "lr-tree-item": unknown;
+    "lr-typing-indicator": unknown;
+    "lr-usage-badge": unknown;
+    "lr-video": unknown;
+    "lr-video-playlist": unknown;
+    "lr-virtual-list": unknown;
+    "lr-visually-hidden": unknown;
+    "lr-voice-picker": unknown;
+    "lr-widget": unknown;
+    "lr-widget-renderer": unknown;
+    "lr-word-cloud": unknown;
+    "lr-xml-viewer": unknown;
+    "lr-zoomable-frame": unknown;
+  }`
+  `LyraSvelteElements {
+    "lr-accordion": unknown;
+    "lr-accordion-item": unknown;
+    "lr-activity-feed": unknown;
+    "lr-agent-eval-dashboard": unknown;
+    "lr-agent-run": unknown;
+    "lr-agent-trace": unknown;
+    "lr-agent-workspace": unknown;
+    "lr-alert": unknown;
+    "lr-animated-image": unknown;
+    "lr-animation": unknown;
+    "lr-app-rail": unknown;
+    "lr-app-rail-item": unknown;
+    "lr-approval-queue": unknown;
+    "lr-archive-viewer": unknown;
+    "lr-artifact-panel": unknown;
+    "lr-attachment-chip": unknown;
+    "lr-attachment-trigger": unknown;
+    "lr-audio-visualizer": unknown;
+    "lr-av-player": unknown;
+    "lr-avatar": unknown;
+    "lr-avatar-group": unknown;
+    "lr-badge": unknown;
+    "lr-bar-chart": unknown;
+    "lr-box-plot": unknown;
+    "lr-branch-picker": unknown;
+    "lr-breadcrumb": unknown;
+    "lr-breadcrumb-item": unknown;
+    "lr-browser-frame": unknown;
+    "lr-bubble-chart": unknown;
+    "lr-button": unknown;
+    "lr-button-group": unknown;
+    "lr-calendar": unknown;
+    "lr-calendar-viewer": unknown;
+    "lr-callout": unknown;
+    "lr-card": unknown;
+    "lr-carousel": unknown;
+    "lr-carousel-item": unknown;
+    "lr-chart": unknown;
+    "lr-chat-composer": unknown;
+    "lr-chat-message": unknown;
+    "lr-chat-viewport": unknown;
+    "lr-checkbox": unknown;
+    "lr-checkbox-group": unknown;
+    "lr-checkpoint": unknown;
+    "lr-chip": unknown;
+    "lr-chip-group": unknown;
+    "lr-chunk-inspector": unknown;
+    "lr-citation-badge": unknown;
+    "lr-claim-evidence": unknown;
+    "lr-code-block": unknown;
+    "lr-code-block-core": unknown;
+    "lr-code-editor": unknown;
+    "lr-color-picker": unknown;
+    "lr-combobox": unknown;
+    "lr-command-palette": unknown;
+    "lr-commit-card": unknown;
+    "lr-community-card": unknown;
+    "lr-compare-panel": unknown;
+    "lr-condition-builder": unknown;
+    "lr-confirm-bar": unknown;
+    "lr-contact-viewer": unknown;
+    "lr-context-inspector": unknown;
+    "lr-context-meter": unknown;
+    "lr-control-group": unknown;
+    "lr-conversation-item": unknown;
+    "lr-copy-button": unknown;
+    "lr-csv-viewer": unknown;
+    "lr-dashboard-grid": unknown;
+    "lr-data-grid": unknown;
+    "lr-dataset-viewer": unknown;
+    "lr-date-input": unknown;
+    "lr-date-picker": unknown;
+    "lr-details": unknown;
+    "lr-dialog": unknown;
+    "lr-diff-view": unknown;
+    "lr-divider": unknown;
+    "lr-dock-panel": unknown;
+    "lr-document-compare": unknown;
+    "lr-document-library": unknown;
+    "lr-document-preview": unknown;
+    "lr-document-viewer": unknown;
+    "lr-docx-viewer": unknown;
+    "lr-doughnut-chart": unknown;
+    "lr-drawer": unknown;
+    "lr-drilldown-panel": unknown;
+    "lr-dropdown": unknown;
+    "lr-dropdown-item": unknown;
+    "lr-ebook-viewer": unknown;
+    "lr-email-viewer": unknown;
+    "lr-embedding-explorer": unknown;
+    "lr-emoji-picker": unknown;
+    "lr-empty": unknown;
+    "lr-entity-card": unknown;
+    "lr-entity-chip": unknown;
+    "lr-entity-dossier": unknown;
+    "lr-env-list": unknown;
+    "lr-eval-dataset": unknown;
+    "lr-eval-result": unknown;
+    "lr-evaluation-run": unknown;
+    "lr-export-button": unknown;
+    "lr-file-icon": unknown;
+    "lr-file-input": unknown;
+    "lr-file-tree": unknown;
+    "lr-filter-bar": unknown;
+    "lr-flag": unknown;
+    "lr-flow-canvas": unknown;
+    "lr-flow-controls": unknown;
+    "lr-flow-minimap": unknown;
+    "lr-flow-node": unknown;
+    "lr-flow-run-status": unknown;
+    "lr-format-bytes": unknown;
+    "lr-format-date": unknown;
+    "lr-format-number": unknown;
+    "lr-gauge": unknown;
+    "lr-generation-metrics": unknown;
+    "lr-geojson-view": unknown;
+    "lr-geojson-viewer": unknown;
+    "lr-graph": unknown;
+    "lr-graph-legend": unknown;
+    "lr-graph-query-builder": unknown;
+    "lr-grounding-summary": unknown;
+    "lr-handoff-divider": unknown;
+    "lr-heatmap": unknown;
+    "lr-highlight-layer": unknown;
+    "lr-histogram": unknown;
+    "lr-html-viewer": unknown;
+    "lr-icon": unknown;
+    "lr-icon-button": unknown;
+    "lr-image-comparer": unknown;
+    "lr-image-viewer": unknown;
+    "lr-include": unknown;
+    "lr-ingestion-queue": unknown;
+    "lr-input": unknown;
+    "lr-intersection-observer": unknown;
+    "lr-json-viewer": unknown;
+    "lr-kbd": unknown;
+    "lr-knowledge-base": unknown;
+    "lr-knowledge-base-admin": unknown;
+    "lr-knowledge-graph-explorer": unknown;
+    "lr-known-date": unknown;
+    "lr-lightbox": unknown;
+    "lr-line-chart": unknown;
+    "lr-lite-chart": unknown;
+    "lr-live-region": unknown;
+    "lr-locale-picker": unknown;
+    "lr-map": unknown;
+    "lr-markdown": unknown;
+    "lr-markdown-core": unknown;
+    "lr-mcp-app": unknown;
+    "lr-media-card": unknown;
+    "lr-memory-panel": unknown;
+    "lr-mention-popover": unknown;
+    "lr-menu": unknown;
+    "lr-menu-item": unknown;
+    "lr-menu-label": unknown;
+    "lr-message-actions": unknown;
+    "lr-message-feedback": unknown;
+    "lr-message-parts": unknown;
+    "lr-mind-map": unknown;
+    "lr-model-select": unknown;
+    "lr-model-settings-panel": unknown;
+    "lr-multi-split": unknown;
+    "lr-mutation-observer": unknown;
+    "lr-native-time-input": unknown;
+    "lr-neighbor-list": unknown;
+    "lr-node-palette": unknown;
+    "lr-notebook-viewer": unknown;
+    "lr-number-input": unknown;
+    "lr-option": unknown;
+    "lr-otp-input": unknown;
+    "lr-page": unknown;
+    "lr-page-rail": unknown;
+    "lr-pagination": unknown;
+    "lr-pan-zoom": unknown;
+    "lr-path-strip": unknown;
+    "lr-pdf-viewer": unknown;
+    "lr-phone-input": unknown;
+    "lr-pie-chart": unknown;
+    "lr-polar-area-chart": unknown;
+    "lr-policy-summary": unknown;
+    "lr-poll-status": unknown;
+    "lr-popover": unknown;
+    "lr-popup": unknown;
+    "lr-pptx-viewer": unknown;
+    "lr-progress-bar": unknown;
+    "lr-progress-ring": unknown;
+    "lr-prompt-input": unknown;
+    "lr-prompt-queue": unknown;
+    "lr-prompt-studio": unknown;
+    "lr-provenance-panel": unknown;
+    "lr-push-to-talk": unknown;
+    "lr-qr-code": unknown;
+    "lr-radar-chart": unknown;
+    "lr-radio": unknown;
+    "lr-radio-button": unknown;
+    "lr-radio-group": unknown;
+    "lr-rag-answer": unknown;
+    "lr-rag-eval-dashboard": unknown;
+    "lr-random-content": unknown;
+    "lr-rating": unknown;
+    "lr-realtime-session": unknown;
+    "lr-relative-time": unknown;
+    "lr-reorder-item": unknown;
+    "lr-reorder-list": unknown;
+    "lr-resize-observer": unknown;
+    "lr-responsive-panel": unknown;
+    "lr-result-card": unknown;
+    "lr-result-field": unknown;
+    "lr-retrieval-compare": unknown;
+    "lr-retrieval-results": unknown;
+    "lr-retrieval-search": unknown;
+    "lr-retrieval-trace": unknown;
+    "lr-rubric-form": unknown;
+    "lr-scatter-chart": unknown;
+    "lr-schema-viewer": unknown;
+    "lr-scroller": unknown;
+    "lr-segmented": unknown;
+    "lr-select": unknown;
+    "lr-selection-toolbar": unknown;
+    "lr-sequence-playback": unknown;
+    "lr-sequence-strip": unknown;
+    "lr-skeleton": unknown;
+    "lr-slider": unknown;
+    "lr-source-card": unknown;
+    "lr-source-list": unknown;
+    "lr-source-picker": unknown;
+    "lr-span-waterfall": unknown;
+    "lr-sparkline": unknown;
+    "lr-spinner": unknown;
+    "lr-split-panel": unknown;
+    "lr-spreadsheet-viewer": unknown;
+    "lr-stack-trace": unknown;
+    "lr-stat": unknown;
+    "lr-stepper": unknown;
+    "lr-stream-status": unknown;
+    "lr-streaming-text": unknown;
+    "lr-subagent-panel": unknown;
+    "lr-suggestion-chips": unknown;
+    "lr-svg-viewer": unknown;
+    "lr-swatch-picker": unknown;
+    "lr-switch": unknown;
+    "lr-tab": unknown;
+    "lr-tab-group": unknown;
+    "lr-tab-panel": unknown;
+    "lr-table": unknown;
+    "lr-tag": unknown;
+    "lr-task-list": unknown;
+    "lr-terminal": unknown;
+    "lr-test-results": unknown;
+    "lr-textarea": unknown;
+    "lr-thinking-panel": unknown;
+    "lr-thread-list": unknown;
+    "lr-time-input": unknown;
+    "lr-time-range": unknown;
+    "lr-timeline": unknown;
+    "lr-timeline-item": unknown;
+    "lr-toast": unknown;
+    "lr-toast-item": unknown;
+    "lr-token-input": unknown;
+    "lr-tool-approval-dialog": unknown;
+    "lr-tool-call-chip": unknown;
+    "lr-tool-param-form": unknown;
+    "lr-tool-result-dialog": unknown;
+    "lr-tool-result-view": unknown;
+    "lr-tool-select-dialog": unknown;
+    "lr-tool-timeline": unknown;
+    "lr-tooltip": unknown;
+    "lr-tour": unknown;
+    "lr-trace-tree": unknown;
+    "lr-transcript-feed": unknown;
+    "lr-tree": unknown;
+    "lr-tree-item": unknown;
+    "lr-typing-indicator": unknown;
+    "lr-usage-badge": unknown;
+    "lr-video": unknown;
+    "lr-video-playlist": unknown;
+    "lr-virtual-list": unknown;
+    "lr-visually-hidden": unknown;
+    "lr-voice-picker": unknown;
+    "lr-widget": unknown;
+    "lr-widget-renderer": unknown;
+    "lr-word-cloud": unknown;
+    "lr-xml-viewer": unknown;
+    "lr-zoomable-frame": unknown;
+  }`
+
+- **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
+  `installHappyDomFormAssociatedShims(): unknown`
+  `installStubInternalsForTest(/* public names: host */): unknown`
+
+- **`theme-gemstones-data-contracts`** — Shared utility contracts.
+  `GemstoneAccent {
+    key: unknown;
+    fill: unknown;
+    deep: unknown;
+  }`
+
+- **`theme-gemstones-contracts`** — Shared utility contracts.
+  `gemstoneGlyph(/* public names: color */): unknown`
+
+- **`theme-presets-contracts`** — Shared utility contracts.
+  `applyLyraThemePreset(/* public names: presetOrName */): unknown`
+  `defineLyraThemePreset(/* public names: preset */): unknown`
+  `LyraThemePresetChangeDetail {
+    id: unknown;
+    theme: unknown;
+  }`
+  `LyraThemePreset {
+    id: unknown;
+    theme: unknown;
+  }`
+
+- **`theme-theme-contracts`** — Shared utility contracts.
+  `createLyraThemeBootstrap(/* public names: options */): unknown`
+  `getLyraTheme(): unknown`
+  `LyraThemeBootstrapOptions {
+    storageKey: unknown;
+  }`
+  `LyraTheme {
+    mode: unknown;
+    accent: unknown;
+  }`
+  `setLyraTheme(/* public names: theme */): unknown`
+
+- **`vue-contracts`** — Framework integration type contracts.
+  `LyraVueGlobalComponents {
+    "lr-accordion": unknown;
+    "lr-accordion-item": unknown;
+    "lr-activity-feed": unknown;
+    "lr-agent-eval-dashboard": unknown;
+    "lr-agent-run": unknown;
+    "lr-agent-trace": unknown;
+    "lr-agent-workspace": unknown;
+    "lr-alert": unknown;
+    "lr-animated-image": unknown;
+    "lr-animation": unknown;
+    "lr-app-rail": unknown;
+    "lr-app-rail-item": unknown;
+    "lr-approval-queue": unknown;
+    "lr-archive-viewer": unknown;
+    "lr-artifact-panel": unknown;
+    "lr-attachment-chip": unknown;
+    "lr-attachment-trigger": unknown;
+    "lr-audio-visualizer": unknown;
+    "lr-av-player": unknown;
+    "lr-avatar": unknown;
+    "lr-avatar-group": unknown;
+    "lr-badge": unknown;
+    "lr-bar-chart": unknown;
+    "lr-box-plot": unknown;
+    "lr-branch-picker": unknown;
+    "lr-breadcrumb": unknown;
+    "lr-breadcrumb-item": unknown;
+    "lr-browser-frame": unknown;
+    "lr-bubble-chart": unknown;
+    "lr-button": unknown;
+    "lr-button-group": unknown;
+    "lr-calendar": unknown;
+    "lr-calendar-viewer": unknown;
+    "lr-callout": unknown;
+    "lr-card": unknown;
+    "lr-carousel": unknown;
+    "lr-carousel-item": unknown;
+    "lr-chart": unknown;
+    "lr-chat-composer": unknown;
+    "lr-chat-message": unknown;
+    "lr-chat-viewport": unknown;
+    "lr-checkbox": unknown;
+    "lr-checkbox-group": unknown;
+    "lr-checkpoint": unknown;
+    "lr-chip": unknown;
+    "lr-chip-group": unknown;
+    "lr-chunk-inspector": unknown;
+    "lr-citation-badge": unknown;
+    "lr-claim-evidence": unknown;
+    "lr-code-block": unknown;
+    "lr-code-block-core": unknown;
+    "lr-code-editor": unknown;
+    "lr-color-picker": unknown;
+    "lr-combobox": unknown;
+    "lr-command-palette": unknown;
+    "lr-commit-card": unknown;
+    "lr-community-card": unknown;
+    "lr-compare-panel": unknown;
+    "lr-condition-builder": unknown;
+    "lr-confirm-bar": unknown;
+    "lr-contact-viewer": unknown;
+    "lr-context-inspector": unknown;
+    "lr-context-meter": unknown;
+    "lr-control-group": unknown;
+    "lr-conversation-item": unknown;
+    "lr-copy-button": unknown;
+    "lr-csv-viewer": unknown;
+    "lr-dashboard-grid": unknown;
+    "lr-data-grid": unknown;
+    "lr-dataset-viewer": unknown;
+    "lr-date-input": unknown;
+    "lr-date-picker": unknown;
+    "lr-details": unknown;
+    "lr-dialog": unknown;
+    "lr-diff-view": unknown;
+    "lr-divider": unknown;
+    "lr-dock-panel": unknown;
+    "lr-document-compare": unknown;
+    "lr-document-library": unknown;
+    "lr-document-preview": unknown;
+    "lr-document-viewer": unknown;
+    "lr-docx-viewer": unknown;
+    "lr-doughnut-chart": unknown;
+    "lr-drawer": unknown;
+    "lr-drilldown-panel": unknown;
+    "lr-dropdown": unknown;
+    "lr-dropdown-item": unknown;
+    "lr-ebook-viewer": unknown;
+    "lr-email-viewer": unknown;
+    "lr-embedding-explorer": unknown;
+    "lr-emoji-picker": unknown;
+    "lr-empty": unknown;
+    "lr-entity-card": unknown;
+    "lr-entity-chip": unknown;
+    "lr-entity-dossier": unknown;
+    "lr-env-list": unknown;
+    "lr-eval-dataset": unknown;
+    "lr-eval-result": unknown;
+    "lr-evaluation-run": unknown;
+    "lr-export-button": unknown;
+    "lr-file-icon": unknown;
+    "lr-file-input": unknown;
+    "lr-file-tree": unknown;
+    "lr-filter-bar": unknown;
+    "lr-flag": unknown;
+    "lr-flow-canvas": unknown;
+    "lr-flow-controls": unknown;
+    "lr-flow-minimap": unknown;
+    "lr-flow-node": unknown;
+    "lr-flow-run-status": unknown;
+    "lr-format-bytes": unknown;
+    "lr-format-date": unknown;
+    "lr-format-number": unknown;
+    "lr-gauge": unknown;
+    "lr-generation-metrics": unknown;
+    "lr-geojson-view": unknown;
+    "lr-geojson-viewer": unknown;
+    "lr-graph": unknown;
+    "lr-graph-legend": unknown;
+    "lr-graph-query-builder": unknown;
+    "lr-grounding-summary": unknown;
+    "lr-handoff-divider": unknown;
+    "lr-heatmap": unknown;
+    "lr-highlight-layer": unknown;
+    "lr-histogram": unknown;
+    "lr-html-viewer": unknown;
+    "lr-icon": unknown;
+    "lr-icon-button": unknown;
+    "lr-image-comparer": unknown;
+    "lr-image-viewer": unknown;
+    "lr-include": unknown;
+    "lr-ingestion-queue": unknown;
+    "lr-input": unknown;
+    "lr-intersection-observer": unknown;
+    "lr-json-viewer": unknown;
+    "lr-kbd": unknown;
+    "lr-knowledge-base": unknown;
+    "lr-knowledge-base-admin": unknown;
+    "lr-knowledge-graph-explorer": unknown;
+    "lr-known-date": unknown;
+    "lr-lightbox": unknown;
+    "lr-line-chart": unknown;
+    "lr-lite-chart": unknown;
+    "lr-live-region": unknown;
+    "lr-locale-picker": unknown;
+    "lr-map": unknown;
+    "lr-markdown": unknown;
+    "lr-markdown-core": unknown;
+    "lr-mcp-app": unknown;
+    "lr-media-card": unknown;
+    "lr-memory-panel": unknown;
+    "lr-mention-popover": unknown;
+    "lr-menu": unknown;
+    "lr-menu-item": unknown;
+    "lr-menu-label": unknown;
+    "lr-message-actions": unknown;
+    "lr-message-feedback": unknown;
+    "lr-message-parts": unknown;
+    "lr-mind-map": unknown;
+    "lr-model-select": unknown;
+    "lr-model-settings-panel": unknown;
+    "lr-multi-split": unknown;
+    "lr-mutation-observer": unknown;
+    "lr-native-time-input": unknown;
+    "lr-neighbor-list": unknown;
+    "lr-node-palette": unknown;
+    "lr-notebook-viewer": unknown;
+    "lr-number-input": unknown;
+    "lr-option": unknown;
+    "lr-otp-input": unknown;
+    "lr-page": unknown;
+    "lr-page-rail": unknown;
+    "lr-pagination": unknown;
+    "lr-pan-zoom": unknown;
+    "lr-path-strip": unknown;
+    "lr-pdf-viewer": unknown;
+    "lr-phone-input": unknown;
+    "lr-pie-chart": unknown;
+    "lr-polar-area-chart": unknown;
+    "lr-policy-summary": unknown;
+    "lr-poll-status": unknown;
+    "lr-popover": unknown;
+    "lr-popup": unknown;
+    "lr-pptx-viewer": unknown;
+    "lr-progress-bar": unknown;
+    "lr-progress-ring": unknown;
+    "lr-prompt-input": unknown;
+    "lr-prompt-queue": unknown;
+    "lr-prompt-studio": unknown;
+    "lr-provenance-panel": unknown;
+    "lr-push-to-talk": unknown;
+    "lr-qr-code": unknown;
+    "lr-radar-chart": unknown;
+    "lr-radio": unknown;
+    "lr-radio-button": unknown;
+    "lr-radio-group": unknown;
+    "lr-rag-answer": unknown;
+    "lr-rag-eval-dashboard": unknown;
+    "lr-random-content": unknown;
+    "lr-rating": unknown;
+    "lr-realtime-session": unknown;
+    "lr-relative-time": unknown;
+    "lr-reorder-item": unknown;
+    "lr-reorder-list": unknown;
+    "lr-resize-observer": unknown;
+    "lr-responsive-panel": unknown;
+    "lr-result-card": unknown;
+    "lr-result-field": unknown;
+    "lr-retrieval-compare": unknown;
+    "lr-retrieval-results": unknown;
+    "lr-retrieval-search": unknown;
+    "lr-retrieval-trace": unknown;
+    "lr-rubric-form": unknown;
+    "lr-scatter-chart": unknown;
+    "lr-schema-viewer": unknown;
+    "lr-scroller": unknown;
+    "lr-segmented": unknown;
+    "lr-select": unknown;
+    "lr-selection-toolbar": unknown;
+    "lr-sequence-playback": unknown;
+    "lr-sequence-strip": unknown;
+    "lr-skeleton": unknown;
+    "lr-slider": unknown;
+    "lr-source-card": unknown;
+    "lr-source-list": unknown;
+    "lr-source-picker": unknown;
+    "lr-span-waterfall": unknown;
+    "lr-sparkline": unknown;
+    "lr-spinner": unknown;
+    "lr-split-panel": unknown;
+    "lr-spreadsheet-viewer": unknown;
+    "lr-stack-trace": unknown;
+    "lr-stat": unknown;
+    "lr-stepper": unknown;
+    "lr-stream-status": unknown;
+    "lr-streaming-text": unknown;
+    "lr-subagent-panel": unknown;
+    "lr-suggestion-chips": unknown;
+    "lr-svg-viewer": unknown;
+    "lr-swatch-picker": unknown;
+    "lr-switch": unknown;
+    "lr-tab": unknown;
+    "lr-tab-group": unknown;
+    "lr-tab-panel": unknown;
+    "lr-table": unknown;
+    "lr-tag": unknown;
+    "lr-task-list": unknown;
+    "lr-terminal": unknown;
+    "lr-test-results": unknown;
+    "lr-textarea": unknown;
+    "lr-thinking-panel": unknown;
+    "lr-thread-list": unknown;
+    "lr-time-input": unknown;
+    "lr-time-range": unknown;
+    "lr-timeline": unknown;
+    "lr-timeline-item": unknown;
+    "lr-toast": unknown;
+    "lr-toast-item": unknown;
+    "lr-token-input": unknown;
+    "lr-tool-approval-dialog": unknown;
+    "lr-tool-call-chip": unknown;
+    "lr-tool-param-form": unknown;
+    "lr-tool-result-dialog": unknown;
+    "lr-tool-result-view": unknown;
+    "lr-tool-select-dialog": unknown;
+    "lr-tool-timeline": unknown;
+    "lr-tooltip": unknown;
+    "lr-tour": unknown;
+    "lr-trace-tree": unknown;
+    "lr-transcript-feed": unknown;
+    "lr-tree": unknown;
+    "lr-tree-item": unknown;
+    "lr-typing-indicator": unknown;
+    "lr-usage-badge": unknown;
+    "lr-video": unknown;
+    "lr-video-playlist": unknown;
+    "lr-virtual-list": unknown;
+    "lr-visually-hidden": unknown;
+    "lr-voice-picker": unknown;
+    "lr-widget": unknown;
+    "lr-widget-renderer": unknown;
+    "lr-word-cloud": unknown;
+    "lr-xml-viewer": unknown;
+    "lr-zoomable-frame": unknown;
+  }`

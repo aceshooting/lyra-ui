@@ -27,11 +27,12 @@ If an instance disconnects and reconnects before that shared promise settles, on
 connection applies the result and reparses; the stale connection callback is generation-guarded.
 
 To warm that shared cache before the first Markdown instance connects, await the stable public
-entry point. This keeps the default lazy behavior for apps that do not need it, while letting a
-route or startup boundary make an `eager-load` instance render from an already-settled cache:
+entry point. This keeps the default lazy behavior for apps that do not need it while letting a
+route or startup boundary render from an already-settled cache. The helper is exported by both
+the full and core granular entries:
 
 ```ts
-import { preloadMarkdown } from '@aceshooting/lyra-ui/components/lr-markdown.js';
+import { preloadMarkdown } from "@aceshooting/lyra-ui/components/conversation/markdown/markdown.js";
 
 await preloadMarkdown();
 ```
@@ -60,21 +61,18 @@ uses for its own `[part="body"]`.
   indentation before parsing. Values are finite-integer guarded and clamped to `[1, 32]` at use;
   invalid values fall back to `4`. This is separate from `--lr-code-block-tab-size`, which controls
   how tabs already inside rendered code are displayed.
-- `marked: LyraMarkedParser | undefined` (readonly, no attribute) — the peer-neutral configurable
-  `marked.Marked` parser shared by every `<lr-markdown>` and `<lr-markdown-core>` instance on the
-  page. It is `undefined` while the optional peer is still resolving or unavailable; configuration installed with
-  variadic `marked.use(...extensions)` is copied into each parse. The peer-neutral type deliberately
-  models Lyra's stable `defaults`/`use()`/`parse()` configuration surface; consumers using
-  version-specific Marked tokenizers, constructors, or helpers should type that local reference
-  with their installed `marked` version.
-- `sanitize: boolean = true` — sanitize `marked`'s HTML output with DOMPurify before rendering
-- `escapeHtml: boolean = false` (attribute `escape-html`) — when `true`, overrides `marked`'s `html`
-  renderer hook to emit the HTML-escaped source text instead of passing raw/sanitized markup through
-  — for rendering arbitrary already-written content (e.g. a historical chat/agent transcript full of
-  code/XML/HTML snippets) where a stray angle bracket should render as visible text, not a real DOM
-  element. GFM tables/lists/etc. still render normally — only raw embedded HTML is affected. `false`
-  (the default) reproduces the exact `marked`-default (sanitized-when-`sanitize`) passthrough
-  behavior.
+- `marked: LyraMarkedParser | undefined` (readonly, no attribute) — this instance's peer-neutral,
+  configurable `marked.Marked` parser. It is `undefined` while the optional peer is still resolving
+  or unavailable. Each element owns an isolated parser, so `marked.use(...extensions)` affects only
+  that element; call `renderMarkdown()` after configuring it. The peer-neutral type deliberately
+  models Lyra's stable `defaults`/`use()`/`parse()` surface; consumers using version-specific Marked
+  tokenizers, constructors, or helpers should type that local reference with their installed
+  `marked` version.
+- `htmlMode: 'sanitize' | 'escape' | 'trusted' = 'sanitize'` (attribute `html-mode`) — controls raw
+  authored HTML. `sanitize` passes the complete rendered document through DOMPurify and fails closed
+  to plain text if the peer is unavailable; `escape` displays raw HTML source as text while ordinary
+  Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
+  content.
 - `gfm: boolean = true` — GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists)
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — `target` applied to every
   rendered `<a>`, with `rel="noopener noreferrer"` always added alongside it whenever a `target` is
@@ -90,12 +88,6 @@ uses for its own `[part="body"]`.
   as `<h3>`); clamped to `[1, 6]` so a source `######` with a positive offset stays at `<h6>` rather
   than overflowing past the HTML heading levels. `0` (the default) preserves the original
   `<h${token.depth}>` output
-- `eagerLoad: boolean = false` (attribute `eager-load`) — when `true`, `connectedCallback()` skips
-  awaiting the async `loadMarkdownDeps()` import and renders synchronously if the shared
-  `marked`/`dompurify` module cache is _already_ warm (e.g. an earlier `<lr-markdown>` instance on
-  the page already finished loading); falls back to the normal async path (with its brief
-  plain-text-fallback first paint) when the cache isn't warm yet. `false` (the default) is
-  byte-identical to always taking the async path
 - `streaming: boolean = false` (reflected) — marks the host `aria-busy="true"` while partial Markdown
   is still arriving and lets consumers target `lr-markdown[streaming]`; content updates while it is
   true are coalesced to at most one parse per animation frame, while the final `streaming=false`
@@ -109,15 +101,11 @@ uses for its own `[part="body"]`.
   `<lr-code-block>`'s own `languages`: a fine-grained, explicit language-grammar bundle scoping
   shiki's build output to just those grammars instead of its full ~200-language bundle. Forwarded
   verbatim to `loadShikiHighlighterCore()`. Unset (the default) uses the default full-bundle loader
-- `languagesOnly: boolean = false` (attribute `languages-only`) — same purpose as
-  `<lr-code-block>`'s own `languagesOnly`: skips the default full-bundle loader entirely, so a
-  fenced block whose language isn't in `languages` falls back to plain unhighlighted text rather
-  than reaching for the full bundle. No effect unless `languages` is also set
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
   lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
-- `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied `text-quote` highlights;
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — host-supplied `text-quote` highlights;
   reassign the array after mutation so painting is refreshed.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — identifies the
   currently active entry in `highlights` for active paint and outline treatment.
@@ -129,16 +117,22 @@ uses for its own `[part="body"]`.
 
 **Methods:**
 
-- `renderMarkdown(): void` — immediately reruns the current content through the parse, sanitize,
-  and fallback pipeline. Use it to refresh existing content after changing `marked` configuration;
+- `renderMarkdown(): void` — immediately reruns the current content through the parse, selected
+  HTML-mode, and fallback pipeline. Use it to refresh existing content after changing `marked` configuration;
   it safely no-ops while the optional parser is unresolved.
 - `getHeadingTree(): MarkdownHeadingItem[]` — returns the document-ordered heading outline
   (`{ id, label, level }[]`)
   computed on every parse, regardless of `headingAnchors`.
+- `LyraMarkdown.getMarked(): Marked` — returns the variant's shared compatibility parser (`Marked`
+  is the route's exported alias of `LyraMarkedParser`),
+  whose configuration seeds instance parses. Await `preloadMarkdown()` first; otherwise this throws.
+- `LyraMarkdown.updateAll(): void` — re-renders every connected full Markdown instance after shared
+  compatibility-parser configuration changes. Prefer the instance `marked` parser for isolated
+  configuration.
 
 **Events:**
 
-- `lr-link-click` (`detail: { href: string; internal: true }`) — fired, with the click prevented,
+- `lr-link-click` (`detail: { href: string }`) — fired, with the click prevented,
   when a rendered link's `href` starts with `internal-link-prefix`; ordinary external links navigate
   normally and never fire this
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
@@ -172,12 +166,12 @@ rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
 `loadMarkdownDeps()`, mirroring `chart-loader.ts`'s two-independent-optional-peers shape). Each half
 is loaded and caught independently — a consumer who installs only `marked` and explicitly sets
-`sanitize="false"` (so `dompurify` is never needed) is a valid, supported combination. Also `shiki`,
+`html-mode="trusted"` (so `dompurify` is never needed) is a valid, supported combination. Also `shiki`,
 the same optional peer `<lr-code-block>` uses, for `highlightCode`'s fenced-block syntax
 highlighting — independent of the `marked`/`dompurify` pair, and its absence never blocks rendering
 (fenced blocks simply stay unhighlighted). The readonly `marked` property becomes available only
-after that lazy load resolves and exposes the same configurable parser to every `<lr-markdown>`
-instance; call `renderMarkdown()` after `marked.use(...)` to refresh content that is already shown.
+after that lazy load resolves; each instance owns its configuration. Call `renderMarkdown()` after
+`marked.use(...)` to refresh content that is already shown.
 
 ```html
 <lr-markdown
@@ -195,16 +189,15 @@ instance; call `renderMarkdown()` after `marked.use(...)` to refresh content tha
 
 Rendering never ships unsanitized or broken markup silently. If `marked` fails to load, or throws
 while parsing malformed input, the component falls back to plain text (`white-space: pre-wrap`, no
-HTML parsing at all — the raw `content` string itself) and fires `lr-render-error`. If `sanitize`
-is `true` (the default) and `dompurify` fails to load, the component _also_ falls back to plain text
-
-- `lr-render-error` — it never renders `marked`'s raw HTML output when sanitization was requested
-  (or defaulted to) but is unavailable, even though `marked` itself loaded fine. If `sanitize` is
-  explicitly `false`, `marked`'s raw output renders as-is regardless of whether `dompurify` is
-  installed. While the optional peers are still resolving, the host carries `aria-busy="true"` (set/
-  cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
-  rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
-  legible text in the meantime.
+HTML parsing at all — the raw `content` string itself) and fires `lr-render-error`. In the default
+`html-mode="sanitize"`, an unavailable or failed `dompurify` peer takes that same fail-closed path:
+the component never renders `marked`'s raw HTML output when sanitization was requested. Use
+`html-mode="escape"` when authored raw HTML should remain visible as text, or
+`html-mode="trusted"` only for content whose complete HTML output is already trusted. While the
+optional peers are still resolving, the host carries `aria-busy="true"` (set/
+cleared in `updated()` based on whether the deps have loaded) and shows the same plain-text fallback
+rendering — there's no separate loading skeleton, since the un-rendered Markdown source is already
+legible text in the meantime.
 
 **One tab width for every code surface.** `--lr-code-block-tab-size` is deliberately the same
 property name and default (`2`) that `<lr-code-block>` and `<lr-code-editor>` use, so a consumer sets
@@ -233,9 +226,9 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
 - `internal-link-prefix` matching compares against the raw `href` _attribute_, not the resolved
   `.href` IDL property (always an absolute URL in the browser) — a prefix like `/docs/` matches a
   relative markdown link but would never match against the resolved property.
-- rendered output goes through `unsafeHTML`; with `sanitize="false"` the component renders whatever
-  HTML `marked` produces from `content` completely unsanitized, so untrusted `content` must never be
-  paired with `sanitize="false"`.
+- rendered output goes through `unsafeHTML`; with `html-mode="trusted"` the component renders
+  whatever HTML `marked` produces from `content` completely unsanitized, so untrusted `content`
+  must never use trusted mode.
 
 **Additional API surface:**
 

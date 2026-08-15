@@ -27,7 +27,8 @@ small card/field shell is useful.
 A small bordered card shell. Purely visual, with no state of its own beyond slot-presence tracking.
 
 **Properties:**
-- `title: string = ''` — small heading for the card. Leave unset for an untitled card (e.g. a bare
+
+- `heading: string = ''` — small heading for the card. Leave unset for an untitled card (e.g. a bare
   block of `lr-result-field` rows with no natural heading).
 - `compact: boolean = false` (reflected) — tighter header/body padding for dense contexts (a card
   rendered as a row in a transcript or result list), same convention as `<lr-agent-run>`'s own
@@ -51,11 +52,11 @@ A small bordered card shell. Purely visual, with no state of its own beyond slot
 
 **Slots:** default (the card body — typically one or more `lr-result-field` rows, though any
 content is accepted), `actions` (small header controls, e.g. a copy button, rendered alongside the
-title).
+heading).
 
 **CSS parts:** `base` (outer bordered container), `header` (present in the DOM at all times so a
-later `slotchange` on `actions` is still observed, but `hidden` whenever there's no `title` and no
-`actions` content), `title` (truncates with an ellipsis when it overflows; carries its own native
+later `slotchange` on `actions` is still observed, but `hidden` whenever there's no `heading` and no
+`actions` content), `heading` (truncates with an ellipsis when it overflows; carries its own native
 `title` attribute — the full string — so hovering the truncated text reveals it via the browser's
 default tooltip, scoped to just this element rather than the whole card), `actions` (`hidden`
 whenever the slot has no assigned content), `body`.
@@ -63,7 +64,7 @@ whenever the slot has no assigned content), `body`.
 **Themeable custom properties:** `--lr-result-card-compact-header-padding` (default
 `var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `compact`;
 `--lr-result-card-compact-header-gap` (default `var(--lr-space-xs)`) — gap between
-`[part="header"]`'s title and actions while `compact`, one step tighter than the uncompacted
+`[part="header"]`'s heading and actions while `compact`, one step tighter than the uncompacted
 `--lr-space-s`; `--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) —
 `[part="body"]` padding while `compact`; `--lr-result-card-compact-body-gap` (default
 `var(--lr-space-2xs)`) — gap between `[part="body"]`'s children while `compact`, one step tighter
@@ -78,6 +79,7 @@ A single label/value row — e.g. "Status: 200 OK" or "Duration: 340ms" — rend
 "label: value" line by default, matching the compact, small-card presentation this pair exists for.
 
 **Properties:**
+
 - `label: string = ''` — the field name, e.g. "Status". Leave unset to render a value with no label.
 - `value: string = ''` — plain-text value, e.g. "200 OK". Ignored once the default slot carries real
   content.
@@ -86,7 +88,7 @@ A single label/value row — e.g. "Status: 200 OK" or "Duration: 340ms" — rend
 
 **Slots:** default — rich value content (e.g. a `lr-chip` status badge, or a plain text override),
 taking precedence over `value` whenever it has any assigned content. "Real content" means any
-assigned *element* (even one with no text of its own, like an attribute-driven status badge) or any
+assigned _element_ (even one with no text of its own, like an attribute-driven status badge) or any
 non-whitespace text node — both a rich slotted badge and a plain-text override are caught.
 
 **CSS parts:** `base` (row container), `label` (including its trailing colon), `value` (wrapper
@@ -98,7 +100,7 @@ around either the slotted content or the plain `value` text).
 **Optional peer deps:** none (either component).
 
 ```html
-<lr-result-card title="Weather">
+<lr-result-card heading="Weather">
   <lr-result-field label="Status" value="200 OK"></lr-result-field>
   <lr-result-field label="Duration" value="340ms"></lr-result-field>
   <lr-result-field label="Provider">
@@ -108,6 +110,7 @@ around either the slotted content or the plain `value` text).
 ```
 
 **Known gotchas:**
+
 - `HTMLElement.textContent` read on a shadow-DOM wrapper containing a `<slot>` does NOT include the
   slot's assigned/projected light-DOM content — only literal fallback children of the `<slot>` tag
   itself (there are none here). Asserting against `[part="value"]`'s own `.textContent` to check

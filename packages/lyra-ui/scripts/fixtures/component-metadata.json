@@ -314,10 +314,20 @@
       "lr-xml-viewer",
       "lr-zoomable-frame"
     ],
-    "published-experimental": ["lr-date-input", "lr-date-picker"],
-    "mapped-experimental": ["lr-data-grid"],
-    "introduced-mapped-experimental": ["lr-video", "lr-video-playlist"],
-    "compatibility-stable": ["lr-native-time-input"],
+    "published-experimental": [
+      "lr-date-input",
+      "lr-date-picker"
+    ],
+    "mapped-experimental": [
+      "lr-data-grid"
+    ],
+    "introduced-mapped-experimental": [
+      "lr-video",
+      "lr-video-playlist"
+    ],
+    "compatibility-stable": [
+      "lr-native-time-input"
+    ],
     "introduced-stable": [
       "lr-alert",
       "lr-condition-builder",
@@ -341,6 +351,88 @@
     ]
   },
   "deprecations": [
+    {
+      "tag": "lr-accordion-item",
+      "kind": "part",
+      "name": "base",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "part",
+        "name": "accordion-item",
+        "usage": "::part(accordion-item)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window."
+    },
+    {
+      "tag": "lr-box-plot",
+      "kind": "property",
+      "name": "accessibleDescription",
+      "attribute": "accessible-description",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "description",
+        "usage": "description=\"…\""
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "description follows the mirrored chart vocabulary while accessibleDescription remains a compatibility alias."
+    },
+    {
+      "tag": "lr-box-plot",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "attribute": "accessible-label",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "label",
+        "usage": "label=\"…\""
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "label follows the mirrored chart vocabulary while accessibleLabel remains a compatibility alias."
+    },
+    {
+      "tag": "lr-box-plot",
+      "kind": "property",
+      "name": "boxes",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "datasets",
+        "usage": ".datasets = […]"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "datasets follows the chart-family vocabulary while boxes remains a compatibility alias over the same immutable data."
+    },
+    {
+      "tag": "lr-chart",
+      "kind": "property",
+      "name": "accessibleDescription",
+      "attribute": "accessible-description",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "description",
+        "usage": "description=\"…\""
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "description follows the mirrored chart vocabulary while accessibleDescription remains a compatibility alias."
+    },
+    {
+      "tag": "lr-chart",
+      "kind": "property",
+      "name": "accessibleLabel",
+      "attribute": "accessible-label",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "label",
+        "usage": "label=\"…\""
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "label follows the mirrored chart vocabulary while accessibleLabel remains a compatibility alias."
+    },
     {
       "tag": "lr-date-input",
       "kind": "part",
@@ -407,6 +499,19 @@
       "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window."
     },
     {
+      "tag": "lr-histogram",
+      "kind": "method",
+      "name": "appendData",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "method",
+        "name": "appendSamples",
+        "usage": ".appendSamples(values, maxSamples)"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "appendSamples describes the histogram's numeric sample stream directly while appendData remains a compatibility adapter."
+    },
+    {
       "tag": "lr-icon",
       "kind": "property",
       "name": "autoWidth",
@@ -432,6 +537,47 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window."
+    },
+    {
+      "tag": "lr-lite-chart",
+      "kind": "property",
+      "name": "hideAxis",
+      "attribute": "hide-axis",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "withoutValueAxis",
+        "usage": "without-value-axis"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "withoutValueAxis identifies the affected axis precisely while hideAxis remains a compatibility alias."
+    },
+    {
+      "tag": "lr-lite-chart",
+      "kind": "property",
+      "name": "padLeft",
+      "attribute": "pad-left",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "valueAxisGutter",
+        "usage": "value-axis-gutter=\"…\""
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "valueAxisGutter uses logical purpose-based naming while padLeft remains a compatibility alias for the same allocation."
+    },
+    {
+      "tag": "lr-lite-chart",
+      "kind": "property",
+      "name": "selectedIndex",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "selectedIndices",
+        "usage": ".selectedIndices = […]"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "selectedIndices accurately names the plural controlled selection while selectedIndex remains a compatibility alias."
     },
     {
       "tag": "lr-qr-code",
@@ -486,6 +632,33 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window."
+    },
+    {
+      "tag": "lr-swatch-picker",
+      "kind": "property",
+      "name": "label",
+      "attribute": "label",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "accessibleLabel",
+        "usage": "aria-label=\"…\""
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "accessibleLabel names the accessibility-only value explicitly while label remains a compatibility alias."
+    },
+    {
+      "tag": "lr-swatch-picker",
+      "kind": "property",
+      "name": "options",
+      "since": "8.2.3",
+      "replacement": {
+        "kind": "property",
+        "name": "items",
+        "usage": ".items = […]"
+      },
+      "removalNotBefore": "10.0.0",
+      "rationale": "items follows the shared collection vocabulary while options remains a compatibility alias over the same immutable snapshot."
     },
     {
       "tag": "lr-video-playlist",
@@ -10512,7 +10685,7 @@
     "current": {
       "version": "8.2.3",
       "sourceCommit": null,
-      "manifestSha256": "2a64c3a5d01a2c3714e95a7b14e5e8e6e0ee5ef70d82d9f04cdfc06c14783da3",
+      "manifestSha256": "5f80db809590eeb7eb6f3f3e308049c72cc3c8f5653493f87124e854f332ddd9",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -10572,6 +10745,7 @@
         "lr-commit-card",
         "lr-community-card",
         "lr-compare-panel",
+        "lr-condition-builder",
         "lr-confirm-bar",
         "lr-contact-viewer",
         "lr-context-inspector",
@@ -10622,13 +10796,14 @@
         "lr-flow-controls",
         "lr-flow-minimap",
         "lr-flow-node",
-        "lr-flow-run-overlay",
+        "lr-flow-run-status",
         "lr-format-bytes",
         "lr-format-date",
         "lr-format-number",
         "lr-gauge",
-        "lr-generation-status",
+        "lr-generation-metrics",
         "lr-geojson-view",
+        "lr-geojson-viewer",
         "lr-graph",
         "lr-graph-legend",
         "lr-graph-query-builder",
@@ -10673,6 +10848,7 @@
         "lr-mind-map",
         "lr-model-select",
         "lr-model-settings-panel",
+        "lr-multi-split",
         "lr-mutation-observer",
         "lr-native-time-input",
         "lr-neighbor-list",
@@ -10689,7 +10865,6 @@
         "lr-pdf-viewer",
         "lr-phone-input",
         "lr-pie-chart",
-        "lr-playback",
         "lr-polar-area-chart",
         "lr-policy-summary",
         "lr-poll-status",
@@ -10704,7 +10879,6 @@
         "lr-provenance-panel",
         "lr-push-to-talk",
         "lr-qr-code",
-        "lr-query-builder",
         "lr-radar-chart",
         "lr-radio",
         "lr-radio-button",
@@ -10732,6 +10906,7 @@
         "lr-segmented",
         "lr-select",
         "lr-selection-toolbar",
+        "lr-sequence-playback",
         "lr-sequence-strip",
         "lr-skeleton",
         "lr-slider",
@@ -10741,7 +10916,6 @@
         "lr-span-waterfall",
         "lr-sparkline",
         "lr-spinner",
-        "lr-split",
         "lr-split-panel",
         "lr-spreadsheet-viewer",
         "lr-stack-trace",

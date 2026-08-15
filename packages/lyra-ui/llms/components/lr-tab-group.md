@@ -3,12 +3,13 @@
 # `lr-tab-group`
 
 - **Import** `import '@aceshooting/lyra-ui/components/lr-tab-group.js';` (stable tag alias; registers the tag)
+- **Compound usage registrations** `import '@aceshooting/lyra-ui/components/lr-tab.js';`, `import '@aceshooting/lyra-ui/components/lr-tab-panel.js';` — required by the consumer-supplied child tags in this reference; usage-only, not registration dependencies of `lr-tab-group`
 - **Class** `LyraTabGroup`, also available unregistered from `@aceshooting/lyra-ui/components/layout/tab-group/tab-group.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,58 +27,52 @@ three fail silently: `<lr-tabs>` is an unknown element that renders its children
 change. The rename is what lets `<lr-tab>` and `<lr-tab-panel>` (below) exist as a family, which is
 what makes migrating from either upstream a pure tag rename.
 
-**Two child models are accepted**, and a group is read as one or the other — never a mix.
+**Canonical child model:** direct `<lr-tab panel="x">` + `<lr-tab-panel name="x">` pairs. This is
+the single shape shared with both upstreams, so markup renames mechanically. The pre-9.0
+`<div slot="x" label="…">` data/attribute model is removed; migrate each former child into one
+descriptor and one matching panel. An unpaired panel never creates a tab.
 
-*Element model* (`<lr-tab panel="x">` + `<lr-tab-panel name="x">`) mirrors both upstreams, so that
-markup renames mechanically. The group assigns the `slot` attributes itself; you never write them.
+The group assigns private projection `slot` values itself; consumers do not need to write them.
+Those writes are temporary ownership, not destructive normalization: when a descriptor or panel is
+removed, moved to another group, disconnected/reconnected, or adopted into another document, the
+group restores that element's latest author-owned `slot` value. An author write made while the group
+owns the projection is remembered and then reprojected until release.
+
 Each `<lr-tab>`'s content is projected into the real `role="tab"` button, so a tab can carry an icon
-or a badge while the button's accessible name stays exactly its accessibility-exposed flattened text.
-Direct default-slot element roots in that visual label become inert while projected, and regain their author-owned
-inert state when the tab is removed, reassigned, or the group disconnects; use text/glyph markup,
-not an independent action. Only accessibility-exposed default-slot text contributes: author
-`aria-hidden`, hidden, inert, and CSS-hidden branches are excluded, and direct-label text or
-visibility changes refresh the real button's name. A group containing any `<lr-tab>` child is read
-purely as this model. `active` on a tab/panel pair is an SSR hint: the group reads an initially
-active tab and then keeps both child attributes synchronized with its own `active` selection after
-hydration.
-
-*Attribute model* — this library's own original shape, fully supported: panels are direct light-DOM
-children carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab button's text).
-One named `<slot>` is rendered per distinct `slot` name found among the current children; a child
-with no `label`, or a name with no matching child, simply never produces a tab.
+or badge while the button's accessible name stays exactly its accessibility-exposed flattened text.
+Direct default-slot element roots in that visual label become inert while projected and regain
+their latest author-owned inert state when released; use text/glyph markup, not an independent
+action. Author `aria-hidden`, hidden, inert, and CSS-hidden branches are excluded from the name, and
+direct-label text or visibility changes refresh it. `active` on a tab/panel pair is an SSR hint: the
+group reads an initially active tab and then keeps both child attributes synchronized with its own
+selection after hydration.
 
 Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right (swapped
-under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection together; with
+under RTL, or Up/Down when `placement` is `start`/`end`) move focus _and_ selection together; with
 `activation="manual"` they move focus only and Enter/Space commits. Home/End jump to the first/last
 enabled tab, and a roving `tabindex` follows the focused tab.
+Keyboard handling starts from the real event-target tab (then actual shadow focus), so a controlled
+`active` write cannot make Arrow/Delete/Enter operate on a different remembered tab.
 An enabled `closable` `<lr-tab>` also puts `aria-keyshortcuts="Delete"` on its real tab button.
 Delete emits that descriptor's `lr-close` request without creating a second tab stop or changing
 selection.
 
-A tab button's *visible* content can carry a leading icon without ever changing its *accessible
-name* (always exactly `label`'s text): give a tab an extra direct-child sibling of `<lr-tab-group>`
-carrying `slot="<id>-icon"` (that sibling's own content — inline SVG, emoji span, a custom icon
-element, anything — is entirely up to the consumer). It renders ahead of the label inside that tab's
-button, wrapped in an `aria-hidden="true"` `[part="tab-icon"]`; the assigned source is inert
-while projected and restores its author-owned inert state when reassigned or disconnected. A tab
-with no matching `<id>-icon` sibling renders no icon wrapper at all, so existing text-only tabs are
-unaffected.
-
 **Properties:**
-- `active: string = ''` (reflected) — the active tab's `slot`/id; falls back to the first enabled
+
+- `active: string = ''` (reflected) — the active tab's panel name; falls back to the first enabled
   tab whenever the current value doesn't resolve to one (including on every children/attribute
   change, tracked via a `MutationObserver`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. `null` omits the
   attribute; an explicitly empty value is preserved (there is no localized default name).
 - `placement: 'top' | 'bottom' | 'start' | 'end' = 'top'` (attribute `placement`, reflected) — which
-  edge the strip sits on. `start`/`end` are *logical*, so they mirror under RTL with no `:dir()`
+  edge the strip sits on. `start`/`end` are _logical_, so they mirror under RTL with no `:dir()`
   rule of your own; either turns the tablist vertical, which sets `aria-orientation="vertical"` and
   switches the navigation keys to Up/Down per the APG.
 - `activation: 'auto' | 'manual' = 'auto'` (reflected) — `auto` moves selection with focus; `manual`
   moves focus only and waits for Enter or Space. Use `manual` whenever revealing a panel is
   expensive: automatic activation would reveal every panel the user arrows past. Under `manual` the
-  roving `tabindex="0"` sits on the *focused* tab, which may differ from the selected one.
+  roving `tabindex="0"` sits on the _focused_ tab, which may differ from the selected one.
 - `withoutScrollControls: boolean = false` (reflected, attribute `without-scroll-controls`) and
   `noScrollControls: boolean = false` (reflected, attribute `no-scroll-controls`) — the same opt-out
   under Web Awesome's spelling and Shoelace's. Both are read, either one suppresses the overflow
@@ -85,16 +80,10 @@ unaffected.
   upstream finds their own attribute working. Left unset, an overflowing horizontal strip gets the
   controls.
 - `fixedScrollControls: boolean = false` (reflected, attribute `fixed-scroll-controls`) —
-  `sl-tab-group` parity flag, accepted and reflected but **inert**. Upstream it means "prevent the
-  scroll buttons from being hidden when *inactive*": Shoelace tracks scroll position and hides an
-  individual control once that direction has nothing left to scroll to, and this flag opts out of
-  that per-edge hiding. It never makes controls appear on a row that fits — that stays gated on the
-  overflow measurement in both libraries. Lyra implements no per-edge hiding at all: both controls
-  stay present for the whole overflowing range, which is exactly upstream's
-  `fixed-scroll-controls="true"` rendering, so setting the flag changes nothing. It exists so a
-  mechanical `sl-` → `lr-` rename does not drop an attribute. **Corrected in 9.0.0:** the previous
-  wording implied Shoelace's flag governed whether controls appear at all; it governs only
-  hide-when-inactive.
+  keeps both controls laid out across an overflowing range. Without it, the start control is hidden
+  at the logical start and the end control is hidden at the logical end; an exhausted control is a
+  no-op in either mode. The flag never makes controls appear on a row that fits, which remains gated
+  on real overflow.
 - `defaultSlot: HTMLSlotElement` (property only) — the real unnamed shadow slot expected by mapped
   integrations. Lyra exposes it for slot observation but keeps it hidden because every accepted
   tab and panel is projected through a deterministic named slot.
@@ -103,17 +92,20 @@ unaffected.
 `lr-tab-hide` then `lr-tab-show` sequence as pointer/keyboard selection. Unknown, disabled, and
 already-active names are no-ops.
 
-**Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`) — there is
-no scroll listener and no scroll-position state anywhere in this component. A horizontal row that
-does not fit additionally gets **two scroll-control buttons flanking it inside `[part="nav"]`**,
-mirroring both upstreams, plus a fade at each edge. Both affordances are gated on the same
-measurement of the tablist's real overflow, so a row that fits is never flanked by two dead buttons
-and never dimmed. The controls are rendered only for a horizontal `placement`: a `start`/`end` strip
-scrolls in the block direction, which these controls do not address (the same restriction both
-upstreams apply), and the edge fade is switched off there too because it measures the inline axis.
-One press travels 80% of the visible row — short of a full viewport on purpose, so something that
-was on screen before the press is still on screen after it — smoothly, or instantly under
-`prefers-reduced-motion`. Under RTL the whole row mirrors and the step direction inverts with it.
+**Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`). A
+horizontal row that does not fit additionally gets two pointer scroll controls flanking it inside
+`[part="nav"]`. Logical edge state drives both controls and the mask: at the initial edge only the
+inline-end fade/control appears, in the middle both appear, and at the final edge only inline-start
+appears. Native scroll plus a `ResizeObserver` on the strip and its rendered tabs refresh that state,
+so intrinsic label/font geometry changes cannot leave stale controls. The same contract works under
+RTL, and forced-colors mode removes the alpha mask entirely instead of obscuring text. A row that
+fits gets neither affordance.
+
+Controls are rendered only for horizontal placement. A `start`/`end` strip scrolls natively in the
+block direction, and in a fixed block allocation the vertical nav, tablist, and panel body stay
+within the group: the tablist and body become their own scroll containers rather than expanding the
+host. One horizontal control press travels 80% of the visible row smoothly, or instantly under
+`prefers-reduced-motion`; under RTL the physical delta mirrors.
 
 The controls are `aria-hidden="true"` and `tabindex="-1"`: a pointer affordance only, matching
 upstream. The strip is already fully keyboard-scrollable without them — the roving `tabindex` puts
@@ -123,20 +115,17 @@ is there for automation and for a consumer that chooses to expose them. Pressing
 focus off the tab the user was on.
 
 **Events:**
-- `lr-tab-show` (`detail: { name: string, tabId: string }`) — a tab became active via click,
-  keyboard, or `show()`. `name` is the upstream spelling and `tabId` is Lyra's retained alias; both
-  contain the same panel name. Not fired
+
+- `lr-tab-show` (`detail: { name: string }`) — a tab became active via click, keyboard, or `show()`.
+  Not fired
   when `active` self-corrects to a valid tab (initial default, or a tab disappearing/becoming
   disabled underneath the current selection).
-- `lr-tab-hide` (`detail: { name: string, tabId: string }`) — the outgoing tab, emitted immediately *before* the
+- `lr-tab-hide` (`detail: { name: string }`) — the outgoing tab, emitted immediately _before_ the
   matching `lr-tab-show`, so a listener that tears down the old panel always runs before the one
   that builds the new one. Not fired when there was no previous selection.
 
-**Slots:** default — either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with
-`slot="<id>" label="<text>"` (and optionally `disabled`), one becoming each tab's panel. `<id>-icon`
-— optional inert sibling direct child supplying a tab's leading icon content, in the attribute model
-only; excluded from the tab button's accessible name. `nav` is the upstream-compatible projection
-slot used by `<lr-tab>` descriptors before the hydrated group assigns its per-tab internal slot.
+**Slots:** default — canonical `<lr-tab>`/`<lr-tab-panel>` pairs. `nav` is the upstream-compatible
+projection slot a standalone `<lr-tab>` uses before a hydrated group assigns its private slot.
 
 ```html
 <!-- element model: renames straight across from wa-/sl- -->
@@ -157,15 +146,12 @@ both overflow controls), `scroll-button-start`/`scroll-button--start` and
 `scroll-button-end`/`scroll-button--end` (aliases on the individual
 controls that scroll the tabs toward their inline start and end — under RTL "start" is the
 right-hand one), `scroll-button-glyph` (the chevron wrapper inside a control; this wrapper is what
-mirrors under RTL, never the icon), `tab` (a single tab button), `tab-icon` (the optional
-`aria-hidden` leading-icon wrapper around its inert assigned source inside a tab button; only
-rendered when that tab has a matching
-`<id>-icon` sibling), `active-tab-indicator` (the selected tab's directional indicator), and `panel`
+mirrors under RTL, never the icon), `tab` (a single tab button), `active-tab-indicator` (the selected
+tab's directional indicator), and `panel`
 (a single `role="tabpanel"` wrapper, one per tab, hidden unless active).
 The two controls exist in the DOM whenever the group can have them at all (horizontal `placement`,
-no opt-out) and are taken out of layout while the tablist is not overflowing — the qualifier that
-hides them is wrapped in `:where()`, so a consumer's own `::part(scroll-button)` rule outranks it
-without `!important`.
+no opt-out). Non-overflow and inactive-edge qualifiers are wrapped in `:where()`, so a consumer's
+own `::part(scroll-button)` rule can override presentation without `!important`.
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each inline scroll edge of the tablist, painted only while the tablist actually overflows and
@@ -176,7 +162,7 @@ so it never repaints a hovered unselected tab. `--lr-tab-group-indicator-color` 
 color (an underline on a `top`/`bottom` strip, an inline edge on a vertical one).
 `--lr-tab-group-hover-color` (default `var(--lr-color-text)`) — text color of a hovered, non-disabled
 tab, independent of the two selected-state hooks. All three are declared as inline `var()` fallbacks
-at the point of use rather than on `:host`, so each can be set on the element *or on any ancestor* —
+at the point of use rather than on `:host`, so each can be set on the element _or on any ancestor_ —
 the pattern exists because `::part(tab)[aria-selected='true']` is invalid CSS (Shadow Parts forbids
 an attribute selector after `::part()`), which previously left overriding the library-wide
 `--lr-color-brand`/`--lr-color-text` tokens as the only way to restyle a selected or hovered tab,
@@ -209,17 +195,20 @@ Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 
 ```html
 <lr-tab-group active="general">
-  <div slot="general" label="General">General settings…</div>
-  <div slot="advanced" label="Advanced" disabled>Advanced settings…</div>
+  <lr-tab panel="general">General</lr-tab>
+  <lr-tab panel="advanced" disabled>Advanced</lr-tab>
+  <lr-tab-panel name="general">General settings…</lr-tab-panel>
+  <lr-tab-panel name="advanced">Advanced settings…</lr-tab-panel>
 </lr-tab-group>
 <script type="module">
-  const group = document.querySelector('lr-tab-group');
-  group.addEventListener('lr-tab-show', (e) => console.log(e.detail.name, e.detail.tabId));
-  group.show('general');
+  const group = document.querySelector("lr-tab-group");
+  group.addEventListener("lr-tab-show", (e) => console.log(e.detail.name));
+  group.show("general");
 </script>
 ```
 
 **Known gotchas:**
+
 - **`inert` on a child excludes its tab from arrow-key navigation, exactly as `disabled` does.** An
   inert element refuses focus outright, so a roving `tabindex` that stepped onto one would leave
   `focus()` a silent no-op and strand the arrow key with focus back on `<body>`. The tab button
@@ -231,17 +220,16 @@ Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 - Tabs are rebuilt from direct children via a `MutationObserver` — not `slotchange` — because a
   brand-new tab's `slot` name has no matching `<slot>` to fire `slotchange` on until this component
   has already rendered one for it, and neither `slotchange` nor any Lit lifecycle hook observes a
-  plain attribute edit on a light-DOM child at all. Text/content and relevant accessibility/visibility
-  mutations below a direct `<lr-tab>` refresh that button's flattened name; arbitrary nested
-  mutations inside attribute-model panels remain ignored.
-- If two children share the same `slot` name, the *first* one wins for the tab button's label
-  (matches native slot assignment: both would render into the one panel, but only one label can back
-  the button).
+  plain attribute edit on a light-DOM child at all. Text/content and relevant
+  accessibility/visibility mutations below a direct `<lr-tab>` refresh that button's flattened
+  name; arbitrary nested mutations inside panels remain ignored.
+- If two `<lr-tab>` descriptors share the same panel name, the first wins. A second matching panel
+  is likewise ignored for projection, keeping selection, focus, events, and ARIA idrefs unambiguous.
 - The navigation keys follow `placement`, not the writing mode: a `top`/`bottom` strip uses
   Left/Right (swapped under RTL via `internal/rtl.ts`'s `isRtl()`), and a `start`/`end` strip uses
   Up/Down with no RTL swap, because block flow does not reverse. Only one pair is live at a time —
   there is no set of keys that works for both placements.
-- The two overflow controls are `aria-hidden`, so an automated check that looks for a *focusable*
+- The two overflow controls are `aria-hidden`, so an automated check that looks for a _focusable_
   "scroll tabs" button will not find one. Assert on `[part~="scroll-button"]` (and on the tablist's
   `scrollLeft` moving) instead.
 

@@ -426,8 +426,9 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
     { src: 'captions.vtt', kind: 'captions', srclang: 'en', label: 'English' },
     { src: 'bad.vtt', kind: 'bogus', srclang: 'en', label: 'Bad' },
   ] as unknown as typeof el.tracks;
-  await el.updateComplete;
 
+  // Admission is synchronous: no caller-owned collection is observable between assignment and
+  // the next Lit update.
   expect(el.cues.map((cue) => cue.id)).to.deep.equal(['valid']);
   expect(el.rates).to.deep.equal([1, 2]);
   expect(el.peaks).to.deep.equal([0.25, 0, 1]);
@@ -436,6 +437,7 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
     expect(Object.isFrozen(value)).to.be.true;
   }
   expect(el.cues).not.to.equal(cues);
+  await el.updateComplete;
 });
 
 describe('playback controls', () => {

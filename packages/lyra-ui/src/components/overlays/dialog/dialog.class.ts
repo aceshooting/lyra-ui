@@ -62,11 +62,11 @@ export interface LyraDialogModalController {
 }
 
 export interface LyraDialogEventMap {
-  'lr-show': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
   'lr-hide': CustomEvent<LyraDialogHideDetail>;
-  'lr-after-hide': CustomEvent<undefined>;
-  'lr-initial-focus': CustomEvent<undefined>;
+  'lr-after-hide': CustomEvent<null>;
+  'lr-initial-focus': CustomEvent<null>;
   'lr-request-close': CustomEvent<LyraDialogRequestCloseDetail>;
   'lr-dialog-close': CustomEvent<DialogCloseReason>;
 }
@@ -495,7 +495,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     if (this.coalesceOpenRequest(true)) return Promise.resolve();
     if (this._open) return Promise.resolve();
     this.beginOpenRequest(true);
-    const prevented = this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented;
+    const prevented = this.emit('lr-show', null, { cancelable: true }).defaultPrevented;
     const superseded = this.openRequestWasSuperseded(true);
     this.finishOpenRequest();
     if (prevented || superseded) {
@@ -768,7 +768,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       },
       beforeInitialFocus: () => {
         if (this.initialFocusDecision === undefined) {
-          this.initialFocusDecision = !this.emit('lr-initial-focus', undefined, { cancelable: true }).defaultPrevented;
+          this.initialFocusDecision = !this.emit('lr-initial-focus', null, { cancelable: true }).defaultPrevented;
         }
         return this.initialFocusDecision;
       },

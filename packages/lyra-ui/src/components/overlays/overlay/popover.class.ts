@@ -59,10 +59,10 @@ export type { LyraArrowPlacement, OverlayVirtualRect };
 /** The `showAt()` rectangle, shared verbatim with `<lr-tooltip>` (see `./overlay-shared.ts`). */
 
 export interface LyraPopoverEventMap {
-  'lr-show': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-after-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
 }
 
 /**
@@ -900,13 +900,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    */
   private emitCancelableLifecycle(
     name: 'lr-show' | 'lr-hide',
-  ): CustomEvent<undefined> {
-    return (this as LyraPopover<LyraPopoverEventMap>).emit(name, undefined, { cancelable: true });
+  ): CustomEvent<null> {
+    return (this as LyraPopover<LyraPopoverEventMap>).emit(name, null, { cancelable: true });
   }
 
   private emitSettledLifecycle(
     name: 'lr-after-show' | 'lr-after-hide',
-  ): CustomEvent<undefined> {
+  ): CustomEvent<null> {
     return (this as LyraPopover<LyraPopoverEventMap>).emit(name);
   }
 

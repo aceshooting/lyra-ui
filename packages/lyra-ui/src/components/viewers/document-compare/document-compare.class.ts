@@ -1,18 +1,21 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import type { ShikiLanguageInput } from '../../conversation/code-block/code-loader.js';
 import type { LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
+import {
+  literalSetConverter,
+  trueDefaultBooleanConverter,
+} from '../../../internal/converters.js';
 import type {
   LyraClipboardWriteFailure,
   LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
 import { styles } from './document-compare.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentCompareLabel, LYRA_DEFAULT_documentCompareNewVersion, LYRA_DEFAULT_documentCompareNoVersion, LYRA_DEFAULT_documentCompareOldVersion, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -27,6 +30,15 @@ export type DocumentComparePaneSide = 'old' | 'new';
  *  independently-scrollable `<lr-document-preview>` panes. */
 export type LyraDocumentCompareView = 'diff' | 'side-by-side';
 
+const DOCUMENT_COMPARE_VIEW = literalSetConverter<LyraDocumentCompareView>(
+  ['diff', 'side-by-side'],
+  'diff',
+);
+const DOCUMENT_COMPARE_DIFF_LAYOUT = literalSetConverter<LyraDiffViewLayout>(
+  ['unified', 'split'],
+  'unified',
+);
+
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
@@ -37,7 +49,7 @@ export interface LyraDocumentCompareEventMap {
   /** Bubbles unchanged from the internal `<lr-diff-view>` after the clipboard write fulfills. */
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   /** Bubbles unchanged from the internal `<lr-diff-view>` when clipboard writing fails. */
-  'lr-error': CustomEvent<undefined>;
+  'lr-error': CustomEvent<null>;
   /** Detailed clipboard failure bubbled unchanged from the internal `<lr-diff-view>`. */
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   /** Bubbles unchanged from whichever pane's `<lr-document-preview>` it originated in, while `view="side-by-side"`. `detail: { id }`. Activating a highlight that shares its `id` with a highlight on the *other* version also scrolls that pane to the matching highlight -- see the class doc's "Synchronized anchors" section. */
@@ -105,8 +117,8 @@ function versionSourceIdentity(version: DocumentCompareVersion | undefined): str
  *   `syncScroll` is true). Re-rendering the same identity preserves reading position, and an active
  *   shared `anchor` always wins over the reset.
  *
- * A host `aria-label` names the comparison group by attribute presence, including an explicitly
- * empty value. The localized comparison label is used only when that attribute is absent.
+ * A nonempty host `aria-label` makes the host the sole named semantic owner. An explicitly empty
+ * host label remains on the shadow group, and absence restores its localized comparison label.
  *
  * @customElement lr-document-compare
  * @event lr-copy - See `LyraDocumentCompareEventMap`.
@@ -149,8 +161,21 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   /** `'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two
    *  independently-scrollable `<lr-document-preview>` panes -- see the class doc's "Synchronized
-   *  anchors" section for how the two panes are kept in sync. */
-  @property({ reflect: true }) view: LyraDocumentCompareView = 'diff';
+   *  anchors" section for how the two panes are kept in sync. Unsupported values normalize to
+   *  reflected `diff`. */
+  private _view: LyraDocumentCompareView = 'diff';
+
+  @property({ reflect: true, converter: DOCUMENT_COMPARE_VIEW })
+  get view(): LyraDocumentCompareView {
+    return this._view;
+  }
+  set view(next: LyraDocumentCompareView) {
+    const normalized = DOCUMENT_COMPARE_VIEW.normalizeReflected(this, 'view', next);
+    const old = this._view;
+    if (old === normalized) return;
+    this._view = normalized;
+    this.requestUpdate('view', old);
+  }
 
   /** The "before" version. */
   @property({ attribute: false }) oldVersion?: DocumentCompareVersion;
@@ -158,8 +183,21 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   /** The "after" version. */
   @property({ attribute: false }) newVersion?: DocumentCompareVersion;
 
-  /** Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view="diff"`. */
-  @property({ attribute: 'diff-layout', reflect: true }) diffLayout: LyraDiffViewLayout = 'unified';
+  /** Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view="diff"`;
+   *  unsupported values normalize to reflected `unified`. */
+  private _diffLayout: LyraDiffViewLayout = 'unified';
+
+  @property({ attribute: 'diff-layout', reflect: true, converter: DOCUMENT_COMPARE_DIFF_LAYOUT })
+  get diffLayout(): LyraDiffViewLayout {
+    return this._diffLayout;
+  }
+  set diffLayout(next: LyraDiffViewLayout) {
+    const normalized = DOCUMENT_COMPARE_DIFF_LAYOUT.normalizeReflected(this, 'diff-layout', next);
+    const old = this._diffLayout;
+    if (old === normalized) return;
+    this._diffLayout = normalized;
+    this.requestUpdate('diffLayout', old);
+  }
 
   /** Forwarded to the internal `<lr-diff-view>`'s own `copyable` property while `view="diff"`. */
   @property({ type: Boolean }) copyable = false;
@@ -338,7 +376,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
 
   override render(): TemplateResult {
     return html`
-      <div part="base" role="group" aria-label=${hostAriaLabel(this) ?? this.localize('documentCompareLabel')}>
+      <div part="base" role=${viewerSemanticRole(this, 'group') ?? nothing} aria-label=${viewerSemanticLabel(this, this.localize('documentCompareLabel')) ?? nothing}>
         ${this.view === 'side-by-side' ? this.renderSideBySide() : this.renderDiff()}
       </div>
     `;

@@ -23,6 +23,7 @@ focused) fires `lr-tool-call-chip-select`; a consumer wires that to opening a
 a compact call summary is useful, with or without a detail surface behind it.
 
 **Properties:**
+
 - `name: string = ''` — the tool/function name, e.g. `web_search`
 - `category: string = ''` — optional grouping label, e.g. `research`
 - `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
@@ -41,6 +42,10 @@ a compact call summary is useful, with or without a detail surface behind it.
 click or Enter/Space activation of the pill, exactly once per activation. The `lr-tool-chip-select`
 alias (deprecated since 4.0.0) was removed in 9.0.0; listen for `lr-tool-call-chip-select` instead —
 the detail is identical.
+
+**Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the internal native chip
+button, so programmatic focus/activation reaches the same semantic owner as pointer and keyboard
+interaction.
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover/focus; nothing renders at all, no hover affordance, when this
@@ -70,7 +75,7 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 > Retheming a chip from outside `<lr-tool-call-chip>` (e.g. per-tool or per-status colors)?
 > Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
 > "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
-> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+> wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none.
 
@@ -99,12 +104,15 @@ identical status vocabulary so a call reads the same way in both places. Duratio
 sub-1000ms `"820ms"`, else trimmed to at most one decimal of seconds (`"1.5s"`, `"2s"`).
 
 **Known gotchas:**
+
 - the default slot is checked for emptiness by scanning `Array.from(this.children)` for elements
-  once on first update, then kept in sync via `slotchange` — only *element* children count (a bare
+  once on first update, then kept in sync via `slotchange` — only _element_ children count (a bare
   text node assigned to the default slot won't trigger the tooltip)
-- `aria-label` on the host element (if you set one) wins over the component's own generated
-  accessible label (`"name — summary — Status — duration"`); otherwise that generated string is
-  what's announced
+- the native button always keeps its purpose-specific generated name (`"name — summary — Status —
+duration"`). A host `aria-label` remains on the host and is not cloned onto that button; even an
+  explicit empty host label never leaves the actionable button unnamed
+- the `icon` slot is decorative by contract. Its wrapper is both `aria-hidden` and `inert`, so do
+  not place links, buttons, or other controls there; use the chip activation or detail slot instead
 - Escape only dismisses the tooltip when it's open; it does not fire any event or otherwise affect
   `status`/`open` state, since the chip has no "open" state of its own beyond the tooltip
 

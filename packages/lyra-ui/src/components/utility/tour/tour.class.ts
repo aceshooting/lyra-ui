@@ -16,6 +16,7 @@ import { place, trackRect } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { styles } from './tour.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -28,6 +29,26 @@ const DEFAULT_DISTANCE = 12;
 /** Default extra px between a target's own box and the spotlight cutout/ring -- see
  *  `LyraTour.spotlightPadding`. */
 const DEFAULT_SPOTLIGHT_PADDING = 4;
+const MAX_TOUR_STEPS = 256;
+const MAX_STEP_ID_LENGTH = 256;
+const MAX_TARGET_SELECTOR_LENGTH = 8_192;
+const MAX_HEADING_LENGTH = 4_096;
+const MAX_CONTENT_LENGTH = 65_536;
+const MAX_STEP_SPOTLIGHT_PADDING = 10_000;
+const TOUR_PLACEMENTS = new Set<Placement>([
+  'top',
+  'top-start',
+  'top-end',
+  'right',
+  'right-start',
+  'right-end',
+  'bottom',
+  'bottom-start',
+  'bottom-end',
+  'left',
+  'left-start',
+  'left-end',
+]);
 
 /**
  * Resolves the element a step spotlights/anchors to. A `string` is resolved via
@@ -133,8 +154,109 @@ function isElementNode(value: unknown): value is Element {
   );
 }
 
-function isHtmlElementNode(value: unknown): value is HTMLElement {
-  return isElementNode(value) && value.namespaceURI === 'http://www.w3.org/1999/xhtml';
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) return false;
+  try {
+    if (Array.isArray(value)) return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === null || Object.getPrototypeOf(prototype) === null;
+  } catch {
+    return false;
+  }
+}
+
+function ownDataValue(record: Record<string, unknown>, key: string): unknown {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(record, key);
+    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function safeArrayLength(value: unknown): number {
+  try {
+    if (!Array.isArray(value)) return 0;
+    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
+    const length = descriptor && 'value' in descriptor ? descriptor.value : 0;
+    return typeof length === 'number' && Number.isFinite(length)
+      ? Math.min(MAX_TOUR_STEPS, Math.max(0, Math.floor(length)))
+      : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function arrayItem(value: unknown, index: number): unknown {
+  try {
+    if (!Array.isArray(value)) return undefined;
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function boundedString(value: unknown, maxLength: number): string | undefined {
+  return typeof value === 'string' ? value.slice(0, maxLength) : undefined;
+}
+
+function normalizeTourTarget(value: unknown): LyraTourTarget | undefined {
+  if (typeof value === 'string') {
+    const selector = value.slice(0, MAX_TARGET_SELECTOR_LENGTH);
+    return selector ? selector : undefined;
+  }
+  if (typeof value === 'function') {
+    return value as () => HTMLElement | null;
+  }
+  try {
+    return isHtmlElement(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Owns a bounded, realm-neutral snapshot without invoking provider accessors or iterators. */
+function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
+  const normalized: Readonly<LyraTourStep>[] = [];
+  const length = safeArrayLength(value);
+  for (let index = 0; index < length; index += 1) {
+    const candidate = arrayItem(value, index);
+    if (!isPlainRecord(candidate)) continue;
+    const stepId = boundedString(ownDataValue(candidate, 'stepId'), MAX_STEP_ID_LENGTH);
+    const target = normalizeTourTarget(ownDataValue(candidate, 'target'));
+    const heading = boundedString(ownDataValue(candidate, 'heading'), MAX_HEADING_LENGTH);
+    if (!stepId || stepId !== stepId.trim() || !target || heading === undefined) continue;
+
+    const content = boundedString(ownDataValue(candidate, 'content'), MAX_CONTENT_LENGTH);
+    const rawPlacement = ownDataValue(candidate, 'placement');
+    const placement = TOUR_PLACEMENTS.has(rawPlacement as Placement)
+      ? (rawPlacement as Placement)
+      : undefined;
+    const rawPadding = ownDataValue(candidate, 'spotlightPadding');
+    const spotlightPadding =
+      typeof rawPadding === 'number' && Number.isFinite(rawPadding)
+        ? finiteRange(rawPadding, DEFAULT_SPOTLIGHT_PADDING, 0, MAX_STEP_SPOTLIGHT_PADDING)
+        : undefined;
+    const rawInteractive = ownDataValue(candidate, 'interactiveTarget');
+    const interactiveTarget = typeof rawInteractive === 'boolean' ? rawInteractive : undefined;
+    const rawHidePrevious = ownDataValue(candidate, 'hidePrevious');
+    const hidePrevious = typeof rawHidePrevious === 'boolean' ? rawHidePrevious : undefined;
+
+    normalized.push(
+      Object.freeze({
+        stepId,
+        target,
+        heading,
+        ...(content !== undefined ? { content } : {}),
+        ...(placement !== undefined ? { placement } : {}),
+        ...(spotlightPadding !== undefined ? { spotlightPadding } : {}),
+        ...(interactiveTarget !== undefined ? { interactiveTarget } : {}),
+        ...(hidePrevious !== undefined ? { hidePrevious } : {}),
+      }),
+    );
+  }
+  return Object.freeze(normalized);
 }
 
 /**
@@ -256,16 +378,17 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   private _steps: readonly Readonly<LyraTourStep>[] = Object.freeze([]);
 
-  /** Ordered step data. Assignment takes a shallow frozen snapshot, so later caller mutation
-   *  cannot silently change rendering or an emitted event. Empty (the default) renders nothing. */
+  /** Ordered step data. Assignment clone-normalizes at most 256 own-data records into a frozen
+   *  snapshot, omitting malformed/accessor rows and invalid optional fields, so later caller
+   *  mutation cannot silently change rendering or an emitted event. Empty (the default) renders
+   *  nothing. */
   get steps(): readonly Readonly<LyraTourStep>[] {
     return this._steps;
   }
 
   set steps(next: readonly LyraTourStep[]) {
     const previous = this._steps;
-    const source = Array.isArray(next) ? next : [];
-    this._steps = Object.freeze(source.map((step) => Object.freeze({ ...step })));
+    this._steps = snapshotTourSteps(next);
     this.requestUpdate('steps', previous);
   }
 
@@ -347,7 +470,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     } else if (changed.has('open')) {
       if (this.open) {
         const active = deepActiveElement(this.ownerDocument);
-        this.focusReturnTarget = isHtmlElementNode(active) ? active : null;
+        this.focusReturnTarget = isHtmlElement(active) ? active : null;
         this.activateOverlayInternal();
       } else {
         this.deactivateOverlayInternal();
@@ -511,7 +634,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
           : typeof target === 'function'
           ? target()
           : target;
-      return isHtmlElementNode(resolved) && resolved.isConnected && resolved.ownerDocument === this.ownerDocument
+      return isHtmlElement(resolved) && resolved.isConnected && resolved.ownerDocument === this.ownerDocument
         ? resolved
         : null;
     } catch {

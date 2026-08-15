@@ -4,7 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './browser-frame.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -15,6 +15,11 @@ import { firstByIdentity } from '../collection-identity.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+const BROWSER_FRAME_PHASE = literalSetConverter<LyraStreamPhase>(
+  ['idle', 'connecting', 'streaming', 'stalled'],
+  'idle',
+);
 
 
 /** The `object-fit: contain` content box (in pixels, relative to the container's own top-left) for
@@ -65,7 +70,7 @@ const STATUS_KEY = {
 
 export interface LyraBrowserFrameEventMap {
   'lr-take-over': CustomEvent<{ controller: BrowserFrameController }>;
-  'lr-stop': CustomEvent<undefined>;
+  'lr-stop': CustomEvent<null>;
 }
 
 /**
@@ -150,7 +155,19 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   @property() url = '';
   /** The browser session's connection/streaming lifecycle phase. */
-  @property({ reflect: true }) phase: LyraStreamPhase = 'idle';
+  private _phase: LyraStreamPhase = 'idle';
+
+  @property({ reflect: true, converter: BROWSER_FRAME_PHASE })
+  get phase(): LyraStreamPhase {
+    return this._phase;
+  }
+  set phase(next: LyraStreamPhase) {
+    const normalized = BROWSER_FRAME_PHASE.normalizeReflected(this, 'phase', next);
+    const old = this._phase;
+    if (old === normalized) return;
+    this._phase = normalized;
+    this.requestUpdate('phase', old);
+  }
   @property({ reflect: true }) controller: BrowserFrameController = 'agent';
   /** Pointer markers keyed by stable id. Duplicate ids normalize first-wins before rendering. */
   @property({ attribute: false }) pings: BrowserPing[] = [];

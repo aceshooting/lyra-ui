@@ -16,7 +16,8 @@
 ## `lr-dropdown`
 
 The complete mapped action-menu component. The public element remains a Popover-style trigger plus
-positioned popup; inside that popup it owns the same contained interaction engine as `lr-menu`, so
+positioned popup shell; the shell is presentation-only, and its contained `lr-menu` is the sole
+menu role/name owner. That menu provides the same interaction engine as standalone `lr-menu`, so
 direct `lr-dropdown-item`/`lr-menu-item` children get roving focus, disabled skipping, type-ahead,
 nested submenu keyboard/pointer intent, and focus return without a second public popup. A
 consumer-supplied `lr-menu` in the default slot becomes that contained engine instead of being
@@ -30,6 +31,18 @@ consumer-supplied `<lr-menu>` uses that controller directly. This preserves both
 direct-item composition and Shoelace's consumer-menu composition. The canonical item properties,
 methods, events, slots, parts, and theme variables are documented in the layout-family
 `lr-menu` / `lr-menu-item` section.
+The trigger always receives `aria-haspopup="menu"`. `popupRole` is narrowed to the invariant
+`'menu'`; assigning another runtime value or authoring another `popup-role` value normalizes it
+back to `menu` and never puts a dialog/menu role on the outer positioning shell. This matches Web
+Awesome's fixed inner menu role and Shoelace's consumer-menu ownership rather than exposing a
+Lyra-only role switch.
+
+The generated menu uses the dropdown's presence-sensitive host `aria-label`, `accessibleLabel`, or
+localized "Menu" fallback. A consumer-supplied menu keeps its own naming precedence: its host
+`aria-label` (including an explicit empty value), then an explicit nondefault `label`, then the
+dropdown fallback. Its `header` and `footer` slots remain rendered outside the inner
+`role="menu"` list while contained, including after live slot changes; Tab can therefore reach
+their controls without putting arbitrary content inside the menu role.
 
 **Properties:**
 - `open: boolean = false` (reflected), `placement: Placement = 'bottom-start'`,
@@ -48,23 +61,29 @@ methods, events, slots, parts, and theme variables are documented in the layout-
 - `sync?: 'width'|'height'|'both'` (reflected) — copies the trigger dimension(s) onto the popup.
 - `containingElement?: HTMLElement` (property only) — an external element that counts as inside for
   light-dismiss handling.
-- `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, `accessibleLabel`
-  (`aria-label`) and `popupRole` are retained from `lr-popover` for existing Lyra consumers; the
-  popup role defaults to `menu` and its accessible-name fallback is the localized "Menu".
+- `arrow`, `withoutArrow` (`without-arrow`), `arrowPlacement`, `arrowPadding`, and `accessibleLabel`
+  (`aria-label`) are retained from `lr-popover` for existing Lyra consumers.
+- `popupRole: 'menu'` (attribute `popup-role`) is the narrowed inherited surface. Dropdowns cannot
+  be changed into dialogs; use `lr-popover popup-role="dialog"` for arbitrary dialog-like content.
 
 **Methods:** `show(): Promise<void>` and
 `hide(options?: { focusTrigger?: boolean }): Promise<void>` use the same cancelable before-events,
 after-events, focus return, and settlement rules as `lr-popover`. `reposition(): void` immediately
-recomputes placement after an imperative anchor/layout change. `showAt()` remains available for
-Lyra's virtual-anchor compatibility surface.
+recomputes placement after an imperative anchor/layout change. `focusOnTrigger(options?): void`
+focuses the first assigned trigger, and `getMenu(): LyraMenu | null` returns the live generated or
+consumer-supplied contained menu engine. `showAt()` remains available for Lyra's virtual-anchor
+compatibility surface.
+
+While a consumer-supplied menu is contained, the dropdown snapshots every integration field it owns
+(`dropdownOpen`, owner/contained/role flags, stay-open policy, and size). Removing/swapping that menu or
+disconnecting the dropdown restores the exact author values, so reuse outside this dropdown does
+not retain hidden parent policy.
 
 **Events:** `lr-select` is the single mapped selection path: cancelable, bubbling/composed, with
 `detail: { item }` carrying the activated element. Preventing it keeps the complete submenu chain
 open; `stay-open-on-select` applies the same default suppression declaratively. Nested selection is
 not translated or re-emitted at each level, so a listener on `lr-dropdown` receives exactly one
-event. The contained menu's standalone `lr-menu-select` compatibility alias is stopped inside the
-dropdown for direct, nested, and consumer-supplied menu shapes. `lr-show` (cancelable),
-`lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
+event. `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), and `lr-after-hide` retain
 the Popover lifecycle; none fires for initial open markup.
 
 Dropdown motion resolves `dropdown.show` / `dropdown.hide` through the public animation registry;
@@ -72,9 +91,10 @@ it retains the dropdown's `--show-duration` / `--hide-duration` defaults when an
 only keyframes. Passing `null` disables motion without skipping the after-event or promise.
 
 **Slots:** `trigger`; default (`lr-dropdown-item`/`lr-menu-item` rows, or one consumer-supplied
-`lr-menu`). **CSS parts:** `trigger`; `popup dialog popup__popup base base__popup panel` (all six
-tokens on the positioned popup, preserving the popover, Web Awesome and Shoelace wrapper names on
-the same node); `menu` (the contained controller); `content body`; and the retained optional
+`lr-menu`; that menu may use its own `header`/`footer` regions). **CSS parts:** `trigger`;
+`popup dialog popup__popup base base__popup panel` (all six tokens on the neutral positioned
+popup, preserving the popover, Web Awesome and Shoelace wrapper names on the same node); `menu`
+(the contained semantic/controller owner); `content body`; and the retained optional
 `arrow popup__arrow` token set.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default

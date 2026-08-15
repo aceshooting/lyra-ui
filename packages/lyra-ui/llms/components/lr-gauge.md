@@ -22,10 +22,11 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 - `value: number = 0`
 - `min: number = 0`
 - `max: number = 100`
-- `type: 'radial'|'ring'|'linear' = 'radial'` (reflected — `radial` is a 270° sweep; `ring` is a
+- `shape: GaugeShape = 'radial'`, where `GaugeShape = 'radial'|'ring'|'linear'` (reflected —
+  `radial` is a 270° sweep; `ring` is a
   full circle that begins at 12 o'clock)
 - `label: string = ''`
-- `valueLabel?: string` (attribute: false — overrides both the visible text and the host's
+- `valueText?: string` (attribute `value-text` — overrides both the visible text and the host's
   `aria-valuetext`; an empty string is treated the same as unset and falls back to the numeric
   `value` while removing `aria-valuetext`)
 
@@ -43,24 +44,23 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 ```html
 <lr-gauge value="72" min="0" max="100" label="CPU"></lr-gauge>
 <lr-gauge
-  type="ring"
+  shape="ring"
   value="84"
   label="Coverage"
   style="--lr-gauge-fill: var(--lr-color-success)"
 ></lr-gauge>
-<lr-gauge type="linear" value="0.4" max="1"></lr-gauge>
-<script type="module">
-  document.querySelector("lr-gauge").valueLabel = "72°F"; // visible text and announced value
-</script>
+<lr-gauge shape="linear" value="0.4" max="1" value-text="72°F"></lr-gauge>
 ```
+
+**9.0 migration:** rename geometry `type`/`GaugeType` to `shape`/`GaugeShape`, and formatted-value
+`valueLabel` to the declarative `valueText`/`value-text`. There are no legacy aliases.
 
 **Known gotchas:**
 
-- SVG text cannot wrap. When a caller-supplied visible `label` or `valueLabel` exceeds the
-  single-line capacity, the component applies SVG `textLength` fitting so the complete string stays
-  inside the fixed radial/ring viewBox or its half of the linear viewBox; the host's accessible
-  label and `aria-valuetext` retain the original text.
-- setting `valueLabel` (e.g. `"72°F"`) now also sets `aria-valuetext` on the host (in addition to
+- SVG text cannot wrap. Long caller-supplied `label`/`valueText` strings are visibly abbreviated
+  with an ellipsis instead of being compressed into unreadable hairline glyphs; the SVG `<title>`,
+  host accessible label, and `aria-valuetext` retain the complete text.
+- setting `valueText` (e.g. `"72°F"`) also sets `aria-valuetext` on the host (in addition to
   changing the visible SVG text), so a screen reader announces your formatted string instead of the
   raw `aria-valuenow` number; the SVG `<text part="value">`/`<text part="label">` elements are
   `aria-hidden="true"` so they're no longer separately exposed inside the same `role="meter"` host.
@@ -69,9 +69,10 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 - no documented component-specific sizing custom property; host size is fixed em values
   (`8em` radial/ring, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
   element instead.
-- Divide-by-zero guarded (`max - min || 1`), and radial/linear share one component via the `type`
+- Divide-by-zero guarded, and radial/linear share one component via the `shape`
   attribute.
-- non-finite `value` text remains blank, while non-finite `min`/`max` use finite default domain
+- non-finite `value` text remains blank unless `valueText` supplies a truthful fallback; that
+  fallback is included in the generated `role="img"` accessible name. Non-finite `min`/`max` use finite default domain
   bounds; no `NaN`/`Infinity` value leaks into the SVG geometry or ARIA attributes, and a finite
   value is clamped into the resolved domain before being announced.
 

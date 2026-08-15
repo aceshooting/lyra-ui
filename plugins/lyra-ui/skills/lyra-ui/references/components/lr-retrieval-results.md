@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 29 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -22,17 +22,18 @@ array), reusing its score bar, tier coloring, title+page rendering, and expandab
 Large sets window through an internal `lr-virtual-list`.
 
 **Properties:**
+
 - `chunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk`, imported from
   `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; text: string; score: number;
-  source: DocumentRef; metadata?: Record<string, unknown>; rank?: number; locator?: DocumentLocator;
-  queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreakdown }`. The raw,
+source: DocumentRef; metadata?: Record<string, unknown>; rank?: number; locator?: DocumentLocator;
+queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreakdown }`. The raw,
   un-deduplicated/unsorted/ungrouped result set; host-owned. Internally mapped to
   `lr-chunk-inspector`'s flatter `LyraChunk` via `source.id → sourceId`, `source.name → title`, and
   `locator → anchor`; a `page`-kind `locator` additionally supplies the inspector's visible `page`.
   Nothing is ever guessed from `metadata` — a chunk with no `locator` simply leaves `anchor`/`page`
   unset
 - `selectedIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. The component
-  updates its own copy on toggle *then* emits `lr-select`; reassign to control. An id with no
+  updates its own copy on toggle _then_ emits `lr-select`; reassign to control. An id with no
   matching chunk is harmless
 - `selectable: boolean = true` (reflected) — shows a per-row `lr-checkbox`
 - `dedupe: boolean = true` (reflected) — drops duplicate `id`s, keeping the higher `score`
@@ -69,12 +70,17 @@ Large sets window through an internal `lr-virtual-list`.
   replaces the whole result view with a neutral visible message. Caller-supplied text is not
   localized (app/network data, not library copy). A new non-empty value is announced through a
   shared assertive light-DOM region; initial and reconnect content is not replayed
-- `label: string = ''` — accessible name; defaults to the localized `chunkInspectorLabel`
+- `label: string = ''` — fallback name for the populated result group; defaults to localized
+  `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
+  explicitly empty host label stays empty
 
 **Events:**
+
 - `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ ids: string[]; chunks: RetrievalChunk[] }`)
-  — the *complete* updated selection, both as ids and as the matching deduplicated records, so a host
-  needn't re-look-up ids against its own copy on every toggle.
+  — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
+  host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
+  deduplicated even when `dedupe=false` keeps duplicate rows visible; the highest finite score wins
+  and equal scores keep first appearance.
 - `lr-load-more` (`detail: undefined`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
@@ -116,7 +122,7 @@ border rather than a fill by design: the row's own text (the nested chunk inspec
 score line in particular) is sized and colored for the page's default surface, and a tinted
 background can drop it below the required contrast ratio, while a border-only indicator carries no
 such risk — so recoloring this hook is contrast-safe. It is an inline `var()` fallback at the point
-of use rather than a `:host` declaration, so it can be set on the element *or on any ancestor*:
+of use rather than a `:host` declaration, so it can be set on the element _or on any ancestor_:
 `::part(row-body)[data-selected]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as the only
 lever, repainting every other brand surface with it. Plus shared tokens otherwise.
@@ -124,6 +130,7 @@ lever, repainting every other brand surface with it. Plus shared tokens otherwis
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - While virtualized, each row's content lives inside `lr-virtual-list`'s shadow root, not this
   component's.
 - Below the virtualization threshold, scroll-near-bottom isn't a meaningful gesture, so a

@@ -387,16 +387,44 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this._volume = finiteRange(next, 1, 0, 1);
     this.requestUpdate('volume', old);
   }
+  private _rates: readonly number[] = DEFAULT_RATES;
   /** Selectable rates offered by `[part="rate-select"]`; snapshotted, deduplicated, bounded to 32. */
-  @property({ attribute: false }) rates: readonly number[] = DEFAULT_RATES;
+  @property({ attribute: false })
+  get rates(): readonly number[] { return this._rates; }
+  set rates(value: readonly number[]) {
+    const previous = this._rates;
+    this._rates = normalizeRates(value);
+    this.requestUpdate('rates', previous);
+  }
+  private _cues: readonly LyraAvCue[] = EMPTY_CUES;
   /** Transcript entries, rendered as a virtualized, `currentTime`-synced list. Valid nonempty cue
    * IDs are unique; the first occurrence wins. Inputs are bounded, cloned, and frozen. */
-  @property({ attribute: false }) cues: readonly LyraAvCue[] = EMPTY_CUES;
+  @property({ attribute: false })
+  get cues(): readonly LyraAvCue[] { return this._cues; }
+  set cues(value: readonly LyraAvCue[]) {
+    const previous = this._cues;
+    this._cues = snapshotLyraAvCues(value);
+    this.requestUpdate('cues', previous);
+  }
+  private _peaks: readonly number[] = EMPTY_PEAKS;
   /** Normalized `0..1` waveform amplitude samples. Empty renders a plain seek rail instead of a
    *  canvas -- this component never decodes audio itself. */
-  @property({ attribute: false }) peaks: readonly number[] = EMPTY_PEAKS;
+  @property({ attribute: false })
+  get peaks(): readonly number[] { return this._peaks; }
+  set peaks(value: readonly number[]) {
+    const previous = this._peaks;
+    this._peaks = normalizePeaks(value);
+    this.requestUpdate('peaks', previous);
+  }
+  private _tracks: readonly LyraAvTrack[] = EMPTY_TRACKS;
   /** Native `<track>` sources (subtitles/captions/descriptions), bounded and snapshotted. */
-  @property({ attribute: false }) tracks: readonly LyraAvTrack[] = EMPTY_TRACKS;
+  @property({ attribute: false })
+  get tracks(): readonly LyraAvTrack[] { return this._tracks; }
+  set tracks(value: readonly LyraAvTrack[]) {
+    const previous = this._tracks;
+    this._tracks = snapshotLyraAvTracks(value);
+    this.requestUpdate('tracks', previous);
+  }
 
   /** From `DocumentAnchorTarget` — only `time-range` anchors resolve here. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['time-range'];
@@ -515,23 +543,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       this.kind = undefined;
     }
     if (changed.has('preload') && this.preload !== this.effectivePreload) this.preload = this.effectivePreload;
-    if (changed.has('rates')) {
-      const normalized = normalizeRates(this.rates);
-      if (this.rates !== normalized) this.rates = normalized;
-    }
     if (changed.has('cues')) {
-      const normalized = snapshotLyraAvCues(this.cues);
-      if (this.cues !== normalized) this.cues = normalized;
       this.rebuildCueKeys();
       if (this.metadataLoaded) this.reconcileActiveCue();
-    }
-    if (changed.has('peaks')) {
-      const normalized = normalizePeaks(this.peaks);
-      if (this.peaks !== normalized) this.peaks = normalized;
-    }
-    if (changed.has('tracks')) {
-      const normalized = snapshotLyraAvTracks(this.tracks);
-      if (this.tracks !== normalized) this.tracks = normalized;
     }
     if (this.transcriptLocale !== locale) {
       this.transcriptLocale = locale;

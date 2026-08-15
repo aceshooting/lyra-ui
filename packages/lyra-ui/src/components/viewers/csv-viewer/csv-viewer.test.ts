@@ -585,8 +585,8 @@ describe('lr-csv-viewer', () => {
         await el.search('ada');
         const listener = oneEvent(el, 'lr-search-change');
         el.clearSearch();
-        const event = (await listener) as CustomEvent<{ matchCount: number; activeIndex: number }>;
-        expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+        const event = (await listener) as CustomEvent<{ matchCount: number; matchCountExact: boolean; activeIndex: number }>;
+        expect(event.detail).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
       } finally {
         restore();
       }
@@ -612,8 +612,18 @@ describe('lr-csv-viewer', () => {
         rows: Array.from({ length: 1_001 }, () => ['hit']),
       };
       await el.updateComplete;
+      let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
       expect(await el.search('hit')).to.equal(1_000);
       expect((el as unknown as { searchMatches: unknown[] }).searchMatches).to.have.lengthOf(1_000);
+      expect(detail).to.deep.include({ matchCount: 1_000, matchCountExact: false });
+
+      (el as unknown as { fetchState: unknown }).fetchState = {
+        kind: 'loaded',
+        rows: Array.from({ length: 1_000 }, () => ['hit']),
+      };
+      expect(await el.search('hit')).to.equal(1_000);
+      expect(detail).to.deep.include({ matchCount: 1_000, matchCountExact: true });
     });
   });
 

@@ -4059,6 +4059,27 @@ it("accepts an array-form groupBy and supports multi-level grouping", async () =
   expect(nestedGroups.length).to.be.greaterThan(0);
 });
 
+it("snapshots column records and array-form grouping synchronously on assignment", async () => {
+  const element = await dataGrid();
+  const authoredColumns = [{ field: "name", label: "Original" }];
+  const authoredGroups = ["team", "score"];
+
+  element.columns = authoredColumns;
+  element.groupBy = authoredGroups;
+  authoredColumns[0]!.label = "Mutated";
+  authoredColumns.push({ field: "team", label: "Later" });
+  authoredGroups[0] = "score";
+  authoredGroups.push("name");
+
+  expect(element.columns).to.deep.equal([
+    { field: "name", label: "Original" },
+  ]);
+  expect(element.groupBy).to.deep.equal(["team", "score"]);
+  expect(Object.isFrozen(element.columns)).to.equal(true);
+  expect(Object.isFrozen(element.columns[0])).to.equal(true);
+  expect(Object.isFrozen(element.groupBy)).to.equal(true);
+});
+
 it("skips client-side grouping and filtering math entirely in server mode", async () => {
   const element = await dataGrid(html`
     <lr-data-grid

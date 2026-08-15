@@ -21,7 +21,10 @@ A form-associated single-choice control. Use it alone or inside `lr-radio-group`
 reflected `customError: string | null` (attribute `custom-error`); `disabled`, `required`, `name`,
 and `value`. A selected standalone radio submits its value through `ElementInternals`.
 An empty `name` is canonicalized to an omitted attribute rather than reappearing as `name=""`.
-`effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
+`effectiveRequired` exposes the required state inherited from a containing radio group.
+`effectiveName` and `effectiveSize` expose the owning group's aggregate projections while `name`
+and `size` remain the option's authored state; late writes survive removal, reparenting, and group
+disconnect/reconnect. `focus()`,
 `blur()`, and `click()` forward to the internal radio control; `getForm()` returns the standalone
 radio's owning form and the aggregate group's owning form while the radio is group-owned.
 
@@ -66,6 +69,8 @@ LTR and RTL while the indicator retains its fixed geometry; an exact-320px story
 **CSS parts:** default appearance: `base`, `circle` / `control` (with Shoelace's
 `control--checked` state token), `dot` / `checked-icon`, and `label`. Button appearance: `base`,
 `button`, `control`, `button--checked` while selected, and `label`.
+Every `<lr-radio-button>` size tier keeps its interactive base at least 24px in both axes, including
+an empty-label control; the visible density can still grow with the shared size ladder.
 
 **Themeable custom properties:**
 

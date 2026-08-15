@@ -368,11 +368,12 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   }
 
   override render(): TemplateResult {
+    const hostLabel = this.getAttribute('aria-label');
     return html`
       <div part="base">
         <lr-tree
           .data=${this.treeItems}
-          label=${this.getAttribute('aria-label') || this.label || this.localize('fileTreeLabel')}
+          label=${hostLabel ?? (this.label || this.localize('fileTreeLabel'))}
           @lr-node-select=${this.onNodeSelect}
           @lr-node-toggle=${this.onNodeToggle}
         ></lr-tree>

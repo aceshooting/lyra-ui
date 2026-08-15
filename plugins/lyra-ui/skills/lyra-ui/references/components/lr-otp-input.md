@@ -42,7 +42,8 @@ slots inherit a containing control's size context; standalone font and radius re
 to `m`. Explicitly writing even the same-default `m` pins the `m` mapping, and removing the
 attribute restores contextual inheritance;
 `length: number = 6` (reflected); `format: string = ''` — `#` marks a segment and any
-other character becomes a literal separator (`format="###-###"`), overriding `length`;
+other character becomes a literal separator (`format="###-###"`), overriding `length`. Only the
+first 4,096 UTF-16 code units are parsed;
 `type: 'numeric' | 'alpha' | 'alphanumeric' = 'numeric'` (reflected, also drives `inputmode`);
 `case: 'preserve' | 'upper' | 'lower' = 'preserve'` (reflected); `mask: boolean = false` masks entered
 characters, while `withMask: boolean = false` (`with-mask`) independently paints the mask glyph in
@@ -61,26 +62,29 @@ a consumer-supplied custom error and recomputes the intrinsic required/completen
 The browser restoration callback sanitizes string state and restores unsupported state shapes as
 the empty value. `select()` selects the real compact-string value; typing replaces its selected
 occupied cells at the first selected cell, while Backspace/Delete clears them in one edit.
-`setRangeText()` applies a programmatic compact-string edit through the same character, case, and
-length sanitizer as every other value path, synchronizes the visual cells, submitted value, and
-validity, and emits no user-input event. When sanitizing removes a replacement character, the
+`setRangeText()` bounds both the current native value and replacement before applying a
+programmatic compact-string edit through the same character, case, and length sanitizer as every
+other value path, synchronizes the visual cells, submitted value, and validity, and emits no
+user-input event. When sanitizing removes a replacement character, the
 returned selection offsets are remapped onto the accepted compact string.
 
 **Read-only:** `input: HTMLInputElement | null` exposes the real native input and
 `validationTarget: HTMLInputElement | null` exposes the same element as the native validation-UI
-anchor. Both are `null` before the component connects and renders. `effectiveLength: number` and
-its retained `segmentCount` alias report how many segments are actually rendered: a valid
-`format`'s `#` count, else `length`, clamped to 1–32. A nonempty format containing no `#` is treated
-as unset, so `length` supplies the segments and no literal-only row renders. Literal runs are
-coalesced into one separator cell, and an adversarially long format is still bounded to 32
-segments. This is the number `value` is truncated to and the field is validated against, so read it
-instead of re-deriving it from `length`.
+anchor. Both are `null` before the component connects and renders. `effectiveLength: number`
+reports how many segments are actually rendered: a valid
+`format`'s `#` count, else `length`, clamped to 1–32. A nonempty format whose bounded
+4,096-code-unit prefix contains no `#` is treated as unset, so `length` supplies the segments and
+no literal-only row renders. Literal runs are
+coalesced into one separator cell; output is still bounded to 32 segments. Value sanitization
+likewise inspects at most the first 4,096 UTF-16 code units and stops earlier as soon as the
+effective length is filled. This is the number `value` is truncated to and the field is validated
+against, so read it instead of re-deriving it from `length`.
 
 **Selection facade:** `selectionStart`, `selectionEnd`, and `selectionDirection` forward native
 compact-string getters and setters; each reads `null` before the input renders, and pre-render
-writes and range-method calls are safe no-ops. A collapsed selection also moves the fixed-cell
-keyboard target, so the next typed character replaces the cell at that compact offset rather than
-the previously active cell.
+writes and range-method calls are safe no-ops. Native selection, Home/End, click/pointer caret, and
+host facade changes all move the fixed-cell keyboard target, so printable, Delete, and Backspace
+edit the cell at the live compact caret rather than a stale internal index.
 
 **Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
 `lr-clear` (no detail) when a nonempty field is cleared by the user or `clear()`. Fixed-cell edits
@@ -165,10 +169,25 @@ other Lyra form controls. `readonly` suspends intrinsic required/completeness va
 control cannot be edited and restores the current intrinsic result when editing is enabled again.
 
 ```html
-<lr-otp-input label="Verification code" required error-text="Enter the code we sent you."></lr-otp-input>
-<lr-otp-input label="License key" type="alphanumeric" case="upper" format="####-####-####"></lr-otp-input>
+<lr-otp-input
+  label="Verification code"
+  required
+  error-text="Enter the code we sent you."
+></lr-otp-input>
+<lr-otp-input
+  label="License key"
+  type="alphanumeric"
+  case="upper"
+  format="####-####-####"
+></lr-otp-input>
 <form>
-  <lr-otp-input name="code" label="PIN" length="4" appearance="contained" autosubmit></lr-otp-input>
+  <lr-otp-input
+    name="code"
+    label="PIN"
+    length="4"
+    appearance="contained"
+    autosubmit
+  ></lr-otp-input>
 </form>
 ```
 

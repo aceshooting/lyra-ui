@@ -34,9 +34,11 @@ both dimensions through the aspect ratio.
 
 **Additive Lyra extensions:**
 
-- `values: number[] = []` — programmatic data source used while `data` is empty
-- `type?: 'line'|'bar'|'area'` — `bar` renders bounded rectangles; `line`/`area` retain the older
-  explicit unfilled/filled modes. Omit it for the mirrored `appearance` surface
+- `values: readonly number[] = []` (attribute: false) — property-only programmatic data source used
+  while `data` is empty; foreign/non-array assignments render the empty state rather than throwing
+- `mark: LyraSparklineMark = 'line'`, where `LyraSparklineMark = 'line'|'bar'` (reflected) —
+  chooses line/path versus bounded rectangle geometry. Fill treatment remains solely on the
+  mirrored `appearance` axis
 - `min?: number` (defaults to data minimum)
 - `max?: number` (defaults to data maximum)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
@@ -78,14 +80,18 @@ manual refresh is needed.
   midline/mid-height bars instead of collapsing every point to the bottom edge, and a single-value
   additive `values` series renders a visible flat line. Mirrored `data` deliberately requires two
   values. **Every** rendering mode
-  (`line`/`area`/`bar`) decimates a `values` array past 500 points down to at most 500 plotted
+  (`mark="line"` with any appearance, or `mark="bar"`) decimates a `values` array past 500 points
+  down to at most 500 plotted
   samples — evenly sampled by index, always keeping the first and last value exactly, not
-  aggregated/averaged. `type="bar"` caps at 500 rendered `<rect>`s directly; `line`/`area` cap the
+  aggregated/averaged. `mark="bar"` caps at 500 rendered `<rect>`s directly; line marks cap the
   point count baked into the single `<path>`'s `d` string instead (an uncapped path string also
   grows unbounded, even though the element count stays at one `<path>`). Auto `min`/`max` is still
   scanned from the _full_ pre-decimation `values` array, so a real extreme value that decimation
   happens to drop can't silently narrow the rendered scale.
 - Point order mirrors under RTL while the numeric sample order remains unchanged. There are no
   animations, so reduced-motion mode needs no alternate timing branch.
+- **9.0 migration:** rename additive `type="bar"`/`"line"` to `mark="bar"`/`"line"`. Replace
+  `type="area"` with `mark="line" appearance="solid"`. `values` is now property-only, matching its
+  array type; use mirrored `data` for declarative space-separated samples.
 
 ---

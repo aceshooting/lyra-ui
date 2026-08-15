@@ -141,7 +141,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     if (translated.defaultPrevented) event.preventDefault();
   }
 
-  private onDeny(request: ToolApprovalRequest, event: CustomEvent<undefined>): void {
+  private onDeny(request: ToolApprovalRequest, event: CustomEvent<null>): void {
     event.stopPropagation();
     if ((request.status ?? 'pending') !== 'pending') return;
     const translated = this.emit(
@@ -196,7 +196,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
               .args=${request.args}
               .editable=${this.editable}
               @lr-approve=${(event: CustomEvent<{ args: unknown }>) => this.onApprove(request, event)}
-              @lr-deny=${(event: CustomEvent<undefined>) => this.onDeny(request, event)}
+              @lr-deny=${(event: CustomEvent<null>) => this.onDeny(request, event)}
               @lr-close=${(event: CustomEvent<ToolApprovalDialogCloseReason>) => this.onClose(request, event)}
             ></lr-tool-approval-dialog>`,
           )

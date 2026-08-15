@@ -8,7 +8,7 @@
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -38,9 +38,14 @@ wrapper without being shadowed by the subclass.
 `base` and `input-wrapper`.
 
 ```html
-<lr-native-time-input label="Start time" min="09:00" max="17:00" value="09:30"></lr-native-time-input>
+<lr-native-time-input
+  label="Start time"
+  min="09:00"
+  max="17:00"
+  value="09:30"
+></lr-native-time-input>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/input/native-time-input.js';
+  import "@aceshooting/lyra-ui/components/forms/input/native-time-input.js";
 </script>
 ```
 

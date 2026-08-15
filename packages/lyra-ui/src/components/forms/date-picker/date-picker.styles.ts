@@ -85,7 +85,7 @@ export const styles = css`
   :where([part='title']):active:not(:disabled) {
     color: var(--lr-date-picker-title-active-color, var(--lr-color-brand));
     background: var(--lr-date-picker-title-active-bg, var(--lr-color-brand-quiet));
-    border-radius: var(--lr-date-picker-radius);
+    border-radius: var(--lr-date-picker-title-active-radius, var(--lr-date-picker-radius));
   }
   :where([part='title']):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The inline semantic menu mapped from `sl-menu`: a named `role="menu"`, real roving focus, nested submenus, and one cancelable `lr-select` event. Wrap it in `<lr-dropdown>` when the interaction needs a trigger, positioned popup, open state, or overlay lifecycle.',
+          'The inline semantic menu mapped from `sl-menu`: a named `role="menu"`, real roving focus, nested submenus, and one cancelable `lr-select` event. Omit `label` for the localized menu name; every supplied string, including an empty one, stays literal. Wrap it in `<lr-dropdown>` when the interaction needs a trigger, positioned popup, open state, or overlay lifecycle.',
       },
     },
   },

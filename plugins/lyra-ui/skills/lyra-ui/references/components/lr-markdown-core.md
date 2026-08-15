@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 11 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,44 +19,46 @@ A build-lean sibling of `<lr-markdown>` above, for a consumer whose `languages` 
 every language it will ever render — mirrors `<lr-code-block-core>`'s relationship to
 `<lr-code-block>`. Where `<lr-markdown>` unconditionally calls `loadShikiHighlighter()` — the
 default ~200-language dynamic-import table loader, whose bundled lookup table a bundler can't
-statically narrow away even when a consumer's `languagesOnly` flag makes it unreachable at runtime —
+statically narrow away —
 this component's own module never imports or calls that function at all; it only ever calls
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
 A fenced code block whose language isn't a key in `languages` always renders the plain-text fallback
 — there is no default/full-table highlighter here to fall back to, the same default (not degraded)
-rendering path as `<lr-code-block-core>`'s identical contract. A block that *is* highlighted follows the
+rendering path as `<lr-code-block-core>`'s identical contract. A block that _is_ highlighted follows the
 page's resolved theme through the same `[part="content"][data-dark-theme="true"]` hook `<lr-markdown>`
 documents above, painting each token from `--shiki-dark`/`--shiki-dark-bg` on a dark palette. Every other capability — GFM tables,
 links, blockquotes, images, heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
 support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highlight-activate`/
 `lr-text-select`/`lr-anchor-result` events), math via the optional `katex` peer, the sanitize/
-`escapeHtml`/streaming fallback matrix and known gotchas — is identical to `<lr-markdown>`; see that
-section above for the full write-up of shared behavior. There is no `languagesOnly` property here —
-meaningless without a full-table fallback to gate, matching `<lr-code-block-core>` having none
-either.
+`htmlMode`/streaming fallback matrix and known gotchas — is identical to `<lr-markdown>`; see that
+section above for the full write-up of shared behavior.
 
 **Properties:** `content: string = ''`, `tabSize: number = 4` (attribute `tab-size`) — the same
 finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; values outside 1–32
 or non-finite values fall back to `4`, independently of rendered code's
-`--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — the
-same peer-neutral configurable parser shared by both Markdown variants; `sanitize: boolean = true`, `escapeHtml: boolean = false`
-(attribute `escape-html`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
+`--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — this
+instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
+'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
-`headingOffset: number = 0` (attribute `heading-offset`), `eagerLoad: boolean = false` (attribute
-`eager-load`), `streaming: boolean = false` (reflected), `highlightCode: boolean = true` (attribute
+`headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
+`highlightCode: boolean = true` (attribute
 `highlight-code`), `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — required,
 unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced block stays
 unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading-anchors`),
 `math: boolean = false`; plus the same inherited anchor-target properties as `<lr-markdown>`:
-`highlights: LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
+`highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
 and `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']`.
 
 **Methods:** `renderMarkdown(): void` — immediately reruns the current content through the parse,
-sanitize, highlight, and fallback pipeline after changing shared `marked` configuration; safely
-no-ops while the parser is unresolved. `getHeadingTree()` — same contract as `<lr-markdown>`'s own.
+sanitize, highlight, and fallback pipeline after changing this instance's `marked` configuration;
+safely no-ops while the parser is unresolved. `refreshTheme(): void` re-reads the resolved theme
+for syntax highlighting. `getHeadingTree()` — same contract as
+`<lr-markdown>`'s own. `LyraMarkdownCore.getMarked(): Marked` and
+`LyraMarkdownCore.updateAll(): void` provide the same variant-scoped compatibility-parser contract
+as the full class; the core route exports its own `Marked` alias.
 
 **Events:** `lr-link-click`, `lr-render-error`, `lr-highlight-activate`, `lr-text-select`,
 `lr-anchor-result` — identical detail shapes to `<lr-markdown>`'s own.
@@ -73,24 +75,24 @@ read, declared as a `var()` fallback at the point of use rather than on `:host` 
 container-level value reaches it, and carried here in its own right because this element is a
 **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown code blocks wrap
 (`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width can render
-differently on a wrapped line.
+differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by rendered
+code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
 `shiki/core`/`shiki/engine/oniguruma`/`shiki/langs/*`, the same fine-grained subset
 `<lr-code-block-core>` depends on.
 
-```html
-<lr-markdown-core
-  content="# Report&#10;&#10;\`\`\`python&#10;print('hi')&#10;\`\`\`"
-  .languages="${{"
-  python
-  }}
-></lr-markdown-core>
-<script type="module">
-  import python from "shiki/langs/python.mjs";
-</script>
-```
+````ts
+import { html } from "lit";
+import python from "shiki/langs/python.mjs";
+import "@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.js";
+
+const view = html`<lr-markdown-core
+  .content=${"# Report\n\n```python\nprint('hi')\n```"}
+  .languages=${{ python }}
+></lr-markdown-core>`;
+````
 
 **Additional API surface:**
 

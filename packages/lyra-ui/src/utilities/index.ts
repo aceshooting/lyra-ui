@@ -104,6 +104,7 @@ export { resolveCssLength } from './css-length.js';
 export type { ResolveCssLengthOptions } from './css-length.js';
 export { invalidateLyraTheme } from './theme.js';
 export type { LyraThemeRoot } from './theme.js';
+export type { LyraCatalog, LyraCatalogEntry } from './catalog.js';
 export type {
   LyraAnchorTarget,
   LyraAnchorTargetEventMap,

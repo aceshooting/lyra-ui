@@ -59,10 +59,10 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part='summary']::-webkit-details-marker { display: none; }
-  [part='summary']:hover {
+  :host(:not([disabled])) [part='summary']:hover {
     background: var(--lr-details-summary-hover-bg, var(--lr-color-brand-quiet));
   }
-  [part='summary']:active {
+  :host(:not([disabled])) [part='summary']:active {
     background: var(
       --lr-details-summary-active-bg,
       color-mix(

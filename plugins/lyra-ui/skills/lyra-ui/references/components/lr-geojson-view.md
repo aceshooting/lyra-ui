@@ -9,21 +9,25 @@
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
 - **Themeable via** 6 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Documented with** `lr-geojson-viewer` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
-## `lr-geojson-view`
+## `lr-geojson-viewer` / `lr-geojson-view`
 
-Internal document-registry bridge that fetches, validates, and renders a GeoJSON file through
-`<lr-map>`'s `dataLayers` — not a documented public tag: excluded from the README/llms family
-tables, present in the generated manifest since a defined custom element is technically reachable.
-The document registry matches `application/geo+json` and `.geojson` filenames.
+Document-registry bridge that fetches, validates, and renders a GeoJSON file through `<lr-map>`'s
+`dataLayers`. The canonical class is `LyraGeoJsonViewer`; the pre-v9 `lr-geojson-view` tag and
+`LyraGeojsonView` class name remain compatibility aliases. The document registry renders the
+canonical tag and matches `application/geo+json` and `.geojson` filenames.
 
 Validates the parsed JSON is a `Feature`/`FeatureCollection`/bare geometry (one of `Point`,
 `LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`) before
 rendering; anything else renders the localized `geojsonViewInvalid` error. On success, it walks every
-coordinate to compute a bounding box and fits a `center`/`zoom` to it (a Web-Mercator-fit
+value and object key first, rejecting more than 50,000 graph units, nesting beyond 64 levels, more
+than 2 Mi UTF-16 units of aggregate keys/string values, or more than 4 Mi UTF-16 units of formatted
+metadata before serialization or peer handoff. It then walks every coordinate under a separate
+10,000-position ceiling to compute a bounding box and fits a `center`/`zoom` to it (a Web-Mercator-fit
 approximation weighting latitude span ~2x, with 40% padding), then hands the parsed value to
 `<lr-map>` as a single `dataLayers` entry (`sourceId: 'lr-geojson'`). When the optional
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
@@ -43,13 +47,14 @@ text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
 text, independent of whether the optional map peer is available.
 
 **Events:**
+
 - `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever serialized-metadata search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the serialized metadata.
+DOMRect[] }`) — fired after a selection ends inside the serialized metadata.
 
 `lr-highlight-activate` is not part of this registry bridge's event contract: serialized-metadata
 highlights are passive and cannot be activated.
@@ -72,8 +77,9 @@ body text: `error` is `--lr-color-danger` (matching `lr-docx-viewer`/`lr-email-v
 but working state, since the `lr-json-viewer` fallback below it still renders the data, not a failure
 -- and `status` is the quiet `--lr-color-text-quiet` metadata tone.
 
-Registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel, the
-same as `lr-map`/`lr-graph`, since it depends on the same optional `maplibre-gl` peer. Remote
+The canonical tag is registered by importing `geojson-viewer/geojson-viewer.js`; the permanent
+compatibility tag and old deep route remain available through `geojson-view/geojson-view.js`.
+Remote
 resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
 message instead of the map. Lyra supports MapLibre v5 and v6; consumers must import its CSS.
 MapLibre v5's standard build includes its worker, while v6 is ESM-only, requires WebGL2, and needs

@@ -78,8 +78,8 @@ describe("Web Awesome carousel surface", () => {
     expect('index' in el).to.equal(false);
     expect('showIndicators' in el).to.equal(false);
     expect('goTo' in el).to.equal(false);
-    expect((el.shadowRoot!.querySelector('[part~="navigation"]')) === null).to.be.true;
-    expect((el.shadowRoot!.querySelector('[part~="pagination"]')) === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part~="navigation"]') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part~="pagination"]') === null).to.be.true;
 
     el.currentSlide = 2;
     await el.updateComplete;
@@ -173,15 +173,15 @@ describe("Web Awesome carousel surface", () => {
       '[part~="pagination-item-active"]'
     );
 
-    expect((previous) != null).to.equal(true);
+    expect(previous != null).to.equal(true);
     expect(previous.getAttribute("part")).to.include("navigation-button");
     expect(previous.getAttribute("part")).to.include(
       "navigation-button--previous"
     );
-    expect((next) != null).to.equal(true);
+    expect(next != null).to.equal(true);
     expect(next.getAttribute("part")).to.include("navigation-button--next");
-    expect((pagination) != null).to.equal(true);
-    expect((active) != null).to.equal(true);
+    expect(pagination != null).to.equal(true);
+    expect(active != null).to.equal(true);
     expect(
       previous.querySelector('slot[name="previous-icon"]')
     ).to.exist;
@@ -194,7 +194,7 @@ describe("Web Awesome carousel surface", () => {
     next.click();
     const event = await changed;
     expect(event.detail.index).to.equal(1);
-    expect((event.detail.slide) === (el.children[3])).to.equal(true);
+    expect(event.detail.slide === el.children[3]).to.equal(true);
     expect(event.cancelable).to.be.false;
   });
 
@@ -245,8 +245,8 @@ describe("Web Awesome carousel surface", () => {
     await el.updateComplete;
     expect(el.navigation).to.be.false;
     expect(el.pagination).to.be.false;
-    expect((el.shadowRoot!.querySelector('[part~="navigation"]')) === null).to.be.true;
-    expect((el.shadowRoot!.querySelector('[part~="pagination"]')) === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part~="navigation"]') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part~="pagination"]') === null).to.be.true;
   });
 
   it("moves by pages, exposes the correct final page, and keeps every visible slide operable", async () => {
@@ -370,7 +370,7 @@ describe("Web Awesome carousel surface", () => {
     el.addSlide(added);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
-    expect((el.lastElementChild) === (added)).to.equal(true);
+    expect(el.lastElementChild === added).to.equal(true);
     expect(el.slides).to.equal(4);
 
     el.goToSlide(3, "instant");
@@ -725,7 +725,7 @@ it("omits the indicator group entirely when pagination is false", async () => {
       <lr-carousel-item>Two</lr-carousel-item>
     </lr-carousel>
   `);
-  expect((el.shadowRoot!.querySelector('[part~="pagination"]')) === null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part~="pagination"]') === null).to.be.true;
 });
 
 it("removing the pagination attribute restores the mapped false default", async () => {
@@ -739,7 +739,7 @@ it("removing the pagination attribute restores the mapped false default", async 
   el.removeAttribute("pagination");
   await el.updateComplete;
   expect(el.pagination).to.be.false;
-  expect((el.shadowRoot!.querySelector('[part~="pagination"]')) === null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part~="pagination"]') === null).to.be.true;
 });
 
 it("emits slide changes and supports keyboard navigation", async () => {
@@ -865,7 +865,7 @@ it("clamps invalid indices in the current update without scheduling a follow-up 
   ).to.be.false;
 });
 
-it("treats a non-finite autoplayInterval as its 5s default instead of NaN math", async () => {
+it("treats a non-finite autoplayInterval as its 3s default instead of NaN math", async () => {
   const el = await carousel(html`
     <lr-carousel autoplay autoplay-interval="NaN">
       <div>One</div>
@@ -874,7 +874,7 @@ it("treats a non-finite autoplayInterval as its 5s default instead of NaN math",
   `);
   // A non-finite interval falling through to `setInterval` unguarded would either throw or fire
   // immediately/never; asserting a timer actually got scheduled is the observable proxy for "the
-  // sanitized 5s default was used", since the internal numeric timer id isn't itself meaningful.
+  // sanitized 3s default was used", since the internal numeric timer id isn't itself meaningful.
   expect((el as unknown as { timer?: number }).timer).to.not.be.undefined;
 });
 
@@ -1811,7 +1811,7 @@ describe("indicator current-state cssprops", () => {
   it("recolors the current indicator dot from an ancestor, not a :host-declared prop", async () => {
     const el = await themed(overrides);
     const dot = currentDot(el);
-    expect((dot) != null).to.equal(true);
+    expect(dot != null).to.equal(true);
     expect(getComputedStyle(dot).backgroundColor).to.equal("rgb(0, 51, 102)");
     expect(getComputedStyle(dot).borderTopColor).to.equal("rgb(0, 102, 51)");
     // A non-current dot keeps its resting surface/border tokens -- the props are scoped to
@@ -2245,7 +2245,8 @@ describe("touch scrolling and scroll-snap", () => {
     const beforeClone = el.shadowRoot!.querySelector(
       '[data-clone-set="before"] [data-carousel-index="2"]'
     ) as HTMLElement;
-    expect((beforeClone) != null, "precondition: the last slide is mirrored before the real sequence").to.equal(true);
+    expect(
+      beforeClone != null, "precondition: the last slide is mirrored before the real sequence").to.equal(true);
     const delta = inlineDelta(el, beforeClone);
 
     viewport.scrollBy({ left: delta, behavior: "instant" });
@@ -3323,4 +3324,28 @@ it("moves to the very last slide index (not just the last full page) on End when
   viewport.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
   await el.updateComplete;
   expect(el.currentSlide).to.equal(4);
+});
+
+it("restores the declared numeric and orientation defaults when attributes are removed", async () => {
+  const el = (await fixture(html`
+    <lr-carousel
+      autoplay-interval="9000"
+      orientation="vertical"
+      slides-per-page="3"
+      slides-per-move="2"
+    ></lr-carousel>
+  `)) as LyraCarousel;
+  for (const name of [
+    "autoplay-interval",
+    "orientation",
+    "slides-per-page",
+    "slides-per-move",
+  ]) {
+    el.removeAttribute(name);
+  }
+  await el.updateComplete;
+  expect(el.autoplayInterval).to.equal(3000);
+  expect(el.orientation).to.equal("horizontal");
+  expect(el.slidesPerPage).to.equal(1);
+  expect(el.slidesPerMove).to.equal(1);
 });

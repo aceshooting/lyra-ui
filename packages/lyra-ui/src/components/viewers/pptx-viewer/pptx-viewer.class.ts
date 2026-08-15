@@ -4,7 +4,11 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
-import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
+import {
+  TextViewerTarget,
+  type LyraSearchChangeDetail,
+  type LyraTextViewerTargetEventMap,
+} from '../../../internal/text-viewer-target.js';
 import { isAbortError, isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -49,7 +53,7 @@ export interface LyraPptxViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-load': CustomEvent<{ slideCount: number }>;
   'lr-slide-change': CustomEvent<{ index: number; count: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
   'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
@@ -71,9 +75,9 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @event lr-slide-change - Fired when the active slide changes.
  * @event lr-render-error - Fired for terminal fetch/open/render failures. Recoverable post-load
  *   slide/node/search failures use `lr-viewer-diagnostic` without also posing as terminal errors.
- * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
- *   Fired whenever search state changes. `detail: { query: string; matchCount: number;
- *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change - Fired whenever search state
+ *   changes. At most 10,000 valid matches are retained; when more exist, `matchCount` is 10,000
+ *   and `matchCountExact` is false. Bubbling, composed, and non-cancelable.
  * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
  *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
  *   non-cancelable.
@@ -140,7 +144,8 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   @property({ attribute: 'max-height' }) maxHeight = '';
   /**
    * Searches the renderer's complete presentation model, including slides that windowed rendering
-   * has not mounted. Results are capped at 10,000 and navigation uses renderer-owned node overlays.
+   * has not mounted. Returns at most 10,000 retained results and navigation uses renderer-owned node
+   * overlays; `lr-search-change.detail.matchCountExact=false` identifies the return as a lower bound.
    */
   override async search(query: string): Promise<number> {
     const generation = ++this.pptxSearchGeneration;
@@ -150,6 +155,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     viewer?.clearSearchHighlights();
     if (!viewer || !query.trim()) {
       this.pptxSearchMatches = [];
+      this.pptxSearchMatchCountExact = true;
       this.pptxSearchActiveIndex = -1;
       this.emitPptxSearchChange();
       return 0;
@@ -159,7 +165,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       if (generation !== this.pptxSearchGeneration || viewer !== this.viewer) {
         return this.pptxSearchMatches.length;
       }
-      this.pptxSearchMatches = this.normalizeSearchResults(raw, viewer.slideCount);
+      const normalized = this.normalizeSearchResults(raw, viewer.slideCount);
+      this.pptxSearchMatches = normalized.matches;
+      this.pptxSearchMatchCountExact = normalized.matchCountExact;
       this.pptxSearchActiveIndex = this.pptxSearchMatches.length > 0 ? 0 : -1;
       this.emitPptxSearchChange();
       if (this.pptxSearchActiveIndex >= 0) {
@@ -169,6 +177,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     } catch (cause) {
       if (generation !== this.pptxSearchGeneration || viewer !== this.viewer) return 0;
       this.pptxSearchMatches = [];
+      this.pptxSearchMatchCountExact = false;
       this.pptxSearchActiveIndex = -1;
       this.reportPeerDiagnostic('pptx-search-error', cause);
       this.emitPptxSearchChange();
@@ -202,6 +211,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.pptxSearchGeneration++;
     this.pptxSearchQuery = '';
     this.pptxSearchMatches = [];
+    this.pptxSearchMatchCountExact = true;
     this.pptxSearchActiveIndex = -1;
     this.disposeSearchHighlight();
     this.viewer?.clearSearchHighlights();
@@ -222,6 +232,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   private readonly announcements = new ViewerAnnouncementController(this);
   private pptxSearchQuery = '';
   private pptxSearchMatches: PptxTextSearchResult[] = [];
+  private pptxSearchMatchCountExact = true;
   private pptxSearchActiveIndex = -1;
   private pptxSearchGeneration = 0;
   private searchHighlight?: PptxSearchHighlightHandle;
@@ -408,14 +419,18 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.viewer = undefined;
     this.pptxSearchQuery = '';
     this.pptxSearchMatches = [];
+    this.pptxSearchMatchCountExact = true;
     this.pptxSearchActiveIndex = -1;
   }
 
-  private normalizeSearchResults(value: unknown, slideCount: number): PptxTextSearchResult[] {
+  private normalizeSearchResults(
+    value: unknown,
+    slideCount: number,
+  ): { matches: PptxTextSearchResult[]; matchCountExact: boolean } {
     if (!Array.isArray(value)) throw new TypeError('PPTX search returned a non-array result.');
     const matches: PptxTextSearchResult[] = [];
+    let matchCountExact = true;
     for (const candidate of value) {
-      if (matches.length >= MAX_PPTX_SEARCH_MATCHES) break;
       if (!candidate || typeof candidate !== 'object') continue;
       const result = candidate as Partial<PptxTextSearchResult>;
       if (
@@ -430,9 +445,13 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
         || result.matchEnd! < result.matchStart!
         || result.matchEnd! > result.text.length
       ) continue;
+      if (matches.length === MAX_PPTX_SEARCH_MATCHES) {
+        matchCountExact = false;
+        break;
+      }
       matches.push(candidate as PptxTextSearchResult);
     }
-    return matches;
+    return { matches, matchCountExact };
   }
 
   private async focusPptxSearchMatch(
@@ -469,6 +488,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.emit('lr-search-change', {
       query: this.pptxSearchQuery,
       matchCount: this.pptxSearchMatches.length,
+      matchCountExact: this.pptxSearchMatchCountExact,
       activeIndex: this.pptxSearchActiveIndex,
     });
   }

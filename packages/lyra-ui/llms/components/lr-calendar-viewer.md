@@ -16,7 +16,9 @@
 ## `lr-calendar-viewer`
 
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
-plain text, including its title, start/end time, location, and description. No HTML is injected.
+plain text, including its title, start/end time, location, and description. RFC 5545 `DATE` values
+remain all-day dates rather than fabricated midnight times, and an all-day `DTEND` is displayed as
+the exclusive boundary it represents (14–17 renders as 14–16). No HTML is injected.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
@@ -29,13 +31,14 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 `scrollToAnchor()` operate on rendered event text and emit `lr-search-change`/`lr-anchor-result`.
 
 **Events:**
+
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-calendar search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered calendar.
+DOMRect[] }`) — fired after a selection ends inside the rendered calendar.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted text highlights are
 passive and cannot be activated.
@@ -52,4 +55,6 @@ size of `[part="body"]`; also settable via the `max-height` property, which writ
 `text/calendar` and falls back to matching `.ics` filenames in `<lr-document-viewer>`.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the calendar.
+`documentPreviewResourceTooLarge` message instead of the calendar. The accepted model is further
+capped at 250 events and 2 MiB of rendered event text; this keeps the complete accepted document in
+the DOM so search, selection and anchors remain truthful without the former 10,000-event eager tree.

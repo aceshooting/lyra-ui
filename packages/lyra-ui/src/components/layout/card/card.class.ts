@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
 import { activeElementIn } from "../../../internal/active-element.js";
 import { hostAriaLabel } from "../../../internal/a11y.js";
+import { declaredDefaultConverter } from "../../../internal/converters.js";
 import {
   bindAccessibleTextObserver,
   composedAccessibilityText,
@@ -11,7 +12,6 @@ import { safeLinkHref } from "../../../internal/safe-url.js";
 import type { LyraAppearance } from "../../../internal/variants.js";
 import { styles } from "./card.styles.js";
 
-export type CardAppearance = LyraAppearance;
 export type CardOrientation = "horizontal" | "vertical";
 
 export interface LyraCardEventMap {
@@ -115,10 +115,14 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   /** Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)
    *  is a bordered surface -- the common "small bordered surface with padding" idiom. */
-  @property({ reflect: true }) appearance: CardAppearance = "outlined";
+  @property({ reflect: true,
+    converter: declaredDefaultConverter<LyraAppearance>("outlined"),
+  }) appearance: LyraAppearance = "outlined";
 
   /** Section flow. Horizontal cards arrange media, body, and `actions` side by side. */
-  @property({ reflect: true }) orientation: CardOrientation = "vertical";
+  @property({ reflect: true,
+    converter: declaredDefaultConverter<CardOrientation>("vertical"),
+  }) orientation: CardOrientation = "vertical";
 
   /** SSR presence hints. Hydrated cards also detect populated slots automatically. */
   @property({ type: Boolean, attribute: "with-header", reflect: true })
@@ -187,9 +191,11 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   private semanticOwner(): HTMLElement | null {
     const root = this.renderRoot;
     if (!root) return null;
-    return root.querySelector<HTMLElement>('a[part="base"]') ??
+    return (
+      root.querySelector<HTMLElement>('a[part="base"]') ??
       root.querySelector<HTMLElement>('button[part="activation-button"]') ??
-      root.querySelector<HTMLElement>('div[part="base"]');
+      root.querySelector<HTMLElement>('div[part="base"]')
+    );
   }
 
   protected override willUpdate(changed: PropertyValues): void {

@@ -4,6 +4,7 @@ import {
   type LyraDashboardCell,
 } from "./layout.js";
 import * as publicLayout from "./layout.js";
+import type { LyraWidgetNode } from "../../conversation/widget-renderer/resolve.js";
 import {
   clampDashboardCandidate,
   createDashboardSpatialIndex,
@@ -441,6 +442,53 @@ describe("dashboard layout admission and public resolver", () => {
     expect(Object.isFrozen(result.layout)).to.be.true;
     expect(Object.isFrozen(result.layout[0])).to.be.true;
     expect(Object.isFrozen(result.collidedWith)).to.be.true;
+  });
+
+  it("snapshots widget structure at admission while preserving opaque prop leaves", () => {
+    const leaf = { value: 1 };
+    const widget = {
+      type: "row",
+      children: [{ type: "stat", props: { data: leaf } }],
+    };
+    const source = [{ id: "a", x: 0, y: 0, w: 1, h: 1, widget }];
+
+    const snapshot = snapshotDashboardLayout(source);
+    widget.children[0]!.type = "mutated";
+    widget.children.push({ type: "later", props: { data: leaf } });
+
+    expect(snapshot[0]?.widget?.children).to.have.length(1);
+    expect(snapshot[0]?.widget?.children?.[0]).to.deep.include({ type: "stat" });
+    expect(Object.isFrozen(snapshot[0]?.widget)).to.be.true;
+    expect(Object.isFrozen(snapshot[0]?.widget?.children)).to.be.true;
+    const child = snapshot[0]?.widget?.children?.[0] as LyraWidgetNode;
+    expect(Object.isFrozen(child.props)).to.be.true;
+    expect(child.props?.["data"]).to.equal(leaf);
+    expect(Object.isFrozen(leaf)).to.be.false;
+  });
+
+  it("omits malformed or hostile widget input without discarding its cell", () => {
+    const hostile = {
+      get type(): never {
+        throw new Error("hostile widget");
+      },
+    };
+    const snapshot = snapshotDashboardLayout([
+      { id: "hostile", x: 0, y: 0, w: 1, h: 1, widget: hostile as never },
+      {
+        id: "malformed",
+        x: 1,
+        y: 0,
+        w: 1,
+        h: 1,
+        widget: { type: "row", children: [null] } as never,
+      },
+    ]);
+
+    expect(snapshot.map((cell) => cell.id)).to.deep.equal([
+      "hostile",
+      "malformed",
+    ]);
+    expect(snapshot.every((cell) => cell.widget === undefined)).to.be.true;
   });
 
   it("normalizes a foreign collision policy to reject at the runtime boundary", () => {

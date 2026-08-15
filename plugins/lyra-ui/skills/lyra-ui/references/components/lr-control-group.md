@@ -20,6 +20,7 @@ inline-flex row and centers children with different intrinsic heights. Use it fo
 toolbars that combine segmented controls, selects, buttons, and other interactive elements.
 
 **Properties:**
+
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`; a host
   `aria-label`, when present, wins including an explicitly empty value.
 - `responsive: boolean = false` (reflected) — opts into a `@container` narrow-allocation breakpoint
@@ -46,6 +47,7 @@ between grouped controls; shared spacing and layout tokens apply as well.
 ```
 
 **Known gotchas:**
+
 - This is a layout and semantics primitive; it does not coordinate child values or emit a group
   change event.
 - Children wrap according to the group's own allocated inline size, not the viewport width.

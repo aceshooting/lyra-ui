@@ -8,7 +8,7 @@
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,25 +23,30 @@ string form entry. Observe `lr-input` for controlled text and handle `lr-submit`
 request. `label` names the prompt section; it is not generic field chrome.
 
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
-`placeholder: string = ''`; `disabled: boolean = false` (reflected);
+`placeholder: string = ''`; `disabled: boolean = false` (reflected); `readOnly: boolean = false`
+(attribute `readonly`, reflected); `minLength?: number` (attribute `minlength`) and
+`maxLength?: number` (attribute `maxlength`);
 `submitOnEnter: boolean = true` (attribute `submit-on-enter`, string-aware true-default converter);
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
-`autoCorrect: string = ''` (attribute `autocorrect`), `wrap: 'hard' | 'soft' | 'off' = 'soft'`,
+`autocorrect: boolean = true` (legacy string writes `'off'`/`'false'` normalize to `false`),
+`wrap: 'hard' | 'soft' | 'off' = 'soft'`,
 `autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
 `enterKeyHint: string = ''` (attribute `enterkeyhint`) forward unchanged to the composed native
 textarea; empty string hints preserve the browser default.
-`attachments: PromptInputAttachment[] = []`, `attachmentCapabilities: AttachmentCapability[] =
-['files', 'image', 'audio']`, `mentionItems: PromptSuggestion[] = []`, `commandItems:
-PromptSuggestion[] = []`, `modelCatalog?: LyraModelCatalog`, `voiceCatalog?: LyraVoiceCatalog`,
+`attachments: readonly LyraPromptInputAttachment[] = []`, `attachmentCapabilities: readonly
+LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: LyraPromptSuggestion[] =
+[]`, `commandItems: LyraPromptSuggestion[] = []`,
+`modelCatalog?: LyraCatalog<LyraModelCatalogEntry>`,
+`voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>`,
 `sources: LyraSourceEntry[] = []`, `selectedSourceIds: string[] = []`, and `queue:
 PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 
-`PromptSuggestion` extends `MentionItem { id, label, description?, icon? }` with optional
-`insertText` (defaults to `label`). `PromptInputAttachment` extends `DocumentRef { id, name,
-mimeType?, uri?, version? }` with `file?`, `bytes?` (forwarded to the attachment chip's byte-count
-contract), attachment-chip `status?`, and numeric `progress?`. The former `size?` spelling was
-removed in 9.0.0.
+`LyraPromptSuggestion` extends `LyraMentionItem { suggestionId, label, description?, icon? }` with
+optional `insertText` (defaults to `label`). The selected occurrence's original, pre-filter `index`
+is preserved in the event detail. `LyraPromptInputAttachment` replaces `DocumentRef.id` with
+`attachmentId` and adds `file?`, `bytes?`, `status?: 'pending' | 'uploading' | 'error' | 'success'`,
+and numeric `progress?`.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the composed chat input;
 `select()` selects its native text surface. `click()` is inert while disabled. `input:
@@ -52,24 +57,31 @@ HTMLTextAreaElement | null`, `selectionStart: number | null`, `selectionEnd: num
 `setRangeText()` synchronizes outer `value` without emitting `lr-input`. Selection and range calls
 are no-ops before the textarea has rendered.
 
-**Events:** `lr-input` (`{ value }`), `lr-submit` (`{ value }`), `lr-stop`,
-`lr-mention-select` (`{ id, label, trigger }`), `lr-attachments-add` (`{ files, capability }`),
-`lr-attachment-remove` (`{ id }`), `lr-model-change`/`lr-voice-change`
+**Events:** native `input`, `change`, `focus`, and `blur` are each relayed once from the primary
+textarea, paired with `lr-input`, `lr-change`, `lr-focus`, and `lr-blur`; `lr-submit` (`{ value }`),
+`lr-stop` (`null`), `lr-mention-select` (`{ suggestionId, index, label, trigger }`),
+`lr-attachments-add` (`{ capability, files }`), `lr-attachment-remove` (`{ attachmentId }`),
+`lr-model-change`/`lr-voice-change`
 (`{ value, inCatalog }`), `lr-sources-change` (`{ selectedIds }`), `lr-queue-change`
 (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,
-`lr-audio-request`, `lr-attachment-retry` (`{ id }`), and `lr-attachment-preview`
-(`{ id, name, mimeType, src }`). Child events are stopped and re-emitted from
-`lr-prompt-input`; all composed interactions are suppressed while `disabled`.
+`lr-audio-request`, `lr-attachment-retry` (`{ attachmentId }`), and cancelable
+`lr-attachment-preview-request` (`{ attachmentId, name, mimeType, src }`). Child events are stopped
+and re-emitted from `lr-prompt-input`; all composed interactions are suppressed while `disabled`,
+including a child event dispatched in the same turn that disables the host.
 
-**Slots:** `controls`; `start` (the canonical attachment-control content before the textarea) and
-`leading` (the established alias); `chips`; `end` (the canonical custom send/stop action) and
-`trailing` (the established alias); and `footer`. Either `start` or `leading` replaces the default
-attachment trigger, and they may coexist. Either `end` or `trailing` replaces the built-in composer
-action, and they may coexist.
+**Slots:** `controls`; `start` (attachment-control content before the textarea); `chips`; `end`
+(custom send/stop action); and `footer`. `start` replaces the default attachment trigger and `end`
+replaces the built-in composer action.
 
 **CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
-`composer`, `leading` (the `start`/`leading` attachment controls, or the default attachment trigger
-when both slots are empty), `chips`, `footer`.
+`composer`, `start`, `chips`, `footer`.
+
+**Themeable custom properties:** `--lr-prompt-input-control-width` (default `--lr-size-12rem`) is
+the preferred width of each generated model, voice, and source control before wrapping.
+
+Mention-popover focus transfer is generation-guarded: closing, disabling, disconnecting, adopting,
+or replacing the query/data before its awaited focus step prevents stale focus. Empty `chips` and
+`footer` wrappers are not rendered, so an absent optional region cannot create phantom spacing.
 
 **Optional peer deps:** none of its own.
 

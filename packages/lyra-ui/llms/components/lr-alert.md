@@ -27,12 +27,17 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
   below.
 - `closable: boolean = false` (reflected) — renders a localized close action.
 - `variant: 'primary' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
-  `primary` resolves through Lyra's shared brand semantic tokens.
+  `primary` resolves through Lyra's shared brand semantic tokens. Unsupported attributes and
+  untyped property writes normalize to reflected `primary`.
 - `duration: number = Infinity` — milliseconds before automatic dismissal. `Infinity` stays open;
   hover or focus pauses the timer, and leaving interaction restarts the full duration.
 - `countdown: 'rtl' | 'ltr' | undefined` (reflected, unset by default) — adds a decorative visual
   bar that empties in the requested physical direction. Its motion is removed under
-  `prefers-reduced-motion: reduce`.
+  `prefers-reduced-motion: reduce`. Unsupported attributes and untyped property writes normalize
+  to the omitted state and remove the attribute.
+- `role: string | null = 'alert'` (reflected) — the light-DOM semantic owner. The default is a
+  reactive initial value, so SSR/no-JS output serializes it before `connectedCallback`; an authored
+  alternate role such as `status` remains authoritative.
 
 **Methods:** `show(): Promise<void>` and `hide(): Promise<void>` resolve after their respective
 after-event. `toast(): Promise<void>` moves the same alert instance into Lyra's singleton logical
@@ -42,23 +47,44 @@ document uses that document's toast region, timers, motion preference, and focus
 DOM reconciliation removes a toast without hiding it, the pending promise settles after that
 disconnect proves lasting (a synchronous move into the toast region does not count), stale
 listeners are released, and a later `toast()` starts a fresh lifecycle.
+The region admits three active alerts and twenty hidden/inert queued alerts in FIFO order. An
+already-open alert also becomes explicitly hidden and inert while queued; promotion preserves that
+accepted state without replaying `lr-show`. If focus was inside that surface, queue admission repairs
+it to an available adjacent control without overriding a newer external focus destination. An initial
+`lr-show` veto removes and settles that toast attempt; a later `toast()` uses a fresh promise and can
+retry. Re-entering `show()` or the same `open` request during the before-event coalesces, so an outer
+veto cannot be bypassed by a nested request.
+In an adopted document without an upgraded bounded toast controller, `toast()` fails closed by
+removing the unavailable request and settling its unchanged `Promise<void>` rather than appending to
+an unbounded fallback element. Region ownership is reasserted when an alert moves between stacks;
+stale observations from its previous stack cannot change its active/queued state. A lasting region
+disconnect discards managed work, so reconnecting that old region cannot resurrect an already-settled
+alert toast.
 
 **Events:** `lr-show`, `lr-after-show`, `lr-hide`, and `lr-after-hide` all bubble, compose, carry no
 detail. `lr-show` and `lr-hide` are cancelable veto points; their `lr-after-*` counterparts are
 noncancelable. A transition interrupted by the opposite state does not emit the stale after-event.
+When an accepted hide removes the focused close action, focus moves to the nearest available
+composed action. A veto keeps focus in place, and a listener-selected external destination wins.
+An accepted show/hide interrupted by a same-task move resumes and emits exactly one matching
+after-event before its method resolves. A lasting disconnect settles the method without emitting on
+the detached node; reconnecting the same inline alert later resumes the pending terminal lifecycle
+once. Toast-owned work instead settles and is discarded when its region disconnect proves lasting.
 
-**Slots:** default message content; `icon` for the optional leading icon.
+**Slots:** default message content; `icon` for an optional decorative leading icon whose flattened
+subtree remains visible but is inert and aria-hidden.
 
 **CSS parts:** `base`, `icon`, `message`, and `close-button` / `close-button__base` on the same
 native close button. The pinned surface exposes no component CSS custom properties, custom states,
 form association, native-event relays, or delegated native methods.
 
-The light-DOM `<lr-alert>` host owns `role="alert"`, so initially-open/static alerts and alerts shown
-later expose one assertive, content-derived semantic surface without duplicating it in a shadow or
-shared live region. The optional icon wrapper is decorative (`aria-hidden="true"`); the close action
-remains independently accessible through Lyra's localized `close` string. Layout uses logical
-properties, wraps unbroken content at 320px, and the toast path reuses the existing Lyra toast layer
-instead of creating a second placement system.
+By default the light-DOM `<lr-alert>` host owns `role="alert"`, so initially-open/static alerts and
+alerts shown later expose one assertive, content-derived semantic surface without duplicating it in
+a shadow or shared live region. The role is present in server output; an explicit authored role is
+preserved. The optional icon wrapper remains visible, but its flattened subtree is inert
+and `aria-hidden`; the close action remains independently accessible through Lyra's localized
+`close` string. Layout uses logical properties, wraps unbroken content at 320px, and the toast path
+reuses the existing Lyra toast layer instead of creating a second placement system.
 
 ```html
 <lr-alert id="session-alert" closable duration="10000" countdown="rtl" variant="warning">

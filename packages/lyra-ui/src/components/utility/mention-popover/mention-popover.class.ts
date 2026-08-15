@@ -159,7 +159,7 @@ function caretClientRect(el: TextControl): DOMRect | null {
 
 export interface LyraMentionPopoverEventMap {
   'lr-mention-select': CustomEvent<LyraMentionSelectDetail>;
-  'lr-mention-close': CustomEvent<undefined>;
+  'lr-mention-close': CustomEvent<null>;
 }
 /**
  * `<lr-mention-popover>` — a caret-anchored, keyboard-navigable popover for

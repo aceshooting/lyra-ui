@@ -27,15 +27,18 @@ wrapper can override size-tier fallbacks; a value set directly on the element st
 
 **Properties:**
 
-- `locales: LyraLocaleCatalog = []` (attribute: false) — `LyraLocaleCatalog = string[] |
-LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; country?: string }`. Empty
-  (the default) auto-discovers the registry; a non-empty array (either form) overrides it
-  entirely — a curated subset, custom order, custom labels, or a locale offered before its
-  strings are registered. `country` (ISO 3166-1 alpha-2) overrides a row's derived flag — e.g.
+- `locales?: LyraLocaleCatalog` (attribute: false) — `LyraLocaleCatalog = readonly string[] |
+readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; country?: string }`.
+  `undefined` (the default) auto-discovers the registry; every supplied array (either form),
+  including an authoritative `[]`, overrides it entirely — a curated subset, custom order,
+  custom labels, or a locale offered before its strings are registered. Explicit catalogs are
+  capped, cloned and frozen at assignment; mutate a new array/entry and reassign it to update the
+  list. `country` (ISO 3166-1 alpha-2) overrides a row's derived flag — e.g.
   showing Lebanon's flag for an `'ar'` row instead of the library's default Saudi Arabia mapping;
   only available on the `{tag,label,country}` object form, not the bare `string[]` form. Replacing
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
-  new end is rehomed to the last remaining row.
+  new end is rehomed to the last remaining row. Arrow/Home/End/typeahead changes scroll the active
+  owned option into nearest view after render; replacement and disconnect cancel stale scrolls.
 - `showFlags: boolean = true` — each row's leading `<lr-flag language={tag} variant="compact">`
   (or `<lr-flag country={country} variant="compact">` when the entry sets `country`); `false`
   omits the flag element entirely (not just visually).
@@ -54,13 +57,15 @@ LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; country?: st
   same opt-in form-control chrome as `lr-select` (props + matching named slots + parts); unset
   renders none of it.
 - `open: boolean = false` (reflected).
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`).
+- `size: LyraSize = 'm'` (reflected) — the same full scale as `lr-select`, accepting
+  `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`.
 
 **Events:** `lr-change` (`detail: { value, previousValue, direction }`, **cancelable**) — fired on
 every explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
-active locale untouched, so a host can persist the choice first and apply it later. `blur`/`focus`
-re-dispatched from the internal trigger as bubbling, composed events. `lr-invalid` is the single
+active locale untouched, so a host can persist the choice first and apply it later. `focus`/`blur`
+are relayed once from the trigger as native `FocusEvent`s preserving `relatedTarget`, followed
+respectively by `lr-focus`/`lr-blur`. `lr-invalid` is the single
 bubbling/composed, cancelable alias of a failed native validity check.
 
 `direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing
@@ -71,7 +76,7 @@ precisely so applying the direction is a one-liner instead of an application-mai
 tags:
 
 ```js
-picker.addEventListener('lr-change', (e) => {
+picker.addEventListener("lr-change", (e) => {
   document.documentElement.lang = e.detail.value;
   document.documentElement.dir = e.detail.direction;
 });
@@ -83,7 +88,8 @@ longer leaves the host to work the direction out. `getLyraLocaleDirection()` is 
 choice applied on boot).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` — all forward to the internal trigger
-button, same convention as `lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
+button and synchronously no-op under direct or fieldset disablement, same convention as
+`lr-select`'s identical trio. `setCustomValidity(message)` sets or clears
 a consumer-supplied error ("that locale is not enabled for your account"): a non-empty message
 raises `customError` and blocks submission, `''` restores the picker's own computed validity so a
 required picker with nothing committed goes back to `valueMissing`. It survives every
@@ -121,9 +127,11 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
 ```html
 <lr-locale-picker label="Language"></lr-locale-picker>
 <script type="module">
-  import { registerLyraLocale } from '@aceshooting/lyra-ui/localization.js';
-  registerLyraLocale('fr', { close: 'Fermer' });
-  document.querySelector('lr-locale-picker').addEventListener('lr-change', (e) => console.log(e.detail.value));
+  import { registerLyraLocale } from "@aceshooting/lyra-ui/localization.js";
+  registerLyraLocale("fr", { close: "Fermer" });
+  document
+    .querySelector("lr-locale-picker")
+    .addEventListener("lr-change", (e) => console.log(e.detail.value));
 </script>
 ```
 

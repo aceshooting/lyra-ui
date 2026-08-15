@@ -283,6 +283,50 @@ describe('acquireHighlightHandle (fallback path, forced via a hidden Highlight g
     }
   });
 
+  it('bounds the common-ancestor walk for a fallback range', () => {
+    const root = makeContent('');
+    try {
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < 25_000; index++) fragment.append(document.createTextNode('x'));
+      root.append(fragment);
+      const range = document.createRange();
+      range.selectNodeContents(root);
+      const originalIntersectsNode = range.intersectsNode.bind(range);
+      let intersectionChecks = 0;
+      range.intersectsNode = (node) => {
+        intersectionChecks++;
+        return originalIntersectsNode(node);
+      };
+
+      const handle = acquireHighlightHandle({}, document);
+      handle.setRanges('accent', [range]);
+      expect(intersectionChecks).to.be.at.most(20_000);
+      handle.release();
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('retains at most 200 fallback ranges for one tone', () => {
+    const root = makeContent('');
+    try {
+      const ranges: Range[] = [];
+      for (let index = 0; index < 300; index++) {
+        const textNode = document.createTextNode('x');
+        root.append(textNode);
+        const range = document.createRange();
+        range.selectNodeContents(textNode);
+        ranges.push(range);
+      }
+      const handle = acquireHighlightHandle({}, document);
+      handle.setRanges('accent', ranges);
+      expect(root.querySelectorAll('mark[data-lr-highlight-name="lr-highlight-accent"]')).to.have.length(200);
+      handle.release();
+    } finally {
+      root.remove();
+    }
+  });
+
   it('skips a collapsed (zero-width) sub-range at the exact end of a text node without creating a mark', () => {
     const root = makeContent('<p>Solo text</p>');
     try {

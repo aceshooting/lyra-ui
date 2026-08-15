@@ -8,7 +8,7 @@
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,11 +28,16 @@ receives focus. Removing an unfocused row does not move focus.
 `PromptQueueItem = { id: string; value: string; attachments?: DocumentRef[]; createdAt?: number;
 metadata?: Record<string, unknown> }`.
 
+Item ids are occurrence identities. Empty ids and later duplicates are ignored before rendering or
+proposing a mutation, preserving one unambiguous `itemId`. Attachment names render visibly for both
+editable and read-only rows; the host `label` is also the visible queue heading.
+
 **Events:** `lr-queue-change` (`PromptQueueChangeDetail = { items, reason, itemId }`, with
 `reason: 'edit' | 'remove' | 'reorder'`), `lr-send-now` (`{ item }`). The queue is controlled:
 these events propose complete next values without mutating `items`.
 
-**CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `actions`, `action`, `empty`.
+**CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `attachments`, `attachment`,
+`actions`, `action`, `empty`.
 
 **Slots:** none. **Optional peer deps:** none.
 

@@ -8,7 +8,7 @@
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 46 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 47 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,27 +24,30 @@ import "@aceshooting/lyra-ui/components/data/data-grid/data-grid.js";
 ```
 
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
-Arrays are shallow-reactive, so reassign `data`, `columns`, and controlled state arrays after
-mutation.
+Collection inputs are clone-owned readonly snapshots, so reassign `data`, `columns`, `groupBy`, and controlled
+state arrays to update them; mutating the array originally assigned has no effect.
+Column records are also copied and frozen synchronously. Row object
+identities are preserved so formatter callbacks and `selectedRows` still refer to caller records.
 
 **Properties:**
 
 - `appearance: 'outlined' | 'plain' = 'outlined'` (`appearance`, reflected).
-- `childRows: string | ((row) => Row[] | undefined) | null = null` (`child-rows`) — dot path or
+- `childRows: string | ((row) => readonly Row[] | undefined) | null = null` (`child-rows`) — dot path or
   callback for nested rows. Tree sorting stays within each parent and paging keeps a subtree with
-  its top-level parent.
-- `columnOrder: string[] = []` (JS-only) — empty preserves declaration order.
-- `columns: DataGridColumn<Row>[] = []` (JS-only).
-- `data: Row[] = []` (JS-only) — client rows, or the currently loaded server page.
+  its top-level parent. Projection is iterative, cycle-safe, and bounded to 10,000 total rows and
+  64 descendant levels; exceeding a budget renders the localized `tree-limit` notice.
+- `columnOrder: readonly string[] = []` (JS-only) — empty preserves declaration order.
+- `columns: readonly DataGridColumn<Row>[] = []` (JS-only).
+- `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
-- `expandedKeys: Array<string | number> = []` (JS-only).
+- `expandedKeys: readonly Array<string | number> = []` (JS-only).
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
 - `filteredCount: number` (read-only, JS-only) — matching client rows before paging.
 - `filterFromLeafRows: boolean = false` (`filter-from-leaf-rows`) — retains ancestors of matching
   tree descendants.
-- `filters: Array<{ id: string; value: unknown }> = []` (JS-only).
-- `groupBy: string | string[] | null = null` (`group-by`) — a string accepts comma- or
+- `filters: readonly Array<{ readonly id: string; readonly value: unknown }> = []` (JS-only).
+- `groupBy: string | readonly string[] | null = null` (`group-by`) — a string accepts comma- or
   whitespace-separated column ids/fields.
 - `label: string | null = null` (`label`).
 - `loading: boolean = false` (`loading`, reflected).
@@ -53,7 +56,8 @@ mutation.
 - `page: number = 0` (`page`, reflected) — zero-based.
 - `pageCount: number` (read-only, JS-only).
 - `pageSize: number = 20` (`page-size`).
-- `pageSizeOptions: number[] = [10, 20, 50, 100]` (JS-only).
+- `pageSizeOptions: readonly number[] = [10, 20, 50, 100]` (JS-only). A finite current `pageSize`
+  absent from this list is still inserted into the selector, keeping visible and IDL state aligned.
 - `paginate: boolean = false` (`paginate`, reflected).
 - `pinnable: boolean = false` (`pinnable`, reflected).
 - `reorderable: boolean = false` (`reorderable`, reflected).
@@ -66,12 +70,12 @@ mutation.
 - `selectable: '' | 'single' | 'multiple' | 'none' = 'none'` (`selectable`, reflected) — a bare
   `selectable` attribute means `multiple`.
 - `selectableRows: ((row) => boolean) | null = null` (JS-only).
-- `selectedKeys: Array<string | number> = []` (JS-only).
-- `selectedRows: Row[]` (writable, JS-only) — assigning rows that belong to the current source
+- `selectedKeys: readonly Array<string | number> = []` (JS-only).
+- `selectedRows: readonly Row[]` (writable, JS-only) — assigning rows that belong to the current source
   maps them to `selectedKeys`; detached rows are ignored and single-selection mode keeps the first.
 - `server: boolean = false` (`server`, reflected).
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (`size`, reflected).
-- `sort: Array<{ id: string; desc: boolean }> = []` (JS-only).
+- `sort: readonly Array<{ readonly id: string; readonly desc: boolean }> = []` (JS-only).
 - `sortDescFirst: boolean = false` (`sort-desc-first`).
 - `striped: boolean = false` (`striped`, reflected).
 - `total: number = -1` (`total`) — server total; `-1` derives from loaded/matching rows.
@@ -101,7 +105,10 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
 - `copySelectedRows(options?: DataGridCopyOptions)` copies selected rows (or all processed rows
   when selection is empty) as TSV by default and returns the copied row count. Its options include
   `columnIds`, `includeHeaders`, `format: 'tsv' | 'csv'`, `escapeFormulas`, and `delimiter`; an
-  explicit delimiter overrides the one normally selected by `format`.
+  explicit delimiter overrides the one normally selected by `format`. Clipboard settlement is
+  asynchronous: `lr-copy` fires only after the owning context's write fulfills (including a
+  successful legacy textarea fallback), while rejection emits `lr-error` plus `lr-copy-error` and
+  announces the localized `copyFailed` string. Copy intent alone is never reported as success.
 - `exportDataAsCsv(options?: DataGridExportOptions)` downloads formula-safe delimited data (CSV by
   default); `getDataAsCsv(options?: DataGridCsvOptions)` returns it without downloading. Options include `delimiter`,
   `includeHeaders`, `columnIds`, `escapeFormulas`, and `fileName`. The Lyra-only `columns` and
@@ -112,31 +119,35 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
 - `focus(options?)` focuses the current roving header/cell stop.
 - `getColumnFacets(columnId)` returns `{ uniqueValues: Map, minMax? }`, computed after every other
   filter but before the named column's own filter. Server mode returns an empty map.
-- `getColumnPin(columnId)`, `pinColumn(columnId, side: 'left' | 'right' | false)`, and
+- `getColumnPin(columnId)`, `pinColumn(columnId, side: 'left' | 'right' | 'start' | 'end' | false)`, and
   `toggleColumn(columnId, visible)` read or change column state without emitting the corresponding
-  user-only events. Pass `false` to unpin.
-- `getProcessedRows()` returns matching sorted rows before paging; `getVisibleRows()` returns the
-  current page.
+  user-only events. `left`/`start` mean logical inline-start and `right`/`end` mean logical
+  inline-end, so both pairs mirror under RTL; pass `false` to unpin.
+- `getProcessedRows()` returns a frozen readonly snapshot of matching sorted rows before paging;
+  `getVisibleRows()` returns a frozen readonly snapshot of the current effective page.
 - `getState()`, `setState(state)`, `resetState()`, and `resetColumns()` serialize or restore view
-  state. Unknown column ids are ignored. `resetState()` intentionally preserves selection, the
-  current page, and page size.
+  state. `getState()` is detached, frozen, and JSON-safe (Set filter values become arrays). Unknown
+  column ids are ignored. `resetState()` intentionally preserves selection, page, and page size.
 - `handleColumnsChange()`, `handlePageChange()`, and `handleSearchTermChange()` are public handler
   seams used by the built-in controls.
 - `reload()` forces the current server request.
-- `scrollToIndex(index, options?: DataGridScrollOptions)` scrolls a virtual row with
-  `align: 'start' | 'center' | 'end'`.
+- `scrollToIndex(index, options?: DataGridScrollOptions)` addresses a processed row, maps it through
+  group/tree/detail display rows, and scrolls with `align: 'start' | 'center' | 'end'`. A row hidden
+  in a collapsed branch is a no-op.
 
 **Server mode:** `dataSource` receives `{ sort, filters, search, page, pageSize, signal }`. A newer
 request aborts and supersedes the previous one; rejected requests keep prior rows and emit
 `lr-data-error`. Filter/search requests use `filterDebounce`; sorting and paging load immediately.
-For event-driven loading, set `server`, listen to `lr-data-request`, and assign `data`, `total`, and
-`loading` yourself. Both server forms expose a `request` compatibility event carrying the same
-detail.
+For event-driven loading, set `server`, listen to the mirrored `request` event, and assign `data`,
+`total`, and `loading` yourself. The redundant Lyra-only `lr-data-request` event was removed in
+9.0.0; rename that listener to `request`. Each dispatch carries a fresh frozen detail that cannot
+mutate the component or loader request.
 
 **Keyboard:** headers and cells share one roving grid stop; the scrollable `body` is separately
 focusable so keyboard users can pan overflowing content. Arrow keys traverse cells, Home/End
 traverse a row, Ctrl+Home / Ctrl+End reach grid ends, PageUp/PageDown move a page, Enter
-sorts/activates, Space selects, Shift+Arrow reorders a header, Alt+Arrow resizes it, Ctrl+A selects
+sorts/activates, Space selects, Shift+Arrow reorders a header, Alt+Arrow resizes from the header,
+unmodified Left/Right adjusts a focused separator, Ctrl+A selects
 the current page, Ctrl+C copies, and Shift+F10 requests a cell context menu. Inline-direction
 movement swaps under RTL. Keyboard events from an interactive formatter descendant remain owned by
 that descendant.
@@ -146,10 +157,13 @@ native menu); `lr-column-move`; `lr-column-pin`; `lr-column-resize` (`detail.fin
 live and committed resize). `pointerup` commits a pointer drag. `pointercancel` or lost capture
 restores the exact pre-gesture width state; after a live move it emits the restored width with
 `finished: false`, and it never emits a canceled `finished: true` commit. `lr-column-visibility-change`;
-`lr-data-error`; `lr-data-request`;
-`lr-filter-change`; `lr-page-change`; `lr-row-collapse`; `lr-row-expand`; `lr-row-select`;
-`lr-sort-change`. Every library event bubbles and is composed; only `lr-cell-contextmenu` is
-cancelable. The toolbar search and active column-filter inputs re-dispatch `focus` and `blur` once
+`lr-data-error`;
+`lr-filter-change`; `lr-page-change`; `lr-row-collapse`; `lr-row-expand`; `lr-group-collapse` and
+`lr-group-expand` (frozen `{ key, columnId, value, rows }` snapshots); `lr-row-select`;
+`lr-sort-change`; `lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
+(frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
+notification with no raw platform error text). Every library event bubbles and is composed; only `lr-cell-contextmenu` is
+cancelable. Structured details and their owned collections are frozen. The toolbar search and active column-filter inputs re-dispatch `focus` and `blur` once
 from the grid host as bubbling, composed native `FocusEvent`s, preserving `relatedTarget` so
 delegated ancestors can observe editor entry and exit without crossing the shadow boundary.
 
@@ -162,7 +176,15 @@ delegated ancestors can observe editor entry and exit without crossing the shado
 `next-button`, `next-icon`, `no-results`, `page`, `page-current`, `page-size`, `pager`,
 `pager-button`, `pin-indicator`, `previous-button`, `previous-icon`,
 `resize-handle`, `row`, `row-detail`, `search`, `select-all-checkbox`, `sort-indicator`,
-`sort-number`, `table`, `toolbar`.
+`sort-number`, `table`, `toolbar`, `tree-limit`.
+
+Each per-column disclosure opens an honestly named native-control `group`, not a false ARIA menu:
+its buttons have localized pin-to-start, pin-to-end, and unpin names; its visibility toggle has one
+native checkbox semantic owner; `aria-controls` links trigger and group; and Escape closes it and
+returns focus. Resize separators are focusable and expose finite `aria-valuemin`, `aria-valuemax`,
+and `aria-valuenow`; inverted bounds collapse to the minimum. Revoking resize/reorder capability
+during a gesture rolls it back, and column drops require the current grid's owned drag token plus
+current source/target capability.
 
 The four pager navigation controls each wrap their glyph in an icon part — `first-icon`,
 `previous-icon`, `next-icon`, `last-icon` — rendered as real chevron SVGs rather than literal

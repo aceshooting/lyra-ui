@@ -23,10 +23,11 @@ the mode selector and the submit button are all left on the shared `--lr-form-co
 at the same size tier, so the toolbar row renders as one flush line.
 
 **Properties:**
+
 - `query: string = ''` — the query text. The internal `lr-input` updates it optimistically as the
   user types; a host reassignment always wins
 - `mode: LyraRetrievalMode = 'hybrid'` — `LyraRetrievalMode = RetrievalQuery['mode'] = 'vector' |
-  'keyword' | 'hybrid'`, re-exported here rather than redefined
+'keyword' | 'hybrid'`, re-exported here rather than redefined
 - `filters: Record<string, unknown> = {}` (attribute: false) — arbitrary metadata filters, rendered
   as removable `"{key}: {value}"` chips. Controlled
 - `scope: string[] = []` (attribute: false) — source-scope ids/labels this query is restricted to,
@@ -40,26 +41,29 @@ at the same size tier, so the toolbar row renders as one flush line.
   results"; never inferred, since this component holds no results data (see `lr-retrieval-results`)
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
-- `label: string = ''` — accessible name for the `role="search"` landmark; falls back to a localized
+- `label: string = ''` — fallback name for the `role="search"` landmark; falls back to a localized
   default
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the landmark's
-  computed accessible name; wins over `label` and the localized default, and attribute-reflects from
-  a host-level `aria-label`
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
+  the host attribute is absent, overrides the search-landmark name. A non-empty authored host
+  `aria-label` makes the host the sole overall owner, so the inner shell omits its duplicate
+  role/name; an explicitly empty host label stays empty on the search landmark
 
 **Events:**
+
 - `lr-search` (`detail: RetrievalQuery` from `@aceshooting/lyra-ui/ai` = `{ text: string;
-  filters?: Record<string, unknown>; mode: 'vector' | 'keyword' | 'hybrid'; scope?: string[] }`) —
+filters?: Record<string, unknown>; mode: 'vector' | 'keyword' | 'hybrid'; scope?: string[] }`) —
   Enter in the query field, or the submit button while not `loading`.
 - `lr-cancel` (`detail: CancelEventDetail` from `@aceshooting/lyra-ui/ai` = `{ reason?: string }`) —
   either the button was clicked while `loading` (`detail: {}`), or a new submission superseded an
-  in-flight one (`detail: { reason: 'superseded' }`, fired immediately *before* the new `lr-search`).
+  in-flight one (`detail: { reason: 'superseded' }`, fired immediately _before_ the new `lr-search`).
 - `lr-filters-change` (`detail: RetrievalFiltersChangeDetail` = `{ filters: Record<string, unknown>;
-  scope: string[] }`) — a chip's remove button was activated; the complete already-updated next
+scope: string[] }`) — a chip's remove button was activated; the complete already-updated next
   state, not a delta. The component updates its own copy first, then emits; reassign to control.
 
 **Slots:** none.
 
-**CSS parts:** `base` (the `role="search"` landmark), `row`, `query`, `mode`, `submit` (reads
+**CSS parts:** `base` (the `role="search"` landmark unless a non-empty host label owns the
+component), `row`, `query`, `mode`, `submit` (reads
 "Search" while idle, "Cancel" while `loading`), `filters` (omitted entirely when both `filters` and
 `scope` are empty), `spinner` (only while `loading`), `error` (neutral visible message, only when
 `errorText` is non-empty and not `loading`), `empty` (only when `empty` and neither `loading` nor
@@ -70,10 +74,14 @@ at the same size tier, so the toolbar row renders as one flush line.
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - Submitting while `loading` is already true **supersedes** the in-flight request: `lr-cancel` fires
   immediately before the new `lr-search`. Clicking the submit button (rather than pressing Enter)
   while `loading` only emits `lr-cancel` and does not resubmit.
 - Long unbroken filter keys, values, and scope labels are contained within the search allocation;
   the removable chip label truncates while its remove action remains available.
+- Filter values use a cycle-aware formatter bounded to 128 visited values, six nesting levels,
+  32 entries per container and 256 characters per string. Cycles use the localized invalid-value
+  sentinel and budget/depth truncation uses a stable ellipsis in both SSR and browser rendering.
 
 ---

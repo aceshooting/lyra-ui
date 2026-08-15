@@ -49,7 +49,7 @@ export interface LyraFilterBarOption {
   readonly label: string;
   /** Optional decorative leading visual rendered into the `<lr-option>`'s `start` slot — a status
    *  dot, a type glyph, a flag. Deliberately general Lit content rather than an icon-name string,
-   *  matching `SegmentedItem`/`PaletteItem`'s own `icon` fields. It is rendered inert and
+   *  matching `LyraSegmentedItem`/`PaletteItem`'s own `icon` fields. It is rendered inert and
    *  `aria-hidden`, so it never contributes to the option's accessible name. */
   readonly icon?: unknown;
 }

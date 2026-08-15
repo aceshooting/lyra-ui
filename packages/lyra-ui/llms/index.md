@@ -2,7 +2,7 @@
 
 # Component index
 
-283 custom elements, grouped by the source family they live in.
+284 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -59,7 +59,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-pagination` · lr-pagination.js · `stable` since `4.0.0` — controlled, server-friendly page navigation: a numbered page list with elided gaps, optional first/last controls, an optional item-range...
 - `lr-gauge` · lr-gauge.js · `stable` since `4.0.0` — a radial, full-circle ring, or linear meter.
 - `lr-word-cloud` · lr-word-cloud.js · `stable` since `4.0.0` — a zero-dependency SVG word/tag cloud.
-- `lr-heatmap` · lr-heatmap.js · `stable` since `4.0.0` — a Canvas heatmap with a DPR-aware, resize-aware redraw loop, in one of two `mode`s:
+- `lr-heatmap` · lr-heatmap.js · `stable` since `4.0.0` — a Canvas heatmap with a DPR-aware, resize-aware redraw loop.
 - `lr-sequence-strip` · lr-sequence-strip.js · `stable` since `4.0.0` — a compact, one-thin-cell-per-item strip visualizing a sequence of categorical states, with an optional secondary per-cell marker.
 - `lr-tree` · lr-tree.js · `stable` since `4.0.0` — an expand/collapse hierarchy for graph/document navigation.
 - `lr-tree-item` · lr-tree-item.js · `stable` since `8.0.0` — one row of `<lr-tree>`, in either of two child models.
@@ -67,7 +67,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-flow-node` · lr-flow-node.js · `stable` since `4.0.0` — the card a workflow node renders as: header/body/toolbar chrome, tool-lifecycle status tones, and the named connection-handle elements ed...
 - `lr-flow-minimap` · lr-flow-minimap.js · `stable` since `4.0.0` — a corner overview map of a `lr-flow-canvas`: scaled node rectangles plus a draggable viewport rectangle, for orientation and fast navigat...
 - `lr-flow-controls` · lr-flow-controls.js · `stable` since `4.0.0` — the canvas's button cluster: zoom in/out, fit, and interaction lock, so every flow surface ships the same affordances without hosts rebui...
-- `lr-flow-run-overlay` · lr-flow-run-overlay.js · `stable` since `4.0.0` — execution-state presentation for a `lr-flow-canvas`: pushes a `FlowRunDecorations` map into the resolved canvas (the canvas itself render...
+- `lr-flow-run-status` · lr-flow-run-status.js · `stable` since `unreleased` — execution-state presentation for a `lr-flow-canvas`: pushes a `FlowRunDecorations` map into the resolved canvas (the canvas itself render...
 - `lr-context-meter` · lr-context-meter.js · `stable` since `4.0.0` — a segmented occupancy meter (bar or ring) for showing how a fixed capacity (a model's context window, a token budget, any consumable quot...
 - `lr-calendar` · lr-calendar.js · `stable` since `4.0.0` — responsive month calendar with event markers and agenda mode.
 - `lr-timeline` · lr-timeline.js · `stable` since `4.0.0` — an ordered, connected sequence of past-event rows (an audit trail, an agent action history, a changelog) composed from `<lr-timeline-item...
@@ -76,18 +76,18 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-env-list` · lr-env-list.js · `stable` since `4.0.0` — masked key/value list for environment variables and secrets, with per-row reveal and copy.
 - `lr-document-library` · lr-document-library.js · `stable` since `4.1.0` — a searchable, filterable inventory of documents with versions, tags, owners, freshness, and bulk selection.
 - `lr-graph-query-builder` · lr-graph-query-builder.js · `stable` since `4.1.0` — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
-- `lr-query-builder` · lr-query-builder.js · `stable` since `4.1.0` — a composable structured-query builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with one AN...
+- `lr-condition-builder` · lr-condition-builder.js · `stable` since `unreleased` — a composable structured-condition builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with on...
 
 ## Layout, navigation & structure — `components/layout/` (35)
 
-- `lr-split` · lr-split.js · `stable` since `4.0.0` — resizable panels for dashboard layouts.
+- `lr-multi-split` · lr-multi-split.js · `stable` since `unreleased` — resizable panels for dashboard layouts.
 - `lr-split-panel` · lr-split-panel.js · `stable` since `8.0.0` — an accessible, draggable two-pane layout.
 - `lr-widget` · lr-widget.js · `stable` since `4.0.0` — a titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
 - `lr-carousel` · lr-carousel.js · `stable` since `4.0.0` — a scroll-snap carousel for arbitrary slotted content.
 - `lr-carousel-item` · lr-carousel-item.js · `stable` since `4.0.0` — an optional semantic wrapper for one child of `<lr-carousel>`.
 - `lr-button-group` · lr-button-group.js · `stable` since `4.0.0` — a responsive grouping primitive for related actions.
 - `lr-scroller` · lr-scroller.js · `stable` since `4.0.0` — a responsive overflow surface with optional previous and next controls.
-- `lr-tab-group` · lr-tab-group.js · `stable` since `8.0.0` — a tab strip whose panels are direct light-DOM children, each carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab...
+- `lr-tab-group` · lr-tab-group.js · `stable` since `8.0.0` — a tab strip composed from direct `<lr-tab panel="x">` and `<lr-tab-panel name="x">` children.
 - `lr-stepper` · lr-stepper.js · `stable` since `4.0.0` — ordered multi-step wizard/form navigation: label + index per step, current/completed/locked/error state, click-to-jump.
 - `lr-tab` · lr-tab.js · `stable` since `8.0.0` — one tab in a `<lr-tab-group>`'s strip.
 - `lr-tab-panel` · lr-tab-panel.js · `stable` since `8.0.0` — the content revealed by the `<lr-tab>` whose `panel` matches this element's `name`.
@@ -100,7 +100,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-app-rail-item` · lr-app-rail-item.js · `stable` since `4.0.0` — an explicit icon/label navigation item for `<lr-app-rail>`.
 - `lr-responsive-panel` · lr-responsive-panel.js · `stable` since `4.0.0` — the same slotted content either docked inline in the page's normal layout flow (desktop) or presented as a full-screen/ bottom-sheet over...
 - `lr-menu-label` · lr-menu-label.js · `stable` since `8.0.0` — a non-interactive section heading inside `<lr-menu>`'s default slot.
-- `lr-menu` · lr-menu.js · `stable` since `4.0.0` — a menu of `<lr-menu-item>` actions.
+- `lr-menu` · lr-menu.js · `stable` since `4.0.0` — the inline semantic controller mapped from `<sl-menu>`.
 - `lr-menu-item` · lr-menu-item.js · `stable` since `4.0.0` — a single action row inside `<lr-menu>`'s default slot.
 - `lr-dropdown-item` · lr-dropdown-item.js · `stable` since `4.0.0` — the Web Awesome-compatible name for a menu item.
 - `lr-dock-panel` · lr-dock-panel.js · `stable` since `4.0.0` — a single panel docked to one edge of whatever contains it, resizable by dragging its inner edge.
@@ -111,17 +111,17 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-accordion-item` · lr-accordion-item.js · `stable` since `4.0.0` — an accessible expandable section for `<lr-accordion>`.
 - `lr-breadcrumb` · lr-breadcrumb.js · `stable` since `4.0.0` — a responsive navigation trail.
 - `lr-breadcrumb-item` · lr-breadcrumb-item.js · `stable` since `4.0.0` — one link, button, or current-page label in a breadcrumb.
-- `lr-dashboard-grid` · lr-dashboard-grid.js · `stable` since `4.1.0` — a responsive, keyboard-accessible widget grid: positions `layout` entries (`DashboardCell`: `x`/`y`/`w`/`h` grid units + a widget descrip...
-- `lr-drilldown-panel` · lr-drilldown-panel.js · `stable` since `4.1.0` — controlled navigation from a chart/table datum to its related evidence, documents, entities, or agent runs.
+- `lr-dashboard-grid` · lr-dashboard-grid.js · `stable` since `4.1.0` — a responsive, keyboard-accessible widget grid: positions `layout` entries (`LyraDashboardCell`: `x`/`y`/`w`/`h` grid units + a widget des...
+- `lr-drilldown-panel` · lr-drilldown-panel.js · `stable` since `4.1.0` — a controlled navigation and category shell for related evidence, documents, entities, and host-rendered agent runs.
 - `lr-filter-bar` · lr-filter-bar.js · `stable` since `4.1.0` — a row of dashboard filters, each declared by the host (`filters`) rather than invented by this component: every filter composes an existi...
 - `lr-page` · lr-page.js · `stable` since `8.0.0` — a semantic application/page shell that derives its mobile or desktop presentation from its own allocated inline size.
 
 ## Overlays, status & feedback — `components/overlays/` (21)
 
-- `lr-toast` · lr-toast.js · `stable` since `4.0.0` — the stacking toast region.
+- `lr-toast` · lr-toast.js · `stable` since `4.0.0` — one placement-specific stacking toast region.
 - `lr-toast-item` · lr-toast-item.js · `stable` since `4.0.0` — a single toast notification.
 - `lr-empty` · lr-empty.js · `stable` since `4.0.0` — a generic empty/no-data state.
-- `lr-skeleton` · lr-skeleton.js · `stable` since `4.0.0` — a loading placeholder.
+- `lr-skeleton` · lr-skeleton.js · `stable` since `4.0.0` — a loading placeholder mirroring the public Web Awesome/Shoelace skeleton surface under the `lr-` prefix.
 - `lr-drawer` · lr-drawer.js · `stable` since `4.0.0` — a modal panel anchored to one logical edge of the viewport.
 - `lr-dialog` · lr-dialog.js · `stable` since `4.0.0` — a general-purpose modal/overlay.
 - `lr-chip` · lr-chip.js · `stable` since `4.0.0` — a small, content-agnostic pill for a short label: a tag, an active-filter/scope indicator, etc.
@@ -151,7 +151,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-live-region` · lr-live-region.js · `stable` since `4.0.0` — a visually-hidden ARIA live region that throttles and coalesces announcements instead of relaying every call verbatim.
 - `lr-poll-status` · lr-poll-status.js · `stable` since `4.0.0` — a "next scheduled refresh" countdown with a built-in pause control: a ticking `M:SS` display counting down to the next scheduled action,...
 - `lr-mention-popover` · lr-mention-popover.js · `stable` since `4.0.0` — a caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete inside a plain-text `<textarea>`/`<input>...
-- `lr-diff-view` · lr-diff-view.js · `stable` since `4.0.0` — a real two-string line diff (Myers/LCS-style alignment), rendered as interleaved unified-diff output -- not diff-flavored syntax highligh...
+- `lr-diff-view` · lr-diff-view.js · `stable` since `4.0.0` — a real two-string line diff (Hirschberg LCS alignment), rendered as interleaved unified-diff output -- not diff-flavored syntax highlight...
 - `lr-icon` · lr-icon.js · `stable` since `4.0.0` — an SVG icon primitive.
 - `lr-visually-hidden` · lr-visually-hidden.js · `stable` since `8.0.0` — hides its content from sight while leaving it in the accessibility tree, so screen readers still announce it.
 - `lr-divider` · lr-divider.js · `stable` since `4.0.0` — a themeable semantic separator.
@@ -166,7 +166,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 ## Media, files & maps — `components/media/` (21)
 
 - `lr-flag` · lr-flag.js · `stable` since `4.0.0` — a country/language flag.
-- `lr-playback` · lr-playback.js · `stable` since `4.0.0` — steps an index through `[0, length)` on a fixed interval (play/pause), the common building block behind ad-hoc play-timers in time-series...
+- `lr-sequence-playback` · lr-sequence-playback.js · `stable` since `unreleased` — steps a current index through `[0, itemCount)` on a fixed interval (play/pause), the common building block behind ad-hoc play-timers in t...
 - `lr-map` · lr-map.js · `stable` since `4.0.0` — a maplibre-gl wrapper with a declarative legend, choropleth GeoJSON layer, markers, and additive `dataLayers` GeoJSON overlays (arbitrary...
 - `lr-file-input` · lr-file-input.js · `stable` since `4.0.0` — a drag-drop + click-to-browse file dropzone.
 - `lr-image-comparer` · lr-image-comparer.js · `stable` since `4.0.0` — compares two slotted surfaces with a keyboard- accessible range divider.
@@ -176,7 +176,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-file-icon` · lr-file-icon.js · `stable` since `4.0.0` — Displays a localized, tokenized file-type badge from a MIME type.
 - `lr-media-card` · lr-media-card.js · `stable` since `4.0.0` — a lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message body (e.g.
 - `lr-attachment-trigger` · lr-attachment-trigger.js · `stable` since `4.0.0` — a compact attach affordance designed for a chat composer's leading slot (see `<lr-chat-composer>`'s own `leading` slot, which this drops...
-- `lr-avatar` · lr-avatar.js · `stable` since `4.0.0` — a small, fixed-size identity marker: default-slotted icon/glyph content, an image, an `icon`-slotted fallback glyph, or an initials fallb...
+- `lr-avatar` · lr-avatar.js · `stable` since `4.0.0` — a small, fixed-size identity marker: an image, an `icon`-slotted fallback glyph, or an initials fallback, in that priority order.
 - `lr-animated-image` · lr-animated-image.js · `stable` since `4.0.0` — - displays an animated GIF/APNG/WebP with a play/pause control, defaulting to a frozen first frame both at rest and automatically under `...
 - `lr-animation` · lr-animation.js · `stable` since `4.0.0` — `<lr-animation>` declaratively animates its single slotted child through the native Web Animations API: a small curated preset catalog (`...
 - `lr-avatar-group` · lr-avatar-group.js · `stable` since `4.0.0` — stacks a set of slotted `<lr-avatar>` children into a single overlapping row (negative-margin overlap, ring border so each circle reads a...
@@ -189,27 +189,27 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 
 ## Charts — `components/charts/` (12)
 
-- `lr-chart` · lr-chart.js · `stable` since `4.0.0` — the core Chart.js wrapper every other `lr-*-chart` tag subclasses.
+- `lr-chart` · lr-chart.js · `stable` since `4.0.0` — the core Chart.js wrapper used directly and by the typed Chart.js tags plus `<lr-histogram>`.
 - `lr-lite-chart` · lr-lite-chart.js · `stable` since `4.0.0` — a dependency-free bar/line chart, plain SVG/DOM rendering with zero peer dependencies (unlike `lr-chart`, which wraps `chart.js`).
-- `lr-line-chart` · lr-line-chart.js · `stable` since `4.0.0` — `<lr-chart>` with `type` locked to `"line"`.
-- `lr-bar-chart` · lr-bar-chart.js · `stable` since `4.0.0` — `<lr-chart>` with `type` locked to `"bar"`.
-- `lr-pie-chart` · lr-pie-chart.js · `stable` since `4.0.0` — `<lr-chart>` with `type` locked to `"pie"`.
-- `lr-doughnut-chart` · lr-doughnut-chart.js · `stable` since `4.0.0` — `<lr-chart>` with `type` locked to `"doughnut"`.
-- `lr-radar-chart` · lr-radar-chart.js · `stable` since `4.0.0` — `<lr-chart>` with `type` locked to `"radar"`.
-- `lr-polar-area-chart` · lr-polar-area-chart.js · `stable` since `4.0.0` — `<lr-chart>` with `type` locked to `"polarArea"`.
-- `lr-bubble-chart` · lr-bubble-chart.js · `stable` since `4.0.0` — `<lr-chart>` with `type` locked to `"bubble"`.
-- `lr-scatter-chart` · lr-scatter-chart.js · `stable` since `4.0.0` — `<lr-chart>` with `type` locked to `"scatter"`.
+- `lr-line-chart` · lr-line-chart.js · `stable` since `4.0.0` — `<lr-chart>` with a `"line"` default and the mirrored writable type.
+- `lr-bar-chart` · lr-bar-chart.js · `stable` since `4.0.0` — `<lr-chart>` with a `"bar"` default.
+- `lr-pie-chart` · lr-pie-chart.js · `stable` since `4.0.0` — `<lr-chart>` with a `"pie"` default and the mirrored writable type.
+- `lr-doughnut-chart` · lr-doughnut-chart.js · `stable` since `4.0.0` — `<lr-chart>` with a `"doughnut"` default and the mirrored writable type.
+- `lr-radar-chart` · lr-radar-chart.js · `stable` since `4.0.0` — `<lr-chart>` with a `"radar"` default and the mirrored writable type.
+- `lr-polar-area-chart` · lr-polar-area-chart.js · `stable` since `4.0.0` — `<lr-chart>` with a `"polarArea"` default and the mirrored writable type.
+- `lr-bubble-chart` · lr-bubble-chart.js · `stable` since `4.0.0` — `<lr-chart>` with a `"bubble"` default and the mirrored writable type.
+- `lr-scatter-chart` · lr-scatter-chart.js · `stable` since `4.0.0` — `<lr-chart>` with a `"scatter"` default and the mirrored writable type.
 - `lr-histogram` · lr-histogram.js · `stable` since `4.0.0` — bins `values` into `bins` equal-width buckets and renders them as a bar chart.
 - `lr-box-plot` · lr-box-plot.js · `stable` since `4.0.0` — a box-and-whisker chart from precomputed five-number summaries (no raw sample data is shipped to the browser).
 
-## Document & file viewers — `components/viewers/` (22)
+## Document & file viewers — `components/viewers/` (23)
 
 - `lr-document-preview` · lr-document-preview.js · `stable` since `4.0.0` — a format-dispatching viewer for one document/ attachment, plus the visual state machine for an async server-side conversion a host app ru...
 - `lr-document-viewer` · lr-document-viewer.js · `stable` since `4.0.0` — A dialog-hosted document viewer with a pluggable MIME-type renderer registry.
 - `lr-docx-viewer` · lr-docx-viewer.js · `stable` since `4.0.0` — Renders a DOCX document as sanitized semantic HTML using the optional `mammoth` converter and `dompurify` sanitizer peers.
 - `lr-email-viewer` · lr-email-viewer.js · `stable` since `4.0.0` — Parses `.eml` messages with the optional `postal-mime` peer and renders their HTML body only after DOMPurify sanitization and inside a pa...
-- `lr-calendar-viewer` · lr-calendar-viewer.js · `stable` since `4.0.0` — Parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as plain text, preserving summaries, times, locations, a...
-- `lr-archive-viewer` · lr-archive-viewer.js · `stable` since `4.0.0` — Lists names and uncompressed sizes in a ZIP archive without rendering entry contents.
+- `lr-calendar-viewer` · lr-calendar-viewer.js · `stable` since `4.0.0` — Parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as plain text, preserving summaries, DATE/DATE-TIME sema...
+- `lr-archive-viewer` · lr-archive-viewer.js · `stable` since `4.0.0` — Lists names and declared uncompressed sizes in a ZIP archive without rendering entry contents or loading an archive parser.
 - `lr-ebook-viewer` · lr-ebook-viewer.js · `stable` since `4.0.0` — Renders an EPUB with the optional `epubjs` peer.
 - `lr-pptx-viewer` · lr-pptx-viewer.js · `stable` since `4.0.0` — Best-effort client-side PPTX viewer backed by `@aiden0z/pptx-renderer`.
 - `lr-svg-viewer` · lr-svg-viewer.js · `stable` since `4.0.0` — Fetches and safely renders an inline SVG document.
@@ -225,7 +225,8 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-notebook-viewer` · lr-notebook-viewer.js · `stable` since `4.0.0` — read-only Jupyter notebook (nbformat 4.x) renderer, composing existing components per cell.
 - `lr-xml-viewer` · lr-xml-viewer.js · `stable` since `4.0.0` — collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s UX (`collapsed-depth`, `copyable`, str...
 - `lr-document-compare` · lr-document-compare.js · `stable` since `4.1.0` — side-by-side or inline comparison of two document versions, composed entirely from two existing primitives rather than reimplementing eit...
-- `lr-geojson-view` · lr-geojson-view.js · `stable` since `4.0.0` — internal document-registry bridge rendering a fetched GeoJSON file through `<lr-map>`'s `dataLayers`.
+- `lr-geojson-viewer` · lr-geojson-viewer.js · `stable` since `unreleased` — document-registry bridge rendering a fetched GeoJSON file through `<lr-map>`'s `dataLayers`.
+- `lr-geojson-view` · lr-geojson-view.js · `stable` since `4.0.0` — Permanent compatibility class for the pre-v9 `lr-geojson-view` tag.
 
 ## Conversation & chat UI — `components/conversation/` (33)
 
@@ -238,11 +239,11 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-conversation-item` · lr-conversation-item.js · `stable` since `4.0.0` — a selectable row representing one chat session in a history sidebar list.
 - `lr-model-select` · lr-model-select.js · `stable` since `4.0.0` — a provider/model picker that renders as a closed dropdown when a fixed `catalog` is available, or as a filterable free-text combobox when...
 - `lr-streaming-text` · lr-streaming-text.js · `stable` since `4.0.0` — a token-coalescing incremental text renderer for streaming assistant output, with an optional blinking cursor and auto-detected Markdown...
-- `lr-generation-status` · lr-generation-status.js · `stable` since `4.0.0` — a compact, ticking status readout shown alongside an in-progress AI response: elapsed time, token count, and token-throughput, plus a bui...
+- `lr-generation-metrics` · lr-generation-metrics.js · `stable` since `unreleased` — a compact, ticking status readout shown alongside an in-progress AI response: elapsed time, token count, and token-throughput, plus a bui...
 - `lr-code-block` · lr-code-block.js · `stable` since `4.0.0` — fenced code display with optional lazy syntax highlighting and a copy button.
 - `lr-code-block-core` · lr-code-block-core.js · `stable` since `4.0.0` — a build-lean variant of `<lr-code-block>` for a consumer whose `languages` map already covers every language it will ever render.
 - `lr-model-settings-panel` · lr-model-settings-panel.js · `stable` since `4.0.0` — a fixed composition of `<lr-model-select>` and `<lr-slider>` into one agent-configuration card: pick a provider's model, then tune its sa...
-- `lr-audio-visualizer` · lr-audio-visualizer.js · `stable` since `4.0.0` — a presentational, canvas-drawn voice-activity visualization (bars or waveform), the LiveKit-BarVisualizer counterpart for this library.
+- `lr-audio-visualizer` · lr-audio-visualizer.js · `stable` since `4.0.0` — a presentational, canvas-drawn voice-activity visualization.
 - `lr-branch-picker` · lr-branch-picker.js · `stable` since `4.0.0` — the "‹ 2 / 5 ›" navigator across regenerated/edited variants of one message.
 - `lr-message-actions` · lr-message-actions.js · `stable` since `4.0.0` — the per-message action toolbar for `<lr-chat-message>`'s `actions` slot: opt-in built-ins (copy / regenerate / edit / feedback) that emit...
 - `lr-message-feedback` · lr-message-feedback.js · `stable` since `4.0.0` — thumbs up/down for one assistant message, with an optional inline detail step (categorical reason chips + a free-text comment) that opens...

@@ -22,14 +22,15 @@ radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module,
 `lr-word-cloud`'s dependency-free precedent.
 
 **Properties:**
+
 - `topics: LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
-  LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub
+LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub
 - `label: string = ''` — accessible name for the SVG group and the implicit hub's text
 - `expandDepth: number = 1` (attribute `expand-depth`) — initial expansion depth (root + first
   ring); expansion state afterward is component-managed per topic id and survives `topics`
   reassignment
 
-**Events:** `lr-topic-select` (`detail: { id }`, a *leaf* topic was activated),
+**Events:** `lr-topic-select` (`detail: { id }`, a _leaf_ topic was activated),
 `lr-topic-toggle` (`detail: { id, expanded }`, a parent topic was activated, or auto-expanded by
 keyboard descent).
 
@@ -49,16 +50,25 @@ clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 ```html
 <lr-mind-map style="height:480px" expand-depth="2"></lr-mind-map>
 <script>
-  document.querySelector('lr-mind-map').topics = [
-    { id: 'root', label: 'Computing history', children: [
-      { id: 'people', label: 'People', children: [{ id: 'ada', label: 'Ada Lovelace' }] },
-      { id: 'machines', label: 'Machines' },
-    ] },
+  document.querySelector("lr-mind-map").topics = [
+    {
+      id: "root",
+      label: "Computing history",
+      children: [
+        {
+          id: "people",
+          label: "People",
+          children: [{ id: "ada", label: "Ada Lovelace" }],
+        },
+        { id: "machines", label: "Machines" },
+      ],
+    },
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - A user's explicit expand/collapse only ever overrides the `depth < expandDepth` default in the
   direction chosen — reassigning `topics` (even with the same ids) never silently discards that
   override.

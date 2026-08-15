@@ -25,20 +25,27 @@ element. First-party invention (no Web Awesome equivalent).
 Session-history/autofill restoration synchronously restores the model id and form entry without
 emitting `lr-change`.
 
+When `catalog`/`allowCustom` replaces a focused trigger with the free-text input or vice versa,
+focus follows the available replacement. If the new owner is disabled or inert, focus returns to
+the available element that led into the picker, or to the stable `form-control` owner when no
+return target exists. This repair emits no action/value events and never overrides a newer external
+focus move.
+
 **Exported types:**
 
-- `LyraModelCatalogEntry { id: string; label: string; icon?: string }` — one catalog row. An
+- `LyraCatalogEntry { id: string; label: string }` — the shared minimum row vocabulary.
+- `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
+  — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
+  shorthand uses the same string for both id and label; readonly tuples/arrays are accepted.
+- `LyraModelCatalogEntry extends LyraCatalogEntry { icon?: string }` — one model row. An
   optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
   change the option's accessible name.
-- `LyraModelCatalog = string[] | LyraModelCatalogEntry[]` — either every entry is a plain string (used
-  as both id and label) or every entry is a full `{ id, label, icon? }` row; the two shapes are not
-  meant to be mixed within one array.
 
 **Properties:**
 
 - `provider: string = ''` — informational only (e.g. `'ollama'`); rendered as a small leading badge.
-- `catalog?: LyraModelCatalog` (attribute: false) — the full model list. Omit (or leave empty) to fall
-  back to plain free-text entry.
+- `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false) — the full model list. Omit (or
+  leave empty) to fall back to plain free-text entry.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
 - `label: string = ''` — optional visible title above the control, rendered alongside the `label`
@@ -73,8 +80,7 @@ emitting `lr-change`.
   `[part="trigger"]`/`[part="combobox"]`'s padding/min-height/font-size through the shared
   `--lr-form-control-*` knobs, so a model select sits at the same height as the `lr-select`,
   `lr-input` or `lr-button` beside it in a toolbar row at every tier, plus `[part="expand-icon"]`'s
-  box size (see the themeable custom properties below). The exported alias `LyraModelSelectSize`
-  names the canonical step (`LyraSizeStep`) a size resolves to.
+  box size (see the themeable custom properties below).
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
   `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
   untouched model-select contributes `''` to `FormData` instead of omitting its key.
@@ -97,13 +103,16 @@ since `HTMLElement.prototype.click()` is otherwise a no-op on a custom element w
 semantics of its own (mirrors `<lr-button>`'s identical host `click()` forwarding, so a generic
 form-automation helper or another component calling `.click()` on the host actually opens the picker
 instead of silently doing nothing). Closed-dropdown mode forwards a real `.click()` to the trigger
-`<button>`, whose own `@click` handler opens it. Free-text mode instead calls `.focus()` on the
-combobox `<input>`: unlike a genuine pointer click, `HTMLElement.click()` never moves focus (that's a
-`mousedown` side effect the browser applies only to real pointer interaction), and this mode's open
-behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` handler on the input
-itself.
+`<button>`, whose own `@click` handler opens it. Free-text mode forwards `.click()` to the combobox
+`<input>`, then explicitly calls `.focus()`: unlike a genuine pointer click,
+`HTMLElement.click()` never moves focus (that's a `mousedown` side effect the browser applies only
+to real pointer interaction), and this mode's open behavior is wired to the input's `focus` event
+(`onInputFocus`), not a `click` handler on the input itself.
 
 `focus(options?)` and `blur()` forward to the active semantic control in either rendering mode.
+If a catalog/`allowCustom` update replaces that control while it owns focus, focus follows from the
+closed trigger to the free-text input (or back again). A newer external focus destination is never
+overridden.
 
 `select()` and `setSelectionRange()` forward to the native input in free-text mode.
 `setRangeText()` applies the native range edit and silently synchronizes `value`, the form entry,
@@ -142,14 +151,14 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
   distinctly from a real catalog pick)
-- `change` (`Event`, no detail) — fired on a committed value alongside `lr-change`, mirroring `<lr-select>`/
-  `<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model`
-  handlers behave consistently across the picker family.
-- `input` — a payload-preserving `InputEvent` for each free-text edit, and a plain `Event` fired
-  immediately before `change` when either mode commits a value.
-- `blur` / `focus` (no detail) — one native `FocusEvent` re-dispatched from the active control in
-  either mode (the closed trigger button or free-text input), bubbling and composed unlike the
-  shadow-internal original.
+- `change` (`Event`, no detail) — an owner-realm native event fired on a committed value alongside
+  `lr-change`, mirroring `<lr-select>`/`<lr-combobox>`'s value-change pair so native form bindings
+  and framework `v-model` handlers behave consistently across the picker family.
+- `input` — a payload-preserving owner-realm `InputEvent` for each free-text edit, and a plain
+  owner-realm `Event` fired immediately before `change` when either mode commits a value.
+- `blur` / `focus` (no detail) — one owner-realm native `FocusEvent` re-dispatched from the active
+  control in either mode (the closed trigger button or free-text input), retaining `relatedTarget`
+  and bubbling/composed unlike the shadow-internal original.
 - `lr-blur` and `lr-focus` (no detail) — prefixed compatibility aliases, each fired immediately
   after its unprefixed counterpart.
 - `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
@@ -232,8 +241,8 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 **Known gotchas:**
 
 - `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label, icon? }`
-  objects, not a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union
-  item type.
+  objects, not a mix; `LyraCatalog<T>` is a union of two readonly array _types_, not an array of a
+  union item type.
 - The synthetic "not in catalog" row only ever appears when `catalog` is non-empty and `value` isn't one
   of its ids — with no `catalog` at all, there's no catalog list to diff `value` against, so no badge.
 - `value`/form-association here is hand-rolled via `attachInternals()` directly, not the shared

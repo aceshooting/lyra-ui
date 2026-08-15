@@ -51,6 +51,28 @@ it('defaults to size="m", variant="neutral", removable=false, disabled=false, pi
   expect(el.value).to.be.undefined;
 });
 
+it('normalizes unsupported closed-set attributes and untyped property writes', async () => {
+  const el = (await fixture(
+    html`<lr-chip size="huge" variant="primary">Tag</lr-chip>`,
+  )) as LyraChip;
+  expect(el.size).to.equal('m');
+  expect(el.getAttribute('size')).to.equal('m');
+  expect(el.variant).to.equal('neutral');
+  expect(el.getAttribute('variant')).to.equal('neutral');
+
+  el.size = 'xs';
+  el.variant = 'success';
+  await el.updateComplete;
+  const foreign = el as unknown as Record<string, unknown>;
+  foreign.size = 'huge';
+  foreign.variant = 'primary';
+  await el.updateComplete;
+  expect(el.size).to.equal('m');
+  expect(el.getAttribute('size')).to.equal('m');
+  expect(el.variant).to.equal('neutral');
+  expect(el.getAttribute('variant')).to.equal('neutral');
+});
+
 describe('disabled', () => {
   it('disables the native toggle control, blocks focus/click, and emits no selection request', async () => {
     const el = (await fixture(

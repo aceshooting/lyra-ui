@@ -116,7 +116,7 @@ export interface VirtualListScroll {
 
 export interface LyraVirtualListEventMap {
   "lr-visible-range-changed": CustomEvent<VirtualListRange>;
-  "lr-load-more": CustomEvent<undefined>;
+  "lr-load-more": CustomEvent<null>;
   "lr-virtual-scroll": CustomEvent<VirtualListScroll>;
 }
 /**

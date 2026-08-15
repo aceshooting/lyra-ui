@@ -3,6 +3,7 @@
 # `lr-checkbox-group`
 
 - **Import** `import '@aceshooting/lyra-ui/components/lr-checkbox-group.js';` (stable tag alias; registers the tag)
+- **Compound usage registrations** `import '@aceshooting/lyra-ui/components/lr-checkbox.js';` — required by the consumer-supplied child tags in this reference; usage-only, not registration dependencies of `lr-checkbox-group`
 - **Class** `LyraCheckboxGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/checkbox-group/checkbox-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -19,31 +20,30 @@ Long group labels, hints, errors, and horizontal option labels wrap within the h
 directions. The `Narrow RTL long options (320px)` story is the adversarial baseline; checkbox
 targets keep their own fixed hit-area floor while the surrounding text wraps.
 
-A form-associated collection of `<lr-checkbox>` children. Its `value` is a `string[]`; each
+A form-associated collection of `<lr-checkbox>` children. Its readonly `value` is a defensive
+`string[]` snapshot; each
 selected value is submitted under `name` and `required` requires at least one selection.
 
 **Properties:** `label`, `hint`, `errorText`, `value`, `customError` (`custom-error`), `name`,
 `required`, `disabled`, `orientation: 'vertical' | 'horizontal' = 'vertical'`,
 `withLabel`/`withHint` (`with-label`/`with-hint` SSR presence hints),
-`accessibleLabel` (`aria-label`), and `size: LyraSize = 'm'` (reflected) — the size of the group's
+`accessibleLabel` (`aria-label`), and `size?: LyraSize` (reflected) — the optional size of the group's
 **own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
 `small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
-options, and propagates the group tier to every owned `<lr-checkbox>`, including children added
-later. Group size is the authoritative aggregate setting.
+options. When set, it temporarily projects the tier to every owned `<lr-checkbox>`, including
+children added later. When omitted, each child retains its own authored tier.
 
-**Migration note — `size` is authoritative here, unlike upstream.** Web Awesome's checkbox group
-applies its `size` to the items only *when the attribute is present*, so an unset group leaves each
-child's own `size` alone. `<lr-checkbox-group>` instead has a real `'m'` default and re-asserts the
-group tier on connect, on every slot change, and again whenever a child's `size` attribute is
-mutated afterwards — so `<lr-checkbox-group><lr-checkbox size="s">…` renders at the group's tier,
-not `s`. Markup that relied on per-child sizes should split the odd option out of the group, or size
-the whole group.
+An explicit group `size` is owner state, not a destructive rewrite: late child-size writes are
+remembered while the group remains authoritative, and removing the group size, moving an option
+out, or disconnecting the group restores the latest authored child value. This matches Web
+Awesome's unset-default behavior.
 
 **Slots:** default checkboxes, `label`, `hint`, `error`.
 **Events:** a user toggle emits exactly one group-owned `input`, then `change`, then `lr-change`;
 all three carry `{ value: string[] }`. The owned child's corresponding events are consumed at the
 group boundary, so an ancestor does not receive a second, differently shaped sequence.
-Programmatic child/property synchronization is silent.
+Programmatic child `checked`/`value` synchronization is silent and completes synchronously, so a
+same-task `new FormData(form)` or validity query observes the same state as the child.
 `lr-invalid` (no detail) is the group's one bubbling/composed native-validity alias.
 **Methods:** `getForm()` returns the group's owning form, including an external owner selected by
 `form`. `setCustomValidity(message)` sets or clears a consumer-supplied error ("that
@@ -53,8 +53,14 @@ goes back to `valueMissing`. It survives every child toggle, slot change and for
 Session restore uses a `FormData` state containing the repeated selected strings; it is independent
 of the control's current `name`, preserves duplicate-value cardinality, waits for early-arriving
 option children, and falls back to an empty selection for malformed state. Restoration is silent.
-`click()` forwards focus to the first enabled checkbox, so the host behaves like a single control
-rather than a no-op under a `<label>`-driven or programmatic click.
+`focus()` targets the first enabled checkbox, `blur()` releases whichever owned checkbox contains
+focus, and `click()` activates (toggles) the first enabled checkbox. Native validity UI anchors to
+that checkbox's focusable semantic owner. A required group also leases a localized visually-hidden
+aggregate requiredness description onto its fieldset without replacing hint/error IDs; it does not
+incorrectly mark every child checkbox required.
+The fieldset exposes explicit stateful `aria-invalid`: visible property/slotted error chrome makes
+it `"true"` immediately; otherwise only interacted intrinsic/custom invalidity does so, and the
+valid/pristine state is explicitly `"false"`.
 **CSS parts:** `form-control`, `form-control-label`, `options` / `form-control-input`, `hint`,
 `error`.
 **Disabled chrome.** A disabled group — its own `disabled` or an ancestor `<fieldset disabled>` —
@@ -79,21 +85,18 @@ option layout and defaults to `--lr-checkbox-group-option-gap`.
 `--lr-checkbox-group-invalid-border` (default `var(--lr-color-danger)`) independently retints the
 invalid option-collection border without changing other danger-colored surfaces.
 
-**`value` is a read-out of child state, not an input.** The children are the single source of
-truth. An internal sync recomputes `value` from them and reassigns it on every child toggle,
-programmatic child `checked`/`value`/`disabled` update, `slotchange`, `name`/`required` change,
-blur, and `form.reset()` — so a host assignment is silently overwritten by the next of those.
+**`value` is a readonly defensive read-out of child state, not an input.** The children are the
+single source of truth. An internal sync recomputes `value` on every child toggle, programmatic
+child `checked`/`value`/`disabled` update, `slotchange`, `name`/`required` change, blur, and
+`form.reset()`. Mutating an obtained array cannot mutate the group.
 Only a checkbox whose nearest `lr-checkbox-group` ancestor is this group contributes; a nested
-group owns its own descendants and form entries. `connectedCallback()` runs that sync **before the
-first render**, which means even a constructor-time or template-time `.value=${…}` binding is
-discarded before anything can observe it. Assigning `value` logs a `console.warn` naming the
-property (once per group instance).
+group owns its own descendants and form entries. `connectedCallback()` runs that sync before the
+first render.
 
 - **To preselect**, set `checked` on the children: `<lr-checkbox value="a" checked>`.
 - **To read the selection**, use this property or the `lr-change` event detail.
 - **Give every child a distinct `value`.** `<lr-checkbox>`'s `value` defaults to `'on'`, so a group
   of undifferentiated children submits several identical `FormData` entries and the submitted data
   cannot say which one was checked. The group warns once per duplicated value when it sees this.
-- Making `value` authoritative is deliberately not implemented, for the same reason: a host
-  assigning `['on']` would check every child that kept the default. A distinct `defaultValue` API
-  could be added later without reversing any of the above.
+- Assignments migrate to writes on the intended children's `checked` state; a host value such as
+  `['on']` cannot identify which default-valued occurrence was intended.

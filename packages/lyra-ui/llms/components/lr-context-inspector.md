@@ -19,9 +19,10 @@ Inspection view of model-call context segments, with token estimates, source cit
 markers, and copy/export controls.
 
 **Properties:**
+
 - `segments: ContextInspectorSegment[] = []` (attribute: false) — `ContextInspectorSegment { id:
-  string; label: string; text: string; tokens: number; tone?: ContextMeterTone; citation?: Citation;
-  truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }` (exported
+string; label: string; text: string; tokens: number; tone?: ContextMeterTone; citation?: Citation;
+truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }` (exported
   here). One entry per piece of the assembled final prompt (system prompt, retrieved chunk, one
   history turn, …). `text` is the segment's **final** text, exactly as sent to the model
   (post-redaction/post-truncation). `tokens` is the estimated count, fed straight to
@@ -29,24 +30,26 @@ markers, and copy/export controls.
   segment label. `citation` is **`Citation` from `@aceshooting/lyra-ui/ai`** and renders an
   `lr-citation-badge` carrying its `sourceId`/`label`. `omittedTokens` is shown in the
   truncation-boundary marker when `truncated` is set. `ContextInspectorRedaction { start: number;
-  end: number; reason?: string }` marks character ranges within `text` that are redaction
+end: number; reason?: string }` marks character ranges within `text` that are redaction
   placeholders; `reason` becomes the marker's `title`/accessible reason, falling back to a localized
-  "Redacted"
+  "Redacted". Segment `id` is the stable public identity; later duplicates are omitted before
+  meter values, rendering, copy/export serialization, and citation events are derived.
 - `total: number = 0` — the full token budget `segments` are measured against; passed straight to
   `lr-context-meter.total`
 - `label: string = ''` — accessible group name, and the embedded meter's visible caption (e.g.
   "128K context window")
-- `formats: ExportFormatOption[] = ['json']` (attribute: false) — forwarded to the embedded
+- `exportFormats: LyraExportFormatOption[] = ['json']` (attribute: false) — forwarded to the embedded
   `lr-export-button`; one id renders a plain button, more than one a format-choice menu
-- `filename: string = 'context'` — download filename (no extension) passed to `lr-export-button`
+- `exportFilename: string = 'context'` (attribute `export-filename`) — download filename (no
+  extension) passed to `lr-export-button`
 
 **Events:** `lr-citation-activate` (`detail: { sourceId: string; index: number }`, surfaced by a
 segment's embedded `lr-citation-badge`), `lr-citation-open` (`detail: { sourceId: string; index:
-number; href?: string }`, the "full preview" signal), `lr-copy` (`detail: { text: string }`, from the
+number; href?: string }`, the "full preview" signal), `lr-copy` (`detail: { ok: true; text: string }`, from the
 embedded `lr-copy-button`), `lr-export` (`detail: { format: string }`, from the embedded
 `lr-export-button`), `lr-export-complete` (`detail: { format: string }`, after a non-cancelled export
-finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { text:
-string; reason: string }`, the detailed compatibility event for that clipboard failure),
+finishes), `lr-error` (the embedded clipboard write failed), `lr-copy-error` (`detail: { ok: false;
+text: string; reason: string; error: unknown }`, the detailed clipboard failure),
 `lr-export-error` (`detail: { format: ExportFormat; error: unknown }`, the embedded export could not
 complete), and the cancelable `lr-show` / `lr-hide` lifecycle events from the embedded export-format
 menu. These composed child events surface unchanged; the inspector does not emit duplicate copies.

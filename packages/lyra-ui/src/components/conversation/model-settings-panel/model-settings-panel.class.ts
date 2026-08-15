@@ -3,8 +3,9 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange, decimalPlaces } from '../../../internal/numbers.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './model-settings-panel.styles.js';
-import type { LyraModelCatalog } from '../model-select/model-select.class.js';
+import type { LyraCatalog, LyraModelCatalogEntry } from '../model-select/model-select.class.js';
 import '../model-select/model-select.class.js';
 import '../../forms/slider/slider.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -14,6 +15,11 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_model, LYRA_DEFAULT_selectMode
 
 
 export type ModelSettingsPanelLayout = 'vertical' | 'compact';
+
+const MODEL_SETTINGS_PANEL_LAYOUT = literalSetConverter<ModelSettingsPanelLayout>(
+  ['vertical', 'compact'],
+  'vertical',
+);
 
 /** The full current settings shape, re-emitted on every `lr-change`
  *  regardless of which child control actually triggered it. */
@@ -86,7 +92,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   /** Informational provider badge, passed straight through to the internal `lr-model-select`. */
   @property() provider = '';
   /** The model list, passed straight through to the internal `lr-model-select`. */
-  @property({ attribute: false }) catalog?: LyraModelCatalog;
+  @property({ attribute: false }) catalog?: LyraCatalog<LyraModelCatalogEntry>;
   /** The current model id. */
   @property() model = '';
   /** Let the model control accept a value outside `catalog`; passed straight through. */
@@ -99,7 +105,19 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   /** `vertical` stacks full-width rows with visible labels; `compact` runs
    *  the same two rows side by side with a smaller temperature caption, for
    *  toolbars/sidebars where the vertical layout's height doesn't fit. */
-  @property({ reflect: true }) layout: ModelSettingsPanelLayout = 'vertical';
+  private _layout: ModelSettingsPanelLayout = 'vertical';
+
+  @property({ reflect: true, converter: MODEL_SETTINGS_PANEL_LAYOUT })
+  get layout(): ModelSettingsPanelLayout {
+    return this._layout;
+  }
+  set layout(next: ModelSettingsPanelLayout) {
+    const normalized = MODEL_SETTINGS_PANEL_LAYOUT.normalizeReflected(this, 'layout', next);
+    const old = this._layout;
+    if (old === normalized) return;
+    this._layout = normalized;
+    this.requestUpdate('layout', old);
+  }
   /** Disables the panel as a unit by forwarding to both the internal
    *  `lr-model-select` and `lr-slider` — a wrapping `<fieldset disabled>`
    *  alone would not reach either, since a form-associated control's own

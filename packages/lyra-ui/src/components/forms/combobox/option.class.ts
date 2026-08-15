@@ -43,7 +43,7 @@ function checkmarkGlyph(): SVGTemplateResult {
 }
 
 export interface LyraOptionEventMap {
-  'lr-option-change': CustomEvent<undefined>;
+  'lr-option-change': CustomEvent<null>;
 }
 
 /**

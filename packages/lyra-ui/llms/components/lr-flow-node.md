@@ -23,11 +23,11 @@ owns none of that.
 
 **Properties:**
 
-- `nodeId: string = ''` (attribute `node-id`, reflected) — the identity `lr-flow-canvas` adopts this
-  card by. It reflects because that adoption reads the *attribute*, so a property-only
-  `card.nodeId = 'fetch'` reaches the canvas too; the empty default stays absent from the DOM. Set it
-  before the canvas receives the matching `nodes` entry — the canvas reconciles its light-DOM
-  children only when `nodes` changes
+- `nodeId: string = ''` (attribute `node-id`, reflected) — identity used to match an authored card
+  to a canvas node; the empty default leaves the attribute absent
+- `flowType: string = ''` (attribute `data-node-type`, reflected) — consumer taxonomy forwarded by
+  the canvas; use this stable hook or the canvas's normalized `node-type-*` part for type-specific
+  presentation
 - `heading: string = ''`
 - `status: 'pending' | 'running' | 'success' | 'error' | 'denied' | null = null` (reflected)
 - `progress: number | null = null` — renders a determinate `[part="progress"]` bar when set
@@ -36,8 +36,8 @@ owns none of that.
 - `selected: boolean = false` (reflected)
 - `compact: boolean = false` (reflected) — tighter card padding for dense canvases and palette
   previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
-- `inputs: FlowHandle[] = [{ id: 'in' }]`, `outputs: FlowHandle[] = [{ id: 'out' }]` (attribute:
-  false) — `FlowHandle { id: string; label?: string }`
+- `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
+  }]` (attribute: false) — detached, frozen snapshots of readonly `{ id, label? }` handles
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`
 
@@ -54,22 +54,22 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 **Themeable custom properties:** `--lr-flow-node-min-inline-size` (default `11rem`),
 `--lr-flow-node-compact-padding` (default `var(--lr-space-xs)`) and `--lr-flow-node-compact-gap`
 (default `var(--lr-space-2xs)`) — `[part="card"]`'s padding and row gap while `compact` — and
-`--lr-flow-node-selected-border` (default `var(--lr-color-brand)`) — the card's border color while
-`selected`. Like the other state-scoped custom properties here they are inline `var()` fallbacks at
-their point of use rather than `:host` declarations, so they can be set on the element _or any
+`--lr-flow-node-selected-outline-color` (default `var(--lr-color-brand)`) — the card's outline color
+while `selected`. Like the other state-scoped custom properties here, it is an inline `var()`
+fallback at its point of use rather than a `:host` declaration, so it can be set on the element _or any
 ancestor_ (a canvas retunes every card at once); overriding the selection color otherwise means
 hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
 `--lr-flow-node-running-border` (default `var(--lr-color-brand)`) — the card's border color while
-`status="running"`, independent of `--lr-flow-node-selected-border` so a consumer can retint just one
-of the two states without the other following along — and `--lr-flow-node-running-glow` (default
+`status="running"`, independent of `--lr-flow-node-selected-outline-color` so a consumer can retint
+just one of the two states without the other following along — and `--lr-flow-node-running-glow` (default
 `var(--lr-color-brand-quiet)`) — the box-shadow color of the running-state ring around the card, and
-the pulse keyframes' peak color. The status dot has independent
-`--lr-flow-node-status-{pending|running|success|error|denied}-color` hooks, defaulting respectively
-to the shared border-strong, brand, success, danger, and warning tokens;
-`--lr-flow-node-status-color` controls the no-status fallback. The expanded status names are
-`--lr-flow-node-status-pending-color`, `--lr-flow-node-status-running-color`,
-`--lr-flow-node-status-success-color`, `--lr-flow-node-status-error-color`, and
-`--lr-flow-node-status-denied-color`. `--lr-flow-node-progress-track-color` (default
+the pulse keyframes' peak color. The status dot uses the shared
+`--lr-flow-status-{pending|running|success|error|denied}-color` hooks, defaulting respectively
+to border-strong, brand, success, danger, and warning; `--lr-flow-status-color` is the no-status
+fallback. The explicit status hooks are `--lr-flow-status-pending-color`,
+`--lr-flow-status-running-color`, `--lr-flow-status-success-color`,
+`--lr-flow-status-error-color`, and `--lr-flow-status-denied-color`.
+`--lr-flow-node-progress-track-color` (default
 `var(--lr-color-border)`) and `--lr-flow-node-progress-fill-color` (default
 `var(--lr-color-brand)`) independently retint the determinate progress track and fill. All of
 these hooks inherit, so one canvas-level override can retint every descendant node without
@@ -94,6 +94,10 @@ changing a library-wide semantic token.
   color-only indicator.
 - All card chrome lives on `[part="card"]`, not `[part="base"]` — `base` is only the flex row that
   holds the input handles, the card and the output handles. Style the box through `::part(card)`.
+- Empty `header`, body, and toolbar rows are removed from layout and update when slot contents are
+  added or removed. Invalid status/orientation inputs normalize to the documented canonical values.
+- Selection uses an outline, while the running lifecycle uses its own border and glow; the two
+  remain simultaneously visible.
 - `--lr-flow-node-min-inline-size` was previously overridden by a duplicate declaration and had no
   effect. It now sets the card's minimum inline size again, so a node that was relying on the card
   collapsing below `11rem` will render wider than it used to.

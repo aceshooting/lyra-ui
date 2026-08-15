@@ -80,9 +80,9 @@ export interface LyraCheckboxEventMap {
   'lr-change': CustomEvent<{ checked: boolean }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 /**
  * `<lr-checkbox>` — a boolean form control. Structurally the same idea as
@@ -411,7 +411,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   constructor() {
     super();
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);

@@ -7,6 +7,7 @@ import type { LyraLocalePicker } from './locale-picker.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getRegisteredLyraLocales, registerLyraLocale, setLyraLocale, getLyraLocale } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
+import { setForcedColors } from "../../../../test/wtr-media.js";
 
 function trigger(el: LyraLocalePicker): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -31,6 +32,33 @@ it('rejects direct open writes while disabled or synchronously fieldset-disabled
   await el.updateComplete;
   expect(el.open).to.be.false;
   expect(el.hasAttribute('open')).to.be.false;
+});
+
+it("restores its declared size default when the attribute is removed", async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker size="xl"></lr-locale-picker>`
+  )) as LyraLocalePicker;
+  el.removeAttribute("size");
+  await el.updateComplete;
+  expect(el.size).to.equal("m");
+});
+
+it("keeps active and selected options visually distinct in forced-colors mode", async () => {
+  await setForcedColors("active");
+  try {
+    const el = (await fixture(html`
+      <lr-locale-picker value="en" .locales=${["en", "fr"]}></lr-locale-picker>
+    `)) as LyraLocalePicker;
+    el.open = true;
+    await el.updateComplete;
+    const [selected, active] = rows(el);
+    active!.setAttribute("data-active", "");
+
+    expect(getComputedStyle(selected!).borderStyle).to.equal("double");
+    expect(getComputedStyle(active!).outlineStyle).to.equal("dashed");
+  } finally {
+    await setForcedColors("none");
+  }
 });
 
 it('inherits public trigger geometry from an ancestor across a size tier', async () => {
@@ -80,7 +108,7 @@ it('uses the scoped selected-option font weight inherited from an ancestor', asy
 
 it('renders a trigger button and a closed listbox by default', async () => {
   const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
-  expect((trigger(el)) != null).to.equal(true);
+  expect(trigger(el) != null).to.equal(true);
   expect(el.open).to.be.false;
 });
 
@@ -308,7 +336,7 @@ it('showFlags=false omits the flag element entirely, not just visually', async (
   expect(rows(el)[0].querySelectorAll('lr-flag').length).to.equal(0);
 });
 
-it('a locales entry with country overrides that row\'s flag; a row without it keeps deriving from the tag', async () => {
+it("a locales entry with country overrides that row's flag; a row without it keeps deriving from the tag", async () => {
   const el = (await fixture(
     html`<lr-locale-picker
       .locales=${[
@@ -340,16 +368,16 @@ it('a plain string[] locales catalog never emits a country attribute', async () 
   expect(flag.hasAttribute('country')).to.be.false;
 });
 
-it('shows the current value\'s flag in the trigger, not just in the open listbox', async () => {
+it("shows the current value's flag in the trigger, not just in the open listbox", async () => {
   const el = (await fixture(
     html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
   const flag = trigger(el).querySelector('lr-flag') as HTMLElement;
-  expect((flag) != null).to.equal(true);
+  expect(flag != null).to.equal(true);
   expect(flag.getAttribute('language')).to.equal('fr');
 });
 
-it('trigger flag honors a locales entry\'s country override, same as the row does', async () => {
+it("trigger flag honors a locales entry's country override, same as the row does", async () => {
   const el = (await fixture(
     html`<lr-locale-picker value="ar" .locales=${[{ tag: 'ar', country: 'lb' }]}></lr-locale-picker>`,
   )) as LyraLocalePicker;
@@ -374,7 +402,8 @@ it('selecting a row updates value, fires lr-change with {value, previousValue}, 
   el.open = true;
   await el.updateComplete;
 
-  let detail: { value: string; previousValue: string; direction: string } | undefined;
+  let detail:
+    | { value: string; previousValue: string; direction: string } | undefined;
   el.addEventListener('lr-change', (e) => (detail = (e as CustomEvent).detail));
   setTimeout(() => rows(el)[1].click());
   await oneEvent(el, 'lr-change');
@@ -672,7 +701,7 @@ it('unset (only locales, or nothing) renders deterministically with no other new
   expect(el.open).to.be.false;
   expect(el.size).to.equal('m');
   expect(el.disabled).to.be.false;
-  expect((trigger(el)) != null).to.equal(true);
+  expect(trigger(el) != null).to.equal(true);
 });
 
 // -- Attribute parsing, ElementInternals fallback/passthrough,
@@ -691,7 +720,8 @@ it('parses a plain show-flags="false" HTML attribute via fromAttribute, not just
 });
 
 it('falls back to a no-op ElementInternals when attachInternals is unavailable', async () => {
-  const proto = HTMLElement.prototype as unknown as { attachInternals: unknown };
+  const proto = HTMLElement.prototype as unknown as { attachInternals: unknown;
+  };
   const original = proto.attachInternals;
   proto.attachInternals = undefined;
   try {
@@ -708,7 +738,8 @@ it('falls back to a no-op ElementInternals when attachInternals is unavailable',
 });
 
 it('falls back to a no-op ElementInternals when attachInternals throws', async () => {
-  const proto = HTMLElement.prototype as unknown as { attachInternals: () => ElementInternals };
+  const proto = HTMLElement.prototype as unknown as { attachInternals: () => ElementInternals;
+  };
   const original = proto.attachInternals;
   proto.attachInternals = () => {
     throw new Error('simulated attachInternals failure');
@@ -763,7 +794,8 @@ it('formStateRestoreCallback restores a string state and clears on a non-string 
     html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
   const restore = (
-    el as unknown as { formStateRestoreCallback(state: string | File | FormData | null): void }
+    el as unknown as { formStateRestoreCallback(state: string | File | FormData | null): void;
+    }
   ).formStateRestoreCallback;
   restore.call(el, 'de');
   expect(el.value).to.equal('de');
@@ -964,7 +996,8 @@ it('reflects aria-invalid=true on the trigger once a required field is touched a
 // shadow DOM, and those extend LyraElement and override the same hooks on their own, so an
 // unscoped flag would be satisfied by a *different* element's call. Mirrors flag.test.ts's pair.
 it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in (regression)', async () => {
-  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void;
+  };
   const original = proto.willUpdate;
   let calledOnSelf = false;
   proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
@@ -981,7 +1014,8 @@ it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wi
 });
 
 it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in (regression)', async () => {
-  const proto = LyraElement.prototype as unknown as { updated: (changed: PropertyValues) => void };
+  const proto = LyraElement.prototype as unknown as { updated: (changed: PropertyValues) => void;
+  };
   const original = proto.updated;
   let calledOnSelf = false;
   proto.updated = function (this: LyraElement, changed: PropertyValues): void {
@@ -1022,7 +1056,8 @@ it('tracks slotted label, hint and error content through slotchange', async () =
     </lr-locale-picker>
   `)) as LyraLocalePicker;
   await el.updateComplete;
-  const flags = el as unknown as { hasLabelSlot: boolean; hasHintSlot: boolean; hasErrorSlot: boolean };
+  const flags = el as unknown as { hasLabelSlot: boolean; hasHintSlot: boolean; hasErrorSlot: boolean;
+  };
   expect(flags.hasLabelSlot).to.be.true;
   expect(flags.hasHintSlot).to.be.true;
   expect(flags.hasErrorSlot).to.be.true;
@@ -1070,7 +1105,8 @@ describe('ElementInternals fallback (lr-locale-picker)', () => {
     impl: undefined | (() => never),
     assertion: (el: LyraLocalePicker) => void | Promise<void>,
   ): Promise<void> => {
-    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown;
+    };
     const original = proto.attachInternals;
     if (impl === undefined) delete proto.attachInternals;
     else proto.attachInternals = impl;
@@ -1086,7 +1122,7 @@ describe('ElementInternals fallback (lr-locale-picker)', () => {
   it('answers inertly when attachInternals is missing', async () => {
     await withoutAttachInternals(undefined, async (el) => {
       const internals = (el as unknown as { internals: ElementInternals }).internals;
-      expect((internals.form) === null).to.equal(true);
+      expect(internals.form === null).to.equal(true);
       expect(internals.willValidate).to.be.false;
       expect(internals.validationMessage).to.equal('');
       expect(internals.checkValidity()).to.be.true;

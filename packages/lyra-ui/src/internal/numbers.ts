@@ -6,7 +6,7 @@ export function finiteNumber(value: number, fallback: number): number {
   return Number.isFinite(value) ? value : Number.isFinite(fallback) ? fallback : 0;
 }
 
-/** Returns a finite value clamped to the requested range. */
+/** Returns a finite value clamped to the requested range, ordering inverted endpoints first. */
 export function finiteRange(
   value: number,
   fallback: number,
@@ -17,7 +17,9 @@ export function finiteRange(
   const safeMin = Number.isFinite(min) ? min : Number.NEGATIVE_INFINITY;
   const safeMax = Number.isFinite(max) ? max : Number.POSITIVE_INFINITY;
   const safeValue = finiteNumber(value, safeFallback);
-  return Math.min(safeMax, Math.max(safeMin, safeValue));
+  const lower = Math.min(safeMin, safeMax);
+  const upper = Math.max(safeMin, safeMax);
+  return Math.min(upper, Math.max(lower, safeValue));
 }
 
 /** Returns a finite integer, truncating fractional input and clamping it. */
@@ -123,14 +125,18 @@ export function finiteAdd(left: number, right: number, fallback = 0): number {
 
 /** Whether `key` is one of the four arrow keys. */
 export function isArrowKey(key: string): boolean {
-  return key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowLeft' || key === 'ArrowDown';
+  return (
+    key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowLeft' || key === 'ArrowDown'
+  );
 }
 
 /** Keys a slider-style control's onKeyDown acts on and onKeyUp commits after
  *  — arrow keys plus the WAI-ARIA APG slider pattern's Home/End/PageUp/
  *  PageDown shortcuts. */
 export function isSliderKey(key: string): boolean {
-  return isArrowKey(key) || key === 'Home' || key === 'End' || key === 'PageUp' || key === 'PageDown';
+  return (
+    isArrowKey(key) || key === 'Home' || key === 'End' || key === 'PageUp' || key === 'PageDown'
+  );
 }
 
 /** Number of decimal places implied by `n`, including exponent notation.

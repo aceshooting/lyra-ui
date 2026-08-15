@@ -18,36 +18,39 @@
 A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
 **Properties:**
-- `nodes: GraphNode[] = []` (attribute: false) — `GraphNode { id: string; label?: string;
-  accessibleLabel?: string; description?: string; radius?: number; color?: string; type?: string;
-  expandable?: boolean; communityId?: string }`;
+
+- `nodes: LyraGraphNode[] = []` (attribute: false) — readonly `LyraGraphNode { id: string; label?: string;
+accessibleLabel?: string; description?: string; radius?: number; color?: string; type?: string;
+expandable?: boolean; communityId?: string }`;
   `accessibleLabel` supplies richer spoken text than the visible label, while `description` renders
-  as native SVG `<title>` tooltip text. `radius` is clamped to `[6, 24]` (an unset/non-finite value
+  as the preferred bounded tooltip/summary text in both renderers. `radius` is clamped to `[6, 24]` (an unset/non-finite value
   falls back to the midpoint, `15`) so a node can never render invisibly small or absurdly large.
-  `type` is a key into `nodeTypes` (matched by `GraphNodeType.id`); unknown/absent renders as an
+  `type` is a key into `nodeTypes` (matched by `LyraNodeTypeStyle.id`); unknown/absent renders as an
   untyped default circle with the token fill, but an unmatched `type` still participates in
   `hiddenTypes` filtering by its raw string value
-- `nodeTypes: GraphNodeType[] = []` (attribute: false) — `GraphNodeType { id: string; label: string;
-  color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `GraphNode.type` value:
+- `nodeTypes: LyraNodeTypeStyle[] = []` (attribute: false) — readonly `LyraNodeTypeStyle { id: string; label: string;
+color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `LyraGraphNode.type` value:
   `label` feeds the spoken "typed node" summary, and `shape`/`color` drive rendering per node.
-  Per-node fill resolution precedence is `GraphNode.color` (most specific) > the matched
-  `GraphNodeType.color` > an ordered categorical fallback palette assigned by the type's index in
+  Per-node fill resolution precedence is `LyraGraphNode.color` (most specific) > the matched
+  `LyraNodeTypeStyle.color` > an ordered categorical fallback palette assigned by the type's index in
   `nodeTypes` (`--lr-graph-cat-1` through `-8`, wrapping every 8 entries) > the untyped
   `--lr-node-fill` default; both data-driven color sources are sanitized the same way as
-  `GraphNode.color` itself. A typed node with no matching `nodeTypes` entry renders as a plain
+  `LyraGraphNode.color` itself. A typed node with no matching `nodeTypes` entry renders as a plain
   circle with the untyped default fill
 - `hiddenTypes: string[] = []` (attribute: false) — hides nodes whose raw `type` is listed and every
   incident link from rendering, layout, keyboard navigation, the data-list alternative, and the
   accessible counts. Hidden positions are retained by id, so showing a type restores its prior
   layout even when no matching `nodeTypes` entry exists
-- `links: GraphLink[] = []` (attribute: false) — `GraphLink { id?: string; source: string; target:
-  string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
-  boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
+- `links: LyraGraphLink[] = []` (attribute: false) — readonly `LyraGraphLink { id?: string; source: string; target:
+string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
+boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
   tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
   can override the spoken name and tooltip independently. `width` is normalized before reaching
   SVG, canvas paint, or canvas picking: negative values clamp to `0`, while a non-finite or unset
-  value uses `1.5`. A link whose `source` id doesn't resolve to a real node is still dropped entirely
+  value uses `1.5`. A zero-width or fully transparent link remains in the nonvisual topology
+  summary but is excluded from pointer picking and keyboard navigation, so invisible geometry never
+  becomes an operable control. A link whose `source` id doesn't resolve to a real node is still dropped entirely
   (there's no position to draw a stub from). A link whose `target` id doesn't resolve instead renders
   as a short, dashed, non-interactive stub off `source`'s own position
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
@@ -59,15 +62,18 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 - `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible name forwarded
-  to the internal semantic SVG; when unset, the SVG uses the localized node/link-count summary
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
+  the host attribute is absent names the SVG/canvas owner. Authored host `aria-label` presence,
+  including an explicitly empty value, instead makes the host the sole named graph owner; the
+  inner renderer drops its parallel role/name. Removing the attribute restores the inner owner and
+  its localized node/link-count fallback
 - `seed?: number` — when set, seeds each node's initial x/y deterministically
   (keyed by node **id**, not array index/order) instead of `forceSimulation()`'s own random start,
   and settles the simulation synchronously instead of animating the settle (same effect
   `prefers-reduced-motion` has, see gotchas)
 - `showEdgeLabels: boolean = false` (attribute `show-edge-labels`) — draws each resolved
   (non-dangling) link's `label` as visible SVG text (`[part="link-label"]`) at the segment midpoint.
-  Off by default: `GraphLink.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
+  Off by default: `LyraGraphLink.label` stays spoken/tooltip-only, matching pre-existing behavior, unless
   this is set
 - `edgeLabelMinZoom: number = 0.6` (attribute `edge-label-min-zoom`) — below this zoom scale, every
   drawn edge label is hidden (toggled via a `data-edge-labels-hidden` attribute on the zoomed `<g>`,
@@ -90,7 +96,8 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
   native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a drawn focus ring instead of a
   CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
-  button per node/link/hull. In both renderers, node, link, and community-hull picking keeps at
+  button per visible node/link/hull; the canvas repaints a non-color dashed/ring focus cue for the
+  currently focused node, link, or hull and uses a system color under forced colors. In both renderers, node, link, and community-hull picking keeps at
   least 24 CSS px of screen-space geometry as the viewport zoom changes; this enlarges interaction
   only, not the visible marks.
 
@@ -100,11 +107,11 @@ camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local draw
 
 **Events:** `lr-node-click` (`detail: { id, x, y }`, where `x` and `y` are the clicked node's current
 local drawing coordinates), `lr-link-click` (`detail: { source, target,
-id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller), `lr-node-enter`/
+id? }`; the optional `id` is the stable `LyraGraphLink.id` supplied by the caller), `lr-node-enter`/
 `lr-node-leave` (`detail: { id }`, hover start/end, suppressed while dragging/panning),
 `lr-link-enter`/`lr-link-leave` (`detail: { source, target, id? }`, same hover contract),
 `lr-node-expand` (`detail: { id }`, a node was double-activated — native `dblclick`, or two
-Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), `lr-community-click`
+Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-click`
 (`detail: { id }`, a hull was activated), `lr-selection-change`
 (`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
 (`detail: { k, x, y }`, a frame-coalesced camera/layout signal)
@@ -123,11 +130,11 @@ the peers loaded fine but `nodes` is empty),
 (`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
 the offscreen keyboard-roving items)
 
-**Themeable custom properties:** `--lr-node-fill` (set inline per-node from `GraphNode.color`,
+**Themeable custom properties:** `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
 falls back to `--lr-color-brand`) and `--lr-link-color` (set inline per-link from
-`GraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
+`LyraGraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).
-The ordered categorical fallback palette for a typed node with no `GraphNodeType.color` is
+The ordered categorical fallback palette for a typed node with no `LyraNodeTypeStyle.color` is
 `--lr-graph-cat-1` (default `var(--lr-theme-graph-cat-1,#8250df)`),
 `--lr-graph-cat-2` (default `var(--lr-theme-graph-cat-2,#bf3989)`),
 `--lr-graph-cat-3` (default `var(--lr-theme-graph-cat-3,#0a7d91)`),
@@ -140,7 +147,7 @@ index in `nodeTypes` and wraps every eight entries; the `--lr-theme-graph-cat-*`
 preferred theme-level overrides.
 `--lr-graph-edge-label-halo` (default `var(--lr-color-surface)`) — the legibility halo painted
 behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
-`--lr-graph-focus-halo-color` (default `var(--lr-color-brand)`) — `[part="focus-halo"]` stroke.
+`--lr-graph-focus-halo-color` (default `var(--lr-color-brand)`) — `[part="focus-halo"]` and canvas keyboard-focus cue stroke.
 `--lr-graph-selected-color` (default `var(--lr-color-success)`) — selected node/link stroke.
 `--lr-graph-dimmed-opacity` (default `0.35`) — opacity of a node/link listed in
 `dimmedNodeIds`/`dimmedLinkIds`.
@@ -162,24 +169,40 @@ localized `part="error"` alert. Install with
 ```html
 <lr-graph style="display:block;height:500px"></lr-graph>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';
+  import "@aceshooting/lyra-ui/components/retrieval/graph/graph.js";
 
-  const g = document.querySelector('lr-graph');
+  const g = document.querySelector("lr-graph");
   g.nodes = [
-    { id: 'a', label: 'A', accessibleLabel: 'Source document A', description: 'The source document' },
-    { id: 'b', label: 'B', description: 'The cited document' },
+    {
+      id: "a",
+      label: "A",
+      accessibleLabel: "Source document A",
+      description: "The source document",
+    },
+    { id: "b", label: "B", description: "The cited document" },
   ];
-  g.links = [{
-    id: 'citation-a-b', source: 'a', target: 'b', label: 'cites',
-    accessibleLabel: 'Document A cites document B', description: 'Citation relationship',
-    directed: true, color: 'var(--lr-color-brand)', dash: [6, 3],
-  }];
-  g.addEventListener('lr-node-click', (e) => console.log(e.detail.id));
-  g.addEventListener('lr-link-click', (e) => console.log(e.detail.id, e.detail.source, e.detail.target));
+  g.links = [
+    {
+      id: "citation-a-b",
+      source: "a",
+      target: "b",
+      label: "cites",
+      accessibleLabel: "Document A cites document B",
+      description: "Citation relationship",
+      directed: true,
+      color: "var(--lr-color-brand)",
+      dash: [6, 3],
+    },
+  ];
+  g.addEventListener("lr-node-click", (e) => console.log(e.detail.id));
+  g.addEventListener("lr-link-click", (e) =>
+    console.log(e.detail.id, e.detail.source, e.detail.target)
+  );
 </script>
 ```
 
 **Known gotchas:**
+
 - per-tick full re-render is expensive: every d3-force tick (up to ~300 by default,
   continuously while dragging via `alphaTarget(0.3)`) writes node/link positions straight onto the
   already-rendered DOM via `setAttribute()` rather than reassigning `simNodes`/`simLinks` (that
@@ -203,9 +226,9 @@ localized `part="error"` alert. Install with
   load (for example, because they are not installed), the graph fails closed with a localized
   neutral `part="error"` message and announces the transition through a shared assertive light-DOM
   region instead of leaving an empty SVG.
-- `GraphNode.color`, node-type colors, `GraphLink.color`, and community colors are accepted only
+- `LyraGraphNode.color`, node-type colors, `LyraGraphLink.color`, and community colors are accepted only
   when the browser parses them as CSS `color`; declaration breaks and `url()` paint servers are
-  ignored in favor of the normal token/palette fallback. `GraphLink.dash` is used only when every
+  ignored in favor of the normal token/palette fallback. `LyraGraphLink.dash` is used only when every
   entry is finite and non-negative; an empty or invalid array falls back to a solid line rather
   than partially applying malformed SVG stroke data.
 - a structural `nodes`/`links` change now carries over each already-settled node's position (and any
@@ -218,15 +241,16 @@ localized `part="error"` alert. Install with
   ~300 rendered frames; user-initiated motion (dragging a node) is unaffected either way.
 - in canvas mode, `pointercancel`, lost pointer capture, and disconnect all release a live node's
   force pin and reset the simulation target; a canceled drag never leaves the node pinned.
-- the `<svg part="svg">` now carries `role="group"` and an `aria-label` summarizing the node/link
-  counts (e.g. "Node-link diagram with 5 nodes and 4 links"), and node `<text part="label">`s are
-  `aria-hidden="true"` (their content is already covered by each node's own `aria-label`).
+- With no authored host `aria-label`, the SVG/canvas carries `role="group"` and the localized
+  node/link-count name (e.g. "Node-link diagram with 5 nodes and 4 links"). An authored host label
+  moves that one graph role/name to the host instead of duplicating it. Node `<text part="label">`s
+  stay `aria-hidden="true"` because each node control already owns its label.
 - `nodeTypes` and `showEdgeLabels` are live-reactive post-mount: either changing re-scans/rebinds the
   cached per-node and per-link DOM element arrays, alongside the existing `simNodes`/`simLinks`
   structural-change trigger — no need to also touch `nodes`/`links` to see a type/shape/color or
   edge-label change take effect.
 - when `showEdgeLabels` is `false` (the default), a resolved link renders as a bare `<line
-  part="link">` with no extra wrapping element, so existing consumers who never set it see
+part="link">` with no extra wrapping element, so existing consumers who never set it see
   byte-for-byte identical link DOM; setting it wraps each link's `<line>` and its
   `[part="link-label"]` `<text>` together. `edgeLabelMinZoom`'s hide/show gate is applied once at
   mount (against d3-zoom's known identity transform) as well as on every subsequent pan/zoom, so

@@ -280,6 +280,101 @@ describe('lr-tour', () => {
     expect(JSON.parse(JSON.stringify(tour.steps))).to.deep.equal(snapshot);
   });
 
+  it('clone-normalizes a bounded foreign-realm step list without invoking hostile records', async () => {
+    const tour = await fixture<LyraTour>(html`<lr-tour></lr-tour>`);
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const foreignSteps = new frame.contentWindow!.Array();
+      const hostile = {};
+      Object.defineProperty(hostile, 'stepId', {
+        get(): never {
+          throw new Error('hostile step id');
+        },
+      });
+      const mutable = {
+        stepId: 'safe',
+        target: '#tour-target-0',
+        heading: 'Safe heading',
+        content: 'Safe body',
+        placement: 'not-a-placement',
+        spotlightPadding: Number.POSITIVE_INFINITY,
+        interactiveTarget: 'yes',
+        hidePrevious: 1,
+      };
+      foreignSteps.push(
+        hostile,
+        Object.create({
+          stepId: 'inherited',
+          target: '#tour-target-0',
+          heading: 'Inherited data',
+        }),
+        {
+          stepId: 'forged-target',
+          target: {
+            nodeType: 1,
+            namespaceURI: 'http://www.w3.org/1999/xhtml',
+            localName: 'button',
+            matches: () => true,
+          },
+          heading: 'Structural lookalikes are not DOM targets',
+        },
+        { stepId: '', target: '#tour-target-0', heading: 'Missing id' },
+        mutable,
+        { stepId: 'later', target: '#tour-target-1', heading: 'Later heading' },
+      );
+
+      expect(() => {
+        tour.steps = foreignSteps as unknown as readonly LyraTourStep[];
+      }).to.not.throw();
+      await tour.updateComplete;
+
+      mutable.heading = 'Caller mutation';
+      expect(tour.steps.map((step) => step.stepId)).to.deep.equal(['safe', 'later']);
+      expect(tour.steps[0]).to.deep.equal({
+        stepId: 'safe',
+        target: '#tour-target-0',
+        heading: 'Safe heading',
+        content: 'Safe body',
+      });
+      expect(Object.isFrozen(tour.steps)).to.equal(true);
+      expect(Object.isFrozen(tour.steps[0])).to.equal(true);
+
+      tour.steps = Array.from({ length: 300 }, (_, index) => ({
+        stepId: `step-${index}`,
+        target: '#tour-target-0',
+        heading: `Step ${index}`,
+      }));
+      expect(tour.steps.length).to.equal(256);
+
+      tour.steps = [{
+        stepId: 'x'.repeat(300),
+        target: `#${'y'.repeat(9_000)}`,
+        heading: 'h'.repeat(5_000),
+        content: 'c'.repeat(70_000),
+        spotlightPadding: 1_000_000,
+      }];
+      expect(tour.steps[0]!.stepId.length).to.equal(256);
+      expect((tour.steps[0]!.target as string).length).to.equal(8_192);
+      expect(tour.steps[0]!.heading.length).to.equal(4_096);
+      expect(tour.steps[0]!.content!.length).to.equal(65_536);
+      expect(tour.steps[0]!.spotlightPadding).to.equal(10_000);
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('fails closed when a revoked array proxy is assigned to steps', async () => {
+    const tour = await fixture<LyraTour>(html`<lr-tour .steps=${makeSteps(1)}></lr-tour>`);
+    const { proxy, revoke } = Proxy.revocable(makeSteps(1), {});
+    revoke();
+
+    expect(() => {
+      tour.steps = proxy;
+    }).to.not.throw();
+    expect(tour.steps.length).to.equal(0);
+  });
+
   it('reflects activeIndex as an attribute and updates it via next()/back()/goToStep()', async () => {
     const el = (await fixture(
       html`<div>

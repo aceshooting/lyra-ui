@@ -16,17 +16,18 @@
 ## `lr-dock-panel`
 
 A single panel docked to one edge of whatever contains it, resizable by dragging its inner edge.
-First-party invention (no `wa-*`/`sl-*` counterpart). Unlike `lr-split` (which owns and lays out N
+First-party invention (no `wa-*`/`sl-*` counterpart). Unlike `lr-multi-split` (which owns and lays out N
 sibling panels, and requires restructuring a layout so every panel becomes its direct child), this is
 one self-contained element you drop next to your existing content — typically as an absolutely-
 positioned child of a `position: relative` parent, or as a flex item alongside a main-content sibling.
 It deliberately imposes no `position`/`inset` of its own: it only manages its own size along the
 resize axis (`inline-size` for `start`/`end`, `block-size` for `top`/`bottom`) and fills 100% of the
-cross axis, leaving where it sits in the page entirely up to the consumer's own layout. `lr-split`
+cross axis, leaving where it sits in the page entirely up to the consumer's own layout. `lr-multi-split`
 stays the right primitive for the multi-sibling-panel case; this is the primitive for the single-edge-
 docked case.
 
 **Properties:**
+
 - `edge: 'start' | 'end' | 'top' | 'bottom' = 'end'` (reflected) — which edge of the panel's own
   container it's docked to. `start`/`end` are logical-inline (mirror left/right depending on writing
   direction); `top`/`bottom` are block-direction and unaffected by RTL.
@@ -34,8 +35,9 @@ docked case.
 - `minExtent: string = '160px'` (attribute `min-extent`) — minimum resize bound, as a CSS length.
 - `maxExtent: string = ''` (attribute `max-extent`) — maximum resize bound. Empty means "no explicit
   cap": the live extent of the containing element is used instead (falling back to the viewport if
-  there's no parent, e.g. not yet connected), so the panel still can't be dragged wider/taller than
-  its container.
+  there's no parent, e.g. not yet connected). An explicit maximum is still capped to that live
+  containing extent, and an effective minimum above the maximum is reduced to the maximum, so the
+  separator always exposes `min <= now <= max`.
 - `collapsible: boolean = false` (reflected)
 - `collapsed: boolean = false` (reflected)
 - `resizable: boolean = true` (reflected) — when `false`, no drag handle renders at all and the panel
@@ -45,31 +47,35 @@ docked case.
   a true-defaulting property.
 
 **Renamed in 8.0.0: `size`/`min-size`/`max-size` are now `extent`/`min-extent`/`max-extent`**, and
-`lr-resize`'s detail key moved with them (`{ size }` → `{ extent }`). Everywhere else in the library
+the then-current resize detail key moved with them (`{ size }` → `{ extent }`). Everywhere else in the library
 `size` names a tier on the shared six-step ladder; here it was an arbitrary CSS length, which is the
 collision the rename resolves. It is a clean rename with no alias, and it fails quietly in both
 directions: `size="320px"` is now an unknown attribute the browser ignores, so the panel silently
-renders at the `280px` default, and `event.detail.size` reads `undefined`. Rename the attributes and
-the detail key in the same change.
+renders at the `280px` default, and `event.detail.size` reads `undefined`.
 
-**Exported helper:** `parseLengthPx(length: string, containerPx: number, fontSizeEl: Element =
-document.documentElement): number | undefined` — resolves an arbitrary CSS length (`px`, `rem`, `em`,
-`vw`, `vh`, `%`, or a bare/unitless number treated as `px`) to a live pixel value without a DOM-probe
-measurement, since `min-extent`/`max-extent` are pure constraints that are never themselves rendered
-anywhere. `rem` resolves against the document root's font size; `em` resolves against `fontSizeEl`'s
-own computed font size; `%` resolves against `containerPx`. Returns `undefined` for an
-empty/unparseable string. Used internally to resolve `min-extent`/`max-extent`; the panel's
-*current* extent is instead always read back live from `getBoundingClientRect()`, which handles any
-unit for free.
+**Exported types:** `LyraDockPanelEdge = 'start' | 'end' | 'top' | 'bottom'`, readonly
+`LyraDockPanelResizeDetail = { extent: string }`, readonly
+`LyraDockPanelCollapseChangeDetail = { collapsed: boolean }`, and `LyraDockPanelEventMap`.
+The former dock-specific `parseLengthPx()` export is removed; dock length resolution is now a
+private adapter over the library's canonical CSS-length resolver, with container/viewport units
+resolved in the host's owner realm.
 
 **Events:**
-- `lr-resize` — `detail: { extent }` (a `px` CSS length string), fired on every drag step, drag
-  release, and keyboard step.
+
+- `lr-resize-input` — frozen `detail: { extent }` (a `px` CSS length string), fired for each genuine
+  pointer or keyboard value transition. Fully clamped/no-op attempts emit nothing.
+- `lr-resize-change` — a fresh frozen detail snapshot, fired exactly once on genuine `pointerup`
+  after at least one value transition, and after each genuine keyboard step. `pointercancel`, lost
+  capture, disconnect/adoption, live policy/geometry mutation, and no-op attempts emit nothing.
 - `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the built-in
   collapse toggle. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a
   consumer assigns `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: {
-  collapsed }` is the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed`
-  directly).
+collapsed }` is the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed`
+  directly). Both details are fresh readonly/frozen snapshots.
+
+The Lyra-original v9 event migration is mechanical: listen for `lr-resize-input` for live layout
+feedback and `lr-resize-change` for persistence/telemetry instead of the removed `lr-resize` name.
+Type imports likewise move from `DockPanel*` to `LyraDockPanel*`.
 
 **Slots:** default — the panel's own content.
 
@@ -104,7 +110,8 @@ being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--
     min-extent="200px"
     max-extent="480px"
     collapsible
-    @lr-resize=${(e) => console.log(e.detail.extent)}
+    @lr-resize-input=${(e) => updateLayoutPreview(e.detail.extent)}
+    @lr-resize-change=${(e) => persistExtent(e.detail.extent)}
     @lr-collapse-change=${(e) => console.log(e.detail.collapsed)}
   >
     <div>Sidebar content — a chat thread list, an inspector, anything.</div>
@@ -112,18 +119,24 @@ being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--
 </div>
 ```
 
-Pointer-drag-resize mirrors `lr-split`'s pointer-capture technique (`pointerdown` captures the
-pointer on the handle; `pointermove` computes a new size; `pointerup`/`pointercancel`/
-`lostpointercapture` all release it, since a drag can end without a clean `pointerup`) but reasons in
-raw pixels throughout rather than percent. Every resize — drag step, drag release, or a keyboard step
+Pointer-drag-resize admits only a primary pointer using its primary button, then mirrors
+`lr-multi-split`'s pointer-capture technique (`pointerdown` captures the pointer on the handle;
+`pointermove` computes a new size; `pointerup`/`pointercancel`/`lostpointercapture` all release it,
+since a drag can end without a clean `pointerup`) but reasons in raw pixels throughout rather than
+percent. A genuine interaction — pointer movement or a keyboard step
 (<kbd>ArrowLeft</kbd>/<kbd>ArrowRight</kbd> for the inline axis, <kbd>ArrowUp</kbd>/<kbd>ArrowDown</kbd>
-for the block axis, 16px per step) — always commits `extent` as a rounded `px` string regardless of
-what unit `extent`/`min-extent`/`max-extent` were originally expressed in.
+for the block axis, 16px per step) — commits `extent` as a rounded `px` string regardless of what
+unit `extent`/`min-extent`/`max-extent` were originally expressed in. Passive container/bounds
+reconciliation emits neither resize event and preserves an in-range authored relative unit.
 
 **Known gotchas:**
+
 - `collapsed` doesn't zero the panel's box — it shrinks to the persistent rail size
   (`--lr-dock-panel-collapsed-size`). `extent` itself is left untouched while collapsed, so
-  re-expanding restores exactly what it was.
+  re-expanding restores what it was unless the current bounds require a valid clamp.
+- Parent or flex allocation shrink, direct out-of-range property writes, and live min/max changes
+  reconcile atomically. A later container grow does not silently restore an extent that was clamped
+  during shrink.
 - `handle` only renders while `resizable && !collapsed`; `collapse-toggle` only renders while
   `collapsible` — a panel with both `false` renders neither control, just fixed-size slotted content.
   `resizable` and `collapsed` interact: dragging is disabled whenever `collapsed` is `true`, even if

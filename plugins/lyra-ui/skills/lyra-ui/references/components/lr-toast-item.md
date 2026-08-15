@@ -20,7 +20,8 @@ Stacking toast/notification region. Mirrors `<wa-toast>`/`<wa-toast-item>` under
 
 ### `lr-toast`
 
-One per page recommended — the region.
+A placement-specific region. The imperative helper maintains one region for each
+`ownerDocument` + `placement` pair; manually authored regions remain independent.
 
 **Properties:**
 - `placement: ToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
@@ -29,12 +30,34 @@ One per page recommended — the region.
   Start/end follow direction, center placements use that rectangle's midpoint even when the inline
   safe-area insets are asymmetric, and an oversized stack is capped to its usable inline size.
 
-**Methods:** `async create(message: string, options?: ToastCreateOptions): Promise<LyraToastItem>` —
-`ToastCreateOptions = { variant?, duration?, size?, withIcon? }`. Its `size` accepts the canonical
-`2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; either spelling is preserved by
-the created item's getter and reflected attribute.
+**Methods:** `create(options: LyraToastOptions): Promise<LyraToastItem>` is the canonical form;
+`create(message: string, options?: ToastCreateOptions)` remains as a compatibility overload.
+`LyraToastOptions` contains `message`, optional `placement`, `ownerDocument`, `variant`, `duration`,
+`size`, `withIcon`, `icon`, and `action`; `ToastCreateOptions` omits `message` and `placement`.
+`icon` accepts text, a DOM node, a Lit template, or a target-document factory returning one of
+those. Strings are always text, never HTML; cross-document nodes are imported into the region's
+document. `action` creates a native button from `{ label, onClick }`. The options' `ownerDocument`,
+and `placement`, when supplied directly to a region, must match that region. Calling `create()`
+while the region is detached rejects immediately instead of leaving a render-dependent promise pending. `size` accepts
+the canonical `2xs`/`xs`/`s`/`m`/`l`/`xl` values plus `small`/`medium`/`large`; either spelling is
+preserved by the created item's getter and reflected attribute.
 
-**Events:** none.
+**Live members:** `stack: HTMLElement | null` returns the rendered `[part="stack"]` element, or
+`null` before the render root is populated. Its identity remains stable across ordinary updates and
+reconnection.
+
+The region keeps exactly three items active. Later items enter a hidden, inert FIFO queue capped at
+twenty; their show lifecycle and auto-dismiss timer do not start until promotion. Removing an active
+item promotes the oldest queued item. A visible standalone item moved into a full region is
+deactivated and timer-paused without replaying `lr-show`, then resumes from its remaining duration
+when promoted; its progress ring resumes at the same elapsed fraction as that JavaScript countdown.
+The visible stack is safe-area bounded and vertically scrollable, so all three active items and their
+controls remain keyboard-reachable even with long localized content.
+
+**Events:** `lr-toast-overflow` (noncancelable, `detail: { count: number }`) reports how many oldest
+queued items were discarded when admission exceeded the twenty-item queue. Losses in one synchronous
+burst coalesce into one event and one localized polite announcement; `create()` retains its existing
+promise/result contract.
 
 **Slots:** default (`<lr-toast-item>` children)
 
@@ -64,12 +87,18 @@ A single notification.
 - `withIcon: boolean = false` (attribute `with-icon`)
 
 **Methods:** `async hide(): Promise<void>` — plays the hide animation, then removes itself from the
-DOM.
+DOM. `toastItemElement: HTMLElement | null` exposes the live `[part="toast-item"]` surface (or
+`null` before rendering) and remains the same node across ordinary updates/reconnection.
 
-**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`. `lr-hide` is the cancelable
-pre-hide veto point. Vetoing an auto-dismiss expiry leaves the item visible and restarts the full
-current normalized `duration`; repeated vetoes retry at that same interval. Vetoing a manual
-`hide()` leaves any active countdown at its current elapsed position.
+**Events:** `lr-show`, `lr-after-show`, `lr-hide`, `lr-after-hide`. `lr-show` and `lr-hide` are the
+cancelable before-transition veto points. The item stays hidden and inert throughout `lr-show`;
+vetoing its initial request releases it from the region without an after-event or timer. Re-entering
+the same show/hide request from its own before-event coalesces onto that request, so the outer veto
+remains authoritative and the lifecycle event fires once. Vetoing an auto-dismiss expiry leaves the
+item visible and restarts the full current normalized `duration`; repeated vetoes retry at that same
+interval. Vetoing a manual `hide()` leaves any active countdown at its current elapsed position. An
+accepted show or hide interrupted by disconnection resumes after reconnection and emits its matching
+`lr-after-*` event exactly once; no terminal event fires while the item is detached.
 
 **Slots:** default (message), `icon`
 
@@ -117,6 +146,12 @@ A `duration` change while the timer is actively counting down reschedules it imm
 the new value instead of waiting for the next pause/resume cycle. A vetoed timer expiry restarts
 that full normalized value; if hover/focus or a disconnect begins during the veto event, the retry
 stays paused and starts from the full value only after the item resumes/reconnects.
+Accessible message extraction follows same-root `aria-labelledby` references and observes their
+targets, lookup roots, and every open shadow root actually traversed for text, including targets
+outside the toast subtree. Traversal is bounded; when a ceiling is reached, the announcement carries
+an explicit ellipsis and the close action uses the localized truncated-context template instead of
+silently treating the bounded prefix as whole. If no prefix fits before a ceiling, both surfaces use
+the localized `toastContentIncomplete` fallback so the missing content remains explicit.
 
 ### `toast()`
 
@@ -127,17 +162,23 @@ needed:
 import { toast } from '@aceshooting/lyra-ui/components/overlays/toast/toaster.js';
 
 toast('Saved');
-toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick: (item) => {/*...*/} } });
+toast({
+  message: 'Deleted',
+  variant: 'danger',
+  icon: (ownerDocument) => ownerDocument.createTextNode('!'),
+  action: { label: 'Undo', onClick: (item) => {/*...*/} },
+});
 ```
 
-`toast(input: ToastOptions | string): ToastHandle` where
-`ToastOptions = ToastCreateOptions & { message: string; placement?: ToastPlacement; action?: { label: string; onClick: (item: LyraToastItem) => void } }`,
-and `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. Because it extends
-`ToastCreateOptions`, the helper accepts the same long `small`/`medium`/`large` size aliases and
-preserves them on the created item identically. It lazily mounts (and
-re-mounts if removed) **one singleton `<lr-toast>` region per distinct `placement`** on
-`document.body` — a `toast()` call targeting one placement never relocates toasts already showing
-at another, since `placement` is a per-call option rather than a single global region's setting.
+`toast(input: LyraToastOptions | string): ToastHandle`, where `ToastOptions` remains a deprecated
+type alias for `LyraToastOptions`, and
+`ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. The canonical options are
+shared byte-for-byte with the region's object-form `create()`, including `ownerDocument`, safe icon
+payloads/factories, actions, and the long `small`/`medium`/`large` size aliases. It lazily mounts
+(and re-mounts if removed) **one singleton `<lr-toast>` region per distinct `ownerDocument` and
+`placement`** on that document's body — a call targeting one placement/document never relocates
+toasts already showing in another. A foreign document must have the toast elements registered in
+its own custom-element registry; otherwise the returned `item` promise rejects explicitly.
 
 ```html
 <script type="module">
@@ -153,16 +194,19 @@ at another, since `placement` is a per-call option rather than a single global r
   message, and appending an action does not re-announce it.
 - the close button's accessible name is derived from the toast's own message text (the first 40
   grapheme clusters when it must be shortened, falling back to bare `"Close"` only when the toast
-  has no text content) rather than a bare `"Close"` on every instance — useful when several toasts
+  has no text content and extraction completed) rather than a bare `"Close"` on every instance — useful when several toasts
   are stacked and a screen-reader or switch-access user needs to tell their close buttons apart
   without activating one first. On a legacy engine without `Intl.Segmenter`, it retains the whole
   label rather than splitting a grapheme. The localized `closeWithTruncatedContext` template owns
   truncation punctuation and word order. Rich non-interactive message markup contributes its text,
   named-slot/icon and actionable content do not, and live message text mutations or reassignment
   update the name through nested forwarding slots. Hidden, inert, CSS-hidden and `aria-hidden`
-  message branches are excluded. Observation, animation frames, elapsed-time clocks and
-  completion/auto-dismiss timers follow the item's owner window after iframe adoption and cancel
-  through the same window that scheduled them.
+  message branches are excluded. Same-root external `aria-labelledby` targets and the open shadow
+  roots traversed for their text remain synchronized across reconnect, replacement, and adoption.
+  A bounded traversal prefix is explicitly marked as incomplete; if no prefix is available, the
+  localized `toastContentIncomplete` fallback keeps both the announcement and close name truthful.
+  Observation, animation frames, elapsed-time clocks and completion/auto-dismiss timers follow the
+  item's owner window after iframe adoption and cancel through the same window that scheduled them.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`
@@ -173,6 +217,8 @@ at another, since `placement` is a per-call option rather than a single global r
   close control, or back to the connected element that held focus before the toast when no adjacent
   item remains.
 - Prefer the `toast()` helper over manually creating `<lr-toast>`/`<lr-toast-item>` — it already
-  handles the singleton-region and remount-if-removed logic.
+  handles the singleton-region and remount-if-removed logic. The helper and `lr-alert.toast()` never
+  fall back to an unbounded unknown region in an owner document where the controller is unregistered;
+  unavailable alert requests are removed and their existing `Promise<void>` settles.
 
 ---

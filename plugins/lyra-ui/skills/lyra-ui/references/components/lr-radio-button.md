@@ -48,6 +48,9 @@ inline padding and font size, so a `size="small"` radio button sits at the same 
 `size="small"` `lr-button` beside it. `pill` is the one inherited property that does _more_ here
 than on a plain `lr-radio` — see the radius note below.
 
+The inherited derived reads `effectiveName` and `effectiveSize` expose the resolved group name and
+size used by the button's form and chrome logic.
+
 **Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
 then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
 aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
@@ -63,15 +66,18 @@ Host `aria-label` is forwarded to the internal radio by attribute presence, incl
 
 **CSS parts:** `base` / `button` / `control`, `start` / `prefix` (the same leading wrapper),
 `label`, and `end` / `suffix` (the same trailing wrapper). The interactive node carries `checked`
-and `button--checked` when selected, plus `disabled` when disabled, because an attribute selector
+and `button--checked` when selected, plus `disabled` under own, group, or fieldset disablement,
+because an attribute selector
 after `::part()` never matches.
 
 **Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
 uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
 it at `--lr-form-control-radius` — the active `size` tier's shared corner radius — and `pill` swaps
-it back to `--lr-radius-pill`. Only the _outer_ corners of a run take it: consecutive siblings
-collapse their shared borders, so the radius lands on the first button's leading corners and the
-last button's trailing ones. `--lr-radio-button-gap` (default `var(--lr-space-xs)`) controls the
+it back to `--lr-radius-pill`. Only the _outer_ corners of an actually contiguous run take it: an
+owning horizontal group measures same-line adjacency after layout, then collapses shared borders.
+The ordinary group gap, a plain-radio interruption, vertical layout, or a flex wrap starts a new
+fully rounded run, and live add/remove/reorder plus LTR/RTL changes are reconciled. Standalone
+siblings are never guessed into a run. `--lr-radio-button-gap` (default `var(--lr-space-xs)`) controls the
 spacing between the start/prefix wrapper, label, and end/suffix wrapper in both `<lr-radio-button>`
 and `<lr-radio appearance="button">` without changing the shared spacing token used elsewhere.
 Button paint states can be rethemed without changing shared tokens:

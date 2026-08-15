@@ -27,6 +27,26 @@ it('inherits public segment paint and radius across an appearance fallback', asy
   expect(computed.borderTopLeftRadius).to.equal('17px');
 });
 
+it("restores every nonempty declared default when its attribute is removed", async () => {
+  const el = (await fixture(html`
+    <lr-otp-input
+      appearance="contained"
+      length="8"
+      type="alphanumeric"
+      case="upper"
+      autocomplete="off"
+    ></lr-otp-input>
+  `)) as LyraOtpInput;
+  for (const name of ["appearance", "length", "type", "case", "autocomplete"])
+    el.removeAttribute(name);
+  await el.updateComplete;
+  expect(el.appearance).to.equal("outlined");
+  expect(el.length).to.equal(6);
+  expect(el.type).to.equal("numeric");
+  expect(el.case).to.equal("preserve");
+  expect(el.autocomplete).to.equal("one-time-code");
+});
+
 it('uses scoped active and invalid segment paint inherited from an ancestor', async () => {
   const activeWrapper = await fixture<HTMLElement>(html`
     <div style="--lr-transition-fast: 0ms; --lr-otp-input-active-border-color: rgb(1, 2, 3); --lr-otp-input-active-ring-color: rgb(4, 5, 6)">
@@ -99,7 +119,7 @@ it('emits one cancelable lr-invalid alias when a validity check fails', async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect((aliases[0].target) === (el)).to.equal(true);
+  expect(aliases[0].target === el).to.equal(true);
   expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
   expect(aliases[0].cancelable).to.be.true;
 });
@@ -273,7 +293,8 @@ it('stops value normalization as soon as the effective segment cap is filled', (
 
 it('reuses one bounded format projection until the public format string changes', () => {
   const el = document.createElement('lr-otp-input') as LyraOtpInput;
-  const withFormatCache = el as unknown as { readonly formattedCells: readonly unknown[] | null };
+  const withFormatCache = el as unknown as { readonly formattedCells: readonly unknown[] | null;
+  };
   el.format = '##-##';
   const first = withFormatCache.formattedCells;
   const second = withFormatCache.formattedCells;
@@ -293,7 +314,7 @@ it('bounds range replacements and the existing native value before invoking setR
   const originalSetRangeText = native.setRangeText;
   let receivedReplacementLength = 0;
   let receivedValueLength = 0;
-  native.setRangeText = (function (
+  native.setRangeText = function (
     this: HTMLInputElement,
     replacement: string,
     start?: number,
@@ -304,7 +325,7 @@ it('bounds range replacements and the existing native value before invoking setR
     receivedValueLength = this.value.length;
     if (start === undefined || end === undefined) Reflect.apply(originalSetRangeText, this, [replacement]);
     else Reflect.apply(originalSetRangeText, this, [replacement, start, end, selectMode]);
-  }) as HTMLInputElement['setRangeText'];
+  } as HTMLInputElement['setRangeText'];
 
   try {
     el.setRangeText(`34${'9'.repeat(1_000_000)}`, 0, 0, 'end');
@@ -950,7 +971,7 @@ it('emits one native change when a fixed-cell keyboard edit settles on blur', as
   el.blur();
 
   expect(changes).to.have.lengthOf(1);
-  expect((changes[0].target) === (el)).to.equal(true);
+  expect(changes[0].target === el).to.equal(true);
   expect(changes[0].bubbles && changes[0].composed).to.equal(true);
   expect(changes[0].cancelable).to.equal(false);
 });
@@ -1457,7 +1478,7 @@ it('relays exactly one host-target native non-cancelable change event', async ()
 
   expect(events).to.have.lengthOf(1);
   expect(events[0] instanceof Event).to.be.true;
-  expect((events[0].target) === (el)).to.equal(true);
+  expect(events[0].target === el).to.equal(true);
   expect(events[0].bubbles && events[0].composed).to.be.true;
   expect(events[0].cancelable).to.be.false;
 });

@@ -37,7 +37,7 @@ export interface RetrievalResultsSelectDetail {
 
 export interface LyraRetrievalResultsEventMap {
   "lr-select": CustomEvent<RetrievalResultsSelectDetail>;
-  "lr-load-more": CustomEvent<undefined>;
+  "lr-load-more": CustomEvent<null>;
   "lr-chunk-open": CustomEvent<{
     id: string;
     sourceId: string;

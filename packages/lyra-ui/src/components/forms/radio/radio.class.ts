@@ -17,7 +17,9 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
-import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import {
+  declaredDefaultConverter,
+  omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -27,15 +29,15 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_radioRequired } from '../../..
 
 
 export interface LyraRadioEventMap {
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
   input: Event;
   change: Event;
   'lr-input': CustomEvent<{ checked: boolean; value: string }>;
   'lr-change': CustomEvent<{ checked: boolean; value: string }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
 }
 
 interface RadioGroupController {
@@ -172,12 +174,14 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       useDefault: true,
       noAccessor: true,
     },
-    appearance: { reflect: true },
+    appearance: { reflect: true,
+      converter: declaredDefaultConverter<RadioAppearance>("default"),
+    },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     pill: { type: Boolean, reflect: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
-    size: { reflect: true },
+    size: { reflect: true, converter: declaredDefaultConverter<LyraSize>("m") },
     value: { reflect: true, noAccessor: true },
   };
 
@@ -304,8 +308,10 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.requestUpdate('value', old);
   }
   get effectiveDisabled(): boolean {
-    return this.disabled || this._fieldsetDisabled ||
-      (Boolean(this.currentGroup()) && this._groupDisabled);
+    return (
+      this.disabled || this._fieldsetDisabled ||
+      (Boolean(this.currentGroup()) && this._groupDisabled)
+    );
   }
   get effectiveRequired(): boolean {
     return this.required || (this.currentGroup() ? this._groupRequired : false);
@@ -335,7 +341,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       () => this.currentGroup()?.customError ?? this.validityController.customValidityMessage,
     );
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     this.syncFormState();
   }
 
@@ -603,7 +609,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     if (!this.isConnected) return null;
     const closest = (this as unknown as { closest?: (selector: string) => Element | null }).closest;
     if (typeof closest !== 'function') return null;
-    const group = closest.call(this, tag('radio-group')) as (HTMLElement & RadioGroupController) | null;
+    const group = closest.call(this, tag('radio-group')) as
+      | (HTMLElement & RadioGroupController) | null;
     return group?.isConnected && group.ownsRadio?.(this) ? group : null;
   }
   private group(): RadioGroupController | null {

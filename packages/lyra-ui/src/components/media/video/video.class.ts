@@ -47,8 +47,8 @@ export interface LyraVideoEventMap {
   volumechange: Event;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 
 interface ThumbnailCue {

@@ -29,7 +29,7 @@ const strings: LyraLocaleStrings = {
   toolParamBooleanTrue: 'Wahr',
   toolParamBooleanFalse: 'Falsch',
   toolParamSchemaLimit:
-    'Schemata für Werkzeugparameter unterstützen höchstens {fields} Felder und {options} Auswahlmöglichkeiten pro Feld.',
+    'Schemata für Tool-Parameter unterstützen höchstens {fields} Felder und {options} Auswahlmöglichkeiten pro Feld.',
   testResultsLimit: 'Nur die ersten {count} Testergebnisse werden angezeigt.',
   toolTimelineLimit: 'Es werden höchstens {count} Tool-Aufrufe angezeigt.',
   toolSelectLimit: 'Nur die ersten {count} Tools werden angezeigt.',

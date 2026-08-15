@@ -34,6 +34,7 @@ import {
 } from '../../../internal/clipboard.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_xmlViewerChildCount, LYRA_DEFAULT_xmlViewerCollapseNode, LYRA_DEFAULT_xmlViewerCopyDocument, LYRA_DEFAULT_xmlViewerCopyNode, LYRA_DEFAULT_xmlViewerExpandNode, LYRA_DEFAULT_xmlViewerLabel, LYRA_DEFAULT_xmlViewerParseError, LYRA_DEFAULT_xmlViewerTooManyNodes } from '../../../internal/default-strings.generated.js';
@@ -42,6 +43,9 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 
 const MAX_NODES = 50_000;
 const MAX_DEPTH = 256;
+const MAX_SEARCH_MATCHES = 10_000;
+const MAX_PAINTED_HIGHLIGHTS = 100;
+const MAX_HIGHLIGHT_CANDIDATES = 1_000;
 
 type PathSegment = number | string;
 
@@ -69,6 +73,8 @@ interface SearchState {
   paths: Set<string>;
   /** Match path keys in document order -- what `activeSearchIndex` indexes into. */
   ordered: string[];
+  /** False when more than `MAX_SEARCH_MATCHES` nodes match and `ordered.length` is a lower bound. */
+  matchCountExact: boolean;
 }
 
 const EMPTY_SEARCH: SearchState = {
@@ -79,6 +85,7 @@ const EMPTY_SEARCH: SearchState = {
   forceExpand: new Set(),
   paths: new Set(),
   ordered: [],
+  matchCountExact: true,
 };
 
 type XmlState =
@@ -177,9 +184,9 @@ function resolvePath(root: Element, path: PathSegment[]): { element: Element; at
 
 export interface LyraXmlViewerEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
-  'lr-error': CustomEvent<undefined>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
@@ -229,7 +236,8 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @event lr-copy-error - A clipboard write failed. `detail: { ok: false, text, reason, error }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match
  *   index changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: {
- *   query, matchCount, activeIndex }`.
+ *   query, matchCount, matchCountExact, activeIndex }`. At most 10,000 matches are retained; a
+ *   false `matchCountExact` makes `matchCount` a lower bound.
  * @event lr-render-error - Fired when fetching or parsing the document fails, including a
  *   parse error or exceeding the node cap. `detail: { error }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -555,6 +563,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const forceExpand = new Set<string>();
     const paths = new Set<string>();
     const ordered: string[] = [];
+    let matchCountExact = true;
 
     const markAncestors = (path: PathSegment[]): void => {
       for (let i = path.length - 1; i >= 0; i--) forceExpand.add(JSON.stringify(path.slice(0, i)));
@@ -563,7 +572,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const walk = (el: Element, path: PathSegment[]): void => {
       const pathKey = JSON.stringify(path);
       paths.add(pathKey);
-      if (query) {
+      if (query && matchCountExact) {
         let hit = false;
         if (el.tagName.toLocaleLowerCase(locale).includes(query)) {
           tagMatches.add(pathKey);
@@ -588,19 +597,28 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
           hit = true;
         }
         if (hit) {
-          matches.add(pathKey);
-          ordered.push(pathKey);
-          // Reveals the match itself, not just its ancestors -- a text match specifically is
-          // gated behind its own element's expand state (see the SearchState.forceExpand doc).
-          forceExpand.add(pathKey);
-          markAncestors(path);
+          if (ordered.length === MAX_SEARCH_MATCHES) {
+            matchCountExact = false;
+            tagMatches.delete(pathKey);
+            textMatches.delete(pathKey);
+            for (const attr of Array.from(el.attributes)) {
+              attrMatches.delete(attrKey(pathKey, attr.name));
+            }
+          } else {
+            matches.add(pathKey);
+            ordered.push(pathKey);
+            // Reveals the match itself, not just its ancestors -- a text match specifically is
+            // gated behind its own element's expand state (see the SearchState.forceExpand doc).
+            forceExpand.add(pathKey);
+            markAncestors(path);
+          }
         }
       }
       elementChildren(el).forEach((child, i) => walk(child, [...path, i]));
     };
 
     if (doc.documentElement) walk(doc.documentElement, []);
-    return { matches, tagMatches, attrMatches, textMatches, forceExpand, paths, ordered };
+    return { matches, tagMatches, attrMatches, textMatches, forceExpand, paths, ordered, matchCountExact };
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
@@ -627,8 +645,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
    * document can actually resolve -- an unresolvable entry is dropped whole rather than painted at
    * some coarser granularity. `index`/`total` position each surviving entry for its localized
    * accessible name, exactly as `<lr-svg-viewer>` numbers its own region highlights; two entries
-   * resolving to the SAME element still both count toward `total`, while the first one supplied
-   * owns that row's paint.
+   * resolving to the SAME element still both count toward `total`, while the first retained one
+   * owns that row's paint. Painting retains at most 100 resolved entries after inspecting at most
+   * 1,000 candidates; an active entry is inspected first and retained inside that cap.
    */
   private resolveHighlights(): Map<string, { highlight: LyraHighlight; index: number; total: number }> {
     const byPath = new Map<string, { highlight: LyraHighlight; index: number; total: number }>();
@@ -637,7 +656,16 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     if (!root) return byPath;
     const seen = new Set<string>();
     const resolved: Array<{ highlight: LyraHighlight; pathKey: string }> = [];
+    const active = this.highlights.find((highlight) => highlight.id === this.activeHighlightId);
+    const candidates: LyraHighlight[] = active ? [active] : [];
+    let inspected = candidates.length;
     for (const highlight of this.highlights) {
+      if (highlight === active) continue;
+      if (inspected >= MAX_HIGHLIGHT_CANDIDATES) break;
+      inspected++;
+      candidates.push(highlight);
+    }
+    for (const highlight of candidates) {
       if (seen.has(highlight.id)) continue;
       seen.add(highlight.id);
       if (highlight.anchor.kind !== 'node-path') continue;
@@ -646,6 +674,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
         highlight,
         pathKey: JSON.stringify(highlight.anchor.path.filter((s): s is number => typeof s === 'number')),
       });
+      if (resolved.length >= MAX_PAINTED_HIGHLIGHTS) break;
     }
     resolved.forEach(({ highlight, pathKey }, index) => {
       if (!byPath.has(pathKey)) byPath.set(pathKey, { highlight, index, total: resolved.length });
@@ -674,8 +703,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   }
 
   /** Case-insensitive substring search over every element's tag name, attribute names/values,
-   *  and own text, layered over the already-parsed document -- resolves the match count and
-   *  fires `lr-search-change`. Matches are re-derived automatically whenever the document
+   *  and own text, layered over the already-parsed document -- resolves at most 10,000 retained
+   *  matches and fires `lr-search-change`; `detail.matchCountExact=false` identifies that return
+   *  as a lower bound. Matches are re-derived automatically whenever the document
    *  reloads with the same query still set; the active index is clamped and the recomputed state
    *  fires `lr-search-change` again (see `setDoc()`). */
   async search(query: string): Promise<number> {
@@ -737,6 +767,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchState.ordered.length,
+      matchCountExact: this.searchState.matchCountExact,
       activeIndex: this.activeSearchIndex,
     });
   }

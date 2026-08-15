@@ -19,11 +19,12 @@
 A collapsible "Sources" panel for one chat message (`lr-source-list`) that groups a set of
 `lr-source-card` entries. First-party invention (no Web Awesome equivalent). Cards are meant to be
 direct light-DOM children of the list (plain composition — no `.items` array prop, the same shape
-`<lr-split>`'s panels take), though `lr-source-card` renders and functions fine standalone.
+`<lr-multi-split>`'s panels take), though `lr-source-card` renders and functions fine standalone.
 
 ### `lr-source-list`
 
 **Properties:**
+
 - `expanded: boolean = false` (reflected) — whether the card list is currently shown. Starts
   collapsed by default so a message's sources don't eat vertical space until asked for.
 - `label: string = ''` — header text used when `label-plural` isn't set, e.g. `"Sources"`.
@@ -59,10 +60,11 @@ while collapsed).
 ### `lr-source-card`
 
 **Properties:**
+
 - `sourceId: string = ''` (attribute `source-id`) — stable identifier matching a
   `<lr-citation-badge>` elsewhere on the page.
 - `title: string = ''` — the source's display title, e.g. a filename. Falls back to `"Untitled
-  source"` when empty.
+source"` when empty.
 - `page?: string | number` — optional page reference, e.g. `12` or `"iv"`, rendered as-is (never
   parsed/validated as a number), appended to the title as `" — p. {page}"`.
 - `href?: string` — optional URL, echoed back (unopened) in `lr-open`'s detail.
@@ -75,12 +77,13 @@ while collapsed).
   `<lr-source-list>` (or any container already drawing its own border/dividers) doesn't double it.
   `plain` wins over `compact` when both are set — nothing left to tighten. The title and toggle keep
   their brand color and hover underline under `plain`, since neither ever depended on the card
-  chrome. The exported alias `SourceCardAppearance` is retained as a name for the same union.
+  chrome. Use the shared `LyraFrame` type when authoring this property.
 
 **Events:**
+
 - `lr-expand` (`detail: { sourceId: string; expanded: boolean }`) — the per-card "Show
   more"/"Show less" toggle was activated. Unrelated to the parent `lr-source-list`'s own
-  expand/collapse, which only ever hides/shows the *set* of cards, never a single card's own content.
+  expand/collapse, which only ever hides/shows the _set_ of cards, never a single card's own content.
 - `lr-open` (`detail: { sourceId: string; href?: string }`) — the title was activated. This
   component never navigates on its own (a controlled component, the same convention
   `<lr-tool-call-chip>`'s `lr-tool-call-chip-select` follows); a listener decides what "open"
@@ -110,7 +113,9 @@ elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
 <lr-source-list label-plural="2 sources">
   <lr-source-card source-id="doc-1" title="annual_report.pdf" page="12">
     <span slot="excerpt">Revenue grew 12% year over year...</span>
-    <span slot="full">Revenue grew 12% year over year, driven primarily by...</span>
+    <span slot="full"
+      >Revenue grew 12% year over year, driven primarily by...</span
+    >
   </lr-source-card>
   <lr-source-card source-id="doc-2" title="q3_notes.md">
     <span slot="excerpt">No matching full-text chunk for this source.</span>
@@ -120,9 +125,11 @@ elsewhere. Plus shared tokens — `--lr-color-border`, `--lr-color-surface`,
   // Elsewhere, a <lr-citation-badge>'s activation handler can scroll to and
   // highlight the matching card -- neither component needs extra API surface
   // for that, only source-id to be targeted by:
-  document.addEventListener('lr-citation-activate', (e) => {
-    const card = document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`);
-    card?.scrollIntoView({ block: 'center' });
+  document.addEventListener("lr-citation-activate", (e) => {
+    const card = document.querySelector(
+      `lr-source-card[source-id="${e.detail.sourceId}"]`
+    );
+    card?.scrollIntoView({ block: "center" });
   });
 </script>
 ```
@@ -137,6 +144,7 @@ forwarding scenarios or engines that don't fire `slotchange` for content already
 time.
 
 **Known gotchas:**
+
 - `lr-source-list` does not automatically build an “N sources” plural summary: provide
   `labelPlural` when that is wanted. Its no-label fallback is localized through
   `sourceListDefaultLabel`, and a per-instance `.strings` override reaches the rendered header.

@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './pan-zoom.js';
 import type { LyraPanZoom } from './pan-zoom.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('preserves the former zoomable-frame slotted pan/zoom contract under lr-pan-zoom', async () => {
   const el = await fixture<LyraPanZoom>(html`
@@ -12,6 +13,28 @@ it('preserves the former zoomable-frame slotted pan/zoom contract under lr-pan-z
   expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('data-zoom')).to.equal('2');
   expect(el.shadowRoot!.querySelectorAll('[part="zoom-out"]').length).to.equal(1);
   expect(el.shadowRoot!.querySelectorAll('[part="zoom-in"]').length).to.equal(1);
+});
+
+it('keeps a bound-disabled zoom control visually inert on hover and press', async () => {
+  const el = await fixture<LyraPanZoom>(html`
+    <lr-pan-zoom zoom="0.5" min-zoom="0.5" max-zoom="2"></lr-pan-zoom>
+  `);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-out"]')!;
+  expect(button.disabled).to.equal(true);
+  const rest = getComputedStyle(button).backgroundColor;
+  const rect = button.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(button).backgroundColor).to.equal(rest);
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(button).backgroundColor).to.equal(rest);
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 });
 
 it('uses only pan-zoom geometry tokens after the v9 component split', async () => {

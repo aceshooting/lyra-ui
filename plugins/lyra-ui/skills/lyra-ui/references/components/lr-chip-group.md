@@ -30,36 +30,42 @@ fully-rounded treatment moved behind the new opt-in `pill` boolean. Existing mar
 radius only if you add `pill`, or set `--lr-chip-radius: var(--lr-radius-pill)` once at the app
 level. `<lr-badge>`/`<lr-tag>` made the identical shape change, with the identical `pill` opt-in.
 
+**Two breaks in 9.0.0.** The chip's leading adornment slot and CSS part are now `start`, matching
+the library-wide adornment vocabulary; migrate `slot="icon"` to `slot="start"` and
+`::part(icon)` to `::part(start)`. Also, `toggleable` is now the sole toggle-mode opt-in:
+`selected` represents only current pressed state, so add `toggleable` anywhere that previously
+relied on `<lr-chip selected>` to create an action.
+
 ### `lr-chip`
 
 **Properties:**
 - `size: '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — standard visual-density
-  scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions
+  scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions.
+  Unsupported attributes and untyped property writes normalize to reflected `m`
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
   **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
   `<lr-toast-item>` all already spelled it `variant`. It tints the whole surface using the
   loud-color-on-quiet-tint convention: background is the
   variant's quiet fill, text/icon its loud fill, both read from the shared semantic grid. `neutral`
-  deliberately opts out of that grid and falls back to a plain bordered-surface look.
+  deliberately opts out of that grid and falls back to a plain bordered-surface look. Unsupported
+  attributes and untyped property writes normalize to reflected `neutral`.
 - `removable: boolean = false` (reflected — shows the remove (×) button)
 - `disabled: boolean = false` (reflected) — disables the active native toggle/remove control,
   blocks focus and activation, and suppresses selection/removal requests without mutating state
 - `pill: boolean = false` (reflected) — **new in 8.0.0.** Fully-rounded ends instead of the default
   rounded rectangle; the same property `<lr-badge>`/`<lr-tag>` carry. Since it defaults to `false`,
   `pill="false"` is not a way to switch it off — remove the attribute, or assign `.pill = false`.
-- `selected: boolean = false` (reflected) — current value for opt-in toggle/pressed mode. Once
-  toggle mode is active, a separate native `[part='toggle-button']` owns focus, Enter/Space/click
+- `selected: boolean = false` (reflected) — current pressed value. It does not opt into interaction
+  or selected styling by itself; set `toggleable` independently. Once toggle mode is active, a
+  separate native `[part='toggle-button']` owns focus, Enter/Space/click
   activation, and explicit `"true"`/`"false"` `aria-pressed`; `[part='base']` remains a container
-  and the default-slot label is inert. Activation proposes the opposite value through the
-  cancelable `lr-chip-select` event and mutates `selected` only when that event is not prevented.
+  and the visible default-slot label is inert and aria-hidden. Activation proposes the opposite
+  value through the cancelable `lr-chip-select` event and mutates `selected` only when that event is
+  not prevented.
   Has no toggle effect when combined with `removable`, where the remove button is the sole control.
-  `false` (with `toggleable` also left at its default) reproduces the passive label-pill output.
-- `toggleable: boolean = false` (reflected) — explicit opt-in into `selected`'s toggle/pressed
-  interactive mode, independent of `selected`'s own current value. Setting `selected` to `true` at
-  any point opts in automatically and keeps `toggleable` `true` from then on (enough for a chip that
-  starts already pressed) — set `toggleable` directly instead for a chip that must be clickable from
-  the outset while starting **unselected**, e.g. an initially-inactive category filter chip, since
-  `selected`'s own default (`false`) can't otherwise be distinguished from "never opted in".
+- `toggleable: boolean = false` (reflected) — sole opt-in into the toggle/pressed interactive mode,
+  independent of `selected`'s current value. Pair it with `selected` for an initially pressed chip;
+  leave `selected` unset for an initially unpressed chip.
 - `value?: string` — opaque consumer bookkeeping value, never read, validated, or rendered by this
   component itself, only ever echoed back verbatim (including `undefined` if never set) in
   `lr-remove`'s detail
@@ -74,28 +80,40 @@ Calling `preventDefault()` keeps the current `selected` state unchanged)
 (toggle or remove button); a disabled control refuses focus/click, and a passive chip's `click()`
 retains ordinary host behavior.
 
-**Slots:** default (the chip's label content; inert in toggle mode, so move links/buttons outside a
-toggleable chip), `icon` (optional leading icon or status dot; nothing reserved for it — no extra
-gap — when left empty), `end` (optional trailing content, typically an icon, placed after the label
-and before the toggle/remove button; nothing reserved for it — no extra gap — when left empty,
-mirroring `<lr-badge>`'s identical `end` slot)
+When `removable`, `toggleable`, or `disabled` replaces a focused control, focus follows to the
+equivalent new chip control when one exists, otherwise to the nearest available composed action.
+Synchronous controlled removal receives the same repair, and a newer external focus destination is
+never overridden.
+
+**Slots:** default (the chip's label content; its flattened subtree is inert and aria-hidden in
+toggle mode, so move links/buttons outside a toggleable chip), `start` (optional decorative leading
+adornment such as an icon or status dot; its flattened subtree stays visible but is always inert
+and aria-hidden, and nothing is reserved for it — no extra gap — when left empty), `end` (optional trailing content,
+typically an icon, placed after the label and before the toggle/remove button; nothing is reserved
+for it — no extra gap — when left empty, mirroring `<lr-badge>`'s identical `end` slot). `end`
+remains ordinary consumer content in passive/removable mode, but its flattened subtree becomes
+inert and aria-hidden beneath the full-surface toggle.
 
 Toggle/remove action names follow the default slot's live visible accessible text through nested
-forwarding slots and assigned-node replacement; decorative `icon` content never leaks into them.
-Hidden, inert, CSS-hidden and `aria-hidden` label branches are excluded. A host `aria-label` wins by
-presence, so an explicitly empty value remains empty.
+forwarding slots and assigned-node replacement; decorative `start` content never leaks into them.
+Hidden, inert, CSS-hidden and `aria-hidden` label branches are excluded. When a host `aria-label`
+is present—including `aria-label=""`—the host becomes the one aggregate `role="group"` owner;
+that label is not copied onto the nested action. The toggle/remove button instead keeps its
+purpose-specific name from visible label text or the localized `select`/`remove` fallback, so the
+host and action never expose duplicate names.
 
-**CSS parts:** `base` (the pill's root container), `icon` (wrapper around the `icon` slot; hidden
-entirely while empty), `label` (non-interactive wrapper around the default slot), `end` (wrapper
-around the `end` slot; hidden entirely while empty, the same `end` csspart name `<lr-badge>` uses),
+**CSS parts:** `base` (the pill's root container), `start` (inert, aria-hidden wrapper around the
+decorative `start` slot; hidden entirely while empty), `label` (wrapper around the default slot,
+inert and aria-hidden in toggle mode), `end` (wrapper around the `end` slot; hidden entirely while
+empty and inert plus aria-hidden in toggle mode, the same `end` csspart name `<lr-badge>` uses),
 `toggle-button` (the real native toggle control, rendered over the label in toggle mode),
 `remove-button` (the remove (×) affordance, only rendered while `removable`)
 
-The toggle control's accessible name comes from a host `aria-label` first, then the chip's own
-default-slot text. An icon-only toggleable chip (a colour swatch standing in for a chart series, a
-bare status dot) has neither, so it falls back to the localized `select` message rather than
-shipping an unnamed focusable button — the same generic fallback the remove button already makes to
-`remove`.
+The toggle control's accessible name comes from the chip's default-slot text. A start-only
+toggleable chip (a colour swatch standing in for a chart series, a bare status dot) falls back to
+the localized `select` message rather than shipping an unnamed focusable button—the same generic
+fallback the remove button makes to `remove`. A host name, when supplied, remains on the aggregate
+group as described above.
 
 **Themeable custom properties:** `--lr-chip-accent`, `--lr-chip-bg`, `--lr-chip-border`
 (component-local trio swapped per `variant` rather than repeating background/color/border per part
@@ -108,7 +126,7 @@ the chip reads those generic slots and never names a variant, and sets its borde
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
 back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
 `--lr-chip-padding-inline`, `--lr-chip-gap`, `--lr-chip-icon-size` (all five are rewritten by each
-`:host([size])` rule, so setting one directly on the element overrides that step of the scale; the
+`:host([size])` rule, so setting one on the element or a theme ancestor overrides that step of the scale; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /
 `--lr-font-size-sm`), the height pair `--lr-chip-min-height` / `--lr-chip-height` (below),
 `--lr-chip-radius` (default `var(--lr-radius)`; `pill` raises it to `var(--lr-radius-pill)`) — the
@@ -123,20 +141,21 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 **Chip height — a floor and an exact cap:**
 
-- `--lr-chip-min-height` (default `--lr-size-1-5rem`) floors an **interactive** chip only — one in
-  toggle mode or with `removable` set. `2xs`/`xs`/`s`/`m` all share that `1.5rem` value because it
-  is the 24px WCAG 2.2 SC 2.5.8 target minimum and an interactive chip must never shrink below it;
-  `l` and `xl` raise it to their own taller floors. A passive display chip takes no floor from
-  this at all, and every default sits below the chip's own content-driven height, so the floor is
-  invisible until you raise it.
+- `--lr-chip-min-height` (default `--lr-size-1-5rem`) controls the component-density floor for
+  **every interactive chip**—toggleable and removable alike. The final used block size is also
+  floored by the shared `--lr-icon-button-size` target in both modes, while `l`/`xl` raise the
+  density default. A passive display chip takes no floor from this at all. The interactive base is
+  likewise allocated at least the shared target width, so its absolute toggle action cannot escape
+  into an adjacent control.
 - `--lr-chip-height` pins an **exact** height on `[part='base']` — interactive and passive chips
   alike — so a row of chips can line up with a sibling control of a known height. It is
   **undeclared by default**, which is what keeps the per-tier floor alive: `auto` is a valid
   declared value that would win over the `var()` fallback arm and make `--lr-chip-min-height` dead
   code, so never set it to `auto` — remove the declaration instead. Because the component never
   declares it, it can be set inline, from an ancestor, or from an outer-tree rule.
-  **A value below 24px is for non-interactive display chips only**; pinning an interactive chip
-  that short breaks its tap target.
+  On an interactive chip, a value below the shared target size controls only the painted density;
+  the owned action allocation still expands to the target floor and cannot overlap adjacent
+  controls.
 
 **Optional peer deps:** none.
 
@@ -153,25 +172,31 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 ### `lr-chip-group`
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
-children are the chips (the same shape `<lr-split>`'s panels / `<lr-source-list>`'s cards take,
+children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
 no `.items` array prop).
 
 **Properties:**
 - `maxVisible?: number` (attribute `max-visible`) — maximum number of assigned children shown before
   the rest collapse behind a "+N" indicator; flattened slot-forwarded children count the same as
-  direct children. Unset means no limit
+  direct children. Author-hidden or inert children do not consume capacity or inflate the hidden
+  count. Unset means no limit.
 
 **Events:** `lr-overflow-toggle` (`detail: { expanded }` — the overflow indicator was activated,
 revealing or re-collapsing the excess children; fires only from that click, i.e. only when
 `max-visible` is actually causing an overflow state — never as a side effect of `max-visible`/
 children changing on their own)
 
+When collapse, `max-visible`, or controlled child removal hides the focused chip action, focus moves
+to the nearest enabled visible chip control, then the overflow disclosure, then the stable group
+base. Focus already moved outside the group is preserved.
+
 **Slots:** default (`<lr-chip>` elements, or any content, though the chip pairing is the intended
 usage)
 
 **CSS parts:** `base` (the flex-wrap container, holds both the slot and the overflow indicator),
 `overflow-indicator` (the "+N" / "Show less" toggle button; only rendered while `max-visible` is
-actively causing an overflow — a locally-styled pill, not an instantiated real `<lr-chip>`)
+actively causing an overflow—a locally-styled pill, not an instantiated real `<lr-chip>`, with the
+shared minimum hit area in both axes)
 
 **Themeable custom properties:** `--lr-chip-group-overflow-expanded-color` (default
 `var(--lr-color-text)`) — text color of `[part="overflow-indicator"]` while expanded
@@ -206,14 +231,16 @@ re-pointing shared tokens. Left unset, rendering is unchanged. Otherwise shared 
 
 Since CSS alone can't parameterize `:nth-child` on a runtime prop, `<lr-chip-group>` reaches
 directly into the light DOM and sets each excess child's own `hidden` property once `max-visible` is
-exceeded — the same approach `<lr-split>` uses to set each panel's inline `flex`/`order`, rather
+exceeded — the same approach `<lr-multi-split>` uses to set each panel's inline `flex`/`order`, rather
 than a stylesheet-only solution. It observes live author changes to each managed child's `hidden`
-state and restores the latest author-owned value when ownership ends or the group disconnects;
-reconnecting reapplies the current collapsed state.
+and `inert` state, uses real `hidden` attributes for arbitrary HTML/SVG elements, and restores the
+latest author-owned value when ownership ends or the group disconnects; reconnecting reapplies the
+current collapsed state. Forwarded-slot reconciliation is deferred without scheduling a reactive
+write from `firstUpdated()`.
 
 **Known gotchas:**
 - `<lr-chip>`'s accessible remove-button label ("Remove {text}") is computed only from the default
-  slot's own text content — text living inside the (decorative) `icon` slot doesn't leak into it.
+  slot's own text content — text living inside the (decorative) `start` slot doesn't leak into it.
 - `<lr-chip-group>` silently un-expands (`expanded` resets to `false`, with no event firing) if a
   consumer raises `max-visible` past the current child count while already expanded — only an actual
   click on the overflow indicator fires `lr-overflow-toggle`.

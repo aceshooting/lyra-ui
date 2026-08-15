@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,10 +29,10 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
 
 - `provider: string = ''` — informational provider badge, passed straight through to the internal
   `lr-model-select`.
-- `catalog?: LyraModelCatalog` (attribute: false, JS-only) — `string[] | { id: string; label: string
-}[]` (every entry must be one shape or the other, never mixed); passed straight through to the
-  internal `lr-model-select`.
-- `modelValue: string = ''` (attribute `model-value`) — the current model id.
+- `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false, JS-only) — a readonly string
+  catalog or readonly object-row catalog (every entry must be one shape or the other, never mixed);
+  passed straight through to the internal `lr-model-select`.
+- `model: string = ''` — the current model id.
 - `allowCustom: boolean = false` (attribute `allow-custom`) — lets the model control accept a value
   outside `catalog`; passed straight through.
 - `temperature: number = 1` — the current sampling temperature. `1` is the midpoint of the default
@@ -49,16 +49,17 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
   reach either, since a form-associated control's own `disabled` IDL property/attribute is never
   mutated by fieldset cascading.
 
-**Events:** `lr-change` — `detail: { modelValue: string; inCatalog: boolean; temperature: number }`.
+**Events:** `lr-change` — `detail: { model: string; inCatalog: boolean; temperature: number }`.
 Fires whenever _either_ child control's own `lr-change` fires, and always carries the full current
 settings snapshot, not just whichever field actually changed. `inCatalog` is recomputed fresh from
-`catalog`/`modelValue` on every emission (mirroring `lr-model-select`'s own `effectiveEntries` logic)
-rather than cached from the last child event, so it's still correct even when `modelValue` was just
+`catalog`/`model` on every emission (mirroring `lr-model-select`'s own `effectiveEntries` logic)
+rather than cached from the last child event, so it's still correct even when `model` was just
 assigned directly instead of via the child's own event.
 
 **Slots:** none — this is a fixed two-control composition, not a generic layout shell.
 
-**CSS parts:** `base`, `model-row`, `temperature-row`, `temperature-label`, `temperature-value`
+**CSS parts:** `base`, `model-row`, `model-select`, `model-label` (forwarded visible internal
+selector label), `temperature-row`, `temperature-label`, `temperature-value`
 
 **Themeable custom properties:** no component-specific custom properties; consumes shared tokens
 `--lr-space-l/-m/-s/-xs`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
@@ -71,7 +72,7 @@ internally (both imported unconditionally as side effects, not optional).
 <lr-model-settings-panel
   provider="OpenAI"
   .catalog=${['gpt-4o', 'gpt-4o-mini', 'gpt-4.1']}
-  model-value="gpt-4o"
+  model="gpt-4o"
   temperature="0.7"
   @lr-change=${(e) => console.log(e.detail)}
 ></lr-model-settings-panel>

@@ -5,14 +5,25 @@ import { readFileSync } from 'node:fs';
 import {
   build,
   buildMigration,
+  COMPOUND_USAGE_REGISTRATIONS,
   readTagFacts,
   TYPE_ONLY_DECLARATION_PEERS,
+  validateCompoundUsageRegistrations,
 } from './build-llms.mjs';
 import { createManifestInheritanceFixture } from './fixtures/manifest-inheritance.mjs';
 import { compactManifest } from './manifest-compact.mjs';
 
 const inventory = JSON.parse(
   readFileSync(new URL('./fixtures/component-inventory.json', import.meta.url), 'utf8'),
+);
+assert.deepEqual(
+  COMPOUND_USAGE_REGISTRATIONS,
+  {
+    'lr-checkbox-group': ['lr-checkbox'],
+    'lr-radio-group': ['lr-radio', 'lr-radio-button'],
+    'lr-tab-group': ['lr-tab', 'lr-tab-panel'],
+  },
+  'the compound usage policy must retain every authored group child registration',
 );
 const migration = buildMigration();
 
@@ -76,6 +87,38 @@ assert.deepEqual(
   compactFacts.get('lr-fixture-child').cssProperties.map(({ name }) => name),
   ['--lr-fixture-base-color', '--lr-fixture-child-color'],
   'generated component docs must count inherited CSS properties from the compact manifest',
+);
+
+const compoundFixtureFacts = new Map([
+  ['lr-owner', {}],
+  ['lr-child', {}],
+]);
+const compoundFixtureSections = new Map([
+  ['lr-owner', { text: '## `lr-owner`\n\nCompose `<lr-child>` inside it.' }],
+]);
+assert.deepEqual(
+  validateCompoundUsageRegistrations(
+    { 'lr-owner': ['lr-child'] },
+    compoundFixtureFacts,
+    compoundFixtureSections,
+  ),
+  [],
+  'compound usage metadata accepts public child tags used by the owner section',
+);
+assert.deepEqual(
+  validateCompoundUsageRegistrations(
+    { 'lr-owner': ['lr-owner', 'lr-child', 'lr-child', 'lr-missing'] },
+    compoundFixtureFacts,
+    compoundFixtureSections,
+  ),
+  [
+    'compound usage owner `lr-owner` cannot list itself as a related tag',
+    'compound usage owner `lr-owner` does not use `lr-owner` in its authored section',
+    'compound usage owner `lr-owner` lists `lr-child` more than once',
+    'compound usage owner `lr-owner` refers to unknown tag `lr-missing`',
+    'compound usage owner `lr-owner` does not use `lr-missing` in its authored section',
+  ],
+  'compound usage metadata fails closed on self, duplicate, fictional, and stale tags',
 );
 
 assert.match(
@@ -173,11 +216,34 @@ const peers = [...artifacts].find(([file]) => file.endsWith('/llms/peers.md'))?.
 const index = [...artifacts].find(([file]) => file.endsWith('/llms/index.md'))?.[1];
 const table = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-table.md'))?.[1];
 const streamingText = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-streaming-text.md'))?.[1];
+const compoundReferences = Object.fromEntries(
+  Object.keys(COMPOUND_USAGE_REGISTRATIONS).map((tag) => [
+    tag,
+    [...artifacts].find(([file]) => file.endsWith(`/llms/components/${tag}.md`))?.[1],
+  ]),
+);
 assert.ok(tokens, 'build({ write: false }) must produce llms/tokens.md');
 assert.ok(peers, 'build({ write: false }) must produce llms/peers.md');
 assert.ok(index, 'build({ write: false }) must produce llms/index.md');
 assert.ok(table, 'build({ write: false }) must produce per-tag component docs');
 assert.ok(streamingText, 'build({ write: false }) must produce lr-streaming-text docs');
+for (const [tag, reference] of Object.entries(compoundReferences)) {
+  assert.ok(reference, `build({ write: false }) must produce ${tag} docs`);
+  const generatedHeader = reference.split('\n---\n', 1)[0];
+  const documentedRegistrationTags = [...generatedHeader.matchAll(
+    /import '@aceshooting\/lyra-ui\/components\/(lr-[a-z0-9-]+)\.js';/gu,
+  )].map((match) => match[1]);
+  assert.deepEqual(
+    documentedRegistrationTags,
+    [tag, ...COMPOUND_USAGE_REGISTRATIONS[tag]],
+    `${tag} docs must publish the complete owner + consumer-supplied child registration closure`,
+  );
+  assert.match(
+    generatedHeader,
+    /usage-only, not registration dependencies/,
+    `${tag} docs must not misclassify consumer-supplied children as owner module dependencies`,
+  );
+}
 
 assert.match(index, /components\/lr-table\.js/);
 assert.doesNotMatch(index, /path is NOT `components\/<tag>\/`/);

@@ -26,17 +26,27 @@ treat a gap in any of them as a bug, not a missing feature.
   a *defined* `fallback` argument, and only checks `registerLyraLocale()`-registered translations
   when both are `undefined` — so `this.localize('close', 'Close')` renders fine in English while
   silently defeating translation for that call site forever. Call it bare:
-  `this.localize('close')`. The one legitimate fallback is *conditionally* derived from a public
-  property a consumer might have explicitly customized away from its built-in default, so an
-  explicit override still wins verbatim while the unmodified case resolves through the registry:
-  `this.localize('previousMonth', this.previousLabel === 'Previous month' ? undefined : this.previousLabel)`.
-  Passing `this.someProp` unconditionally has the same bug as a literal — it always
-  short-circuits the registry unless the prop happens to be empty/`undefined`. This is the single
-  easiest-to-introduce regression in the library. `scripts/check-source-policy.mjs` greps for the
+  `this.localize('close')`. Passing `this.someProp` unconditionally has the same bug as a literal —
+  it always short-circuits the registry unless the prop happens to be `undefined`, and it gives
+  `.strings` priority over a defined property override. Resolve public copy properties before
+  calling `localize()` as described in the next bullet. This is the single easiest-to-introduce
+  regression in the library. `scripts/check-source-policy.mjs` greps for the
   `this.localize('key', 'literal'` shape and fails on it, but it's a pattern-matcher, not a
   semantic check — a fallback that *looks* conditional but is actually unconditional (e.g.
   `this.someProp` passed straight through), or any variant the grep can't see, still slips past.
   Check each `localize()` call site by hand rather than assuming the gate caught it.
+- **A public copy override is optional, not an English sentinel or an empty-string sentinel.**
+  Declare it as `label?: string`, then resolve it with
+  `this.label == null ? this.localize('messageKey') : this.label` (the `null` arm covers removal of
+  the reflected string attribute at runtime). This preserves all three
+  observable states: omission enters localization, an explicitly supplied built-in English value
+  remains the caller's literal even when `.strings` is non-English, and an explicit empty string
+  stays empty. A default such as `label = 'Close'` cannot distinguish omission from a caller that
+  deliberately wrote `label="Close"`; `this.label || undefined` likewise destroys the distinction
+  between omission and `label=""`. Do not pass a defined override through `localize()` because
+  per-instance `.strings` is intentionally checked first there; bypass localization once the copy
+  property is present. If the override is a message template, interpolate its documented
+  placeholders after this branch, just as the localized path does.
 - **Never render a caught error's raw `.message` verbatim in a `role="alert"`/`role="status"`
   region.** A native exception's message is untranslated and engine-dependent — a `JSON.parse()`
   `SyntaxError` reads completely differently across V8, SpiderMonkey, and JavaScriptCore. Show

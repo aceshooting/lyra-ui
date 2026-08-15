@@ -53,7 +53,10 @@ import {
 } from './editor-type-values.mjs';
 import { cssPropertyDescription } from './editor-css-descriptions.mjs';
 import { generateManifest } from './generate-manifest.mjs';
-import { expandManifestInheritance } from './manifest-compact.mjs';
+import {
+  compactManifest,
+  expandManifestInheritance,
+} from './manifest-compact.mjs';
 import { sourceEventTypeContracts } from './check-event-contracts.mjs';
 
 const packageDir = path.resolve(
@@ -880,7 +883,7 @@ test('form association comes only from static/mixin truth and follows superclass
   );
 });
 
-test('the live manifest resolves to the exact 34 runtime FACE tags', () => {
+test('the live manifest resolves to the exact 33 runtime FACE tags', () => {
   const associated = normalizeManifest(readJson('custom-elements.json'), {
     ecosystem: 'lyra',
   })
@@ -898,7 +901,6 @@ test('the live manifest resolves to the exact 34 runtime FACE tags', () => {
     'lr-emoji-picker',
     'lr-file-input',
     'lr-graph-query-builder',
-    'lr-icon-button',
     'lr-input',
     'lr-known-date',
     'lr-locale-picker',
@@ -1161,11 +1163,11 @@ test('the CEM suppresses reviewed private transport attributes from the public s
   const synthetic = {
     modules: [
       {
-        path: 'split.class.ts',
+        path: 'multi-split.class.ts',
         declarations: [
           {
             kind: 'class',
-            name: 'LyraSplit',
+            name: 'LyraMultiSplit',
             tagName: 'lr-multi-split',
             members: [
               {
@@ -1573,10 +1575,11 @@ test('the CEM accessor projection publishes only reviewed runtime defaults and r
     'the accessor runtime projection plugin is installed'
   );
 
-  const field = (name, type = 'string') => ({
+  const field = (name, type = 'string', readonly) => ({
     kind: 'field',
     name,
     type: { text: type },
+    ...(readonly === undefined ? {} : { readonly }),
   });
   const attribute = (name, fieldName) => ({
     name,
@@ -1593,7 +1596,11 @@ test('the CEM accessor projection publishes only reviewed runtime defaults and r
             name: tagName,
             tagName,
             members: Object.keys(contract).map((name) =>
-              field(name, name === 'dragging' ? 'boolean' : 'string')
+              field(
+                name,
+                name === 'dragging' ? 'boolean' : 'string',
+                name === 'dragging' ? true : undefined
+              )
             ),
             attributes: Object.entries(contract)
               .filter(
@@ -1650,15 +1657,10 @@ test('the CEM accessor projection publishes only reviewed runtime defaults and r
   assert.equal(member('lr-file-input', 'name').default, 'null');
   assert.equal(projectedAttribute('lr-popover', 'for').default, "''");
   assert.equal(projectedAttribute('lr-tooltip', 'for').default, "''");
-  assert.equal(member('lr-file-input', 'dragging').readonly, false);
-  assert.equal(member('lr-file-input', 'dragging').reflects, true);
+  assert.equal(member('lr-file-input', 'dragging').readonly, true);
+  assert.equal(member('lr-file-input', 'dragging').reflects, undefined);
   assert.equal(member('lr-select', 'selectedOptions').readonly, false);
-  assert.deepEqual(projectedAttribute('lr-file-input', 'dragging'), {
-    name: 'dragging',
-    fieldName: 'dragging',
-    type: { text: 'boolean' },
-    default: 'false',
-  });
+  assert.equal(projectedAttribute('lr-file-input', 'dragging'), undefined);
   assert.equal(
     member('lr-unrelated', 'disabled').default,
     undefined,
@@ -1710,16 +1712,23 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
     [...INHERITED_PUBLIC_MEMBER_CONTRACTS],
     [
       ['lr-drawer', { sourceTag: 'lr-dialog', members: ['modal'] }],
-      [
-        'lr-tag',
-        {
-          sourceTag: 'lr-badge',
-          members: ['size', 'variant'],
-          memberTypes: { variant: 'TagVariant' },
-        },
-      ],
-    ]
-  );
+    [
+      'lr-geojson-view',
+      {
+        sourceTag: 'lr-geojson-viewer',
+        events: ['lr-anchor-result'],
+      },
+    ],
+    [
+      'lr-tag',
+      {
+        sourceTag: 'lr-badge',
+        members: ['size', 'variant'],
+        memberTypes: { variant: 'TagVariant' },
+      },
+    ],
+  ]
+);
 
   const synthetic = {
     modules: [
@@ -1797,6 +1806,46 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
         ],
       },
       {
+        path: 'geojson-viewer.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraGeoJsonViewer',
+            tagName: 'lr-geojson-viewer',
+            events: [
+              {
+                name: 'lr-anchor-result',
+                type: { text: 'CustomEvent<AnchorResultDetail>' },
+                description: 'Reports whether the anchor was found.',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: 'geojson-view.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraGeojsonView',
+            tagName: 'lr-geojson-view',
+            superclass: {
+              name: 'LyraGeoJsonViewer',
+              module: 'geojson-viewer.class.ts',
+            },
+            events: [
+              {
+                name: 'lr-anchor-result',
+                inheritedFrom: {
+                  name: 'LyraGeoJsonViewer',
+                  module: 'geojson-viewer.class.ts',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
         path: 'unrelated.ts',
         declarations: [
           {
@@ -1839,6 +1888,24 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
     tag.attributes.find(({ name }) => name === 'variant').type.text,
     'TagVariant'
   );
+  const geojsonAlias = synthetic.modules.find(
+    ({ path }) => path === 'geojson-view.class.ts'
+  ).declarations[0];
+  assert.deepEqual(geojsonAlias.events, [
+    {
+      name: 'lr-anchor-result',
+      type: { text: 'CustomEvent<AnchorResultDetail>' },
+      description: 'Reports whether the anchor was found.',
+    },
+  ]);
+  const compactGeojsonAlias = compactManifest(synthetic).modules.find(
+    ({ path }) => path === 'geojson-view.class.ts'
+  ).declarations[0];
+  assert.deepEqual(
+    compactGeojsonAlias.events,
+    geojsonAlias.events,
+    'the permanent alias event survives published-manifest compaction'
+  );
   assert.deepEqual(
     synthetic.modules.find(({ path }) => path === 'unrelated.ts')
       .declarations[0].members,
@@ -1863,6 +1930,16 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
   assert.throws(
     () => plugin.packageLinkPhase({ customElementsManifest: malformed }),
     /lr-drawer: inherited-member projection requires lr-dialog\.modal/
+  );
+
+  const malformedEvent = structuredClone(synthetic);
+  malformedEvent.modules.find(
+    ({ path }) => path === 'geojson-viewer.class.ts'
+  ).declarations[0].events = [];
+  assert.throws(
+    () => plugin.packageLinkPhase({ customElementsManifest: malformedEvent }),
+    /lr-geojson-view: inherited-member projection requires lr-geojson-viewer#lr-anchor-result/,
+    'an event rename cannot silently leave stale alias metadata behind'
   );
 });
 
@@ -2031,8 +2108,8 @@ test('source EventMaps provide concrete event schemas for CEM and inventory proj
     'CustomEvent<LyraAccordionEventDetail>'
   );
   assert.equal(
-    contracts.get('lr-menu')?.['lr-menu-select'],
-    'CustomEvent<MenuSelectDetail>'
+    contracts.get('lr-menu')?.['lr-select'],
+    'CustomEvent<MenuItemSelectDetail>'
   );
   for (const [tagName, contract] of contracts) {
     for (const [event, type] of Object.entries(contract)) {
@@ -2462,6 +2539,101 @@ test('normalization keeps public contracts and rejects analyzer implementation d
       ),
     /lr-malformed-css: malformed CSS custom-property manifest entry/,
     'a malformed CEM annotation fails with its tag instead of crashing during an anonymous sort'
+  );
+});
+
+test('normalization retains the documented Markdown API after shared-base extraction', () => {
+  const normalized = normalizeDeclaration(
+    {
+      tagName: 'lr-markdown',
+      customElement: true,
+      members: [
+        {
+          kind: 'field',
+          name: 'languages',
+          type: { text: 'Record<string, unknown> | undefined' },
+          inheritedFrom: { name: 'MarkdownRuntimeBase' },
+        },
+        {
+          kind: 'field',
+          name: 'marked',
+          type: { text: 'LyraMarkedParser | undefined' },
+          readonly: true,
+          inheritedFrom: { name: 'MarkdownRuntimeBase' },
+        },
+        {
+          kind: 'method',
+          name: 'getHeadingTree',
+          return: { type: { text: 'MarkdownHeadingItem[]' } },
+          inheritedFrom: { name: 'MarkdownRuntimeBase' },
+        },
+        {
+          kind: 'method',
+          name: 'renderMarkdown',
+          return: { type: { text: 'void' } },
+          inheritedFrom: { name: 'MarkdownRuntimeBase' },
+        },
+      ],
+    },
+    { ecosystem: 'lyra' }
+  );
+
+  assert.deepEqual(
+    normalized.properties.map(({ name }) => name),
+    ['languages', 'marked']
+  );
+  assert.deepEqual(
+    normalized.methods.map(({ name }) => name),
+    ['getHeadingTree', 'renderMarkdown']
+  );
+});
+
+test('normalization retains the documented typed-chart API inherited from the generic chart', () => {
+  const normalized = normalizeDeclaration(
+    {
+      tagName: 'lr-bar-chart',
+      customElement: true,
+      members: [
+        {
+          kind: 'field',
+          name: 'chart',
+          type: { text: 'LyraChartInstance | undefined' },
+          readonly: true,
+          inheritedFrom: { name: 'LyraChart' },
+        },
+        {
+          kind: 'method',
+          name: 'renderChart',
+          return: { type: { text: 'void' } },
+          inheritedFrom: { name: 'LyraChart' },
+        },
+      ],
+    },
+    { ecosystem: 'lyra' }
+  );
+
+  assert.deepEqual(normalized.properties.map(({ name }) => name), ['chart']);
+  assert.deepEqual(normalized.methods.map(({ name }) => name), [
+    'renderChart',
+  ]);
+});
+
+test('normalization preserves the canonical GeoJSON search API on its compatibility alias', () => {
+  const components = new Map(
+    normalizeManifest(
+      expandLyraInventoryManifest(readJson('custom-elements.json')),
+      { ecosystem: 'lyra' }
+    ).map((component) => [component.tag, component])
+  );
+  const canonical = components.get('lr-geojson-viewer');
+  const alias = components.get('lr-geojson-view');
+
+  assert.ok(canonical);
+  assert.ok(alias);
+  assert.deepEqual(
+    alias.surface.methods,
+    canonical.surface.methods,
+    'the permanent compatibility tag exposes the canonical effective method surface'
   );
 });
 
@@ -4945,15 +5117,13 @@ test('reviewed type equivalences stay exact per upstream tag and public member',
         entry.target === target
     );
 
-  assert.ok(
-    hasTypeRule(
-      'sl-button',
-      'attribute',
-      'form',
-      'string',
-      'HTMLFormElement | null'
+  assert.equal(
+    reviewedMappingNormalizations('sl-button').typeEquivalences.some(
+      (entry) =>
+        entry.memberKind === 'attribute' && entry.member === 'form'
     ),
-    'the CEM form-owner attribute/property projection is reviewed on the exact affected tag'
+    false,
+    'the stale form-owner attribute/property type rewrite stays removed'
   );
   assert.ok(
     hasTypeRule(
@@ -5296,15 +5466,30 @@ test('carousel event-detail widenings require explicit migration review', () => 
       upstreamTag: 'wa-carousel',
       targetTag: 'lr-carousel',
       event: 'wa-slide-change',
-      flags: ['event-detail-slide-type-widening'],
-      rationale: /arbitrary HTMLElement slides.*item-specific members/iu,
+      flags: [
+        'event-detail-slide-type-widening',
+        'readonly-derived-slide-count',
+      ],
+      rationale: /arbitrary HTMLElement slides.*read-only live composition count.*write slides/iu,
       drift: [
+        {
+          code: 'missing-attribute',
+          section: 'attributes',
+          member: 'slides',
+        },
         {
           code: 'event-type-mismatch',
           section: 'events',
           member: 'wa-slide-change',
           expected: '{ index: number, slide: LyraCarouselItem }',
           actual: 'CustomEvent<{ index: number; slide: HTMLElement }>',
+        },
+        {
+          code: 'readonly-mismatch',
+          section: 'properties',
+          member: 'slides',
+          expected: false,
+          actual: true,
         },
       ],
     },
@@ -5818,7 +6003,6 @@ test('every known live editor closed-set gap emits VS Code and WebStorm values',
     ['lr-data-grid', 'size'],
     ['lr-color-picker', 'placement'],
     ['lr-select', 'placement'],
-    ['lr-menu', 'placement'],
     ['lr-dropdown', 'placement'],
     ['lr-popover', 'placement'],
     ['lr-tooltip', 'placement'],
@@ -6258,6 +6442,27 @@ test('the raw CEM projects complete effective wrapper and source-only mixin surf
       );
     }
   }
+});
+
+test('the raw CEM and normalization govern lr-terminal.anchorKinds exactly', async () => {
+  const manifest = (await generateManifest({ write: false })).manifest;
+  const declaration = manifest.modules
+    .flatMap((module) => module.declarations ?? [])
+    .find(({ tagName }) => tagName === 'lr-terminal');
+  const raw = declaration?.members?.find(
+    ({ kind, name }) => kind === 'field' && name === 'anchorKinds'
+  );
+
+  assert.equal(raw?.type?.text, "readonly LyraAnchor['kind'][]");
+  assert.equal(raw?.readonly, true);
+  assert.equal(raw?.default, "['line-range']");
+
+  const normalized = normalizeDeclaration(declaration, {
+    ecosystem: 'lyra',
+  }).properties.find(({ name }) => name === 'anchorKinds');
+  assert.equal(normalized?.type, "readonly LyraAnchor['kind'][]");
+  assert.equal(normalized?.readonly, true);
+  assert.equal(normalized?.default, "['line-range']");
 });
 
 test('authored docs enumerate the effective context-inspector and radio-button contracts', () => {
@@ -6990,6 +7195,7 @@ test('Random Content migration metadata names every behavior that requires manua
       'lr-random-content'
     ),
     behaviorReviewFlags: [
+      'immutable-selection-snapshots',
       'host-layout',
       'multi-item-layout',
       'unique-retry-bound',
@@ -6999,10 +7205,26 @@ test('Random Content migration metadata names every behavior that requires manua
   });
 
   const decision = reviewedMigrationDecision('wa-random-content');
-  assert.equal(decision.classification, 'rewritten');
-  assert.match(decision.rationale, /conditional|separately reports/i);
+  assert.equal(decision.classification, 'warning-required');
+  assert.match(decision.rationale, /frozen readonly selection snapshots/i);
   assert.match(decision.rationale, /multi-item layout/i);
   assert.match(decision.rationale, /autoplay semantics/i);
+  assert.deepEqual(decision.expectedDrift, [
+    {
+      code: 'event-type-mismatch',
+      section: 'events',
+      member: 'wa-content-change',
+      expected: '{ items: Element[] }',
+      actual: 'CustomEvent<{ readonly items: readonly Element[] }>',
+    },
+    {
+      code: 'method-signature-mismatch',
+      section: 'methods',
+      member: 'randomize',
+      expected: [{ parameters: [], returnType: 'Element[]' }],
+      actual: [{ parameters: [], returnType: 'readonly Element[]' }],
+    },
+  ]);
 });
 
 test('Zoomable Frame migration metadata requires review of sandbox and URL safety behavior', () => {
@@ -7389,44 +7611,19 @@ test('pinned-manifest drift validation compares normalized public data, not raw 
       },
     ],
   };
-  const normalized = normalizeDeclaration(declaration, {
+  const webawesomeManifest = {
+    modules: [{ path: 'example.js', declarations: [declaration] }],
+  };
+  const normalized = normalizeManifest(webawesomeManifest, {
     ecosystem: 'webawesome',
-  });
-  const surface = Object.fromEntries(
-    [
-      'attributes',
-      'properties',
-      'slots',
-      'events',
-      'parts',
-      'cssProperties',
-      'cssStates',
-      'methods',
-      'form',
-      'native',
-    ].map((section) => [section, normalized[section]])
-  );
+  })[0];
   const inventory = {
     upstreams: {
       webawesome: {
-        components: [
-          {
-            tag: 'wa-example',
-            maturity: normalized.maturity,
-            surface,
-            review: {
-              status: 'complete',
-              source: 'published-manifest',
-              unreviewedSections: [],
-            },
-          },
-        ],
+        components: [structuredClone(normalized)],
       },
       shoelace: { components: [] },
     },
-  };
-  const webawesomeManifest = {
-    modules: [{ path: 'example.js', declarations: [declaration] }],
   };
   const shoelaceManifest = { modules: [] };
 

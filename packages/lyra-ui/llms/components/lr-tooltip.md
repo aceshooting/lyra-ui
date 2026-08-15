@@ -122,7 +122,8 @@ receives the serialized ID; one inside a shadow root is linked through `ariaDesc
 whose explicit element-reference assignment intentionally leaves that control's serialized
 `aria-describedby` value empty in supporting browsers. Existing author-provided descriptions —
 including a control's own internal hint/error text — are merged while open and restored when the
-tooltip closes, the trigger is replaced, or the tooltip disconnects.
+tooltip closes, the trigger is replaced, or the tooltip disconnects. Late author writes remain the
+release baseline while Lyra's active description stays composed into the owned value.
 
 With no slotted trigger, a live HTML `for` target receives those same interactions and description;
 target insertion, removal, replacement and `id` changes are tracked without requiring reinsertion.
@@ -130,9 +131,12 @@ Removing the sole connected direct or interaction anchor force-closes despite an
 while a live slotted/`for` positioning fallback is rebound and keeps the tooltip open.
 
 Plain content keeps `role="tooltip"`. If actionable content appears anywhere in the assigned
-default-slot subtree — including inside a nested custom element's open shadow root — the popup
+default-slot subtree — including native links/form/media controls, authored sequential focus stops,
+explicit ARIA widget roles, or content inside a nested custom element's open shadow root — the popup
 promotes to a named `role="dialog"` and remains open while pointer or focus is within it. Escape
-from either the trigger or popup closes it; Escape from popup content returns focus to the trigger.
+from either the trigger or popup closes it; Escape from popup content returns focus to the trigger's
+real composed focus target. Bubbling `focusin`/`focusout` keeps the tooltip open when focus moves
+within a wrapper trigger or between interactive popup controls.
 The content scan follows the live composed assignment through forwarding slots. Reassignment,
 external descendant text/actionability changes, and relevant composed-ancestor visibility changes
 update both the hidden description proxy and popup role; when a forwarding slot becomes genuinely
@@ -140,7 +144,8 @@ unassigned, its own fallback content is restored. This classification also runs 
 closed, without treating the popup's internal closed-state visibility as consumer-hidden content.
 Image alternatives and `aria-labelledby` references contribute their accessible text; referenced
 targets outside the tooltip subtree are observed too, so a sibling label's live text mutation
-updates the proxy. Reference traversal is bounded and cycle-safe.
+updates the proxy. Text, actionability, and observer enrollment share bounded, cycle-safe composed
+traversal; content beyond the traversal ceiling fails closed instead of recursing without bound.
 While open, rootless custom-element content receives a bounded initialization grace period for an
 upgrade or newly attached open shadow root; later observable content mutations start a fresh
 grace period. This catches normal lazy initialization without scheduling perpetual animation-frame

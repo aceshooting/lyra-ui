@@ -22,9 +22,16 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 
 ```html
 <lr-textarea placeholder="Notes" rows="4"></lr-textarea>
-<lr-textarea label="Bio" maxlength="280" with-count appearance="outlined" size="s" resize="auto"></lr-textarea>
+<lr-textarea
+  label="Bio"
+  maxlength="280"
+  with-count
+  appearance="outlined"
+  size="s"
+  resize="auto"
+></lr-textarea>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/textarea/textarea.js';
+  import "@aceshooting/lyra-ui/components/forms/textarea/textarea.js";
   const bio = document.querySelector('lr-textarea[label="Bio"]');
   await bio.updateComplete; // both calls are no-ops before the first render
   bio.scrollPosition({ top: 0 }); // pin a restored draft back to the top

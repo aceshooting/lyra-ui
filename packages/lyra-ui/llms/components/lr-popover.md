@@ -56,14 +56,14 @@ To preserve the previous Lyra-shaped defaults explicitly, use
 `placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.
 
 The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`. With no slotted
-trigger, a live HTML `for` target receives the identical ownership contract. Target insertion,
-removal, replacement and `id` changes are tracked live; author ARIA is restored when ownership moves.
-`aria-controls` targets the public `lr-popover` host (which receives a stable generated `id` when
-the consumer did not supply one), rather than the shadow-private popup, so the relationship
-resolves from a native light-DOM trigger. `lr-button` and `lr-icon-button` additionally reflect
-that host onto their focused shadow-internal controls through `ariaControlsElements`; supporting
-browsers intentionally serialize the internal control's `aria-controls` content attribute as an
-empty string after that assignment.
+trigger, a live HTML `for` target receives the identical ownership contract. A wrapper/custom
+trigger's composed descendant that actually receives focus receives the same semantics and becomes
+the focus-return target. The component supplies the real popup to the shared relationship owner;
+because current browsers reject a light-DOM reference into a private shadow tree, that inward edge
+is exposed as the public `lr-popover` host. Target insertion, removal, replacement, `id` changes,
+and late custom-element upgrade are tracked live. Authored relationship tokens compose, generated
+whole-value attributes stay authoritative while owned, and exact late-authored baselines return
+when ownership moves or disconnects.
 **Methods:** `show(): Promise<void>` opens the popover programmatically — identical to
 `el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
 transition returns an already-resolved promise.
@@ -83,9 +83,9 @@ element owns click or generated ARIA.
 `hide(options?: { focusTrigger?: boolean }): Promise<void>` programmatically closes the popover and
 resolves after `lr-after-hide`; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
-dismiss, and a bare `el.open = false` all return focus to the slotted/`for` interaction owner, or to
-a virtual anchor's explicit `returnFocusTo`; a virtual anchor with no return target closes without
-moving focus. No-op when already closed.
+dismiss, and a bare `el.open = false` all return focus to the slotted/`for` owner's real composed
+focus target, or to a virtual anchor's explicit `returnFocusTo`; a virtual anchor with no return
+target closes without moving focus. No-op when already closed.
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — none
 carries a detail, and the two `lr-after-*` events are never cancelable. Neither pair fires for
 markup that renders open from the start, nor when only `placement`/`distance` change on an
@@ -94,6 +94,14 @@ already-open popover.
 Removing the sole connected direct anchor or sole interaction anchor from an open popover is
 structural teardown: it force-closes even if an `lr-hide` listener would veto an ordinary close. If
 a live slotted/`for` positioning fallback remains, the popover rebinds to it and stays open instead.
+
+Public DOM-anchored `lr-popover` instances form a same-root singleton. A later ordinary `show()`
+first requests the existing peer's cancelable close and remains closed if that peer vetoes. Initial
+open markup stays lifecycle-silent: after the hydration-safe first-render boundary, the
+later-connected instance wins and the earlier peer closes structurally without a veto or lifecycle
+event. `lr-dropdown`, `showAt()` virtual surfaces, and popovers in separate document/shadow roots
+remain independent. Re-entering the same `show()` or `hide()` request from its own before-event
+coalesces onto one transition promise and emits the lifecycle once.
 
 **Breaking in 8.0.0:** `lr-show`/`lr-hide` now fire *before* the state changes and are cancelable —
 `preventDefault()` on `lr-show` leaves the popover closed for the trigger click, `show()` and

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,20 +34,22 @@ children; nothing is moved or cloned.
   toggles this state; a programmatic assignment remains silent.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
 
-**Methods:** `randomize(): Element[]` — re-selects using the current `mode`, applies
+**Methods:** `randomize(): readonly Element[]` — re-selects using the current `mode`, applies
 `hidden`/`aria-hidden`, emits `lr-content-change`, appends the exposed selection text to the shared
 polite announcement sink (even when `autoplay` is enabled), and returns the elements now shown.
 Does **not** reset or restart the autoplay timer.
 
-**Events:** `lr-content-change` (`detail: { items: HTMLElement[] }` — the exact elements now shown,
-in display order). Fires on first render, on `randomize()`, on a real slot-content change, and on
-each autoplay tick; never when the eligible pool is empty. `lr-pause-change` (`detail: boolean` —
-the new `paused` value) fires only when the built-in pause/resume button toggles `paused`, so a
+**Events:** `lr-content-change` (`detail: { readonly items: readonly Element[] }` — a frozen
+snapshot of the exact elements now shown, in display order). Fires on first render, on
+`randomize()`, on a real slot-content change, and on
+each autoplay tick; never when the eligible pool is empty. `lr-pause-change`
+(`detail: { paused: boolean }`) fires only when the built-in pause/resume button toggles `paused`, so a
 host mirroring or persisting that state stays in sync; a programmatic `paused` write stays silent,
 so a controlled binding can't echo itself. Same event name and payload shape as `<lr-poll-status>`'s
 identical affordance, so one handler serves both.
 
-**Slots:** default — the candidate pool. Direct **element** children are eligible. When a wrapper
+**Slots:** default — the candidate pool. Direct **element** children, including SVG elements, are
+eligible. When a wrapper
 places a forwarding `<slot>` directly in the pool, its flattened projected elements become the
 candidates; an arbitrary nested custom-element subtree remains one opaque direct candidate.
 
@@ -71,12 +73,18 @@ only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`.
 `--lr-size-0-5em` — travel distance for the four directional `fade-*` effects) feed the mapped
 `--lr-animation-duration`, `--lr-animation-easing`, and `--lr-animation-translate` names. Existing
 `--lr-random-content-animation-duration`, `--lr-random-content-animation-easing`, and
-`--lr-random-content-animation-translate` names remain fallbacks.
+`--lr-random-content-animation-translate` names remain fallbacks. The base owns a wrapping flex
+layout for simultaneous selections; `--lr-random-content-item-gap` (default `--lr-space-s`) sets
+the row/column gap and `--lr-random-content-item-alignment` (default `flex-start`) sets cross-axis
+alignment. Slotted candidates establish transformable inline-block boxes, so directional entrance
+animations retain their travel for ordinary inline elements.
 
-**Web Awesome migration note:** this mapping requires manual review rather than a mechanical tag
-rename. Candidate eligibility and selection semantics differ, and Lyra additionally suppresses
-autoplay under `prefers-reduced-motion: reduce` and renders a visible localized pause/resume
-control. Review all four behaviors before replacing `<wa-random-content>`.
+**Web Awesome migration note:** `migrate-wa` performs the tag rename and reports only the behavior
+groups exercised by each use: host layout (`display: contents` versus Lyra's block host),
+multi-item layout ownership, the bounded retry used by `mode="unique"`, direct forwarding-slot
+candidates, and autoplay semantics (reduced-motion suppression, silent timer ticks, focus-only
+pause, and Lyra's visible localized pause/resume control). An empty element is rewritten without a
+behavior warning; direct SVG candidates and the documented animation vocabulary are parity cases.
 
 **Known gotchas:**
 

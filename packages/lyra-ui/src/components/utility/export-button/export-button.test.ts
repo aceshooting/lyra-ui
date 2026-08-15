@@ -886,6 +886,19 @@ it('forwards a host aria-label to the trigger and derives the menu name from it'
   expect(menu.getAttribute('aria-label')).to.equal('Download metrics format');
 });
 
+it('preserves an explicit empty host aria-label and restores visible-text naming on removal', async () => {
+  const el = (await fixture(html`
+    <lr-export-button aria-label="" .formats=${['csv', 'json']}></lr-export-button>
+  `)) as LyraExportButton;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  expect(trigger.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-label')).to.equal(null);
+  expect(trigger.textContent!.trim()).to.equal('Export');
+});
+
 it('focus() delegates to the native trigger button', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.focus();

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { h
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 const meta: Meta = { title: 'Command Palette', component: 'lr-command-palette', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
 const documentIcon = svg`<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h8l4 4v16H6zM13 3v4h4"></path></svg>`;
-export const Default: Story = { render: () => html`<button @click=${(e: Event) => ((e.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Open command palette</button><lr-command-palette hotkey="mod+k" .commands=${[{ id: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { id: 'search', label: 'Search workspace', group: 'Navigation' }]}></lr-command-palette>` };
+export const Default: Story = { render: () => html`<button @click=${(e: Event) => ((e.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Open command palette</button><lr-command-palette hotkey="mod+k" .commands=${[{ commandId: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { commandId: 'search', label: 'Search workspace', group: 'Navigation' }]}></lr-command-palette>` };
 
 export const MixedCommandIcons: Story = {
   name: 'Mixed command icons',
@@ -17,8 +17,8 @@ export const MixedCommandIcons: Story = {
   render: (_args, context) => html`<lr-command-palette
     .open=${context.viewMode !== 'docs'}
     .commands=${[
-      { id: 'new', label: 'New document', description: 'Create a blank workspace document', group: 'File', icon: documentIcon },
-      { id: 'search', label: 'Search workspace', description: 'Find documents and conversations', group: 'Navigation' },
+      { commandId: 'new', label: 'New document', description: 'Create a blank workspace document', group: 'File', icon: documentIcon },
+      { commandId: 'search', label: 'Search workspace', description: 'Find documents and conversations', group: 'Navigation' },
     ]}
   ></lr-command-palette>`,
 };
@@ -38,7 +38,7 @@ export const ThemedActiveCommand: Story = {
   },
   render: () => html`<div style="--lr-command-palette-active-bg: ${storyColor('successQuiet')};">
     <button @click=${(e: Event) => ((e.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Open command palette</button>
-    <lr-command-palette .commands=${[{ id: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { id: 'search', label: 'Search workspace', group: 'Navigation' }]}></lr-command-palette>
+    <lr-command-palette .commands=${[{ commandId: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { commandId: 'search', label: 'Search workspace', group: 'Navigation' }]}></lr-command-palette>
   </div>`,
 };
 
@@ -53,8 +53,8 @@ export const NarrowAllocation: Story = {
     style="--lr-command-palette-max-inline-size: 320px;"
     .open=${context.viewMode !== 'docs'}
     .commands=${[
-      { id: 'open', label: 'Open File', description: '/workspace/example-project/very-long-nested-directory-path/index.ts', shortcut: '⌘O' },
-      { id: 'save', label: 'Save', group: 'File' },
+      { commandId: 'open', label: 'Open File', description: '/workspace/example-project/very-long-nested-directory-path/index.ts', shortcut: '⌘O' },
+      { commandId: 'save', label: 'Save', group: 'File' },
     ]}
   ></lr-command-palette>`,
 };
@@ -73,10 +73,10 @@ export const CustomVirtualPitch: Story = {
     style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px;"
     .open=${context.viewMode !== 'docs'}
     .commands=${[
-      { id: 'new', label: 'New document', group: 'File' },
-      { id: 'open', label: 'Open document', group: 'File' },
-      { id: 'search', label: 'Search workspace', group: 'Navigation' },
-      { id: 'symbols', label: 'Go to symbol', group: 'Navigation' },
+      { commandId: 'new', label: 'New document', group: 'File' },
+      { commandId: 'open', label: 'Open document', group: 'File' },
+      { commandId: 'search', label: 'Search workspace', group: 'Navigation' },
+      { commandId: 'symbols', label: 'Go to symbol', group: 'Navigation' },
     ]}
   ></lr-command-palette>`,
 };

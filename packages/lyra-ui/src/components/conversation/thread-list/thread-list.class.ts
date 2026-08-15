@@ -28,7 +28,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export interface ChatThread {
+export interface LyraChatThread {
   id: string;
   title: string;
   excerpt?: string;
@@ -68,7 +68,7 @@ export type ThreadBucketKey =
 
 export interface ThreadGroupContext {
   id: string;
-  threads: readonly ChatThread[];
+  threads: readonly LyraChatThread[];
   bucket?: ThreadBucketKey;
   date?: Date;
 }
@@ -81,7 +81,7 @@ type ThreadListItem =
       adornment?: TemplateResult;
       collapsed: boolean;
     }
-  | { kind: "thread"; thread: ChatThread };
+  | { kind: "thread"; thread: LyraChatThread };
 
 const ICON_VIEW_BOX = "0 0 24 24";
 const ICON_STROKE_WIDTH = "1.75";
@@ -123,7 +123,7 @@ function trashIcon(): SVGTemplateResult {
 }
 
 function defaultFilter(
-  thread: ChatThread,
+  thread: LyraChatThread,
   query: string,
   locale: string
 ): boolean {
@@ -146,6 +146,9 @@ function defaultFilter(
  *
  * No thread CRUD or persistence: every mutation (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is
  * a controlled event carrying the *requested* new state — the host mutates `threads`.
+ * Data-mode thread `id` values must be nonempty and unique. Untyped invalid rows and later
+ * duplicates are omitted deterministically, so focus, virtualization, actions, and emitted
+ * `conversationId` values all resolve to the first valid occurrence.
  * Arrow/Home/End navigation skips unavailable rows, including a row placed below an `inert`
  * ancestor by `wrapRow`. Arrow navigation continues through the complete item model at a virtual
  * window edge; Home/End always resolve the first/last complete-model thread even from a middle
@@ -268,8 +271,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Non-empty ⇒ data mode (the default slot is ignored). Empty with no slotted content ⇒ data mode
-   *  with zero rows (the built-in empty state). Empty *with* slotted content ⇒ slotted mode. */
-  @property({ attribute: false }) threads: ChatThread[] = [];
+   *  with zero rows (the built-in empty state). Empty *with* slotted content ⇒ slotted mode. Thread
+   *  ids must be nonempty and unique; invalid/later duplicate rows are omitted, first wins. */
+  @property({ attribute: false }) threads: LyraChatThread[] = [];
 
   /**
    * Data mode: marks the matching raw thread id `active`/`aria-current` and scrolls it into view.
@@ -283,7 +287,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** Overrides the default case-insensitive `title` + `excerpt` substring match. */
   @property({ attribute: false }) filter?: (
-    thread: ChatThread,
+    thread: LyraChatThread,
     query: string
   ) => boolean;
 
@@ -292,7 +296,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @property() grouping: ThreadListGrouping = "date";
 
   /** `grouping="custom"`: derives an arbitrary controlled group id for every visible thread. */
-  @property({ attribute: false }) groupBy?: (thread: ChatThread) => string;
+  @property({ attribute: false }) groupBy?: (thread: LyraChatThread) => string;
 
   /** Returns the semantic string label for any date or custom group. */
   @property({ attribute: false }) getGroupLabel?: (
@@ -333,37 +337,37 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  virtual row above later rows even if focus temporarily leaves the menu. Unset (the default)
    *  leaves `rowActions`' output byte-for-byte unchanged. */
   @property({ attribute: false }) renderActions?: (
-    thread: ChatThread
+    thread: LyraChatThread
   ) => TemplateResult;
 
   /** Data mode only: renders non-interactive content in the row's start slot, before its label
    *  and excerpt. The callback runs during the virtualized row render. */
   @property({ attribute: false }) renderStart?: (
-    thread: ChatThread
+    thread: LyraChatThread
   ) => TemplateResult;
 
   /** Data mode only: renders the row's meta content. Built-in pin metadata remains available when
    *  present, and this result is appended in the same meta region. */
   @property({ attribute: false }) renderMeta?: (
-    thread: ChatThread
+    thread: LyraChatThread
   ) => TemplateResult;
 
   /** Data mode only: renders the row's excerpt content into the row item's own `excerpt` slot,
    *  which wins over its plain-string `excerpt` property whenever it has assigned content -- see
    *  `<lr-conversation-item>`'s own `excerpt` slot doc. Use this for rich content the plain
-   *  `ChatThread.excerpt` string can't carry, e.g. a server-highlighted search-match snippet.
+   *  `LyraChatThread.excerpt` string can't carry, e.g. a server-highlighted search-match snippet.
    *  Unlike `renderRowContent`, this leaves the built-in label layout and inline-rename affordance
    *  untouched -- only the excerpt line is replaced. Unset (the default) leaves the plain-string
    *  `excerpt` property rendering exactly as it does today. */
   @property({ attribute: false }) renderExcerpt?: (
-    thread: ChatThread
+    thread: LyraChatThread
   ) => TemplateResult;
 
   /** Data mode only: replaces the conversation item's label/excerpt/meta content area with a
    *  host-rendered row body. Use this for structured, non-interactive row content while keeping
    *  the selectable row and timestamp semantics supplied by `<lr-conversation-item>`. */
   @property({ attribute: false }) renderRowContent?: (
-    thread: ChatThread
+    thread: LyraChatThread
   ) => TemplateResult;
 
   /** Overrides the default locale-aware formatting used for month group dates. */
@@ -414,7 +418,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  to it, so adding it leaves every measured row height unchanged. Applies to rows only -- group
    *  headers never pass through `wrapRow` and never carry `row-wrapper`. */
   @property({ attribute: false }) wrapRow?: (
-    thread: ChatThread,
+    thread: LyraChatThread,
     row: TemplateResult
   ) => TemplateResult;
 
@@ -528,7 +532,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     super.disconnectedCallback();
   }
 
-  private get visibleThreads(): ChatThread[] {
+  private get visibleThreads(): LyraChatThread[] {
     const q = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
     const seen = new Set<string>();
     const withArchiveFilter = this.threads.filter((thread) => {
@@ -549,7 +553,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     );
   }
 
-  private bucketFor(thread: ChatThread, now: Date): ThreadBucketKey {
+  private bucketFor(thread: LyraChatThread, now: Date): ThreadBucketKey {
     if (thread.archived) return "archived";
     if (thread.pinned) return "pinned";
     const ts =
@@ -573,7 +577,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private bucketLabel(
     key: ThreadBucketKey,
-    threads: readonly ChatThread[]
+    threads: readonly LyraChatThread[]
   ): string {
     const groupDate = key.startsWith("month:")
       ? this.dateForBucket(key)
@@ -617,7 +621,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return new Date(year!, month! - 1, 1);
   }
 
-  private orderedCustomGroupIds(grouped: Map<string, ChatThread[]>): string[] {
+  private orderedCustomGroupIds(grouped: Map<string, LyraChatThread[]>): string[] {
     const firstSeen = [...grouped.keys()];
     if (typeof this.groupOrder === "function")
       return firstSeen.sort(this.groupOrder);
@@ -630,9 +634,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private groupedItems(
-    grouped: Map<string, ChatThread[]>,
+    grouped: Map<string, LyraChatThread[]>,
     order: string[],
-    contextFor: (id: string, threads: ChatThread[]) => ThreadGroupContext,
+    contextFor: (id: string, threads: LyraChatThread[]) => ThreadGroupContext,
     defaultLabel: (context: ThreadGroupContext) => string
   ): ThreadListItem[] {
     const collapsedIds = new Set(this.collapsedGroupIds);
@@ -660,7 +664,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return items;
   }
 
-  private buildItems(visible: ChatThread[]): ThreadListItem[] {
+  private buildItems(visible: LyraChatThread[]): ThreadListItem[] {
     if (this.grouping === "none") {
       return visible.map((thread) => ({ kind: "thread", thread }));
     }
@@ -668,7 +672,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     if (this.grouping === "custom") {
       if (!this.groupBy)
         return visible.map((thread) => ({ kind: "thread", thread }));
-      const grouped = new Map<string, ChatThread[]>();
+      const grouped = new Map<string, LyraChatThread[]>();
       for (const thread of visible) {
         const id = this.groupBy(thread);
         const existing = grouped.get(id);
@@ -684,7 +688,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     }
 
     const now = new Date();
-    const grouped = new Map<string, ChatThread[]>();
+    const grouped = new Map<string, LyraChatThread[]>();
     const monthKeys = new Set<string>();
     for (const thread of visible) {
       const id = this.bucketFor(thread, now);
@@ -952,7 +956,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     );
   };
 
-  private renderRowActions(thread: ChatThread): TemplateResult {
+  private renderRowActions(thread: LyraChatThread): TemplateResult {
     return html`
       <span slot="actions" part="row-actions">
         ${this.rowActions.includes("pin")
@@ -1052,7 +1056,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private renderRow = (item: unknown): unknown => {
-    const thread = item as ChatThread;
+    const thread = item as LyraChatThread;
     const row = html`
       <lr-conversation-item
         exportparts="base:row-item-base, active-indicator:row-item-active-indicator, select-button:row-item-select-button, start:row-item-start, content:row-item-content, label:row-item-label, label-input:row-item-label-input, rename-button:row-item-rename-button, excerpt:row-item-excerpt, meta:row-item-meta, timestamp:row-item-timestamp, actions:row-item-actions"

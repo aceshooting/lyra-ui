@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,12 +21,17 @@ characters; an overlong unterminated CSI/OSC sequence is dropped and the next wr
 clean parser boundary.
 
 **Properties:** `content: string = ''` — initial/replaceable buffer content, parsed for ANSI/SGR
-codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boolean = true`
+codes. `replace(content: string): void` synchronously replaces the parsed buffer and reactive
+`content` source, preserving commit order with same-turn `write()`/`clear()` calls.
+`maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boolean = true`
 (reflected) — stick-to-bottom, `wrap: boolean = true` (reflected), `copyable: boolean = true`
 (reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
-`accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
-false), and `activeHighlightId: string | null = null` (attribute: false).
+`accessibleLabel: string = ''` (attribute `aria-label`), `highlights: readonly LyraHighlight[] = []` (attribute:
+false), and `activeHighlightId: string | null = null` (attribute: false). Later duplicate highlight
+ids are omitted before painting, focus ownership, active lookup, and activation events. A host `aria-label` names
+the host; the nested `role="log"` keeps the localized terminal-purpose name rather than cloning the
+same label, and an explicit empty host label never leaves the actionable log unnamed.
 `compact: boolean = false` (reflected) — tightens `[part="toolbar"]`'s padding and gap and each
 rendered line's inline padding for a terminal embedded in an already-padded transcript row, the same
 convention `<lr-task-list>` and `<lr-thinking-panel>` use; purely a density knob, the card border and
@@ -49,7 +54,9 @@ line-granular (a match identifies a whole line, not a character range) and cappe
 stops climbing on a pathologically repetitive buffer. `getPlainText()` returns the SGR-stripped
 plain text of the whole buffer.
 
-**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { filename }`, cancelable — by
+**Events:** `lr-copy` (`detail: { ok: true, text }`, emitted only after a successful clipboard write),
+`lr-error` (no detail) and `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on clipboard failure,
+`lr-download` (`detail: { filename }`, cancelable — by
 default the component creates a plain-text `Blob`/object URL and activates a synthetic
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
@@ -62,7 +69,9 @@ text, anchor, rects }`).
 `data-line-number`/`data-match`/`data-highlight-tone`, and is forwarded via `exportparts` so
 `lr-terminal::part(line)` reaches the rendered lines from a consumer stylesheet despite them living
 in the internal `<lr-virtual-list>`'s shadow root), `jump-to-latest` (shown while `follow` is
-disengaged and new output has arrived), and `announcer` (the visually-hidden, `aria-hidden` mirror
+disengaged and new output has arrived), `line-interactive`, `line-highlight-accent`,
+`line-highlight-success`, `line-highlight-warning`, `line-highlight-danger`, `line-highlight-neutral`,
+`line-match`, `line-active-match`, and `announcer` (the visually-hidden, `aria-hidden` mirror
 of the text last announced while `announce-output` is set).
 
 `[part="announcer"]` is a styling and inspection surface only — it carries **no** live-region role
@@ -94,9 +103,9 @@ beat it without `!important`.
 **The ANSI/SGR palette is two token sets, not one.** SGR gives the sixteen colour names two
 different jobs, and each job is themed separately:
 
-- `--lr-terminal-color-<name>` — **foregrounds**, i.e. `CSI 30`–`37` and `CSI 90`–`97`, drawn *on*
+- `--lr-terminal-color-<name>` — **foregrounds**, i.e. `CSI 30`–`37` and `CSI 90`–`97`, drawn _on_
   the terminal panel.
-- `--lr-terminal-bg-<name>` — **backgrounds**, i.e. `CSI 40`–`47` and `CSI 100`–`107`, drawn *under*
+- `--lr-terminal-bg-<name>` — **backgrounds**, i.e. `CSI 40`–`47` and `CSI 100`–`107`, drawn _under_
   the panel's text.
 
 `<name>` is `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` and their
@@ -113,7 +122,7 @@ cases a program cannot avoid legible:
    **the default foreground is legible on any background**.
 
 A single shared set could not do both: foregrounds solved against a light panel are all dark, so
-`ESC[41m` would paint a near-black red behind near-black text. An *explicit* foreground+background
+`ESC[41m` would paint a near-black red behind near-black text. An _explicit_ foreground+background
 pair (`ESC[30;47m`) is the emitting program's choice and is not guaranteed here, exactly as in a
 native terminal — sixteen against sixteen is 256 combinations, several degenerate by construction.
 

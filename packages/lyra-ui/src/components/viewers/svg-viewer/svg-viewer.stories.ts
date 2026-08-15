@@ -47,7 +47,7 @@ export const ThemedActiveRegion: Story = {
     docs: {
       description: {
         story:
-          '`--lr-svg-viewer-active-border` recolors only the region highlight matching `active-highlight-id`; the resting highlights keep `--lr-color-brand`. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed. Previously the active border resolved straight through library-wide `--lr-color-warning`.',
+          '`--lr-svg-viewer-active-border` recolors only the region matching `active-highlight-id`. Painting retains at most 100 valid regions after inspecting 1,000 candidates, and the active region is inspected first so it remains inside that cap. Set the token on the element or an ancestor; resting highlights keep `--lr-color-brand`.',
       },
     },
   },

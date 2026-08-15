@@ -122,7 +122,7 @@ class CopySourceError extends Error {
 
 export interface LyraCopyButtonEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
-  'lr-error': CustomEvent<undefined>;
+  'lr-error': CustomEvent<null>;
   'lr-toolbar-actions-change': Event;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
@@ -510,6 +510,10 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     if (this.hasCustomTrigger) void this.copy();
   };
 
+  private stopInternalTooltipEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private statusLabel(status: CopyStatus): string {
     if (status === 'success') return this.successLabel || this.localize('copied');
     if (status === 'error') return this.errorLabel || this.localize('copyFailed');
@@ -549,6 +553,10 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
         .hoist=${this.hoist}
         .disabled=${tooltipDisabled}
         .open=${tooltipOpen}
+        @lr-show=${this.stopInternalTooltipEvent}
+        @lr-after-show=${this.stopInternalTooltipEvent}
+        @lr-hide=${this.stopInternalTooltipEvent}
+        @lr-after-hide=${this.stopInternalTooltipEvent}
         exportparts="base:tooltip__base, base__popup:tooltip__base__popup, base__arrow:tooltip__base__arrow, body:tooltip__body"
       >
         ${this.hasCustomTrigger
@@ -558,7 +566,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
                 part=${part}
                 type="button"
                 ?disabled=${this.disabled}
-                aria-label=${this.accessibleLabel || statusLabel}
+                aria-label=${this.accessibleLabel ?? statusLabel}
                 @click=${this.onClick}
               >
                 ${this.renderIcon()}

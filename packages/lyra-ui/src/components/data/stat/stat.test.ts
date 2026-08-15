@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './stat.js';
 import type { LyraStat } from './stat.js';
@@ -960,6 +960,40 @@ it('gives a linked plain stat a rendered text-underline hover/focus affordance, 
 
   anchor.focus();
   expect(getComputedStyle(value).textDecorationLine).to.contain('underline');
+});
+
+it('inherits linked hover/pressed hooks while direct host values still win', async () => {
+  const wrapper = await fixture(html`
+    <div
+      style="--lr-transition-fast: 0s; --lr-stat-link-hover-border-color: rgb(1, 2, 3); --lr-stat-link-active-bg: rgb(4, 5, 6)"
+    >
+      <lr-stat label="Memories" value="128" href="#memory-inventory"></lr-stat>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-stat') as LyraStat;
+  const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
+  anchor.addEventListener('click', (event) => event.preventDefault());
+  const rect = anchor.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+
+  try {
+    await sendMouse({ type: 'move', position });
+    await waitUntil(() => getComputedStyle(anchor).borderTopColor === 'rgb(1, 2, 3)');
+
+    el.style.setProperty('--lr-stat-link-hover-border-color', 'rgb(7, 8, 9)');
+    await waitUntil(() => getComputedStyle(anchor).borderTopColor === 'rgb(7, 8, 9)');
+
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(anchor).backgroundColor === 'rgb(4, 5, 6)');
+    el.style.setProperty('--lr-stat-link-active-bg', 'rgb(10, 11, 12)');
+    await waitUntil(() => getComputedStyle(anchor).backgroundColor === 'rgb(10, 11, 12)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 });
 
 it("wraps the internal [part='base'][href]:hover rule in :where() so a consumer ::part(base):hover override wins without !important", async () => {

@@ -4,7 +4,12 @@ import './breadcrumb-item.js';
 import './breadcrumb.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
-const meta: Meta = { title: 'Navigation/Breadcrumb item', component: 'lr-breadcrumb-item', tags: ['autodocs'] };
+const meta: Meta = {
+  title: 'Navigation/Breadcrumb item',
+  component: 'lr-breadcrumb-item',
+  tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'Interactive link/button owners retain a 24px minimum target in both axes; the inert current-page label keeps its content-sized geometry.' } } },
+};
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-breadcrumb-item href="/docs">Documentation</lr-breadcrumb-item>` };
 

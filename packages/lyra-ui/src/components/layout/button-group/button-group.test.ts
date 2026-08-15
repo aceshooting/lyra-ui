@@ -126,3 +126,12 @@ describe('<lr-button-group>', () => {
     expect(getComputedStyle(base).direction).to.equal('rtl');
   });
 });
+
+it("restores the declared orientation default when the attribute is removed", async () => {
+  const el = (await fixture(
+    html`<lr-button-group orientation="vertical"></lr-button-group>`
+  )) as LyraButtonGroup;
+  el.removeAttribute("orientation");
+  await el.updateComplete;
+  expect(el.orientation).to.equal("horizontal");
+});

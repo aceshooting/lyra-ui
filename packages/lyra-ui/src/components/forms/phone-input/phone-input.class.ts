@@ -7,26 +7,25 @@ import { FormAssociated, isBarredFromValidation } from '../../../internal/form-a
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './phone-input.styles.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import {
   dispatchNativeInputEvent,
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
-import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import {
+  declaredDefaultConverter,
+  trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEFAULT_phoneInputLabel, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type LyraPhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
+export type LyraPhoneNumberStatus =
+  | 'empty' | 'incomplete' | 'invalid' | 'valid';
 export type LyraPhoneInputSelectionDirection = 'forward' | 'backward' | 'none';
-/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
- *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
-export type LyraPhoneInputSize = LyraSizeStep;
-
 export interface LyraPhoneCountry {
   /** ISO 3166-1 alpha-2 region code. */
   readonly code: string;
@@ -92,17 +91,20 @@ export async function loadLibphonenumberAdapter<CountryCode extends string>(
   loader: () => Promise<LibphonenumberModuleLike<CountryCode>>,
 ): Promise<LyraPhoneNumberAdapter> {
   const module = await loader();
-  const countries = module.getCountries().map((code) => ({
-    code: normalizeCountry(code),
-    callingCode: module.getCountryCallingCode(code),
-  }));
+  const countries = Object.freeze(module.getCountries().map((code) =>
+    Object.freeze({
+      code: normalizeCountry(code),
+      callingCode: module.getCountryCallingCode(code),
+    })
+  ));
 
   return {
     countries,
     parse(input, country) {
       const raw = input.trim();
       if (!raw) return { status: 'empty' };
-      const normalizedCountry = country ? normalizeCountry(country) as CountryCode : undefined;
+      const normalizedCountry = country ? (normalizeCountry(country) as CountryCode)
+        : undefined;
       const phone = module.parsePhoneNumberFromString(raw, normalizedCountry);
       if (!phone) {
         const length = module.validatePhoneNumberLength?.(raw, normalizedCountry);
@@ -143,15 +145,15 @@ export interface LyraPhoneInputEventDetail {
 }
 
 export interface LyraPhoneInputEventMap {
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
   input: InputEvent;
   change: Event;
   focus: FocusEvent;
   blur: FocusEvent;
   'lr-input': CustomEvent<LyraPhoneInputEventDetail>;
   'lr-change': CustomEvent<LyraPhoneInputEventDetail>;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
 }
 
 class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
@@ -409,7 +411,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   /**
    * Show the selected country's flag in the country trigger. Rendering uses `<lr-flag
-   * variant="compact">` (the icon-scale tier); the flag artwork itself still comes from the
+   * fidelity="compact">` (the icon-scale tier); the flag artwork itself still comes from the
    * optional `@aceshooting/lyra-flags` peer package, which the consumer registers by importing
    * `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` — the same contract as a standalone
    * `<lr-flag>`. Without that registration (or the peer package) the trigger simply renders no
@@ -448,22 +450,24 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-input`. The Web Awesome /
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
    *  tag rename with no attribute rewrite. */
-  @property({ reflect: true }) size: LyraSize = 'm';
+  @property({ reflect: true,
+    converter: declaredDefaultConverter<LyraSize>("m"),
+  }) size: LyraSize = 'm';
   /** Rounds the field's corners to a full pill, mirroring `lr-input`'s own `pill`. The country
    *  trigger's leading corners follow, since both read `--lr-phone-input-radius`. */
   @property({ type: Boolean, reflect: true }) pill = false;
   /** Accessible name for the telephone input. Takes precedence over `phoneLabel`, label, and placeholder. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Accessible name for the country selector. */
-  @property({ attribute: 'country-label' }) countryLabel = 'Select';
+  @property({ attribute: 'country-label', useDefault: true }) countryLabel = 'Select';
   /** Accessible-name override for the telephone input. */
   @property({ attribute: 'phone-label' }) phoneLabel = '';
   /** Validation message for a number that may still become valid with more digits. */
-  @property({ attribute: 'incomplete-text' }) incompleteText = 'This phone number is incomplete.';
+  @property({ attribute: 'incomplete-text', useDefault: true }) incompleteText = 'This phone number is incomplete.';
   /** Validation message for a completed but invalid number. */
-  @property({ attribute: 'invalid-text' }) invalidText = 'The value is invalid.';
-  @property() autocomplete = 'tel';
-  @property() inputmode: 'tel' | 'numeric' | 'text' = 'tel';
+  @property({ attribute: 'invalid-text', useDefault: true }) invalidText = 'The value is invalid.';
+  @property({ useDefault: true }) autocomplete = 'tel';
+  @property({ useDefault: true }) inputmode: 'tel' | 'numeric' | 'text' = 'tel';
   @property() enterkeyhint = '';
   /** Native readonly mode: keeps the telephone value focusable/copyable/submittable while
    * preventing telephone and country edits and barring constraint validation. */
@@ -671,7 +675,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       // Shared per-locale instance: this runs once per country row on every render of the
       // select, and constructing an `Intl.DisplayNames` is an ICU locale-data lookup that
       // would otherwise repeat for every row (a full libphonenumber country list is ~250).
-      return getDisplayNames(this.effectiveLocale, { type: 'region' }).of(row.code) ?? row.code;
+      return (
+        getDisplayNames(this.effectiveLocale, { type: 'region' }).of(row.code) ?? row.code
+      );
     } catch {
       return row.code;
     }
@@ -936,7 +942,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             </select>
             <span part="country-trigger" aria-hidden="true">
               ${this.flags && this.country
-                ? html`<lr-flag part="flag" country=${this.country} variant="compact" aria-label=""></lr-flag>`
+                ? html`<lr-flag part="flag" country=${this.country} fidelity="compact" aria-label=""></lr-flag>`
                 : nothing}
               <span part="country-code" ?data-placeholder=${!this.country}>${
                 this.country || this.effectiveCountryLabel

@@ -24,22 +24,25 @@ final.
 **Properties:**
 - `src: string = ''` — the media URL. Always re-validated against a safe-scheme allowlist before
   use (see below) — never trust it unsanitized even though it's typed as a plain string.
-- `kind?: 'image' | 'video' | 'file'` (reflected) — explicit format dispatch. Leave unset to
+- `kind?: LyraMediaCardKind` (`'image' | 'video' | 'file'`, reflected) — explicit format dispatch. Leave unset to
   auto-detect from `mimeType`.
 - `mimeType: string = ''` (attribute `mime-type`) — drives auto-detection when `kind` is unset.
 - `filename: string = ''` — shown in the file-chip fallback, used as the download link's suggested
   filename, and folded into the accessible name.
 - `alt: string = ''` — alt text for the image case (and reused as a video label fallback). Falls
   back to `filename`, then a generic per-kind description.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized action name on
-  the actual button/link without replacing image alt text or the video control's own label
+- `accessibleLabel: string = ''` (attribute `aria-label`) — a declarative attribute names the host
+  as a whole while its nested button/link keeps a purpose-specific localized action name. A
+  property-only assignment can override the nested action when no host label is present. Image alt
+  text and the native video's own purpose label remain independent; an explicitly empty host still
+  leaves every interactive descendant named.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
   shadow root) — same contract as `<lr-document-preview>`'s identically-named prop. Values that do
   not parse as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   the stylesheet token in control.
-- `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, on the library-wide `frame`
   vocabulary. `'card'` (the default) keeps the bordered, filled box. `'plain'` removes
   `[part="base"]`'s border, background, padding, and corner radius, so a card inside a dense chat
   transcript (or any container already drawing its own separation between attachments) doesn't
@@ -51,16 +54,21 @@ this property was always the second. There is no alias — `appearance` on `<lr-
 an unknown attribute now, so a card left on `appearance="plain"` silently renders the full card
 chrome again.
 
-**Events:** `lr-open` (`detail: { src: string; filename: string }`, cancelable) — fired when the
-card (or, for `kind="video"`, its separate `open-button`) is activated. `detail.src` is whichever
-safe-URL sink actually rendered (`safeMediaSrc(src) ?? safeLinkHref(src) ?? src.trim()`), not
-necessarily the raw `src` property verbatim — a whitespace-padded value is trimmed, so `detail.src`
-always matches what the DOM would show if it were safe. This component never navigates on its own
-for `image`/`video` — a host decides what "open" means. The `file`-chip case is the exception: when
-`src` passes the stricter href safety check, the chip is a real `<a href download>` so a bare
-drop-in still does something useful, but `lr-open` fires first — a host calling
-`preventDefault()` on it suppresses that default download/open so it can substitute its own
-handling.
+**Authoring types:** `LyraMediaCardKind` and `LyraMediaCardOpenDetail`; `frame` uses the shared
+`LyraFrame` directly. The former `MediaCardKind`, `MediaCardOpenDetail`, and `MediaCardFrame`
+names are removed in v9 rather than retained as aliases. URL validators are implementation details,
+not exports from the component entry.
+
+**Events:** `lr-media-open` (`detail: LyraMediaCardOpenDetail { src: string; filename: string }`,
+noncancelable) notifies
+after image-card or video open-button activation; those kinds have no component-owned navigation,
+so a host decides what "open" means. `lr-before-media-download` carries the same detail and is
+cancelable only for a safe file anchor immediately before its native download/open default; calling
+`preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
+validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
+whitespace-padded value is trimmed, so it matches the rendered sink.
+The former generic `lr-open` event is removed in v9: notification and veto phases now have distinct,
+truthful names.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the primary action for the
 current media kind.
@@ -91,19 +99,21 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
 
 ```html
 <lr-media-card kind="image" src="https://example.com/photo.jpg" alt="Screenshot" filename="photo.jpg"
-  @lr-open=${(e) => openLightbox(e.detail.src)}
+  @lr-media-open=${(e) => openLightbox(e.detail.src)}
 ></lr-media-card>
-<lr-media-card kind="file" src="https://example.com/report.pdf" filename="report.pdf"></lr-media-card>
+<lr-media-card kind="file" src="https://example.com/report.pdf" filename="report.pdf"
+  @lr-before-media-download=${(e) => shouldUseNativeDownload || e.preventDefault()}
+></lr-media-card>
 ```
 
-**Safe-URL checking.** `src` is validated (exported as `safeMediaSrc()`/`safeLinkHref()`) before it's
+**Safe-URL checking.** `src` is validated by internal sink-specific helpers before it's
 ever assigned to an `<img>`/`<video>` `src` or an `<a href>` — only `http:`/`https:`/`blob:` (plus
 `data:` for a *media* `src` only) or a scheme-relative/relative URL with no scheme at all pass;
 anything else (`javascript:`, `vbscript:`, and similarly suspicious schemes) is rejected. `data:` is
-allowed for `safeMediaSrc()` (a browser never executes script from a media element's `src`) but
-rejected by the stricter `safeLinkHref()` (a `data:text/html` URI navigated to via a clicked `<a
+allowed for a media source (a browser never executes script from a media element's `src`) but
+rejected by the stricter link validator (a `data:text/html` URI navigated to via a clicked `<a
 href>` runs as a full document and can execute script) — the same scheme gets a different verdict
-depending on which DOM sink it's headed for. Both functions delegate to the platform's own `new
+depending on which DOM sink it's headed for. Both validators delegate to the platform's own `new
 URL()` parser rather than a hand-rolled scheme regex, specifically because `new URL()` already
 implements the WHATWG URL Standard's input normalization (stripping tab/newline/leading-trailing
 space before looking for a scheme) — a naive regex is vulnerable to exactly the kind of
@@ -116,7 +126,7 @@ download affordance.
 `[part="media"]` rather than wrapping the whole card in one `<button>`/`<a>` (the pattern
 `image`/`file` use) — a `<video controls>` element is itself interactive content, and HTML forbids
 nesting interactive content inside a `<button>`/`<a>`; doing so anyway would also make every click on
-the video's own native controls bubble up and spuriously fire `lr-open`.
+the video's own native controls bubble up and spuriously fire `lr-media-open`.
 
 **Known gotchas:**
 - Calling the real `.click()` (or dispatching a `click`/`MouseEvent`) on the file-chip's `<a href>`

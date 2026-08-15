@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 1 part, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-timeline-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -35,16 +35,16 @@ unrelated slotted elements and text nodes are ignored.
 isn't attribute-serializable; invalid input normalizes to unset and renders no timestamp UI),
 `sync: boolean = false` (forwarded to the internal `<lr-relative-time>`; no effect when the
 `timestamp` slot is filled), `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' =
-'neutral'` (marker tone), `active: boolean = false` (reflected — pulsing marker, disabled under
-`prefers-reduced-motion: reduce`, plus `aria-current="true"` on the host, removed entirely while
-inactive).
+'neutral'` (marker tone), `active: boolean = false` (reflected — a static marker ring plus an
+optional pulse disabled under `prefers-reduced-motion: reduce`, with explicit `aria-current="true"`
+or `"false"` on the host).
 
-**Events:** none on either element. Listen to the native `slotchange` if you need item-count changes.
+**Events:** none on either element. Read the reactive `itemCount` property after changing direct
+children; the internal slot's non-composed `slotchange` event is not a host-level public signal.
 
 **Slots:** `lr-timeline`'s default slot holds the items, in display order. On an item the **default
-slot is the title** (there is no `title` slot), plus `marker-icon` (canonical marker glyph override),
-`icon` (legacy marker-glyph alias retained as the fallback; `marker-icon` takes precedence when both
-are filled, and an empty pair falls back to a color-coded dot), `timestamp` (wins outright over the
+slot is the title** (there is no `title` slot), plus `marker-icon` (marker glyph override; an empty
+slot falls back to a color-coded dot), `timestamp` (wins outright over the
 `timestamp` property whenever it has assigned content), and `description` (its part is hidden
 entirely when empty).
 
@@ -57,15 +57,17 @@ wrapping `title` and `timestamp`; wraps at narrow widths rather than truncating)
 
 **Themeable custom properties:** `--lr-timeline-gap` (default `var(--lr-space-l)`) — declared on
 `lr-timeline` but consumed inside each item via inheritance across the slot boundary; it is both the
-inter-item spacing and the length each rail bridges. On the item: `--lr-timeline-marker-size`
+inter-item spacing and the length each rail bridges. `--lr-scroll-fade-size` (default `2rem`) controls each
+horizontal-overflow edge fade; forced-colors mode removes the masks while retaining native
+scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border)`), `--lr-timeline-marker-color` (default
-`var(--lr-color-text-quiet)`, swapped per `variant`). All four item hooks inherit from theme
+`var(--lr-color-text-quiet)`, swapped per `variant`), and `--lr-timeline-active-ring-color`
+(defaults to the effective marker color). All five item hooks inherit from theme
 ancestors; setting one directly on an item wins over both the inherited value and variant default.
 
-**Internal, not public:** `--lr-timeline-item-direction`, `--lr-timeline-item-track-direction`,
-`--lr-timeline-item-gap-block-end` and `--lr-timeline-item-gap-inline-end` (set by `lr-timeline`'s
-`:host` / `:host([orientation='horizontal'])` rules), plus `--lr-timeline-item-rail-visibility` (set
-by its `::slotted(:last-child)` rule) propagate orientation and last-item state across the slot
-boundary. Overriding any of them breaks layout rather than merely restyling it.
+Version 9 removes the legacy item `icon` slot; migrate marker glyphs to `slot="marker-icon"`.
+Timeline orientation/rail coordination now uses private implementation-prefixed cross-shadow
+properties. The only supported spacing input remains `--lr-timeline-gap`; stop overriding the five
+former `--lr-timeline-item-*` plumbing names.

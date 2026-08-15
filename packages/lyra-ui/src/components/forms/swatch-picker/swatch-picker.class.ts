@@ -6,9 +6,10 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { gemstoneGlyph, type GemstoneKey } from '../../../theme/gemstones.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './swatch-picker.styles.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 
 export interface SwatchPickerItem {
   /** The option's value -- reported in `lr-change` and matched against `value`. */
@@ -20,7 +21,7 @@ export interface SwatchPickerItem {
   /** Optional decorative custom shape rendered in place of the plain filled circle -- e.g. a gem
    *  or other brand-specific glyph. Its rendered subtree is inert and aria-hidden. A
    *  `currentColor`-based SVG (fill or stroke) picks up `color` automatically via the swatch's
-   *  `color` CSS property, matching `<lr-segmented>`'s `SegmentedItem.icon` field. */
+   *  `color` CSS property, matching `<lr-segmented>`'s `LyraSegmentedItem.icon` field. */
   readonly icon?: unknown;
   /** Canonical gemstone to render automatically in `mode="gemstone"`. An explicit `icon` still
    * wins, so a consumer can customize one option without leaving gemstone mode. */
@@ -30,10 +31,12 @@ export interface SwatchPickerItem {
 /** @deprecated Use {@link SwatchPickerItem}. */
 export type SwatchOption = SwatchPickerItem;
 
-/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
- *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
-export type LyraSwatchPickerSize = LyraSizeStep;
 export type LyraSwatchPickerMode = 'swatch' | 'gemstone';
+
+const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
+  ['swatch', 'gemstone'],
+  'swatch',
+);
 
 export interface LyraSwatchPickerEventMap {
   'lr-change': CustomEvent<{ value: string }>;
@@ -154,7 +157,19 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
   /** Visual treatment. `swatch` preserves the plain-circle default; `gemstone` renders the shared
    * gemstone glyph for items with a `gemstone` key and enables its glow/shine recipe. */
-  @property({ reflect: true }) mode: LyraSwatchPickerMode = 'swatch';
+  private _mode: LyraSwatchPickerMode = 'swatch';
+
+  @property({ reflect: true, converter: SWATCH_PICKER_MODE })
+  get mode(): LyraSwatchPickerMode {
+    return this._mode;
+  }
+  set mode(next: LyraSwatchPickerMode) {
+    const normalized = SWATCH_PICKER_MODE.normalizeReflected(this, 'mode', next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate('mode', old);
+  }
 
   /** Accessible-name fallback for the radiogroup when the host has no `aria-label`, used when no
    *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading).

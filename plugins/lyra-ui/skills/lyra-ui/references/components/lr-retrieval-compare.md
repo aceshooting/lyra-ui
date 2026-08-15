@@ -21,7 +21,9 @@ dense/sparse/rerank/final score breakdowns.
 **Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
 `RetrievalComparisonSet = { id: string; label: string; chunks: RetrievalChunk[] }`;
 `topK: number = 10` (attribute `top-k`, finite integer with minimum 1);
-`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label: string = ''`.
+`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label: string = ''` (fallback name
+for the overall comparison region; a non-empty host `aria-label` makes the host the sole overall
+owner, while an explicitly empty host label stays empty on the region).
 `RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
 trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
 
@@ -39,5 +41,5 @@ is pairwise Jaccard similarity across those visible chunk ids. Selection is cont
 same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border`.
 
 ```ts
-import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js';
+import "@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js";
 ```

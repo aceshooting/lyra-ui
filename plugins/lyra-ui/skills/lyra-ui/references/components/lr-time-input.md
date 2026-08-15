@@ -18,6 +18,8 @@
 A locale-aware segmented field and column picker mirroring `wa-time-input`. Its wire and submitted
 value is always timezone-free, 24-hour ASCII: `HH:mm`, or `HH:mm:ss` when seconds are visible.
 Locale changes segment order, separators, digits, and day-period labels — never the wire value.
+Typing accepts both ASCII digits and the active locale's digit glyphs, and validation-message
+bounds use the same localized time presentation rather than exposing the ASCII wire form.
 An incomplete draft remains visible for editing but submits `''` and raises `badInput`.
 The clear/expand actions sit directly in the shared outer height ladder: compact tiers grow only
 enough for their hit targets, while `l` and `xl` retain the shared 48px and 56px heights rather
@@ -37,8 +39,12 @@ than adding outer padding around the buttons.
   state unchanged.
 - `min = ''`, `max = ''` accept the same canonical time syntax. `min <= max` is an ordinary
   closed range; `min > max` is an overnight range (for example `22:00` through `06:00`).
-- `step: number | 'any' = 60` is seconds. A numeric value below 60 reveals seconds; a whole-minute
-  multiple also becomes the minute picker column's stride. `'any'` disables step mismatch.
+- `step: number | 'any' = 60` is seconds. A numeric value below 60 reveals seconds. Numeric
+  validation follows native time step-base precedence: valid `min`, otherwise the current reset
+  default (`defaultValue`/the `value` content attribute), otherwise midnight. Picker options are
+  projected from the complete valid-time grid, so offset, hourly, multi-hour, bounded and overnight
+  grids expose only reachable values and retain a selected valid value. `'any'` disables step
+  mismatch and exposes the unrestricted segment vocabulary.
 - `hourFormat: 'auto' | '12' | '24' = 'auto'` (`hour-format`) overrides the locale's hour cycle.
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`,
   `size` (shared `2xs`…`xl` ladder and `small`/`medium`/`large` aliases), and `pill = false`.
@@ -57,12 +63,18 @@ than adding outer padding around the buttons.
 events from a removed tab stop. If a controlled locale, `hourFormat`, or `step` change removes the
 segment that currently owns focus, the first surviving segment receives focus after the new pattern
 renders. A format change never reclaims focus from another control. `show()` and `hide()` control the
-picker, while its form methods are described above.
+picker, while its form methods are described above. Disconnecting force-closes without a veto and
+reconnects with `open`, its attribute, ARIA, popup visibility, and `:state(open)` all closed. A
+visible incomplete draft retains its segments, digit buffer, empty submitted value, and `badInput`
+state across detach/adoption/reconnect.
 
 **Keyboard:** only one segment is in the tab order. Digits fill the active segment and advance when
 no further digit can be accepted; Left/Right moves in locale order and reverses under RTL;
 Up/Down steps, Home/End selects the segment edge, and Backspace/Delete clears the segment.
 Pasting a canonical time replaces the full value as one edit. Alt+ArrowDown opens the picker.
+Inside a picker column, one enabled option is tabbable; ArrowUp/ArrowDown rove, Home/End jump to
+the bounds, and Enter/Space activate the focused native option button. Disabled controls project
+`disabled` and `tabindex=-1` to every picker option.
 `readonly` keeps navigation and popup browsing but blocks commits; `disabled` removes the tab stop,
 popup, validation, and form submission.
 
@@ -71,6 +83,8 @@ aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the s
 with `lr-focus` / `lr-blur` aliases. `lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
 precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
 `lr-invalid` follows a failed validity check.
+The hidden native autofill seam treats an intentional empty `input` followed by `change` as a
+single clear transaction, emitting `input`, `lr-input`, `change`, then `lr-change` exactly once.
 
 **Slots:** `label`, `hint`, `error`, `start`, `end`, `clear-icon`, `expand-icon`, and `footer`.
 
@@ -87,6 +101,12 @@ fixed-size actions, and the open picker contained.
 `error` is ordinary visible validation text referenced by the segmented input through
 `aria-describedby`, not a shadow `role="alert"`. Native `reportValidity()`/focus feedback therefore
 has one description path instead of being duplicated by a second live-region announcement.
+The group and every spinbutton expose explicit stateful `aria-invalid`: visible property/slotted
+error chrome makes it `"true"` immediately, as does intrinsic/custom invalidity after interaction;
+otherwise each owner explicitly exposes `"false"`.
+Every spinbutton renders explicit `aria-required="true"` or `"false"`. While required, the
+segmented `role="group"` also acquires a localized visually-hidden requiredness description without
+overwriting its existing hint/error relationship; removing `required` releases only that text.
 
 **Custom states:** `blank`, `disabled`, and `open`, plus the shared validity states.
 
@@ -116,9 +136,14 @@ undeclared on the host so ancestor themes work. The upstream-compatible
 `--hide-duration`, each with a Lyra design-token fallback.
 
 ```html
-<lr-time-input label="Start time" value="09:30" with-clear with-now></lr-time-input>
+<lr-time-input
+  label="Start time"
+  value="09:30"
+  with-clear
+  with-now
+></lr-time-input>
 <lr-time-input label="Precise time" step="15" value="09:30:15"></lr-time-input>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/input/time-input.js';
+  import "@aceshooting/lyra-ui/components/forms/input/time-input.js";
 </script>
 ```

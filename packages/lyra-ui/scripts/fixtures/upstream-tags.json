@@ -360,7 +360,9 @@
     ]
   },
   "noCounterpart": {},
-  "unaliasedEvents": {},
+  "unaliasedEvents": {
+    "wa-data-grid wa-data-request": "Lyra deliberately exposes the same server-request detail under the native `request` event and does not dispatch a prefixed alias."
+  },
   "attributeRenames": [
     {
       "component": "lr-dialog",

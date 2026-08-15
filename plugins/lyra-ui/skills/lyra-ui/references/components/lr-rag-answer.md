@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
+- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom`, `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -26,9 +26,16 @@ neutral visible caller text; new non-empty values announce through a shared asse
 region, while initial and reconnect content is not replayed — spelled plain `error` before 9.0.0);
 `showSources: boolean = true`; `showClaims: boolean = true`
 (attribute `show-claims`); `label: string = ''`; `accessibleLabel: string | null = null` (attribute
-`aria-label`).
+`aria-label`). The same `<article>` remains the semantic shell in `idle`, `loading`, `answer`, and
+`error` states. With no non-empty host `aria-label` it owns the article role/name; a non-empty host
+label makes the host the sole overall owner, while an explicitly empty host label stays empty on
+the article. The normalized state gives `errorText` precedence over a conflicting `loading`
+flag; `aria-busy="true"` and the spinner appear exactly in the resulting `loading` state, including
+while a partial property or slotted answer is streaming.
 
-**Events:** `lr-citation-select` (`{ citation }`), `lr-claim-select` (`{ claim }`), and `lr-retry`.
+**Events:** `lr-citation-select` (`{ citation, section: 'answer' | 'grounding' }`),
+`lr-claim-select` (`{ claim }`), and `lr-retry`. When `assessment` is present, grounding summary is
+the single citation presentation/action owner; the answer-level duplicate citation row is omitted.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list. Either slot renders from its assigned content without requiring the corresponding

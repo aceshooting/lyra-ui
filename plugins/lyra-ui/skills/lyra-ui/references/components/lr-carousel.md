@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,10 +27,10 @@ temporarily makes off-page slides inert and aria-hidden, then restores their ret
 when they become visible, are removed, or the carousel disconnects.
 
 **Properties:**
+
 - `currentSlide: number = 0` (attribute `current-slide`, reflected) — zero-based index of the first
-  slide in the active page. `index: number = 0` (attribute `index`, reflected) is the established
-  Lyra alias; setting either name updates and reflects both through one clamped state value. The
-  pinned Web Awesome markup spelling `currentSlide` is also accepted through HTML's normalized
+  slide in the active page. The pinned Web Awesome markup spelling `currentSlide` is also accepted
+  through HTML's normalized
   `currentslide` attribute as a permanent compatibility alias. When both spellings are present on
   initial markup, canonical `current-slide` wins.
 - `loop: boolean = false` (attribute `loop`, reflected) — wraps navigation at either end
@@ -41,8 +41,6 @@ when they become visible, are removed, or the carousel disconnects.
 - `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
   buttons
 - `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.
-  `showIndicators: boolean = false` (attribute `show-indicators`) is the synchronized Lyra alias;
-  its legacy literal `show-indicators="false"` spelling remains understood.
 - `slidesPerPage: number = 1` (attribute `slides-per-page`) — number of simultaneously operable
   slides. Values used for layout are finite integers clamped to at least one and at most the live
   slide count.
@@ -53,32 +51,35 @@ when they become visible, are removed, or the carousel disconnects.
 - `mouseDragging: boolean = false` (attribute `mouse-dragging`, reflected) — adds desktop
   click-and-drag scrolling without replacing native touch and trackpad scrolling. Pointer
   cancellation releases capture, removes drag state, and returns to the active snap position.
-- `slides: number = 0` (attribute `slides`, reflected) — live assigned-slide count; updated after
-  dynamic child changes
+  Gestures begin only for a primary left-mouse pointer on noninteractive slide content; native,
+  custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
+- `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — fallback landmark name; a host
   `aria-label` takes precedence by presence, including an explicitly empty value
 
-**8.0 default migration:** navigation and pagination now match the mapped opt-in defaults. Markup
-that relied on Lyra's former always-present arrow row or `showIndicators = true` must add
-`navigation` and/or `pagination`; the `showIndicators` property/attribute remains an alias but now
-defaults to `false`. The autoplay interval also changes from Lyra's former 5000ms to the mapped
-3000ms default. Existing explicit values continue to win.
+**9.0 cleanup:** the redundant Lyra-only `index`, `showIndicators`, and `goTo()` aliases were
+removed. Use mapped `currentSlide`, `pagination`, and `goToSlide()`. The writable/reflected
+`slides` readout also became a readonly composition-derived property. Navigation and pagination
+retain their mapped opt-in defaults, and the autoplay interval remains 3000ms.
 
 **Methods:**
+
 - `next(behavior: ScrollBehavior = 'smooth')` and
   `previous(behavior: ScrollBehavior = 'smooth')` move by `slidesPerMove`
-- `goToSlide(index, behavior: ScrollBehavior = 'smooth')` moves to a specific slide;
-  `goTo(index, behavior)` is the Lyra compatibility alias
+- `goToSlide(index, behavior: ScrollBehavior = 'smooth')` moves to a specific slide
 - `addSlide(slide: LyraCarouselItem)` appends a slide and `removeSlide(index)` removes one; page
-  count, reflected `slides`, active range, inertness, eligible loop snapshots, and pagination reconcile
+  count, active range, inertness, eligible loop snapshots, and pagination reconcile
   automatically
 
 **Events:** `lr-slide-change` (`detail: { index, slide }`) — emitted after the active slide changes
 from a method, button, key, pagination item, autoplay tick, or settled user scroll. `slide` is the
 original assigned element at `index`, never a loop endcap.
 
-**Paging and scrolling.** The page count is the set of reachable starts from zero to
-`slideCount - slidesPerPage`, stepping by `slidesPerMove` and always including the final start. All
+**Paging and scrolling.** In non-loop mode the page count is the set of reachable starts from zero
+to `slideCount - slidesPerPage`, stepping by `slidesPerMove` and always including the final start.
+Loop pagination exposes every slide as an exact valid start, so the current loop start always has
+one and only one current indicator. Multi-slide basis conserves the allocation as
+`(100% - (slidesPerPage - 1) * gap) / slidesPerPage`, including final partial pages. All
 slides in the active page are restored to their authored `inert`/`aria-hidden` state; every other
 slide keeps its layout box but becomes `inert` and `aria-hidden="true"`, so visible multi-slide
 pages remain fully operable while off-page links are unreachable. Native mandatory scroll snap
@@ -94,7 +95,7 @@ lifecycle, network/playback, and state owners even when the physical wrap cannot
 the requested direction.
 
 Manual active-page changes after mount are appended to Lyra's shared light-DOM polite
-announcement sink. The focusable `scroll-container viewport` is not itself a shadow-root live
+announcement sink. The focusable `scroll-container` is not itself a shadow-root live
 region. Initial connection and reconnection stay silent. Timer-driven autoplay advances also stay
 silent, while click, keyboard, method, scroll-gesture, and property changes are announced even
 when `autoplay` remains enabled. A change made while the carousel or a composed ancestor is
@@ -113,16 +114,19 @@ summaries. A registered locale or the instance's `strings` override can customiz
 Horizontal Left/Right keys follow logical direction and swap under RTL; vertical carousels use
 Up/Down without an RTL inversion. Home and End move to the first and final reachable start. The
 populated multi-slide state remains accessible at a 320px allocation.
+If a controlled page/page-size change or slide removal would make the currently focused slide
+inert or disconnected, focus moves to the stable `scroll-container` before exclusion. A
+newer external focus destination is never reclaimed.
 
 **Slots:** default slides, `previous-icon`, and `next-icon`. Named icon slots replace only the
-decorative glyph content; Lyra retains the localized button names and minimum hit areas.
+decorative glyph content; their flattened subtrees remain visible but are inert and aria-hidden.
+Lyra retains the localized native-button names, actions, and minimum hit areas.
 
-**CSS parts:** `base carousel` (same region node), `scroll-container viewport` (same focusable
-scroll port), `navigation`, `navigation-button`, `navigation-button-previous` /
+**CSS parts:** `base carousel` (same region node), `scroll-container` (focusable scroll port),
+`navigation`, `navigation-button`, `navigation-button-previous` /
 `navigation-button-next`, Shoelace aliases `navigation-button--previous` /
-`navigation-button--next`, and Lyra aliases `previous-button` / `next-button` plus
-`previous-glyph` / `next-glyph`; `pagination indicators`, `pagination-item indicator`, active
-aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot`. `track` and
+`navigation-button--next`, plus `previous-glyph` / `next-glyph`; `pagination`, `pagination-item`,
+active aliases `pagination-item-active` / `pagination-item--active`, and `indicator-dot`. `track` and
 `controls` are Lyra extensions.
 
 **Themeable custom properties:** mapped `--aspect-ratio` (default `16/9`), `--scroll-hint`
@@ -142,8 +146,12 @@ brand/active-mix rendering when unset.
 
 ```html
 <lr-carousel navigation pagination aria-label="Screenshots">
-  <lr-carousel-item><img alt="Dashboard overview" src="overview.png"></lr-carousel-item>
-  <lr-carousel-item><img alt="Dashboard details" src="details.png"></lr-carousel-item>
+  <lr-carousel-item
+    ><img alt="Dashboard overview" src="overview.png"
+  /></lr-carousel-item>
+  <lr-carousel-item
+    ><img alt="Dashboard details" src="details.png"
+  /></lr-carousel-item>
 </lr-carousel>
 ```
 

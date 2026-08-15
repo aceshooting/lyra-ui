@@ -1,7 +1,7 @@
 import { html, type TemplateResult } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './thread-list.js';
-import type { ChatThread, LyraThreadList } from './thread-list.class.js';
+import type { LyraChatThread, LyraThreadList } from './thread-list.class.js';
 import '../../layout/menu/menu.js';
 import '../../layout/menu/menu-item.js';
 import '../../overlays/overlay/dropdown.js';
@@ -28,7 +28,7 @@ const now = new Date();
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 3_600_000);
 const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000);
 
-const threads: ChatThread[] = [
+const threads: LyraChatThread[] = [
   { id: '1', title: 'Deploy pipeline investigation', pinned: true, timestamp: hoursAgo(2) },
   {
     id: '2',
@@ -42,7 +42,7 @@ const threads: ChatThread[] = [
   { id: '6', title: 'Archived spike', archived: true, timestamp: daysAgo(10) },
 ];
 const narrowUnbrokenThreadText = 'ConversationIdentifierWithoutNaturalBreaks'.repeat(6);
-const narrowRtlThreads: ChatThread[] = [
+const narrowRtlThreads: LyraChatThread[] = [
   {
     id: 'rtl-active',
     title: narrowUnbrokenThreadText,
@@ -58,12 +58,12 @@ const narrowRtlThreads: ChatThread[] = [
     timestamp: daysAgo(1),
   },
 ];
-const boundaryThreads: ChatThread[] = Array.from({ length: 40 }, (_, index) => ({
+const boundaryThreads: LyraChatThread[] = Array.from({ length: 40 }, (_, index) => ({
   id: `boundary-${index}`,
   title: `Virtualized conversation ${index + 1}`,
   timestamp: hoursAgo(index),
 }));
-const collidingIdentityThreads: Array<ChatThread & { group: string }> = Array.from({ length: 30 }, (_, index) => ({
+const collidingIdentityThreads: Array<LyraChatThread & { group: string }> = Array.from({ length: 30 }, (_, index) => ({
   id: index === 29 ? 'group:today' : `ordinary-${index}`,
   title: `Grouped conversation ${index + 1}`,
   group: 'today',
@@ -95,7 +95,7 @@ export const CustomRowActions: Story = {
         searchable
         active-id="2"
         .threads=${threads}
-        .renderActions=${(thread: ChatThread) => html`
+        .renderActions=${(thread: LyraChatThread) => html`
           <lr-dropdown placement="bottom-end">
             <button
               slot="trigger"
@@ -110,7 +110,7 @@ export const CustomRowActions: Story = {
                 console.log(e.detail.item.value, thread.id)}
             >
               <lr-menu-item value="rename">Rename</lr-menu-item>
-              <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+              <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
             </lr-menu>
           </lr-dropdown>
         `}
@@ -141,7 +141,7 @@ export const UnavailableWrappedRow: Story = {
       <lr-thread-list
         grouping="none"
         .threads=${threads}
-        .wrapRow=${(thread: ChatThread, row: TemplateResult) =>
+        .wrapRow=${(thread: LyraChatThread, row: TemplateResult) =>
           thread.id === '2' ? html`<div inert style="opacity:var(--lr-opacity-disabled);">${row}</div>` : row}
       ></lr-thread-list>
     </div>
@@ -183,7 +183,7 @@ export const CollidingActiveIdentity: Story = {
         <lr-thread-list
           grouping="custom"
           .threads=${collidingIdentityThreads}
-          .groupBy=${(thread: ChatThread & { group: string }) => thread.group}
+          .groupBy=${(thread: LyraChatThread & { group: string }) => thread.group}
         ></lr-thread-list>
       </div>
     </div>
@@ -249,10 +249,10 @@ export const RenderHooks: Story = {
       <lr-thread-list
         class="hook-parts"
         .threads=${threads}
-        .renderStart=${(thread: ChatThread) =>
+        .renderStart=${(thread: LyraChatThread) =>
           html`<lr-badge variant=${thread.pinned ? 'brand' : 'neutral'}>AI</lr-badge>`}
-        .renderMeta=${(thread: ChatThread) => html`<span>${thread.archived ? 'Archived' : 'Knowledge base'}</span>`}
-        .renderRowContent=${(thread: ChatThread) => html`
+        .renderMeta=${(thread: LyraChatThread) => html`<span>${thread.archived ? 'Archived' : 'Knowledge base'}</span>`}
+        .renderRowContent=${(thread: LyraChatThread) => html`
           <strong>${thread.title}</strong>
           <small>${thread.excerpt ?? 'No preview available'}</small>
         `}
@@ -269,7 +269,7 @@ export const RenderHooks: Story = {
  *  second retunes all four component-scoped highlight properties. */
 export const HighlightedExcerpt: Story = {
   render: () => {
-    const renderExcerpt = (thread: ChatThread) => {
+    const renderExcerpt = (thread: LyraChatThread) => {
       const excerpt = thread.excerpt ?? '';
       const query = 'token';
       const index = excerpt.toLowerCase().indexOf(query);
@@ -334,7 +334,7 @@ export const DenseRows: Story = {
         class="dense-rows"
         active-id="2"
         .threads=${threads}
-        .renderActions=${(thread: ChatThread) => html`
+        .renderActions=${(thread: LyraChatThread) => html`
           <lr-dropdown placement="bottom-end">
             <button
               slot="trigger"
@@ -349,7 +349,7 @@ export const DenseRows: Story = {
                 console.log(e.detail.item.value, thread.id)}
             >
               <lr-menu-item value="rename">Rename</lr-menu-item>
-              <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+              <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
             </lr-menu>
           </lr-dropdown>
         `}
@@ -377,7 +377,7 @@ export const CompactRows: Story = {
   `,
 };
 
-interface ProjectThread extends ChatThread {
+interface ProjectThread extends LyraChatThread {
   project: string;
 }
 
@@ -393,9 +393,9 @@ export const ControlledProjectGroups: Story = {
       <lr-thread-list
         grouping="custom"
         .threads=${projectThreads}
-        .groupBy=${(thread: ChatThread) => (thread as ProjectThread).project}
+        .groupBy=${(thread: LyraChatThread) => (thread as ProjectThread).project}
         .groupOrder=${['Viewer', 'Platform']}
-        .getGroupLabel=${({ id, threads }: { id: string; threads: readonly ChatThread[] }) =>
+        .getGroupLabel=${({ id, threads }: { id: string; threads: readonly LyraChatThread[] }) =>
           `${id} (${threads.length})`}
         .renderGroupAdornment=${({ id }: { id: string }) => html`<a href="#group-${id}">Open</a>`}
         .collapsedGroupIds=${['Platform']}
@@ -431,7 +431,7 @@ export const WrappedRows: Story = {
       <lr-thread-list
         class="wrapped-rows"
         .threads=${threads}
-        .wrapRow=${(thread: ChatThread, row: unknown) => html`
+        .wrapRow=${(thread: LyraChatThread, row: unknown) => html`
           ${row}
           <span class="row-tags">
             <lr-badge variant=${thread.pinned ? 'brand' : 'neutral'}>${thread.pinned ? 'Pinned' : 'Chat'}</lr-badge>
@@ -466,7 +466,7 @@ export const FillsItsContainer: Story = {
  *  through `::part(group-sticky)`. */
 export const StickyGroups: Story = {
   render: () => {
-    const many: ChatThread[] = [
+    const many: LyraChatThread[] = [
       ...Array.from({ length: 12 }, (_, i) => ({
         id: `today-${i}`,
         title: `Today conversation ${i + 1}`,

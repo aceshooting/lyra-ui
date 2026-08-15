@@ -31,7 +31,8 @@ First-party invention (no Web Awesome equivalent).
   `false` (the default) renders no button.
 - `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders today's
   single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
-  the same diff alignment.
+  the same diff alignment. Unsupported attributes and untyped property writes normalize to
+  reflected `unified`.
 - `language: string = ''` — a shiki-recognized language id. Highlighting activates only when this
   has a matching entry in `languages` — there is deliberately no default full-table
   `lr-code-block`-style fallback, so this component never reaches shiki's ~200-language
@@ -43,21 +44,22 @@ First-party invention (no Web Awesome equivalent).
   default `undefined` shows every line; negative and non-finite values also disable folding.
 - `maxLines: number = 5000` (attribute `max-lines`) — maximum logical lines accepted on either
   side. Larger input renders the localized `diffViewTooLarge` fallback without computing or
-  highlighting the diff. Set the property to `Infinity` explicitly to opt into unbounded diffing.
+  highlighting the diff. `Infinity` relaxes this line-count ceiling, but the fixed aggregate
+  character and comparison-work ceilings remain in force.
 
 **Events:**
 
-- `lr-copy` (`detail: { text: string }`) — the full unified-diff text, fired on every copy-button
-  activation, including an attempt whose clipboard write later fails.
+- `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — the frozen full
+  unified-diff outcome, fired only after the owning browsing context's clipboard write fulfills.
 - `lr-error` (no detail) — the Clipboard API was unavailable or the write failed.
-- `lr-copy-error` (detail contains the text, a `LyraCopyErrorReason`, and the original error) — the
-  detailed failure alias. The reason is `'unsupported' | 'denied' | 'failed'`; its error field
-  preserves the original platform error for diagnostics.
+- `lr-copy-error` (`detail: LyraClipboardWriteFailure`) — the frozen failure outcome contains
+  `ok: false`, the text, a `LyraCopyErrorReason`, and the original error. The reason is
+  `'unsupported' | 'denied' | 'failed'`.
 
 The copy button stays in its resting state until `writeText()` resolves. Success renders and
 announces localized `copied`; failure renders and announces localized `copyFailed`. A newer
-activation, source-text change, disconnect, or document adoption retires an older pending outcome,
-so stale writes cannot confirm or fail the current diff.
+activation, source-text change, `copyable`/`maxLines` transition, disconnect, or document adoption
+retires an older pending outcome, so stale writes cannot confirm or fail a hidden or replaced diff.
 
 **Slots:** none.
 
@@ -92,7 +94,7 @@ the plain unhighlighted diff text untouched.
 ```
 
 The package root also exports the pure `computeLineDiff(oldLines: string[], newLines: string[]):
-DiffOp[]` helper (plus the `DiffOp` type, `{ type: 'equal' | 'add' | 'remove'; text: string }`) — the
+LyraDiffOp[]` helper (plus the `LyraDiffOp` type, `{ type: 'equal' | 'add' | 'remove'; text: string }`) — the
 same line-diff function this component's own `render()`/copy handler call, exposed standalone so a
 consumer can compute or unit-test the same alignment without instantiating the element at all.
 
@@ -100,9 +102,11 @@ consumer can compute or unit-test the same alignment without instantiating the e
 
 - line splitting normalizes LF, CRLF, and lone CR endings before alignment and syntax-token indexing,
   so files that differ only by line-ending convention do not appear wholly changed.
+- An empty document contains zero logical lines. A genuine trailing newline is still represented,
+  so empty/one-sided diffs and copied unified text do not gain a phantom blank operation.
 - alignment uses Hirschberg longest-common-subsequence matching: O(n·m) time with linear working
-  memory. The 5,000-line per-side default ceiling bounds pathological inputs; `Infinity` is an
-  explicit performance-risk opt-out.
+  memory. The 5,000-line per-side default, aggregate character ceiling, and comparison-work ceiling
+  bound pathological inputs; `Infinity` opts out of only the first of those limits.
 - the computed `diffOps` state is cached and recomputed only when `oldText`, `newText`, or
   `maxLines` changes. Copy-confirmation and other unrelated renders reuse the cached alignment.
 - Changing either `oldText` or `newText` clears any in-progress "Copied" feedback immediately.

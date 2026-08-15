@@ -19,28 +19,24 @@
 `lr-details` is a native-semantics disclosure panel; it mirrors `wa-details` / `sl-details`.
 `lr-accordion` and `lr-accordion-item` mirror `wa-accordion` / `wa-accordion-item`: the group owns
 mode, presentation, lifecycle events, and roving focus, while each item renders a heading button
-and animated panel. An item also retains the previous Details vocabulary as aliases (`open`,
-`summary`, the `summary` slot, `show()`/`hide()`), so migrating markup keeps working.
+and animated panel. The two components intentionally keep distinct vocabularies: accordion items
+use `expanded`, `label`, and `expand()`/`collapse()`/`toggle()`, while `open`, `summary`, and
+`show()`/`hide()` belong only to Details.
 
 **Breaking in 9.0.0:** an accordion coordinates direct `lr-accordion-item` children only. Direct
 `lr-details` panels used to be accepted as well; they are not any more. A `lr-details` slotted into
 an accordion today is ordinary content owning its own disclosure lifecycle — the group applies
 neither its presentation, nor its single-panel invariant, nor its roving keyboard model, nor its
-`lr-expand`/`lr-collapse` lifecycle to it, and `expandAll()`/`collapseAll()` skip it. Migrate by
-renaming the tag: `<lr-details summary="...">` → `<lr-accordion-item summary="...">`, which accepts
-the same `summary` text and `open` state. `lr-details` on its own, outside an accordion, is
-unchanged.
+`lr-expand`/`lr-collapse` lifecycle to it, and `expandAll()`/`collapseAll()` skip it. Migrate both
+the tag and its member vocabulary: `<lr-details summary="..." open>` becomes
+`<lr-accordion-item label="..." expanded>`, and `show()`/`hide()` become
+`expand()`/`collapse()`. `lr-details` on its own, outside an accordion, is unchanged.
 
 **Accordion properties:**
 
 - `mode: 'single' | 'single-collapsible' | 'multiple' = 'multiple'` (reflected). `multiple` allows
   any number of expanded items. `single` permits at most one and activating the expanded item is a
   no-op. `single-collapsible` permits at most one but allows zero.
-- `multiple: boolean = true` (reflected compatibility alias). `true` selects `mode="multiple"`;
-  `false` selects `mode="single-collapsible"`. The true default stays absent while false serializes
-  as `multiple="false"`, so declarative false is unambiguous. When both attributes occur in initial
-  markup, the explicit `mode` value wins, so their interpretation does not depend on attribute
-  order.
 - `iconPlacement: 'start' | 'end' = 'end'` (attribute `icon-placement`, reflected),
   `headingLevel: string = '3'` (attribute `heading-level`, reflected; `1`–`6` select that heading,
   `none` omits it, and every other value renders the documented h3 fallback), and
@@ -50,9 +46,11 @@ unchanged.
 
 **Accordion-item properties:** `label: string = ''`, `expanded: boolean = false` (reflected),
 `disabled: boolean = false` (reflected), plus the same `iconPlacement`, `headingLevel`, and
-`appearance` properties listed above. `open` is a synchronized reflected alias for `expanded`, and
-`summary` is a text alias for `label`; the canonical value wins when both text properties are set.
-Items also retain the Details `size` property.
+`appearance` properties listed above. **Removed in 9.0.0:** inherited Details members `open`,
+`summary`, `name`, `size`, `show()`, and `hide()`; use the canonical accordion-item members or use
+`lr-details` when the Details contract is required. Accordion expansion policy likewise has one
+authority: migrate `multiple` to `mode="multiple"`, and `multiple="false"` to the intended
+`mode="single"` or `mode="single-collapsible"` behavior.
 
 **Details properties:** `open: boolean = false` (reflected), `disabled: boolean = false`
 (reflected), `summary: string = ''`, `name: string = ''` (reflected — disclosures with the same
@@ -64,9 +62,9 @@ non-empty name in one document or shadow root are mutually exclusive),
 A host `aria-label`, when present, names the actual Details summary or accordion-item trigger;
 it wins over summary/label content even when explicitly empty. When the host attribute is absent,
 Details and accordion-item property/localized fallbacks keep their native name-from-content
-behavior. An active accordion-item `label` or compatibility `summary` slot instead contributes its
-normalized accessibility-visible text as the trigger's explicit name; its rendered subtree is inert
-and hidden from assistive technology so the trigger remains the sole action.
+behavior. An active accordion-item `label` slot contributes its normalized
+accessibility-visible text as the trigger's explicit name; its rendered subtree is inert and hidden
+from assistive technology so the trigger remains the sole action.
 
 `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected, new
 in 8.0.0) is the library's shared size ladder, so a disclosure scales with the controls around it
@@ -80,26 +78,23 @@ the ladder doesn't cover is a two-line override rather than a fork.
 
 - Accordion: `expandAll()` expands every direct enabled item only in `multiple` mode;
   `collapseAll()` collapses every direct expanded item. Nested accordion items are never included.
-- Accordion item: `expand()`, `collapse()`, and `toggle()` initiate the corresponding transition and
-  return `void`; observe `lr-after-expand` / `lr-after-collapse` on the owning accordion (or the
-  retained Details after-events on the item) for completion. Disabled items are unchanged.
-  `focus()`, `blur()`, and `click()` forward to the trigger button.
-- Details and compatibility aliases on accordion item: `show(): Promise<void>` expands and
-  `hide(): Promise<void>` collapses. Each promise settles after its matching `lr-after-show` or
-  `lr-after-hide`; a vetoed, disabled, or already-satisfied request resolves without changing state.
-  Assigning `open` runs the same Details lifecycle. `show()` is a no-op while disabled; `hide()`
-  can still close a disabled Details panel. On an item, prefer `expand()` / `collapse()` when the
-  disabled guard and canonical accordion vocabulary matter.
+- Accordion item: `expand(): Promise<void>`, `collapse(): Promise<void>`, and
+  `toggle(): Promise<void>` initiate the corresponding transition and settle after its rendered
+  motion. Disabled items are unchanged. `focus()` and the host's `click()` target the trigger.
+- Details: `show(): Promise<void>` expands and `hide(): Promise<void>` collapses. Each promise
+  settles after its matching `lr-after-show` or `lr-after-hide`; a vetoed, disabled, or
+  already-satisfied request resolves without changing state. Assigning `open` runs the same
+  Details lifecycle. `show()` is a no-op while disabled; `hide()` can still close a disabled
+  Details panel.
 
 **Events:**
 
 - `lr-expand`, `lr-collapse`, `lr-after-expand`, `lr-after-collapse` — accordion group lifecycle.
-- `lr-show`, `lr-hide`, `lr-toggle`, `lr-after-show`, `lr-after-hide` — Details lifecycle, also
-  retained by accordion items.
+- `lr-show`, `lr-hide`, `lr-toggle`, `lr-after-show`, `lr-after-hide` — Details lifecycle only.
 
 On the accordion, `lr-expand` and `lr-collapse` fire before a direct item changes, are cancelable,
-and carry `detail: { item }`. **Changed in 9.0.0:** `item` is now always an `LyraAccordionItem` —
-it could previously also be an `LyraDetails`. The exported `LyraAccordionPanel` union that spelled
+and carry `detail: { item }`. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
+it could previously also be a `LyraDetails`. The exported `LyraAccordionPanel` union that spelled
 that has been removed; use `LyraAccordionItem`. An accepted transition finishes with the
 non-cancelable
 `lr-after-expand` or `lr-after-collapse`, carrying the same item. In `single` mode, activating the
@@ -128,16 +123,17 @@ skipped. Enter and Space use the native button activation contract. Focus and ke
 inside the nearest nested accordion.
 
 **Slots:** accordion has a default slot for direct items. Accordion item has default panel content,
-`label`, `icon`, and the compatibility `summary` slot; `label` slot → `summary` slot → `label`
-property → `summary` property → localized `"Details"` is the precedence order. The two label-slot
-aliases accept rich visible markup, but their flattened subtrees are inert and hidden from
-assistive technology: do not place independent links, buttons, inputs, form state, or focus targets
-there. Details has `summary`, `expand-icon`, `collapse-icon`, plus default content.
+`label`, and `icon`; `label` slot → `label` property → localized `"Details"` is the precedence
+order. The label slot accepts rich visible markup, but its flattened subtree is inert and hidden
+from assistive technology: do not place independent links, buttons, inputs, form state, or focus
+targets there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden
+visual contract, while the trigger button remains the sole action. Details has `summary`,
+`expand-icon`, `collapse-icon`, plus default content.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
-same outer wrapper; `button` and the Details-compatible `summary` name are on the same trigger; and
-it also exposes `heading`, `label`, `icon`, `panel`, and `content`. Details exposes `base` and
-`details` on the same native `<details>` wrapper, plus `header`, `summary`, `icon`, and `content`.
+same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
+exposes `base` and `details` on the same native `<details>` wrapper, plus `header`, `summary`,
+`icon`, and `content`.
 The Details icon wrapper also carries Shoelace's `summary-icon` alias, so either part name styles
 the same node.
 
@@ -146,9 +142,7 @@ the same node.
 `--lr-accordion-item-hide-duration` (both default `var(--lr-duration-base)`), and
 `--lr-accordion-item-easing` (default `var(--lr-easing-standard)`). The mapped unprefixed names
 `--spacing`, `--show-duration`, `--hide-duration`, and `--easing` remain accepted aliases and win
-when set. The Details compatibility hooks `--lr-details-font-size` and `--lr-details-spacing` also
-continue to affect an accordion item. Panel and icon transitions stop under
-`prefers-reduced-motion: reduce`.
+when set. Panel and icon transitions stop under `prefers-reduced-motion: reduce`.
 
 Accordion appearance paint is independently inheritable: `--lr-accordion-outlined-bg` (default
 `var(--lr-color-surface)`) and `--lr-accordion-outlined-border-color` (default
@@ -168,7 +162,7 @@ Details exposes `--lr-details-font-size` (default
 summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads
 evenly. Each `size` tier sets both from the shared ladder, and both are declared on `:host`, so an
 override has to target the element itself — an ancestor rule is shadowed. Note that the spacing knob
-deliberately reads the ladder's *inline*-padding value: a stacked panel wants generous block rhythm,
+deliberately reads the ladder's _inline_-padding value: a stacked panel wants generous block rhythm,
 whereas the ladder's own block padding exists to fit text inside a fixed control height and would
 collapse the summary row. `--spacing` aliases the Details rhythm, while `--show-duration` and
 `--hide-duration` (both default `var(--lr-duration-base)`) tune its icon transitions. Motion stops
@@ -188,29 +182,37 @@ theme without requiring shared-token changes or shadow-part selectors.
 ```html
 <lr-details summary="Advanced options">Panel content</lr-details>
 <script type="module">
-  const panel = document.querySelector('lr-details');
+  const panel = document.querySelector("lr-details");
   let ready = false;
   // Cancelable: veto the open until some precondition is met.
-  panel.addEventListener('lr-show', (e) => {
+  panel.addEventListener("lr-show", (e) => {
     if (!ready) e.preventDefault();
   });
-  panel.addEventListener('lr-after-show', () => panel.querySelector('input')?.focus());
+  panel.addEventListener("lr-after-show", () =>
+    panel.querySelector("input")?.focus()
+  );
   ready = true;
   await panel.show();
 </script>
 ```
 
 ```html
-<lr-accordion mode="single-collapsible" icon-placement="start" heading-level="2">
-  <lr-accordion-item label="Account" expanded>Profile settings</lr-accordion-item>
+<lr-accordion
+  mode="single-collapsible"
+  icon-placement="start"
+  heading-level="2"
+>
+  <lr-accordion-item label="Account" expanded
+    >Profile settings</lr-accordion-item
+  >
   <lr-accordion-item>
     <strong slot="label">Notifications</strong>
     Notification settings
   </lr-accordion-item>
 </lr-accordion>
 <script type="module">
-  const accordion = document.querySelector('lr-accordion');
-  accordion.addEventListener('lr-expand', (event) => {
+  const accordion = document.querySelector("lr-accordion");
+  accordion.addEventListener("lr-expand", (event) => {
     if (event.detail.item.disabled) event.preventDefault();
   });
 </script>

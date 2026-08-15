@@ -17,7 +17,7 @@ export type KnowledgeBaseAdminTab = "sources" | "ingestion";
 
 export interface LyraKnowledgeBaseAdminEventMap {
   "lr-tab-change": CustomEvent<{ tab: KnowledgeBaseAdminTab }>;
-  "lr-source-create": CustomEvent<undefined>;
+  "lr-source-create": CustomEvent<null>;
   "lr-source-sync": CustomEvent<{ sourceId: string }>;
   "lr-source-pause": CustomEvent<{ sourceId: string }>;
   "lr-source-delete": CustomEvent<{ sourceId: string }>;

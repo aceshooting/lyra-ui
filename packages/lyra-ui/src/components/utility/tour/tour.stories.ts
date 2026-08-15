@@ -121,6 +121,36 @@ export const InteractiveTarget: Story = {
   },
 };
 
+export const NormalizedProviderSteps: Story = {
+  render: () => {
+    const targetId = createTourDemoIds('normalized').search;
+    const providerSteps = [
+      { stepId: 'malformed', target: `#${targetId}`, heading: 42 },
+      {
+        stepId: 'safe',
+        target: `#${targetId}`,
+        heading: 'Valid provider step',
+        content: 'Malformed siblings are omitted without preventing this valid step from running.',
+      },
+    ] as unknown as LyraTourStep[];
+    return html`
+      <div class="tour-demo" style="display:flex; flex-direction:column; gap:1rem; max-width:32rem;">
+        <button @click=${startDemoTour}>Start normalized tour</button>
+        <button id=${targetId}>Provider-owned target</button>
+        <lr-tour .steps=${providerSteps}></lr-tour>
+      </div>
+    `;
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `steps` boundary clone-normalizes bounded provider data. This fixture includes one malformed row before a valid row; the valid sibling remains usable.',
+      },
+    },
+  },
+};
+
 export const NoProgressAndLightDismiss: Story = {
   render: () => {
     const ids = createTourDemoIds('dismiss');

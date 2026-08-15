@@ -327,6 +327,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private declaredRootCount = 0;
   private _dataTruncated = false;
 
+  /** Clone-owned/frozen object child model.
+   * @default [] */
   @property({ attribute: false })
   get data(): readonly LyraTreeNodeData[] {
     return this._data;

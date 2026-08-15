@@ -187,7 +187,9 @@ export const styles = css`
   }
   [part='clear-button']:hover:not(:disabled),
   [part='expand-button']:hover:not(:disabled) {
-    color: var(--lr-color-text);
+    color: var(--lr-date-input-action-hover-color, var(--lr-color-text));
+    background: var(--lr-date-input-action-hover-bg, transparent);
+    border-radius: var(--lr-date-input-action-hover-radius, var(--lr-date-input-radius));
   }
   /* Hover has already spent the colour step (quiet -> full text), so the press is a background pad
      mixed off the row's own --lr-color-surface fill: it moves toward the text colour, so it darkens
@@ -195,8 +197,19 @@ export const styles = css`
      push. */
   [part='clear-button']:active:not(:disabled),
   [part='expand-button']:active:not(:disabled) {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    border-radius: var(--lr-date-input-radius);
+    color: var(
+      --lr-date-input-action-active-color,
+      var(--lr-date-input-action-hover-color, var(--lr-color-text))
+    );
+    background: var(
+      --lr-date-input-action-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-surface),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    border-radius: var(--lr-date-input-action-active-radius, var(--lr-date-input-radius));
   }
   [part='clear-button']:focus-visible,
   [part='expand-button']:focus-visible {

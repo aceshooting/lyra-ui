@@ -36,7 +36,7 @@ export interface LyraEnvListEventMap {
   'lr-reveal-change': CustomEvent<Readonly<{ name: string; revealed: boolean }>>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
-  'lr-error': CustomEvent<void>;
+  'lr-error': CustomEvent<null>;
 }
 
 /**

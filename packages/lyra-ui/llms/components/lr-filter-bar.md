@@ -19,16 +19,21 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 
 **Properties:**
 
-- `filters: FilterBarFilterDefinition[] = []` (attribute: false) — filter schema in render order.
-- `value: FilterBarValue = {}` (attribute: false) — current values keyed by filter id; reads and
-  writes clone the object and each string-array field independently.
+- `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in
+  render order. Invalid definitions and later duplicate ids are ignored deterministically. Writing
+  `null` or `undefined` clears the schema; reads remain the canonical non-null empty array.
+- `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by filter id.
+  Cleared fields are omitted. Reads, writes, event details, and string-array fields are immutable
+  snapshots rather than references to caller-owned data. Writing `null` or `undefined` clears the
+  value; reads remain the canonical non-null empty record.
 - `label: string = ''` — accessible-name fallback for the internal `role="group"`. A host
   `aria-label` wins by attribute presence, including an explicitly empty value.
 - `disabled: boolean = false` (reflected) — disables every filter control and reset action.
 - `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
   filters editable.
 - `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value.
-- `invalidFilterIds: string[]` (read-only) — ids of required filters whose values are unset.
+- `invalidFilterIds: readonly string[]` (read-only) — immutable ids of required filters whose
+  values are unset.
 
 The composed reset action uses `lr-button`'s default `m` size tier, matching the default rendered
 height of adjacent select, combobox, input, and date fields instead of introducing a shorter action
@@ -63,16 +68,21 @@ filters. This lets a consumer theme the composed tier from `lr-filter-bar::part(
 depending on the built-in control type selected by a filter definition. Custom renderers retain
 ownership of their own part forwarding.
 
-A `'select'`/`'combobox'` filter's `options` entries are `FilterBarOption { value, label, icon? }`.
+A `'select'`/`'combobox'` filter's required `options` entries are
+`LyraFilterBarOption { value, label, icon? }`.
 `icon` is optional Lit content — a status dot, a type glyph, a flag — rendered into the composed
 `<lr-option>`'s own `start` slot as inert, `aria-hidden` chrome, so it never joins the option's
 accessible name:
 
 ```ts
 options: [
-  { value: 'open', label: 'Open', icon: html`<lr-icon name="circle"></lr-icon>` },
-  { value: 'closed', label: 'Closed' },
-]
+  {
+    value: "open",
+    label: "Open",
+    icon: html`<lr-icon name="circle"></lr-icon>`,
+  },
+  { value: "closed", label: "Closed" },
+];
 ```
 
 Each filter definition's `type` selects which existing Lyra input renders it — this component
@@ -83,10 +93,11 @@ to `<lr-input>` for an open-ended free-text query rather than a closed choice se
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
 text the user typed, not a truncated or normalized form.
 
-Date and date-range chips localize only round-trip-valid ISO `YYYY-MM-DD` segments. Four-digit
+Date chips localize exactly one round-trip-valid ISO `YYYY-MM-DD` segment; date-range chips require
+exactly two slash-separated segments. Four-digit
 years `0000`–`0099` retain those literal years rather than inheriting JavaScript's 1900 offset;
-impossible days/months, malformed values, and a range with either invalid endpoint stay verbatim
-instead of silently rolling into another date.
+impossible days/months, extra/missing segments, inverted ranges, and a range with either invalid
+endpoint stay verbatim instead of silently rolling into another date or discarding data.
 
 A `'text'` filter is the one control that is **not** a fully controlled `.value=` binding.
 Re-rendering a text field from `value` mid-typing would push a stale value back in and drop the
@@ -111,26 +122,30 @@ markup and should bind the context's `value`, `disabled`, `required`, and `error
 `context.onValueChange` (or its `onInput`/`onChange` aliases) reads the event through
 `adapter.valueFromEvent` and commits it to the filter bar. `context.setValue(value)` is available for
 controls that expose a value without an event payload, and `context.onFocusout` marks the filter
-touched for required validation.
+touched for required validation. Every context also carries a monotonic `generation` and an
+`AbortSignal`; replacement/removal of the schema, disconnection, and reconnect abort stale
+contexts, whose callbacks become inert.
 
-The adapter's optional `emptyValue` is used when the active chip is removed, and its optional
-`formatValue` controls the chip's display text. Custom values may be strings, string arrays,
-booleans, or `undefined`, so controls such as `lr-time-range`, `lr-checkbox`, and an async-backed
-`lr-combobox` can participate in the same controlled `value`, active-chip, reset, disabled, and
-validation contract:
+The adapter's required `clearValue` is used when the active chip is removed. Its optional
+`isEmpty(value)` defines domain emptiness; without one, the bar compares against `clearValue`
+(including shallow string-array equality). Its optional `formatValue` controls chip display.
+Consequently `false` remains a meaningful active value unless the adapter explicitly declares it
+empty. Custom values may be strings, string arrays, booleans, or `undefined`, so controls such as
+`lr-time-range`, `lr-checkbox`, and an async-backed `lr-combobox` can participate in the same
+controlled value, active-chip, reset, disabled, and validation contract:
 
 ```ts
-const filters: FilterBarFilterDefinition[] = [
+const filters: LyraFilterBarFilterDefinition[] = [
   {
-    id: 'archived',
-    label: 'Include archived',
-    type: 'custom',
+    id: "archived",
+    label: "Include archived",
+    type: "custom",
     custom: {
       adapter: {
         valueFromEvent: (event) =>
           (event as CustomEvent<{ checked: boolean }>).detail.checked,
-        emptyValue: false,
-        formatValue: (value) => value === true ? 'Enabled' : 'Disabled',
+        clearValue: false,
+        formatValue: (value) => (value === true ? "Enabled" : "Disabled"),
       },
       render: (context) => html`
         <lr-checkbox
@@ -138,7 +153,8 @@ const filters: FilterBarFilterDefinition[] = [
           ?disabled=${context.disabled}
           @lr-change=${context.onValueChange}
           @focusout=${context.onFocusout}
-        >${context.label}</lr-checkbox>
+          >${context.label}</lr-checkbox
+        >
       `,
     },
   },

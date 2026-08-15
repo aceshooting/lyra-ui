@@ -181,6 +181,12 @@ so retinting the trend pill doesn't also recolor the value, and vice versa.
 value for each non-neutral `variant`. `--lr-stat-emphasis-border-color` and
 `--lr-stat-emphasis-value-color` (both default `var(--lr-color-brand)`) independently color the
 emphasis accent edge and a neutral emphasized headline without retinting `variant="brand"`.
+Linked-card interaction paint is independently themeable through
+`--lr-stat-link-hover-border-color` (default `var(--lr-color-brand)`),
+`--lr-stat-link-hover-shadow` (default `var(--lr-shadow-s)`),
+`--lr-stat-link-active-border-color`/`--lr-stat-link-active-shadow` (defaulting to their hover
+counterparts), and `--lr-stat-link-active-bg` (defaulting to the existing active color mix). These
+are point-of-use fallbacks, so values inherit from a theme ancestor and a value on `lr-stat` wins.
 
 **Optional peer deps:** none.
 
@@ -222,8 +228,9 @@ import "@aceshooting/lyra-ui/components/data/data-grid/data-grid.js";
 ```
 
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
-Collection inputs are clone-owned readonly snapshots, so reassign `data`, `columns`, and controlled
-state arrays to update them; mutating the array originally assigned has no effect. Row object
+Collection inputs are clone-owned readonly snapshots, so reassign `data`, `columns`, `groupBy`, and controlled
+state arrays to update them; mutating the array originally assigned has no effect.
+Column records are also copied and frozen synchronously. Row object
 identities are preserved so formatter callbacks and `selectedRows` still refer to caller records.
 
 **Properties:**
@@ -244,7 +251,7 @@ identities are preserved so formatter callbacks and `selectedRows` still refer t
 - `filterFromLeafRows: boolean = false` (`filter-from-leaf-rows`) — retains ancestors of matching
   tree descendants.
 - `filters: readonly Array<{ readonly id: string; readonly value: unknown }> = []` (JS-only).
-- `groupBy: string | string[] | null = null` (`group-by`) — a string accepts comma- or
+- `groupBy: string | readonly string[] | null = null` (`group-by`) — a string accepts comma- or
   whitespace-separated column ids/fields.
 - `label: string | null = null` (`label`).
 - `loading: boolean = false` (`loading`, reflected).
@@ -587,16 +594,19 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 - `filterText: string = ''` (attribute `filter-text`) — controlled filter text
 - `filter?: (row: T, text: string) => boolean` (attribute: false) — typed predicate used by the
   filter field; when omitted, rows are matched against their JSON representation
-- `filterLabel: string = ''` (attribute `filter-label`) and `filterPlaceholder: string = ''`
-  (attribute `filter-placeholder`) — optional localized-label overrides
+- `filterLabel?: string` (attribute `filter-label`) and `filterPlaceholder?: string`
+  (attribute `filter-placeholder`) — omission localizes `tableFilterLabel`/
+  `tableFilterPlaceholder`; any supplied string, including the built-in English text or `''`, is
+  an explicit verbatim override
 - `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
   (attribute `autocorrect`) — forwarded to the filter input and, for a `'text'` (the default)
   `editType`, the inline cell editor; no effect on a `'number'` cell editor. `spellcheck="false"`
   is parsed as `false` via a string-aware converter (Lit's default presence-based boolean
   converter would otherwise treat any attribute value, including the literal string `"false"`, as
   `true`).
-- `loading: boolean = false` (attribute `loading`, reflected) and `loadingLabel: string = ''`
-  (attribute `loading-label`) — renders busy chrome and suppresses the real rows while loading
+- `loading: boolean = false` (attribute `loading`, reflected) and `loadingLabel?: string`
+  (attribute `loading-label`) — renders busy chrome and suppresses the real rows while loading;
+  omission localizes `tableLoading`, while a supplied string (including `''`) renders verbatim
 - `loadingAppearance: 'spinner'|'skeleton' = 'spinner'` (attribute `loading-appearance`, reflected) —
   how `loading` renders. `'spinner'` replaces the whole grid with an indeterminate spinner.
   `'skeleton'` instead renders the real table — the same `<colgroup>` (declared _and_ drag-resized
@@ -638,14 +648,11 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
   expanded state; reads return detached snapshots, and consumers reassign it after
   `lr-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
-- `moreLabel: string = ''` (attribute `more-label`) — when empty/unset, the button renders the
-  localized `loadMore` fallback (`'Load more'` in the default English catalog)
-- `emptyHeading: string = ''` (attribute `empty-heading`) — when empty/unset, the built-in empty
-  state renders the localized `noData` fallback (`'No data'` in the default English catalog)
+- `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
+- `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
-- `noColumnsHeading: string = ''` (attribute `no-columns-heading`) — when empty/unset, the
-  no-columns state renders the localized `noColumns` fallback (`'No columns configured'` in the
-  default English catalog)
+- `noColumnsHeading?: string` (attribute `no-columns-heading`) — omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
+  including `''`, renders verbatim
 - `noColumnsDescription: string = ''` (attribute `no-columns-description`)
 - `emptyCompact?: boolean` (attribute `empty-compact`) — overrides the built-in `[part='empty']`
   state's `compact` rendering. Tri-state: leave it `undefined` (the default) to keep each empty
@@ -654,12 +661,11 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
   field, renders compact. `empty-compact="false"` forces the spacious rendering everywhere, and is
   parsed as `false` rather than as mere attribute presence. Has no effect once the `empty` slot is
   filled
-- `revealColumnsLabel: string = ''` (attribute `reveal-columns-label`) — the reveal button's label
-  while `priority`-hidden columns are hidden; when empty/unset, it renders the localized
-  `showAllColumns` fallback (`'Show all columns'` in the default English catalog)
-- `hideColumnsLabel: string = ''` (attribute `hide-columns-label`) — the same button's label once
-  the columns have been revealed; when empty/unset, it renders the localized `showFewerColumns`
-  fallback (`'Show fewer columns'` in the default English catalog)
+- `revealColumnsLabel?: string` (attribute `reveal-columns-label`) — the reveal button's label
+  while `priority`-hidden columns are hidden; omission renders localized
+  `showAllColumns` (`'Show all columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
+- `hideColumnsLabel?: string` (attribute `hide-columns-label`) — the same button's label once
+  the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
@@ -740,8 +746,12 @@ body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-bra
 `--lr-table-heat-tint-hi` (default `var(--lr-color-brand)`) — the `color-mix()` ramp endpoints
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
 `--lr-table-resize-min-width` (default `var(--lr-size-3rem)`) and
-`--lr-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior.
-These four heat-tint/resize hooks are not redeclared on the component host: set them on
+`--lr-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior. The latter
+remains the legacy shared opacity fallback; `--lr-table-resize-handle-hover-bg` (default
+`var(--lr-color-brand)`), `--lr-table-resize-handle-hover-opacity` (defaulting to the legacy
+opacity), `--lr-table-resize-handle-active-bg` (defaulting to the hover background), and
+`--lr-table-resize-handle-active-opacity` (defaulting to twice the hover opacity) independently
+retune the rendered interaction states. These heat-tint/resize hooks are not redeclared on the component host: set them on
 `lr-table` or on a theme ancestor, and a table-level value wins through the normal cascade.
 `--lr-table-row-selected-bg` (default `var(--lr-color-brand-quiet)`) — the background of a row whose
 `aria-selected` is `true`. Like every state-scoped custom property in this library it is an inline
@@ -753,8 +763,9 @@ so the only prior lever for restyling the selected row was overriding the librar
 `--lr-table-row-stripe-bg` (default `transparent`) — the background of alternating body rows. The
 component marks the alternating rows itself, so this works without an invalid `::part(row)` attribute
 or structural-pseudo-class selector and does not affect group, expanded, hover, or selected rows.
-`--lr-table-header-sorted-bg` (default `transparent`) and `--lr-table-header-sorted-color` (default
-`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`).
+`--lr-table-header-sorted-bg` (default `var(--lr-color-surface)`) and `--lr-table-header-sorted-color` (default
+`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`). The opaque surface default prevents body rows from
+showing through the sticky header while it scrolls.
 Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,
 because `::part(header-cell)[aria-sort]` is invalid CSS. The `sort-icon` part styles only the
 chevron; these tokens style the header cell itself.
@@ -963,15 +974,17 @@ independent concepts.
   forwarded to the internal `<nav>` landmark; takes precedence over `label`
 - `label: string = ''` — explicit fallback accessible name for the internal `<nav>` landmark;
   empty uses the localized `paginationLabel` message
-- `pageLabel: string = 'Page'` (attribute `page-label`) — accessible name for the page-jump input
-- `previousLabel: string = 'Previous'` (attribute `previous-label`), `nextLabel: string = 'Next'`
-  (attribute `next-label`) — accessible names for the icon-only directional buttons
-- `firstLabel: string = 'First page'` (attribute `first-label`), `lastLabel: string = 'Last page'`
-  (attribute `last-label`) — accessible names for the icon-only edge buttons rendered by
+- `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input
+- `previousLabel?: string` (attribute `previous-label`), `nextLabel?: string`
+  (attribute `next-label`) — optional accessible-name overrides for the icon-only directional buttons
+- `firstLabel?: string` (attribute `first-label`), `lastLabel?: string`
+  (attribute `last-label`) —
+  optional accessible-name overrides for the icon-only edge buttons rendered by
   `with-edges`
 
-Built-in property defaults resolve through the locale registry. A property value customized away
-from its built-in default is treated as an explicit per-instance wording override.
+Omitting any of those five control-label properties resolves the matching locale message. Any
+supplied string is an explicit per-instance override and renders verbatim, including the built-in
+English wording under a non-English `.strings` catalog and an empty string.
 
 **Events:** `lr-before-page-change` (frozen readonly `detail: { page: number, pageSize: number }`, bubbles and
 composes, cancelable) fires first for any valid, different requested page. Preventing it suppresses
@@ -1259,9 +1272,9 @@ SVG surface; the potentially tiny text glyphs are not independent hit targets.
   activation or palette selection
 
 **Methods:** `refreshTheme(): void` — forces a relayout so the `--lr-font` custom property is
-re-read from computed style (font-family affects the canvas text measurement layout depends on);
-call this from your own theme-toggle handler, since there's no global theme-change event to
-subscribe to automatically (mirrors `lr-chart`'s `refreshTheme()`).
+re-read from computed style (font-family affects the canvas text measurement layout depends on).
+The component's theme watcher calls it automatically when inherited theme typography changes; the
+method remains available for a host theme system that needs an explicit synchronous refresh.
 
 **Events:** `lr-word-activate` (frozen readonly `detail: { text, weight, group }`; fires from the
 single SVG pointer surface, or Enter/Space on the current word)
@@ -1309,7 +1322,7 @@ the nested focus owner. When records are omitted, the SVG references the visible
 **Known gotchas:**
 
 - capped at 150 words (`MAX_WORDS` in `word-cloud-layout.ts`, mirroring `lr-sparkline`'s
-  `MAX_BARS` DOM-node-count guard) — a one-pass bounded top-K scan retains the **heaviest** 150 and
+  `MAX_POINTS` input-sample guard) — a one-pass bounded top-K scan retains the **heaviest** 150 and
   counts the rest without cloning/sorting/spreading the full input. A pathological input can exhaust the
   spiral search's radius bound and get dropped the same way; blank/whitespace-only `text` is dropped
   during boundary normalization. Omitted diagnostics retain at most 32 records, while a separate
@@ -2331,7 +2344,10 @@ just one of the two states without the other following along — and `--lr-flow-
 the pulse keyframes' peak color. The status dot uses the shared
 `--lr-flow-status-{pending|running|success|error|denied}-color` hooks, defaulting respectively
 to border-strong, brand, success, danger, and warning; `--lr-flow-status-color` is the no-status
-fallback. `--lr-flow-node-progress-track-color` (default
+fallback. The explicit status hooks are `--lr-flow-status-pending-color`,
+`--lr-flow-status-running-color`, `--lr-flow-status-success-color`,
+`--lr-flow-status-error-color`, and `--lr-flow-status-denied-color`.
+`--lr-flow-node-progress-track-color` (default
 `var(--lr-color-border)`) and `--lr-flow-node-progress-fill-color` (default
 `var(--lr-color-brand)`) independently retint the determinate progress track and fill. All of
 these hooks inherit, so one canvas-level override can retint every descendant node without
@@ -2392,7 +2408,10 @@ latest viewport-change text).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
 `--lr-flow-minimap-block-size` (default `8rem`), plus the shared
-`--lr-flow-status-color` and `--lr-flow-status-{pending|running|success|error|denied}-color` palette.
+`--lr-flow-status-color` and the explicit palette hooks
+`--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,
+`--lr-flow-status-success-color`, `--lr-flow-status-error-color`, and
+`--lr-flow-status-denied-color`.
 `--lr-flow-minimap-viewport-min-size` (default `var(--lr-icon-button-size)`, normally 40px) floors
 only the transparent `viewport-hit-area` along each axis. The visible `viewport` remains the exact
 viewport-to-content ratio. The token inherits from ancestors; set it to `0` to opt out.
@@ -2530,10 +2549,11 @@ consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live re
 shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
 document-level region rather than `::part(live-region)`.
 
-**Themeable custom properties:** shared `--lr-flow-status-color` and
-`--lr-flow-status-{pending|running|success|error|denied}-color`, also consumed by `lr-flow-node` and
-`lr-flow-minimap`. Set the palette on a canvas/theme ancestor to keep all three presentations in
-sync.
+**Themeable custom properties:** shared `--lr-flow-status-color` and the explicit
+`--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,
+`--lr-flow-status-success-color`, `--lr-flow-status-error-color`, and
+`--lr-flow-status-denied-color` hooks, also consumed by `lr-flow-node` and `lr-flow-minimap`.
+Set the palette on a canvas/theme ancestor to keep all three presentations in sync.
 
 **Optional peer deps:** none.
 
@@ -2746,7 +2766,8 @@ isn't attribute-serializable; invalid input normalizes to unset and renders no t
 optional pulse disabled under `prefers-reduced-motion: reduce`, with explicit `aria-current="true"`
 or `"false"` on the host).
 
-**Events:** none on either element. Listen to the native `slotchange` if you need item-count changes.
+**Events:** none on either element. Read the reactive `itemCount` property after changing direct
+children; the internal slot's non-composed `slotchange` event is not a host-level public signal.
 
 **Slots:** `lr-timeline`'s default slot holds the items, in display order. On an item the **default
 slot is the title** (there is no `title` slot), plus `marker-icon` (marker glyph override; an empty
@@ -2787,7 +2808,8 @@ git-status/diff-count badges, lazy directory loading, and select/open events.
 cycle-safe, first-path-wins snapshot bounded to 10,000 nodes and 64 descendant levels),
 `selectedPath: string | null = null` (attribute `selected-path`), and `label: string = ''`.
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
-and accessible diff summaries.
+and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
+including an explicit empty string; removing it restores `label` or the localized fallback.
 
 **Methods:** `setChildren(path, children)` supplies a lazily-loaded directory's children.
 `revealPath(path)` expands every ancestor directory and scrolls the target row into view, resolving
@@ -3003,3 +3025,524 @@ name continues to identify each row's destructive action.
 At allocations of 320px or less, each condition stacks its composed field/operator/value controls
 into one column. Long field labels and localized operator text remain contained and ellipsize inside
 the nested `lr-select` triggers in both LTR and RTL; they do not widen the host or document.
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-data-calendar-calendar-contracts`** — Supporting data types and helpers for this component family.
+  `CalendarEvent {
+    id: unknown;
+    date: unknown;
+    title: unknown;
+    color: unknown;
+    data: unknown;
+  }`
+
+- **`components-data-condition-builder-condition-builder-contracts`** — Supporting data types and helpers for this component family.
+  `ConditionBuilderCondition {
+    id: unknown;
+    field: unknown;
+    operator: unknown;
+    value: unknown;
+  }`
+  `ConditionBuilderField {
+    name: unknown;
+    label: unknown;
+    type: unknown;
+    options: unknown;
+    operators: unknown;
+    placeholder: unknown;
+  }`
+  `ConditionBuilderFieldOption {
+    value: unknown;
+    label: unknown;
+  }`
+  `ConditionBuilderValue {
+    combinator: unknown;
+    conditions: unknown;
+  }`
+
+- **`components-data-context-meter-context-meter-contracts`** — Supporting data types and helpers for this component family.
+  `ContextMeterSegment {
+    label: unknown;
+    value: unknown;
+    tone: unknown;
+    color: unknown;
+  }`
+
+- **`components-data-data-grid-data-grid-types-contracts`** — Supporting data types and helpers for this component family.
+  `DataGridCellContextMenuDetail {
+    originalEvent: unknown;
+    column: unknown;
+    value: unknown;
+    row: unknown;
+    index: unknown;
+  }`
+  `DataGridCellDetail {
+    column: unknown;
+    value: unknown;
+    row: unknown;
+    index: unknown;
+  }`
+  `DataGridColumn {
+    id: unknown;
+    field: unknown;
+    label: unknown;
+    align: unknown;
+    width: unknown;
+    minWidth: unknown;
+    maxWidth: unknown;
+    flex: unknown;
+    formatter: unknown;
+    value: unknown;
+    row: unknown;
+    sortable: unknown;
+    sortFn: unknown;
+    comparator: unknown;
+    left: unknown;
+    right: unknown;
+    leftRow: unknown;
+    rightRow: unknown;
+    sortDescFirst: unknown;
+    sortUndefined: unknown;
+    searchable: unknown;
+    filterable: unknown;
+    filterType: unknown;
+    filterFn: unknown;
+    filter: unknown;
+    hidden: unknown;
+    hideable: unknown;
+    resizable: unknown;
+    movable: unknown;
+    pinnable: unknown;
+    pinned: unknown;
+    footer: unknown;
+    rows: unknown;
+    aggregation: unknown;
+    aggregatedFormatter: unknown;
+  }`
+  `DataGridColumnMoveDetail {
+    columnOrder: unknown;
+    columnId: unknown;
+    finished: unknown;
+  }`
+  `DataGridColumnPinDetail {
+    columnId: unknown;
+    side: unknown;
+  }`
+  `DataGridColumnResizeDetail {
+    columnId: unknown;
+    width: unknown;
+    finished: unknown;
+  }`
+  `DataGridColumnState {
+    order: unknown;
+    widths: unknown;
+    visibility: unknown;
+    pinning: unknown;
+  }`
+  `DataGridColumnVisibilityDetail {
+    columnId: unknown;
+    visible: unknown;
+  }`
+  `DataGridCopyOptions {
+    columnIds: unknown;
+    includeHeaders: unknown;
+    format: unknown;
+    escapeFormulas: unknown;
+    delimiter: unknown;
+  }`
+  `DataGridCsvOptions {
+    delimiter: unknown;
+    includeHeaders: unknown;
+    columnIds: unknown;
+    escapeFormulas: unknown;
+  }`
+  `DataGridDataErrorDetail {
+    error: unknown;
+    request: unknown;
+  }`
+  `DataGridExportOptions {
+    fileName: unknown;
+    delimiter: unknown;
+    includeHeaders: unknown;
+    columnIds: unknown;
+    escapeFormulas: unknown;
+  }`
+  `DataGridFacets {
+    uniqueValues: unknown;
+    minMax: unknown;
+  }`
+  `DataGridFilter {
+    id: unknown;
+    value: unknown;
+  }`
+  `DataGridGroupDetail {
+    key: unknown;
+    columnId: unknown;
+    value: unknown;
+    rows: unknown;
+  }`
+  `DataGridPageDetail {
+    page: unknown;
+    pageSize: unknown;
+  }`
+  `DataGridRequest {
+    sort: unknown;
+    filters: unknown;
+    search: unknown;
+    page: unknown;
+    pageSize: unknown;
+    signal: unknown;
+  }`
+  `DataGridResponse {
+    rows: unknown;
+    total: unknown;
+  }`
+  `DataGridRowDetail {
+    key: unknown;
+    row: unknown;
+  }`
+  `DataGridScrollOptions {
+    align: unknown;
+  }`
+  `DataGridSelectionDetail {
+    selectedKeys: unknown;
+    selectedRows: unknown;
+  }`
+  `DataGridSort {
+    id: unknown;
+    desc: unknown;
+  }`
+  `DataGridStateFilter {
+    id: unknown;
+    value: unknown;
+  }`
+  `DataGridState {
+    sort: unknown;
+    filters: unknown;
+    search: unknown;
+    selectedKeys: unknown;
+    expandedKeys: unknown;
+    page: unknown;
+    pageSize: unknown;
+    order: unknown;
+    widths: unknown;
+    visibility: unknown;
+    pinning: unknown;
+  }`
+
+- **`components-data-document-library-document-library-contracts`** — Supporting data types and helpers for this component family.
+  `DocumentLibraryFilterChangeDetail {
+    searchTerm: unknown;
+    tags: unknown;
+    matchCount: unknown;
+  }`
+  `DocumentLibraryOpenDetail {
+    id: unknown;
+  }`
+  `DocumentLibrarySelectionChangeDetail {
+    ids: unknown;
+  }`
+  `DocumentLibrarySortCommitDetail {
+    phase: unknown;
+    sortKey: unknown;
+    sortDir: unknown;
+  }`
+  `DocumentLibrarySortRequestDetail {
+    phase: unknown;
+    sortKey: unknown;
+    sortDir: unknown;
+  }`
+  `LibraryDocument {
+    tags: unknown;
+    owner: unknown;
+    updatedAt: unknown;
+    freshness: unknown;
+    id: unknown;
+    name: unknown;
+    mimeType: unknown;
+    uri: unknown;
+    version: unknown;
+  }`
+
+- **`components-data-env-list-env-list-contracts`** — Supporting data types and helpers for this component family.
+  `EnvEntry {
+    name: unknown;
+    value: unknown;
+    secret: unknown;
+  }`
+
+- **`components-data-file-tree-file-tree-contracts`** — Supporting data types and helpers for this component family.
+  `FileTreeNode {
+    path: unknown;
+    name: unknown;
+    kind: unknown;
+    mimeType: unknown;
+    gitStatus: unknown;
+    additions: unknown;
+    deletions: unknown;
+    children: unknown;
+    hasChildren: unknown;
+  }`
+
+- **`components-data-flow-canvas-flow-types-contracts`** — Supporting data types and helpers for this component family.
+  `FlowEdge {
+    id: unknown;
+    source: unknown;
+    target: unknown;
+    sourceHandle: unknown;
+    targetHandle: unknown;
+    label: unknown;
+    tone: unknown;
+  }`
+  `FlowHandle {
+    id: unknown;
+    label: unknown;
+  }`
+  `FlowLayoutChangeDetail {
+    positions: unknown;
+    x: unknown;
+    y: unknown;
+    truncated: unknown;
+  }`
+  `FlowNode {
+    id: unknown;
+    type: unknown;
+    position: unknown;
+    x: unknown;
+    y: unknown;
+    data: unknown;
+    accessibleLabel: unknown;
+    inputs: unknown;
+    outputs: unknown;
+  }`
+  `FlowRunDecoration {
+    status: unknown;
+    progress: unknown;
+    durationMs: unknown;
+    detail: unknown;
+  }`
+  `FlowStructureEdgeSnapshot {
+    id: unknown;
+    source: unknown;
+    target: unknown;
+    status: unknown;
+  }`
+  `FlowStructureNodeSnapshot {
+    id: unknown;
+    x: unknown;
+    y: unknown;
+    width: unknown;
+    height: unknown;
+    status: unknown;
+  }`
+  `FlowStructureSnapshot {
+    nodes: unknown;
+    edges: unknown;
+    viewport: unknown;
+    locked: unknown;
+    orientation: unknown;
+    layerGap: unknown;
+    nodeGap: unknown;
+  }`
+  `FlowViewportSnapshot {
+    x: unknown;
+    y: unknown;
+    zoom: unknown;
+    width: unknown;
+    height: unknown;
+    minZoom: unknown;
+    maxZoom: unknown;
+  }`
+
+- **`components-data-graph-query-builder-graph-query-builder-contracts`** — Supporting data types and helpers for this component family.
+  `GraphQueryDeleteDetail {
+    id: unknown;
+  }`
+  `GraphQuery {
+    startId: unknown;
+    endId: unknown;
+    relationshipTypes: unknown;
+    nodeTypes: unknown;
+    direction: unknown;
+    minHops: unknown;
+    maxHops: unknown;
+  }`
+  `GraphQueryLoadDetail {
+    id: unknown;
+    query: unknown;
+  }`
+  `GraphQueryRunDetail {
+    query: unknown;
+  }`
+  `GraphQuerySaveDetail {
+    name: unknown;
+    query: unknown;
+  }`
+  `GraphQuerySavedItem {
+    id: unknown;
+    name: unknown;
+    query: unknown;
+  }`
+  `GraphQueryTypeOption {
+    value: unknown;
+    label: unknown;
+  }`
+
+- **`components-data-heatmap-calendar-grid-contracts`** — Supporting data types and helpers for this component family.
+  `CalendarDay {
+    date: unknown;
+    value: unknown;
+  }`
+
+- **`components-data-heatmap-heatmap-scale-contracts`** — Supporting data types and helpers for this component family.
+  `linearAlpha(/* public names: value, lo, hi */): unknown`
+  `sqrtStep(/* public names: count, max, steps */): unknown`
+
+- **`components-data-heatmap-heatmap-contracts`** — Supporting data types and helpers for this component family.
+  `CalendarCellPos {
+    week: unknown;
+    weekday: unknown;
+    date: unknown;
+  }`
+  `HeatmapAnnotation {
+    row: unknown;
+    col: unknown;
+    date: unknown;
+    label: unknown;
+  }`
+  `HeatmapCalendarData {
+    kind: unknown;
+    days: unknown;
+    firstDayOfWeek: unknown;
+    columnX: unknown;
+    index: unknown;
+    rowY: unknown;
+    weekday: unknown;
+    weekdayLabelText: unknown;
+    jsWeekday: unknown;
+    monthLabelText: unknown;
+    jsMonth: unknown;
+    year: unknown;
+  }`
+  `HeatmapLegendStop {
+    value: unknown;
+    color: unknown;
+    label: unknown;
+  }`
+  `HeatmapMatrixData {
+    kind: unknown;
+    rowLabels: unknown;
+    colLabels: unknown;
+    values: unknown;
+  }`
+  `HeatmapSelectedCell {
+    row: unknown;
+    col: unknown;
+    date: unknown;
+  }`
+  `hexToRgb(/* public names: hex */): unknown`
+  `MatrixCellPos {
+    row: unknown;
+    col: unknown;
+  }`
+  `normalizeBucketCount(/* public names: bucketCount */): unknown`
+  `resolveRgb(/* public names: color, fallbackHex, ownerDocument */): unknown`
+
+- **`components-data-pagination-pagination-contracts`** — Supporting data types and helpers for this component family.
+  `LyraPaginationChangeDetail {
+    page: unknown;
+    pageSize: unknown;
+  }`
+
+- **`components-data-sequence-strip-sequence-strip-contracts`** — Supporting data types and helpers for this component family.
+  `SequenceStripCategory {
+    id: unknown;
+    color: unknown;
+    label: unknown;
+  }`
+  `SequenceStripItem {
+    id: unknown;
+    categoryId: unknown;
+    marker: unknown;
+    label: unknown;
+  }`
+
+- **`components-data-stat-stat-contracts`** — Supporting data types and helpers for this component family.
+  `StatRow {
+    label: unknown;
+    value: unknown;
+    exactValue: unknown;
+  }`
+
+- **`components-data-table-table-contracts`** — Supporting data types and helpers for this component family.
+  `TableColumn {
+    key: unknown;
+    label: unknown;
+    headerCell: unknown;
+    column: unknown;
+    width: unknown;
+    minWidth: unknown;
+    maxWidth: unknown;
+    resizable: unknown;
+    sortable: unknown;
+    sortValue: unknown;
+    row: unknown;
+    align: unknown;
+    priority: unknown;
+    sticky: unknown;
+    footer: unknown;
+    rows: unknown;
+    cellStyle: unknown;
+    cellTitle: unknown;
+    heatValue: unknown;
+    editTrigger: unknown;
+    editValue: unknown;
+    editType: unknown;
+    cell: unknown;
+  }`
+  `TableSortCommitDetail {
+    phase: unknown;
+    sortKey: unknown;
+    sortDir: unknown;
+  }`
+  `TableSortRequestDetail {
+    phase: unknown;
+    sortKey: unknown;
+    sortDir: unknown;
+  }`
+
+- **`components-data-tree-tree-types-contracts`** — Supporting data types and helpers for this component family.
+  `LyraTreeNodeData {
+    id: unknown;
+    label: unknown;
+    selected: unknown;
+    disabled: unknown;
+    lazy: unknown;
+    children: unknown;
+    badges: unknown;
+    icon: unknown;
+    description: unknown;
+    accessibleLabel: unknown;
+  }`
+  `TreeBadge {
+    text: unknown;
+    tone: unknown;
+    label: unknown;
+  }`
+
+- **`components-data-word-cloud-word-cloud-layout-contracts`** — Supporting data types and helpers for this component family.
+  `WordCloudWord {
+    text: unknown;
+    weight: unknown;
+    color: unknown;
+    group: unknown;
+  }`
+
+- **`components-data-word-cloud-word-cloud-contracts`** — Supporting data types and helpers for this component family.
+  `WordCloudLegendItem {
+    label: unknown;
+    color: unknown;
+  }`

@@ -29,7 +29,10 @@ const outputFile = path.join(sourceDir, 'events.ts');
 const manifestFile = path.join(packageDir, 'custom-elements.json');
 const prefixFile = path.join(sourceDir, 'internal', 'prefix.ts');
 
-const EVENT_MAP_NAME_RE = /^Lyra\w*EventMap$/;
+// Component event maps use the Lyra* convention. The side-effect-free autoloader is a public
+// free-function entry rather than a custom element, so its one map is the deliberate exception.
+const EVENT_MAP_NAME_RE = /^(?:Lyra\w*EventMap|AutoloaderEventMap)$/;
+const EVENT_MAP_DECLARATION_RE = /export\s+interface\s+(?:Lyra\w*EventMap|AutoloaderEventMap)\b/;
 const DOC_WIDTH = 96;
 
 const byLocale = (a, b) => a.localeCompare(b);
@@ -81,17 +84,17 @@ function moduleSpecifier(file) {
 }
 
 /**
- * Every exported `Lyra*EventMap` interface in the shipped source, with the event names it declares
+ * Every exported public event-map interface in the shipped source, with the event names it declares
  * *directly*. Inherited members are deliberately not resolved: an inherited name is declared
  * directly by the base interface, which this scan visits in its own right, so the union assembled
  * per event name already covers it — without this script needing to re-implement the heritage
  * resolution (`extends` / `Omit` / `Pick`) that `check-event-contracts.mjs` owns.
  */
-function collectEventMaps() {
+export function collectEventMaps() {
   const maps = [];
   for (const file of walk(sourceDir).filter(isShippedSource).sort(byLocale)) {
     const source = readFileSync(file, 'utf8');
-    if (!/export\s+interface\s+Lyra\w*EventMap\b/.test(source)) continue;
+    if (!EVENT_MAP_DECLARATION_RE.test(source)) continue;
 
     const parsed = parseSync(file, source);
     if (parsed.errors.length > 0) {

@@ -57,7 +57,7 @@ describe('allDefined', () => {
           const shadow = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
           shadow.append(document.createElement('lr-avatar'));
         });
-      }
+      },
     );
     await customElements.whenDefined('lr-avatar-group');
     await Promise.resolve();
@@ -150,6 +150,117 @@ describe('allDefined', () => {
     }
     expect(error instanceof Error).to.equal(true);
     expect((error as Error).message).to.include('maxElements');
+  });
+
+  it('applies the element ceiling cumulatively across render-discovery passes', async () => {
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const first = document.createElement('lr-avatar');
+    const second = document.createElement('lr-badge');
+    Object.defineProperty(first, 'updateComplete', {
+      configurable: true,
+      value: Promise.resolve().then(() => shadow.replaceChildren(second)),
+    });
+    shadow.append(first);
+    const constructor = class extends HTMLElement {};
+    const registry = {
+      get(name: string) {
+        return name === 'lr-avatar' || name === 'lr-badge' ? constructor : undefined;
+      },
+      whenDefined() {
+        return Promise.resolve(constructor);
+      },
+    } as unknown as CustomElementRegistry;
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+
+    try {
+      let error: unknown;
+      try {
+        await allDefined(shadow, { maxElements: 1 });
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error instanceof Error).to.equal(true);
+      expect((error as Error).message).to.include('maxElements');
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('uses maxPasses for productive passes and permits the final empty confirmation scan', async () => {
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const element = document.createElement('lr-avatar');
+    Object.defineProperty(element, 'updateComplete', {
+      configurable: true,
+      value: Promise.resolve(),
+    });
+    shadow.append(element);
+    const constructor = class extends HTMLElement {};
+    const registry = {
+      get: () => constructor,
+      whenDefined: () => Promise.resolve(constructor),
+    } as unknown as CustomElementRegistry;
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+
+    try {
+      await allDefined(shadow, { maxPasses: 1 });
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('bypasses hostile traversal and update getters without blocking valid siblings', async () => {
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const hostile = document.createElement('lr-badge');
+    for (const property of [
+      'nodeType',
+      'localName',
+      'firstElementChild',
+      'nextElementSibling',
+      'shadowRoot',
+      'updateComplete',
+    ]) {
+      Object.defineProperty(hostile, property, {
+        configurable: true,
+        get(): never {
+          throw new Error(`hostile ${property}`);
+        },
+      });
+    }
+    let validUpdateReads = 0;
+    const valid = document.createElement('lr-avatar');
+    Object.defineProperty(valid, 'updateComplete', {
+      configurable: true,
+      get() {
+        validUpdateReads += 1;
+        return Promise.resolve();
+      },
+    });
+    shadow.append(hostile, valid);
+    const constructor = class extends HTMLElement {};
+    const registry = {
+      get: () => constructor,
+      whenDefined: () => Promise.resolve(constructor),
+    } as unknown as CustomElementRegistry;
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+
+    try {
+      await allDefined(shadow);
+      expect(validUpdateReads).to.equal(1);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
   });
 
   it('rejects truthfully when open-shadow-root or total-work ceilings are exceeded', async () => {

@@ -8,17 +8,17 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-heatmap`
 
-A Canvas-rendered heatmap with a DPR-aware, resize-aware redraw loop, in one of two `mode`s:
-`"matrix"` (default — a `rowLabels` × `colLabels` grid of `values`) or `"calendar"` (a
-GitHub-style Sunday–Saturday × week grid built from `days`, colored by quartile bucket rather than
-the matrix mode's continuous ramp). Every cell is independently addressable despite being
+A Canvas-rendered heatmap with a DPR-aware, resize-aware redraw loop. One discriminated `data`
+property selects `{ kind: "matrix", rowLabels, colLabels, values }` (the default) or
+`{ kind: "calendar", days, ...calendarOptions }` (a GitHub-style weekday × week grid). Every cell
+is independently addressable despite being
 canvas-drawn (no per-cell DOM node by default): a `pointermove` hit-test over the canvas shows `[part="tooltip"]`
 with that cell's label + value; the canvas is a named `role="application"`, `tabindex="0"` control
 with arrow-key roving focus (a stroked ring is redrawn over the focused cell on every draw, and the
@@ -32,21 +32,35 @@ Full canvas redraws pause while the host is outside the viewport. Data, locale, 
 DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
 environments without `IntersectionObserver` retain eager drawing.
 
-Set `accessibleCells: true` (`accessible-cells`) to opt into a native-button overlay for each
-interactive matrix/calendar cell. The overlay uses localized `aria-label`s, explicit
-`aria-pressed="true"|"false"` from the controlled `selectedCell`, and roving tabindex/arrow-key
-focus; it continues to emit `lr-cell-click` and leaves selection state consumer-controlled.
+Set `accessibleCells: true` (`accessible-cells`) to opt into a semantic grid backed by a bounded
+window of native buttons. It retains the complete `aria-rowcount`/`aria-colcount` and arrow-key
+navigation model without mounting one node per cell. Buttons use localized `aria-label`s, explicit
+`aria-selected="true"|"false"` from the controlled `selectedCell`, and roving tabindex; the grid
+continues to emit `lr-cell-click` and leaves selection state consumer-controlled.
 When matrix/calendar data refreshes while one of those buttons owns focus, the semantic matrix
 coordinate or calendar date remains the sole roving stop. If it disappears, focus clamps to the
 nearest surviving interactive cell, or to the stable heatmap base when none remain; an unfocused
 refresh never steals external focus.
 
+Changing `accessibleCells` also preserves owned focus across the rendering-mode replacement:
+turning the overlay off moves a focused cell button to the canvas application control; turning it on
+moves a focused canvas to the matching remembered cell, the first interactive cell, or the stable
+base when no cell exists. A newer external focus destination is never reclaimed.
+
 **Properties:**
 
-- `rowLabels: string[] = []` (attribute: false — matrix mode only)
-- `colLabels: string[] = []` (attribute: false — matrix mode only)
-- `values: number[][] = []` (attribute: false — matrix mode only) — `-1` or any non-finite value is
-  the "no data" sentinel; ragged/sparse rows are safe (`?? -1`)
+- `data: HeatmapData = { kind: 'matrix', rowLabels: [], colLabels: [], values: [] }` (attribute:
+  false), where `HeatmapData` is the readonly discriminated union:
+  - `HeatmapMatrixData { kind: 'matrix'; rowLabels: readonly string[]; colLabels: readonly
+    string[]; values: readonly (readonly number[])[] }`
+  - `HeatmapCalendarData { kind: 'calendar'; days: readonly CalendarDay[]; firstDayOfWeek?:
+    number; columnX?: (index:number)=>number; rowY?: (weekday:number)=>number;
+    weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
+    (jsMonth:number,year:number)=>string|undefined }`
+  Matrix `-1` or non-finite values are no-data. Calendar identity is ISO date and duplicates use one
+  deterministic **last-wins** entry before count, scale, paint, selection, focus and event paths.
+  Collections are snapshotted into a bounded canonical projection; reassign `data` after changing
+  caller-owned input.
 - `cellSize: number = 22` (attribute `cell-size` — default `22` in matrix mode, `11` in calendar
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)
@@ -64,21 +78,16 @@ refresh never steals external focus.
   below `4` normalizes to `4`. When both clamps are set and `maxCellSize < minCellSize`, the ceiling
   wins. For both: a non-finite value, or an empty attribute, means unset rather than `0`, and unset
   (the default) reproduces the unclamped fit-to-width behavior exactly
-- `valueLabel: string = 'value'` (attribute `value-label`)
+- `valueLabel?: string` (attribute `value-label`) — absence uses the localized default. Every
+  supplied string is literal, including `"value"` and `""`; unset the property/attribute to resume
+  localization.
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
   same `sqrtStep()` magnitude compression as matrix mode, so one heavy day doesn't wash out the rest
-- `mode: 'matrix' | 'calendar' = 'matrix'`
-- `days: CalendarDay[] = []` (attribute: false — calendar mode only) — `CalendarDay { date:
-string /* ISO yyyy-mm-dd */; value: number }`; need not be sorted or contiguous, and an entry whose
-  `date` doesn't parse is dropped rather than poisoning the whole grid
-- `firstDayOfWeek: number = 0` (attribute `first-day-of-week` — calendar mode only, no-op in matrix
-  mode) — anchors the calendar grid at a different weekday instead of always Sunday; `0`-`6`, same
-  numbering as `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday)
 - `bucketCount: number = 5` (attribute `bucket-count` — calendar mode only; non-finite values fall
   back to 5, while finite values are floored and clamped to 2–256 before the color-ramp allocation)
-- `annotations: HeatmapAnnotation[] = []` (attribute: false) — `HeatmapAnnotation { row?: number;
+- `annotations: readonly HeatmapAnnotation[] = []` (attribute: false) — `HeatmapAnnotation { row?: number;
 col?: number; date?: string; label?: string }`: matrix mode matches by `row`/`col`, calendar mode
   by `date` (whichever pair matches the active `mode`; the other fields are ignored). Draws a
   stroked ring over the matching cell; an annotation with a `label` also gets its own
@@ -91,10 +100,11 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   `<lr-lite-chart>`'s `selectedIndex`, this component never mutates it itself. Unset (the default,
   `null`) reproduces today's exact output.
 - `accessibleCells: boolean = false` (attribute `accessible-cells`) — renders `[part="cells"]` with
-  one `[part="cell"]` native button per interactive cell. Buttons expose localized `aria-label`s,
-  explicit `aria-pressed` state from `selectedCell`, and a roving tabindex; the canvas becomes
-  `aria-hidden` while this mode is enabled. The property is opt-in so the default canvas mode keeps
-  its low DOM footprint. Controlled refresh focus follows the preservation/clamping behavior above.
+  at most 400 `[part="cell"]` native buttons around the active cell. The semantic grid exposes the
+  full row/column counts, buttons expose localized `aria-label`s and explicit `aria-selected`, and
+  roving arrow navigation still reaches every canonical cell. The canvas remains the visual and
+  pointer surface but is hidden from the accessibility tree. Controlled refresh focus follows the
+  preservation/clamping behavior above.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
   formats the per-cell hover tooltip and keyboard announcement text; receives the cell
   position (`MatrixCellPos { row, col }` in matrix mode, `CalendarCellPos { week, weekday, date }` in
@@ -113,13 +123,13 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   value, return `false` to make that cell present-but-non-interactive (no hover tooltip, click, or
   keyboard roving-focus stop) without losing the layout/color-ramp machinery. Unset (the default)
   keeps every cell interactive, unchanged.
-- `columnX?: (index: number) => number` (attribute: false, calendar mode only) — overrides the
+- `data.columnX?: (index: number) => number` (calendar branch only) — overrides the
   internal week-column x-coordinate formula (`CAL_PAD_LEFT + week * (CAL_CELL + CAL_GAP)`) used
   consistently across drawing, hit-testing, the focus ring, and month-label positioning, so a
   consumer can pixel-align this calendar's week columns with a sibling `<lr-lite-chart>`'s bars
   (see that component's own `barX`) by supplying the same coordinate function to both. Unset (the
   default) is the original formula, unchanged.
-- `rowY?: (weekday: number) => number` (attribute: false, calendar mode only) — the vertical
+- `data.rowY?: (weekday: number) => number` (calendar branch only) — the vertical
   analogue of `columnX`: overrides the internal weekday-row y-coordinate formula (`CAL_LABEL_H +
 weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing, and the focus
   ring (also consulted at `weekday = 7` to size the canvas height, mirroring `columnX` at
@@ -132,26 +142,26 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   zero-count day rendered as a neutral hairline, distinct from both "no data" and the ramp's own
   lightest step) without a synthetic ramp color, which can't safely reserve an exact value on a
   skewed dataset. Unset (the default) reproduces the exact ramp/no-data behavior for every cell.
-- `weekdayLabelText?: (jsWeekday: number) => string | undefined` (attribute: false, calendar mode
-  only) — overrides the weekday-axis label text; receives the real JS weekday index (`0` Sunday ..
+- `data.weekdayLabelText?: (jsWeekday: number) => string | undefined` (calendar branch only) —
+  overrides the weekday-axis label text; receives the real JS weekday index (`0` Sunday ..
   `6` Saturday) for a row that would otherwise render a label and, when it returns a string, uses it
   instead of the built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default)
   reproduces today's exact locale-derived output.
-- `monthLabelText?: (jsMonth: number, year: number) => string | undefined` (attribute: false,
-  calendar mode only) — the month-axis analogue of `weekdayLabelText`: receives the real JS month
+- `data.monthLabelText?: (jsMonth: number, year: number) => string | undefined` (calendar branch
+  only) — the month-axis analogue of `weekdayLabelText`: receives the real JS month
   index (`0` January .. `11` December) and full year for a month boundary that would otherwise
   render a label, and, when it returns a string, uses it instead of the built-in
   `Intl.DateTimeFormat`-derived short month name. Unset (the default) reproduces today's exact
   locale-derived output. Lets month labels track the same locale signal (e.g. an app's own i18n
   store) as `weekdayLabelText` and the component's other localizable strings, instead of always
   following the browser/OS-language default.
-- `colorSteps?: string[]` (attribute: false) — a discrete array (≥2 entries) of CSS colors used as
+- `colorSteps?: readonly string[]` (attribute: false) — a discrete array (≥2 entries) of CSS colors used as
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
   than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
   fallback color and prevent the custom legend gradient from being assigned.
-- `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
+- `legendStops?: readonly HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
 color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
@@ -183,7 +193,8 @@ force a redraw manually.
 **CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
 button), `tooltip` (hover tooltip, positioned over the hovered cell),
 `live-region` (visually-hidden, `aria-hidden` mirror of the keyboard-focused cell; the actual
-announcement uses the shared light-DOM polite sink), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
+announcement uses the shared light-DOM polite sink), `projection-limit` (localized assistive
+disclosure when bounded canonicalization truncates input), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
 bar between them, while `legendStops` is supplied), `legend-stop` (one per `legendStops` entry),
 `legend-swatch` (that stop's color chip, not rendered at all for a caption-only stop),
 `legend-stop-label` (that stop's text), `legend-value-label` (the trailing `valueLabel` caption that
@@ -227,30 +238,49 @@ same color as `--lr-heatmap-focus-ring-color`).
 <lr-heatmap value-label="requests"></lr-heatmap>
 <script>
   const hm = document.querySelector("lr-heatmap");
-  hm.rowLabels = ["Mon", "Tue", "Wed"];
-  hm.colLabels = ["00h", "06h", "12h", "18h"];
-  hm.values = [
-    [3, 8, 12, 4],
-    [1, 2, 9, 5],
-    [0, 4, 6, 2],
-  ];
+  hm.data = {
+    kind: "matrix",
+    rowLabels: ["Mon", "Tue", "Wed"],
+    colLabels: ["00h", "06h", "12h", "18h"],
+    values: [[3, 8, 12, 4], [1, 2, 9, 5], [0, 4, 6, 2]],
+  };
 </script>
 ```
 
 ```html
 <!-- Calendar mode: a GitHub-contributions-style day grid -->
-<lr-heatmap mode="calendar" value-label="commits"></lr-heatmap>
+<lr-heatmap value-label="commits"></lr-heatmap>
 <script>
-  document.querySelector("lr-heatmap").days = [
-    { date: "2026-01-01", value: 3 },
-    { date: "2026-01-02", value: 0 },
-    // ...
-  ];
+  document.querySelector("lr-heatmap").data = {
+    kind: "calendar",
+    days: [
+      { date: "2026-01-01", value: 3 },
+      { date: "2026-01-02", value: 0 },
+    ],
+    firstDayOfWeek: 1,
+  };
 </script>
 ```
 
+**9.0 migration:** replace the independent `mode`, `rowLabels`, `colLabels`, `values`, `days`,
+`firstDayOfWeek`, `columnX`, `rowY`, `weekdayLabelText`, and `monthLabelText` members with one
+`data` assignment as shown above. There are no runtime aliases: this removes stale cross-mode state
+and gives every scale/count/paint/selection/event path the same bounded projection. Replace the old
+magic `value-label="value"` localization sentinel by removing the attribute; a supplied `"value"`
+is now literal.
+
 **Known gotchas:**
 
+- Matrix projection is capped at 10,000 renderable cells. Calendar input is capped at 10,000
+  records and 530 weeks, and the color-step/legend-stop/annotation projections are each capped at
+  256 entries. `[part="projection-limit"]` and the generated accessible summary disclose every
+  truncation. The semantic grid mounts at most 400 cell buttons while preserving full navigation.
+- Calendar duplicates use a last-wins ISO-date identity. Invalid dates are dropped. `data.columnX`
+  and `data.rowY` results must be finite, nonnegative, monotonic and non-overlapping; an invalid,
+  throwing or hostile result safely falls back to the normal coordinate for that position.
+- Annotation, controlled selection and keyboard focus use independent concentric canvas rings;
+  selection/focus also use distinct dash patterns so forced-color rendering does not collapse the
+  three public states into one overwritten outline.
 - The legend is a wrapping flex row. Long unbroken stop labels, the trailing `valueLabel`, and
   annotation labels wrap within the host instead of forcing the heatmap wider than its allocation.
 - `legendStops` _replaces_ the lo/hi gradient bar rather than adding to it: supplying it removes

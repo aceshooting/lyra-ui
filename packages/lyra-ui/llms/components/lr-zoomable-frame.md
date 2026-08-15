@@ -24,42 +24,61 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
   values are accepted; active `data:`/`javascript:` and non-embeddable schemes are omitted.
 - `srcdoc: string = ''` — inline iframe document. A present `srcdoc` wins over `src`, including an
   explicitly empty `srcdoc` attribute.
-- `allowfullscreen: boolean = false`, `loading: 'eager' | 'lazy' = 'eager'`,
+- `allowfullscreen: boolean = false`, `loading: LyraZoomableFrameLoading = 'eager'`
+  (`'eager' | 'lazy'`),
   `referrerpolicy: string = ''`, and `sandbox: string = 'allow-same-origin'` forward the native
   iframe controls after validation. Invalid loading becomes `eager`; an invalid non-empty referrer
   policy becomes `no-referrer`.
 - `zoom: number = 1` (reflected) — current scale. Finite programmatic values do not have to occur
   in `zoomLevels`; unsafe/non-finite layout values render as a finite positive fallback.
 - `zoomLevels: string = '25% 50% 75% 100% 125% 150% 175% 200%'` (attribute `zoom-levels`) —
-  decimal/percentage stops used by the controls, parsed, deduplicated, and sorted.
+  decimal/percentage stops used by the controls. The cached projection reads at most the first
+  16,384 UTF-16 code units and 256 whitespace-delimited tokens before deduplicating and sorting;
+  a token cut by the source ceiling is ignored, and later source text cannot affect the controls.
 - `withoutControls: boolean = false`, `withoutInteraction: boolean = false`, and
   `withThemeSync: boolean = false` (reflected attributes `without-controls`,
   `without-interaction`, `with-theme-sync`) — respectively remove the toolbar, remove pointer and
-  sequential-keyboard iframe interaction, and opt into best-effort same-origin theme sync.
-- `accessibleLabel: string | null` (attribute `aria-label`) — forwarded to the actual iframe
-  `title`; otherwise the localized zoomable-frame label names it.
+  sequential-keyboard iframe interaction by making the browsing context native `inert`, and opt
+  into best-effort same-origin theme sync. The inert frame also refuses programmatic focus/click
+  and carries no unsupported `aria-disabled` claim.
+- `accessibleLabel: string | null` (attribute `aria-label`) — a declarative attribute remains on
+  the host while the iframe gets its localized purpose title, avoiding a duplicate name on two
+  semantic owners. A property-only value names the iframe. Explicit empty host naming is preserved
+  as an empty iframe title rather than replaced through truthiness.
 - readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
   `contentDocument` also returns `null` across an origin boundary.
 
+**Authoring type:** `LyraZoomableFrameLoading`. The former unprefixed
+`ZoomableFrameLoading` name is removed in v9 rather than retained as an alias.
+The former deep-class-module implementation exports `DEFAULT_ZOOM_LEVELS`,
+`DEFAULT_IFRAME_SANDBOX`, `safeZoomableFrameSrc()`, and `safeZoomableFrameSandbox()` are also
+removed in v9. They were never part of the registration, root, or documented component surface;
+configure the corresponding public properties instead of depending on sink-policy internals.
+
 **Methods:** `zoomIn()` selects the nearest configured level above the current value;
 `zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
 of its controls has focus. `focus(options?)`, `blur()`, and `click()` forward to the internal
-iframe — the component's primary interactive surface, still programmatically focusable under
-`without-interaction` — rather than to the two-button zoom toolbar, which has no single primary
-action.
+iframe — the component's primary interactive surface — only while the component is connected and
+interaction is enabled. Under `without-interaction` they are deliberate no-ops rather than an
+escape around native `inert`; the two-button zoom toolbar has no single primary action.
 
 **Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs. Their
 flattened subtrees are always inert and hidden from assistive technology, so use an SVG or glyph
 rather than a second interactive control; the native zoom buttons remain the sole focus and pointer
 actions.
 
-**Events:** internal `focus`/`blur` from the iframe are bridged as bubbling, composed host events;
-native `load` and `error` are relayed exactly once from the current iframe generation as
-non-bubbling, non-composed `Event` instances. Navigation/source-policy changes replace the iframe,
-so a late event from an earlier document is ignored; detached frames do not notify.
+**Events:** internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
+`FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
+`lr-focus`/`lr-blur`; native `load` and `error` are relayed exactly once from the current iframe
+generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes
+replace the iframe, so a late event from an earlier document is ignored; detached frames do not
+notify.
 
-**CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`.
+**CSS parts:** `iframe`, `controls`, `zoom-in-button`, and `zoom-out-button`. Real focus entry into
+the browsing context (Tab, pointer, or `focus()`) exposes `data-frame-focused` on the host and paints
+the shared focus ring around the iframe boundary; blur, navigation rekey, disablement, and removal
+clear it.
 
 **CSS custom properties:** read-only `--lr-zoomable-frame-zoom`, resolved from the `zoom`
 property and applied to the internal iframe scale; and `--lr-zoomable-frame-control-hover-background`

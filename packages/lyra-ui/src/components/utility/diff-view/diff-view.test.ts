@@ -15,6 +15,23 @@ function stubClipboard(target: Navigator, value: unknown): () => void {
 }
 
 describe('lr-diff-view', () => {
+  it('normalizes unsupported layout attributes and untyped property writes', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view layout="columns" .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(el.layout).to.equal('unified');
+    expect(el.getAttribute('layout')).to.equal('unified');
+
+    el.layout = 'split';
+    await el.updateComplete;
+    (el as unknown as Record<string, unknown>).layout = 'columns';
+    await el.updateComplete;
+    expect(el.layout).to.equal('unified');
+    expect(el.getAttribute('layout')).to.equal('unified');
+    const hasSide = el.shadowRoot!.querySelector('[part="side"]') !== null;
+    expect(hasSide).to.equal(false);
+  });
+
   it('renders the localized size fallback instead of diffing past maxLines', async () => {
     const el = (await fixture(
       html`<lr-diff-view

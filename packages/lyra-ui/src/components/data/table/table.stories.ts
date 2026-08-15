@@ -28,7 +28,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A bounded sort/select-aware grid. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted.',
+          'A bounded sort/select-aware grid. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted. Built-in filter/loading/empty/more/column-toggle copy localizes only while its optional override is omitted; supplied strings, including empty strings, render verbatim.',
       },
     },
   },
@@ -654,13 +654,13 @@ export const AncestorThemeHooks: Story = {
     docs: {
       description: {
         story:
-          'Heat-tint and resize hooks inherit from a theme wrapper. A value set directly on the table still wins through the normal cascade.',
+          'Heat-tint and resize hooks, including independent handle hover and press paint, inherit from a theme wrapper. A value set directly on the table still wins through the normal cascade.',
       },
     },
   },
   render: () => html`
     <div
-      style="--lr-table-heat-tint-lo: var(--lr-color-success-quiet); --lr-table-heat-tint-hi: var(--lr-color-success); --lr-table-resize-min-width: var(--lr-size-8rem); --lr-table-resize-handle-opacity: var(--lr-opacity-disabled)"
+      style="--lr-table-heat-tint-lo: var(--lr-color-success-quiet); --lr-table-heat-tint-hi: var(--lr-color-success); --lr-table-resize-min-width: var(--lr-size-8rem); --lr-table-resize-handle-hover-bg: var(--lr-color-warning); --lr-table-resize-handle-hover-opacity: 0.45; --lr-table-resize-handle-active-bg: var(--lr-color-danger); --lr-table-resize-handle-active-opacity: 0.8"
     >
       <lr-table
         .columns=${pivotColumns.map((column) => ({ ...column, resizable: true }))}

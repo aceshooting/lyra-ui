@@ -22,26 +22,28 @@ at `lr-node-add`/`lr-palette-place`; the host mutates `nodes`. Fully decoupled f
 with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
 
 **Properties:**
+
 - `items: PaletteItem[] = []` (attribute: false) — `PaletteItem { type: string; label: string;
-  description?: string; category?: string; keywords?: string[]; icon?: unknown; disabled?: boolean }`;
+description?: string; category?: string; keywords?: string[]; icon?: unknown; disabled?: boolean }`;
   `type` is the `FlowNode.type` a placement/drop creates, `category` groups items under
   first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable
 - `label: string = ''` — accessible name for the search field/listbox
 - `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
   reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
   behaving exactly like a plain Arrow press
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the listbox's
-  computed accessible name; wins over `label` and the localized default, and attribute-reflects
-  from a host-level `aria-label`
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
+  the host attribute is absent, overrides the listbox name. Authored host `aria-label` instead
+  names the component as a whole (including explicit-empty/dynamic values) and is not cloned onto
+  the listbox, which retains the distinct `label`/localized name
 
 **Events:** `lr-palette-place` (`detail: { type }`, a pointer click or Enter/Space — the
 click/keyboard alternative to dragging), `lr-select` (`detail: { item }`, emitted alongside
 `lr-palette-place` on both gestures, carrying the full item), `lr-reorder`
-(`detail: { type, category, fromIndex, toIndex }`, only while `reorderable`), `focus`/`blur` (no
-detail — re-dispatched from the internal search field's own `focus`/`blur`, bubbling and composed
-unlike the native events, since neither bubbles nor crosses the shadow boundary on its own).
+(`detail: { type, category, fromIndex, toIndex }`, only while `reorderable`), `focus`/`blur`
+(realm-correct native `FocusEvent`s relayed exactly once from the internal search field, preserving
+`relatedTarget` while bubbling and crossing the shadow boundary).
 
-`lr-reorder` is a *request*, the same host-applies-the-mutation contract `lr-tree`'s identical
+`lr-reorder` is a _request_, the same host-applies-the-mutation contract `lr-tree`'s identical
 `reorderable`/`lr-reorder` pair already uses: Ctrl/Cmd+ArrowUp/ArrowDown on the focused item asks to
 move it past its neighbour **inside its own category group**, so a reorder can never turn into a
 recategorization, and nothing is emitted at a group boundary. `category` is `null` for the
@@ -65,17 +67,18 @@ announcement).
 <lr-node-palette id="palette"></lr-node-palette>
 <lr-flow-canvas id="canvas" droppable style="height:480px"></lr-flow-canvas>
 <script>
-  document.getElementById('palette').items = [
-    { type: 'http-request', label: 'HTTP Request', category: 'Actions' },
-    { type: 'transform', label: 'Transform', category: 'Actions' },
+  document.getElementById("palette").items = [
+    { type: "http-request", label: "HTTP Request", category: "Actions" },
+    { type: "transform", label: "Transform", category: "Actions" },
   ];
-  document.getElementById('canvas').addEventListener('lr-node-add', (e) => {
-    console.log('drop payload type:', e.detail.type, e.detail.position);
+  document.getElementById("canvas").addEventListener("lr-node-add", (e) => {
+    console.log("drop payload type:", e.detail.type, e.detail.position);
   });
 </script>
 ```
 
 **Known gotchas:**
+
 - A drag from this palette carries `FLOW_PALETTE_MIME_TYPE` as its `DataTransfer` type — only a
   `droppable` `lr-flow-canvas` (or a host reimplementing the same MIME type) accepts it.
 - Clicking or activating an item by keyboard fires `lr-palette-place`/`lr-select` immediately, no

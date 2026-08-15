@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -16,7 +16,8 @@
 ## `lr-page-rail`
 
 A virtualized vertical thumbnail rail for page-addressed documents, with per-page highlight heat
-markers. Two modes: **wired** (`viewer`/`for` supply a live page source, e.g. `<lr-pdf-viewer>` —
+markers. Two modes: **wired** (`viewer`/`for` supply a live page source, e.g. `<lr-pdf-viewer>` or
+`<lr-pptx-viewer>` —
 thumbnails render lazily as rows materialize, and the rail tracks page/count from the viewer's own
 events) and **mediated** (`page-count`/`page` are host-bound directly, rows render a placeholder
 glyph — still a fully functional pager). In wired mode the viewer's `page` is the single source of
@@ -25,8 +26,14 @@ truth.
 **Properties:** `viewer: PageThumbnailSource | null = null` (attribute: false) — the wired viewer.
 `for: string = ''` — an id selector alternative to setting `viewer` directly. `pageCount: number = 0`
 (attribute `page-count`) and `page: number = 1` (reflected) — mediated-mode page state.
-`highlights: LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers.
-`thumbWidth: number = 96` (attribute `thumb-width`) and `label: string = ''`.
+`highlights: readonly LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers.
+`thumbWidth: number = 96` (attribute `thumb-width`) and `label: string = ''`. A wired
+`PageThumbnailSource` provides its one-based `page`, optionally exposes the atomic
+`pageViewerSnapshot`/`lr-page-viewer-state-change` protocol, and supplies at least one lazy preview
+method: the original `renderPageThumbnail(page, canvas, options?)` for bitmap/canvas sources, or
+`renderPageThumbnailToContainer(page, container, options?)` for renderer-owned DOM/SVG previews.
+The latter resolves to a `PageThumbnailRenderHandle`; the rail disposes it whenever its row,
+viewer, allocation width, status, or document identity changes.
 
 **Events:** `lr-page-select` — a page row was activated (click, or Enter/Space on a focused row).
 `detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
@@ -37,8 +44,9 @@ Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the l
 numeric type-ahead buffer is cleared on detach.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
-button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas
-wrapper), `page-number` (the visible page number), `heat` (the heat-marker cluster), `heat-dot` (one
+button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas/DOM
+preview wrapper), `thumbnail-target` (the canvas or renderer-owned DOM preview target), `page-number`
+(the visible page number), `heat` (the heat-marker cluster), `heat-dot` (one
 heat marker), `heat-dot-accent`, `heat-dot-success`, `heat-dot-warning`, `heat-dot-danger` and
 `heat-dot-neutral` (the tone-specific name on each marker), and `heat-dot-overflow` (the `+n`
 marker).

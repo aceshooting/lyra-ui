@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 15 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-line-chart`, `lr-bar-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -16,12 +16,9 @@
 
 ## Typed subclasses: `lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart`
 
-Each is `LyraChart` with `type` locked to a fixed value — respectively `line`, `bar`, `pie`,
-`doughnut`, `radar`, `polarArea`, `bubble`, `scatter` — via a real `get`/`set` accessor pair the
-shared `lockChartType()` helper installs on the subclass's own prototype (`declare type: '…'`
-narrows the TS type at compile time; the runtime lock is the `Object.defineProperty` pair alongside
-it — the same helper `lr-histogram` uses), not merely a class-field default a later assignment
-could still override.
+Each is `LyraChart` with a named default `type` — respectively `line`, `bar`, `pie`, `doughnut`,
+`radar`, `polarArea`, `bubble`, `scatter`. In parity with the mirrored tags, `type` remains writable
+and accepts the full `LyraChartType` vocabulary; the tag name is a convenient default, not a lock.
 
 Everything else is inherited verbatim from `lr-chart`; each name below has the same type, default,
 and behavior there. **See `llms/components/lr-chart.md` for the details, code example, and gotchas
@@ -30,17 +27,16 @@ of every entry in these lists.**
 **Properties:** `description`, `grid`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
 (`legend-position`), `max`, `min`, `plugins`, `stacked`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
-`yLabel` (`y-label`), plus additive `labels`, `datasets`, `legend`, `valueFormatter`, `area`, `zoom`,
+`yLabel` (`y-label`), plus additive `labels`, `datasets`, `legend`, `valueFormatter`, `formatter`, `area`, `zoom`,
 `height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`
 (`data-labels`), `stackTotals` (`stack-totals`), `config`, `accessibleLabel`
 (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
-(`show-data-table`), `chartArea` (readonly). `type` is the only member that differs: read-only,
-locked to this tag's value.
+(`show-data-table`), `chartArea` (readonly), and `chart`. `type` differs only in its initial value.
 
-**Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `resetZoom()`,
+**Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `renderChart()`, `resetZoom()`,
 `refreshTheme()`.
 
-**Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-point-click` (`detail: { datasetIndex,
+**Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-click` (`detail: { datasetIndex,
 index, label, value }`), `lr-before-legend-visibility-change` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
 complete `hiddenDatasets` snapshot).
@@ -59,7 +55,7 @@ failure transition is announced through the shared document-level light-DOM asse
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
-`--lr-chart-pattern-step` — all inherited from `LyraChart`, identical in meaning and default (see
+`--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
 `lr-chart` above); each of the eight variants below reads the same set, so one rule retunes them
 together. The mirrored hooks are `--border-color-1`,
 `--border-color-2`, `--border-color-3`, `--border-color-4`, `--border-color-5`,
@@ -83,10 +79,9 @@ together. The mirrored hooks are `--border-color-1`,
 ```
 
 **Known gotchas (in addition to the core `lr-chart` list in `llms/components/lr-chart.md`):**
-- `type` truly is locked per subclass: `<lr-pie-chart type="bar">` or `el.type = 'bar'` at runtime
-  is a genuine no-op (the accessor's setter silently ignores the write), not a footgun like a plain
-  overridden class-field default would be.
-- `lr-bubble-chart` consumes the exported `ChartPoint` shape directly. Set `x`/`y`, optional `r`
+- Changing `type` after construction may rebuild the underlying Chart.js instance; any active zoom
+  state is reset and announced before the new type renders.
+- `lr-bubble-chart` consumes the exported `LyraChartPoint` shape directly. Set `x`/`y`, optional `r`
   for bubble radius, and optional `label` for the point-level accessible/event/export label; no
   runtime cast is needed.
 

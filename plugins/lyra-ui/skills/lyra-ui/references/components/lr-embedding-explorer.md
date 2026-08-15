@@ -8,7 +8,7 @@
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,9 +22,11 @@ the component only normalizes them into SVG, colors optional clusters, and emits
 y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'` (any CSS length valid for `block-size`,
 including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host as
 `--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
-`accessibleLabel: string | null = null` (attribute `aria-label`). Non-finite coordinates are
-omitted. Pointer and programmatic focus synchronize the single roving tab stop, and every point
-keeps at least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
+`accessibleLabel: string | null = null` (attribute `aria-label`). As a JS-only property with no host
+attribute, it names the plot. Authored host `aria-label` instead names the explorer as a whole and
+is not cloned onto the plot, which retains its localized name. Non-finite coordinates are omitted.
+Pointer and programmatic focus synchronize the single roving tab stop, and every point keeps at
+least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
@@ -34,4 +36,8 @@ keeps at least a 24×24 CSS px pointer target at narrow allocations without enla
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`
 (default `360px`) — the `block-size` of `[part="plot"]`, set on the host from `height`. A consumer's
 own `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
-`min-block-size` floor still raises it. Plus shared tokens.
+`min-block-size` floor still raises it. Unspecified clusters cycle through the canonical
+`--lr-color-chart-1`, `--lr-color-chart-2`, `--lr-color-chart-3`, `--lr-color-chart-4`,
+`--lr-color-chart-5`, `--lr-color-chart-6`, `--lr-color-chart-7`, and `--lr-color-chart-8` palette,
+including its dark and forced-color values.
+Plus shared tokens.

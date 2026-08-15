@@ -19,9 +19,9 @@ export const Default: Story = {
     <lr-multi-split
       style="height: 8rem; border: 1px solid var(--lr-color-border)"
     >
-      <div style="padding: 0.5rem">Panel A</div>
-      <div style="padding: 0.5rem">Panel B</div>
-      <div style="padding: 0.5rem">Panel C</div>
+      <div panel-id="navigation" style="padding: 0.5rem">Panel A</div>
+      <div panel-id="content" style="padding: 0.5rem">Panel B</div>
+      <div panel-id="inspector" style="padding: 0.5rem">Panel C</div>
     </lr-multi-split>
   `,
 };

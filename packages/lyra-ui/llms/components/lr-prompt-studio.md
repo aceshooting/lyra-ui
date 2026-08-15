@@ -26,6 +26,8 @@ cancelable `lr-change` before updating the current arrays, while the host remain
 persistence.
 `versions: PromptStudioVersion[] = []` is a property-only host-controlled input;
 `selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
+`heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
+label when unset;
 `running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
 (all reflected). `reorderable` adds native move-up/move-down controls for each message. A move first
 emits a cancelable request, so a host can veto it while persisting the proposed order and later
@@ -34,7 +36,8 @@ textarea and variable input through `spellcheck: boolean = true`, `autocapitaliz
 and `autoCorrect: string = ''` (attribute `autocorrect`); `wrap: PromptStudioWrap = 'soft'` applies
 to message textareas only.
 
-**Exported types:** `PromptStudioRole = 'system' | 'user' | 'assistant' | 'tool'`;
+**Exported types:** `PromptStudioRole = ChatMessageRole | 'tool'`, where the shared
+`ChatMessageRole` is `'system' | 'user' | 'assistant'`;
 `PromptStudioMessage = { id, role, content, name? }`; `PromptStudioVariable = { name, value,
 description? }`; `PromptStudioVersion = { id: string; label: string; messages:
 PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`; and
@@ -70,7 +73,7 @@ not collapse to indistinguishable generic names.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';
+import "@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js";
 ```
 
 **Additional API surface:**

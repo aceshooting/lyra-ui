@@ -1,26 +1,40 @@
-import { LitElement, type CSSResultGroup, type PropertyDeclaration } from 'lit';
-import { property } from 'lit/decorators.js';
-import { captureFormInternals, ExternalLabelController } from './form-control-labels.js';
-import { tokens } from './tokens.styles.js';
-import { palette } from './tokens/palette.styles.js';
-import { resolveIntlLocale } from './intl-cache.js';
+import {
+  LitElement,
+  type CSSResultGroup,
+  type PropertyDeclaration,
+  type PropertyValues,
+} from "lit";
+import { property } from "lit/decorators.js";
+import {
+  captureFormInternals,
+  ExternalLabelController,
+} from "./form-control-labels.js";
+import { tokens } from "./tokens.styles.js";
+import { palette } from "./tokens/palette.styles.js";
+import { resolveIntlLocale } from "./intl-cache.js";
 import {
   observeInheritedContext,
+  beginInheritedContextUpdate,
+  finishInheritedContextUpdate,
+  markInheritedContextUpdateRendered,
+  queueInheritedDirectionChange,
   recordInheritedDirectionRead,
   recordInheritedLocaleRead,
-} from './inherited-context-observer.js';
+} from "./inherited-context-observer.js";
 import {
   canonicalizeLyraLocale,
   enableLyraLocaleCache,
   invalidateLyraLocaleCache,
+  lyraLocaleCatalogVersion,
   peekLyraLocale,
+  recordLyraOwnerDocumentConnection,
   resolveLyraDirection,
   resolveLyraString,
   resolveLyraLocale,
   snapshotLyraLocaleStrings,
   subscribeLyraLocaleForHost,
-} from './localization-runtime.js';
-import type { LyraLocaleStrings } from './localization.js';
+} from "./localization-runtime.js";
+import type { LyraLocaleStrings } from "./localization.js";
 
 export interface LyraEmitOptions {
   /** Set only for events whose listener may veto an operation before it runs. */
@@ -33,8 +47,9 @@ export type LyraEventMap = Record<string, Event>;
  * The trailing `emit()` arguments for one entry of a component's event map.
  *
  * The map entry is the single source of truth: `CustomEvent<{ id: string }>` makes `detail`
- * **required** and typed, while `CustomEvent<undefined>` (or a `void`/optional detail) makes it
- * omittable. Entries that are not `CustomEvent` at all — the native re-emits some components list
+ * **required** and typed, while `CustomEvent<null>` (or an optional detail) makes it omittable.
+ * The runtime normalizes an omitted detail to the platform's canonical `null`. Entries that are
+ * not `CustomEvent` at all — the native re-emits some components list
  * as `input: Event` / `load: Event` — keep the permissive shape, since there is no declared detail
  * to check against.
  *
@@ -42,18 +57,20 @@ export type LyraEventMap = Record<string, Event>;
  * distributing over a union-typed map entry, which would otherwise turn one required `detail` into
  * a union of argument lists that no call site can satisfy.
  */
-export type LyraEmitArgs<Events, K extends keyof Events & string> = [Events[K]] extends [
-  CustomEvent<infer Detail>,
-]
-  ? undefined extends Detail
+export type LyraEmitArgs<Events, K extends keyof Events & string> = [
+  Events[K]
+] extends [CustomEvent<infer Detail>]
+  ? null extends Detail
+    ? [detail?: Detail, options?: LyraEmitOptions]
+    : undefined extends Detail
     ? [detail?: Detail, options?: LyraEmitOptions]
     : [detail: Detail, options?: LyraEmitOptions]
   : [detail?: unknown, options?: LyraEmitOptions];
 
 /** The `CustomEvent` `emit()` returns for one entry of a component's event map. */
-export type LyraEmittedEvent<Events, K extends keyof Events & string> = [Events[K]] extends [
-  CustomEvent<infer Detail>,
-]
+export type LyraEmittedEvent<Events, K extends keyof Events & string> = [
+  Events[K]
+] extends [CustomEvent<infer Detail>]
   ? CustomEvent<Detail>
   : CustomEvent<unknown>;
 
@@ -62,12 +79,17 @@ export type LyraEmittedEvent<Events, K extends keyof Events & string> = [Events[
  * first render. A symbol keeps the hook out of the component API while allowing shared reactive
  * controllers to use the same hydration decision as their host.
  */
-export const SEED_FIRST_RENDER_STATE = Symbol('lr-seed-first-render-state');
+export const SEED_FIRST_RENDER_STATE = Symbol("lr-seed-first-render-state");
 /** Internal query used by slot-presence controllers while SSR light DOM is unknowable. */
-export const SLOT_PRESENCE_UNRESOLVED = Symbol('lr-slot-presence-unresolved');
+export const SLOT_PRESENCE_UNRESOLVED = Symbol("lr-slot-presence-unresolved");
 
-const REACTIVE_HOST_ATTRIBUTES = ['aria-label', 'aria-describedby', 'lang', 'dir'] as const;
-const DIRECTION_HOST_ATTRIBUTES = ['class', 'style'] as const;
+const REACTIVE_HOST_ATTRIBUTES = [
+  "aria-label",
+  "aria-describedby",
+  "lang",
+  "dir",
+] as const;
+const DIRECTION_HOST_ATTRIBUTES = ["class", "style", "slot"] as const;
 
 /**
  * Shared base for every Lyra component. Supplies the design-token layer
@@ -81,7 +103,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   static override styles: CSSResultGroup = [palette, tokens];
 
   /** @internal English fallbacks owned by this class hierarchy and generated per component. */
-  protected static readonly defaultStrings: Readonly<LyraLocaleStrings> = Object.freeze({});
+  protected static readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    Object.freeze({});
 
   /**
    * Components commonly forward ARIA host attributes to an internal role and derive localization
@@ -90,12 +113,16 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    */
   static override get observedAttributes(): string[] {
     return [
-      ...new Set([...super.observedAttributes, ...REACTIVE_HOST_ATTRIBUTES, ...DIRECTION_HOST_ATTRIBUTES]),
+      ...new Set([
+        ...super.observedAttributes,
+        ...REACTIVE_HOST_ATTRIBUTES,
+        ...DIRECTION_HOST_ATTRIBUTES,
+      ]),
     ];
   }
 
   /** Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used. */
-  @property({ reflect: true }) locale = '';
+  @property({ reflect: true }) locale = "";
 
   private stringsValue: LyraLocaleStrings = snapshotLyraLocaleStrings({});
 
@@ -111,10 +138,12 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   set strings(value: LyraLocaleStrings) {
     const previous = this.stringsValue;
     this.stringsValue = snapshotLyraLocaleStrings(value);
-    this.requestUpdate('strings', previous);
+    this.requestUpdate("strings", previous);
   }
 
   private stopLocaleSubscription?: () => void;
+  private localeSubscriptionNeeded = false;
+  private lastLocalizedCatalogVersion?: string;
   private pendingLoadController?: AbortController;
   /** Callbacks scheduled during the current update cycle, keyed so that two callers with
    *  *different* purposes each keep a slot. A single boolean here meant the second caller in a
@@ -165,6 +194,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // whatever the browser alone can see.
     this.hydratingServerShadow ??= !this.hasUpdated && this.shadowRoot !== null;
     super.connectedCallback();
+    recordLyraOwnerDocumentConnection(this);
     // A reconnected element may sit under a different `lang`/`dir` ancestor,
     // and Lit schedules no update for a pure DOM move — the memo from the
     // previous tree must not carry over.
@@ -172,11 +202,19 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     invalidateLyraLocaleCache(this);
     this.stopInheritedContextObservation?.();
     this.stopInheritedContextObservation = observeInheritedContext(this);
-    this.stopLocaleSubscription = subscribeLyraLocaleForHost(this, () => this.requestUpdate());
+    if (this.localeSubscriptionNeeded) this.ensureLocaleSubscription();
+    if (this.lastLocalizedCatalogVersion !== undefined) {
+      const currentCatalogVersion = lyraLocaleCatalogVersion(
+        resolveLyraLocale(this)
+      );
+      if (currentCatalogVersion !== this.lastLocalizedCatalogVersion)
+        this.requestUpdate();
+    }
     const deferred = this.deferredAfterUpdate;
     if (deferred) {
       this.deferredAfterUpdate = undefined;
-      for (const [key, callback] of deferred) this.scheduleAfterUpdate(callback, key);
+      for (const [key, callback] of deferred)
+        this.scheduleAfterUpdate(callback, key);
     }
   }
 
@@ -198,7 +236,11 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * surviving until an unrelated update.
    */
   adoptedCallback(): void {
+    this.stopLocaleSubscription?.();
+    this.stopLocaleSubscription = undefined;
     invalidateLyraLocaleCache(this);
+    if (this.isConnected && this.localeSubscriptionNeeded)
+      this.ensureLocaleSubscription();
   }
 
   /**
@@ -209,25 +251,58 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * most once per update cycle no matter how many times a template loop calls
    * `localize()`/`effectiveLocale`/`effectiveDirection`.
    */
-  override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: PropertyDeclaration): void {
+  override requestUpdate(
+    name?: PropertyKey,
+    oldValue?: unknown,
+    options?: PropertyDeclaration
+  ): void {
     invalidateLyraLocaleCache(this);
     super.requestUpdate(name, oldValue, options);
   }
 
-  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+  protected override performUpdate(): void {
+    beginInheritedContextUpdate(this);
+    try {
+      super.performUpdate();
+    } finally {
+      finishInheritedContextUpdate(this);
+    }
+  }
+
+  protected override update(changedProperties: PropertyValues): void {
+    super.update(changedProperties);
+    markInheritedContextUpdateRendered(this);
+  }
+
+  private ensureLocaleSubscription(): void {
+    this.localeSubscriptionNeeded = true;
+    if (!this.isConnected || this.stopLocaleSubscription) return;
+    this.stopLocaleSubscription = subscribeLyraLocaleForHost(this);
+  }
+
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    value: string | null
+  ): void {
+    const directionHostAttribute =
+      oldValue !== value &&
+      DIRECTION_HOST_ATTRIBUTES.includes(
+        name as (typeof DIRECTION_HOST_ATTRIBUTES)[number]
+      );
+    if (directionHostAttribute)
+      queueInheritedDirectionChange(this, name === "slot");
     super.attributeChangedCallback(name, oldValue, value);
     if (
       oldValue !== value &&
-      REACTIVE_HOST_ATTRIBUTES.includes(name as (typeof REACTIVE_HOST_ATTRIBUTES)[number])
+      REACTIVE_HOST_ATTRIBUTES.includes(
+        name as (typeof REACTIVE_HOST_ATTRIBUTES)[number]
+      )
     ) {
       this.requestUpdate();
-    } else if (
-      oldValue !== value &&
-      DIRECTION_HOST_ATTRIBUTES.includes(name as (typeof DIRECTION_HOST_ATTRIBUTES)[number])
-    ) {
-      // Host class/style changes are synchronous attribute mutations. Drop the computed-direction
-      // memo immediately so keyboard handlers in the same task cannot observe the previous CSS
-      // cascade; CSS itself handles the visual update, so no render is required here.
+    } else if (directionHostAttribute) {
+      // Capture happened before invalidation, so a same-task getter cannot replace the rendered
+      // baseline before the coalesced observer comparison runs.
       invalidateLyraLocaleCache(this);
     }
   }
@@ -287,7 +362,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
         // flag so a later update seeds normally instead of deferring forever.
         this.hydratingServerShadow = false;
         this.deferredFirstRenderSeeds = undefined;
-      },
+      }
     );
   }
 
@@ -308,7 +383,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   /** @internal */
   [SLOT_PRESENCE_UNRESOLVED](): boolean {
-    return typeof Node === 'undefined' || this.hydratingServerShadow === true;
+    return typeof Node === "undefined" || this.hydratingServerShadow === true;
   }
 
   /** Starts a component-owned cancellable load and aborts the previous one. */
@@ -334,7 +409,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * Lit still runs the update cycle while detached, so callbacks that come due then are held and
    * replayed on reconnect rather than dropped.
    */
-  protected scheduleAfterUpdate(callback: () => void, key = 'load'): void {
+  protected scheduleAfterUpdate(callback: () => void, key = "load"): void {
     const pending = (this.afterUpdateCallbacks ??= new Map());
     if (pending.has(key)) return;
     pending.set(key, callback);
@@ -349,7 +424,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
         return;
       }
       const held = (this.deferredAfterUpdate ??= new Map());
-      for (const [heldKey, heldCallback] of due) if (!held.has(heldKey)) held.set(heldKey, heldCallback);
+      for (const [heldKey, heldCallback] of due)
+        if (!held.has(heldKey)) held.set(heldKey, heldCallback);
     });
   }
 
@@ -357,7 +433,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   protected localize(
     key: string,
     fallback?: string,
-    values?: Record<string, string | number>,
+    values?: Record<string, string | number>
   ): string {
     const message = resolveLyraString(
       this,
@@ -365,9 +441,14 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       this.strings,
       fallback,
       values,
-      (this.constructor as typeof LyraElement).defaultStrings,
+      (this.constructor as typeof LyraElement).defaultStrings
     );
-    recordInheritedLocaleRead(this, peekLyraLocale(this));
+    const locale = peekLyraLocale(this);
+    recordInheritedLocaleRead(this, locale);
+    if (locale !== undefined) {
+      this.lastLocalizedCatalogVersion = lyraLocaleCatalogVersion(locale);
+      this.ensureLocaleSubscription();
+    }
     return message;
   }
 
@@ -376,6 +457,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     if (this.locale) return canonicalizeLyraLocale(this.locale);
     const locale = resolveLyraLocale(this);
     recordInheritedLocaleRead(this, locale);
+    this.ensureLocaleSubscription();
     return locale;
   }
 
@@ -390,7 +472,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   }
 
   /** The effective text direction, including inherited CSS direction. */
-  protected get effectiveDirection(): 'ltr' | 'rtl' {
+  protected get effectiveDirection(): "ltr" | "rtl" {
     const direction = resolveLyraDirection(this);
     recordInheritedDirectionRead(this, direction);
     return direction;
@@ -399,47 +481,55 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   override addEventListener<K extends keyof Events & string>(
     type: K,
     listener: (this: this, event: Events[K]) => unknown,
-    options?: boolean | AddEventListenerOptions,
+    options?: boolean | AddEventListenerOptions
   ): void;
   override addEventListener<K extends keyof HTMLElementEventMap>(
     type: K,
     listener: (this: this, event: HTMLElementEventMap[K]) => unknown,
-    options?: boolean | AddEventListenerOptions,
+    options?: boolean | AddEventListenerOptions
   ): void;
   override addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
-    options?: boolean | AddEventListenerOptions,
+    options?: boolean | AddEventListenerOptions
   ): void;
   override addEventListener(
     type: string,
     listener: unknown,
-    options?: boolean | AddEventListenerOptions,
+    options?: boolean | AddEventListenerOptions
   ): void {
-    super.addEventListener(type, listener as EventListenerOrEventListenerObject, options);
+    super.addEventListener(
+      type,
+      listener as EventListenerOrEventListenerObject,
+      options
+    );
   }
 
   override removeEventListener<K extends keyof Events & string>(
     type: K,
     listener: (this: this, event: Events[K]) => unknown,
-    options?: boolean | EventListenerOptions,
+    options?: boolean | EventListenerOptions
   ): void;
   override removeEventListener<K extends keyof HTMLElementEventMap>(
     type: K,
     listener: (this: this, event: HTMLElementEventMap[K]) => unknown,
-    options?: boolean | EventListenerOptions,
+    options?: boolean | EventListenerOptions
   ): void;
   override removeEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
-    options?: boolean | EventListenerOptions,
+    options?: boolean | EventListenerOptions
   ): void;
   override removeEventListener(
     type: string,
     listener: unknown,
-    options?: boolean | EventListenerOptions,
+    options?: boolean | EventListenerOptions
   ): void {
-    super.removeEventListener(type, listener as EventListenerOrEventListenerObject, options);
+    super.removeEventListener(
+      type,
+      listener as EventListenerOrEventListenerObject,
+      options
+    );
   }
 
   /**
@@ -462,12 +552,13 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // Inert documents have no `defaultView` but still retain their creator realm. A probe created
     // by that document exposes the correct constructor; the global fallback exists only for
     // incomplete DOM shims whose `createEvent()` is absent or throws.
-    const ownerDocument = (this as unknown as { ownerDocument?: Document }).ownerDocument;
+    const ownerDocument = (this as unknown as { ownerDocument?: Document })
+      .ownerDocument;
     let CustomEventCtor = ownerDocument?.defaultView?.CustomEvent;
     if (!CustomEventCtor && ownerDocument) {
       try {
-        const candidate = ownerDocument.createEvent('CustomEvent').constructor;
-        if (typeof candidate === 'function') {
+        const candidate = ownerDocument.createEvent("CustomEvent").constructor;
+        if (typeof candidate === "function") {
           CustomEventCtor = candidate as typeof CustomEvent;
         }
       } catch {
@@ -476,7 +567,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     }
     CustomEventCtor ??= globalThis.CustomEvent;
     const event = new CustomEventCtor(name, {
-      detail,
+      detail: detail === undefined ? null : detail,
       bubbles: true,
       composed: true,
       cancelable: options?.cancelable ?? false,

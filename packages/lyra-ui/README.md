@@ -205,9 +205,11 @@ later discovery can retry it.
 Traversal is iterative and bounded per discovery operation: `maxElements` defaults to `10_000`,
 `maxRoots` to `2_000`, `maxDepth` to `256`, and `maxWork` to `100_000`; `maxConcurrency` defaults
 to `16` definition/first-update tasks. Invalid limits throw `RangeError`. `discover()` and the
-initial `start()` reject when a traversal limit is exceeded, without loading a partial tree. A
-watched insertion instead emits `lr-autoload-traversal-error` with `{ limit, maximum, error }` when
-events are enabled, and later bounded discovery work remains available.
+initial `start()` preflight the currently rendered tree and reject a traversal-limit failure before
+loading it. Shadow content rendered by a successfully loaded element is then bounded cumulatively; a
+failure there rejects after that parent definition, without starting the over-limit descendants. A
+watched insertion emits `lr-autoload-traversal-error` with `{ limit, maximum, error }` when events
+are enabled, and later bounded discovery work remains available.
 
 Optional-peer tags are skipped by default. Opt in only after installing every peer named by that
 tag's package metadata:
@@ -519,14 +521,13 @@ rewrites the declarative default.
 
 ```html
 <sl-button-group label="Actions">
-  →
-  <lr-button-group label="Actions">
-    <sl-resize-observer @sl-resize="sync">
-      →
-      <lr-resize-observer
-        @lr-resize="sync"
-      ></lr-resize-observer></sl-resize-observer></lr-button-group
-></sl-button-group>
+  <sl-resize-observer @sl-resize="sync"></sl-resize-observer>
+</sl-button-group>
+
+<!-- becomes -->
+<lr-button-group label="Actions">
+  <lr-resize-observer @lr-resize="sync"></lr-resize-observer>
+</lr-button-group>
 ```
 
 **Automating the safe subset.** The package ships the version-matched `lyra-ui-migrate` CLI. It
@@ -1141,7 +1142,7 @@ each one-liner below.
 | `<lr-tool-param-form>`                                                                 | — (extra)                                                                               | Renders one form control per property of a flat JSON Schema object, for ad hoc tool invocation or approval-time argument editing                                                                                                                                                                                  |
 | `<lr-tool-select-dialog>`                                                              | — (extra)                                                                               | Category-grouped, filterable, searchable dialog for picking which agent tools are enabled in a conversation                                                                                                                                                                                                       |
 | `<lr-command-palette>`                                                                 | — (extra)                                                                               | Searchable command menu with groups, keyboard navigation, async-friendly registration, and `mod+k` opening                                                                                                                                                                                                        |
-| `<lr-widget-renderer>`                                                                 | — (extra)                                                                               | Renders an agent-streamed declarative JSON widget tree through an allowlisted `type -> lyra tag` registry (`registerWidgetType()`); mapped nodes are real elements with props assigned as JS properties (never `innerHTML`), reused by key across a re-resolve                                                    |
+| `<lr-widget-renderer>`                                                                 | — (extra)                                                                               | Renders an agent-streamed declarative JSON widget tree through an immutable allowlisted `type -> lyra tag` registry created with `createWidgetTypeRegistry()`; mapped nodes are real elements with props assigned as JS properties (never `innerHTML`), reused by key across a re-resolve                              |
 | `<lr-json-viewer>`                                                                     | — (extra)                                                                               | Collapsible, copyable tree view for an arbitrary JSON value; path-keyed expand state survives a streamed in-place `data` patch                                                                                                                                                                                    |
 | `<lr-citation-badge>`                                                                  | — (extra)                                                                               | Inline `[n]` citation marker with a hover/focus preview popover and confidence/verification-status coloring                                                                                                                                                                                                       |
 | `<lr-source-list>` + `<lr-source-card>`                                                | — (extra)                                                                               | Collapsible "Sources" panel for one chat message, grouping per-source cards with an excerpt + "Show more" full-text toggle                                                                                                                                                                                        |

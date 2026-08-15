@@ -23,10 +23,12 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 **Properties:**
 - `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
   `zoomStep: number = 0.25` — bounded, finite zoom configuration
-- `src: string = ''` and `alt: string = ''` — optional safe image source; otherwise the default
-  slot renders
-- `accessibleLabel: string | null` (attribute `aria-label`) — names the region and its focusable
-  viewport
+- `src: string = ''` and `alt: string = ''` — optional safe image source. A rejected URL is treated
+  as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
+- `accessibleLabel: string | null` (attribute `aria-label`) — a declarative host label remains on
+  the host while the focusable viewport receives the localized inspection-surface purpose name.
+  A property-only value can name the viewport. This avoids cloning one author label onto both the
+  outer component and nested `role="group"`.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
@@ -38,15 +40,20 @@ origin. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys f
 component's own keyboard target — a bare host `.focus()` would otherwise be a silent no-op.
 
 **Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
-bridged as bubbling, composed host events.
+relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
+`relatedTarget`), followed by `lr-focus`/`lr-blur`.
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
 `reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
-`zoom` on every render (not a fixed "100%").
+`zoom` on every render (not a fixed "100%"). Its accessible name includes both the localized reset
+action and that visible percentage, so the visible label is contained in the computed name.
 
 **Themeable custom properties:** `--lr-pan-zoom-min-block-size` (default `var(--lr-size-10rem)`)
 and the read-only `--lr-pan-zoom-zoom`. The former `--lr-zoomable-frame-min-block-size` and
-`--lr-zoomable-frame-zoom` names remain temporary fallbacks during the tag migration.
+`--lr-zoomable-frame-zoom` compatibility names were removed in v9; migrate them to the two
+`--lr-pan-zoom-*` names. Scaling
+uses layout-participating CSS `zoom`, not a paint-only transform, so the viewport's native scroll
+range reaches the entire painted footprint at both logical edges in LTR and RTL.
 
 ```js
 import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';

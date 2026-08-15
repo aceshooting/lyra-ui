@@ -1,4 +1,5 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { sendMouse } from '@web/test-runner-commands';
 import './model-select.js';
 import type { LyraModelSelect } from './model-select.js';
 import { styles } from './model-select.styles.js';
@@ -919,7 +920,7 @@ describe('touched state (disabled-forced blur)', () => {
   });
 });
 
-it('clears a stale active row when an open catalog is replaced', async () => {
+it('clears an active row when an open catalog is replaced, even if the same id remains', async () => {
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
@@ -933,7 +934,7 @@ it('clears a stale active row when an open catalog is replaced', async () => {
   await el.updateComplete;
   expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(0);
 
-  el.catalog = ['replacement', 'another'];
+  el.catalog = [CATALOG[0]!, 'replacement'];
   await el.updateComplete;
   let changed = false;
   el.addEventListener('lr-change', () => (changed = true));
@@ -1241,6 +1242,17 @@ it('normalizes a null value assignment to an empty string (defensive ?? fallback
   expect(el.value).to.equal('');
 });
 
+it('normalizes an explicitly empty value attribute to the canonical absent default', async () => {
+  const el = (await fixture(
+    html`<lr-model-select value="" .catalog=${CATALOG}></lr-model-select>`,
+  )) as LyraModelSelect;
+  await el.updateComplete;
+
+  expect(el.defaultValue).to.equal('');
+  expect(el.value).to.equal('');
+  expect(el.hasAttribute('value')).to.be.false;
+});
+
 it('dispatches one native Event input/change pair even from a detached/adopted document', async () => {
   const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
   const detachedDoc = document.implementation.createHTMLDocument('detached');
@@ -1253,7 +1265,7 @@ it('dispatches one native Event input/change pair even from a detached/adopted d
   const events: Event[] = [];
   el.addEventListener('input', (event) => events.push(event));
   el.addEventListener('change', (event) => events.push(event));
-  (el as unknown as { emitValueEvents(): void }).emitValueEvents();
+  rows(el)[0]!.click();
   expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
   expect(events.every((event) => event.constructor === Event)).to.be.true;
   expect(events.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
@@ -1688,6 +1700,10 @@ describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
 
 describe('native event relays', () => {
   async function expectFocusContract(wrapper: HTMLElement, el: LyraModelSelect, control: HTMLElement): Promise<void> {
+    const before = document.createElement('button');
+    const after = document.createElement('button');
+    wrapper.prepend(before);
+    wrapper.append(after);
     const nativeEvents: FocusEvent[] = [];
     const aliases: string[] = [];
     wrapper.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
@@ -1695,12 +1711,15 @@ describe('native event relays', () => {
     wrapper.addEventListener('lr-focus', () => aliases.push('lr-focus'));
     wrapper.addEventListener('lr-blur', () => aliases.push('lr-blur'));
 
+    before.focus();
     control.focus();
-    control.blur();
+    after.focus();
 
     expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
     expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
     expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+    expect(nativeEvents[0]!.relatedTarget === before).to.be.true;
+    expect(nativeEvents[1]!.relatedTarget === after).to.be.true;
     expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
   }
 
@@ -1832,10 +1851,13 @@ it('forwards a host-level .click() to the internal trigger button (closed-dropdo
 
 it('forwards a host-level .click() to the internal combobox input (free-text mode)', async () => {
   const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
+  let relayedClicks = 0;
+  el.addEventListener('click', () => (relayedClicks += 1));
   expect(el.open).to.be.false;
   el.click();
   await el.updateComplete;
   expect(el.open, 'clicking the free-text input focuses it, which opens the suggestion popup').to.be.true;
+  expect(relayedClicks, 'model-select retains its inner click relay before focusing').to.equal(1);
 });
 
 it('host .click() is a no-op while disabled, matching native disabled-control semantics', async () => {
@@ -2017,6 +2039,28 @@ it('mousedown on the combobox shell focuses the input instead of letting the she
   await el.updateComplete;
   expect(event.defaultPrevented).to.be.true;
   expect(el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part="combobox-input"]')).to.equal(true);
+});
+
+it('preserves the native caret-placement default for a trusted mousedown on the editable input', async () => {
+  const el = (await fixture(
+    html`<lr-model-select .catalog=${CATALOG} allow-custom value="abcdefghij"></lr-model-select>`
+  )) as LyraModelSelect;
+  const nativeInput = input(el);
+  nativeInput.focus();
+  nativeInput.setSelectionRange(0, nativeInput.value.length);
+  let trustedMouseDown: MouseEvent | undefined;
+  nativeInput.addEventListener('mousedown', (event) => {
+    if (event.isTrusted) trustedMouseDown = event;
+  });
+
+  const rect = nativeInput.getBoundingClientRect();
+  await sendMouse({
+    type: 'click',
+    position: [Math.round(rect.right - 4), Math.round(rect.top + rect.height / 2)],
+  });
+
+  expect(trustedMouseDown?.defaultPrevented).to.equal(false);
+  expect(nativeInput.selectionStart).to.equal(nativeInput.selectionEnd);
 });
 
 it('mousedown on the combobox shell is inert while disabled', async () => {

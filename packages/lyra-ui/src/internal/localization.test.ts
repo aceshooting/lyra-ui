@@ -242,6 +242,7 @@ it('getRegisteredLyraLocales always includes "en" and every registered key, dedu
   expect(result).to.include('x-registry-zz');
   expect(result.filter((l) => l === 'x-registry-aa')).to.have.lengthOf(1);
   expect(result).to.deep.equal([...result].sort());
+  expect(Object.isFrozen(result)).to.be.true;
 });
 
 it('uses one canonical BCP-47 tag for registration, active state, lookup, and enumeration', async () => {

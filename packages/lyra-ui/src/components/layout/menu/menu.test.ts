@@ -190,6 +190,26 @@ it('rehomes the roving stop when the active item becomes unavailable', async () 
   expect(document.activeElement === first).to.equal(true);
 });
 
+it('contains private item-state events while still repairing roving focus', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item value="a">A</lr-menu-item>
+      <lr-menu-item value="b">B</lr-menu-item>
+    </lr-menu>
+  `);
+  const [first, second] = ownItems(menu);
+  first.focus();
+  let leaked = 0;
+  menu.addEventListener('lr-menu-item-state-change', () => leaked++);
+
+  first.disabled = true;
+  await first.updateComplete;
+  await menu.updateComplete;
+
+  expect(leaked).to.equal(0);
+  expect(second.tabIndex).to.equal(0);
+});
+
 it('preserves active identity across reorder and repairs removal', async () => {
   const menu = await fixture<LyraMenu>(basic());
   const [first, second] = ownItems(menu);
@@ -299,6 +319,21 @@ it('uses host aria-label, explicit label, dropdown fallback, then localized Menu
   menu.setAttribute('aria-label', '');
   await menu.updateComplete;
   expect(list(menu).getAttribute('aria-label')).to.equal('');
+});
+
+it('treats every supplied label literally, including the former English default and empty string', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Menu" .strings=${{ menuLabel: 'Aktionen' }}></lr-menu>
+  `);
+  expect(list(menu).getAttribute('aria-label')).to.equal('Menu');
+
+  menu.label = '';
+  await menu.updateComplete;
+  expect(list(menu).getAttribute('aria-label')).to.equal('');
+
+  menu.label = undefined;
+  await menu.updateComplete;
+  expect(list(menu).getAttribute('aria-label')).to.equal('Aktionen');
 });
 
 it('retains header/list/footer composition without a popup wrapper', async () => {

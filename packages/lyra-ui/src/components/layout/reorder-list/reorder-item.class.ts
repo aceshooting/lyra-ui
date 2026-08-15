@@ -126,6 +126,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     return this.ownerState.pending;
   }
 
+  /** @internal Applies state from the reorder list that currently owns this item. */
   [reorderOwnerUpdate](owner: object, state?: unknown): void {
     if (!isReorderOwnerState(state)) {
       if (this.owner === owner) {

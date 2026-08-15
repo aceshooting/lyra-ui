@@ -1,3 +1,4 @@
+/** @internal State projected from an owning reorder list into one of its items. */
 export interface ReorderOwnerState {
   readonly atStart: boolean;
   readonly atEnd: boolean;
@@ -7,12 +8,15 @@ export interface ReorderOwnerState {
   readonly validIdentity: boolean;
 }
 
+/** @internal Private owner-to-item state bridge. */
 export const reorderOwnerUpdate = Symbol("lyra-reorder-owner-update");
 
+/** @internal */
 export interface ReorderOwnedItem {
   [reorderOwnerUpdate](owner: object, state?: unknown): void;
 }
 
+/** @internal */
 export function updateReorderOwnerState(
   item: ReorderOwnedItem,
   owner: object,
@@ -21,6 +25,7 @@ export function updateReorderOwnerState(
   item[reorderOwnerUpdate](owner, state);
 }
 
+/** @internal */
 export function releaseReorderOwnerState(
   item: ReorderOwnedItem,
   owner: object

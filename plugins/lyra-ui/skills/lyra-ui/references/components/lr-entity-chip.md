@@ -20,6 +20,7 @@ preview popover. The knowledge-graph sibling of `lr-citation-badge`, reusing its
 contract wholesale. Carries ids through events only — no entity data resolution, no navigation.
 
 **Properties:**
+
 - `entityId: string = ''` (attribute `entity-id`)
 - `label: string = ''` — the chip's visible text
 - `type: string = ''` (reflected) — lets a host theme per type from CSS, e.g.
@@ -41,12 +42,16 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 **Optional peer deps:** none.
 
 ```html
-<p>…first described by <lr-entity-chip entity-id="e1" label="Ada Lovelace" type="person">
-  <lr-entity-card slot=""></lr-entity-card>
-</lr-entity-chip>.</p>
+<p>
+  …first described by
+  <lr-entity-chip entity-id="e1" label="Ada Lovelace" type="person">
+    <lr-entity-card slot=""></lr-entity-card> </lr-entity-chip
+  >.
+</p>
 ```
 
 **Known gotchas:**
+
 - Reuses `lr-citation-badge`'s exact "real preview content" detection (an assigned element with no
   other `slot`, or non-whitespace text) to decide whether a popover exists at all.
 

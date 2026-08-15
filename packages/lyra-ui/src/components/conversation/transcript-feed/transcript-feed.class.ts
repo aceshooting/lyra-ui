@@ -33,8 +33,10 @@ export interface LyraTranscriptFeedEventMap {
  * entries, interim-vs-final styling with in-place upgrades keyed by `id`, and a stick-to-bottom
  * auto-scroll with release, the same `follow`/`lr-follow-change` contract `lr-terminal` uses.
  *
- * Rendering reconciles `entries` keyed by `id` via Lit's `repeat()`: a same-`id` entry with new
- * `text` replaces in place; a same-`id` entry whose `interim` flips from `true` to unset/`false`
+ * Rendering reconciles `entries` keyed by `id` via Lit's `repeat()`. Ids must be nonempty and
+ * unique within a session; invalid and later duplicate rows are omitted with the first valid
+ * occurrence winning. A same-`id` entry with new `text` replaces in place; a same-`id` entry whose
+ * `interim` flips from `true` to unset/`false`
  * moves from the interim area into the `role="log"` region and announces exactly once. Interim
  * entries render *after* the log container, visible but structurally outside it, so per-token
  * mutations are never spoken by assistive tech.

@@ -69,6 +69,20 @@ it('preloads the optional map peer without constructing a map', async () => {
   expect(typeof loaded).to.equal('boolean');
 });
 
+it('floors an empty peer-owned marker target to 24px in both axes without WebGL', async () => {
+  const { el } = await connectedMapWithoutMaplibre();
+  const marker = document.createElement('span');
+  marker.className = 'maplibregl-marker';
+  marker.setAttribute('part', 'marker');
+  marker.setAttribute('role', 'button');
+  marker.tabIndex = 0;
+  el.shadowRoot!.append(marker);
+
+  const rect = marker.getBoundingClientRect();
+  expect(rect.width).to.be.at.least(24);
+  expect(rect.height).to.be.at.least(24);
+});
+
 it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps to the container', async function () {
   if (!hasWebGL2) this.skip();
   let resolveLibrary!: (value: Awaited<ReturnType<typeof loadMaplibre>>) => void;

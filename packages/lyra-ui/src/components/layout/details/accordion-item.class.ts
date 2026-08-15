@@ -5,7 +5,6 @@ import { attachInternalsSafely } from "../../../internal/form-associated.js";
 import { renderInertPresentation } from "../../../internal/inert-presentation.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { sizes } from "../../../internal/sizes.styles.js";
-import type { LyraAppearance } from "../../../internal/variants.js";
 import { styles } from "./accordion-item.styles.js";
 import { DisclosureMotionController } from "./disclosure-motion.js";
 import {
@@ -14,17 +13,23 @@ import {
   notifyAccordionItemTransitionSettled,
   registerAccordionItemStateController,
   requestAccordionItemTransition,
-  type AccordionItemTransitionSource,
 } from "./accordion-owner.js";
+import type {
+  AccordionItemTransitionSource,
+  LyraAccordionAppearance,
+  LyraAccordionHeadingLevel,
+  LyraAccordionIconPlacement,
+} from "./accordion-types.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type LyraAccordionIconPlacement = "start" | "end";
-/** A heading level string. Values other than 1–6 and `none` render the documented h3 fallback. */
-export type LyraAccordionHeadingLevel = string;
-export type LyraAccordionAppearance = Exclude<LyraAppearance, "accent">;
+export type {
+  LyraAccordionAppearance,
+  LyraAccordionHeadingLevel,
+  LyraAccordionIconPlacement,
+} from "./accordion-types.js";
 
 /**
  * `<lr-accordion-item>` — an accessible expandable section for `<lr-accordion>`.

@@ -24,8 +24,9 @@ registered renderer returns; `<lr-tool-result-view>` is just the dispatch + fall
 shell around it.
 
 **Properties:**
+
 - `registry?: ToolRendererRegistry` (property only, no attribute) — a custom `Map<string,
-  ToolRendererDefinition>` to dispatch against instead of the module-level default registry (see
+ToolRendererDefinition>` to dispatch against instead of the module-level default registry (see
   `registry.ts` below)
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name; the primary dispatch key
 - `result: unknown` (property only, no attribute) — the tool call's result payload, handed to the
@@ -33,11 +34,12 @@ shell around it.
   `<lr-json-viewer>` fallback)
 - `args: unknown` (property only, no attribute) — the tool call's original arguments, if available,
   handed to the matched renderer's `render()` alongside `result`
-- `fallback: string = 'json'` (reflected) — fallback-kind selector. `"json"` (the default) is
-  an unconditional `<lr-json-viewer>`. `"text"` renders a *string* `result` as preformatted text
+- `fallback: ToolResultFallback = 'json'` (reflected), where exported `ToolResultFallback =
+  'json' | 'text'` — fallback-kind selector. `"json"` (the default) is
+  an unconditional `<lr-json-viewer>`. `"text"` renders a _string_ `result` as preformatted text
   instead — falling back to the `"json"` behavior when `result` isn't a string, so setting
   `fallback="text"` defensively against an unpredictable result shape never renders broken output.
-  Any other value also uses the `"json"` behavior, forward-compatible plumbing only.
+  Foreign runtime values normalize to the reflected `"json"` default.
 - `copyable: boolean = false` (reflected) — shows a copy-to-clipboard affordance alongside the
   fallback view, for either `fallback` kind: forwarded to `<lr-json-viewer>`'s own `copyable` for
   `"json"`, or a `<lr-copy-button>` rendered next to the text for `"text"`.
@@ -89,24 +91,30 @@ without this library knowing anything about either. Every registered instance di
 this same module-level registry unless a given `<lr-tool-result-view>`'s `registry` property is
 set to a different `Map` instance.
 
-**`ToolRendererDefinition`** — the shape of one registered renderer:
-- `render?: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown` — renders the
+**`ToolRendererDefinition`** — an exclusive
+`DirectToolRendererDefinition | LazyToolRendererDefinition` union. Runtime registration, custom
+registry lookup, and loaded-module boundaries validate the same shape, so plain JavaScript cannot
+silently register `{}`, combine `render` with `load`, or cache an invalid loaded definition:
+
+- direct: `render: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown` and
+  `load?: never` — renders the
   result (and the args that produced it) as UI. Typed as `unknown` rather than Lit's
   `TemplateResult` so any lit-html-renderable value works (a plain string, a DOM node, an array of
   templates) — consumers already own their own Lit import and don't need this module to add one.
-  The 3rd `context` argument is additive: it's the *last* positional parameter, so a pre-existing
+  The 3rd `context` argument is additive: it's the _last_ positional parameter, so a pre-existing
   2-arg `render(result, args)` function stays assignable to this type unchanged — JS/TS function
-  assignability allows an implementation with fewer parameters than its declared type. Use
-  Direct callers may omit `context`; component invocations always provide it. Use
+  assignability allows an implementation with fewer parameters than its declared type. Direct
+  callers may omit `context`; component invocations always provide it. Use
   `context?.reportStatus(status)` (see `ToolRenderContext` below) to signal a non-throwing outcome
   — e.g. an application-level failure the renderer still drew real UI for — instead of throwing,
   which discards that UI for the `<lr-json-viewer>` fallback instead
-- `matches?: (payload: unknown) => boolean` — facade/shape-based dispatch predicate, consulted only
-  when no exact `toolName` key matches (see dispatch order below); only ever consulted *before*
+- either branch may include `matches?: (payload: unknown) => boolean` — facade/shape-based dispatch predicate, consulted only
+  when no exact `toolName` key matches (see dispatch order below); only ever consulted _before_
   `load` resolves when supplied inline at registration time — a definition that needs shape-based
   dispatch and also wants to lazy-load its `render` should register a lightweight synchronous
   `matches` up front alongside `load`
-- `load?: () => Promise<ToolRendererDefinition | { default: ToolRendererDefinition }>` — lazy loader
+- lazy: `load: () => Promise<DirectToolRendererDefinition | { default:
+  DirectToolRendererDefinition }>` and `render?: never` — lazy loader
   for a code-split renderer, so a host app can defer the cost of a rarely-used or heavy renderer
   (e.g. one pulling in a charting library) instead of paying for it on every page that merely
   registers it. Resolves to either a definition directly, or a `{ default }`-shaped module namespace
@@ -114,6 +122,7 @@ set to a different `Map` instance.
   export is itself a `ToolRendererDefinition`
 
 **`ToolRenderContext`** — the shape of `render()`'s 3rd argument:
+
 - `reportStatus: (status: ToolResultStatus) => void` — reports this render's outcome without
   throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied'`, the same
   union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported from this module. Calling
@@ -123,27 +132,30 @@ set to a different `Map` instance.
   registered directly.
 
 ```ts
-registerToolRenderer('run_query', {
+registerToolRenderer("run_query", {
   render: (result, _args, context) => {
     if ((result as { rows?: unknown[] })?.rows === undefined) {
-      context.reportStatus('error');
+      context?.reportStatus("error");
       return html`<p class="query-error">The query returned no result set.</p>`;
     }
-    return html`<query-result-table .rows=${(result as { rows: unknown[] }).rows}></query-result-table>`;
+    return html`<query-result-table
+      .rows=${(result as { rows: unknown[] }).rows}
+    ></query-result-table>`;
   },
 });
 ```
 
 **Exports:**
+
 - `registerToolRenderer(name: string, def: ToolRendererDefinition): void` — registers (or
   overwrites) the renderer for `name` in the module-level default registry
 - `getDefaultToolRendererRegistry(): ToolRendererRegistry` — returns the default `Map` that
   `registerToolRenderer()` writes to and every `<lr-tool-result-view>` reads from unless its own
   `registry` prop is set
 - `findToolRenderer(toolName: string, payload: unknown, registry?: ToolRendererRegistry):
-  ToolRendererDefinition | undefined` — the dispatch function `<lr-tool-result-view>` calls
+ToolRendererDefinition | undefined` — the dispatch function `<lr-tool-result-view>` calls
   internally on every resolve; exposed for direct use/testing too
-- `loadToolRenderer(def: ToolRendererDefinition): Promise<ToolRendererDefinition>` — resolves `def`
+- `loadToolRenderer(def: ToolRendererDefinition): Promise<DirectToolRendererDefinition>` — resolves `def`
   to a definition guaranteed to carry a real `render`, awaiting/unwrapping `def.load()` when present
   (or returning `def` unchanged otherwise)
 - `clearToolRenderers(): void` — test-only utility that empties the default registry and its
@@ -151,6 +163,7 @@ registerToolRenderer('run_query', {
 
 **Dispatch order** (`findToolRenderer`), exactly as `<lr-tool-result-view>`'s own `resolve()` uses
 it:
+
 1. An exact `toolName` key match in the registry.
 2. Failing that, the first entry — in registration order, since a `Map` already iterates that way —
    whose `matches(payload)` returns `true`. Useful when several tool names share one result shape
@@ -160,33 +173,36 @@ it:
    fires `lr-render-error`.
 
 Once a definition is found, if it carries `load`, `<lr-tool-result-view>` shows a
-decorative `<lr-skeleton variant="rect" height="4rem">` while `loadToolRenderer()` resolves it.
+decorative `<lr-skeleton shape="rect" height="4rem">` while `loadToolRenderer()` resolves it.
 The nested skeleton has announcements disabled; the stable `base` busy state and an ordinary,
 visually hidden localized Loading label expose the in-progress state without creating a shadow-root
 live region. The resolved
-`load()` promise is cached keyed by *definition object identity* (a `WeakMap`, not by tool-name
+`load()` promise is cached keyed by _definition object identity_ (a `WeakMap`, not by tool-name
 string) — two different registries that happen to reuse the same tool-name string get independently
 cached loads, and any given lazy definition's `load()` runs at most once no matter how many times
 it's dispatched to, across every `<lr-tool-result-view>` instance that resolves to it. A **rejected**
-`load()` is *not* cached — the definition stays registered, so a later resolution attempt (e.g. after
-a transient network failure) gets a fresh `load()` call rather than being stuck replaying one failed
-promise forever.
+`load()` is _not_ cached — nor is a load that resolves to an invalid/another-lazy definition. The
+definition stays registered, so a later resolution attempt (e.g. after a transient network failure)
+gets a fresh `load()` call rather than being stuck replaying one failed promise forever.
 
 ```ts
-import { registerToolRenderer } from '@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js';
+import { registerToolRenderer } from "@aceshooting/lyra-ui/components/agent-tools/tool-result-view/registry.js";
 
-registerToolRenderer('get_weather', {
-  render: (result, args) => html`<weather-card .data=${result} .city=${args?.city}></weather-card>`,
+registerToolRenderer("get_weather", {
+  render: (result, args) =>
+    html`<weather-card .data=${result} .city=${args?.city}></weather-card>`,
 });
 
 // Lazily loaded, shape-based fallback for every *_search tool:
-registerToolRenderer('web_search', {
-  matches: (payload) => typeof payload === 'object' && payload !== null && 'results' in payload,
-  load: () => import('./search-result-renderer.js'), // default export is a ToolRendererDefinition
+registerToolRenderer("web_search", {
+  matches: (payload) =>
+    typeof payload === "object" && payload !== null && "results" in payload,
+  load: () => import("./search-result-renderer.js"), // default export is a ToolRendererDefinition
 });
 ```
 
 **Known gotchas:**
+
 - `<lr-tool-result-view>` re-resolves (re-runs the full dispatch → load → render pipeline)
   whenever `toolName`, `result`, `args`, or `registry` changes, or on first update — a stale
   in-flight `load()` superseded by a newer change is detected via an internal generation counter and
@@ -199,7 +215,7 @@ registerToolRenderer('web_search', {
 - `status` is reset to `'success'` immediately before every `render()` call, not merely at
   construction — a renderer that reported `'error'` on one result does not leave that status
   behind once dispatch moves on to a different (quiet) renderer; a `reportStatus()` call that
-  arrives asynchronously after a *newer* resolve has already started (a stale promise the previous
+  arrives asynchronously after a _newer_ resolve has already started (a stale promise the previous
   render kicked off) is detected via the same generation counter as the `load()` staleness guard
   and discarded rather than clobbering the newer status
 - **don't type a custom renderer against a hand-rolled, over-generic function signature** (e.g.
@@ -210,8 +226,9 @@ registerToolRenderer('web_search', {
   parameter and the exact `ToolResultStatus` string union `reportStatus` accepts. A loosened/`any`
   signature type-checks either way but silently gives up the compiler's ability to catch a typo'd
   status string or a dropped `context` parameter
-- `fallback` implements exactly two kinds, `"json"` and `"text"`; any *other* value silently behaves
-  as `"json"`, as does `"text"` whenever `result` isn't a string. Only `"text"` renders
+- `fallback` implements exactly two kinds, `"json"` and `"text"`; any _other_ runtime value
+  normalizes to reflected `"json"`, while `"text"` with a non-string result uses the JSON view.
+  Only `"text"` renders
   `[part="fallback-text"]`/`[part="fallback-copy"]`
 
 ---

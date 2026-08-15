@@ -9,7 +9,7 @@
 - **Deprecated part** `base` since `8.0.0`; use part `::part(date-input)`; removal not before `10.0.0` — The date-input part names the native date field wrapper explicitly; base remains on that same node during the compatibility window.
 - **Deprecated part** `label` since `8.0.0`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window.
 - **Optional peers** none
-- **Themeable via** 20 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-picker` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -20,6 +20,12 @@
 Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Both
 components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or
 `YYYY-MM-DD/YYYY-MM-DD` (range).
+
+The ISO model is proleptic Gregorian in every locale, including years `0000`–`0099` (no JavaScript
+`Date` 1900 remap). Month/day names and visible day/week digits follow the effective locale while
+formatters explicitly select the Gregorian calendar. `lr-date-input` uses locale `formatRange()`
+for range presentation and normalizes locale digits plus bidi marks before parsing, so its own
+Arabic/Persian display round-trips to the same ISO value.
 
 ### `lr-date-picker`
 
@@ -34,7 +40,7 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `disabledDaysOfWeek: string = ''` (attribute `disabled-days-of-week`)
 - `disableFuture: boolean = false` and `disablePast: boolean = false` (reflected)
 - `firstDayOfWeek: LyraDatePickerFirstDayOfWeek = 'auto'` (`'auto'|'sun'|'mon'|'tue'|'wed'|
-  'thu'|'fri'|'sat'`; attribute
+'thu'|'fri'|'sat'`; attribute
   `first-day-of-week`, reflected)
 - `focusedDate: string = ''` (attribute `focused-date`, reflected)
 - `isDateDisabled?: (date: Date) => boolean` (JS only)
@@ -46,7 +52,7 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `months: 1|2 = 1` (reflected; finite values are truncated and clamped to `1..2`)
 - `pageBy: 'months'|'single' = 'months'` (attribute `page-by`, reflected)
 - `readonly: boolean = false` (reflected)
-- `size: LyraDatePickerSize = 'm'` (reflected; the shared `2xs`–`xl` ladder plus
+- `size: LyraSize = 'm'` (reflected; the shared `2xs`–`xl` ladder plus
   `small`/`medium`/`large` aliases)
 - `today: string = ''` (reflected ISO override for deterministic today styling/constraints)
 - `value: string = ''` (reflected)
@@ -126,7 +132,7 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `placement: LyraDateInputPlacement = 'bottom-start'` (reflected; all 12 side/alignment
   placements are accepted)
 - `readonly: boolean = false` and `required: boolean = false` (reflected)
-- `size: LyraDateInputSize = 'm'` (reflected; `2xs`–`xl` and aliases)
+- `size: LyraSize = 'm'` (reflected; `2xs`–`xl` and aliases)
 - `today: string = ''` (reflected ISO override)
 - `validationTarget: HTMLElement | undefined` (JS only) — writable native-validity focus anchor.
   It defaults to the internal input after first render; assign another element to override it, or
@@ -164,6 +170,10 @@ element-valued `form` IDL.
 they do nothing when already settled, and respect cancellation of their request event. `clear()`
 is a no-op while blank, disabled, or readonly; otherwise it emits `lr-clear`, then `input`, then
 `change`. Lyra also retains native-wrapper `select()`, `setSelectionRange()`, and `setRangeText()`.
+The text input is itself the popup-opening combobox owner: it exposes `role="combobox"`,
+`aria-haspopup="dialog"`, and explicit `aria-controls`/`aria-expanded` alongside the expand button.
+Host focus/click/show/clear calls are synchronous no-ops as soon as direct or fieldset disablement
+starts, including before Lit has updated the inner native controls.
 
 **Getters:** `input: HTMLInputElement | undefined` — the internal native `<input>`, for direct DOM
 access.
@@ -217,6 +227,12 @@ floor. All four are declared on `:host` and auto-swapped per `size`
 `lr-input` uses. `pill` re-assigns `--lr-date-input-radius` to `--lr-radius-pill`. Plus shared
 tokens. The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's
 enter and exit transitions; both default to `var(--lr-transition-fast)`.
+The clear and calendar actions expose point-of-use state hooks:
+`--lr-date-input-action-hover-color`, `--lr-date-input-action-hover-bg`, and
+`--lr-date-input-action-hover-radius` (defaults: text, transparent, and the input radius), plus
+`--lr-date-input-action-active-color`, `--lr-date-input-action-active-bg`, and
+`--lr-date-input-action-active-radius` for the pressed state. They inherit from theme ancestors;
+direct values on `lr-date-input` win without retuning library-wide tokens.
 
 `--lr-date-input-control-height` pins an **exact** `input-wrapper` height (both floors and caps it).
 It is **undeclared by default**, so the row grows to fit its content — see "exact-height hatches"
@@ -241,11 +257,16 @@ up exactly, either raise `lr-input`'s floor to meet the date input, or lower
 **Optional peer deps:** none.
 
 ```html
-<lr-date-input id="di" label="Start date" with-clear name="start"></lr-date-input>
+<lr-date-input
+  id="di"
+  label="Start date"
+  with-clear
+  name="start"
+></lr-date-input>
 <script type="module">
-  const di = document.getElementById('di');
-  di.value = '2026-07-10';
-  di.addEventListener('change', () => console.log(di.value)); // ISO string
+  const di = document.getElementById("di");
+  di.value = "2026-07-10";
+  di.addEventListener("change", () => console.log(di.value)); // ISO string
 </script>
 ```
 
@@ -308,9 +329,10 @@ and `dateTimeFormat(locale, options)`.
   `::part(previous):hover` still wins without `!important`.
 - `--lr-date-picker-nav-active-bg` — Pressed navigation background; defaults to the hover color
   mixed by `--lr-color-mix-active`.
-- `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`, and
-  `--lr-date-picker-title-active-bg` — Month-title hover/press paint; defaults to brand, brand, and
-  brand-quiet respectively.
+- `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`,
+  `--lr-date-picker-title-active-bg`, and `--lr-date-picker-title-active-radius` — Month-title
+  hover/press paint and pressed shape; defaults to brand, brand, brand-quiet, and
+  `var(--lr-date-picker-radius)` respectively.
 - `--lr-date-picker-day-hover-bg` and `--lr-date-picker-day-active-bg` — Day hover/press
   backgrounds; the pressed default mixes the hover hook by `--lr-color-mix-active`.
 - `--lr-date-picker-day-outside-color`, `--lr-date-picker-today-outline`,

@@ -18,8 +18,8 @@ import { LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings.
 export interface LyraIconButtonEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
 }
 
 /** Raw SVG geometry primitives that render nothing when parsed as top-level light-DOM children

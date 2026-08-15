@@ -95,6 +95,56 @@ export const AggregateFormChrome: Story = {
   `,
 };
 
+export const EffectiveValidityEvents: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The log receives frozen, deduplicated effective-validity snapshots. A consumer custom error appears under `errors.base`; disabling the control bars native validation and publishes `{ valid: true, errors: {} }`.',
+      },
+    },
+  },
+  render: () => {
+    const controlFor = (event: Event) =>
+      (event.currentTarget as HTMLElement)
+        .closest('.demo')!
+        .querySelector('lr-rubric-form') as HTMLElement & {
+        disabled: boolean;
+        setCustomValidity(message: string): void;
+      };
+    const showSnapshot = (event: CustomEvent) => {
+      const output = (event.currentTarget as HTMLElement)
+        .closest('.demo')!
+        .querySelector('output')!;
+      output.textContent = JSON.stringify(event.detail);
+    };
+    return html`
+      <div class="demo" style="display: grid; gap: var(--lr-space-m); max-inline-size: var(--lr-size-28rem)">
+        <lr-rubric-form
+          .keys=${keys}
+          .value=${{ accuracy: 4 }}
+          @lr-validity-change=${showSnapshot}
+        ></lr-rubric-form>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-xs)">
+          <button type="button" @click=${(event: Event) => controlFor(event).setCustomValidity('Rejected by policy.')}>
+            Set custom error
+          </button>
+          <button type="button" @click=${(event: Event) => controlFor(event).setCustomValidity('')}>
+            Clear custom error
+          </button>
+          <button type="button" @click=${(event: Event) => {
+            const control = controlFor(event);
+            control.disabled = !control.disabled;
+          }}>
+            Toggle disabled
+          </button>
+        </div>
+        <output aria-live="polite"></output>
+      </div>
+    `;
+  },
+};
+
 export const IndependentActionTheme: Story = {
   name: 'Independent submit and skip themes',
   render: () => html`

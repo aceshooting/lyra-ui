@@ -102,6 +102,22 @@ it('reflects mode as a host attribute', async () => {
   expect(el.getAttribute('mode')).to.equal('assertive');
 });
 
+it('normalizes unsupported mode attributes and untyped property writes', async () => {
+  const el = (await fixture(
+    html`<lr-live-region mode="urgent"></lr-live-region>`,
+  )) as LyraLiveRegion;
+  expect(el.mode).to.equal('polite');
+  expect(el.getAttribute('mode')).to.equal('polite');
+
+  el.mode = 'assertive';
+  await el.updateComplete;
+  (el as unknown as Record<string, unknown>).mode = 'urgent';
+  await el.updateComplete;
+  expect(el.mode).to.equal('polite');
+  expect(el.getAttribute('mode')).to.equal('polite');
+  expect(sinkElement('polite')).to.not.equal(null);
+});
+
 it('defaults throttleMs to 500, settable via the throttle-ms attribute', async () => {
   const el = (await fixture(html`<lr-live-region></lr-live-region>`)) as LyraLiveRegion;
   expect(el.throttleMs).to.equal(500);

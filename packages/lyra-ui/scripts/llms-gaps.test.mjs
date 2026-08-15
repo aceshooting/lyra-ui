@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   collectGaps,
   contractBlockMentionsName,
@@ -25,6 +26,7 @@ import {
   ownsToken,
 } from './llms-gaps.mjs';
 import {
+  publicSourceContractModules,
   sourceContractCensus,
   sourceContractKey,
   validateSourceContractBaseline,
@@ -67,11 +69,12 @@ function baselineOwner(contract, status = 'documented') {
     exportName: contract.exportName,
     kind: contract.kind,
     fingerprint: contract.fingerprint,
+    routes: contract.routes,
     ...(status === 'documented'
       ? {
           document: 'llms/shared.md',
           family: 'shared',
-          locator: { kind: 'utility', name: 'fixture' },
+          locator: { kind: 'utility', name: 'fixture', declaration: contract.exportName },
         }
       : {}),
   };
@@ -328,13 +331,16 @@ test('the source census follows public re-exports and fingerprints nested public
         '  internalOnly?(secret: string): void;',
         '}',
         'export function fixture(',
-        "  { publicKey: localAlias = 'fallback' }: { publicKey?: string },",
+        "  { publicKey: localAlias = 'fallback', ...localRest }: { publicKey?: string },",
         '  callback: (options: { limit?: number }) => void,',
-        '): void { void localAlias; void callback; }',
+        '): void { void localAlias; void localRest; void callback; }',
+        "export interface ListenerContracts { 'lr-ready': CustomEvent<void>; }",
+        'interface Source { value: string; }',
+        "export interface IndexedData { value: Source['value']; }",
       ].join('\n'),
       'src/utilities/fixture.ts': [
         "export { fixture } from '../internal/fixture.js';",
-        "export type { FixtureOptions } from '../internal/fixture.js';",
+        "export type { FixtureOptions, IndexedData, ListenerContracts as RenamedEvents } from '../internal/fixture.js';",
       ].join('\n'),
     },
     (fixtureDir) => {
@@ -343,7 +349,7 @@ test('the source census follows public re-exports and fingerprints nested public
         utilityModules: ['src/utilities/fixture.ts'],
       };
       const census = sourceContractCensus(fixtureDir, modules);
-      assert.equal(census.length, 2);
+      assert.equal(census.length, 3, 'ordinary indexed-access fields are not EventMaps');
       const options = census.find(({ exportName }) => exportName === 'FixtureOptions');
       const fn = census.find(({ exportName }) => exportName === 'fixture');
       assert.deepEqual(
@@ -371,9 +377,12 @@ test('the source census follows public re-exports and fingerprints nested public
         '  internalOnly?(secret: string): void;',
         '}',
         'export function fixture(',
-        "  { publicKey: localAlias = 'fallback' }: { publicKey?: string },",
+        "  { publicKey: localAlias = 'fallback', ...localRest }: { publicKey?: string },",
         '  callback: (options: { limit?: number }) => void,',
-        '): void { void localAlias; void callback; }',
+        '): void { void localAlias; void localRest; void callback; }',
+        "export interface ListenerContracts { 'lr-ready': CustomEvent<void>; }",
+        'interface Source { value: string; }',
+        "export interface IndexedData { value: Source['value']; }",
       ].join('\n');
       writeFileSync(sourceFile, original.replace("'compact' | 'full'", 'number'));
       const typeDrift = sourceContractCensus(fixtureDir, modules);
@@ -400,6 +409,649 @@ test('the source census follows public re-exports and fingerprints nested public
         [],
         '@internal members are absent from the shipped public contract',
       );
+
+      writeFileSync(
+        sourceFile,
+        original
+          .replace('...localRest', '...renamedRest')
+          .replace('void localRest', 'void renamedRest'),
+      );
+      assert.deepEqual(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline),
+        [],
+        'an object-rest local binding rename is not public signature drift',
+      );
+
+      writeFileSync(
+        sourceFile,
+        original.replace("'compact' | 'full'", '"compact" | "full"'),
+      );
+      assert.deepEqual(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline),
+        [],
+        'quote spelling is not public signature drift',
+      );
+
+      writeFileSync(
+        sourceFile,
+        original.replace("'compact' | 'full'", "'full' | 'compact'"),
+      );
+      assert.deepEqual(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline),
+        [],
+        'union member order is not public signature drift',
+      );
+    },
+  );
+});
+
+test('ordinary Event-valued data interfaces stay in the source-contract census', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'export interface EventPair {',
+        '  source: MouseEvent;',
+        '  replacement: CustomEvent<string>;',
+        '}',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const census = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      });
+      assert.deepEqual(census.map(({ exportName }) => exportName), ['EventPair']);
+      assert.deepEqual(census[0].names, ['source', 'replacement']);
+    },
+  );
+});
+
+test('free-function docs names include fields of an inline return object', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts':
+        'export function parse(input: string): { value: string; retry?: boolean } { return { value: input }; }',
+    },
+    (fixtureDir) => {
+      const [contract] = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      });
+      assert.deepEqual(contract.names, ['input', 'value', 'retry']);
+    },
+  );
+});
+
+test('defaulted callback parameters retain their public callback argument names', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'export function formatFileSize(',
+        '  bytes: number,',
+        '  unitLabel: (unit: string) => string = (unit) => unit,',
+        '  numberLabel: (value: number, fractionDigits: number) => string = (value) => String(value),',
+        '): string { return numberLabel(bytes, 0) + unitLabel("B"); }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const [contract] = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      });
+      assert.deepEqual(
+        contract.names,
+        ['bytes', 'unitLabel', 'unit', 'numberLabel', 'value', 'fractionDigits'],
+      );
+    },
+  );
+
+});
+
+test('default-exported interfaces and functions enter the census under the default name', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/options.ts': 'export default interface Options { value: string; }',
+      'src/utilities/helper.ts':
+        'export default function (input: string): string { return input; }',
+    },
+    (fixtureDir) => {
+      const census = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/options.ts', 'src/utilities/helper.ts'],
+      });
+      assert.deepEqual(
+        census.map(({ module, exportName, kind }) => [module, exportName, kind]),
+        [
+          ['src/utilities/helper.ts', 'default', 'function'],
+          ['src/utilities/options.ts', 'default', 'interface'],
+        ],
+      );
+    },
+  );
+});
+
+test('same-name type and value declarations remain distinct census contracts', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'export interface Fixture { value: string; }',
+        'export function Fixture(value: string): Fixture { return { value }; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const census = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      });
+      assert.deepEqual(census.map(({ exportName, kind }) => [exportName, kind]), [
+        ['Fixture', 'function'],
+        ['Fixture', 'interface'],
+      ]);
+    },
+  );
+});
+
+test('type-query value dependencies and dependency identity edges affect fingerprints', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        "const KEYS = ['a', 'b'] as const;",
+        'type Key = (typeof KEYS)[number];',
+        'interface A { a: string; }',
+        'interface B { b: number; }',
+        'export interface Options { key: Key; left: A; right: B; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      const file = path.join(fixtureDir, 'src/utilities/fixture.ts');
+      writeFileSync(file, [
+        "const KEYS = ['a', 'changed'] as const;",
+        'type Key = (typeof KEYS)[number];',
+        'interface A { a: string; }',
+        'interface B { b: number; }',
+        'export interface Options { key: Key; left: A; right: B; }',
+      ].join('\n'));
+      assert.ok(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline)
+          .some((finding) => finding.includes('signature changed')),
+        'a typeof-backed literal change must invalidate the effective signature',
+      );
+
+      writeFileSync(file, [
+        "const KEYS = ['a', 'b'] as const;",
+        'type Key = (typeof KEYS)[number];',
+        'interface A { b: number; }',
+        'interface B { a: string; }',
+        'export interface Options { key: Key; left: A; right: B; }',
+      ].join('\n'));
+      assert.ok(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline)
+          .some((finding) => finding.includes('signature changed')),
+        'swapping dependency shapes must not preserve an anonymous dependency multiset',
+      );
+    },
+  );
+});
+
+test('Omit and indexed-access dependencies use only their effective fields', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'interface Source { chosen: string; ignored: number; }',
+        "type Narrow = Omit<Source, 'ignored'>;",
+        'interface Derived extends Source { own: boolean; }',
+        'type Alias = Derived;',
+        "type Chosen = Source['chosen'];",
+        'export interface Options extends Narrow { selected: Chosen; }',
+        "export interface DirectOptions extends Omit<Source, 'ignored'> { own: boolean; }",
+        "export interface TransitiveOptions extends Omit<Alias, 'ignored'> { local: Date; }",
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      assert.deepEqual(
+        initial.find(({ exportName }) => exportName === 'Options').names,
+        ['selected', 'chosen'],
+      );
+      assert.deepEqual(
+        initial.find(({ exportName }) => exportName === 'DirectOptions').names,
+        ['own', 'chosen'],
+      );
+      assert.deepEqual(
+        initial.find(({ exportName }) => exportName === 'TransitiveOptions').names,
+        ['local', 'own', 'chosen'],
+      );
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      const file = path.join(fixtureDir, 'src/utilities/fixture.ts');
+      writeFileSync(file, [
+        'interface Source { chosen: string; ignored: bigint; }',
+        "type Narrow = Omit<Source, 'ignored'>;",
+        'interface Derived extends Source { own: boolean; }',
+        'type Alias = Derived;',
+        "type Chosen = Source['chosen'];",
+        'export interface Options extends Narrow { selected: Chosen; }',
+        "export interface DirectOptions extends Omit<Source, 'ignored'> { own: boolean; }",
+        "export interface TransitiveOptions extends Omit<Alias, 'ignored'> { local: Date; }",
+      ].join('\n'));
+      assert.deepEqual(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline),
+        [],
+        'an omitted and unselected field cannot affect the effective public contract',
+      );
+      writeFileSync(file, [
+        'interface Source { chosen: boolean; ignored: number; }',
+        "type Narrow = Omit<Source, 'ignored'>;",
+        'interface Derived extends Source { own: boolean; }',
+        'type Alias = Derived;',
+        "type Chosen = Source['chosen'];",
+        'export interface Options extends Narrow { selected: Chosen; }',
+        "export interface DirectOptions extends Omit<Source, 'ignored'> { own: boolean; }",
+        "export interface TransitiveOptions extends Omit<Alias, 'ignored'> { local: Date; }",
+      ].join('\n'));
+      assert.ok(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline)
+          .some((finding) => finding.includes('signature changed')),
+      );
+    },
+  );
+});
+
+test('array-destructure binding names are implementation-local', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts':
+        'export function consume([first, ...localRest]: readonly string[]): void { void first; void localRest; }',
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      assert.deepEqual(initial[0].names, []);
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      writeFileSync(
+        path.join(fixtureDir, 'src/utilities/fixture.ts'),
+        'export function consume([renamed, ...renamedRest]: readonly string[]): void { void renamed; void renamedRest; }',
+      );
+      assert.deepEqual(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline),
+        [],
+      );
+    },
+  );
+});
+
+test('namespace source-contract exports fail closed instead of flattening or disappearing', () => {
+  withSourceContractFixture(
+    {
+      'src/internal/contracts.ts': 'export interface Options { value: string; }',
+      'src/utilities/fixture.ts': "export * as contracts from '../internal/contracts.js';",
+    },
+    (fixtureDir) => {
+      assert.throws(
+        () => sourceContractCensus(fixtureDir, {
+          componentModules: [],
+          utilityModules: ['src/utilities/fixture.ts'],
+        }),
+        /unsupported namespace source-contract export/u,
+      );
+    },
+  );
+});
+
+test('an explicit named re-export overrides a colliding star export', () => {
+  withSourceContractFixture(
+    {
+      'src/internal/star.ts': 'export interface Options { fromStar: string; }',
+      'src/internal/explicit.ts': 'export interface Options { explicit: number; }',
+      'src/utilities/fixture.ts': [
+        "export * from '../internal/star.js';",
+        "export { Options } from '../internal/explicit.js';",
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const [contract] = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      });
+      assert.deepEqual(contract.names, ['explicit']);
+      assert.equal(contract.module, 'src/internal/explicit.ts');
+    },
+  );
+});
+
+test('removing one of several public routes invalidates the source-contract baseline', () => {
+  withSourceContractFixture(
+    {
+      'src/internal/contracts.ts': 'export interface Options { value: string; }',
+      'src/utilities/first.ts': "export type { Options } from '../internal/contracts.js';",
+      'src/utilities/second.ts': "export type { Options } from '../internal/contracts.js';",
+    },
+    (fixtureDir) => {
+      const initial = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/first.ts', 'src/utilities/second.ts'],
+      });
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      const withoutSecondRoute = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/first.ts'],
+      });
+      assert.ok(
+        validateSourceContractBaseline(withoutSecondRoute, baseline).some((finding) =>
+          finding.includes('public source-contract routes changed')),
+      );
+    },
+  );
+});
+
+test('a legacy route change requires promotion to documented enrollment', () => {
+  withSourceContractFixture(
+    {
+      'src/internal/contracts.ts': 'export interface Options { value: string; }',
+      'src/components/first.ts': "export type { Options } from '../internal/contracts.js';",
+      'src/components/second.ts': "export type { Options } from '../internal/contracts.js';",
+    },
+    (fixtureDir) => {
+      const initial = sourceContractCensus(fixtureDir, {
+        componentModules: ['src/components/first.ts', 'src/components/second.ts'],
+        utilityModules: [],
+      });
+      const baseline = {
+        schemaVersion: 1,
+        documented: [],
+        legacy: initial.map((contract) => baselineOwner(contract, 'legacy')),
+      };
+      const changed = sourceContractCensus(fixtureDir, {
+        componentModules: ['src/components/first.ts'],
+        utilityModules: [],
+      });
+      assert.ok(
+        validateSourceContractBaseline(changed, baseline).some((finding) =>
+          finding.includes('legacy public source contract changed; promote it to documented enrollment')),
+      );
+    },
+  );
+});
+
+test('overload docs use public signature names, never implementation bindings', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'export function overloaded(input: string): string;',
+        'export function overloaded(value: string): string { return value; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const [contract] = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      });
+      assert.deepEqual(contract.names, ['input']);
+    },
+  );
+});
+
+test('a local declaration rename behind a stable public alias is not signature drift', () => {
+  withSourceContractFixture(
+    {
+      'src/internal/fixture.ts': [
+        'export function localHelper(value: string): string { return value; }',
+      ].join('\n'),
+      'src/utilities/fixture.ts': [
+        "export { localHelper as publicHelper } from '../internal/fixture.js';",
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      writeFileSync(
+        path.join(fixtureDir, 'src/internal/fixture.ts'),
+        'export function renamedHelper(value: string): string { return value; }',
+      );
+      writeFileSync(
+        path.join(fixtureDir, 'src/utilities/fixture.ts'),
+        "export { renamedHelper as publicHelper } from '../internal/fixture.js';",
+      );
+      assert.deepEqual(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline),
+        [],
+      );
+    },
+  );
+});
+
+test('call-signature overload order remains part of an interface fingerprint', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'export interface Callable {',
+        "  (input: string): 'specific';",
+        "  (input: unknown): 'fallback';",
+        '}',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      writeFileSync(
+        path.join(fixtureDir, 'src/utilities/fixture.ts'),
+        [
+          'export interface Callable {',
+          "  (input: unknown): 'fallback';",
+          "  (input: string): 'specific';",
+          '}',
+        ].join('\n'),
+      );
+      assert.ok(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline).some(
+          (finding) => finding.includes('signature changed'),
+        ),
+      );
+    },
+  );
+});
+
+test('effective interface signatures include imported non-reexported bases and type literals', () => {
+  withSourceContractFixture(
+    {
+      'src/internal/base.ts': [
+        'export interface TraversalOptions { maxElements?: number; maxDepth?: number; }',
+        'export type CallbackOptions = { retry?: boolean; };',
+      ].join('\n'),
+      'src/utilities/fixture.ts': [
+        "import type { CallbackOptions, TraversalOptions } from '../internal/base.js';",
+        'export interface FixtureOptions extends TraversalOptions {',
+        '  maxPasses?: number;',
+        '  callback?: (options: CallbackOptions) => void;',
+        '}',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      assert.deepEqual(
+        initial[0].names,
+        ['maxPasses', 'callback', 'options', 'maxElements', 'maxDepth'],
+      );
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      writeFileSync(
+        path.join(fixtureDir, 'src/internal/base.ts'),
+        [
+          'export interface TraversalOptions { maxElements?: bigint; maxDepth?: number; }',
+          'export type CallbackOptions = { retry?: boolean; };',
+        ].join('\n'),
+      );
+      assert.ok(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline).some(
+          (finding) => finding.includes('signature changed'),
+        ),
+      );
+    },
+  );
+});
+
+test('inherited generic value contracts affect fingerprints without copying their fields into docs', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'interface Definition { tag: string; hidden?: boolean; }',
+        'export interface Registry extends ReadonlyMap<string, Definition> { label?: string; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      assert.deepEqual(initial[0].names, ['label']);
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      writeFileSync(
+        path.join(fixtureDir, 'src/utilities/fixture.ts'),
+        [
+          'interface Definition { tag: number; hidden?: boolean; }',
+          'export interface Registry extends ReadonlyMap<string, Definition> { label?: string; }',
+        ].join('\n'),
+      );
+      assert.ok(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline)
+          .some((finding) => finding.includes('signature changed')),
+      );
+    },
+  );
+});
+
+test('typed function-valued consts use their declared callable type, not initializer bindings', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'export type SnapFunction = (options: { pos: number }) => number;',
+        'export const SNAP: SnapFunction = ({ pos }) => pos;',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      assert.deepEqual(initial[0].names, ['options', 'pos']);
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      writeFileSync(
+        path.join(fixtureDir, 'src/utilities/fixture.ts'),
+        [
+          'export type SnapFunction = (options: { pos: number }) => number;',
+          'export const SNAP: SnapFunction = ({ pos: localPosition }) => localPosition;',
+        ].join('\n'),
+      );
+      assert.deepEqual(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline),
+        [],
+      );
+    },
+  );
+});
+
+test('the source census derives every explicit component package route from inventory', () => {
+  const modules = publicSourceContractModules('/unused-fixture-root', {
+    components: [
+      {
+        tag: 'lr-fixture',
+        family: 'utility',
+        classModule: 'src/components/utility/fixture/fixture.class.ts',
+        registrationModule: 'src/components/utility/fixture/fixture.ts',
+      },
+    ],
+  });
+  assert.ok(modules.componentModules.includes('src/components/utility/fixture/fixture.class.ts'));
+  assert.ok(modules.componentModules.includes('src/components/utility/fixture/fixture.ts'));
+  assert.ok(modules.componentModules.includes('src/components/lr-fixture.ts'));
+  assert.ok(modules.componentModules.includes('src/components/utility/index.ts'));
+});
+
+test('the source census derives root, AI, and wildcard owners from package exports', () => {
+  withSourceContractFixture(
+    {
+      'package.json': JSON.stringify({
+        exports: {
+          '.': { types: './dist/lyra.d.ts', default: './dist/lyra.js' },
+          './ai': './dist/ai/index.js',
+          './ai/*': './dist/ai/*',
+        },
+      }),
+      'src/lyra.ts': 'export interface RootContract { value: string; }',
+      'src/ai/index.ts': 'export interface AiContract { model: string; }',
+      'src/ai/adapters/provider.ts': 'export function adapt(value: string): string { return value; }',
+      'src/ai/adapters/provider.test.ts': 'export interface TestOnlyContract { hidden: true; }',
+    },
+    (fixtureDir) => {
+      const modules = publicSourceContractModules(fixtureDir, { components: [] });
+      assert.ok(modules.componentModules.includes('src/lyra.ts'));
+      assert.ok(modules.componentModules.includes('src/ai/index.ts'));
+      assert.ok(modules.componentModules.includes('src/ai/adapters/provider.ts'));
+      assert.equal(
+        modules.componentModules.includes('src/ai/adapters/provider.test.ts'),
+        false,
+      );
     },
   );
 });
@@ -409,7 +1061,12 @@ test('the source-contract baseline fails closed for new, renamed, stale, and dup
     {
       'src/components/fixture.ts': 'export interface LegacyContract { value: string; }',
       'src/utilities/fixture.ts': 'export function fixture(value: string): void { void value; }',
-      'src/utilities/new-helper.ts': 'export interface NewUtilityOptions { enabled?: boolean; }',
+      'src/utilities/new-helper.ts': [
+        'export interface NewUtilityOptions { enabled?: boolean; }',
+        'export const newHelper = ({ enabled: publicEnabled }: NewUtilityOptions): void => {',
+        '  void publicEnabled;',
+        '};',
+      ].join('\n'),
     },
     (fixtureDir) => {
       const initial = sourceContractCensus(fixtureDir, {
@@ -430,8 +1087,17 @@ test('the source-contract baseline fails closed for new, renamed, stale, and dup
         utilityModules: ['src/utilities/fixture.ts', 'src/utilities/new-helper.ts'],
       });
       const utilityFindings = validateSourceContractBaseline(withNewUtility, baseline);
-      assert.ok(utilityFindings.some((finding) => finding.includes('uncatalogued public source contract')));
-      assert.ok(utilityFindings.some((finding) => finding.includes('lacks documented enrollment')));
+      assert.ok(
+        utilityFindings.some((finding) =>
+          finding.includes('uncatalogued public source contract') && finding.includes('newHelper'),
+        ),
+        'an exported arrow-function utility must enter the census',
+      );
+      assert.ok(
+        utilityFindings.some((finding) =>
+          finding.includes('lacks documented enrollment') && finding.includes('newHelper'),
+        ),
+      );
 
       writeFileSync(
         path.join(fixtureDir, 'src/components/fixture.ts'),
@@ -490,6 +1156,295 @@ test('a changed legacy declaration must be promoted instead of silently re-basel
   );
 });
 
+test('public functions require explicit returns and ignore implementation-only refactors', () => {
+  withSourceContractFixture(
+    { 'src/utilities/fixture.ts': "export const inferred = () => ({ value: 'ready' });" },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      assert.throws(
+        () => sourceContractCensus(fixtureDir, modules),
+        /requires an explicit return annotation/u,
+      );
+    },
+  );
+
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'export function stable(value: string): string {',
+        '  const local = value;',
+        '  return local;',
+        '}',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      writeFileSync(
+        path.join(fixtureDir, 'src/utilities/fixture.ts'),
+        [
+          'export function stable(value: string): string {',
+          '  let renamedLocal = value;',
+          '  return renamedLocal;',
+          '}',
+        ].join('\n'),
+      );
+      assert.deepEqual(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline),
+        [],
+      );
+    },
+  );
+});
+
+test('callable dependencies reached through typeof also require explicit returns', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        "const factory = () => ({ value: 'ready' });",
+        'type Result = ReturnType<typeof factory>;',
+        'export interface Options { result: Result; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      assert.throws(
+        () => sourceContractCensus(fixtureDir, {
+          componentModules: [],
+          utilityModules: ['src/utilities/fixture.ts'],
+        }),
+        /requires an explicit return annotation/u,
+      );
+    },
+  );
+});
+
+test('typeof value dependencies fail closed unless their inferred type is syntactically complete', () => {
+  for (const source of [
+    [
+      "const API = { make: () => ({ before: 1 }) };",
+      'export interface Options { api: typeof API; }',
+    ].join('\n'),
+    [
+      'function make(): { before: number } { return { before: 1 }; }',
+      'const API = make();',
+      'export interface Options { api: typeof API; }',
+    ].join('\n'),
+  ]) {
+    withSourceContractFixture(
+      { 'src/utilities/fixture.ts': source },
+      (fixtureDir) => {
+        assert.throws(
+          () => sourceContractCensus(fixtureDir, {
+            componentModules: [],
+            utilityModules: ['src/utilities/fixture.ts'],
+          }),
+          /typeof value dependency requires an explicit or syntactically complete type/u,
+        );
+      },
+    );
+  }
+
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        "const API = Object.freeze({ value: 'ready' } as const);",
+        'export interface Options { api: typeof API; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      assert.equal(sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      }).length, 1);
+    },
+  );
+});
+
+test('keyof typeof fingerprints static keys without requiring implementation-only value inference', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        'function make(): { value: string } { return { value: "ready" }; }',
+        'const API = Object.freeze({ before: make() });',
+        'type ApiKey = keyof typeof API;',
+        'export interface Options { key: ApiKey; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const initial = sourceContractCensus(fixtureDir, modules);
+      const baseline = {
+        schemaVersion: 1,
+        documented: initial.map((contract) => baselineOwner(contract)),
+        legacy: [],
+      };
+      const file = path.join(fixtureDir, 'src/utilities/fixture.ts');
+      writeFileSync(file, [
+        'function make(): { changed: number } { return { changed: 1 }; }',
+        'const API = Object.freeze({ before: make() });',
+        'type ApiKey = keyof typeof API;',
+        'export interface Options { key: ApiKey; }',
+      ].join('\n'));
+      assert.deepEqual(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline),
+        [],
+        'value-only changes do not alter a keyof-only public contract',
+      );
+      writeFileSync(file, [
+        'function make(): { value: string } { return { value: "ready" }; }',
+        'const API = Object.freeze({ after: make() });',
+        'type ApiKey = keyof typeof API;',
+        'export interface Options { key: ApiKey; }',
+      ].join('\n'));
+      assert.ok(
+        validateSourceContractBaseline(sourceContractCensus(fixtureDir, modules), baseline)
+          .some((finding) => finding.includes('signature changed')),
+      );
+    },
+  );
+});
+
+test('computed public keys fail closed when their consumer spelling is not syntactically literal', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        "const PUBLIC_KEY = 'before' as const;",
+        'export function use({[PUBLIC_KEY]: local}: Record<string, string>): void { void local; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      assert.throws(
+        () => sourceContractCensus(fixtureDir, {
+          componentModules: [],
+          utilityModules: ['src/utilities/fixture.ts'],
+        }),
+        /unsupported computed public key/u,
+      );
+    },
+  );
+
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts':
+        "export function use({['before']: local}: { before: string }): void { void local; }",
+    },
+    (fixtureDir) => {
+      const [contract] = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      });
+      assert.deepEqual(contract.names, ['before']);
+    },
+  );
+});
+
+test('local unique-symbol brands are fingerprinted without becoming authored field names', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        "const FIRST_BRAND: unique symbol = Symbol('fixture');",
+        'export interface Branded { readonly [FIRST_BRAND]: true; value: string; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      const modules = {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      };
+      const [initial] = sourceContractCensus(fixtureDir, modules);
+      assert.deepEqual(initial.names, ['value']);
+
+      writeFileSync(
+        path.join(fixtureDir, 'src/utilities/fixture.ts'),
+        [
+          "const RENAMED_BRAND: unique symbol = Symbol('fixture');",
+          'export interface Branded { readonly [RENAMED_BRAND]: true; value: string; }',
+        ].join('\n'),
+      );
+      const [renamed] = sourceContractCensus(fixtureDir, modules);
+      assert.equal(renamed.fingerprint, initial.fingerprint);
+
+      writeFileSync(
+        path.join(fixtureDir, 'src/utilities/fixture.ts'),
+        [
+          "const RENAMED_BRAND: unique symbol = Symbol('fixture');",
+          'export interface Branded { readonly [RENAMED_BRAND]: false; value: string; }',
+        ].join('\n'),
+      );
+      const [changed] = sourceContractCensus(fixtureDir, modules);
+      assert.notEqual(changed.fingerprint, initial.fingerprint);
+    },
+  );
+
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts': [
+        "export const PUBLIC_BRAND: unique symbol = Symbol('fixture');",
+        'export interface Branded { readonly [PUBLIC_BRAND]: true; value: string; }',
+      ].join('\n'),
+    },
+    (fixtureDir) => {
+      assert.throws(
+        () => sourceContractCensus(fixtureDir, {
+          componentModules: [],
+          utilityModules: ['src/utilities/fixture.ts'],
+        }),
+        /unsupported computed public key/u,
+      );
+    },
+  );
+});
+
+test('the private unique-symbol menu protocols do not enter the public source-contract census', () => {
+  const packageDir = fileURLToPath(new URL('../', import.meta.url));
+  const census = sourceContractCensus(packageDir, {
+    componentModules: ['src/components/layout/menu/menu-shared.ts'],
+    utilityModules: [],
+  });
+
+  assert.deepEqual(census, []);
+});
+
+test('the private unique-symbol reorder protocols do not enter the public source-contract census', () => {
+  const packageDir = fileURLToPath(new URL('../', import.meta.url));
+  const census = sourceContractCensus(packageDir, {
+    componentModules: ['src/components/layout/reorder-list/reorder-owner.ts'],
+    utilityModules: [],
+  });
+
+  assert.deepEqual(census, []);
+});
+
+test('well-known symbol members retain their consumer-facing computed name', () => {
+  withSourceContractFixture(
+    {
+      'src/utilities/fixture.ts':
+        'export interface IterableLike { [Symbol.iterator](): Iterator<string>; }',
+    },
+    (fixtureDir) => {
+      const [contract] = sourceContractCensus(fixtureDir, {
+        componentModules: [],
+        utilityModules: ['src/utilities/fixture.ts'],
+      });
+      assert.deepEqual(contract.names, ['Symbol.iterator']);
+    },
+  );
+});
+
 test('source-contract documentation mappings fail on missing sections and missing utility bullets', () => {
   const component = {
     module: 'src/components/fixture.ts',
@@ -532,11 +1487,164 @@ test('source-contract documentation mappings fail on missing sections and missin
   });
   assert.ok(
     gaps.some(({ tag, names }) =>
-      tag === 'lr-fixture' && names.includes('missing contract locator for FixtureOptions')),
+      tag === 'lr-fixture' &&
+      names.some((name) => name.includes('missing contract locator for FixtureOptions'))),
   );
   assert.ok(
     gaps.some(({ tag, names }) =>
-      tag === 'fixture' && names.includes('missing contract locator for helper')),
+      tag === 'fixture' &&
+      names.some((name) => name.includes('missing contract locator for helper'))),
+  );
+});
+
+test('utility docs require each exact declaration, including zero-parameter functions', () => {
+  const contracts = [
+    {
+      module: 'src/utilities/fixture.ts',
+      exportName: 'A',
+      kind: 'interface',
+      fingerprint: 'a',
+      names: ['value'],
+      routes: ['src/utilities/fixture.ts'],
+      utilityRoutes: ['src/utilities/fixture.ts'],
+    },
+    {
+      module: 'src/utilities/fixture.ts',
+      exportName: 'B',
+      kind: 'interface',
+      fingerprint: 'b',
+      names: ['value'],
+      routes: ['src/utilities/fixture.ts'],
+      utilityRoutes: ['src/utilities/fixture.ts'],
+    },
+    {
+      module: 'src/utilities/fixture.ts',
+      exportName: 'flush',
+      kind: 'function',
+      fingerprint: 'flush',
+      names: [],
+      routes: ['src/utilities/fixture.ts'],
+      utilityRoutes: ['src/utilities/fixture.ts'],
+    },
+  ];
+  const baseline = {
+    schemaVersion: 1,
+    documented: contracts.map((contract) => baselineOwner(contract)),
+    legacy: [],
+  };
+  const gaps = collectGaps([], { modules: [] }, {
+    census: contracts,
+    baseline,
+    documents: {
+      'llms/shared.md': '- **`fixture`** — `B { value: string }` is the only declared contract.',
+    },
+  });
+  assert.ok(gaps.some(({ tag, names }) => tag === 'fixture' && names[0].includes('for A')));
+  assert.equal(gaps.some(({ names }) => names[0]?.includes('for B')), false);
+  assert.ok(gaps.some(({ tag, names }) => tag === 'fixture' && names[0].includes('for flush')));
+});
+
+test('duplicate utility bullets and component sections fail unique locator ownership', () => {
+  const utility = {
+    module: 'src/utilities/fixture.ts',
+    exportName: 'FixtureOptions',
+    kind: 'interface',
+    fingerprint: 'utility',
+    names: ['value'],
+    routes: ['src/utilities/fixture.ts'],
+    utilityRoutes: ['src/utilities/fixture.ts'],
+  };
+  const component = {
+    module: 'src/components/fixture.ts',
+    exportName: 'ComponentOptions',
+    kind: 'interface',
+    fingerprint: 'component',
+    names: ['mode'],
+    routes: ['src/components/fixture.ts'],
+    utilityRoutes: [],
+  };
+  const baseline = {
+    schemaVersion: 1,
+    documented: [
+      baselineOwner(utility),
+      {
+        ...baselineOwner(component),
+        document: 'llms/fixture.md',
+        family: 'fixture',
+        locator: {
+          kind: 'component',
+          tag: 'lr-fixture',
+          declaration: 'ComponentOptions',
+        },
+      },
+    ],
+    legacy: [],
+  };
+  const gaps = collectGaps([], { modules: [] }, {
+    census: [utility, component],
+    baseline,
+    documents: {
+      'llms/shared.md': [
+        '- **`fixture`** — `FixtureOptions { value: string }`.',
+        '- **`fixture`** — `FixtureOptions { value: string }`.',
+      ].join('\n'),
+      'llms/fixture.md': [
+        '## `lr-fixture`',
+        '',
+        '`ComponentOptions { mode: string }`',
+        '',
+        '## `lr-fixture`',
+        '',
+        '`ComponentOptions { mode: string }`',
+      ].join('\n'),
+    },
+  });
+  assert.ok(
+    gaps.some(({ names }) => names[0]?.includes('utility bullet, found 2')),
+  );
+  assert.ok(
+    gaps.some(({ names }) => names[0]?.includes('lr-fixture section, found 2')),
+  );
+});
+
+test('semantic document locator identity ignores object key order and dot-path spelling', () => {
+  const first = {
+    module: 'src/utilities/first.ts',
+    exportName: 'FirstOptions',
+    kind: 'interface',
+    fingerprint: 'first',
+    names: ['value'],
+    routes: ['src/utilities/first.ts'],
+    utilityRoutes: ['src/utilities/first.ts'],
+  };
+  const second = {
+    module: 'src/utilities/second.ts',
+    exportName: 'SecondOptions',
+    kind: 'interface',
+    fingerprint: 'second',
+    names: ['value'],
+    routes: ['src/utilities/second.ts'],
+    utilityRoutes: ['src/utilities/second.ts'],
+  };
+  const baseline = {
+    schemaVersion: 1,
+    documented: [
+      baselineOwner(first),
+      {
+        ...baselineOwner(second),
+        document: './llms/shared.md',
+        locator: {
+          declaration: 'FirstOptions',
+          name: 'fixture',
+          kind: 'utility',
+        },
+      },
+    ],
+    legacy: [],
+  };
+  assert.ok(
+    validateSourceContractBaseline([first, second], baseline)
+      .some((finding) => finding.includes('duplicate source-contract document locator')),
   );
 });
 

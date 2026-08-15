@@ -19,6 +19,7 @@ Responsive semantic grouping primitive for related action controls. It preserves
 controls and exposes `role="group"` on its internal wrapper.
 
 **Properties:**
+
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
 - `label: string = ''` — accessible group-name fallback; a host `aria-label`, when present, wins
   including an explicitly empty value
@@ -31,7 +32,7 @@ container inline-size).
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
 between slotted controls on both axes.
 
-**Sizing gotcha — give it an explicit width.** `:host` is `display: inline-flex` *and* declares
+**Sizing gotcha — give it an explicit width.** `:host` is `display: inline-flex` _and_ declares
 `container-type: inline-size` unconditionally (that is what makes the 20rem `@container` rule above
 fire at all). Inline-size containment means the box's own content can no longer contribute to its
 width, so in any context where the host would otherwise be shrink-to-fit — plain block flow, an

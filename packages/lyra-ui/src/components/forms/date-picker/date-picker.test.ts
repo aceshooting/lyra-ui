@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './date-picker.js';
 import type { LyraDatePicker } from './date-picker.js';
@@ -65,6 +65,38 @@ it('lets a consumer retint day and selection-view states independently', async (
   const selectedView = el.shadowRoot!.querySelector('[part~="view-item-selected"]') as HTMLElement;
   expect(getComputedStyle(selectedView).backgroundColor).to.equal('rgb(10, 11, 12)');
   expect(getComputedStyle(selectedView).color).to.equal('rgb(13, 14, 15)');
+});
+
+it('inherits title hover/pressed hooks including radius while direct host values still win', async () => {
+  const wrapper = await fixture(html`
+    <div
+      style="--lr-date-picker-title-hover-color: rgb(1, 2, 3); --lr-date-picker-title-active-color: rgb(4, 5, 6); --lr-date-picker-title-active-bg: rgb(7, 8, 9); --lr-date-picker-title-active-radius: 11px"
+    >
+      <lr-date-picker value="2026-07-15"></lr-date-picker>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-date-picker') as LyraDatePicker;
+  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLButtonElement;
+  const rect = title.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+
+  try {
+    await sendMouse({ type: 'move', position });
+    await waitUntil(() => getComputedStyle(title).color === 'rgb(1, 2, 3)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(title).backgroundColor === 'rgb(7, 8, 9)');
+    expect(getComputedStyle(title).color).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(title).borderRadius).to.equal('11px');
+
+    el.style.setProperty('--lr-date-picker-title-active-radius', '17px');
+    await waitUntil(() => getComputedStyle(title).borderRadius === '17px');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 });
 
 it('scales day-cell size across every tier, floored at the 24px WCAG minimum', async () => {

@@ -57,7 +57,7 @@ function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
  * @cssprop [--lr-flow-status-error-color=var(--lr-color-danger)] - Error count-dot color.
  * @cssprop [--lr-flow-status-denied-color=var(--lr-color-warning)] - Denied count-dot color.
  * @status stable
- * @since 4.0.0
+ * @since unreleased
  */
 export class LyraFlowRunStatus extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: START

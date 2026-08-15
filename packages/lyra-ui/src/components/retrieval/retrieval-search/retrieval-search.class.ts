@@ -19,6 +19,7 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from "../../../internal/announcer.js";
+import { literalSetConverter } from "../../../internal/converters.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retrievalFilterChipLabel, LYRA_DEFAULT_retrievalFiltersLabel, LYRA_DEFAULT_retrievalModeHybrid, LYRA_DEFAULT_retrievalModeKeyword, LYRA_DEFAULT_retrievalModeLabel, LYRA_DEFAULT_retrievalModeVector, LYRA_DEFAULT_retrievalSearchEmptyDescription, LYRA_DEFAULT_retrievalSearchLabel, LYRA_DEFAULT_search, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -27,6 +28,11 @@ import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches
 /** The three retrieval modes `RetrievalQuery.mode` supports, reused verbatim rather than
  *  redefining the union -- see `src/ai/types.ts`'s own header for why. */
 export type LyraRetrievalMode = RetrievalQuery["mode"];
+
+const RETRIEVAL_MODE = literalSetConverter<LyraRetrievalMode>(
+  ["vector", "keyword", "hybrid"],
+  "hybrid"
+);
 
 /** `detail` for `lr-filters-change` -- the complete, already-updated `filters`/`scope` state
  *  after a chip removal, mirroring `<lr-source-picker>`'s `lr-sources-change` "full next state"
@@ -122,9 +128,21 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
    *  reassignment always wins. */
   @property() query = "";
 
+  private _mode: LyraRetrievalMode = "hybrid";
+
   /** Retrieval mode. Defaults to `'hybrid'`, the common default for a search bar combining both
    *  vector and keyword retrieval. */
-  @property() mode: LyraRetrievalMode = "hybrid";
+  @property({ converter: RETRIEVAL_MODE })
+  get mode(): LyraRetrievalMode {
+    return this._mode;
+  }
+  set mode(next: LyraRetrievalMode) {
+    const normalized = RETRIEVAL_MODE.normalize(next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate("mode", old);
+  }
 
   /** Arbitrary metadata filters, rendered as removable `"{key}: {value}"` chips. Controlled --
    *  reassign to change what's shown; see the class doc's "update, then emit" round-trip. */

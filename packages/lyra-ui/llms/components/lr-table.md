@@ -8,18 +8,17 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-table`
 
-Sort/select-aware data table. Sorting is built in and client-side by default (`sortMode="client"`
-orders `rows` from `sortKey`/`sortDir` and the active column's `sortValue`); `sortMode="server"`
-renders `rows` in the order given for a server-ordered table, and `lr-sort` fires on header
-activation either way. Optional filtering, pagination,
-and loading chrome are built in while remaining controlled at the public API boundary. A
+Sort/select-aware data table with a bounded 100-row default projection. A sortable header first
+emits cancelable `lr-sort-request`; accepted transactions emit `lr-sort` with the same canonical
+`sortKey`/`sortDir`. Client mode updates sort state and orders rows; server mode leaves sort state
+controlled. Optional filtering, bounded pagination, and loading chrome are built in. A
 `columns[].heatValue`-opted-in heat-tint mode paints a shared, normalized color-mix background across
 every tinted cell (auto-derived domain, or overridden via `heatTintScale`); `rowTotal`/`grandTotal`
 add a trailing totals column mirroring `expandedContent`'s leading one — `rowTotal(row)` renders
@@ -32,11 +31,23 @@ it survives and otherwise clamps focus to the nearest surviving index. Moving fo
 table before the update is applied always wins; nested editors and controls keep their independent
 focus contracts.
 
+**9.0 migration:** replace `selectedKey = key` with `selectedKeys = new Set([key])`; both single
+and multiple modes now use that one store. Replace `columnsHidden` with read-only
+`hasHiddenPriorityColumns`, `showAllColumns` with `priorityColumnsVisible`, and the two former
+column-visibility events with `lr-priority-columns-visibility-change { visible }`. Column
+`sticky: true` becomes `sticky: 'start'`; `editable: true` becomes
+`editTrigger: 'double-click'`, and `editable: 'always'` becomes `editTrigger: 'always'`. Sort
+listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
+`lr-sort-request`/`lr-sort`. A bare table now projects 100 rows per page (with inputs bounded to
+1..500); set an explicit finite `page-size` when a different window is required.
+
 **Properties:**
 
-- `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, headerCell?, width?,
-minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
-'start' | 'end', footer?, cellStyle?, heatValue?, cell: (row) => unknown }` —
+- `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection,
+  column identities preserved) — `{ key, label, headerCell?, width?, minWidth?, maxWidth?,
+  resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
+  sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
+  cell: (row) => unknown }` —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
   client-mode sorting for that column: a finite number sorts numerically, a string sorts through an
   `Intl.Collator` built from the component's effective locale with `numeric: true` (so `item2`
@@ -48,8 +59,8 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
   `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
   breakpoints are fixed in `table.styles.ts`, not themeable tokens), reversible via
-  `[part='reveal-columns-button']`; `sticky` pins that column's header/cells to the logical start
-  (`true`/`'start'`) or end edge while the table scrolls horizontally — multiple sticky columns stack
+  `[part='reveal-columns-button']`; `sticky` pins that column's header/cells to the logical start or
+  end edge while the table scrolls horizontally — multiple sticky columns stack
   in logical order (each measures every earlier sticky column's rendered width via
   `--lr-table-sticky-offset`) instead of overlapping at the same edge; `footer` renders a
   sticky-bottom footer cell for that column, computed from every currently-rendered row (post-sort,
@@ -63,9 +74,8 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
   own ramp-token convention; `cellStyle` is applied directly to the generated `<td>` via `styleMap` — e.g. a computed heat-tint
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
   no per-cell style override (the default, unchanged output);
-  `editable` enables inline editing —
-  `true` opens a native editor on that cell's double-click (one cell at a time), `'always'` instead
-  renders a persistent editor in every body cell of the column from first paint, for a
+  `editTrigger: 'double-click'` opens a native editor on that cell's double-click (one cell at a
+  time), while `'always'` renders a persistent editor in every body cell from first paint, for a
   settings/rate-style column meant to be typed straight into — while `editValue` supplies the editor
   value and `editType` selects `text` or `number`
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
@@ -85,9 +95,9 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
   _other_ tinted columns' scale shifts around a cell that shows no tint at all. Define both on one
   column only when that override is the intent; to tint _and_ style, return only non-background
   declarations (`color`, `fontWeight`, `textAlign`, …) from `cellStyle`.
-- `columns[].editable: boolean | 'always'` — a widening of the original `boolean`, non-breaking.
-  `true` is unchanged: double-click a cell to open its editor, one at a time, Enter commits and
-  closes, Escape cancels and closes, blur-after-change commits. `'always'` renders an editor in
+- `columns[].editTrigger: 'double-click' | 'always'` — `'double-click'` opens one transient editor;
+  Enter commits and closes, Escape cancels and closes, and blur-after-change commits. `'always'`
+  renders an editor in
   every body cell of that column, permanently:
   - **Focus model.** Each editor is a plain tab stop — no `tabindex` of its own — exactly like the
     existing row-expand toggle, and stays _outside_ the header/row roving-tabindex model. Tab walks
@@ -99,7 +109,7 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
     their draft. An editor the user has not touched still picks up a new `rows` value normally.
     `lr-cell-edit` remains the only mutation channel — the table never mutates `row`.
   - **Keys.** Enter commits (emits `lr-cell-edit`) and _keeps focus_ in the field, since there is no
-    closed state to fall back to. `change` (blur after a modification) commits, as with `true`.
+    closed state to fall back to. `change` (blur after a modification) commits in both modes.
     Escape is **not** cancelled and does nothing to the editor — there is nothing to cancel back to
     — so an ancestor dialog/popover still acts on it.
   - **Focus across re-sorts and pagination.** Rows are keyed, so a re-sort _moves_ the editor's
@@ -108,16 +118,16 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
     is simply lost rather than yanked to whichever unrelated row now sits in that position.
   - Each editor keeps its own interpolated `tableEditCell` accessible name (`Edit {column}`), so a
     column of otherwise-identical inputs is still individually named to a screen reader.
-- `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
-  when a `priority` column is _actually_ hidden right now by the `@container` breakpoints above, or
-  `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
+- `hasHiddenPriorityColumns: boolean = false` (attribute `has-hidden-priority-columns`, reflected) —
+  computed/read-only and true only while a priority column is actually hidden. It becomes false
+  when `priorityColumnsVisible` reveals the columns. Measured via a `ResizeObserver` on
   `[part='base']` plus a post-render DOM check, so it settles one render cycle after a `columns`/
   `rows`/width change lands — poll for the settled value (e.g. `await el.updateComplete;` twice, or
   `waitUntil()`) rather than assuming a single `updateComplete` covers it. Setting it directly has no
-  lasting effect; it's recomputed on the next render or resize. `[part='reveal-columns-button']` now
-  renders exactly when `columnsHidden` is true — no longer whenever any column merely _declares_ a
-  `priority` regardless of whether anything is actually hidden
-- `rows: T[] = []` (attribute: false)
+  lasting effect; it is recomputed on the next render or resize. The toggle remains available while
+  a narrow table is revealed, even though this property truthfully reports false
+- `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection, row identities
+  preserved)
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
   column shares the available width evenly and long cell content is clipped/wrapped instead of
@@ -130,8 +140,9 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
 - `sortMode: 'client'|'server' = 'client'` (attribute `sort-mode`, reflected) — mirrors
   `paginationMode`'s identical split. `'client'` (the default) orders `rows` in the browser from
   `sortKey`/`sortDir` and the active column's `sortValue`; `'server'` renders `rows` exactly as
-  given, for a table whose ordering already happened server-side. `lr-sort` is emitted on header
-  activation under both modes. With no `sortKey` set (the default) `'client'` is a **no-op** — the
+  given, for a table whose ordering already happened server-side. Accepted header activation emits
+  `lr-sort` under both modes, but only client mode mutates `sortKey`/`sortDir`. With no `sortKey` set
+  (the default) `'client'` is a **no-op** — the
   input order is preserved verbatim — so a table that never sorts renders identically either way.
   Sorting applies to the whole filtered set _before_ client pagination slices the page, so page 1
   holds the globally-smallest rows rather than a re-sorted slice
@@ -144,26 +155,29 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
   sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong row
-- `selectedKey: string | number | null = null` (attribute: false) — **single**-selection only
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
-- `selectedKeys: Set<string | number> = new Set()` (attribute: false) — the selected raw row keys
-  used by multiple selection
+- `selectedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
+  store in every mode. Single mode enforces at most one key; multiple mode toggles membership. Reads
+  return detached snapshots; reassign a new set to update
 - `filterable: boolean = false` (attribute `filterable`, reflected) — renders a localized search
   field above the grid
 - `filterText: string = ''` (attribute `filter-text`) — controlled filter text
 - `filter?: (row: T, text: string) => boolean` (attribute: false) — typed predicate used by the
   filter field; when omitted, rows are matched against their JSON representation
-- `filterLabel: string = ''` (attribute `filter-label`) and `filterPlaceholder: string = ''`
-  (attribute `filter-placeholder`) — optional localized-label overrides
+- `filterLabel?: string` (attribute `filter-label`) and `filterPlaceholder?: string`
+  (attribute `filter-placeholder`) — omission localizes `tableFilterLabel`/
+  `tableFilterPlaceholder`; any supplied string, including the built-in English text or `''`, is
+  an explicit verbatim override
 - `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
   (attribute `autocorrect`) — forwarded to the filter input and, for a `'text'` (the default)
   `editType`, the inline cell editor; no effect on a `'number'` cell editor. `spellcheck="false"`
   is parsed as `false` via a string-aware converter (Lit's default presence-based boolean
   converter would otherwise treat any attribute value, including the literal string `"false"`, as
   `true`).
-- `loading: boolean = false` (attribute `loading`, reflected) and `loadingLabel: string = ''`
-  (attribute `loading-label`) — renders busy chrome and suppresses the real rows while loading
+- `loading: boolean = false` (attribute `loading`, reflected) and `loadingLabel?: string`
+  (attribute `loading-label`) — renders busy chrome and suppresses the real rows while loading;
+  omission localizes `tableLoading`, while a supplied string (including `''`) renders verbatim
 - `loadingAppearance: 'spinner'|'skeleton' = 'spinner'` (attribute `loading-appearance`, reflected) —
   how `loading` renders. `'spinner'` replaces the whole grid with an indeterminate spinner.
   `'skeleton'` instead renders the real table — the same `<colgroup>` (declared _and_ drag-resized
@@ -171,19 +185,22 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
   `<tbody>` with placeholder rows, so a cold load sketches the grid's shape rather than collapsing to
   a spinner and reflowing when the rows land. Kept as a separate property rather than widening
   `loading` to a string union, so `?loading=${…}` bindings and `el.loading === true` checks keep
-  working
+  working. Loading takes precedence over both empty branches. When `columns` is empty, a skeleton
+  request temporarily falls back to the spinner because there is no schema to sketch; the table
+  does not flash its no-columns empty state while `loading` remains true
 - `skeletonRows: number = 0` (attribute `skeleton-rows`) — placeholder row count under
-  `loadingAppearance="skeleton"`. `0` derives the count instead: the normalized `pageSize` when
-  pagination is on (capped at 20, so a large page size can't emit thousands of placeholder cells),
-  otherwise 3. Positive explicit values are also capped at 20, bounding the row-by-column
-  placeholder allocation. Ignored entirely under the default spinner appearance
-- `pageSize: number = 0` (attribute `page-size`) — positive values enable controlled pagination;
-  zero disables the pagination footer
-- `page: number = 1` (attribute `page`, reflected) — controlled current page
+  `loadingAppearance="skeleton"`. `0` renders 3 placeholders for the ordinary bounded default, or
+  derives a non-default explicit `pageSize` (capped at 20). Positive explicit values are also capped
+  at 20. Ignored entirely under the default spinner appearance
+- `pageSize: number = 100` (attribute `page-size`) — normalized to `1..500`; a bare table therefore
+  never mounts an unbounded row-by-column projection
+- `page: number = 1` (attribute `page`, reflected) — self-managed after accepted client pagination;
+  controlled in server mode
 - `totalItems: number = -1` (attribute `total-items`) — server-side total item count; `-1` derives
   the total from filtered rows
 - `paginationMode: 'client'|'server' = 'client'` (attribute `pagination-mode`, reflected) — client
-  mode slices rows; server mode renders the supplied page unchanged
+  mode slices rows and updates `page`; server mode leaves `page` controlled and bounds the supplied
+  page to `pageSize`
 - Editable columns emit `lr-cell-edit` on commit and never mutate the supplied row object.
 - `groupBy?: (row: T) => string | number` (attribute: false) — inserts a non-focusable full-width
   group row wherever this key changes between consecutive rendered rows. Supply `rows` with each
@@ -193,22 +210,20 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
   leaves the grouping intact. The one exception: when the sorted column's value is constant inside
   every group — the group column itself, most obviously — there is nothing to reorder within a
   group, so the **groups** are ordered by that value instead.
-- `groupLabel?: (key: string | number, rows: T[]) => unknown` (attribute: false) — custom group
+- `groupLabel?: (key: string | number, rows: readonly T[]) => unknown` (attribute: false) — custom group
   header content; without it, the group key is rendered as text
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
   renders a full-width detail row beneath expanded records
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
-- `expandedKeys: Set<string | number> = new Set()` (attribute: false) — consumer-controlled expanded
-  state; update it in response to `lr-row-expand-toggle`
+- `expandedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
+  expanded state; reads return detached snapshots, and consumers reassign it after
+  `lr-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
-- `moreLabel: string = ''` (attribute `more-label`) — when empty/unset, the button renders the
-  localized `loadMore` fallback (`'Load more'` in the default English catalog)
-- `emptyHeading: string = ''` (attribute `empty-heading`) — when empty/unset, the built-in empty
-  state renders the localized `noData` fallback (`'No data'` in the default English catalog)
+- `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
+- `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
-- `noColumnsHeading: string = ''` (attribute `no-columns-heading`) — when empty/unset, the
-  no-columns state renders the localized `noColumns` fallback (`'No columns configured'` in the
-  default English catalog)
+- `noColumnsHeading?: string` (attribute `no-columns-heading`) — omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
+  including `''`, renders verbatim
 - `noColumnsDescription: string = ''` (attribute `no-columns-description`)
 - `emptyCompact?: boolean` (attribute `empty-compact`) — overrides the built-in `[part='empty']`
   state's `compact` rendering. Tri-state: leave it `undefined` (the default) to keep each empty
@@ -217,15 +232,14 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
   field, renders compact. `empty-compact="false"` forces the spacious rendering everywhere, and is
   parsed as `false` rather than as mere attribute presence. Has no effect once the `empty` slot is
   filled
-- `revealColumnsLabel: string = ''` (attribute `reveal-columns-label`) — the reveal button's label
-  while `priority`-hidden columns are hidden; when empty/unset, it renders the localized
-  `showAllColumns` fallback (`'Show all columns'` in the default English catalog)
-- `hideColumnsLabel: string = ''` (attribute `hide-columns-label`) — the same button's label once
-  the columns have been revealed; when empty/unset, it renders the localized `showFewerColumns`
-  fallback (`'Show fewer columns'` in the default English catalog)
-- `showAllColumns: boolean = false` (attribute `show-all-columns`, reflected) — forces responsive
-  priority columns visible and is updated by the built-in reveal button
-- `storageKey?: string` (attribute `storage-key`) — when set, persists `showAllColumns` to
+- `revealColumnsLabel?: string` (attribute `reveal-columns-label`) — the reveal button's label
+  while `priority`-hidden columns are hidden; omission renders localized
+  `showAllColumns` (`'Show all columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
+- `hideColumnsLabel?: string` (attribute `hide-columns-label`) — the same button's label once
+  the columns have been revealed; omission renders localized `showFewerColumns` (`'Show fewer columns'` in the built-in English catalog), while a supplied string (including `''`) is verbatim
+- `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
+  forces responsive priority columns visible and is updated by the built-in reveal button
+- `storageKey?: string` (attribute `storage-key`) — when set, persists `priorityColumnsVisible` to
   `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount. Unset
   (the default) touches storage not at all. Mirrors `lr-app-rail`'s identical `storage-key` pattern
 - `heatTintScale?: { min?: number; max?: number }` (attribute: false) — overrides the auto-derived
@@ -238,18 +252,19 @@ minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', 
   computes/renders, table only positions" contract as the existing per-column `footer(rows)` — does
   not assume addition, so a non-sum aggregate works identically. Omit for no trailing column at all
   (unchanged output)
-- `grandTotal?: (rows: T[]) => unknown` (attribute: false) — renders the bottom-right cell (row-total
+- `grandTotal?: (rows: readonly T[]) => unknown` (attribute: false) — renders the bottom-right cell (row-total
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
 
-**Events:** `lr-sort` (`detail: { key }`, fired on sortable-header activation — which also updates
-`sortKey`/`sortDir` itself, per `defaultSortDir` above), `lr-row-click`
-(`detail: { row }`), `lr-load-more` (fired on the "load more" button), `lr-columns-hidden-change`
-(`detail: { hidden: boolean }`, fired only on a real `columnsHidden` transition),
-`lr-columns-revealed` (`detail: { revealed: boolean }`), and `lr-row-expand-toggle`
+**Events:** `lr-sort-request` (cancelable frozen readonly
+`detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
+`detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
+sort properties; server mode leaves them controlled. Other events are `lr-row-click`
+(`detail: { row }`), `lr-load-more` (fired on the "load more" button),
+`lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and `lr-row-expand-toggle`
 (`detail: { row, key }`; the table does not mutate `expandedKeys`), and
-`lr-selection-change` (`detail: { keys }`) when selection is enabled, `lr-filter-change`
-(`detail: { text }`), and `lr-page-change` (`detail: { page }`) from the controlled
+`lr-selection-change` (frozen readonly `detail: { keys }`) when selection is enabled, `lr-filter-change`
+(frozen readonly `detail: { text }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, key, value }`) for editable
 columns, and `lr-column-resize` (`detail: { key, width }`, `width` in CSS pixels) on every pointer or
 keyboard resize step. **Only the commit is cancelable.** A pointer drag fires the event once per
@@ -260,8 +275,11 @@ cancelable commit directly, with no live-feedback stream. Calling `preventDefaul
 emission reverts the column to its pre-gesture width (or removes the override entirely if the column
 had never been resized); calling it on a mid-drag step does nothing, by design — a veto is a decision
 about the final width, not about every pixel the pointer passes through.
-The internal filter/cell-editor native inputs' `focus` and `blur` are also re-dispatched from the
-host as bubbling, composed events (the native ones are neither).
+The internal filter input's composed native `input`/`change` events are contained; only
+`lr-filter-change` crosses the host boundary. Cell-editor `input`/`change` events are likewise
+contained while an accepted edit publishes `lr-cell-edit`. Internal filter/cell-editor native
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events (the native ones
+are neither).
 
 **Slots:** `empty` — replaces the built-in empty state on the two _data_-empty branches (no rows at
 all, and filtered/paginated down to zero). Left unfilled, the built-in `[part='empty']` `<lr-empty>`
@@ -272,7 +290,8 @@ from `columns`/`rows`.
 
 **CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon` (a
 chevron indicator shown on the active sortable header, rotated per `sortDir`), `reveal-columns-button`
-(shown only when `columnsHidden` is true), `foot` (the `<tfoot>`, only rendered when at least one
+(shown when priority columns are hidden or when a narrow allocation is currently force-visible),
+`foot` (the `<tfoot>`, only rendered when at least one
 column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each body row's trailing
 `<td>` holding `rowTotal(row)`, rendered only when `rowTotal` is set — the corresponding footer-row
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
@@ -281,12 +300,12 @@ cell, holding `grandTotal`, is a `footer-cell` instead, matching every other foo
 `loadingAppearance="spinner"` the visible block holding the spinner; under `"skeleton"` the
 visually-hidden, `aria-hidden` announcement mirror, since the placeholder rows are the visible
 affordance; the part has no live-region role in either appearance),
-`skeleton` (each `<lr-skeleton>` placeholder inside a skeleton-mode body cell — the placeholder rows
+`skeleton` (each canonical `shape="rect"` `<lr-skeleton>` placeholder inside a skeleton-mode body cell — the placeholder rows
 and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts, which is exactly what keeps them
 geometrically identical to real rows, so `skeleton` is the part to target for the placeholder's own
 look: `::part(skeleton) { --lr-skeleton-h: 2em; }`), and
 `pagination`, `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
-separator). The built-in empty state is addressable rather than fixed: `empty` is the `<lr-empty>`
+separator, with a finite explicit ARIA maximum even when no CSS `maxWidth` was supplied). The built-in empty state is addressable rather than fixed: `empty` is the `<lr-empty>`
 host in all three empty states, and it re-exports that element's own inner parts as `empty-base`,
 `empty-icon`, `empty-heading`, `empty-description` and `empty-actions`. Note that the no-columns and
 no-rows states return the empty element as the shadow root's own root, with no `[part='base']`
@@ -298,8 +317,12 @@ body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-bra
 `--lr-table-heat-tint-hi` (default `var(--lr-color-brand)`) — the `color-mix()` ramp endpoints
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
 `--lr-table-resize-min-width` (default `var(--lr-size-3rem)`) and
-`--lr-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior.
-These four heat-tint/resize hooks are not redeclared on the component host: set them on
+`--lr-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior. The latter
+remains the legacy shared opacity fallback; `--lr-table-resize-handle-hover-bg` (default
+`var(--lr-color-brand)`), `--lr-table-resize-handle-hover-opacity` (defaulting to the legacy
+opacity), `--lr-table-resize-handle-active-bg` (defaulting to the hover background), and
+`--lr-table-resize-handle-active-opacity` (defaulting to twice the hover opacity) independently
+retune the rendered interaction states. These heat-tint/resize hooks are not redeclared on the component host: set them on
 `lr-table` or on a theme ancestor, and a table-level value wins through the normal cascade.
 `--lr-table-row-selected-bg` (default `var(--lr-color-brand-quiet)`) — the background of a row whose
 `aria-selected` is `true`. Like every state-scoped custom property in this library it is an inline
@@ -311,8 +334,9 @@ so the only prior lever for restyling the selected row was overriding the librar
 `--lr-table-row-stripe-bg` (default `transparent`) — the background of alternating body rows. The
 component marks the alternating rows itself, so this works without an invalid `::part(row)` attribute
 or structural-pseudo-class selector and does not affect group, expanded, hover, or selected rows.
-`--lr-table-header-sorted-bg` (default `transparent`) and `--lr-table-header-sorted-color` (default
-`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`).
+`--lr-table-header-sorted-bg` (default `var(--lr-color-surface)`) and `--lr-table-header-sorted-color` (default
+`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`). The opaque surface default prevents body rows from
+showing through the sticky header while it scrolls.
 Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,
 because `::part(header-cell)[aria-sort]` is invalid CSS. The `sort-icon` part styles only the
 chevron; these tokens style the header cell itself.
@@ -348,7 +372,13 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
     { name: "Beta", value: 2 },
   ];
   t.rowKey = (r) => r.name;
-  t.addEventListener("lr-sort", (e) => console.log("sort by", e.detail.key));
+  t.addEventListener("lr-sort-request", (e) => {
+    console.log("sort proposed", e.detail.sortKey, e.detail.sortDir);
+    // Call e.preventDefault() here to veto the transaction.
+  });
+  t.addEventListener("lr-sort", (e) =>
+    console.log("sort committed", e.detail.sortKey, e.detail.sortDir)
+  );
   t.addEventListener("lr-row-click", (e) =>
     console.log("clicked", e.detail.row)
   );
@@ -357,12 +387,10 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
 
 **Known gotchas:**
 
-- activating a sortable header now writes `sortKey`/`sortDir` on the table itself, in **both** sort
-  modes — it is no longer a pure `lr-sort` notification. A `sortMode="server"` consumer that
-  re-sorts on `lr-sort` and pushes fresh `rows` back in is unaffected (the table renders whatever
-  order it is handed), but a consumer implementing a _tri-state_ header (asc → desc → unsorted) must
-  drive `sortKey`/`sortDir` from its own `lr-sort` handler, since the built-in activation only
-  toggles between the two directions.
+- accepted sortable-header activation writes `sortKey`/`sortDir` only in client mode. Server mode
+  keeps those properties controlled and reports the accepted proposal in `lr-sort`; veto
+  `lr-sort-request` to suppress both state change and commit. The built-in transaction toggles only
+  between two directions, so a tri-state header (asc → desc → unsorted) remains consumer-owned.
 - `sortValue`/`cell` are read off the column object by identity. Mutating a column **in place**
   (`t.columns[0].sortValue = …`) neither re-renders nor re-sorts; assign a new `columns` array.
 - `groupBy` + client sorting are **not** in conflict: the sort runs per group, not across the whole
@@ -374,9 +402,8 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   keeps `aria-sort` and the header chevron honest — otherwise clicking the group column would flip
   both while changing nothing. To force a group order in any other case, sort `rows` into it before
   assigning them (or set `sort-mode="server"` and own the whole ordering).
-- only single-row selection is modeled (`selectedKey: string | number | null`);
-  there's no bulk-select/checkbox-column API — you must hand-roll a checkbox column entirely inside
-  a `cell()` callback if you need multi-select.
+- both single and multiple row selection use `selectedKeys`; the component does not synthesize a
+  checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — a typed accessible name for the
   `<table role="grid">`. A plain `aria-label` HTML attribute on the host is also forwarded (read via
   `this.getAttribute('aria-label')` at render time) and serves as a fallback when `accessibleLabel`
@@ -394,11 +421,15 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   this family. A `priority`-hidden header/cell is skipped when computing the visible header stops,
   so arrow-key navigation never strands the roving stop on a hidden column.
 - a `cell()` template can render its own interactive content without it being swallowed by
-  row/column activation: clicks and Enter/Space landing on (or bubbling through) anything matching
-  `button, a[href], input, select, textarea, [role="button"], [role="combobox"], [role="listbox"],
-[role="slider"]`, **or any custom element** (any tag name containing a hyphen — e.g. a
-  `<lr-select>`/`<lr-combobox>` rendered inside a `cell()`), are left alone by the table's own
-  delegated `click`/`keydown` handlers instead of triggering `lr-sort`/`lr-row-click`.
+  row/column activation. Delegated clicks and Enter/Space inspect the event's composed path for
+  native buttons, links, inputs, selects, textareas, summaries, and media with controls;
+  editable content; a non-negative `tabindex`; or role semantics (`button`, `checkbox`, `combobox`,
+  `listbox`, `menu`, `menuitem`, `option`, `radio`, `separator`, `slider`, `spinbutton`, `switch`,
+  `tab`, or `textbox`). Open-shadow custom controls expose those semantics through the composed path
+  and therefore keep their own action. A passive custom element — including a formatter or
+  display-only badge — remains part of the row activation surface instead of creating a dead zone
+  merely because its tag contains a hyphen. An opaque closed-shadow control can explicitly opt out
+  of row activation by adding `data-table-interactive` to its visible host.
 - `layout="fixed"` (and any `'auto'` that resolves to fixed) carries two consequences of the CSS
   fixed algorithm. With no declared widths the **first** row — the header row included — determines
   every column's width, so revealing a `priority`-hidden column via
@@ -408,7 +439,7 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
 - skeleton mode keeps geometry stable only when the browser isn't sizing columns from cell content.
   Under the default `table-layout: auto`, placeholder cells have no intrinsic width, so the columns
   re-measure when real content arrives — exactly as they do between any two different data sets. For
-  pixel-identical widths across the load, declare `columns[].width` or set `layout="fixed"`. Either
+  pixel-identical widths across the load, declare `columns[].width` or set `layout="fixed"`.
   Initial declarative loading stays silent; every later transition into either loading appearance
   appends the localized loading text to the document's shared light-DOM polite sink, including
   repeated cycles. `[part="base"]` exposes `aria-busy`, `[part="loading"]` is an `aria-hidden`
@@ -421,11 +452,11 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   as the cell's accessible _name_, replacing the cell's content rather than supplementing it (the
   same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
   shows, never for information that exists nowhere else.
-- `editable: 'always'` deliberately does not re-assert a cell's source value once the user has typed
+- `editTrigger: 'always'` deliberately does not re-assert a cell's source value once the user has typed
   into it. That is the native dirty-value-flag behavior the attribute binding buys, and it is the
   point: a background `rows` refresh cannot silently overwrite an in-progress edit. If you need the
   opposite — an authoritative external value that always wins — do not use `'always'`; re-key the
-  row (`rowKey`) so the editor is recreated rather than updated, or keep `editable: true` and let
+  row (`rowKey`) so the editor is recreated rather than updated, or use `editTrigger: 'double-click'` and let
   the short-lived double-click editor's property binding re-assert. Also note the two things
   `'always'` intentionally does _not_ do: it never sets the roving `tabindex` (its editors are
   ordinary tab stops, so Tab order in that column interleaves with the grid's two roving stops,

@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import {
   autocorrectConverter,
+  declaredDefaultConverter,
   literalSetConverter,
   presenceTrueDefaultBooleanConverter,
   spellcheckConverter,
@@ -9,6 +10,20 @@ import {
   trueDefaultBooleanFromAttributeConverter,
   trueDefaultSpellcheckConverter,
 } from './converters.js';
+
+it("restores declared defaults from removal without suppressing initial reflection", () => {
+  const stringDefault = declaredDefaultConverter("outlined");
+  expect(stringDefault.fromAttribute?.(null, undefined)).to.equal("outlined");
+  expect(stringDefault.fromAttribute?.("filled", undefined)).to.equal("filled");
+  expect(stringDefault.toAttribute?.("outlined", undefined)).to.equal(
+    "outlined"
+  );
+
+  const numberDefault = declaredDefaultConverter(6);
+  expect(numberDefault.fromAttribute?.(null, undefined)).to.equal(6);
+  expect(numberDefault.fromAttribute?.("8", undefined)).to.equal(8);
+  expect(numberDefault.toAttribute?.(6, undefined)).to.equal(6);
+});
 
 it('shares one closed-set normalization path across attributes, reflection, and property writes', () => {
   const converter = literalSetConverter(['idle', 'active'] as const, 'idle');
@@ -19,6 +34,12 @@ it('shares one closed-set normalization path across attributes, reflection, and 
   expect(converter.toAttribute?.('active', undefined)).to.equal('active');
   expect(converter.normalize('foreign')).to.equal('idle');
   expect(converter.normalize(undefined)).to.equal('idle');
+  const host = document.createElement("div");
+  host.setAttribute("state", "foreign");
+  expect(converter.normalizeReflected(host, "state", "foreign")).to.equal(
+    "idle"
+  );
+  expect(host.getAttribute("state")).to.equal("idle");
   expect(Object.isFrozen(converter)).to.equal(true);
 });
 

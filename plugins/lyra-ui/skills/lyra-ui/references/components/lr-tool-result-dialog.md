@@ -24,10 +24,12 @@ child scan expects real projected content, while its modal behavior participates
 overlay stack.
 
 **Properties:**
-- `open: boolean = false` (reflected) — whether the dialog is open; set this (or call `close()`) —
-  there is no separate `show()`/`hide()` pair
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — directly names the internal
-  dialog panel; otherwise the tool-name title supplies `aria-labelledby`
+
+- `open: boolean = false` (reflected) — whether the dialog is open; set it directly or use the
+  lifecycle methods below
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
+  host itself, while the dialog panel remains labelled by its visible tool-name title instead of
+  cloning that name. A direct property assignment made without the attribute can name the panel
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name, rendered prominently in the
   header
 - `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
@@ -36,15 +38,18 @@ overlay stack.
   from the header entirely when unset
 - `maximized: boolean = false` (reflected) — near-fullscreen presentation of the same open dialog
 
-**Methods:** `close(reason: ToolResultDialogCloseReason = 'api'): void` — closes the dialog (no-op if
-already closed), emits `lr-close` with `reason`, and returns focus to whatever had it before
+**Methods:** `show(): void` opens the dialog; `hide(reason: ToolResultDialogCloseReason = 'api'):
+void` is the reasoned API dismissal;
+`close(reason: ToolResultDialogCloseReason = 'api'): void` closes the dialog (no-op if already
+closed), emits `lr-close` with `reason`, and returns focus to whatever had it before
 the dialog opened. Built-in triggers call this with `'escape'`/`'backdrop'`/`'close-button'`; a
 consumer's own close affordance (e.g. a footer action button) should call it directly with its own
 reason string so every dismissal path funnels through the same event.
 
 **Events:** `lr-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
 'close-button'|'api'|string`) fired exactly once per dismissal; `lr-maximize-change` (`detail:
-boolean`, the new `maximized` state) fired when the header's maximize/restore toggle is clicked.
+{ readonly maximized: boolean }`, the new `maximized` state) fired when the header's
+maximize/restore toggle is clicked.
 
 **Slots:** `body` (the dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw
 panels, entirely consumer-assembled), `footer` (optional action buttons, rendered in a bottom row —
@@ -75,7 +80,7 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
   duration-ms="1240"
   ?open=${dialogOpen}
   @lr-close=${(e) => (dialogOpen = false)}
-  @lr-maximize-change=${(e) => console.log('maximized:', e.detail)}
+  @lr-maximize-change=${(e) => console.log('maximized:', e.detail.maximized)}
 >
   <lr-tab-group slot="body">
     <div slot="preview" label="Preview">…</div>
@@ -97,6 +102,7 @@ open/close lifecycle — unlike `<lr-widget>`'s fullscreen mode there's no separ
 state, so no additional scroll-lock/focus-trap bookkeeping is needed for that transition alone.
 
 **Known gotchas:**
+
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if `open` was still `true` across the
   move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no intervening update, so

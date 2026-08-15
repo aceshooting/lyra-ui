@@ -33,7 +33,7 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   JavaScript, TypeScript, HTML, CSS, JSON, SQL, Go, Rust, YAML, Markdown, and shell scripts. Lyra
   also includes a built-in GreyCat grammar; use `"gcl"` or `"greycat"` for GreyCat source.
 - `filename: string = ''` — shown in the header, when set
-- `accessibleLabel: string = ''` (attribute `aria-label`) — names the internal focusable code-body
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — names the internal focusable code-body
   region; otherwise a localized filename/language description is generated
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
@@ -49,11 +49,11 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
 - `highlightLines: string = ''` (attribute `highlight-lines`) — comma-separated 1-based inclusive
   line ranges (e.g. `"3-5,7"`) to visually emphasize. Declarative sugar over `highlights` — merges
   with, and renders identically to, any `line-range` entries there.
-- `interactiveLines: boolean = false` (attribute `interactive-lines`) — turns the
-  (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-click`.
+- `activatableLines: boolean = false` (attribute `activatable-lines`) — turns the
+  (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-activate`.
   Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
   focus, focus follows the clamped surviving line; moving focus elsewhere during that update wins.
-- `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
   code (the shared anchor-target `LyraHighlight` contract from `document-viewer/anchors.ts`). Only
   `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
@@ -70,19 +70,19 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
   `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
   the type-only granular import emits no registration side effect.
-- `languagesOnly: boolean = false` (attribute `languages-only`) — skips the default shiki loader;
-  use when every requested language is supplied through `languages`
+  `refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
+  **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
+  resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
+  when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
 
-**Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
-resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
-when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
-
-**Events:** `lr-copy` (`detail: { text: string }` — always the raw `code` value, never the
-highlighted HTML, and always fires regardless of whether the actual OS clipboard write succeeded),
-`lr-toggle` (`detail: { collapsed: boolean }` — fired when the built-in collapse/expand header
-button is activated, same event name/shape convention as `<lr-thinking-panel>`'s own `lr-toggle`),
-`lr-line-click` (`detail: { line: number }` — a gutter line number was activated while
-`interactiveLines` is set),
+**Events:** `lr-copy` (frozen `detail: { ok: true, text }` — fires only after the raw `code` value
+was written successfully), `lr-error` (`detail: null` — generic notification when clipboard writing
+fails), `lr-copy-error` (frozen `detail: { ok: false, text, reason, error }`, where `reason` is
+`'unsupported' | 'denied' | 'failed'`), `lr-toggle-request` (cancelable;
+`detail: { collapsed }` is the proposed next state and canceling leaves `collapsed` unchanged),
+`lr-toggle` (`detail: { collapsed: boolean }` — the committed state after the request is accepted),
+`lr-line-activate` (`detail: { line: number }` — a gutter line number was activated while
+`activatableLines` is set),
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;
 `anchor` is a `line-range` anchor covering the selected lines)
 
@@ -90,11 +90,12 @@ button is activated, same event name/shape convention as `<lr-thinking-panel>`'s
 
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `toggle`, `body`, `pre`,
 `code`, `line-highlight` (a line marked by `highlightLines` or a `line-range` entry in `highlights`),
-`line-button` (a gutter line-number button, only rendered while `interactiveLines` and `lineNumbers`
+`line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)
 
-**Themeable custom properties:** `--lr-code-block-max-height` (default `none` — the consumer-tunable
-scroll cap; only takes effect once `max-height` is set), `--lr-code-block-font` (default
+**Themeable custom properties:** `--lr-code-block-max-height` (default `none` — an independently
+settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
+`--lr-code-block-font` (default
 `var(--lr-font-mono)`, the library's shared monospace stack), `--lr-code-block-tab-size` (default `2` — tab width for the
 rendered code, applied to `[part='pre']`), `--lr-code-block-active-line-outline-color` (default
 `var(--lr-color-brand)` — the outline around the line marked active by `active-highlight-id`),
@@ -135,21 +136,24 @@ other `--lr-color-warning-quiet` surface alone.
 and every instance falls back to plain text — install it with `pnpm add shiki` to enable
 highlighting).
 
-```html
-<lr-code-block
+```ts
+import { html } from "lit";
+import "@aceshooting/lyra-ui/components/conversation/code-block/code-block.js";
+
+const view = html`<lr-code-block
   language="typescript"
   filename="sum.ts"
   collapsible
   max-height="20rem"
   .code=${`export function sum(a: number, b: number) {\n  return a + b;\n}`}
-  @lr-copy=${(e) => console.log('copied', e.detail.text)}
-></lr-code-block>
+  @lr-copy=${(e) => console.log("copied", e.detail.text)}
+></lr-code-block>`;
 ```
 
 Set `line-numbers` when source context benefits from numbered lines. The option does not change the
 raw `code` value or the `lr-copy` event payload.
 
-A decorative `<lr-skeleton variant="rect">` placeholder (with its own announcements disabled and
+A decorative `<lr-skeleton shape="rect">` placeholder (with its own announcements disabled and
 `aria-busy="true"` on the host) stands in only while shiki itself is loading for the very first time
 on the page and `language` is set — it is
 deliberately _not_ shown again for a later per-language grammar fetch (that's typically fast, and the
@@ -174,8 +178,9 @@ one deliberate exception to every other color being a `--lr-*` token.
   the _current_ `language` is ever rendered.
 - a malformed `code`/`language` combination that makes shiki's `codeToHtml()` throw falls back to
   plain text silently, not a blank code block.
-- the "Copied!" label reverts to "Copy" after a fixed 1500ms, regardless of whether the clipboard
-  write actually succeeded — `navigator.clipboard` is absent in insecure contexts/older browsers, and
-  `lr-copy` still fires either way.
+- the "Copied!" label appears only after clipboard fulfillment and reverts to "Copy" after 1500ms.
+  Rejection or an unavailable clipboard instead shows the localized failure state and emits
+  `lr-error` plus `lr-copy-error`; the helper resolves the clipboard from the element's current
+  `ownerDocument`, including after adoption.
 
 ---

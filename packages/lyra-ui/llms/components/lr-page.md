@@ -38,16 +38,22 @@ and event listeners survive every breakpoint crossing.
   including `%`, viewport units, `calc()`, and `var()`, fall back to `768px`.
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
+- `tabindex: string = '-1'` (reflected) — the host fragment target's native focusability. The Page
+  preserves an authored value and otherwise keeps the host target focusable programmatically so a
+  skip link or URL fragment can transfer focus into the main content.
 - `disableNavigationToggle: boolean = false` (attribute `disable-navigation-toggle`, reflected) —
-  hides the built-in mobile toggle. A custom `navigation-toggle` slot or a slotted control carrying
-  `data-toggle-nav` can still own the action.
+  hides the built-in mobile toggle. One or more custom controls assigned to `navigation-toggle`, or
+  a slotted control carrying `data-toggle-nav`, can still own the action.
 - `strings`/`locale` and host `aria-label` follow the shared localization contract. `aria-label`
   overrides the localized name of the internal navigation landmark.
 
 **Methods:** `showNavigation(): void`, `hideNavigation(): void`, and
 `toggleNavigation(): void` update `navOpen`. `visiblePixelsInViewport(element: HTMLElement | null):
 number` returns the element's finite, viewport-clamped vertical intersection in CSS pixels (`0` for
-`null`, invalid geometry, or no intersection).
+`null`, invalid geometry, no intersection, or an element in a detached document with no viewport).
+This is a deliberate owner-realm safety divergence from Web Awesome 3.11, whose method returns
+`null` for a null input and measures detached-document geometry against the ambient page viewport;
+code migrating from `wa-page` should treat Lyra's always-finite `number` result as canonical.
 
 **Events:** `lr-nav-toggle` (cancelable; `detail: { open }` is the `navOpen` state proposed by
 `showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
@@ -55,16 +61,21 @@ click, Escape, or the default/custom navigation-toggle control, all of which rou
 same methods. Call `preventDefault()` to leave `navOpen` unchanged.)
 
 The default mobile toggle is a native button with localized open/close names and explicit
-`aria-expanded="true|false"` plus `aria-controls` pointing to this Page's unique drawer. Opening
+`aria-haspopup="dialog"`, `aria-expanded="true|false"`, plus `aria-controls` pointing to this
+Page's unique drawer. Opening
 uses Lyra's shared modal overlay stack for inerting, scroll lock, Escape/backdrop dismissal, focus
-trapping, stacking, reconnect suspension, and focus return. A custom `navigation-toggle` element is
-wired to the same state and receives synchronized `aria-expanded` plus a localized label when it
-did not supply its own. Its light-DOM `aria-controls` points to the Page host, a resolvable public
-bridge to the private shadow drawer; supporting browsers therefore report the Page in
-`ariaControlsElements` instead of an empty list for an unresolvable shadow ID. When that toggle is
-replaced, removed, or its Page disconnects, component-owned attributes are restored to their prior
-author values (or removed when they were absent). A consumer write made after assignment wins and
-is not restored over.
+trapping, stacking, reconnect suspension, and focus return. Modal inerting is scoped to the live
+drawer root, so header/main/footer siblings inside the Page become inert without inerting the
+drawer itself. Every custom `navigation-toggle` and the composed descendant that actually receives
+focus are wired to the same state with `aria-haspopup="dialog"`, synchronized `aria-expanded`, and
+a localized label when unnamed; any available assigned control opens the same Page-owned drawer,
+while disabled, `aria-disabled`, hidden, and inert controls remain non-actions. The component
+supplies the real drawer to the shared controls owner; current browsers normalize that inward
+private relationship to the public Page host. Generated whole-value state remains authoritative
+while assigned, authored relationship tokens compose, and exact initial or late-authored baselines
+return when a toggle is replaced, removed, or the Page disconnects. If the opening toggle is
+replaced while the drawer is open, both the ARIA owner and eventual focus-return target retarget to
+the next available assigned toggle's real composed control.
 
 `navigation-toggle-icon` is decorative visual content: its assigned subtree is inert and hidden
 from assistive technology, while the native toggle retains the sole action and localized name.
@@ -119,7 +130,7 @@ allocation, and long localized or consumer-provided text cannot widen the Page.
 Import only the Page registration when it is the only layout component this bundle needs:
 
 ```js
-import '@aceshooting/lyra-ui/components/layout/page/page.js';
+import "@aceshooting/lyra-ui/components/layout/page/page.js";
 ```
 
 ```html

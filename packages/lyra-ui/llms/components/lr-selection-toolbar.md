@@ -8,7 +8,7 @@
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,11 +26,15 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 
 When a controlled `actions` refresh replaces the focused action, focus follows the same action id
 through reordering, otherwise moves to the nearest surviving action, or to the stable toolbar when
-the action set becomes empty. A newer focus destination is never overridden.
+the action set becomes empty. The same repair applies when a slotted action is removed or becomes
+disabled, hidden, inert, `aria-disabled`, or no longer actionable. Availability and `tabindex`
+changes are observed live, stale stops are cleared, and a newer focus destination is never
+overridden. Observation is rebound to the current document realm when the toolbar is adopted.
 
 **Events:** `lr-selection-action` (`SelectionActionDetail = { action, text, anchor }`);
-`lr-dismiss` (Escape); `lr-copy-error` (`{ error }`). Copy uses the Clipboard API when available;
-the action event still reports the user intent if writing fails, alongside `lr-copy-error`.
+`lr-dismiss` (`null`, Escape); `lr-copy` (frozen `{ ok: true, text }`, only after the clipboard
+write fulfills); and, on failure, `lr-error` (`null`) plus frozen `lr-copy-error`
+(`{ ok: false, text, reason, error }`). A failed copy does not emit the action event.
 Detaching and later reinserting the same open instance re-establishes positioning and Escape
 ownership even when the detach lasts past an event-loop turn.
 
@@ -42,14 +46,18 @@ instead: slotted elements render after the built-ins **inside** the same `role="
 and join the same roving-tabindex group (Home/End/Arrow, RTL-mirrored), so adding one does not mean
 reimplementing the toolbar's positioning, keyboard, and dismissal behavior. A slotted action brings
 its own accessible name and click handling; this component only manages its tab stop, and re-derives
-the group whenever the slot's assigned elements change.
+the group whenever the slot's assigned elements change. The group resolves actual composed action
+targets through open shadow roots and forwarding slots; decorative wrappers are not accepted as
+stops, while multiple actionable descendants remain independently arrow-reachable. Keyboard
+movement starts from the action that received the event rather than stale controlled state.
 
-**Themeable custom properties:** `--lr-selection-toolbar-inline-start` and
-`--lr-selection-toolbar-block-start` are normally computed from `rect`; hosts may override them to
-provide their own fixed-position anchor. `--lr-selection-toolbar-placement-gap` (default
+`rect` is the sole public positioning input. Internal computed coordinates are intentionally
+private so controlled rect updates cannot be silently overridden by stale authored CSS.
+**Themeable custom properties:** `--lr-selection-toolbar-placement-gap` (default
 `var(--lr-space-s)`) is the non-negative distance from the selection and from viewport edges while
 the toolbar avoids collisions. It accepts unitless pixel values and `px`, `rem`, and `em` values; unsupported
-values fall back to the default and negative values clamp to `0`.
+values fall back to the default and negative values clamp to `0`. Collision math uses the active
+`visualViewport` bounds and offsets when available, including after visual-viewport changes.
 
 **Slots:** `actions` — extra actions rendered after the built-in ask/quote/cite/copy buttons,
 inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.
@@ -57,8 +65,3 @@ inside the same `role="toolbar"` element and roving-tabindex group. **Optional p
 ```ts
 import "@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js";
 ```
-
-**Additional API surface:**
-
-- `--lr-selection-toolbar-inline-shift` — Computed inline collision-avoidance offset.
-- `--lr-selection-toolbar-block-shift` — Computed block collision-avoidance offset.

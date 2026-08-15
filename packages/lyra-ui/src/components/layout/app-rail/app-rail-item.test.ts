@@ -74,6 +74,30 @@ it("renders a disabled button when no href is available", async () => {
   expect(button.getAttribute("aria-disabled")).to.equal("true");
 });
 
+it('keeps disabled rail-item paint unchanged on hover and press', async () => {
+  const el = (await fixture(html`
+    <lr-app-rail-item
+      disabled
+      style="--lr-app-rail-item-hover-bg:rgb(1,2,3);--lr-app-rail-item-active-bg:rgb(4,5,6)"
+    >Settings</lr-app-rail-item>
+  `)) as LyraAppRailItem;
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const rest = getComputedStyle(target).backgroundColor;
+  const rect = target.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(target).backgroundColor).to.equal(rest);
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(target).backgroundColor).to.equal(rest);
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
 it("preserves focus when href changes replace the native link and button owners", async () => {
   const el = (await fixture(
     html`<lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>`

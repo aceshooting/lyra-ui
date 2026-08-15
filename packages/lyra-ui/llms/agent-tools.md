@@ -358,7 +358,8 @@ reason string so every dismissal path funnels through the same event.
 
 **Events:** `lr-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
 'close-button'|'api'|string`) fired exactly once per dismissal; `lr-maximize-change` (`detail:
-boolean`, the new `maximized` state) fired when the header's maximize/restore toggle is clicked.
+{ readonly maximized: boolean }`, the new `maximized` state) fired when the header's
+maximize/restore toggle is clicked.
 
 **Slots:** `body` (the dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw
 panels, entirely consumer-assembled), `footer` (optional action buttons, rendered in a bottom row —
@@ -389,7 +390,7 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
   duration-ms="1240"
   ?open=${dialogOpen}
   @lr-close=${(e) => (dialogOpen = false)}
-  @lr-maximize-change=${(e) => console.log('maximized:', e.detail)}
+  @lr-maximize-change=${(e) => console.log('maximized:', e.detail.maximized)}
 >
   <lr-tab-group slot="body">
     <div slot="preview" label="Preview">…</div>
@@ -456,7 +457,9 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   `icon` is a literal glyph (e.g. an emoji) rendered next to `name` — an opaque string, not a registry
   lookup, the same convention `<lr-tool-call-chip>`'s `icon` uses. `disabled` individually gates a
   tool regardless of `useDefaults`/`selected` (e.g. a tool requiring admin approval);
-  `disabledReason` is supporting text shown under a disabled row, ignored when `disabled` is falsy.
+  `description` and `disabledReason` are supporting descriptions associated with the checkbox
+  through its stable `aria-describedby` owner; only `name` contributes to the checkbox's accessible
+  name. `disabledReason` is ignored when `disabled` is falsy.
 - `ToolSelectFilter = (tool: ToolSelectDialogTool, query: string) => boolean` — a predicate deciding
   whether `tool` matches an already-trimmed, already-lowercased `query`. Assign `filter` to replace the
   built-in case-insensitive name/description substring match entirely (mirrors `<lr-combobox>`'s
@@ -477,11 +480,14 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   treated as one selection.
 - `useDefaults: boolean = false` (attribute `use-defaults`, reflected) — whether the conversation is
   using the default tool set (`true`) or a custom selection (`false`).
-- `label: string = 'Select tools'` — the dialog's visible heading and accessible name.
+- `label?: string` — the dialog's visible heading and accessible name. Omission uses localized
+  `selectTools`; every supplied string, including `"Select tools"` and `""`, remains literal.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
   host; the panel remains labelled by its visible heading instead of cloning that name. A direct
   property assignment made without the attribute can name the panel.
-- `searchPlaceholder: string = 'Search tools…'` (attribute `search-placeholder`)
+- `searchPlaceholder?: string` (attribute `search-placeholder`) — omission uses localized
+  `searchToolsPlaceholder`; every supplied string, including `"Search tools…"` and `""`, remains
+  literal.
 - `filter: ToolSelectFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive name/description substring match.
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
@@ -510,7 +516,7 @@ assigned elements.
 `defaults-row`, `defaults-toggle`, `defaults-hint`, `body` (the keyboard-focusable scroll region),
 `empty`, `category`, `category-heading`,
 `category-count`, `category-list`, `tool-row`, `tool-checkbox`, `tool-name`, `tool-icon`,
-`tool-description`, `tool-disabled-reason`, `footer`
+`tool-description`, `tool-disabled-reason`, `limit`, `load-more`, `footer`
 
 **Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token
@@ -555,6 +561,9 @@ checkboxes for editing.
   `useDefaults` switch is on — a tool without `disabled` set can still render as a locked checkbox while
   `useDefaults` is true.
 - `disabledReason` text only renders when both `tool.disabled` and `tool.disabledReason` are set.
+- Tool descriptions and disabled reasons are checkbox descriptions, not label content: the tool
+  name remains the concise accessible name and the supporting text is linked through the checkbox's
+  stable description bridge.
 - Categories are grouped in first-seen order across `tools`; an empty/whitespace-only `category` folds
   into a trailing "Other" bucket that's always rendered last. A category left with zero matches after
   filtering is dropped entirely, not rendered as an empty heading. A caller-supplied category
@@ -580,7 +589,9 @@ plain text) — this component has no dependency on either.
 
 **Properties:**
 
-- `label: string = 'Thinking'`
+- `label?: string` — omitted localizes `thinkingPanelLabel` (`'Thinking'` in the built-in English
+  catalog). Any supplied string is an explicit override and renders verbatim, including
+  `label="Thinking"` under a non-English `.strings` catalog and `label=""`.
 - `compact: boolean = false` (reflected) — tightens the header/body padding and the header's
   internal gap for dense transcript rows. This is only a density control: its card border and
   surface remain, so use `frame="plain"` when surrounding message chrome already supplies them.
@@ -604,7 +615,8 @@ jump-to-latest action of its own.
 **Events:** cancelable `lr-toggle-request` (`detail: { expanded: boolean }`) fires before a header
 activation changes state. Prevent it to retain the current `expanded` value. An accepted request
 then updates `expanded` and emits the non-cancelable committed `lr-toggle` with the same detail;
-vetoed requests never emit the committed event.
+vetoed requests never emit the committed event. `lr-follow-change` (`detail: { following: boolean }`)
+reports user scroll release or re-engagement; direct `follow` assignments do not echo it.
 
 **Slots:** default (the reasoning/thinking content; entirely free-form)
 
@@ -743,7 +755,7 @@ message text for a group), `group` (one chained-error group of frames), `frame` 
 frame button, carrying `data-internal` for internal frames, or a non-activatable raw row for an
 unsafe location), `frame-function` (the frame's function name), `frame-location` (the frame's
 `file:line:col` text), `internal-toggle` (the collapse/expand toggle for a run of internal frames),
-`raw` (the verbatim fallback when zero structured frames parsed), `copy-button` (only rendered
+`limit` (the resource-ceiling status when additional frames are omitted), `raw` (the verbatim fallback when zero structured frames parsed), `copy-button` (only rendered
 while `copyable`).
 
 **Themeable custom properties:** `--lr-stack-trace-max-height` (default `none`),
@@ -1022,9 +1034,10 @@ string[] }` — the (intentionally flat) schema shape this component can render.
   from `schema`'s own `default`; this is what actually renders and what `lr-input`'s detail carries.
   A key the user has explicitly cleared (a real own property set to `undefined`) stays cleared rather
   than snapping back to its default — only a key genuinely absent from `value` falls back.
-- `errors: Record<string, string>` — the current per-field validation errors (`{ [propertyKey]:
-message }`) for required presence, primitive type, finite number/integer, enum, const, and
-  unsupported type; independent of which fields have been visited.
+- `errors: Readonly<Record<string, string>>` — a frozen effective validation-error snapshot.
+  Intrinsic errors use their schema property key; a schema-wide/serialization error or consumer
+  custom-validity message uses `base`, the whole-control part. It is independent of which fields
+  have been visited.
 - `formError: string` — a schema-wide/JSON-serialization error that has no honest field key; empty
   when the current effective value is safe to submit.
 
@@ -1047,23 +1060,25 @@ message }`) for required presence, primitive type, finite number/integer, enum, 
   with its own message restored, and clearing never forces a form with an unmet `required` property
   valid. The consumer's error survives every intrinsic recomputation in between (each field edit
   re-runs the validity sync) and a `form.reset()`, matching a native control. The message is
-  whole-control state, so it is deliberately absent from `errors`, which is keyed by schema
-  property; it is caller-supplied content and is used verbatim, never localized.
+  whole-control state exposed as `errors.base`; it is caller-supplied content and is used verbatim,
+  never localized.
 - `click(): void` — forwards a host click to the first generated field's control, so the form
   behaves like a single control under both a `<label>`-driven and a programmatic click; a no-op
   while `disabled`.
 
 **Events:** `lr-input` (`detail: { value: Record<string, unknown> }` — the full current value
 object, every property with defaults resolved, not just the field that changed), `lr-validity-change`
-(`detail: { valid: boolean; errors: Record<string, string> }` — fired whenever overall validity or
-the field-error set changes, including once up front at connect time; serialization-only failures
-set `valid: false` while `formError`, rather than a fabricated field key, carries the root message),
-and no-detail `focus`/`blur` events for generated native text/number inputs. The composed
+(frozen `detail: { valid: boolean; errors: Readonly<Record<string, string>> }` — deduplicated on
+effective native validity, including consumer custom errors and own/fieldset validation barring;
+fired once up front at connect time and after every effective change; serialization-only failures
+publish their root message as `errors.base` and `formError`), and no-detail `focus`/`blur` events for
+generated native text/number inputs. The composed
 `<lr-select>` controls already bubble their own focus/blur bridges through the host.
 Their implementation events (`input`, `change`, `lr-change`, select show/hide, and option mutation)
 are contained at the form boundary; consumers receive the single form-level `lr-input` contract.
-`lr-invalid` (no detail) is the bubbling/composed alias emitted when the complete parameter form
-fails a native validity check.
+`lr-invalid` (no detail) is the bubbling/composed, cancelable alias emitted when the complete
+parameter form fails a native validity check; preventing it also prevents the native `invalid`
+event's default validation UI.
 
 **Slots:** none.
 
@@ -1355,6 +1370,8 @@ Space).
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), `limit` (the 500-span projection notice), and `live-region`.
+The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
+paint width would otherwise be only a few pixels.
 
 The terminal axis tick is end-aligned so its label remains inside the allocated chart width. Roving
 keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span
@@ -1401,7 +1418,9 @@ line; `children` is exactly **one** level of sub-steps — a child's own `childr
 `id`; duplicate data stays visible but fails closed, with no row keyboard stops or reorder requests.
 `reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
 It emits a request only; the host must assign a new reordered `items` array before the task visibly
-moves or an announcement is made. `label: string = 'Tasks'`, `headingLevel: LyraHeadingLevel = '3'`
+moves or an announcement is made. `label?: string` omits into localized `taskListLabel` (`'Tasks'`
+in the built-in English catalog); any supplied value is an explicit verbatim override, including
+`'Tasks'` under a non-English `.strings` catalog and `''`. `headingLevel: LyraHeadingLevel = '3'`
 (attribute `heading-level`, reflected) — `1`–`6` expose the visible header as that semantic heading
 level around either its disclosure button or static content, invalid untyped values retain level 3,
 and `none` is the explicit visual-only opt-out — `expanded: boolean = true` (reflected), and
@@ -1459,11 +1478,13 @@ characters; an overlong unterminated CSI/OSC sequence is dropped and the next wr
 clean parser boundary.
 
 **Properties:** `content: string = ''` — initial/replaceable buffer content, parsed for ANSI/SGR
-codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boolean = true`
+codes. `replace(content: string): void` synchronously replaces the parsed buffer and reactive
+`content` source, preserving commit order with same-turn `write()`/`clear()` calls.
+`maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boolean = true`
 (reflected) — stick-to-bottom, `wrap: boolean = true` (reflected), `copyable: boolean = true`
 (reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
-`accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
+`accessibleLabel: string = ''` (attribute `aria-label`), `highlights: readonly LyraHighlight[] = []` (attribute:
 false), and `activeHighlightId: string | null = null` (attribute: false). Later duplicate highlight
 ids are omitted before painting, focus ownership, active lookup, and activation events. A host `aria-label` names
 the host; the nested `role="log"` keeps the localized terminal-purpose name rather than cloning the
@@ -1505,7 +1526,9 @@ text, anchor, rects }`).
 `data-line-number`/`data-match`/`data-highlight-tone`, and is forwarded via `exportparts` so
 `lr-terminal::part(line)` reaches the rendered lines from a consumer stylesheet despite them living
 in the internal `<lr-virtual-list>`'s shadow root), `jump-to-latest` (shown while `follow` is
-disengaged and new output has arrived), and `announcer` (the visually-hidden, `aria-hidden` mirror
+disengaged and new output has arrived), `line-interactive`, `line-highlight-accent`,
+`line-highlight-success`, `line-highlight-warning`, `line-highlight-danger`, `line-highlight-neutral`,
+`line-match`, `line-active-match`, and `announcer` (the visually-hidden, `aria-hidden` mirror
 of the text last announced while `announce-output` is set).
 
 `[part="announcer"]` is a styling and inspection surface only — it carries **no** live-region role
@@ -1624,6 +1647,8 @@ secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the
 `status-text` label). Same state-scoped-property convention described under `lr-span-waterfall`
 above: an inline `var()` fallback rather than a `:host` declaration, so either can be set on the
 element or any ancestor, and they exist because `::part(row)[data-active]` is invalid CSS.
+`--lr-trace-tree-max-indent` (default `var(--lr-size-12rem)`) caps visual nesting indentation;
+semantic `aria-level` remains exact at deeper levels.
 
 **Contrast note:** the active row is more than a tint. Its secondary text would sit at ~4.25:1
 against the default tint if it stayed at `--lr-color-text-quiet`, so it rises to full-strength
@@ -1668,7 +1693,9 @@ summary, keyed render, or virtualization path is chosen. `LyraVariant = 'neutral
 five values as every other `variant` in the library. An invalid `timestamp` string is treated as
 unset. `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
-`label: string = 'Activity'`, `showTimestamps: boolean = false` (attribute `show-timestamps`),
+`label?: string` — omission localizes `activityFeedLabel` (`'Activity'` in the built-in English
+catalog), while any supplied string is a verbatim override, including `'Activity'` under a
+non-English `.strings` catalog and `''` — `showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
@@ -1756,7 +1783,9 @@ alongside the plain failure message.
 name: string; tests: TestCaseResult[] }` and `TestCaseResult { id: string; name: string; status:
 TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed' | 'failed' |
 'skipped' | 'running'` (all three exported here). `statusFilter: TestStatus[] =
-[]` (attribute: false) — empty shows every status; and `autoExpandFailures: boolean = true`
+[]` (attribute: false) — empty shows every status. `runId: string | null = null` (attribute
+`run-id`) identifies the source run, and `runState: TestRunState = 'idle'` (attribute `run-state`,
+reflected) exposes its lifecycle. `autoExpandFailures: boolean = true`
 (attribute `auto-expand-failures`). A duration renders only when it is finite and non-negative;
 invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Suite ids, then test
 ids within each suite, use deterministic first-wins identity. Foreign runtime statuses normalize
@@ -2672,6 +2701,8 @@ cancelable `lr-change` before updating the current arrays, while the host remain
 persistence.
 `versions: PromptStudioVersion[] = []` is a property-only host-controlled input;
 `selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
+`heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
+label when unset;
 `running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
 (all reflected). `reorderable` adds native move-up/move-down controls for each message. A move first
 emits a cancelable request, so a host can veto it while persisting the proposed order and later
@@ -2759,8 +2790,10 @@ to an `error`, which read as a false alarm. Both are inline `var()` fallbacks at
 so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
 invalid CSS, so this is the only way to recolor one severity without touching the others.
 
-**Themeable custom properties:** `--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see
-above); otherwise shared tokens only.
+**Themeable custom properties:** `--lr-schema-viewer-max-indent` (default `var(--lr-size-12rem)`)
+caps visual nesting indentation while preserving complete JSON Pointer paths;
+`--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see above); otherwise shared tokens
+only.
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
 `issue-limit` show their respective truncation as ordinary, non-live status text. Newly reaching or
@@ -2820,3 +2853,442 @@ import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-pane
 - `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-agent-tools-activity-feed-activity-feed-contracts`** — Supporting data types and helpers for this component family.
+  `ActivityEntry {
+    id: unknown;
+    text: unknown;
+    icon: unknown;
+    timestamp: unknown;
+    variant: unknown;
+  }`
+  `ActivityFeedFollowChangeDetail {
+    following: unknown;
+  }`
+  `ActivityFeedToggleDetail {
+    expanded: unknown;
+  }`
+
+- **`components-agent-tools-agent-eval-dashboard-agent-eval-dashboard-contracts`** — Supporting data types and helpers for this component family.
+  `AgentEvaluationDashboardRun {
+    id: unknown;
+    label: unknown;
+    status: unknown;
+    metrics: unknown;
+  }`
+  `AgentEvaluationMetric {
+    id: unknown;
+    label: unknown;
+    value: unknown;
+    format: unknown;
+  }`
+
+- **`components-agent-tools-agent-run-agent-run-contracts`** — Supporting data types and helpers for this component family.
+  `AgentRunMetric {
+    id: unknown;
+    label: unknown;
+    value: unknown;
+    variant: unknown;
+  }`
+
+- **`components-agent-tools-agent-status-presentation-contracts`** — Supporting data types and helpers for this component family.
+  `agentStatusKind(/* public names: status */): unknown`
+  `agentStatusLabel(/* public names: status */): unknown`
+  `agentStatusMessage(/* public names: status */): unknown`
+  `AgentStatusPresentation {
+    label: unknown;
+    variant: unknown;
+    terminal: unknown;
+    active: unknown;
+    kind: unknown;
+    message: unknown;
+  }`
+  `agentStatusVariant(/* public names: status, fallback */): unknown`
+  `isAgentStatusActive(/* public names: status */): unknown`
+  `isAgentStatusTerminal(/* public names: status */): unknown`
+
+- **`components-agent-tools-approval-queue-approval-queue-contracts`** — Supporting data types and helpers for this component family.
+  `ToolApprovalRequest {
+    id: unknown;
+    toolName: unknown;
+    args: unknown;
+    status: unknown;
+  }`
+
+- **`components-agent-tools-approval-state-contracts`** — Supporting data types and helpers for this component family.
+  `approvalAction(/* public names: decision */): unknown`
+  `approvalDecision(/* public names: action */): unknown`
+
+- **`components-agent-tools-artifact-panel-artifact-panel-contracts`** — Supporting data types and helpers for this component family.
+  `ArtifactVersion {
+    id: unknown;
+    label: unknown;
+  }`
+
+- **`components-agent-tools-browser-frame-browser-frame-contracts`** — Supporting data types and helpers for this component family.
+  `BrowserPing {
+    id: unknown;
+    x: unknown;
+    y: unknown;
+    kind: unknown;
+  }`
+
+- **`components-agent-tools-commit-card-commit-card-contracts`** — Supporting data types and helpers for this component family.
+  `CommitFileChange {
+    path: unknown;
+    additions: unknown;
+    deletions: unknown;
+    status: unknown;
+  }`
+
+- **`components-agent-tools-context-inspector-context-inspector-contracts`** — Supporting data types and helpers for this component family.
+  `ContextInspectorRedaction {
+    start: unknown;
+    end: unknown;
+    reason: unknown;
+  }`
+  `ContextInspectorSegment {
+    id: unknown;
+    label: unknown;
+    text: unknown;
+    tokens: unknown;
+    tone: unknown;
+    citation: unknown;
+    truncated: unknown;
+    omittedTokens: unknown;
+    redactions: unknown;
+  }`
+
+- **`components-agent-tools-eval-dataset-eval-dataset-contracts`** — Supporting data types and helpers for this component family.
+  `EvalExample {
+    id: unknown;
+    input: unknown;
+    expectedOutput: unknown;
+    tags: unknown;
+    metadata: unknown;
+  }`
+
+- **`components-agent-tools-eval-result-eval-result-contracts`** — Supporting data types and helpers for this component family.
+  `EvalRunResult {
+    id: unknown;
+    label: unknown;
+    model: unknown;
+    promptVersion: unknown;
+    output: unknown;
+    scores: unknown;
+    review: unknown;
+  }`
+
+- **`components-agent-tools-evaluation-run-evaluation-run-contracts`** — Supporting data types and helpers for this component family.
+  `EvaluationCitationSelectDetail {
+    exampleId: unknown;
+    citation: unknown;
+  }`
+  `EvaluationClaimSelectDetail {
+    exampleId: unknown;
+    claim: unknown;
+  }`
+  `EvaluationContent {
+    text: unknown;
+    format: unknown;
+    language: unknown;
+  }`
+  `EvaluationExampleResult {
+    id: unknown;
+    label: unknown;
+    status: unknown;
+    input: unknown;
+    output: unknown;
+    grounding: unknown;
+    citations: unknown;
+    toolTrace: unknown;
+  }`
+  `EvaluationExampleToggleDetail {
+    exampleId: unknown;
+    expanded: unknown;
+  }`
+  `EvaluationToolActivateDetail {
+    exampleId: unknown;
+    invocationId: unknown;
+    sourceKey: unknown;
+  }`
+  `EvaluationToolApprovalDetail {
+    exampleId: unknown;
+    args: unknown;
+    sourceKey: unknown;
+    invocationId: unknown;
+    approved: unknown;
+  }`
+  `EvaluationToolRenderErrorDetail {
+    exampleId: unknown;
+    toolName: unknown;
+    error: unknown;
+    invocationId: unknown;
+    sourceKey: unknown;
+  }`
+
+- **`components-agent-tools-mcp-app-mcp-app-contracts`** — Supporting data types and helpers for this component family.
+  `McpAppCsp {
+    connectDomains: unknown;
+    resourceDomains: unknown;
+    frameDomains: unknown;
+  }`
+  `McpAppPermissions {
+    camera: unknown;
+    microphone: unknown;
+    geolocation: unknown;
+    clipboardRead: unknown;
+    clipboardWrite: unknown;
+  }`
+  `McpAppToolCallDetail {
+    requestId: unknown;
+    name: unknown;
+    args: unknown;
+    frameGeneration: unknown;
+  }`
+
+- **`components-agent-tools-policy-summary-policy-summary-contracts`** — Supporting data types and helpers for this component family.
+  `PolicyDecision {
+    id: unknown;
+    category: unknown;
+    label: unknown;
+    state: unknown;
+    explanation: unknown;
+    detail: unknown;
+  }`
+
+- **`components-agent-tools-prompt-studio-prompt-studio-contracts`** — Supporting data types and helpers for this component family.
+  `PromptStudioMessage {
+    id: unknown;
+    role: unknown;
+    content: unknown;
+    name: unknown;
+  }`
+  `PromptStudioMessageReorderDetail {
+    messages: unknown;
+    messageId: unknown;
+    fromIndex: unknown;
+    toIndex: unknown;
+  }`
+  `PromptStudioState {
+    messages: unknown;
+    variables: unknown;
+  }`
+  `PromptStudioVariable {
+    name: unknown;
+    value: unknown;
+    description: unknown;
+  }`
+  `PromptStudioVersion {
+    id: unknown;
+    label: unknown;
+    messages: unknown;
+    variables: unknown;
+    createdAt: unknown;
+  }`
+
+- **`components-agent-tools-run-events-contracts`** — Supporting data types and helpers for this component family.
+  `AgentRunActivateDetail {
+    runId: unknown;
+    run: unknown;
+  }`
+
+- **`components-agent-tools-schema-viewer-schema-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `JsonSchemaNode {
+    $ref: unknown;
+    type: unknown;
+    title: unknown;
+    description: unknown;
+    properties: unknown;
+    items: unknown;
+    required: unknown;
+    enum: unknown;
+    const: unknown;
+    default: unknown;
+    examples: unknown;
+    oneOf: unknown;
+    anyOf: unknown;
+    allOf: unknown;
+  }`
+  `SchemaValidationIssue {
+    path: unknown;
+    message: unknown;
+    severity: unknown;
+  }`
+
+- **`components-agent-tools-stack-trace-stack-trace-parse-contracts`** — Supporting data types and helpers for this component family.
+  `parseStackTrace(/* public names: trace, options */): unknown`
+  `StackFrame {
+    functionName: unknown;
+    file: unknown;
+    line: unknown;
+    column: unknown;
+    internal: unknown;
+    raw: unknown;
+  }`
+  `StackGroup {
+    message: unknown;
+    frames: unknown;
+  }`
+  `StackTraceParseOptions {
+    internalPatterns: unknown;
+  }`
+  `StackTraceParseResult {
+    groups: unknown;
+    truncated: unknown;
+    source: unknown;
+  }`
+
+- **`components-agent-tools-subagent-panel-subagent-panel-contracts`** — Supporting data types and helpers for this component family.
+  `SubagentRun {
+    id: unknown;
+    parentId: unknown;
+    label: unknown;
+    status: unknown;
+    task: unknown;
+    model: unknown;
+    progressRatio: unknown;
+    startedAt: unknown;
+    endedAt: unknown;
+    metadata: unknown;
+  }`
+
+- **`components-agent-tools-task-list-task-list-contracts`** — Supporting data types and helpers for this component family.
+  `TaskItem {
+    id: unknown;
+    label: unknown;
+    status: unknown;
+    detail: unknown;
+    children: unknown;
+  }`
+  `TaskListToggleDetail {
+    expanded: unknown;
+  }`
+
+- **`components-agent-tools-test-results-test-results-contracts`** — Supporting data types and helpers for this component family.
+  `TestCaseResult {
+    id: unknown;
+    name: unknown;
+    status: unknown;
+    durationMs: unknown;
+    message: unknown;
+  }`
+  `testResultDetailSlotName(/* public names: suiteId, testId */): unknown`
+  `TestSuiteResult {
+    id: unknown;
+    name: unknown;
+    tests: unknown;
+  }`
+
+- **`components-agent-tools-thinking-panel-thinking-panel-contracts`** — Supporting data types and helpers for this component family.
+  `ThinkingPanelToggleDetail {
+    expanded: unknown;
+  }`
+
+- **`components-agent-tools-tool-call-chip-tool-call-chip-contracts`** — Supporting data types and helpers for this component family.
+  `ToolChipSelectDetail {
+    name: unknown;
+    callId: unknown;
+  }`
+
+- **`components-agent-tools-tool-result-view-registry-contracts`** — Supporting data types and helpers for this component family.
+  `DirectToolRendererDefinition {
+    render: unknown;
+    result: unknown;
+    args: unknown;
+    context: unknown;
+    load: unknown;
+    matches: unknown;
+    payload: unknown;
+  }`
+  `findToolRenderer(/* public names: toolName, payload, registry */): unknown`
+  `getDefaultToolRendererRegistry(): unknown`
+  `LazyToolRendererDefinition {
+    render: unknown;
+    load: unknown;
+    default: unknown;
+    matches: unknown;
+    payload: unknown;
+  }`
+  `loadToolRenderer(/* public names: def */): unknown`
+  `registerToolRenderer(/* public names: name, def */): unknown`
+  `ToolRenderContext {
+    reportStatus: unknown;
+    status: unknown;
+  }`
+
+- **`components-agent-tools-tool-select-dialog-tool-select-dialog-contracts`** — Supporting data types and helpers for this component family.
+  `ToolSelectDialogTool {
+    id: unknown;
+    name: unknown;
+    description: unknown;
+    category: unknown;
+    icon: unknown;
+    disabled: unknown;
+    disabledReason: unknown;
+  }`
+  `ToolSelectionChangeDetail {
+    selected: unknown;
+    useDefaults: unknown;
+  }`
+
+- **`components-agent-tools-tool-timeline-tool-timeline-contracts`** — Supporting data types and helpers for this component family.
+  `ToolTimelineActivateDetail {
+    invocationId: unknown;
+    sourceKey: unknown;
+  }`
+  `ToolTimelineApprovalDetail {
+    args: unknown;
+    sourceKey: unknown;
+    invocationId: unknown;
+    approved: unknown;
+  }`
+  `ToolTimelineEntry {
+    sourceKey: unknown;
+    icon: unknown;
+    startedAt: unknown;
+    endedAt: unknown;
+    retryCount: unknown;
+    redactedFields: unknown;
+    needsApproval: unknown;
+    approved: unknown;
+    id: unknown;
+    name: unknown;
+    args: unknown;
+    status: unknown;
+    result: unknown;
+    error: unknown;
+  }`
+  `ToolTimelineRenderErrorDetail {
+    toolName: unknown;
+    error: unknown;
+    invocationId: unknown;
+    sourceKey: unknown;
+  }`
+
+- **`components-agent-tools-trace-tree-span-contracts`** — Supporting data types and helpers for this component family.
+  `LyraSpan {
+    id: unknown;
+    parentId: unknown;
+    name: unknown;
+    kind: unknown;
+    startMs: unknown;
+    endMs: unknown;
+    status: unknown;
+    tokensIn: unknown;
+    tokensOut: unknown;
+    costText: unknown;
+    detail: unknown;
+  }`
+  `LyraSpanProjection {
+    spans: unknown;
+    byId: unknown;
+    truncated: unknown;
+  }`
+  `normalizeLyraSpanKind(/* public names: value */): unknown`
+  `normalizeLyraSpans(/* public names: values, activeSpanId */): unknown`
+  `normalizeLyraSpanStatus(/* public names: value */): unknown`

@@ -229,7 +229,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
       <div part="base" role="group" aria-label=${ariaLabel} @keydown=${this.onKeyDown}>
         ${this.wrap
           ? html`<div part="row" class="row">${chips}</div>`
-          : html`<lr-scroller orientation="horizontal" hide-scrollbar><div part="row" class="row">${chips}</div></lr-scroller>`}
+          : html`<lr-scroller orientation="horizontal" without-scrollbar><div part="row" class="row">${chips}</div></lr-scroller>`}
       </div>
     `;
   }

@@ -14,7 +14,7 @@ import {
   dispatchNativeInputEvent,
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './emoji-picker.styles.js';
 import { loadEmojiDataCached } from './emoji-data-loader.js';
 // Data types live in ./emoji-types.js (extracted to break a type-only import cycle with
@@ -146,12 +146,8 @@ function probePixels(probe: HTMLElement, fallback: number, allowZero = false): n
   return px > 0 || allowZero ? px : fallback;
 }
 
-/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
- *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
-export type LyraEmojiPickerSize = LyraSizeStep;
-
 export interface LyraEmojiPickerEventMap {
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
@@ -160,8 +156,8 @@ export interface LyraEmojiPickerEventMap {
   'lr-input': CustomEvent<{ value: string }>;
   /** Fired when an emoji pick is committed. `detail.value` is the picked glyph. */
   'lr-change': CustomEvent<{ value: string }>;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 
 class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
@@ -265,7 +261,15 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *   - Roving keyboard/pointer-active background.
  * @cssprop [--lr-emoji-picker-selected-bg=var(--lr-color-brand-quiet)] - Committed-value background.
  * @cssprop [--lr-emoji-picker-selected-color=var(--lr-color-text)] - Committed-value foreground.
+ * @cssprop [--lr-emoji-picker-selected-outline-color=var(--lr-color-brand)] - Outline color for
+ *   the committed selection.
  * @cssprop [--lr-emoji-picker-pressed-bg=color-mix(...)] - Pointer-pressed background.
+ * @cssprop [--lr-emoji-picker-pressed-outline-color=var(--lr-color-brand)] - Outline color while
+ *   an emoji button is being pointer-pressed.
+ * @cssprop [--lr-emoji-picker-keyboard-active-outline-color=var(--lr-color-brand)] - Outline color
+ *   for the roving keyboard-active emoji.
+ * @cssprop [--lr-emoji-picker-active-bg=var(--lr-color-brand-quiet)] - Compatibility fallback
+ *   background for hover and roving-active states.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  *   other quoted string (`' (required)'`, a localized word) to replace it.

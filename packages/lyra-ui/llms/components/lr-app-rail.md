@@ -16,7 +16,7 @@
 
 ## `lr-app-rail`
 
-A responsive navigation rail that adapts across three presentations as the *viewport* narrows (not
+A responsive navigation rail that adapts across three presentations as the _viewport_ narrows (not
 this element's own inline size): `'full'` (nav items show icon + label, inline), `'icon-only'` (a
 narrower inline rail, icons only), and `'mobile'` (hidden behind a toggle button; opening it shows a
 focus-trapped floating overlay over the page). First-party invention (no `wa-*`/`sl-*` counterpart).
@@ -24,7 +24,7 @@ Breakpoints are viewport-width `matchMedia()` queries against `icon-only-breakpo
 `mobile-breakpoint`, not a `ResizeObserver` on this element — presentation tracks the actual device/
 window width the way a native OS shell's navigation does, not however much horizontal space a
 particular layout happens to give it. `[part="base"]` (the inline `'full'`/`'icon-only'`
-presentation) and `[part="panel"]` (the mobile overlay) are the *same* element promoted in place
+presentation) and `[part="panel"]` (the mobile overlay) are the _same_ element promoted in place
 across modes (mirrors `<lr-widget>`'s fullscreen mode) — never both at once, and slotted nav
 content is never duplicated.
 
@@ -32,7 +32,7 @@ Opting in to `resizable` adds a continuously draggable width for the `'full'` st
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
 `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist the fields
 selected by `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restore them on the
-next mount (mirrors `lr-split`'s `storage-key`; effective `mode` is breakpoint-derived and never
+next mount (mirrors `lr-multi-split`'s `storage-key`; effective `mode` is breakpoint-derived and never
 persisted). The backward-compatible allowlist is `open width`; use
 `persist="width preferred-mode"` for durable layout preference without restoring the transient
 mobile overlay. Without a `storageKey` there is no persistence — listen for `lr-rail-resize` and
@@ -44,6 +44,7 @@ automatically regardless — it's only consulted while `mode` isn't force-pinned
 accessor itself, which still takes full priority.
 
 **Properties:**
+
 - `mode: AppRailMode` (custom accessor, reflected) — the getter always returns one of the three real
   modes (`'full'|'icon-only'|'mobile'`), never `'auto'`. The setter accepts
   `AppRailModeInput` (`AppRailMode | 'auto'`): assigning `'full'`/`'icon-only'`/`'mobile'` forces
@@ -61,9 +62,10 @@ accessor itself, which still takes full priority.
   while `mode` is `'mobile'` — the value is preserved (not reset) while another mode is active, but
   no overlay chrome renders until `mode` is `'mobile'` again. Set this directly, or use the built-in
   toggle button — there is no separate `show()`/`hide()` pair.
-- `label: string = 'Navigation'` — accessible name for the rail's navigation landmark, and for its
-  dialog role while the mobile overlay is open. A host-level `aria-label` attribute (see below)
-  takes precedence over this when both are set.
+- `label?: string` — optional accessible name for the rail's navigation landmark and mobile dialog.
+  Every nonempty supplied string is honored literally; only absence/empty uses the localized
+  navigation fallback. A host-level `aria-label` attribute (including an explicit empty value)
+  takes precedence.
 - `preferredMode?: 'full' | 'icon-only' | null` (attribute `preferred-mode`) — manually prefers
   `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while `mobile-breakpoint` continues to
   be tracked automatically regardless — e.g. a user's manual collapse toggle that should still yield
@@ -117,8 +119,9 @@ vetoing that one would leave `open` stuck `true` in a mode where it's meaningles
 proposed width from drag or keyboard stepping, emitted before the component assigns
 `railWidthPx` — call `preventDefault()` to keep the current width. It is not fired when a consumer
 sets `railWidthPx` directly), and `lr-rail-resize` (`detail: AppRailResizeDetail` =
-`{ widthPx: number }`; non-cancelable committed width, emitted after the component assigns
-`railWidthPx`, for the same accepted gesture paths only).
+`{ widthPx: number }`; non-cancelable committed width, emitted immediately for a genuine keyboard
+step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/lost gestures, and
+consumer property writes emit no committed event).
 
 **Slots:** default (nav items — generic slotted content, e.g. `<a>`/`<button>` elements the consumer
 builds with its own icon+label structure; clicking anywhere in this slot closes the mobile overlay if
@@ -149,25 +152,35 @@ fallback at its exact state rule and preserves the previous brand or active-mix 
 **Optional peer deps:** none.
 
 ```html
-<lr-app-rail label="Main navigation" icon-only-breakpoint="960px" mobile-breakpoint="600px" resizable>
+<lr-app-rail
+  label="Main navigation"
+  icon-only-breakpoint="960px"
+  mobile-breakpoint="600px"
+  resizable
+>
   <span slot="header"><img src="/logo.svg" alt="Acme" /></span>
-  <a href="/inbox" aria-label="Inbox"><svg aria-hidden="true">...</svg><span>Inbox</span></a>
-  <a href="/settings" aria-label="Settings"><svg aria-hidden="true">...</svg><span>Settings</span></a>
+  <a href="/inbox" aria-label="Inbox"
+    ><svg aria-hidden="true">...</svg><span>Inbox</span></a
+  >
+  <a href="/settings" aria-label="Settings"
+    ><svg aria-hidden="true">...</svg><span>Settings</span></a
+  >
   <span slot="footer"><button>Profile</button></span>
 </lr-app-rail>
 <script type="module">
-  const rail = document.querySelector('lr-app-rail');
-  rail.addEventListener('lr-rail-resize-request', (e) => {
+  const rail = document.querySelector("lr-app-rail");
+  rail.addEventListener("lr-rail-resize-request", (e) => {
     if (e.detail.widthPx > 360) e.preventDefault();
   });
-  rail.addEventListener('lr-rail-resize', (e) =>
-    localStorage.setItem('railWidthPx', String(e.detail.widthPx)),
+  rail.addEventListener("lr-rail-resize", (e) =>
+    localStorage.setItem("railWidthPx", String(e.detail.widthPx))
   );
 </script>
 ```
+
 ```ts
-rail.mode = 'icon-only'; // force a presentation regardless of viewport width
-rail.mode = 'auto';      // release the force, resume live breakpoint tracking
+rail.mode = "icon-only"; // force a presentation regardless of viewport width
+rail.mode = "auto"; // release the force, resume live breakpoint tracking
 ```
 
 The package root also exports a pure `computeAppRailMode(iconOnlyMatches: boolean, mobileMatches:
@@ -188,6 +201,7 @@ real accessible name (`aria-label`, visually hidden text, or `title`) regardless
 component only lays out whatever is slotted and can't inspect or fix up a consumer's own markup.
 
 **Known gotchas:**
+
 - `mode`'s setter accepts the wider `AppRailModeInput` (including the `'auto'` sentinel) but the
   getter's return type is the narrower `AppRailMode` — assigning `'auto'` is a one-way instruction,
   not a value read back later; there is no `isForced`-style property to check whether the rail is
@@ -228,11 +242,12 @@ set and enabled, otherwise a button; the rail can add its `icon-only` presentati
 removing the label from the accessibility tree.
 
 **Properties:**
+
 - `href: string = ''` — optional destination. Without it, the item renders as a button.
 - `target: string = ''` — optional link target.
 - `disabled: boolean = false` (reflected) — prevents activation while retaining the item in the rail.
-- `active: boolean = false` (reflected) — marks this as the destination for the current page/view;
-  reflects `aria-current="page"` on `[part='base']` and drives the active visual treatment. The rail
+- `current: boolean = false` (reflected) — marks this as the destination for the current page/view;
+  reflects `aria-current="page"` on `[part='base']` and drives the current visual treatment. The rail
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location).
 - `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
@@ -248,18 +263,24 @@ same precedence supplies the tooltip text when that opt-in flyout is visible.
 **Methods:** `click(): void` activates the internal native link or button; it is a no-op while
 `disabled`.
 
+If an `href`/`disabled` update replaces a focused link or button, focus follows an available native
+replacement. When that replacement is disabled or inert, focus returns to the available element
+that led into the item, or to the stable owning rail surface when no return target exists. A newer
+external focus move is always preserved, and this repair dispatches no activation event.
+
 **Slots:** default (the visible label), `icon` (the leading decorative icon, always hidden from
-assistive technology; the default slot or host `aria-label` names the native control).
+assistive technology and inert across its flattened subtree; the default slot or host `aria-label`
+names the native control, which remains the sole action).
 
 **CSS parts:** `base`, `icon`, `label`, `tooltip` (the hover/focus label flyout, only rendered while
 `tooltip` is set, the item is `icon-only`, and it is hovered or focused).
 
 **Themeable custom properties:** `--lr-app-rail-item-current-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-app-rail-item-current-color` (default
-`var(--lr-color-brand)`) — background and text/icon color of the `active` (`aria-current="page"`)
+`var(--lr-color-brand)`) — background and text/icon color of the `current` (`aria-current="page"`)
 item. Both are scoped to `[aria-current='page']` only and declared as inline `var()` fallbacks at
-the point of use, never on `:host`, so either can be set on the item itself *or on any ancestor* —
-including on `<lr-app-rail>` or a wrapper above it, to tint every item's active state at once.
+the point of use, never on `:host`, so either can be set on the item itself _or on any ancestor_ —
+including on `<lr-app-rail>` or a wrapper above it, to tint every item's current state at once.
 `::part(base)[aria-current='page']` is invalid CSS (Shadow Parts forbids an attribute selector after
 `::part()`), so before these hooks the only lever was overriding the library-wide
 `--lr-color-brand-quiet`/`--lr-color-brand` tokens, which repainted every other element reading

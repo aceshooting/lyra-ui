@@ -14,22 +14,45 @@ it('renders a link with design-token color and no default UA underline', async (
   expect(base.getAttribute('aria-current')).to.equal('false');
 });
 
+it("restores the declared rel default when the attribute is removed", async () => {
+  const el = (await fixture(
+    html`<lr-breadcrumb-item rel="nofollow"></lr-breadcrumb-item>`
+  )) as LyraBreadcrumbItem;
+  el.removeAttribute("rel");
+  await el.updateComplete;
+  expect(el.rel).to.equal("noreferrer noopener");
+});
+
 it('renders a native button when a non-current item has no href', async () => {
   const breadcrumb = await fixture(html`
     <lr-breadcrumb><lr-breadcrumb-item>Open menu</lr-breadcrumb-item></lr-breadcrumb>
   `);
   const el = breadcrumb.querySelector('lr-breadcrumb-item') as LyraBreadcrumbItem;
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('button[part="base"]');
-  expect((button) != null).to.equal(true);
+  expect(button != null).to.equal(true);
   expect(button!.type).to.equal('button');
   expect(button!.getAttribute('aria-current')).to.equal('false');
   await expect(breadcrumb).to.be.accessible();
 });
 
+it("floors tiny link and button owners to a 24px target in both axes", async () => {
+  for (const markup of [
+    html`<lr-breadcrumb-item href="/tiny"></lr-breadcrumb-item>`,
+    html`<lr-breadcrumb-item></lr-breadcrumb-item>`,
+  ]) {
+    const el = (await fixture(markup)) as LyraBreadcrumbItem;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const rect = base.getBoundingClientRect();
+    expect(rect.width, base.tagName).to.be.at.least(24);
+    expect(rect.height, base.tagName).to.be.at.least(24);
+  }
+});
+
 it('does not inspect an unavailable render root during the server-side first update', () => {
   const el = document.createElement('lr-breadcrumb-item') as LyraBreadcrumbItem;
   el.href = '/reports';
-  const access = el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void };
+  const access = el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void;
+  };
 
   expect(() => access.willUpdate(new Map([['href', '']]))).not.to.throw();
 });

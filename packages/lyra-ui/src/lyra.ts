@@ -156,7 +156,6 @@ export { LyraEmojiPicker } from './components/forms/emoji-picker/emoji-picker.cl
 export type {
   EmojiPickerItem,
   EmojiPickerGroup,
-  LyraEmojiPickerSize,
   LyraEmojiPickerEventMap,
 } from './components/forms/emoji-picker/emoji-picker.class.js';
 export { LyraLocalePicker } from './components/forms/locale-picker/locale-picker.class.js';
@@ -188,10 +187,8 @@ export type {
 } from './components/overlays/toast/toaster.js';
 export { LyraCombobox } from './components/forms/combobox/combobox.class.js';
 export type {
-  LyraComboboxAppearance,
   LyraComboboxPlacement,
   OptionFilter,
-  LyraComboboxSize,
   LyraComboboxSelectionDirection,
   LyraComboboxTagRenderer,
   ComboboxSourceResult,
@@ -205,11 +202,7 @@ export type {
 
 export { LyraOption } from './components/forms/combobox/option.class.js';
 export { LyraSelect } from './components/forms/select/select.class.js';
-export type {
-  LyraSelectAppearance,
-  LyraSelectSize,
-  LyraSelectTagRenderer,
-} from './components/forms/select/select.class.js';
+export type { LyraSelectTagRenderer } from './components/forms/select/select.class.js';
 export { LyraDatePicker } from './components/forms/date-picker/date-picker.class.js';
 export type {
   DateRange,
@@ -217,12 +210,10 @@ export type {
   LyraDatePickerDisabledDates,
   LyraDatePickerFirstDayOfWeek,
   LyraDatePickerPageBy,
-  LyraDatePickerSize,
   LyraDatePickerView,
 } from './components/forms/date-picker/date-picker.class.js';
 export { LyraDateInput } from './components/forms/date-picker/date-input.class.js';
 export type {
-  LyraDateInputAppearance,
   LyraDateInputFirstDayOfWeek,
   LyraDateInputObjectValidator,
   LyraDateInputObjectValidatorResult,
@@ -444,7 +435,6 @@ export type {
   TimeRangeHandle,
   TimeRangePreset,
   TimeRangeValueFormatter,
-  LyraTimeRangeSize,
 } from './components/forms/time-range/time-range.class.js';
 export { LyraSequencePlayback } from './components/media/sequence-playback/sequence-playback.class.js';
 export { LyraPagination } from './components/data/pagination/pagination.class.js';
@@ -630,7 +620,6 @@ export type {
   LyraPhoneNumberAdapter,
   LibphonenumberModuleLike,
   LyraPhoneInputEventDetail,
-  LyraPhoneInputSize,
   LyraPhoneInputSelectionDirection,
 } from './components/forms/phone-input/phone-input.class.js';
 export { LyraWidget } from './components/layout/widget/widget.class.js';
@@ -784,11 +773,10 @@ export type {
   ConversationItemSelectDetail,
 } from './components/conversation/conversation-item/conversation-item.class.js';
 export type { LyraTimestamp } from './components/conversation/timestamp.js';
+export type { LyraCatalog, LyraCatalogEntry } from './utilities/catalog.js';
 export { LyraModelSelect } from './components/conversation/model-select/model-select.class.js';
 export type {
   LyraModelCatalogEntry,
-  LyraModelCatalog,
-  LyraModelSelectSize,
   LyraModelSelectSelectionDirection,
 } from './components/conversation/model-select/model-select.class.js';
 export { LyraSlider } from './components/forms/slider/slider.class.js';
@@ -954,11 +942,14 @@ export { LyraDocumentPreview } from './components/viewers/document-preview/docum
 export type { DocumentPreviewStatus } from './components/viewers/document-preview/document-preview.class.js';
 export { LyraDocumentViewer } from './components/viewers/document-viewer/document-viewer.class.js';
 export {
+  adaptDocumentRenderer,
+  createDocumentRendererAdapter,
   createDocumentRendererRegistry,
   registerDocumentRenderer,
   getDefaultDocumentRendererRegistry,
   findDocumentRenderer,
   loadDocumentRenderer,
+  snapshotLyraDocumentRendererPayload,
 } from './components/viewers/document-viewer/registry.js';
 export type { DocumentViewerCloseReason } from './components/viewers/document-viewer/document-viewer.class.js';
 export type {
@@ -967,6 +958,18 @@ export type {
   DocumentRendererDefinition,
   DocumentRendererRegistry,
   LazyDocumentRendererDefinition,
+  LyraAdaptedDocumentRenderer,
+  LyraAdaptedDocumentRendererDefinition,
+  LyraAvDocumentRendererPayload,
+  LyraDocumentFile,
+  LyraDocumentRendererAdapter,
+  LyraDocumentRendererAdapterDefinition,
+  LyraDocumentRendererDefinition,
+  LyraDocumentRendererPayload,
+  LyraDocumentRendererPayloadFor,
+  LyraDocumentRendererPayloadKind,
+  LyraGenericDocumentRendererPayload,
+  LyraResolvedDocumentRendererDefinition,
 } from './components/viewers/document-viewer/registry.js';
 export { LyraEbookViewer } from './components/viewers/ebook-viewer/ebook-viewer.class.js';
 export type {
@@ -1078,7 +1081,6 @@ export type { LyraIntersectionObserverEventMap } from './components/utility/inte
 export { LyraMutationObserver } from './components/utility/mutation-observer/mutation-observer.class.js';
 export type { LyraMutationObserverEventMap } from './components/utility/mutation-observer/mutation-observer.class.js';
 export type {
-  CardAppearance,
   CardOrientation,
   LyraCardEventMap,
 } from './components/layout/card/card.class.js';
@@ -1093,7 +1095,6 @@ export type { LyraSegmentedItem } from './components/layout/segmented/segmented.
 export { LyraSwatchPicker } from './components/forms/swatch-picker/swatch-picker.class.js';
 export type {
   LyraSwatchPickerMode,
-  LyraSwatchPickerSize,
   SwatchPickerItem,
   SwatchOption,
 } from './components/forms/swatch-picker/swatch-picker.class.js';
@@ -1114,8 +1115,6 @@ export type {
   TextareaResize,
   TextareaWrap,
   TextareaSelectionDirection,
-  TextareaSize,
-  TextareaAppearance,
   TextareaScrollPosition,
 } from './components/forms/textarea/textarea.class.js';
 
@@ -1123,7 +1122,6 @@ export { LyraButton } from './components/forms/button/button.class.js';
 export type {
   ButtonVariant,
   ButtonAppearance,
-  ButtonSize,
   ButtonType,
   ButtonFormEnctype,
   ButtonFormMethod,
@@ -1131,11 +1129,7 @@ export type {
 } from './components/forms/button/button.class.js';
 
 export { LyraInput } from './components/forms/input/input.class.js';
-export type {
-  LyraInputType,
-  LyraInputSize,
-  LyraInputAppearance,
-} from './components/forms/input/input.class.js';
+export type { LyraInputType } from './components/forms/input/input.class.js';
 export { LyraNativeTimeInput } from './components/forms/input/native-time-input.class.js';
 export { LyraNumberInput } from './components/forms/input/number-input.class.js';
 export { LyraTimeInput } from './components/forms/input/time-input.class.js';
@@ -1246,7 +1240,6 @@ export type {
 export { LyraTokenInput } from './components/forms/token-input/token-input.class.js';
 export type {
   LyraTokenInputEventMap,
-  LyraTokenInputSize,
 } from './components/forms/token-input/token-input.class.js';
 export { LyraIcon } from './components/utility/icon/icon.class.js';
 export {
@@ -1312,10 +1305,7 @@ export type {
   LyraClipboardWriteOutcome,
   LyraClipboardWriteSuccess,
 } from './internal/clipboard.js';
-export type {
-  LyraDateInputEventMap,
-  LyraDateInputSize,
-} from './components/forms/date-picker/date-input.class.js';
+export type { LyraDateInputEventMap } from './components/forms/date-picker/date-input.class.js';
 export type { LyraDatePickerEventMap } from './components/forms/date-picker/date-picker.class.js';
 export type { LyraDialogEventMap } from './components/overlays/dialog/dialog.class.js';
 export type {
@@ -1365,13 +1355,36 @@ export * from './components/conversation/checkpoint/checkpoint.class.js';
 export * from './components/agent-tools/confirm-bar/confirm-bar.class.js';
 export * from './components/viewers/notebook-viewer/notebook-viewer.class.js';
 export * from './components/conversation/suggestion-chips/suggestion-chips.class.js';
-export * from './components/conversation/thread-list/thread-list.class.js';
+export { LyraThreadList } from './components/conversation/thread-list/thread-list.class.js';
+export type {
+  LyraChatThread,
+  LyraThreadListEventMap,
+  ThreadBucketKey,
+  ThreadGroupContext,
+  ThreadListGrouping,
+  ThreadRowAction,
+} from './components/conversation/thread-list/thread-list.class.js';
 export * from './components/conversation/usage-badge/usage-badge.class.js';
 export * from './components/conversation/voice-picker/voice-picker.class.js';
-export * from './components/conversation/widget-renderer/widget-renderer.class.js';
-export * from './components/conversation/widget-renderer/resolve.js';
-export * from './components/conversation/widget-renderer/registry.js';
-export * from './components/conversation/widget-renderer/default-registry.js';
+export { LyraWidgetRenderer } from './components/conversation/widget-renderer/widget-renderer.class.js';
+export type { LyraWidgetRendererEventMap } from './components/conversation/widget-renderer/widget-renderer.class.js';
+export { createWidgetDocument } from './components/conversation/widget-renderer/resolve.js';
+export type {
+  LyraWidgetBinding,
+  LyraWidgetDocument,
+  LyraWidgetNode,
+} from './components/conversation/widget-renderer/resolve.js';
+export {
+  createWidgetTypeRegistry,
+  isWidgetTypeRegistry,
+} from './components/conversation/widget-renderer/registry.js';
+export type {
+  LyraWidgetInteraction,
+  LyraWidgetPropType,
+  LyraWidgetTypeDefinition,
+  LyraWidgetTypeRegistry,
+} from './components/conversation/widget-renderer/registry.js';
+export { DEFAULT_WIDGET_TYPE_REGISTRY } from './components/conversation/widget-renderer/default-registry.js';
 export * from './components/data/flow-canvas/flow-canvas.class.js';
 export * from './components/data/flow-node/flow-node.class.js';
 export * from './components/data/flow-minimap/flow-minimap.class.js';
@@ -1577,6 +1590,7 @@ export type {
   LyraTranscriptMode,
 } from './internal/shared-unions.js';
 export type {
+  LyraSearchChangeDetail,
   LyraTextViewerTarget,
   LyraTextViewerTargetEventMap,
 } from './internal/text-viewer-target.js';

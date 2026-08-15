@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -20,7 +20,9 @@ and run history. The host computes metrics and owns evaluation execution.
 
 **Properties:** `metrics: RagEvaluationMetric[] = []` and `runs: RagEvaluationRun[] = []`
 (attribute: false); `metricId: string = ''` (attribute `metric-id`, with the first metric used for
-display when unset/unmatched); `slice: string = ''`; `label: string = ''`;
+display when unset/unmatched); `slice: string = ''`; `label: string = ''` (visible heading and
+fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
+while an explicitly empty host label stays empty on the region);
 `showChart: boolean = true` (attribute `show-chart`, reflected, string-aware true-default
 converter); `chartHeight: string = '220px'` (attribute `chart-height`).
 
@@ -40,7 +42,7 @@ filtered run order; the host computes every metric and owns evaluation execution
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js';
+import "@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js";
 ```
 
 `lr-grounding-summary` and `lr-rag-answer` now accept `GroundingAssessment.claims` and expose

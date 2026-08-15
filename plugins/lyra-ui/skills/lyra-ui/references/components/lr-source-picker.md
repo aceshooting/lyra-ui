@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,18 +21,23 @@ control — the selection is immediate app state consumed by the next retrieval 
 stance `lr-tool-select-dialog` already takes.
 
 **Properties:**
+
 - `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:
-  string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
-  a tree — presence of `children` makes a row a group/folder with tri-state select
+string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
+  a tree — presence of `children` makes a row a group/folder with tri-state select. Input is
+  normalized once into a deterministic first-id-wins model with identity/cycle detection, a depth
+  ceiling of 64 and a 2,000-node ceiling; rejected/truncated input fails closed with localized
+  visible status rather than recursing or exposing duplicate controls
 - `selectedIds: string[] = []` (attribute: false) — controlled; duplicates and ids that are not
   leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
 - `showSelectAll: boolean = true` (attribute `show-select-all`)
 - `searchable: boolean = true`
-- `label: string = ''`
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the tree's computed
-  accessible name; wins over `label` and the localized default, and attribute-reflects from a
-  host-level `aria-label` so plain markup gets ARIA-name forwarding
+- `label: string = ''` — fallback name for the source tree
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
+  the host attribute is absent, overrides the tree name. Authored host `aria-label` instead names
+  the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,
+  which retains the distinct `label`/localized name
 
 **Events:** `lr-sources-change` (`detail: { selectedIds }`, the complete updated leaf-id array,
 fired after every toggle including select-all).
@@ -40,24 +45,27 @@ fired after every toggle including select-all).
 **Slots:** none.
 
 **CSS parts:** `base`, `search` (the built-in filter `lr-input`, only when `searchable`),
-`select-all` (only when `showSelectAll`), `summary` ("{selected} of {total} selected"), `tree`
+`select-all` (only when `showSelectAll`), `select-all-control` (the shared `lr-checkbox` semantic
+owner), `summary` ("{selected} of {total} selected"), `tree`
 (`role="tree"`), `item` (`role="treeitem"`; selection appears only through tri-state
 `aria-checked` — `"true"`, `"false"`, or `"mixed"` — and intentionally has no duplicate
 `aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
 surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
-when `sources` is empty, `noMatches` when a filter empties the tree).
+when `sources` is empty, `noMatches` when a filter empties the tree), `limit` (bounded-normalizer
+failure/truncation). Post-mount no-match and recovery transitions announce through the shared
+light-DOM polite sink; the shadow messages are visible mirrors, never live regions.
 
 **Themeable custom properties:** `--lr-source-picker-checked-bg` — the background of a fully-checked
 selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and
 a fully-selected entry's `[part='checkbox']` (whose resting default is `var(--lr-color-brand)`). The
 two keep their distinct defaults while it is unset; setting it unifies both.
 `--lr-source-picker-checked-border` (default `var(--lr-color-brand)`) — the border color of every
-checked *or* mixed selection control. `--lr-source-picker-mixed-bg` (default
+checked _or_ mixed selection control. `--lr-source-picker-mixed-bg` (default
 `color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))`) — the background of a
 partially-selected entry's `[part='checkbox']`, so a tri-state folder reads as distinct from a fully
 selected one. All three are inline `var()` fallbacks at the point of use rather than `:host`
-declarations, so each can be set on the element *or on any ancestor*:
+declarations, so each can be set on the element _or on any ancestor_:
 `::part(checkbox)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — which previously left re-pointing the library-wide `--lr-color-brand` token as
 the only lever, repainting every other brand surface with it. `--lr-source-picker-indent-size`
@@ -72,16 +80,26 @@ set the step, not the depth. Plus shared tokens otherwise.
 ```html
 <lr-source-picker></lr-source-picker>
 <script>
-  const picker = document.querySelector('lr-source-picker');
+  const picker = document.querySelector("lr-source-picker");
   picker.sources = [
-    { id: 'folder-1', label: 'Reports', children: [{ id: 'doc-1', label: 'Q3.pdf', mimeType: 'application/pdf' }] },
+    {
+      id: "folder-1",
+      label: "Reports",
+      children: [{ id: "doc-1", label: "Q3.pdf", mimeType: "application/pdf" }],
+    },
   ];
-  picker.addEventListener('lr-sources-change', (e) => (retrievalScope = e.detail.selectedIds));
+  picker.addEventListener(
+    "lr-sources-change",
+    (e) => (retrievalScope = e.detail.selectedIds)
+  );
 </script>
 ```
 
 **Known gotchas:**
+
 - Deliberately not form-associated — `lr-sources-change` is the only wiring; there's no
   `name`/`value`/`FormData` participation the way a genuine form control would have.
+- Selection, filtering and projection all consume the same bounded normalized tree. Repeated ids
+  use the first depth-first occurrence; cyclic/repeated object identities are skipped.
 
 ---

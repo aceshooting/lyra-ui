@@ -60,9 +60,9 @@ export interface LyraRatingEventMap {
   'lr-hover': CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 
 // A five-point star, sharing internal/icons.ts's 24x24 viewBox / 1em sizing
@@ -267,7 +267,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   constructor() {
     super();
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     // Shares the mixin's attach-or-degrade helper so both paths handle a missing *and* a throwing
     // `attachInternals()` (SSR/test DOMs, partial polyfills) without breaking construction.
     this.internals = attachInternalsSafely(this);

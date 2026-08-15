@@ -457,6 +457,64 @@ it('uses singular item text and accepts localized label overrides', async () => 
   expect((el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement).ariaLabel).to.equal('Result page');
 });
 
+it("distinguishes omitted pagination labels from explicit English and empty overrides", async () => {
+  const strings = {
+    previous: "Retour",
+    next: "Suivant",
+    paginationPage: "Page de résultat",
+    paginationFirstPage: "Première page",
+    paginationLastPage: "Dernière page",
+  };
+  const labels = (el: LyraPagination): string[] => [
+    el.shadowRoot!.querySelector('[part="page-input"]')!.getAttribute("aria-label") ?? "missing",
+    el.shadowRoot!.querySelector('[part~="previous-button"]')!.getAttribute("aria-label") ?? "missing",
+    el.shadowRoot!.querySelector('[part~="next-button"]')!.getAttribute("aria-label") ?? "missing",
+    el.shadowRoot!.querySelector('[part~="first-button"]')!.getAttribute("aria-label") ?? "missing",
+    el.shadowRoot!.querySelector('[part~="last-button"]')!.getAttribute("aria-label") ?? "missing",
+  ];
+
+  const omitted = await pagination(html`
+    <lr-pagination format="compact" total="30" with-edges .strings=${strings}></lr-pagination>
+  `);
+  expect(labels(omitted)).to.deep.equal([
+    "Page de résultat",
+    "Retour",
+    "Suivant",
+    "Première page",
+    "Dernière page",
+  ]);
+
+  const explicitEnglish = await pagination(html`
+    <lr-pagination
+      format="compact"
+      total="30"
+      with-edges
+      page-label="Page"
+      previous-label="Previous"
+      next-label="Next"
+      first-label="First page"
+      last-label="Last page"
+      .strings=${strings}
+    ></lr-pagination>
+  `);
+  expect(labels(explicitEnglish)).to.deep.equal(["Page", "Previous", "Next", "First page", "Last page"]);
+
+  const empty = await pagination(html`
+    <lr-pagination
+      format="compact"
+      total="30"
+      with-edges
+      page-label=""
+      previous-label=""
+      next-label=""
+      first-label=""
+      last-label=""
+      .strings=${strings}
+    ></lr-pagination>
+  `);
+  expect(labels(empty)).to.deep.equal(["", "", "", "", ""]);
+});
+
 it('localizes the empty summary as one interpolated message', async () => {
   const el = await pagination(html`
     <lr-pagination
@@ -478,7 +536,7 @@ it('omits the built-in summary by default, without removing the controls', async
   const el = await pagination(html` <lr-pagination total="30"></lr-pagination> `);
 
   expect(el.withSummary).to.equal(false);
-  expect((el.shadowRoot!.querySelector('[part="summary"]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="summary"]') == null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part~="next-button"]')).to.exist;
 });
 
@@ -700,7 +758,9 @@ describe('state color hooks', () => {
         await waitUntil(
           () => {
             const style = getComputedStyle(target);
-            return style.backgroundColor === hoverBg && style.borderTopColor === hoverBorder;
+            return (
+            style.backgroundColor === hoverBg && style.borderTopColor === hoverBorder
+          );
           },
           'pagination hover paint did not settle',
         );
@@ -710,7 +770,9 @@ describe('state color hooks', () => {
         await waitUntil(
           () => {
             const style = getComputedStyle(target);
-            return style.backgroundColor === activeBg && style.borderTopColor === activeBorder;
+            return (
+            style.backgroundColor === activeBg && style.borderTopColor === activeBorder
+          );
           },
           'pagination pressed paint did not settle',
         );
@@ -1403,10 +1465,35 @@ describe('Web Awesome navigation surface', () => {
     expect(el.page).to.equal(1);
   });
 
+  it("emits fresh frozen detail snapshots for the before and accepted page requests", async () => {
+    const el = await pagination(
+      html`<lr-pagination total="95"></lr-pagination>`
+    );
+    const details: Array<{ page: number; pageSize: number }> = [];
+    el.addEventListener("lr-before-page-change", (event) =>
+      details.push(event.detail)
+    );
+    el.addEventListener("lr-page-change", (event) =>
+      details.push(event.detail)
+    );
+
+    (
+      el.shadowRoot!.querySelector('[part~="next-button"]') as HTMLButtonElement
+    ).click();
+
+    expect(details).to.have.length(2);
+    expect(details[0]).to.deep.equal({ page: 2, pageSize: 10 });
+    expect(details[1]).to.deep.equal({ page: 2, pageSize: 10 });
+    expect(details[0] === details[1]).to.equal(false);
+    expect(details.every(Object.isFrozen)).to.equal(true);
+  });
+
   it('without-nav removes only previous/next and hide-single-page renders nothing', async () => {
     const withoutNav = await pagination(html` <lr-pagination total="50" without-nav with-edges></lr-pagination> `);
-    expect((withoutNav.shadowRoot!.querySelector('[part~="previous-button"]')) == null).to.be.true;
-    expect((withoutNav.shadowRoot!.querySelector('[part~="next-button"]')) == null).to.be.true;
+    expect(
+      withoutNav.shadowRoot!.querySelector('[part~="previous-button"]') == null).to.be.true;
+    expect(
+      withoutNav.shadowRoot!.querySelector('[part~="next-button"]') == null).to.be.true;
     expect(withoutNav.shadowRoot!.querySelector('[part~="first-button"]')).to.exist;
     expect(withoutNav.shadowRoot!.querySelector('[part~="page"]')).to.exist;
 

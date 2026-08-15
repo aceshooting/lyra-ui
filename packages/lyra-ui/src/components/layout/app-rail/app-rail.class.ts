@@ -229,17 +229,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** Below this viewport width, the rail switches from `'full'` to
    *  `'icon-only'`. Any valid CSS length, used directly in a `max-width`
    *  media query. */
-  @property({ attribute: 'icon-only-breakpoint' }) iconOnlyBreakpoint = '960px';
+  @property({ attribute: 'icon-only-breakpoint', useDefault: true }) iconOnlyBreakpoint = '960px';
 
   /** Below this viewport width, the rail switches from `'icon-only'` to
    *  `'mobile'`. Should be smaller than `iconOnlyBreakpoint` to produce all
    *  three states as the viewport narrows. */
-  @property({ attribute: 'mobile-breakpoint' }) mobileBreakpoint = '600px';
+  @property({ attribute: 'mobile-breakpoint', useDefault: true }) mobileBreakpoint = '600px';
 
   /** Whether the mobile floating overlay is shown. Only meaningful while
-   *  `mode` is `'mobile'` — the value is preserved (not reset) while another
-   *  mode is active, but no overlay chrome renders until `mode` is
-   *  `'mobile'` again. Set this directly, or use the built-in toggle button
+   *  `mode` is `'mobile'`; leaving mobile mode closes it so a later mobile
+   *  transition never restores a stale modal. Set this directly, or use the built-in toggle button
    *  — there is no separate `show()`/`hide()` pair. */
   @property({ type: Boolean, reflect: true }) open = false;
 
@@ -252,7 +251,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  role, mirroring `<lr-date-input>`'s `accessibleLabel` pattern. Reads the host's own
    *  `aria-label` attribute -- unset (the default, `null`) reproduces today's exact
    *  `label`/localized-default output. */
-  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) private accessibleLabel:
+    | string | null = null;
 
   /** Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the
    *  `mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual
@@ -289,17 +289,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    * use `width preferred-mode` to retain layout preference without restoring the transient mobile
    * overlay. Valid tokens are `open`, `width`, and `preferred-mode`.
    */
-  @property() persist = 'open width';
+  @property({ useDefault: true }) persist = 'open width';
 
   /** The rail's current width in px while `resizable` — settable/gettable. Unset defers to the
    *  `--lr-app-rail-width` CSS token's own resolved width. */
   @property({ type: Number, attribute: 'rail-width-px' }) railWidthPx?: number;
 
   /** Minimum `railWidthPx` a drag/keyboard resize can reach. */
-  @property({ type: Number, attribute: 'min-rail-width-px' }) minRailWidthPx = 190;
+  @property({ type: Number, attribute: 'min-rail-width-px', useDefault: true }) minRailWidthPx = 190;
 
   /** Maximum `railWidthPx` a drag/keyboard resize can reach. */
-  @property({ type: Number, attribute: 'max-rail-width-px' }) maxRailWidthPx = 440;
+  @property({ type: Number, attribute: 'max-rail-width-px', useDefault: true }) maxRailWidthPx = 440;
 
   /** `true` for the duration of an active pointer-driven resize drag (not a keyboard step) --
    *  reflected so a consumer (or this component's own styles) can suppress `[part='base']`'s
@@ -387,8 +387,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   get mode(): AppRailMode {
     return this._mode;
   }
-  set mode(next: AppRailModeInput) {
-    if (next === 'auto') {
+  set mode(next: AppRailModeInput | null | undefined) {
+    if (next == null || next === 'auto') {
       if (!this.forced) return;
       this.forced = false;
       this.applyComputedMode();
@@ -447,7 +447,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private loadPersisted(): boolean {
     const parsed = readPersistedState(
       this.storageFullKey,
-      (v): v is { open?: unknown; railWidthPx?: unknown; preferredMode?: unknown } =>
+      (v): v is { open?: unknown; railWidthPx?: unknown; preferredMode?: unknown;
+      } =>
         typeof v === 'object' && v !== null,
     );
     if (!parsed) return false;

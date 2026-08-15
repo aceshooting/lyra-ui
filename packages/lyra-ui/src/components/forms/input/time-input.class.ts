@@ -87,14 +87,14 @@ export interface LyraTimeInputEventMap {
   blur: FocusEvent;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-clear': CustomEvent<undefined>;
-  'lr-show': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-after-hide': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
+  'lr-clear': CustomEvent<null>;
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 
 class LyraTimeInputBase extends LyraElement<LyraTimeInputEventMap> {}
@@ -892,7 +892,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       return Promise.resolve();
     }
     if (announce) {
-      const event = this.emit(next ? 'lr-show' : 'lr-hide', undefined, { cancelable: true });
+      const event = this.emit(next ? 'lr-show' : 'lr-hide', null, { cancelable: true });
       if (event.defaultPrevented) {
         this.syncOpenAttribute();
         return Promise.resolve();

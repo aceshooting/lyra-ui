@@ -27,7 +27,7 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
   and clears all three fields. Programmatic assignment never emits `input`/`change`
 - `valueAsDate: Date | null` — the same value as a local-midnight `Date`; settable (assigning
   `null` clears)
-- `parts: DateParts` — the live raw `{ day, month, year }` strings. Assigning a complete valid set
+- `parts: LyraKnownDateParts` — the live raw `{ day, month, year }` strings. Assigning a complete valid set
   synchronizes the canonical `value`; assigning an incomplete or impossible set clears `value`
 - `valueInput: HTMLInputElement` — hidden native `type="date"` mirror kept synchronized with
   `value`, `min`, `max`, `required`, `disabled`, and `readonly` for integrations that inspect native
@@ -51,13 +51,26 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
   while any other non-empty field-specific token is forwarded only to the year field
 - `withLabel: boolean = false` (`with-label`) and `withHint: boolean = false` (`with-hint`) — SSR
   slot-presence hints. Normal client rendering detects slotted label/hint content automatically
-- `dayLabel: string = 'Day'` (`day-label`), `monthLabel: string = 'Month'` (`month-label`),
-  `yearLabel: string = 'Year'` (`year-label`) — visible **and** accessible per-field labels; each
-  routes through `localize()` only while left at its literal default
+- `dayLabel?: string` (`day-label`), `monthLabel?: string` (`month-label`), `yearLabel?: string`
+  (`year-label`) — visible **and** accessible per-field labels. `undefined` uses the corresponding
+  localized default; every supplied string, including `''` and the old English copy, is
+  caller-owned
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — applied to `[part="fieldset"]`,
   which owns the group role, overriding the `<legend>`-derived name
 - The shared form surface adds `defaultValue`, `customError` (`custom-error`), `getForm()`,
   `checkValidity()`, `reportValidity()`, and `setCustomValidity(message)`.
+
+**Static constructor API:** `LyraKnownDate.validators` is the mirrored callable validator catalog.
+Each access returns a fresh `LyraFormValidator<LyraKnownDate>[]`; its entry observes
+`required`/`disabled`/`readonly`/`value`/`min`/`max`, and `checkValidity(element)` projects the
+element's current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
+
+```ts
+import { LyraKnownDate } from '@aceshooting/lyra-ui/components/utility/known-date/known-date.js';
+
+const knownDate = document.querySelector('lr-known-date')!;
+const result = LyraKnownDate.validators[0].checkValidity(knownDate);
+```
 
 For mapped JavaScript/TypeScript compatibility, assigning `null` to `name` clears it to the
 canonical `''` read value and removes the `name` attribute. The getter remains non-nullable.
@@ -111,10 +124,10 @@ labelled control in the library does: `--lr-form-control-required-content` (the 
 CSS `content` string; `''` suppresses it), `--lr-form-control-required-color` (default
 `var(--lr-color-danger)`) and `--lr-form-control-required-offset` (default `0`). One declaration on
 an ancestor — `:root` included — retunes this marker along with every other one in the page. The
-one detail specific to this component: the glyph hangs off `[part="legend"]` rather than
-`[part="form-control-label"]`, because the label part here is a `<span>` *inside* the legend and
-the marker belongs after the whole label. With no label the legend is hidden and nothing is
-painted. Full description in `llms/shared.md` → "The required-field marker".
+one detail specific to this component: `[part="form-control-label"]` is the marker owner inside the
+`<legend>`, so known-date consumes the same shared primitive and public marker hooks as every other
+form control. With no label the legend is hidden and nothing is painted. Full description in
+`llms/shared.md` → "The required-field marker".
 
 **CSS states:** `:state(blank)` while the composite value is empty/incomplete;
 `:state(disabled)` for direct or fieldset-cascaded disablement.
@@ -155,7 +168,7 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 
 **Known gotchas:**
 
-- Field _order_ is derived from the locale by formatting a probe date (Jan 2 2026) with
+- Field *order* is derived from the locale by formatting a probe date (Jan 2 2026) with
   `Intl.DateTimeFormat` and reading back the part order — not from `Date.parse()`'s mm/dd/yyyy bias.
   It falls back to `month, day, year` only when that sampling fails.
 - Auto-advance (typing a field's last digit moves to the next) and backspace-into-the-previous-field
@@ -164,12 +177,12 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 - Each `<input>` keeps exactly the digits that were typed — never zero-padded, range-clamped, or
   reverted to a previous value; only the composite `value` is normalized to zero-padded ISO.
 - Non-digit characters are stripped in the `input` handler before they reach field state (the
-  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals _are_
+  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals *are*
   accepted and transliterated to ASCII, not rejected: Arabic-Indic (`٠`–`٩`) and Extended
   Arabic-Indic/Persian (`۰`–`۹`) digits are mapped unconditionally, and the digits of
   `effectiveLocale`'s own numbering system are added on top via `Intl.NumberFormat`, so typing
   `٢٠٢٦` into the year field commits `2026`.
-- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the _physical_ key meaning
+- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the *physical* key meaning
   "next field" flips under an inherited `dir="rtl"`; the locale-derived field order itself does not.
 - A blank composite is `valueMissing` only when **all three** fields are blank; a partially typed
   required date reports `badInput` instead.

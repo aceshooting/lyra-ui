@@ -16,8 +16,8 @@ it("opens, filters, and selects a command", async () => {
   const el = (await fixture(
     html`<lr-command-palette
       .commands=${[
-        { id: "save", label: "Save", group: "File" },
-        { id: "close", label: "Close" },
+        { commandId: "save", label: "Save", group: "File" },
+        { commandId: "close", label: "Close" },
       ]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
@@ -31,7 +31,7 @@ it("opens, filters, and selects a command", async () => {
   el.shadowRoot!.querySelector('[part="command"]')!.dispatchEvent(
     new MouseEvent("click", { bubbles: true })
   );
-  expect((await selected).detail.command.id).to.equal("save");
+  expect((await selected).detail.command.commandId).to.equal("save");
   expect(el.open).to.be.false;
 });
 
@@ -41,7 +41,7 @@ it("registers and unregisters commands through the public API", async () => {
     html`<lr-command-palette></lr-command-palette>`
   )) as LyraCommandPalette;
   const command = {
-    id: "registered",
+    commandId: "registered",
     label: "Registered command",
     onSelect: () => selections++,
   };
@@ -63,8 +63,8 @@ it("registers and unregisters commands through the public API", async () => {
 it("selects the active command with Enter and ignores Enter when no enabled command exists", async () => {
   const el = (await fixture(html`<lr-command-palette
     .commands=${[
-      { id: "disabled", label: "Disabled", disabled: true },
-      { id: "open", label: "Open" },
+      { commandId: "disabled", label: "Disabled", disabled: true },
+      { commandId: "open", label: "Open" },
     ]}
   ></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette();
@@ -78,9 +78,9 @@ it("selects the active command with Enter and ignores Enter when no enabled comm
       cancelable: true,
     })
   );
-  expect((await selected).detail.command.id).to.equal("open");
+  expect((await selected).detail.command.commandId).to.equal("open");
 
-  el.commands = [{ id: "disabled", label: "Disabled", disabled: true }];
+  el.commands = [{ commandId: "disabled", label: "Disabled", disabled: true }];
   el.openPalette();
   await el.updateComplete;
   input.dispatchEvent(
@@ -96,8 +96,8 @@ it("selects the active command with Enter and ignores Enter when no enabled comm
 it("does not navigate or activate while an IME composition key is committing", async () => {
   const el = (await fixture(html`<lr-command-palette
     .commands=${[
-      { id: "first", label: "First" },
-      { id: "second", label: "Second" },
+      { commandId: "first", label: "First" },
+      { commandId: "second", label: "Second" },
     ]}
   ></lr-command-palette>`)) as LyraCommandPalette;
   let selections = 0;
@@ -124,7 +124,7 @@ it("does not navigate or activate while an IME composition key is committing", a
 
 it("contains the native search input event at the component boundary", async () => {
   const el = (await fixture(html`<lr-command-palette
-    .commands=${[{ id: "save", label: "Save" }]}
+    .commands=${[{ commandId: "save", label: "Save" }]}
   ></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette();
   await el.updateComplete;
@@ -141,7 +141,7 @@ it("contains the native search input event at the component boundary", async () 
 it("is accessible while open", async () => {
   const el = (await fixture(
     html`<lr-command-palette
-      .commands=${[{ id: "save", label: "Save" }]}
+      .commands=${[{ commandId: "save", label: "Save" }]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
   el.openPalette();
@@ -153,8 +153,8 @@ it("wires aria-activedescendant to a stable id on the active command row", async
   const el = (await fixture(
     html`<lr-command-palette
       .commands=${[
-        { id: "save", label: "Save" },
-        { id: "close", label: "Close" },
+        { commandId: "save", label: "Save" },
+        { commandId: "close", label: "Close" },
       ]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
@@ -179,8 +179,8 @@ it("keeps aria-activedescendant-owned command options out of the sequential tab 
   const el = (await fixture(
     html`<lr-command-palette
       .commands=${[
-        { id: "save", label: "Save" },
-        { id: "close", label: "Close" },
+        { commandId: "save", label: "Save" },
+        { commandId: "close", label: "Close" },
       ]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
@@ -204,9 +204,9 @@ it("skips disabled commands during arrow navigation and marks them aria-disabled
   const el = (await fixture(
     html`<lr-command-palette
       .commands=${[
-        { id: "a", label: "Alpha" },
-        { id: "b", label: "Bravo", disabled: true },
-        { id: "c", label: "Charlie" },
+        { commandId: "a", label: "Alpha" },
+        { commandId: "b", label: "Bravo", disabled: true },
+        { commandId: "c", label: "Charlie" },
       ]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
@@ -240,8 +240,8 @@ it("never rests the active option on a disabled command when one leads the list"
   const el = (await fixture(
     html`<lr-command-palette
       .commands=${[
-        { id: "a", label: "Alpha", disabled: true },
-        { id: "b", label: "Bravo" },
+        { commandId: "a", label: "Alpha", disabled: true },
+        { commandId: "b", label: "Bravo" },
       ]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
@@ -263,7 +263,7 @@ it("never rests the active option on a disabled command when one leads the list"
 
 it("scrolls the newly active row into view when navigating with arrow keys", async () => {
   const commands = Array.from({ length: 5 }, (_unused, i) => ({
-    id: `c${i}`,
+    commandId: `c${i}`,
     label: `Command ${i}`,
   }));
   const el = (await fixture(
@@ -290,10 +290,10 @@ it("scrolls the newly active row into view when navigating with arrow keys", asy
   expect(called).to.be.true;
 });
 
-it("preserves the active command by identity across reorder and repairs it after removal", async () => {
-  const alpha = { id: "a", label: "Alpha" };
-  const bravo = { id: "b", label: "Bravo" };
-  const charlie = { id: "c", label: "Charlie" };
+it("preserves the active command by commandId across replacement/reorder and repairs it after removal", async () => {
+  const alpha = { commandId: "a", label: "Alpha" };
+  const bravo = { commandId: "b", label: "Bravo" };
+  const charlie = { commandId: "c", label: "Charlie" };
   const el = (await fixture(
     html`<lr-command-palette
       .commands=${[alpha, bravo, charlie]}
@@ -315,7 +315,11 @@ it("preserves the active command by identity across reorder and repairs it after
       .textContent
   ).to.contain("Bravo");
 
-  el.commands = [charlie, alpha, bravo];
+  el.commands = [
+    { commandId: "c", label: "Charlie replacement" },
+    { commandId: "a", label: "Alpha replacement" },
+    { commandId: "b", label: "Bravo replacement" },
+  ];
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[part="command"][data-active="true"]')!
@@ -328,13 +332,35 @@ it("preserves the active command by identity across reorder and repairs it after
   expect((el.shadowRoot!.getElementById(input.getAttribute("aria-activedescendant")!)) != null).to.equal(true);
 });
 
+it("requires unique nonempty commandId values and deterministically keeps the first command", async () => {
+  const el = (await fixture(
+    html`<lr-command-palette
+      .commands=${[
+        { commandId: "", label: "Empty" },
+        { commandId: "same", label: "First" },
+        { commandId: "same", label: "Duplicate" },
+        { commandId: "other", label: "Other" },
+      ]}
+    ></lr-command-palette>`
+  )) as LyraCommandPalette;
+
+  el.openPalette();
+  await el.updateComplete;
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="command"]')];
+  expect(rows.map((row) => row.textContent?.trim())).to.deep.equal(["First", "Other"]);
+
+  const selected = oneEvent(el, "lr-select");
+  rows[0]!.click();
+  expect((await selected).detail.command.commandId).to.equal("same");
+});
+
 it("case-folds command search with the effective locale", async () => {
   const el = (await fixture(
     html`<lr-command-palette
       lang="tr"
       .commands=${[
-        { id: "istanbul", label: "İstanbul" },
-        { id: "izmir", label: "İzmir" },
+        { commandId: "istanbul", label: "İstanbul" },
+        { commandId: "izmir", label: "İzmir" },
       ]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
@@ -353,9 +379,9 @@ it("owns grouped options through labeled ARIA groups", async () => {
   const el = (await fixture(
     html`<lr-command-palette
       .commands=${[
-        { id: "save", label: "Save", group: "File" },
-        { id: "close", label: "Close", group: "File" },
-        { id: "copy", label: "Copy", group: "Edit" },
+        { commandId: "save", label: "Save", group: "File" },
+        { commandId: "close", label: "Close", group: "File" },
+        { commandId: "copy", label: "Copy", group: "Edit" },
       ]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
@@ -379,7 +405,7 @@ it("owns grouped options through labeled ARIA groups", async () => {
 
 it("virtualizes a 5,000-command catalog while keeping the active descendant mounted", async () => {
   const commands = Array.from({ length: 5000 }, (_, index) => ({
-    id: `command-${index}`,
+    commandId: `command-${index}`,
     label: `Command ${index}`,
     group: `Group ${Math.floor(index / 100)}`,
   }));
@@ -397,7 +423,7 @@ it("virtualizes a 5,000-command catalog while keeping the active descendant moun
 it("renders a visible focus indicator on the auto-focused search input", async () => {
   const el = (await fixture(
     html`<lr-command-palette
-      .commands=${[{ id: "save", label: "Save" }]}
+      .commands=${[{ commandId: "save", label: "Save" }]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
   el.openPalette();
@@ -414,7 +440,7 @@ it("contains long labels and shortcuts inside a 320px dialog", async () => {
       style="--lr-command-palette-max-inline-size: 320px"
       .commands=${[
         {
-          id: "long",
+          commandId: "long",
           label: "AnExtremelyLongUnbrokenLocalizedCommandLabelThatMustShrink",
           description:
             "AnEquallyLongUnbrokenDescriptionThatMustRemainContained",
@@ -433,7 +459,7 @@ it("traps focus by inerting sibling content while open, releasing it on close", 
   const wrapper = await fixture(html`<div>
     <button id="outside">Outside</button>
     <lr-command-palette
-      .commands=${[{ id: "save", label: "Save" }]}
+      .commands=${[{ commandId: "save", label: "Save" }]}
     ></lr-command-palette>
   </div>`);
   const el = wrapper.querySelector("lr-command-palette") as LyraCommandPalette;
@@ -451,7 +477,7 @@ it("traps focus by inerting sibling content while open, releasing it on close", 
 it("closes on a document-level Escape via the shared overlay manager", async () => {
   const el = (await fixture(
     html`<lr-command-palette
-      .commands=${[{ id: "save", label: "Save" }]}
+      .commands=${[{ commandId: "save", label: "Save" }]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
   el.openPalette();
@@ -471,7 +497,7 @@ it("closes on a document-level Escape via the shared overlay manager", async () 
 it("locks document scroll while open and releases it on close", async () => {
   const el = (await fixture(
     html`<lr-command-palette
-      .commands=${[{ id: "save", label: "Save" }]}
+      .commands=${[{ commandId: "save", label: "Save" }]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
   el.openPalette();
@@ -485,7 +511,7 @@ it("locks document scroll while open and releases it on close", async () => {
 it("restores overlay ownership when an open palette reconnects", async () => {
   const el = (await fixture(
     html`<lr-command-palette
-      .commands=${[{ id: "save", label: "Save" }]}
+      .commands=${[{ commandId: "save", label: "Save" }]}
     ></lr-command-palette>`
   )) as LyraCommandPalette;
   el.openPalette();
@@ -676,8 +702,8 @@ describe("active-command cssprop", () => {
       <div style=${style}>
         <lr-command-palette
           .commands=${[
-            { id: "save", label: "Save" },
-            { id: "close", label: "Close" },
+            { commandId: "save", label: "Save" },
+            { commandId: "close", label: "Close" },
           ]}
         ></lr-command-palette>
       </div>
@@ -768,7 +794,7 @@ it("shrinks a long, unbreakable command description instead of overflowing the d
   const el = (await fixture(html`<lr-command-palette
     style="--lr-command-palette-max-inline-size: 320px;"
     .commands=${[
-      { id: "open", label: "Open File", description: longDescription },
+      { commandId: "open", label: "Open File", description: longDescription },
     ]}
   ></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette();
@@ -781,8 +807,8 @@ it("renders a leading icon on a command that has one, and omits the part for com
   const icon = html`<svg class="save-icon"></svg>`;
   const el = (await fixture(html`<lr-command-palette
     .commands=${[
-      { id: "save", label: "Save", icon },
-      { id: "close", label: "Close" },
+      { commandId: "save", label: "Save", icon },
+      { commandId: "close", label: "Close" },
     ]}
   ></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette();
@@ -796,7 +822,7 @@ it("renders a leading icon on a command that has one, and omits the part for com
 
 it("renders localized strings from a .strings override for the dialog label, placeholder, results label, and empty message", async () => {
   const el = (await fixture(html`<lr-command-palette
-    .commands=${[{ id: "save", label: "Save" }]}
+    .commands=${[{ commandId: "save", label: "Save" }]}
     .strings=${{
       commandPaletteLabel: "Palette de commandes",
       commandPalettePlaceholder: "Rechercher des commandes…",
@@ -823,7 +849,7 @@ it("derives the virtual row pitch from the row-height tokens, not a hardcoded pi
   const el = (await fixture(
     html`<lr-command-palette style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px"></lr-command-palette>`,
   )) as LyraCommandPalette;
-  el.commands = Array.from({ length: 20 }, (_, i) => ({ id: `c${i}`, label: `Command ${i}` }));
+  el.commands = Array.from({ length: 20 }, (_, i) => ({ commandId: `c${i}`, label: `Command ${i}` }));
   el.openPalette();
   await el.updateComplete;
   await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -866,9 +892,9 @@ it("rebuilds virtual transforms and spacer extent from the measured pitches", as
     <lr-command-palette
       style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px"
       .commands=${[
-        { id: "save", label: "Save", group: "File" },
-        { id: "close", label: "Close", group: "File" },
-        { id: "copy", label: "Copy", group: "Edit" },
+        { commandId: "save", label: "Save", group: "File" },
+        { commandId: "close", label: "Close", group: "File" },
+        { commandId: "copy", label: "Copy", group: "Edit" },
       ]}
     ></lr-command-palette>
   `)) as LyraCommandPalette;
@@ -888,9 +914,9 @@ it("rebuilds virtual geometry after live row and group token changes", async () 
     <lr-command-palette
       style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px"
       .commands=${[
-        { id: "save", label: "Save", group: "File" },
-        { id: "close", label: "Close", group: "File" },
-        { id: "copy", label: "Copy", group: "Edit" },
+        { commandId: "save", label: "Save", group: "File" },
+        { commandId: "close", label: "Close", group: "File" },
+        { commandId: "copy", label: "Copy", group: "Edit" },
       ]}
     ></lr-command-palette>
   `)) as LyraCommandPalette;
@@ -929,7 +955,7 @@ it("does not schedule a Lit update from the initial row-pitch measurement", asyn
         style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px"
       ></lr-command-palette>`
     )) as LyraCommandPalette;
-    el.commands = Array.from({ length: 20 }, (_, i) => ({ id: `c${i}`, label: `Command ${i}` }));
+    el.commands = Array.from({ length: 20 }, (_, i) => ({ commandId: `c${i}`, label: `Command ${i}` }));
     el.openPalette();
     await el.updateComplete;
     await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
@@ -989,8 +1015,8 @@ it("restores a vetoed reflected attribute write and avoids opening side effects"
   const el = (await fixture(html`
     <lr-command-palette
       .commands=${[
-        { id: "save", label: "Save" },
-        { id: "close", label: "Close" },
+        { commandId: "save", label: "Save" },
+        { commandId: "close", label: "Close" },
       ]}
     ></lr-command-palette>
   `)) as LyraCommandPalette;
@@ -1007,8 +1033,8 @@ it("resets search state for every accepted opening entry path", async () => {
   const el = (await fixture(html`
     <lr-command-palette
       .commands=${[
-        { id: "save", label: "Save" },
-        { id: "close", label: "Close" },
+        { commandId: "save", label: "Save" },
+        { commandId: "close", label: "Close" },
       ]}
     ></lr-command-palette>
   `)) as LyraCommandPalette;

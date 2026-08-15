@@ -20,13 +20,15 @@ expand-in-graph affordances. Never computes neighbors itself (the host derives r
 graph data) and never mutates a graph.
 
 **Properties:**
+
 - `rows: LyraNeighborRow[] = []` (attribute: false) — `LyraNeighborRow { relation: string; direction:
-  'in' | 'out' | 'both'; node: LyraEntity }`
+'in' | 'out' | 'both'; node: LyraEntity }`
 - `groupByRelation: boolean = false` (attribute `group-by-relation`) — inserts a `group-header` row per
   distinct `relation`
 - `expandable: boolean = false` — renders a per-row expand-in-graph icon button
 - `virtualizeAt: number = 100` (attribute `virtualize-at`) — row count above which the list virtualizes
-- `label: string = ''`
+- `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
+  the host the sole overall owner; an explicitly empty host label stays empty on the group
 
 **Events:** `lr-entity-activate` (`detail: { id }`, a row's node button was activated),
 `lr-node-expand` (`detail: { id }`, a row's expand button was activated — deliberately the same
@@ -49,13 +51,18 @@ wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `r
 ```html
 <lr-neighbor-list expandable group-by-relation></lr-neighbor-list>
 <script>
-  document.querySelector('lr-neighbor-list').rows = [
-    { relation: 'works_for', direction: 'out', node: { id: 'e2', label: 'Analytical Engine Co.' } },
+  document.querySelector("lr-neighbor-list").rows = [
+    {
+      relation: "works_for",
+      direction: "out",
+      node: { id: "e2", label: "Analytical Engine Co." },
+    },
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - `lr-node-expand`'s detail shape is intentionally identical to `lr-graph`'s own event of the
   same name, so a single listener wired to both handles "expand this node's neighborhood" uniformly.
 - A row is exactly one `[part="row"]` element in both rendering paths. Above `virtualizeAt` that

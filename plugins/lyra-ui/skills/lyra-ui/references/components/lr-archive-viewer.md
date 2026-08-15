@@ -7,7 +7,7 @@
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** `jszip` — see `llms/peers.md`
+- **Optional peers** none
 - **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -15,12 +15,11 @@
 
 ## `lr-archive-viewer`
 
-Lists entry names and human-readable uncompressed sizes inside a `.zip` archive using the optional
-`jszip` peer. It is listing-only: entry content is never rendered or previewed. Each entry's size is
-read straight from JSZip's local file header (`uncompressedSize`) when available, falling back to
-fully decompressing only the rare entry missing that header field. Before JSZip materializes its
-entry graph, the viewer checks the ZIP central directory against its 10,000-entry and 100 MB
-declared-expansion ceilings. The list composes
+Lists entry names and human-readable declared uncompressed sizes inside a `.zip` archive. It is
+listing-only: entry content is never inflated, rendered, or previewed, and the component has no
+runtime archive-parser dependency. One owned central-directory parser validates local-header
+bounds, supported compression methods, entry names, and the 10,000-entry/100 MB declared-expansion
+ceilings, then returns the immutable metadata used directly by the listing. The list composes
 `<lr-virtual-list>` for large archives.
 
 **Properties:** `src: string = ''` and `name: string = ''` — a host-level `aria-label` takes
@@ -38,7 +37,7 @@ reassignment mid-flight, or whose row cannot be located after the wait, reports 
 rather than a phantom success.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
-`lr-search-change` (`detail: { query, matchCount, activeIndex }`) from search, navigation, and
+`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search, navigation, and
 clear; `lr-text-select` (`detail: { text, anchor, rects }`) for a selection contained within one
 entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution.
 `lr-highlight-activate` is not part of this viewer's event contract: archive entry-path highlights
@@ -66,9 +65,8 @@ falling back to that same token would render as unhighlighted.
 
 **Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
 
-**Optional peer dependency:** install `jszip` with `pnpm add jszip`. The lazy registry registers
-`application/zip` and `application/x-zip-compressed`, with a `.zip` filename fallback, and imports
-the viewer only when a matching archive is opened. Both registrations declare
+The lazy registry registers `application/zip` and `application/x-zip-compressed`, with a `.zip`
+filename fallback, and imports the viewer only when a matching archive is opened. Both registrations declare
 `capabilities: { anchors: ['text-quote', 'fragment'], search: true, textSelect: true }` — sibling to
 `load`, not inside it, so feature detection can read the capabilities without paying for the lazy
 import. Opening a `.zip` through `<lr-document-viewer>` forwards `anchor`/`highlights` to the mounted

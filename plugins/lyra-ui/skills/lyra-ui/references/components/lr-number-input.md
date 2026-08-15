@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -100,11 +100,21 @@ the numeric row and its steppers, so their state paint can be isolated from othe
 The exact-320px RTL story keeps long label/hint copy and both fixed-size steppers within the host.
 
 ```html
-<lr-number-input label="Quantity" min="0" max="99" step="1" value="1"></lr-number-input>
+<lr-number-input
+  label="Quantity"
+  min="0"
+  max="99"
+  step="1"
+  value="1"
+></lr-number-input>
 <!-- A bare numeric field: no steppers, and the browser's own spinners back: -->
-<lr-number-input label="Quantity" steppers="false" without-spin-buttons="false"></lr-number-input>
+<lr-number-input
+  label="Quantity"
+  steppers="false"
+  without-spin-buttons="false"
+></lr-number-input>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/input/number-input.js';
+  import "@aceshooting/lyra-ui/components/forms/input/number-input.js";
 </script>
 ```
 

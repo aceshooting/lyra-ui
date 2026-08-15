@@ -12,6 +12,7 @@ import { specialistTokens } from "../../../internal/specialist-tokens.styles.js"
 import { hostAriaLabel, nextId, srOnly } from "../../../internal/a11y.js";
 import { prefersReducedMotion } from "../../../internal/motion.js";
 import { isRtl } from "../../../internal/rtl.js";
+import { literalSetConverter } from "../../../internal/converters.js";
 import { styles } from "./graph.styles.js";
 import {
   loadD3,
@@ -60,6 +61,11 @@ import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_g
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type GraphLayout = "force" | "layered";
+
+const GRAPH_LAYOUT = literalSetConverter<GraphLayout>(
+  ["force", "layered"],
+  "force"
+);
 export type GraphRenderer = "svg" | "canvas";
 export type GraphSelectionMode = "none" | "single" | "multiple";
 export type GraphPickKind = "node" | "link";
@@ -435,13 +441,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** Renders one translucent hull per entry, behind links/nodes. Membership is the union of
    *  `memberIds` and every node whose `communityId` matches this entry's `id`. */
   @property({ attribute: false }) communities: GraphCommunity[] = [];
+  private _layout: GraphLayout = "force";
+
   /** `'force'` (default) runs the existing d3-force simulation, untouched. `'layered'` computes a
    *  deterministic Sugiyama-lite layout (`src/internal/layered-layout.ts`, a shared,
    *  dependency-free util suitable for any future layered-diagram consumer) instead -- no settle
    *  animation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a
    *  documented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions
    *  without a tween. */
-  @property() layout: GraphLayout = "force";
+  @property({ converter: GRAPH_LAYOUT })
+  get layout(): GraphLayout {
+    return this._layout;
+  }
+  set layout(next: GraphLayout) {
+    const normalized = GRAPH_LAYOUT.normalize(next);
+    const old = this._layout;
+    if (old === normalized) return;
+    this._layout = normalized;
+    this.requestUpdate("layout", old);
+  }
   /** `'svg'` (default, unchanged) renders the existing per-node/per-link DOM. `'canvas'` swaps to
    *  a single `<canvas part="canvas">` -- the scale path (an honest ceiling for `'svg'`: dozens to
    *  low hundreds of nodes; `'canvas'` targets roughly 5,000 nodes / 10,000 links). Feature-reduced
@@ -1017,6 +1035,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return finiteRange(this.maxZoom, 8, 0.001, 1000);
   }
 
+  /** Stable ascending zoom domain used by d3 and every imperative camera clamp. */
+  private get effectiveZoomBounds(): Readonly<{ min: number; max: number }> {
+    const min = this.safeMinZoom;
+    const max = this.safeMaxZoom;
+    return Object.freeze({ min: Math.min(min, max), max: Math.max(min, max) });
+  }
+
   /** `edgeLabelMinZoom` is compared directly against the live camera scale (same domain as
    *  `minZoom`/`maxZoom`), so it's normalized with the same bounds -- a non-finite value would
    *  otherwise make every `>=`/`<` comparison against it silently `false`/`true` forever. */
@@ -1276,9 +1301,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const node = this.simNodes.find((n) => n.id === id);
     if (!node || !this.d3 || !this.zoomedEl || !this.zoomBehavior) return false;
     const current = this.d3.zoomTransform(this.zoomedEl);
-    const k = Math.min(
-      this.safeMaxZoom,
-      Math.max(this.safeMinZoom, options?.zoom ?? (current.k as number))
+    const bounds = this.effectiveZoomBounds;
+    const k = finiteRange(
+      options?.zoom ?? (current.k as number),
+      current.k as number,
+      bounds.min,
+      bounds.max
     );
     const arrived = await this.tweenCamera(() =>
       this.d3!.zoomIdentity.translate(
@@ -1306,7 +1334,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       !this.simNodes.length
     )
       return;
-    const padding = options?.padding ?? 24;
+    const padding = finiteRange(options?.padding ?? 24, 24, 0);
     void this.tweenCamera(() => {
       let minX = Infinity;
       let minY = Infinity;
@@ -1331,9 +1359,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       const boxH = Math.max(1, maxY - minY);
       const availW = Math.max(1, this.safeWidth - padding * 2);
       const availH = Math.max(1, this.safeHeight - padding * 2);
-      const k = Math.min(
-        this.safeMaxZoom,
-        Math.max(this.safeMinZoom, Math.min(availW / boxW, availH / boxH))
+      const bounds = this.effectiveZoomBounds;
+      const k = finiteRange(
+        Math.min(availW / boxW, availH / boxH),
+        bounds.min,
+        bounds.min,
+        bounds.max
       );
       const cx = (minX + maxX) / 2;
       const cy = (minY + maxY) / 2;
@@ -1781,9 +1812,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private bindCanvasZoom(): void {
     if (!this.d3 || !this.canvasEl) return;
+    const bounds = this.effectiveZoomBounds;
     const zoomBehavior = this.d3
       .zoom<HTMLCanvasElement, unknown>()
-      .scaleExtent([this.safeMinZoom, this.safeMaxZoom])
+      .scaleExtent([bounds.min, bounds.max])
       .on("start", () => {
         // Same self-triggered-echo guard as the svg zoom bind's own 'start' handler above (see its
         // comment) -- a camera tween's per-frame applyZoomTransform() call fires this synchronously,
@@ -2359,9 +2391,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.focusHaloEl = this.renderRoot.querySelector(
         '[part="focus-halo"]'
       ) as SVGCircleElement;
+      const bounds = this.effectiveZoomBounds;
       const zoomBehavior = this.d3
         .zoom<SVGSVGElement, unknown>()
-        .scaleExtent([this.safeMinZoom, this.safeMaxZoom])
+        .scaleExtent([bounds.min, bounds.max])
         .on("start", () => {
           // A camera tween writes a transform on every frame via applyZoomTransform(), which
           // itself synchronously replays this same 'start' handler -- ignore that self-triggered
@@ -2393,7 +2426,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.zoomBehavior &&
       (changed.has("minZoom") || changed.has("maxZoom"))
     ) {
-      this.zoomBehavior.scaleExtent([this.safeMinZoom, this.safeMaxZoom]);
+      const bounds = this.effectiveZoomBounds;
+      this.zoomBehavior.scaleExtent([bounds.min, bounds.max]);
     }
 
     if (

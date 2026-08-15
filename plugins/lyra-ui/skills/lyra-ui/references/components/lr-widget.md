@@ -21,6 +21,7 @@ place (a CSS state, not a clone/portal), so slotted content (a chart, a running 
 position) survives the transition.
 
 **Properties:**
+
 - `label: string = ''`
 - `sublabel: string = ''`
 - `collapsible: boolean = false` (reflected — shows the collapse/expand chevron button)
@@ -28,21 +29,23 @@ position) survives the transition.
 - `expandable: boolean = false` (reflected — shows the fullscreen toggle button)
 - `fullscreen: boolean = false` (reflected)
 - `fullscreenInset: string = ''` (attribute `fullscreen-inset`) — CSS `inset` shorthand applied to
-  `[part="base"]` and `[part="backdrop"]` while fullscreen instead of the default per-side
+  `[part="base"]` while fullscreen instead of the default per-side
   `max(var(--lr-space-l), <safe-area inset>)`, e.g. `"0 0 0 240px"` to leave a 240px persistent
   sidebar/toolbar visible during fullscreen. Invalid values, declaration-breaking input, and
   `url()` are ignored.
 - `compact: boolean = false` (reflected) — tighter header/body padding, same convention as
   `lr-empty`'s `compact`
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
-  CSS `inset` independently from `fullscreenInset`; when empty or invalid, it follows a valid
+  CSS `inset`; when empty or invalid, the backdrop remains viewport-filling (`0`) independently of
   `fullscreenInset`
-- `views: WidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
-  chart/table toggle inside the same card chrome; `WidgetView { id: string; label?: string; icon?:
-  TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
+- `views: readonly LyraWidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
+  chart/table toggle inside the same card chrome; `LyraWidgetView { id: string; label?: string; icon?:
+TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   (`[part='view-toggle']`) and a `<slot name="view-${id}">`. An icon-only view should set
   `ariaLabel`; if both labels are omitted, the button uses `id` as a last-resort accessible name.
   Empty (the default) renders today's single unnamed default slot as the sole view, unchanged.
+  Up to 256 valid records are snapshotted; IDs must be unique, nonempty, and whitespace-stable.
+  Malformed/hostile entries are ignored without rejecting the component update.
 - `activeView: string = ''` (attribute: false) — the currently active view's `id`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
@@ -70,13 +73,15 @@ toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-v
 active view's `id`. Not emitted when a consumer sets `activeView` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
-icon in the title row), `label` (rich label content, overrides the `label` attribute), `sublabel`
-(rich sublabel content, overrides the `sublabel` attribute), `actions` (header action controls,
+icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,
+overrides the `label` attribute), `sublabel` (rich sublabel content, overrides the `sublabel`
+attribute), `actions` (header action controls,
 rendered before the collapse/expand buttons), `collapse-icon` (replaces the built-in chevron in the
 collapse toggle via native slot fallback; its assigned content is decorative, inert, and aria-hidden
-so the outer toggle remains the only action; only meaningful while `collapsible`),
+so the outer toggle remains the only action. The whole button rotates while expanded, so use a
+collapsed/right-facing baseline for a directional override; only meaningful while `collapsible`),
 `fullscreen-icon` (replaces the built-in glyph in the fullscreen toggle — the override replaces
-*both* the "expand" and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by
+_both_ the "expand" and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by
 reading the `fullscreen` attribute; its assigned content is decorative, inert, and aria-hidden so
 the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{id}`
 slot per `views` entry, used instead of the default slot
@@ -84,19 +89,23 @@ slot per `views` entry, used instead of the default slot
 **CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
 empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabel`, `actions`,
 `view-toggles` (the header toggle-button group, only rendered when `views` is non-empty),
-`view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph), `view-label`
+`view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph whose rendered
+subtree is inert and aria-hidden, leaving the toggle as the sole action), `view-label`
 (a view's visible label), `collapse-button`, `fullscreen-button`, `body`, `backdrop`
 
 Both header rows (`actions` and `view-toggles`) scroll horizontally on their own when the header is
 too narrow for them, and each independently paints a `--lr-scroll-fade-size` edge fade while — and
 only while — it actually overflows, so a clipped row reads as scrollable rather than truncated. The
 overflow is measured, not assumed: a row that fits is left unmasked.
+Forced-colors mode disables those decorative masks while retaining the native scroll owners. The
+body is the block-axis scroll owner whenever the widget receives a constrained height, so the
+header remains fixed while deep body content scrolls.
 
 **Themeable custom properties:** `--lr-widget-overlay-color` (default `var(--lr-color-overlay)` —
 the fullscreen backdrop scrim color), `--lr-widget-fullscreen-inset` (default per side
 `max(var(--lr-space-l), <safe-area inset>)` — the fullscreen `[part="base"]` inset; the
-`fullscreen-inset` attribute overrides it), and `--lr-widget-backdrop-inset` (defaults to
-`var(--lr-widget-fullscreen-inset)`; the `backdrop-inset` attribute overrides it), plus shared
+`fullscreen-inset` attribute overrides it), and `--lr-widget-backdrop-inset` (defaults to `0` so
+the modal backdrop covers the viewport; the `backdrop-inset` attribute overrides it), plus shared
 tokens (`--lr-space-*`, `--lr-color-border/-surface/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-icon-button-size`, `--lr-focus-ring-*`).
 
@@ -105,7 +114,7 @@ Three properties style the pressed view toggle: `--lr-widget-view-toggle-active-
 `var(--lr-color-brand)`), plus `--lr-widget-view-toggle-active-border-color` (default
 `transparent`) — the background, text, and border color of the `aria-pressed="true"` toggle. All three
 are **state hooks**: declared as inline `var()` fallbacks at the point of use and never on `:host`,
-so setting any of them on the element *or on any ancestor* reaches the toggle. That shape exists because
+so setting any of them on the element _or on any ancestor_ reaches the toggle. That shape exists because
 `::part(view-toggle)[aria-pressed='true']` is not valid CSS — Shadow Parts forbids an attribute
 selector after `::part()` — so before these hooks the only way to recolor an active toggle was to
 override the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens, repainting every other
@@ -114,7 +123,7 @@ rendering is unchanged.
 
 `--lr-widget-view-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`) and
 `--lr-widget-view-toggle-hover-color` (default `var(--lr-color-text)`) are the same shape for the
-*hover* state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
+_hover_ state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
 `::part(view-toggle):hover` override wins without `!important`.
 
 **Optional peer deps:** none.
@@ -135,14 +144,15 @@ matching visual tab order — resolved shadow-piercingly, so a slotted custom el
 focusable target inside its own shadow root is found too) so keyboard focus can't escape to page
 content hidden behind the backdrop. Escape or clicking the backdrop exits fullscreen and returns
 focus to whichever button triggered it. Set `fullscreen-inset` (e.g. `"0 0 0 240px"`) to reserve
-space for a persistent sidebar/toolbar that should stay visible instead of being covered by the
-fullscreen panel/backdrop — it overrides the default `var(--lr-space-l)` inset on every side for
-both `[part="base"]` and `[part="backdrop"]`. Set `compact` for tighter header/body padding.
+panel space for a persistent sidebar/toolbar while the default backdrop still covers the complete
+viewport. Set `backdrop-inset` explicitly only when the scrim should leave the same frame open. Set
+`compact` for tighter header/body padding.
 
 The collapse-button `aria-label` is localized via its own `widgetCollapse` (default `'Collapse
 panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
 
 **Known gotchas:**
+
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if `fullscreen` was still `true`
   across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in

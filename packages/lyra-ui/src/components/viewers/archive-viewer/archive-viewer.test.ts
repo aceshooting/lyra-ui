@@ -137,6 +137,7 @@ describe('lr-archive-viewer', () => {
       expect((await eventPromise).detail).to.deep.equal({
         query: 'INDEX.JS',
         matchCount: 1,
+        matchCountExact: true,
         activeIndex: 0,
       });
       const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: string };

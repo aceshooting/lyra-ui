@@ -31,7 +31,10 @@ import type {
   ChatComposerWrap,
   LyraChatComposer,
 } from "../chat-composer/chat-composer.class.js";
-import type { LyraModelCatalog } from "../model-select/model-select.class.js";
+import type {
+  LyraCatalog,
+  LyraModelCatalogEntry,
+} from "../model-select/model-select.class.js";
 import type { PromptQueueItem } from "../prompt-queue/prompt-queue.class.js";
 import type { PromptQueueChangeDetail } from "../prompt-queue/prompt-queue.class.js";
 import type {
@@ -39,7 +42,7 @@ import type {
   LyraAttachmentPreviewRequestDetail,
   LyraAttachmentUploadStatus,
 } from "../../media/attachment-chip/attachment-chip.class.js";
-import type { LyraVoiceCatalog } from "../voice-picker/voice-picker.class.js";
+import type { LyraVoiceCatalogEntry } from "../voice-picker/voice-picker.class.js";
 import { styles } from "./prompt-input.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -227,9 +230,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   ];
   @property({ attribute: false }) mentionItems: LyraPromptSuggestion[] = [];
   @property({ attribute: false }) commandItems: LyraPromptSuggestion[] = [];
-  @property({ attribute: false }) modelCatalog?: LyraModelCatalog;
+  @property({ attribute: false }) modelCatalog?: LyraCatalog<LyraModelCatalogEntry>;
   @property() model = "";
-  @property({ attribute: false }) voiceCatalog?: LyraVoiceCatalog;
+  @property({ attribute: false }) voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>;
   @property() voice = "";
   @property({ attribute: false }) sources: LyraSourceEntry[] = [];
   @property({ attribute: false }) selectedSourceIds: string[] = [];

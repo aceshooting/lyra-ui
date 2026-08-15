@@ -45,7 +45,7 @@ group's `tab` part for the real interactive tab button.
 this tab is projected into lives in `<lr-tab-group>`'s shadow root, so it inherits
 `--lr-tab-group-selected-color`, `--lr-tab-group-indicator-color` and `--lr-tab-group-hover-color`
 from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself does nothing: this
-element is *inside* that button in the flattened tree, and inheritance only runs the other way.
+element is _inside_ that button in the flattened tree, and inheritance only runs the other way.
 
 Before group hydration, an unassigned tab places itself in the public `nav` slot. The group then
 writes its internal per-tab `slot` attribute itself. A tab with no `panel` still gets a stable
@@ -70,8 +70,8 @@ press Delete, advertised through `aria-keyshortcuts`. Remove the corresponding `
 ```
 
 ```js
-const group = document.querySelector('#documents');
-group.addEventListener('lr-close', (event) => {
+const group = document.querySelector("#documents");
+group.addEventListener("lr-close", (event) => {
   const tab = event.target;
   const name = tab.panel;
   tab.remove();

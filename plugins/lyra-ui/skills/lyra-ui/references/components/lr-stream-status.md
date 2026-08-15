@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,7 +17,7 @@
 
 A compact status indicator for a single streaming connection (SSE, WebSocket, long-poll, …), with
 built-in heartbeat-aware stall detection. First-party invention (no Web Awesome equivalent). The
-host drives `phase` directly for `idle`/`connecting`/`streaming`, and calls the imperative
+host drives `connectionState` for `idle`/`connecting`/`streaming`, and calls the imperative
 `recordActivity()` method on every _semantic_ frame received while streaming — a real content
 chunk, never a transport-level keep-alive ping. This component has no payload-inspection logic of
 its own: "ignore heartbeats" is entirely call-site discipline, which is exactly why a connection
@@ -26,9 +26,11 @@ reads as stalled.
 
 **Properties:**
 
-- `phase: 'idle' | 'connecting' | 'streaming' | 'stalled' = 'idle'` (reflected) — current
-  connection phase. Fully public and directly settable by the host at any time, including a manual
-  override to `'stalled'`; the component never fights a host-driven reassignment.
+- `connectionState: StreamConnectionState = 'idle'` (attribute `connection-state`, reflected) —
+  host-owned transport state (`'idle' | 'connecting' | 'streaming'`). Invalid attribute or property
+  writes normalize to `idle`.
+- `phase: LyraStreamPhase` (readonly) — effective state: `connectionState`, or component-owned
+  `'stalled'` while an active stream has exceeded its inactivity threshold
 - `stallThresholdMs: number = 10000` (attribute `stall-threshold-ms`) — how long `phase` may stay
   `'streaming'` with no `recordActivity()` call before the component auto-transitions to
   `'stalled'`. A non-finite or `<= 0` value disables the stall timer entirely (arming becomes a
@@ -42,25 +44,28 @@ reads as stalled.
   streaming.
   - While `phase === 'streaming'`: (re)arms the stall timer, pushing the stall deadline
     `stallThresholdMs` further out.
-  - While `phase === 'stalled'`: recovers — `phase` becomes `'streaming'` again (firing
+  - While `phase === 'stalled'`: recovers — the effective phase becomes `'streaming'` again (firing
     `lr-recover` and arming the timer fresh, via the same transition handling a direct host
-    assignment would also go through).
+    transport transition would also go through).
   - While `phase` is `'idle'` or `'connecting'`: a no-op. Safe to call defensively before formally
     flipping to `'streaming'`; it never throws or starts a timer early.
+- `markStalled(): void` — installs the component-owned stalled override for an active streaming
+  connection; no-op in other transport states or when already stalled
 
-**Events:** `lr-stall` (no detail payload) — fires whenever `phase` transitions into `'stalled'`
-from any other phase, whether timer-driven or via a direct host assignment. `lr-recover` (no
-detail payload) — fires whenever `phase` transitions out of `'stalled'` to any other phase,
-whether via `recordActivity()` or a direct host assignment. Neither fires for a same-value
+**Events:** `lr-stall` (`detail: null`) — fires whenever the effective phase transitions into
+`'stalled'`, whether timer-driven or via `markStalled()`. `lr-recover` (`detail: null`) — fires
+whenever the effective phase transitions out of `'stalled'`, whether via `recordActivity()` or a
+host transport transition. Neither fires for a same-value
 reassignment, and neither fires for whatever phase the element happens to _mount_ with — only a
 later change counts as a transition.
 
-**Slots:** default (custom copy shown only while `phase="stalled"`, e.g. "Taking longer than
+**Slots:** default (custom copy shown only while the readonly `phase` is `'stalled'`, e.g. "Taking longer than
 usual…" — falls back to a built-in default message when nothing is slotted), `actions` (a
 stop/retry button row; always present in the template regardless of `phase` — its wrapper's
 visibility is driven purely by whether anything is slotted into it, not by `phase`)
 
-**CSS parts:** `base`, `indicator`, `message`, `actions`
+**CSS parts:** `base`, `indicator`, `phase` (persistent localized effective-state text), `message`,
+`actions`
 
 **Themeable custom properties:** shared tokens only — `--lr-color-text-quiet` (idle dot color),
 `--lr-color-brand` (connecting/streaming dot color), `--lr-color-warning` (stalled dot color,
@@ -73,7 +78,7 @@ The phase defaults flow through `--lr-stream-status-dot-color` and
 wins through the shadow cascade and is the supported per-instance override. The stalled row's own
 longhands are indirected the same way: `--lr-stream-status-stalled-bg` (falls back to
 `--lr-color-warning-quiet`) and `--lr-stream-status-stalled-border-color` (falls back to
-`--lr-color-warning`) retheme the `base` part's background/border while `phase="stalled"`, and
+`--lr-color-warning`) retheme the `base` part's background/border while stalled, and
 `--lr-stream-status-message-color` (also falling back to `--lr-color-warning`) retheme the
 `message` part's text color independently of the border — the two currently share a default value
 but are separate hooks, so overriding one never moves the other.
@@ -81,7 +86,7 @@ but are separate hooks, so overriding one never moves the other.
 **Optional peer deps:** none.
 
 ```html
-<lr-stream-status phase="streaming" stall-threshold-ms="8000">
+<lr-stream-status connection-state="streaming" stall-threshold-ms="8000">
   <span slot="actions"><button>Stop</button></span>
 </lr-stream-status>
 ```
@@ -96,9 +101,9 @@ status.recordActivity();
 ```
 
 Internally, the inactivity timer runs only while `phase === 'streaming'`. It's (re)armed whenever
-the phase transitions to `'streaming'` (directly, or via `recordActivity()` recovering from
+`connectionState` transitions to `'streaming'` (or `recordActivity()` recovers from
 `'stalled'`) and on every subsequent `recordActivity()` call while already streaming; it's disarmed
-the instant `phase` becomes anything else, including a host-driven reassignment away from
+the instant the effective phase becomes anything else, including a host-driven transport transition away from
 `'streaming'` — so a stale timer can never fire a stall transition after the host has already moved
 on. Phase transitions into/out of `'stalled'` are announced through an internal
 `<lr-live-region>` rather than a hand-rolled `aria-live` region: entering `'stalled'` announces
@@ -112,9 +117,9 @@ screen-reader user must not be told the opposite of what a sighted user sees). C
 `recordActivity()` itself never announces anything, no
 matter how often the host calls it — only the phase _transition_ announces, exactly once. The
 decorative indicator dot is `aria-hidden` (a color/motion cue only) and only pulses while
-`phase="streaming"`; `'stalled'` is styled as a warning tone, not danger, since a stall is usually
+`connection-state="streaming"` and not stalled; `'stalled'` is styled as a warning tone, not danger, since a stall is usually
 recoverable — a host that wants to escalate after N stalls can scope its own CSS off
-`[phase="stalled"]`, or stop rendering this component and show its own danger-styled error state
+the `lr-stall` event, or stop rendering this component and show its own danger-styled error state
 instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce`.
 
 **Known gotchas:**
@@ -126,10 +131,10 @@ instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce
   for longer than `stall-threshold-ms` is _supposed_ to read as stalled — that's the entire
   point of the API.
 - Setting `stallThresholdMs` to `0`, a negative number, or a non-finite value disables the stall
-  timer outright; the component will stay `'streaming'` forever until the host manually changes
-  `phase`.
-- `phase` remains directly settable at all times; assigning `'stalled'` yourself fires `lr-stall`
-  and the assertive announcement exactly as if the timer had fired.
+  timer outright; the component stays `'streaming'` until the host changes `connectionState` or
+  explicitly calls `markStalled()`.
+- `phase` is readonly. Call `markStalled()` for a semantic stall detected outside the inactivity
+  timer; writing an own `phase` property is unsupported and cannot replace component-owned state.
 - reconnecting the element while still `phase === 'streaming'` (e.g. a drag-and-drop reparent that
   keeps the same instance) automatically re-arms the stall timer in `connectedCallback` —
   `disconnectedCallback` always disarms it, and disconnect/reconnect fire back-to-back with no

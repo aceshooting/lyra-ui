@@ -23,13 +23,13 @@ export type LyraHighlightTone = 'accent' | 'success' | 'warning' | 'danger' | 'n
 
 /** One host-supplied highlight: an anchor plus optional display metadata. */
 export interface LyraHighlight {
-  id: string;
-  anchor: LyraAnchor;
-  label?: string;
+  readonly id: string;
+  readonly anchor: LyraAnchor;
+  readonly label?: string;
   /** Host-attached commentary. Carried by every anchor-capable viewer but never rendered by them --
    *  only a provenance-style surface (e.g. a future `lr-provenance-panel`) renders `note` text. */
-  note?: string;
-  tone?: LyraHighlightTone;
+  readonly note?: string;
+  readonly tone?: LyraHighlightTone;
 }
 
 /** Characters of normalized context captured before/after a selection when building a `text-quote`

@@ -42,7 +42,7 @@ writes into — `acquireAnnouncementSink()`, documented after `Announcer` below.
 Streaming UIs (token-by-token chat responses, progress ticks, etc.) naturally produce far more
 candidate announcements than a screen-reader user can usefully absorb — reading every incremental
 chunk aloud is spam, not information. `Announcer` collapses a burst of `announce()` calls arriving
-within `throttleMs` of the _first_ call in that burst down to a single trailing-edge flush of the
+within `throttleMs` of the *first* call in that burst down to a single trailing-edge flush of the
 latest text: superseded intermediate text is dropped outright, never queued or concatenated.
 
 - `new Announcer(options: AnnouncerOptions)` where
@@ -51,7 +51,7 @@ latest text: superseded intermediate text is dropped outright, never queued or c
   `setTimeout`/`clearTimeout` surface implemented by a browser `Window`; omit it to use ambient
   timers.
 - `announce(text: string, options?: AnnounceOptions)` where `AnnounceOptions = { force?: boolean }` —
-  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the _first_
+  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the *first*
   call of a burst schedules the flush timer, so the deadline stays anchored to that first call
   rather than being pushed back by every subsequent call. `{ force: true }` bypasses any
   in-progress window and flushes immediately, so a terminal message (e.g. "response complete") is
@@ -117,7 +117,8 @@ behind as an `aria-hidden` mirror of the latest text.
 
 - `mode: 'polite' | 'assertive' = 'polite'` (reflected) — selects which shared region announcements
   land in: `'polite'` uses the `role="status"` + `aria-live="polite"` one (waits for the user to be
-  idle), `'assertive'` the `role="alert"` + `aria-live="assertive"` one (interrupts)
+  idle), `'assertive'` the `role="alert"` + `aria-live="assertive"` one (interrupts). Unsupported
+  attributes and untyped property writes normalize to reflected `polite`
 - `throttleMs: number = 500` (attribute `throttle-ms`) — the coalescing window; see `Announcer`
   above
 

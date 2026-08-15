@@ -70,13 +70,13 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  [part='zoom-out']:hover,
-  [part='zoom-in']:hover,
+  [part='zoom-out']:not(:disabled):hover,
+  [part='zoom-in']:not(:disabled):hover,
   [part='reset']:hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part='zoom-out']:active,
-  [part='zoom-in']:active,
+  [part='zoom-out']:not(:disabled):active,
+  [part='zoom-in']:not(:disabled):active,
   [part='reset']:active {
     background: color-mix(
       in oklab,

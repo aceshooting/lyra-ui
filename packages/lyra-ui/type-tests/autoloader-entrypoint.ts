@@ -12,6 +12,7 @@ import {
   type LyraDefinitionRoot,
 } from '../src/autoloader.js';
 import { allDefined, type AllDefinedOptions } from '../src/utilities/defined.js';
+import type { LyraGlobalEventMap } from '../src/events.js';
 
 const root: LyraDefinitionRoot = document;
 const options: AutoloaderOptions = {
@@ -54,8 +55,15 @@ const traversalDetail: AutoloaderTraversalErrorEventDetail = {
 };
 const traversalEvent: AutoloaderEventMap['lr-autoload-traversal-error'] = new CustomEvent(
   'lr-autoload-traversal-error',
-  { detail: traversalDetail }
+  { detail: traversalDetail },
 );
+const globalAutoloadEvent: LyraGlobalEventMap['lr-autoload-loaded'] = new CustomEvent('lr-autoload-loaded', {
+  detail,
+});
+document.addEventListener('lr-autoload-traversal-error', (event) => {
+  const maximum: number = event.detail.maximum;
+  void maximum;
+});
 const marker: string = AUTOLOADER_PENDING_ATTRIBUTE;
 stop();
 
@@ -69,5 +77,6 @@ void [
   event,
   traversalDetail,
   traversalEvent,
+  globalAutoloadEvent,
   marker,
 ];

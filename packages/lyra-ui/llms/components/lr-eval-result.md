@@ -19,29 +19,33 @@ Rubric scoring and human-review surface for comparing the runs of one evaluation
 
 Composes `lr-table` (the comparison table), `lr-rubric-form` (the review surface), and
 `lr-diff-view` (baseline↔selected output diff) rather than re-deriving any of their behavior.
-The table's accessible name is the localized evaluation-runs label by default; a host
-`aria-label` on `<lr-eval-result>` overrides it.
+The table keeps the localized purpose-specific evaluation-runs name. A host `aria-label` on
+`<lr-eval-result>` remains the overall host name and is not cloned onto the independently
+interactive table.
 
 **Properties:**
+
 - `runs: EvalRunResult[] = []` (attribute: false) — `EvalRunResult { id: string; label: string;
-  model?: string; promptVersion?: string; output: string; scores?: RubricValue; review?: RubricValue }`
+model?: string; promptVersion?: string; output: string; scores?: RubricValue; review?: RubricValue }`
   (exported here). One entry per model or prompt version being compared for a single evaluation
   example. `scores`/`review` use the same `RubricValue` shape `lr-rubric-form` itself reads and
   writes, so a `TableColumn`'s `cell()` accessor and the rubric form's own `value` binding read a
-  run's fields with no conversion
+  run's fields with no conversion. Later duplicate run ids are omitted before selection, diff,
+  grid, and review-event lookup
 - `columns: TableColumn<EvalRunResult>[] = []` (attribute: false) — plain pass-through to
-  `lr-table.columns`, not re-derived here
-- `rubricKeys: RubricKey[] = []` (attribute: false) — plain pass-through to `lr-rubric-form.keys`
-- `selectedRunId: string = ''` (attribute `selected-run-id`) — the run open for review and the diff's
+  `lr-table.columns`, not re-derived here; later duplicate column keys are omitted
+- `rubricKeys: RubricKey[] = []` (attribute: false) — plain pass-through to `lr-rubric-form.keys`;
+  later duplicate rubric keys are omitted
+- `selectedRunId: string | null = null` (attribute `selected-run-id`) — the run open for review and the diff's
   **new** side; falls back to `runs[0]?.id` when empty
-- `baselineRunId: string = ''` (attribute `baseline-run-id`) — the run compared against and the
+- `baselineRunId: string | null = null` (attribute `baseline-run-id`) — the run compared against and the
   diff's **old** side; falls back to `runs[0]?.id` when empty
 - `reviewSkippable: boolean = false` (attribute `review-skippable`) — shows a Skip control on the
   review form (forwarded to `lr-rubric-form.skippable`)
 - `disabled: boolean = false` (reflected) — disables the review form's controls only; the comparison
   grid stays interactive (selecting a run to inspect is not a mutation)
 
-**Events:** `lr-run-select` (`detail: { runId: string }`), `lr-review-input` (`detail: { runId:
+**Events:** `lr-run-activate` (`detail: { runId: string; run: EvalRunResult }`), `lr-review-input` (`detail: { runId:
 string; value: RubricValue }`), `lr-review-validity-change` (`detail: { runId: string; valid:
 boolean; errors: Record<string, string> }`), `lr-review-submit` (`detail: { runId: string; value:
 RubricValue }`), `lr-review-skip` (`detail: { runId: string }`).

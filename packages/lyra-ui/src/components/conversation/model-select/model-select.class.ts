@@ -8,19 +8,14 @@ import {
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import { AnchoredPopoverController } from '../../../internal/anchored-popover-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './model-select.styles.js';
-import {
-  dispatchNativeEvent,
-  relayNativeEvent,
-} from '../../../internal/native-event-relay.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
   attachInternalsSafely,
@@ -32,9 +27,9 @@ import {
 } from '../../../internal/form-associated.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import {
-  filterCatalogEntries,
-  normalizeCatalog,
-  withSyntheticCatalogValue,
+  CatalogPickerController,
+  type LyraCatalog,
+  type LyraCatalogEntry,
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -44,24 +39,13 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_model, LYRA_DEFAULT_modelSelec
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** The canonical step a `size` resolves to — an alias of the shared {@linkcode LyraSizeStep}, so
- *  there is one definition of the ladder. The public `size` property accepts {@linkcode LyraSize},
- *  i.e. this plus the `small`/`medium`/`large` spellings. */
-export type LyraModelSelectSize = LyraSizeStep;
+export type { LyraCatalog, LyraCatalogEntry } from '../../../internal/catalog-picker.js';
 
 /** A catalog row: a selectable model, keyed by `id` with a display `label`. */
-export interface LyraModelCatalogEntry {
-  id: string;
-  label: string;
+export interface LyraModelCatalogEntry extends LyraCatalogEntry {
   /** Optional literal icon hint (for example, an emoji), rendered decoratively before `label`. */
   icon?: string;
 }
-
-/**
- * The `catalog` shape: either every entry is a plain string (used as both id
- * and label) or every entry is a full `{ id, label, icon? }` row — not a mix of both.
- */
-export type LyraModelCatalog = string[] | LyraModelCatalogEntry[];
 
 /** Direction reported by the free-text input's native selection APIs. */
 export type LyraModelSelectSelectionDirection = LyraSelectionDirection;
@@ -70,14 +54,14 @@ export type LyraModelSelectSelectionDirection = LyraSelectionDirection;
 type DisplayEntry = DisplayCatalogEntry<LyraModelCatalogEntry>;
 
 export interface LyraModelSelectEventMap {
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   input: Event;
   change: Event;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 /**
  * `<lr-model-select>` — a provider/model picker that renders as a closed
@@ -109,13 +93,15 @@ export interface LyraModelSelectEventMap {
  *
  * @customElement lr-model-select
  * @event lr-change - The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.
- * @event {Event} change - Fired alongside `lr-change`, mirroring `<lr-select>`/`<lr-combobox>`'s
- *   native-style value-change pair so native form bindings/framework `v-model` handlers behave
- *   consistently across the picker family.
- * @event {Event} input - A payload-preserving `InputEvent` on each free-text edit, and a plain
- *   native `Event` alongside `change` when either rendering mode commits a value.
- * @event blur - Native blur relayed once from the active control in either rendering mode.
- * @event focus - Native focus relayed once from the active control in either rendering mode.
+ * @event {Event} change - Owner-realm native event fired alongside `lr-change`, mirroring
+ *   `<lr-select>`/`<lr-combobox>`'s value-change pair so native form bindings/framework `v-model`
+ *   handlers behave consistently across the picker family.
+ * @event {Event} input - A payload-preserving owner-realm `InputEvent` on each free-text edit, and
+ *   a plain native `Event` alongside `change` when either rendering mode commits a value.
+ * @event {FocusEvent} blur - Owner-realm native blur relayed once from the active control in either
+ *   rendering mode, retaining `relatedTarget`.
+ * @event {FocusEvent} focus - Owner-realm native focus relayed once from the active control in
+ *   either rendering mode, retaining `relatedTarget`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-invalid - The picker failed a validity check. Cancelable: calling `preventDefault()`
@@ -210,7 +196,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   /** Informational only — e.g. `'ollama'`. Rendered as a small leading badge for display grouping. */
   @property() provider = '';
   /** The full model list. Omit (or leave empty) to fall back to plain free-text entry. */
-  @property({ attribute: false }) catalog?: LyraModelCatalog;
+  @property({ attribute: false }) catalog?: LyraCatalog<LyraModelCatalogEntry>;
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
   /**
@@ -247,29 +233,22 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   /** Whether the model list is open. Effectively disabled controls reject direct reopen attempts,
    * including a synchronous fieldset cascade. */
   @property({ type: Boolean, reflect: true })
-  get open(): boolean { return this._open; }
+  get open(): boolean { return this.catalogPicker.open; }
   set open(next: boolean) {
-    const old = this._open;
-    const liveDisabled = this.effectiveDisabled ||
-      (typeof this.matches === 'function' && this.matches(':disabled'));
-    this._open = Boolean(next) && !liveDisabled;
-    if (this._open === old) {
-      if (next && !this._open && this.hasAttribute('open')) this.removeAttribute('open');
-      return;
-    }
-    if (!this._open) this.activeIndex = -1;
-    this.requestUpdate('open', old);
+    this.catalogPicker.setOpen(next);
   }
   /** Visual size, on the library-wide six-step ladder (`2xs`–`xl`). `small`/`medium`/`large` are
    *  accepted spellings of `s`/`m`/`l` and render identically, so markup migrated from Web Awesome
    *  or Shoelace needs no attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  @state() private activeIndex = -1;
+  private get activeIndex(): number { return this.catalogPicker.activeIndex; }
+  private set activeIndex(next: number) { this.catalogPicker.setActiveIndex(next); }
   // Free-text mode's live input text. Only meaningful while `open` — the
   // input is otherwise controlled by the committed value's label (see
   // `renderFreeText`), so this never needs resetting on commit/hide.
-  @state() private query = '';
+  private get query(): string { return this.catalogPicker.query; }
+  private set query(next: string) { this.catalogPicker.setQuery(next); }
   // Set on first blur; gates the `data-invalid` reflection below so
   // validity styling never flashes on first render (matches lr-select).
   @state() private touched = false;
@@ -283,11 +262,6 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   declare customError: string | null;
   private listId = nextId('model-select-list');
   private controlId = nextId('model-select-control');
-  private popupPosition = new AnchoredPopoverController();
-  private pointerListenerDocument?: Document;
-  private pointerListener?: (event: PointerEvent) => void;
-  private _value = '';
-  private _open = false;
   private _fieldsetDisabled = false;
   private _name = '';
   private _disabled = false;
@@ -299,15 +273,30 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private modeFocusRepair?: ComposedFocusRepairSnapshot;
   private focusedModeRepair?: ComposedFocusRepairSnapshot;
   private focusReturnTarget?: HTMLElement;
-  // What `form.reset()` restores to — captured from the `value` *content
-  // attribute* only, mirroring native `<input>`/`FormAssociated`'s
-  // `_defaultValue` (see internal/form-associated.ts). There's no child
-  // markup here to seed a declarative default from (unlike lr-select's
-  // `<lr-option selected>`), so the initial attribute is the only source.
-  private _defaultValue = '';
-  private _valueDirty = false;
-  private settingDefaultValue = false;
-  private reflectingDefaultValue = false;
+  private readonly catalogPicker = new CatalogPickerController<LyraModelCatalogEntry>(this, {
+    catalog: () => this.catalog,
+    allowCustom: () => this.allowCustom,
+    locale: () => this.effectiveLocale,
+    searchableFields: (entry) => [entry.id, entry.label],
+    emitChange: (detail) => this.emit('lr-change', detail),
+    emitFocusAlias: (type) => this.emit(type),
+    onValueChange: (value, oldValue) => {
+      this.internals.setFormValue(value);
+      this.updateValidity();
+      this.requestUpdate('value', oldValue);
+    },
+    onDefaultValueChange: (_value, oldValue) => this.requestUpdate('defaultValue', oldValue),
+    onStateChange: (state, oldValue) => {
+      if (state === 'open') this.requestUpdate('open', oldValue);
+      else this.requestUpdate();
+    },
+    onControlFocus: (event) => this.captureModeFocus(event),
+    onControlBlur: (event) => {
+      if (!this.effectiveDisabled) this.touched = true;
+      this.retireModeFocusAfterBlur(event);
+    },
+    forwardFreeInputClick: true,
+  });
 
   constructor() {
     super();
@@ -315,7 +304,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     // Native <input> always has a submission value ("") from construction —
     // without this, a control whose `value` is never touched is entirely
     // absent from FormData instead of present as "" (see form-associated.ts).
@@ -328,36 +317,28 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    *  picker instead of silently doing nothing.
    *
    *  Closed-dropdown mode forwards via `.click()` itself, since the trigger is a real
-   *  `<button>` wired to `@click`. Free-text mode instead calls `.focus()` on the input: unlike a
-   *  genuine pointer click, `HTMLElement.click()` never moves focus (that's a mousedown side
-   *  effect the browser applies only to *real* pointer interaction), and this control's open
-   *  behavior for that mode is wired to the input's `focus` event (see `onInputFocus`), not a
-   *  `click` handler on the input itself. */
+   *  `<button>` wired to `@click`. Free-text mode forwards `.click()` to the input, then explicitly
+   *  calls `.focus()`: unlike a genuine pointer click, `HTMLElement.click()` never moves focus
+   *  (that's a mousedown side effect the browser applies only to *real* pointer interaction), and
+   *  this control's open behavior for that mode is wired to the input's `focus` event (see
+   *  `onInputFocus`), not a `click` handler on the input itself. */
   override click(): void {
-    if (this.effectiveDisabled) return;
-    const trigger = this.renderRoot?.querySelector('[part="trigger"]') as HTMLButtonElement | null;
-    if (trigger) {
-      trigger.click();
-      return;
-    }
-    const input = this.renderRoot?.querySelector('[part="combobox-input"]') as HTMLInputElement | null;
-    input?.click();
-    input?.focus();
+    this.catalogPicker.click();
   }
 
   /** Focuses the active semantic control in both closed-dropdown and free-text modes. */
   override focus(options?: FocusOptions): void {
-    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
+    this.catalogPicker.focus(options);
   }
 
   /** Blurs the active semantic control in both rendering modes. */
   override blur(): void {
-    this[VALIDITY_ANCHOR]()?.blur();
+    this.catalogPicker.blur();
   }
 
   /** The native editable input in free-text mode, or `null` in closed-dropdown mode and before render. */
   get input(): HTMLInputElement | null {
-    return this.renderRoot?.querySelector<HTMLInputElement>('[part="combobox-input"]') ?? null;
+    return this.catalogPicker.input;
   }
 
   get selectionStart(): number | null {
@@ -386,7 +367,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   /** Selects all editable text in free-text mode; otherwise a no-op. */
   select(): void {
-    this.input?.select();
+    this.catalogPicker.select();
   }
 
   /** Forwards the native selection range in free-text mode; otherwise a no-op. */
@@ -395,7 +376,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     end: number | null,
     direction?: LyraModelSelectSelectionDirection,
   ): void {
-    this.input?.setSelectionRange(start, end, direction);
+    this.catalogPicker.setSelectionRange(start, end, direction);
   }
 
   setRangeText(replacement: string): void;
@@ -405,16 +386,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    * form entry, and validity. Closed-dropdown mode and pre-render calls are no-ops.
    */
   setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
-    const input = this.input;
-    if (!input) return;
-    if (start === undefined || end === undefined) {
-      input.setRangeText(replacement);
-    } else {
-      input.setRangeText(replacement, start, end, selectMode);
-    }
-    this.query = input.value;
-    this.activeIndex = -1;
-    this.value = input.value;
+    this.catalogPicker.setRangeText(replacement, start, end, selectMode);
   }
 
   get form(): HTMLFormElement | null {
@@ -448,7 +420,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
-    if (this.hasUpdated && this.open) queueMicrotask(() => this.syncPopup());
+    this.catalogPicker.connected(this.hasUpdated);
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -461,6 +433,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
       const renderedClosedMode = renderedControl?.getAttribute('part') === 'trigger';
       modeChanged = renderedClosedMode !== this.closedMode;
       this.suppressControlBlur = modeChanged;
+      this.catalogPicker.suppressControlEvents = modeChanged;
       this.modeFocusRepair =
         modeChanged && renderedControl !== null && activeElementIn(this.shadowRoot) === renderedControl
           ? captureComposedFocusRepair(
@@ -475,13 +448,14 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
       this.open &&
       (changed.has('catalog') || changed.has('value') || changed.has('allowCustom'))
     ) {
-      this.activeIndex = -1;
       // A live catalog refresh changes the suggestions underneath the current draft, not the
       // draft itself. Rebase only for controlled-value changes or a structural mode switch;
       // otherwise a provider polling its model list would erase what the user is typing.
-      if (changed.has('value') || changed.has('allowCustom') || modeChanged) {
-        this.query = this.labelFor(this._value);
-      }
+      this.catalogPicker.reconcileRows(
+        undefined,
+        changed.has('value') || changed.has('allowCustom') || modeChanged,
+        false,
+      );
     }
   }
 
@@ -490,14 +464,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.modeFocusRepair = undefined;
     this.focusedModeRepair = undefined;
     this.focusReturnTarget = undefined;
-    this.popupPosition.disconnect();
-    this.unbindDocumentPointer();
-    // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
-    // `updated()`'s `open`-driven branch -- without this, `open` stays
-    // `true` across the disconnect/reconnect and `changed.has('open')` never
-    // fires again, leaving the listbox rendered open with no positioning and
-    // no outside-click listener.
-    this.open = false;
+    this.catalogPicker.disconnected();
   }
 
   override adoptedCallback(): void {
@@ -505,37 +472,20 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.modeFocusRepair = undefined;
     this.focusedModeRepair = undefined;
     this.focusReturnTarget = undefined;
-    this.popupPosition.disconnect();
-    this.unbindDocumentPointer();
+    this.catalogPicker.adopted();
   }
 
   /** The current model id (empty string when nothing is selected). */
   get value(): string {
-    return this._value;
+    return this.catalogPicker.value;
   }
   set value(next: string) {
-    const old = this._value;
-    if (!this.settingDefaultValue) this._valueDirty = true;
-    this._value = next ?? '';
-    this.internals.setFormValue(this._value);
-    this.updateValidity();
-    this.requestUpdate('value', old);
+    this.catalogPicker.value = next;
   }
   /** Reflected current reset default; changing it never overwrites a dirty live `value`. */
-  get defaultValue(): string { return this._defaultValue; }
+  get defaultValue(): string { return this.catalogPicker.defaultValue; }
   set defaultValue(next: string) {
-    if (this.reflectingDefaultValue) return;
-    const old = this._defaultValue;
-    this._defaultValue = next ?? '';
-    this.reflectingDefaultValue = true;
-    try {
-      if (this._defaultValue) this.setAttribute('value', this._defaultValue);
-      else this.removeAttribute('value');
-    } finally {
-      this.reflectingDefaultValue = false;
-    }
-    if (!this._valueDirty) this.restoreLiveValueFromDefault();
-    this.requestUpdate('defaultValue', old);
+    this.catalogPicker.defaultValue = next;
   }
 
   /** The form submission key, reflected synchronously for native form APIs. */
@@ -596,7 +546,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private updateValidity(): void {
     if (this.barredFromValidation) {
       this.validityController.setValidity({});
-    } else if (this.required && !this._value) {
+    } else if (this.required && !this.value) {
       this.validityController.setValidity({ valueMissing: true }, this.localize('modelSelectRequired'));
     } else {
       this.validityController.setValidity({});
@@ -620,19 +570,13 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   formResetCallback(): void {
     this.touched = false;
-    this.restoreLiveValueFromDefault();
-  }
-  private restoreLiveValueFromDefault(): void {
-    this.settingDefaultValue = true;
-    try { this.value = this._defaultValue; }
-    finally { this.settingDefaultValue = false; }
-    this._valueDirty = false;
+    this.catalogPicker.resetValue();
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
     _mode?: 'restore' | 'autocomplete',
   ): void {
-    this.value = typeof state === 'string' ? state : '';
+    this.catalogPicker.restoreState(state);
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
@@ -674,14 +618,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.publishValidityStates();
   }
 
-  /** `catalog`, normalized to `{ id, label }[]` regardless of the plain-string-array shorthand. */
-  private get normalizedCatalog(): LyraModelCatalogEntry[] {
-    return normalizeCatalog<LyraModelCatalogEntry>(this.catalog);
-  }
-
   /** Closed-dropdown-with-listbox mode vs. free-text filterable mode — see class doc. */
   private get closedMode(): boolean {
-    return this.normalizedCatalog.length > 0 && !this.allowCustom;
+    return this.catalogPicker.closedMode;
   }
 
   /**
@@ -691,85 +630,30 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    * whenever `value` happened to be assigned.
    */
   private get effectiveEntries(): DisplayEntry[] {
-    return withSyntheticCatalogValue(this.normalizedCatalog, this._value);
+    return this.catalogPicker.effectiveEntries;
   }
 
   /** `effectiveEntries` filtered by the typed `query` (free-text mode only; id or label substring, case-insensitive). */
   private get filteredEntries(): DisplayEntry[] {
-    return filterCatalogEntries(this.effectiveEntries, this.query, this.effectiveLocale, (entry) => [
-      entry.id,
-      entry.label,
-    ]);
+    return this.catalogPicker.filteredEntries;
   }
 
   private labelFor(id: string): string {
-    if (!id) return '';
-    return this.effectiveEntries.find((e) => e.id === id)?.label ?? id;
+    return this.catalogPicker.labelFor(id);
   }
 
   private show(): void {
-    if (this.open || this.effectiveDisabled) return;
-    this.open = true;
+    this.catalogPicker.show();
   }
   private hide(): void {
-    if (!this.open) return;
-    this.open = false;
-    this.activeIndex = -1;
-  }
-  private onDocPointer = (e: PointerEvent): void => {
-    if (!e.composedPath().includes(this)) this.hide();
-  };
-
-  private bindDocumentPointer(): void {
-    if (!this.isConnected) return;
-    const ownerDocument = this.ownerDocument;
-    if (this.pointerListenerDocument === ownerDocument && this.pointerListener) return;
-    this.unbindDocumentPointer();
-    const listener = (event: PointerEvent): void => {
-      if (
-        this.pointerListener !== listener ||
-        this.pointerListenerDocument !== ownerDocument ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.onDocPointer(event);
-    };
-    this.pointerListenerDocument = ownerDocument;
-    this.pointerListener = listener;
-    ownerDocument.addEventListener('pointerdown', listener);
-  }
-
-  private unbindDocumentPointer(): void {
-    if (this.pointerListenerDocument && this.pointerListener) {
-      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
-    }
-    this.pointerListenerDocument = undefined;
-    this.pointerListener = undefined;
-  }
-
-  private syncPopup(): void {
-    this.popupPosition.disconnect();
-    if (!this.open || !this.isConnected) {
-      this.unbindDocumentPointer();
-      return;
-    }
-    this.bindDocumentPointer();
-    const anchor = this.renderRoot.querySelector(
-      this.closedMode ? '[part="trigger"]' : '[part="combobox"]',
-    ) as HTMLElement | null;
-    const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-    if (anchor && listbox) this.popupPosition.reposition(anchor, listbox);
+    this.catalogPicker.hide();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const reposition =
       changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
-    if (reposition) {
-      this.syncPopup();
-    }
+    this.catalogPicker.updated(reposition);
     if (changed.has('required') || changed.has('touched') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
@@ -778,6 +662,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     // `required`/`invalid`) for a consumer's :state() rule to match from the moment it mounts.
     this.publishValidityStates();
     this.suppressControlBlur = false;
+    this.catalogPicker.suppressControlEvents = false;
     const focusRepair = this.modeFocusRepair;
     this.modeFocusRepair = undefined;
     if (focusRepair) {
@@ -830,38 +715,6 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     return owner && isComposedFocusAvailable(owner) ? owner : null;
   }
 
-  private commitValue(next: string): void {
-    const inCatalog = this.normalizedCatalog.some((e) => e.id === next);
-    this.value = next;
-    this.hide();
-    this.emit('lr-change', { value: next, inCatalog });
-    this.emitValueEvents();
-  }
-
-  /** Dispatches the platform-style value-event pair alongside `lr-change`,
-   * mirroring `<lr-select>`/`<lr-combobox>` so native form bindings and
-   * framework `v-model` handlers behave consistently across the picker
-   * family. */
-  private emitValueEvents(): void {
-    dispatchNativeEvent(this, 'input');
-    dispatchNativeEvent(this, 'change');
-  }
-
-  private selectEntry(entry: DisplayEntry): void {
-    this.commitValue(entry.id);
-  }
-
-  /** Enter in free-text mode: commit the highlighted suggestion, else the raw typed text. */
-  private commitFreeText(): void {
-    const rows = this.filteredEntries;
-    const active = rows[this.activeIndex];
-    if (this.activeIndex >= 0 && active) {
-      this.commitValue(active.id);
-      return;
-    }
-    this.commitValue(this.query.trim());
-  }
-
   // -- Closed-dropdown mode (trigger button) --------------------------------
 
   private onTriggerClick = (): void => {
@@ -869,150 +722,31 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.open ? this.hide() : this.show();
   };
   private onTriggerBlur = (event: FocusEvent): void => {
-    if (this.suppressControlBlur) {
-      event.stopImmediatePropagation();
-      return;
-    }
-    // The trigger's own `disabled` state becoming true force-blurs it if it currently holds
-    // focus -- a platform reaction, not a user interaction -- and can land synchronously inside
-    // the very property write that disabled this control, so `effectiveDisabled` already reads
-    // true here whenever this is that case. Marking `touched` for it risked reentering that
-    // in-flight update for a state flip nothing observable needed.
-    if (!this.effectiveDisabled) this.touched = true;
-    this.hide();
-    relayNativeEvent(this, event);
-    this.emit('lr-blur');
-    this.retireModeFocusAfterBlur(event);
+    this.catalogPicker.handleControlBlur(event);
   };
   private onTriggerFocus = (event: FocusEvent): void => {
-    this.captureModeFocus(event);
-    relayNativeEvent(this, event);
-    this.emit('lr-focus');
+    this.catalogPicker.handleControlFocus(event);
   };
   private onTriggerKeyDown = (e: KeyboardEvent): void => {
-    const rows = this.effectiveEntries;
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        if (!this.open) return this.show();
-        this.activeIndex = Math.min(rows.length - 1, this.activeIndex + 1);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        if (!this.open) return this.show();
-        this.activeIndex = Math.max(0, this.activeIndex - 1);
-        break;
-      case 'Enter':
-      case ' ':
-        if (this.open) {
-          e.preventDefault();
-          const active = rows[this.activeIndex];
-          if (this.activeIndex >= 0 && active) {
-            this.selectEntry(active);
-          } else {
-            this.hide();
-          }
-        }
-        break;
-      case 'Escape':
-        if (this.open) {
-          e.preventDefault();
-          this.hide();
-        }
-        break;
-      case 'Home':
-        if (this.open) {
-          e.preventDefault();
-          this.activeIndex = 0;
-        }
-        break;
-      case 'End':
-        if (this.open) {
-          e.preventDefault();
-          this.activeIndex = rows.length - 1;
-        }
-        break;
-    }
+    this.catalogPicker.handleTriggerKeyDown(e);
   };
 
   // -- Free-text mode (text input) ------------------------------------------
 
   private onComboMouseDown = (e: MouseEvent): void => {
-    if (this.effectiveDisabled) return;
-    e.preventDefault();
-    (this.renderRoot.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
+    this.catalogPicker.handleComboMouseDown(e);
   };
   private onInputFocus = (event: FocusEvent): void => {
-    this.captureModeFocus(event);
-    // Seed the editable text from the *current* value each time a fresh
-    // editing session starts, not on every keystroke (onInput overwrites
-    // `query` directly) — otherwise a same-session reopen via ArrowDown
-    // after Escape would clobber the just-reverted text right back to
-    // whatever the user had typed before Escape.
-    if (!this.open) this.query = this.labelFor(this.value);
-    this.show();
-    relayNativeEvent(this, event);
-    this.emit('lr-focus');
+    this.catalogPicker.handleInputFocus(event);
   };
   private onInput = (e: Event): void => {
-    this.query = (e.target as HTMLInputElement).value;
-    this.activeIndex = -1;
-    this.show();
-    relayNativeEvent(this, e);
+    this.catalogPicker.handleInput(e);
   };
   private onInputBlur = (event: FocusEvent): void => {
-    if (this.suppressControlBlur) {
-      event.stopImmediatePropagation();
-      return;
-    }
-    // Same disabled-forced-blur guard as onTriggerBlur above -- the combobox input's own
-    // `disabled` state becoming true auto-blurs it if it currently holds focus, a platform
-    // reaction rather than user interaction.
-    if (!this.effectiveDisabled) this.touched = true;
-    this.hide();
-    relayNativeEvent(this, event);
-    this.emit('lr-blur');
-    this.retireModeFocusAfterBlur(event);
+    this.catalogPicker.handleControlBlur(event);
   };
   private onInputKeyDown = (e: KeyboardEvent): void => {
-    const rows = this.filteredEntries;
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        if (!this.open) return this.show();
-        this.activeIndex = Math.min(rows.length - 1, this.activeIndex + 1);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        if (!this.open) return this.show();
-        this.activeIndex = Math.max(0, this.activeIndex - 1);
-        break;
-      case 'Enter':
-        if (this.open) {
-          e.preventDefault();
-          this.commitFreeText();
-        }
-        break;
-      case 'Escape':
-        if (this.open) {
-          e.preventDefault();
-          this.query = this.labelFor(this.value);
-          this.hide();
-        }
-        break;
-      case 'Home':
-        if (this.open) {
-          e.preventDefault();
-          this.activeIndex = 0;
-        }
-        break;
-      case 'End':
-        if (this.open) {
-          e.preventDefault();
-          this.activeIndex = rows.length - 1;
-        }
-        break;
-    }
+    this.catalogPicker.handleInputKeyDown(e);
   };
 
   // -- Shared listbox ---------------------------------------------------
@@ -1021,21 +755,16 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   // per row per render — resolves the target row via closest('[part="option"]')
   // + a data-value lookup, mirroring lr-select/lr-combobox.
   private onListboxMouseDown = (e: MouseEvent): void => {
-    if ((e.target as HTMLElement).closest('[part="option"]')) e.preventDefault();
+    this.catalogPicker.handleListboxMouseDown(e);
   };
   private onListboxClick = (e: MouseEvent): void => {
-    if (this.effectiveDisabled) return;
-    const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
-    const value = optionEl?.dataset['value'];
-    if (value === undefined) return;
-    const entry = (this.closedMode ? this.effectiveEntries : this.filteredEntries).find((e2) => e2.id === value);
-    if (entry) this.selectEntry(entry);
+    this.catalogPicker.handleListboxClick(e);
   };
 
   private renderRows(rows: DisplayEntry[], activeId: string): TemplateResult[] {
     return rows.map((entry, i) => {
       const id = `${this.listId}-opt-${i}`;
-      const selected = entry.id === this._value;
+      const selected = entry.id === this.value;
       return html`<div
         part="option"
         id=${id}
@@ -1095,7 +824,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private renderClosed(): TemplateResult {
     const rows = this.effectiveEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
-    const hasValue = this._value.length > 0;
+    const hasValue = this.value.length > 0;
     const hasLabel = this.hasVisibleLabel;
     const hasHint = this.slotPresence.has('hint') || this.hint.length > 0;
     const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
@@ -1125,7 +854,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
       >
         ${this.provider ? html`<span part="provider-badge">${this.provider}</span>` : ''}
         <span class="trigger-label" ?data-placeholder=${!hasValue}
-          >${hasValue ? this.labelFor(this._value) : this.placeholder}</span
+          >${hasValue ? this.labelFor(this.value) : this.placeholder}</span
         >
         <span part="expand-icon" aria-hidden="true" inert>${chevronIcon()}</span>
       </button>
@@ -1165,7 +894,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
           autocorrect=${this.autoCorrect || nothing}
           inputmode=${this.inputMode || nothing}
           enterkeyhint=${this.enterKeyHint || nothing}
-          .value=${this.open ? this.query : this.labelFor(this._value)}
+          .value=${this.open ? this.query : this.labelFor(this.value)}
           placeholder=${this.placeholder}
           ?disabled=${this.effectiveDisabled}
           @input=${this.onInput}

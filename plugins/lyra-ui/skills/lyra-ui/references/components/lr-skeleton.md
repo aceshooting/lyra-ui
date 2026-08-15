@@ -15,20 +15,24 @@
 
 ## `lr-skeleton`
 
-Loading placeholder (`text`/`circle`/`rect` shapes, opt-in `pulse`/`sheen` effects).
+Loading placeholder mirroring the Web Awesome/Shoelace skeleton surface under the `lr-` prefix,
+with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 
 **Properties:**
-- `variant: 'text'|'circle'|'rect' = 'text'` (reflected)
+- `shape: 'text'|'circle'|'rect' = 'text'` (reflected) — the canonical geometry vocabulary;
+  exported as `LyraSkeletonShape`. The former `variant` property/attribute and `SkeletonVariant`
+  type are removed in v9; use `shape` and `LyraSkeletonShape`.
 - `effect: 'pulse'|'sheen'|'none' = 'none'` (reflected) — animation is opt-in. **Changed in
   8.0.0:** the Lyra default was `pulse`; set `effect="pulse"` to preserve that motion explicitly.
 - `width?: string`
 - `height?: string`
-- `label: string = 'Loading…'` — accessible name for this instance's own `role="status"` (rendered as
-  visually-hidden text inside `[part="base"]`); override with a description of what's actually
-  loading, e.g. `label="Loading chart"`
-- `announce: boolean = true` (reflected) — set false for decorative members of a skeleton group;
-  removes the status role, live-region state, and visually hidden announcement while preserving
-  the visual placeholder
+- `label?: string` — accessible name used when `announce` is set (rendered as visually-hidden text
+  inside `[part="base"]`). Only absence uses the localized loading default; every explicit caller
+  value—including `label="Loading…"` and `label=""`—is preserved literally. Prefer a description
+  of what's actually loading, e.g. `label="Loading chart"`.
+- `announce: boolean = false` (reflected) — opt one meaningful placeholder into `role="status"`
+  and localized hidden text. The false default preserves the decorative bare Web Awesome/Shoelace
+  skeleton contract and prevents repeated placeholders from producing duplicate announcements.
 
 **Events:** none.
 
@@ -47,13 +51,13 @@ timing.
 **Optional peer deps:** none.
 
 ```html
-<lr-skeleton variant="circle" effect="pulse" width="3rem" height="3rem"></lr-skeleton>
-<lr-skeleton variant="text" effect="sheen" label="Loading name"></lr-skeleton>
+<lr-skeleton shape="circle" effect="pulse" width="3rem" height="3rem"></lr-skeleton>
+<lr-skeleton announce shape="text" effect="sheen" label="Loading name"></lr-skeleton>
 ```
 
 **Known gotchas:**
-- Each instance announces by default. In a repeated skeleton layout, provide one parent status and
-  set `announce="false"` on the decorative child placeholders to avoid duplicate announcements.
+- Bare skeletons are decorative. In a repeated layout, set `announce` only on one meaningful
+  placeholder or provide one parent status; leave every other child unannounced.
 - no `lines`/`count` shorthand for "N lines of skeleton text" — stamp out N elements
   yourself.
 - Respects `prefers-reduced-motion` (both effects) — safe to leave as-is for that concern.

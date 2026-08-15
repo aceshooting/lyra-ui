@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,15 +21,18 @@ it has no dependency on the general-purpose dialog, while its modal behavior par
 shared overlay stack. First-party invention (no Web Awesome equivalent).
 
 **Exported types:**
+
 - `ToolSelectDialogTool { id: string; name: string; description?: string; category?: string; icon?:
-  string; disabled?: boolean; disabledReason?: string }` — one selectable agent tool. `category` groups
+string; disabled?: boolean; disabledReason?: string }` — one selectable agent tool. `category` groups
   the row into a heading; tools with no `category` (or an empty/whitespace-only one) fall into a
   trailing localized "Other" bucket. A caller category literally named `"Other"` remains its own
   ordinary, first-seen category and is not merged into or reordered with that uncategorized bucket.
   `icon` is a literal glyph (e.g. an emoji) rendered next to `name` — an opaque string, not a registry
   lookup, the same convention `<lr-tool-call-chip>`'s `icon` uses. `disabled` individually gates a
   tool regardless of `useDefaults`/`selected` (e.g. a tool requiring admin approval);
-  `disabledReason` is supporting text shown under a disabled row, ignored when `disabled` is falsy.
+  `description` and `disabledReason` are supporting descriptions associated with the checkbox
+  through its stable `aria-describedby` owner; only `name` contributes to the checkbox's accessible
+  name. `disabledReason` is ignored when `disabled` is falsy.
 - `ToolSelectFilter = (tool: ToolSelectDialogTool, query: string) => boolean` — a predicate deciding
   whether `tool` matches an already-trimmed, already-lowercased `query`. Assign `filter` to replace the
   built-in case-insensitive name/description substring match entirely (mirrors `<lr-combobox>`'s
@@ -41,26 +44,33 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
   whatever a caller passes to `close()` directly.
 
 **Properties:**
-- `open: boolean = false` (reflected) — set this (or call `close()`) to dismiss; there is no separate
-  `show()`/`hide()` pair.
+
+- `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below.
 - `tools: ToolSelectDialogTool[] = []` (attribute: false) — the full set of tools a consumer offers,
-  across all categories.
-- `selected: string[] = []` (attribute: false) — the currently-enabled tool ids.
+  across all categories. `id` is the public identity: when provider data repeats one, the first
+  occurrence wins consistently for grouping, filtering, counts, selection, and emitted ids.
+- `selected: string[] = []` (attribute: false) — the currently-enabled tool ids. Repeated ids are
+  treated as one selection.
 - `useDefaults: boolean = false` (attribute `use-defaults`, reflected) — whether the conversation is
   using the default tool set (`true`) or a custom selection (`false`).
-- `label: string = 'Select tools'` — the dialog's visible heading and accessible name.
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the dialog panel's
-  accessible name, taking precedence over the visible `label` heading; mirrors `<lr-dialog>`'s
-  own host-`aria-label` override pattern.
-- `searchPlaceholder: string = 'Search tools…'` (attribute `search-placeholder`)
+- `label?: string` — the dialog's visible heading and accessible name. Omission uses localized
+  `selectTools`; every supplied string, including `"Select tools"` and `""`, remains literal.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
+  host; the panel remains labelled by its visible heading instead of cloning that name. A direct
+  property assignment made without the attribute can name the panel.
+- `searchPlaceholder?: string` (attribute `search-placeholder`) — omission uses localized
+  `searchToolsPlaceholder`; every supplied string, including `"Search tools…"` and `""`, remains
+  literal.
 - `filter: ToolSelectFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive name/description substring match.
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
   `autoCorrect: string = ''` (`autocorrect`), `inputMode: string = ''` (`inputmode`), and
   `enterKeyHint: string = ''` (`enterkeyhint`) — forwarded to the search `<input>`.
 
-**Methods:** `close(reason: ToolSelectDialogCloseReason = 'api'): void` — closes the dialog, emits
-`lr-close` with `reason`, and returns focus to whatever had it before the dialog opened.
+**Methods:** `show(): void` opens the dialog; `hide(reason: ToolSelectDialogCloseReason = 'api'):
+void` performs the reasoned API dismissal;
+`close(reason: ToolSelectDialogCloseReason = 'api'): void` closes the dialog, emits `lr-close` with
+`reason`, and returns focus to whatever had it before the dialog opened.
 
 **Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the proposed enabled-tool selection and
 `useDefaults` state) is cancelable and fires before either property changes. Calling
@@ -76,9 +86,10 @@ already apply live via `lr-change`, so this slot is purely optional; only visual
 assigned elements.
 
 **CSS parts:** `backdrop`, `panel`, `header`, `title`, `subtitle`, `search-row`, `search-input`,
-`defaults-row`, `defaults-toggle`, `defaults-hint`, `body`, `empty`, `category`, `category-heading`,
+`defaults-row`, `defaults-toggle`, `defaults-hint`, `body` (the keyboard-focusable scroll region),
+`empty`, `category`, `category-heading`,
 `category-count`, `category-list`, `tool-row`, `tool-checkbox`, `tool-name`, `tool-icon`,
-`tool-description`, `tool-disabled-reason`, `footer`
+`tool-description`, `tool-disabled-reason`, `limit`, `load-more`, `footer`
 
 **Themeable custom properties:** `--lr-tool-select-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token
@@ -112,16 +123,20 @@ dependencies of this package imported directly, not optional peers.
 `useDefaults` is a single top-level switch: while `true`, every per-tool checkbox renders disabled
 (still reflecting whatever `selected` holds — populate that with the actual default tool set whenever
 `useDefaults` is true) alongside a hint explaining that turning the switch off is how to customize.
-Turning it off is the only control that both flips `useDefaults` to `false` *and* unlocks the per-tool
+Turning it off is the only control that both flips `useDefaults` to `false` _and_ unlocks the per-tool
 checkboxes for editing.
 
 **Known gotchas:**
+
 - No built-in footer/close button — dismissal happens via Escape, a backdrop click, or a consumer's own
   `footer`-slotted action calling `close()` directly.
-- A row is effectively disabled whenever *either* its own `tool.disabled` is true *or* the top-level
+- A row is effectively disabled whenever _either_ its own `tool.disabled` is true _or_ the top-level
   `useDefaults` switch is on — a tool without `disabled` set can still render as a locked checkbox while
   `useDefaults` is true.
 - `disabledReason` text only renders when both `tool.disabled` and `tool.disabledReason` are set.
+- Tool descriptions and disabled reasons are checkbox descriptions, not label content: the tool
+  name remains the concise accessible name and the supporting text is linked through the checkbox's
+  stable description bridge.
 - Categories are grouped in first-seen order across `tools`; an empty/whitespace-only `category` folds
   into a trailing "Other" bucket that's always rendered last. A category left with zero matches after
   filtering is dropped entirely, not rendered as an empty heading. A caller-supplied category
@@ -131,5 +146,8 @@ checkboxes for editing.
   instance) resumes its shared overlay registration and re-acquires the scroll lock dropped in
   `disconnectedCallback`.
 - The search input is the first focusable element in the panel and receives focus automatically on open.
+- Matching rows mount in batches of 200. Selected matches reserve positions in the current batch,
+  and a localized `[part="limit"]` notice plus `[part="load-more"]` button mounts the next 200;
+  searching always considers the complete first-wins tool catalog.
 
 ---

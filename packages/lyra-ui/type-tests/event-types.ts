@@ -25,7 +25,7 @@ import type {
   FormAssociatedInterface,
   HeatmapAnnotation,
   LyraLiteChartLayout,
-  LyraSelectSize,
+  LyraSize,
   MatrixCellPos,
   LyraMultiSplitPanelConstraint,
   PromptStudioMessageReorderDetail,
@@ -201,7 +201,7 @@ import type {
 
 const publicTypes: [
   StatRow,
-  LyraSelectSize,
+  LyraSize,
   LyraMultiSplitPanelConstraint,
   TimeRangePreset,
   HeatmapAnnotation,

@@ -20,6 +20,7 @@ to hero highlights, clickable grid tiles, and management-list items. A direct `<
 to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where they overlap.
 
 **Properties:**
+
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
   (reflected) — `'outlined'` (the default) is a plain bordered surface; `'filled'` swaps the border
   for a quiet brand-tinted background; `'filled-outlined'` keeps the border and adds that same tinted
@@ -33,14 +34,15 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   reflected as `with-header`, `with-header-actions`, `with-media`, `with-footer`, and
   `with-footer-actions`) — SSR presence hints. They expose an otherwise-empty section wrapper before
   slot assignment can be measured; populated slots are still detected automatically after hydration.
-- `interactive: boolean = false` (reflected) — opt-in clickable-tile behavior: the hover/focus-visible
+- `actionable: boolean = false` (reflected) — opt-in no-link whole-card action behavior: the hover/focus-visible
   treatment (border-color shift, `cursor: pointer`) plus, when `href` is **not** also set, real
   activation semantics. Those come from a real native `<button part="activation-button">` stretched
   across the card, not from making `[part='base']` itself focusable: it is the keyboard tab stop,
   it answers Enter and Space natively, and activating it emits `lr-card-activate`. With `href` set,
   a stretched sibling native `<a>` owns navigation, no activation button renders, and
   `lr-card-activate` never fires. Consumer slots stay outside that link, so their controls remain
-  independent. `false` (the default) reproduces a plain static card: no button, no listeners, no
+  independent. A valid `href` is inherently actionable and receives the same interaction paint
+  without this flag. `false` (the default) leaves a no-link card static: no button, listeners, or
   events.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the accessible name of the
   native whole-card owner: the activation button without `href`, or the stretched link with it.
@@ -51,19 +53,23 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   link, while slotted controls keep their own native or Lyra behavior. Unset (the default) renders
   a plain `<div>`.
 - `target?: string` — native anchor target, applied only while `href` resolves to a link. Setting it
-  to `'_blank'` (or any other target) automatically derives `rel="noopener noreferrer"` on the
-  rendered anchor; there is deliberately **no** separately-settable `rel` property, so a consumer
-  can't forget it and leave the opened page holding a `window.opener` back-reference
-  (reverse-tabnabbing). Unset (the default) emits neither `target` nor `rel`.
+  to `'_blank'` (or any other target) forces `noopener noreferrer` on the rendered anchor.
+- `rel?: string` — author relationship tokens such as `nofollow`, `sponsored`, `me`, or `license`.
+  `opener` is always stripped, other tokens are preserved, and any set `target` force-adds the
+  non-negotiable `noopener noreferrer` floor. With no target, safe author tokens render unchanged.
 
 **Events:** `lr-card-activate` (no detail) — the whole card was activated, by a click anywhere on it
-or by Enter/Space on `[part='activation-button']`. Only fired while `interactive` is set **without**
+or by Enter/Space on `[part='activation-button']`. Only fired while `actionable` is set **without**
 `href`. Never fired for an interaction that originated in a slotted control, so a card can keep its
 own action buttons (see the gotchas below).
 
 **Methods:** `click(): void` activates the native whole-card owner: the linked anchor when `href` is
-safe, or the activation button while `interactive` is set without a link. Passive cards remain
+safe, or the activation button while `actionable` is set without a link. Passive cards remain
 inert.
+
+Changing `href` or `actionable` while the whole-card owner has focus transfers focus across the
+link, activation button, and a programmatically focusable passive base. It never overrides a newer
+external focus destination.
 
 **Slots:** default (the card body), `header` (vertical header content), `media` and `image` (aliases
 for media above the header vertically or at logical start horizontally), `footer` (vertical footer
@@ -72,7 +78,7 @@ content), `header-actions` and `footer-actions` (controls aligned with those ver
 
 **CSS parts:** `base` (the outer container — a `<div>`, or a stretched `<a>` behind consumer slots
 when `href` is set),
-`activation-button` (the native whole-card action, rendered only while `interactive` without `href`;
+`activation-button` (the native whole-card action, rendered only while `actionable` without `href`;
 it is absolutely positioned across the card, `pointer-events: none` so it never intercepts a click
 meant for slotted content, and it owns the card's `:focus-visible` ring), `media` and `image`
 (aliases on the wrapper around both media slots, hidden entirely when empty), `header` (wrapper around the `header` slot and
@@ -95,7 +101,7 @@ former brand and active-mix values when unset.
 **Optional peer deps:** none.
 
 ```html
-<lr-card appearance="outlined" interactive href="/reports/42" with-media with-header>
+<lr-card appearance="outlined" href="/reports/42" with-media with-header>
   <img slot="image" src="/thumb.png" alt="" />
   <span slot="header">Q3 Report</span>
   <span slot="header-actions"><lr-chip tone="success">Ready</lr-chip></span>
@@ -106,7 +112,8 @@ former brand and active-mix values when unset.
 ```
 
 **Known gotchas:**
-- every `appearance` renders on the *same* `[part="base"]` element — there's no separate element per
+
+- every `appearance` renders on the _same_ `[part="base"]` element — there's no separate element per
   variant, so a `::part(base)` override applies uniformly regardless of `appearance`.
 - slot-presence (`header`/`media`/`image`/`footer`/`actions`/`header-actions`/`footer-actions`) is
   tracked in JS, not via CSS `:empty` (a
@@ -120,10 +127,10 @@ former brand and active-mix values when unset.
   not a viewport media query, so the same card can be horizontal in a wide region and stacked in a
   narrow sidebar on one page.
 - **`[part='base']` itself deliberately carries no `role="button"` and is not focusable.** A card is
-  a *container* — it routinely holds slotted buttons and links — and `role="button"` around
+  a _container_ — it routinely holds slotted buttons and links — and `role="button"` around
   focusable descendants is the `nested-interactive` accessibility violation this library's own a11y
-  gate enforces. (`lr-chip`'s `toggleable` mode *can* carry `role="button"` because it forbids
-  focusable children outright.) The whole-card action is therefore a *sibling* of the slotted
+  gate enforces. (`lr-chip`'s `toggleable` mode _can_ carry `role="button"` because it forbids
+  focusable children outright.) The whole-card action is therefore a _sibling_ of the slotted
   content — `[part='activation-button']` — so the actionable roles are never nested inside one
   another, and the card still announces as a real button rather than as an unnamed focusable region.
 - because the base element carries no `role="button"` to disambiguate, "did the user aim at the card
@@ -132,12 +139,12 @@ former brand and active-mix values when unset.
   itself a control (a link, `button`, `input`, `select`, `textarea`, `label`, `summary`,
   `contenteditable`, anything carrying a `tabindex` other than `-1`, or an ARIA widget role such as
   `button`/`link`/`checkbox`/`switch`/`radio`/`menuitem`/`option`/`tab`/`textbox`/`slider`/
-  `spinbutton`). Using the *composed*
+  `spinbutton`). Using the _composed_
   path is what makes this work through a slotted component's own shadow root — a click on
   `<lr-button>` retargets to the host, but its composed path still contains the internal native
   `<button>`.
 - a click whose composed path starts on `[part='activation-button']` skips that walk entirely and
-  always activates — it *is* the whole-card action, so there is nothing to disambiguate.
+  always activates — it _is_ the whole-card action, so there is nothing to disambiguate.
 - with `href`, `[part='base']` is a stretched real anchor sibling behind the visible content rather
   than an ancestor of it. Clicks from noninteractive slotted content are delegated to that anchor;
   composed-path arbitration leaves native and Lyra buttons, links, and fields independent. The

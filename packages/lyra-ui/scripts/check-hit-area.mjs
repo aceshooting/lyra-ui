@@ -90,12 +90,21 @@ export function targetHitAreaContract(target) {
     return { minimumPx: 24, kind: 'wcag' };
   }
 
+  if (
+    (component === 'lr-span-waterfall' && part === 'bar') ||
+    (component === 'lr-radio-button' && part === 'base') ||
+    (component === 'lr-breadcrumb-item' && part === 'base') ||
+    (component === 'lr-map' && part === 'marker')
+  ) {
+    return { minimumPx: 24, kind: 'physical' };
+  }
+
   return null;
 }
 
 /**
  * Checks measured fixture boxes against targetHitAreaContract(). A compact
- * target must meet the 40px floor in both axes. A WCAG target may instead use
+ * target and an explicitly physical target must meet their floor in both axes. A WCAG target may instead use
  * the 2.5.8 spacing exception: an undersized target passes when the nearest
  * other target centre is at least 24px away.
  */
@@ -960,4 +969,3 @@ function main() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();
 }
-

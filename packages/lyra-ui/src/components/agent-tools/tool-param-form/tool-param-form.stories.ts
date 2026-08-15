@@ -125,7 +125,7 @@ export const NativeFormAndCustomError: Story = {
     docs: {
       description: {
         story:
-          'The complete parameter object participates in a native form. Reset restores a fresh clone of the initial Lisbon value while a consumer-set custom error remains until cleared. The controls also exercise `getForm()` and the bubbling `lr-invalid` alias.',
+          'The complete parameter object participates in a native form. Reset restores a fresh clone of the initial Lisbon value while a consumer-set custom error remains until cleared. The controls also exercise `getForm()` and the cancelable `lr-invalid` alias; the handler prevents the native validation UI in favor of the story output.',
       },
     },
   },
@@ -150,6 +150,7 @@ export const NativeFormAndCustomError: Story = {
       output.textContent = `Owner resolved: ${control.getForm() === control.closest('form')}`;
     };
     const reportInvalid = (event: Event) => {
+      event.preventDefault();
       const output = (event.currentTarget as HTMLElement).closest('form')?.querySelector('output');
       if (output) output.textContent = 'lr-invalid: the complete parameter form is invalid.';
     };
@@ -183,13 +184,34 @@ export const NativeFormAndCustomError: Story = {
   },
 };
 
-/** Live `lr-input`/`lr-validity-change` events, mirroring what a consumer's dialog would listen for. */
+/** Live `lr-input`/`lr-validity-change` events. Validity details are frozen effective snapshots, so
+ * custom errors and validation barring are reflected without exposing mutable component state. */
 export const LiveEvents: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Edit a field, set a whole-control custom error, or toggle validation barring. The log shows each deduplicated frozen `lr-validity-change` snapshot.',
+      },
+    },
+  },
   render: () => {
     const onEvent = (e: Event) => {
       const log = (e.target as HTMLElement).closest('.demo')!.querySelector('.log') as HTMLElement;
       const detail = (e as CustomEvent).detail;
       log.textContent = `${e.type}: ${JSON.stringify(detail)}`;
+    };
+    const setCustomError = (e: Event) => {
+      const control = (e.currentTarget as HTMLElement)
+        .closest('.demo')!
+        .querySelector('lr-tool-param-form') as LyraToolParamForm;
+      control.setCustomValidity('Rejected by policy.');
+    };
+    const toggleDisabled = (e: Event) => {
+      const control = (e.currentTarget as HTMLElement)
+        .closest('.demo')!
+        .querySelector('lr-tool-param-form') as LyraToolParamForm;
+      control.disabled = !control.disabled;
     };
     return html`
       <div class="demo" style="max-width: 26rem; display: flex; flex-direction: column; gap: 1rem">
@@ -198,6 +220,10 @@ export const LiveEvents: Story = {
           @lr-input=${onEvent}
           @lr-validity-change=${onEvent}
         ></lr-tool-param-form>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+          <button type="button" @click=${setCustomError}>Set custom error</button>
+          <button type="button" @click=${toggleDisabled}>Toggle disabled</button>
+        </div>
         <pre class="log" style="font-size: 0.75rem; white-space: pre-wrap; word-break: break-all"></pre>
       </div>
     `;

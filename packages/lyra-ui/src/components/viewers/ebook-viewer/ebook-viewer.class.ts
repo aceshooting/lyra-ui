@@ -35,6 +35,7 @@ import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 import { styles } from './ebook-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
@@ -85,7 +86,7 @@ const ACTIVE_HIGHLIGHT_STROKE_TOKEN = { token: '--lr-focus-ring-color', fallback
 export interface LyraEbookViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-location-change': CustomEvent<{ cfi: string; href: string }>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
 }
 
 class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
@@ -119,7 +120,8 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  *   event). `detail: { cfi, href }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
- *   matchCount, activeIndex }`.
+ *   matchCount, matchCountExact, activeIndex }`. At most 10,000 matches are retained; a false
+ *   `matchCountExact` makes `matchCount` a lower bound (including when a spine item cannot load).
  * @event lr-highlight-activate - A painted `cfi` highlight was clicked. `detail: { id }`.
  * @event lr-text-select - Fired on selection end inside a chapter iframe (mirrors epub.js's own
  *   `selected` event). `detail: { text, anchor, rects }`; `anchor` is a `cfi` `LyraAnchor`.
@@ -203,6 +205,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   @state() private ebookState: EbookState = { kind: 'idle' };
   @state() private searchMatches: EbookSearchMatch[] = [];
+  private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
 
   private readonly mountRef: Ref<HTMLDivElement> = createRef();
@@ -298,6 +301,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     this.searchGeneration++;
     this.searchQuery = '';
     this.searchMatches = [];
+    this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
     this.searchAnnotationCfi = undefined;
     this.paintedHighlightCfis = [];
@@ -690,18 +694,22 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  `item.load()`/`item.find()`/`item.unload()`. Navigates to and highlights the first match once
    *  the scan completes. A newer `search()` call, `clearSearch()`, or a `src` change (via
    *  `teardown()`) aborts an in-flight scan. An empty/whitespace-only query behaves like
-   *  `clearSearch()` and resolves `0`. Peer-produced results are capped at 10,000 matches. */
+   *  `clearSearch()` and resolves `0`. Peer-produced results are capped at 10,000 retained matches;
+   *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
   async search(query: string): Promise<number> {
     const generation = ++this.searchGeneration;
     this.searchQuery = query;
     this.clearSearchAnnotation();
     if (!this.book || !query.trim()) {
       this.searchMatches = [];
+      this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.emitSearchChange();
       return 0;
     }
     const matches: EbookSearchMatch[] = [];
+    let matchCountExact = true;
+    let matchCeilingExceeded = false;
     const book = this.book;
     const spineItems: EpubSpineItem[] = book.spine?.spineItems ?? [];
     for (const item of spineItems) {
@@ -714,18 +722,24 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         const results: EpubSearchResult[] = (await item.find(query)) ?? [];
         if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
         for (const r of results) {
-          if (matches.length >= MAX_SEARCH_MATCHES) break;
+          if (matches.length === MAX_SEARCH_MATCHES) {
+            matchCountExact = false;
+            matchCeilingExceeded = true;
+            break;
+          }
           matches.push({ cfi: r.cfi, excerpt: r.excerpt ?? '' });
         }
       } catch {
+        matchCountExact = false;
         continue;
       } finally {
         if (loaded) item.unload();
       }
-      if (matches.length >= MAX_SEARCH_MATCHES) break;
+      if (matchCeilingExceeded) break;
     }
     if (generation !== this.searchGeneration) return this.searchMatches.length;
     this.searchMatches = matches;
+    this.searchMatchCountExact = matchCountExact;
     this.searchActiveIndex = matches.length > 0 ? 0 : -1;
     this.emitSearchChange();
     if (this.searchActiveIndex >= 0) await this.showSearchMatch(this.searchActiveIndex, generation);
@@ -758,9 +772,10 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     this.searchGeneration++;
     this.searchQuery = '';
     this.searchMatches = [];
+    this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
     this.clearSearchAnnotation();
-    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
   }
 
   private clearSearchAnnotation(): void {
@@ -810,6 +825,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
+      matchCountExact: this.searchMatchCountExact,
       activeIndex: this.searchActiveIndex,
     });
     const numberFormat = getNumberFormat(this.effectiveLocale);

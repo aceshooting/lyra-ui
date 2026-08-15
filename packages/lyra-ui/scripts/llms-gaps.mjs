@@ -114,24 +114,54 @@ export function exportedContractNames(file, source, declarationName) {
   return [...names];
 }
 
-/** Returns only the inline-code signature that declares `name`, never unrelated prose nearby. */
-export function contractDeclarationBlock(text, name) {
-  const match = new RegExp('`' + escapePattern(name) + '(?=[\\s({<])').exec(text);
-  if (!match) return '';
-  const closingBacktick = text.indexOf('`', match.index + 1);
-  return text.slice(match.index, closingBacktick < 0 ? text.length : closingBacktick + 1);
+/** Returns every exact inline-code signature that declares `name`, never a call/example mention. */
+export function contractDeclarationBlocks(text, name, kind) {
+  const matches = [];
+  const pattern = new RegExp(
+    '(?<!`)`' + escapePattern(name) + '(?=[\\s({<])([^`]*)`(?!`)',
+    'g',
+  );
+  for (const match of text.matchAll(pattern)) {
+    const content = `${name}${match[1]}`;
+    const declarationLike = kind === 'interface'
+      ? new RegExp(
+          `^${escapePattern(name)}(?:<[^>]+>)?(?:\\s+extends\\s+[^{}]+)?\\s*\\{`,
+        ).test(content)
+      : kind === 'function'
+        ? new RegExp(`^${escapePattern(name)}(?:<[^>]+>)?\\([\\s\\S]*\\)\\s*:`).test(content)
+        : new RegExp(
+            `^${escapePattern(name)}(?:(?:<[^>]+>)?\\s*\\{|(?:<[^>]+>)?\\([\\s\\S]*\\)\\s*:)`,
+          ).test(content);
+    if (declarationLike) matches.push(match[0]);
+  }
+  return matches;
 }
 
-/** Returns the one authored public-utility bullet owned by `moduleName`. */
+/** Returns one uniquely owned inline signature, or empty when it is missing/duplicated. */
+export function contractDeclarationBlock(text, name, kind) {
+  const matches = contractDeclarationBlocks(text, name, kind);
+  return matches.length === 1 ? matches[0] : '';
+}
+
+/** Returns every authored public-utility bullet owned by `moduleName`. */
+export function utilityContractBlocks(text, moduleName) {
+  const markers = [...text.matchAll(
+    new RegExp(`^- \\*\\*\\\`${escapePattern(moduleName)}\\\`(?:[^\\n]*)`, 'gm'),
+  )];
+  return markers.map((marker) => {
+    const remainder = text.slice(marker.index + marker[0].length);
+    const next = remainder.search(/^- \*\*`[A-Za-z0-9-]+`/m);
+    return text.slice(
+      marker.index,
+      next < 0 ? text.length : marker.index + marker[0].length + next,
+    );
+  });
+}
+
+/** Returns one uniquely owned utility bullet, or empty when it is missing/duplicated. */
 export function utilityContractBlock(text, moduleName) {
-  const marker = new RegExp(
-    `^- \\*\\*\\\`${escapePattern(moduleName)}\\\`(?:[^\\n]*)`,
-    'm',
-  ).exec(text);
-  if (!marker) return '';
-  const remainder = text.slice(marker.index + marker[0].length);
-  const next = remainder.search(/^- \*\*`[a-z0-9-]+`/m);
-  return text.slice(marker.index, next < 0 ? text.length : marker.index + marker[0].length + next);
+  const blocks = utilityContractBlocks(text, moduleName);
+  return blocks.length === 1 ? blocks[0] : '';
 }
 
 /**
@@ -388,26 +418,75 @@ export function collectGaps(
         documents?.[documentPath] ??
         readFileSync(path.join(packageDir, documentPath), 'utf8');
       let block = '';
+      let locatorFailure = '';
       let tag = owner.locator?.name ?? contract.exportName;
       if (owner.locator?.kind === 'utility') {
-        block = utilityContractBlock(text, owner.locator.name);
+        const utilityBlocks = utilityContractBlocks(text, owner.locator.name);
+        if (utilityBlocks.length !== 1) {
+          locatorFailure =
+            `missing contract locator for ${contract.exportName}: expected exactly one ` +
+            `${owner.locator.name} utility bullet, found ${utilityBlocks.length}`;
+        } else {
+          const declarations = contractDeclarationBlocks(
+            utilityBlocks[0],
+            owner.locator.declaration ?? contract.exportName,
+            contract.kind,
+          );
+          if (declarations.length !== 1) {
+            locatorFailure =
+              `missing contract locator for ${contract.exportName}: expected exactly one exact ` +
+              `signature, found ${declarations.length}`;
+          } else {
+            [block] = declarations;
+          }
+        }
       } else if (owner.locator?.kind === 'component') {
-        const section = splitSections(text).find(({ tags }) =>
+        const sections = splitSections(text).filter(({ tags }) =>
           tags.includes(owner.locator.tag),
         );
-        block = contractDeclarationBlock(section?.text ?? '', owner.locator.declaration);
         tag = owner.locator.tag;
+        if (sections.length !== 1) {
+          locatorFailure =
+            `missing contract locator for ${contract.exportName}: expected exactly one ` +
+            `${owner.locator.tag} section, found ${sections.length}`;
+        } else {
+          const declarations = contractDeclarationBlocks(
+            sections[0].text,
+            owner.locator.declaration,
+            contract.kind,
+          );
+          if (declarations.length !== 1) {
+            locatorFailure =
+              `missing contract locator for ${contract.exportName}: expected exactly one exact ` +
+              `signature, found ${declarations.length}`;
+          } else {
+            [block] = declarations;
+          }
+        }
       } else if (owner.locator?.kind === 'declaration') {
-        block = contractDeclarationBlock(text, owner.locator.name);
+        const declarations = contractDeclarationBlocks(
+          text,
+          owner.locator.name,
+          contract.kind,
+        );
+        if (declarations.length !== 1) {
+          locatorFailure =
+            `missing contract locator for ${contract.exportName}: expected exactly one exact ` +
+            `signature, found ${declarations.length}`;
+        } else {
+          [block] = declarations;
+        }
+      } else {
+        locatorFailure = `missing contract locator for ${contract.exportName}`;
       }
       const missing = contract.names.filter((name) => !mentionsName(block, name));
-      if (missing.length > 0 || block.length === 0) {
+      if (missing.length > 0 || locatorFailure) {
         gaps.push({
           family: owner.family ?? 'shared',
           tag,
           lines: block.split('\n').length,
           kind: `${contract.kind} field/parameter contract`,
-          names: block.length === 0 ? [`missing contract locator for ${contract.exportName}`] : missing,
+          names: locatorFailure ? [locatorFailure] : missing,
         });
       }
     }

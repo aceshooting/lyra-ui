@@ -133,13 +133,14 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   /** Accessible name for the `role="menu"` list — override with something
    *  specific (e.g. "Row actions") when a page has more than one menu.
-   *  Localized (`menuLabel`) when left at its default. A host-level
+   *  Localized (`menuLabel`) when omitted. Any supplied string, including
+   *  `"Menu"` or an empty string, remains literal. A host-level
    *  `aria-label` attribute takes precedence over both this prop and the
    *  localized default — including an explicit empty `aria-label=""` —
    *  matching `lr-select`/`lr-model-select`'s established
    *  `this.getAttribute('aria-label') ?? <computed default>` precedence
    *  (see `effectiveLabel`). */
-  @property() label = 'Menu';
+  @property() label?: string;
 
   /** @internal Supplies only the menu interaction engine inside another component's popup. */
   @property({ type: Boolean, attribute: false }) dropdownContained = false;
@@ -558,7 +559,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 
   /** Rehomes roving focus immediately when an active item becomes disabled or hidden. */
-  private onItemStateChange = (): void => {
+  private onItemStateChange = (event?: Event): void => {
+    // This is private item-to-owner coordination. Let the owning menu repair its roving stop,
+    // then contain the implementation event so it cannot appear to originate from a composite
+    // wrapper further up the tree.
+    event?.stopPropagation();
     const navigable = this.items.filter((item) => this.isNavigable(item));
     if (
       this.activeIndex >= 0 &&
@@ -1011,7 +1016,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private get effectiveLabel(): string {
     const hostLabel = this.getAttribute('aria-label');
     if (hostLabel !== null) return hostLabel;
-    if (this.label !== 'Menu') return this.label;
+    if (this.label !== undefined) return this.label;
     if (this.dropdownLabel !== undefined) return this.dropdownLabel;
     return this.localize('menuLabel');
   }

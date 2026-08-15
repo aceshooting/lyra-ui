@@ -11,14 +11,15 @@ function makeEntries(count: number): ActivityEntry[] {
   return Array.from({ length: count }, (_, i) => ({ id: `e${i}`, text: `Entry ${i}` }));
 }
 
-it('defaults to entries=[], mode="live", follow=true, expanded=false, label="Activity"', async () => {
+it('defaults to entries=[], mode="live", follow=true, expanded=false, and a localized Activity label', async () => {
   const el = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
   expect(el.entries).to.deep.equal([]);
   expect(el.mode).to.equal('live');
   expect(el.follow).to.be.true;
   expect(el.hasAttribute('follow')).to.be.true;
   expect(el.expanded).to.be.false;
-  expect(el.label).to.equal('Activity');
+  expect(el.label).to.be.undefined;
+  expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Activity');
   expect(el.showTimestamps).to.be.false;
   expect(el.virtualizeAt).to.equal(199);
 });
@@ -138,6 +139,19 @@ it('uses string overrides for the header label and completed-steps summary', asy
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Activité');
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('3 étapes terminées');
+});
+
+it('distinguishes an omitted label from explicit English and empty overrides', async () => {
+  const labels: string[] = [];
+  for (const template of [
+    html`<lr-activity-feed .strings=${{ activityFeedLabel: 'Activité' }}></lr-activity-feed>`,
+    html`<lr-activity-feed label="Activity" .strings=${{ activityFeedLabel: 'Activité' }}></lr-activity-feed>`,
+    html`<lr-activity-feed label="" .strings=${{ activityFeedLabel: 'Activité' }}></lr-activity-feed>`,
+  ]) {
+    const el = (await fixture(template)) as LyraActivityFeed;
+    labels.push(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim());
+  }
+  expect(labels).to.deep.equal(['Activité', 'Activity', '']);
 });
 
 it('toggles expanded and fires lr-toggle on header click', async () => {

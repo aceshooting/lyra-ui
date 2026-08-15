@@ -32,6 +32,11 @@ thumb remains under the pointer/key. A track click moves whichever handle is nea
 position. `[part~="base"]` then carries `role="group"`, named from
 `label`/`aria-label`, so the pair is announced as one control.
 
+Switching `range` while the outgoing handle owns focus transfers focus to the equivalent replacement
+(single value to lower handle; either range handle to single value) without reclaiming newer
+external focus. A mode switch during a pointer drag releases capture and cancels that gesture
+without an extra commit.
+
 A named range slider submits **two same-name entries**, lower then upper. For example,
 `<lr-slider range name="window">` contributes `window=0&window=50` by default. Read both with
 `formData.getAll('window')`; `get()` returns only the first entry. Turning `range` off restores the

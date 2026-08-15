@@ -15,8 +15,9 @@
 
 ## `lr-icon-button`
 
-An accessible icon-only action button — a form-associated custom element with a native `<button>`
-inside. Its `type="submit"`/`"reset"` behavior is forwarded to the ancestor form by the component.
+An accessible icon-only action/link with a native `<button>` inside. It is deliberately not a
+form-associated submitter; use `<lr-button circle type="submit|reset">` with an icon-only default
+slot when a form action is required.
 
 Its public `--lr-icon-button-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override the built-in fallbacks; a value set directly on the element still wins.
@@ -33,10 +34,10 @@ wrapper can override the built-in fallbacks; a value set directly on the element
   accessible name; wins over `label`
 - `label: string = ''` — accessible name when `accessibleLabel` is unset
 - `disabled: boolean = false` (reflected)
-- `type: 'button' | 'submit' | 'reset' = 'button'`
 - `href?: string`, `target?: string`, `download?: string` — a safe `href` renders a native anchor;
-  `target` derives `rel="noopener noreferrer"`, and `download` selects the stricter downloadable-URL
-  allowlist. A disabled link keeps the anchor but removes `href`
+  `target` derives `rel="noopener noreferrer"`, and download presence (including `download=""`)
+  selects the stricter downloadable-URL allowlist. A disabled link keeps the anchor but removes
+  `href`
 
 With neither `accessibleLabel` nor `label` set, the name falls back to the localized
 `iconButtonLabel` string rather than being empty — override it per instance with `.strings` or
@@ -52,12 +53,8 @@ browsers intentionally clear each serialized internal IDREF attribute after its 
 list is assigned. Browsers without those APIs retain the forwarded string attributes as
 best-effort fallbacks.
 
-**Methods:** `focus(options?)`, `blur()` — forward to the native interactive root. `click()` also
-forwards to it, activating a safe anchor or — in button mode — this component's own
-`type="submit"`/`type="reset"` handling, since the click goes through the same `<button>` the
-pointer/keyboard path does.
-`getForm()` returns the browser-resolved form owner, including an external owner selected by the
-`form` attribute.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native interactive root,
+activating the action button or a safe anchor through the same path as pointer/keyboard input.
 
 **Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by

@@ -31,8 +31,8 @@ export interface LyraExportButtonEventMap {
   'lr-export': CustomEvent<{ readonly format: string }>;
   'lr-export-complete': CustomEvent<{ readonly format: LyraExportFormat }>;
   'lr-export-error': CustomEvent<{ readonly format: LyraExportFormat; readonly error: unknown }>;
-  'lr-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
 }
 /**
  * `<lr-export-button>` — a CSV/JSON download button, single-format or a
@@ -130,8 +130,9 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    * supplied string, including `''` and `'Export'`, is caller-owned. */
   @property() label?: string;
   /** Accessible name forwarded from the host to the native trigger button.
-   * When unset, the trigger's visible `label` provides its name. */
-  @property({ attribute: 'aria-label' }) accessibleLabel = '';
+   * When unset, the trigger's visible `label` provides its name. An explicit empty string remains
+   * authoritative by attribute/property presence. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property({ type: Boolean, reflect: true }) open = false;
 
   @query('[part="trigger"]') private triggerEl?: HTMLButtonElement;
@@ -326,7 +327,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.openVetoed = false;
     if (!changed.has('open') || this._isFirstUpdate || this.forcedMenuClose) return;
     const name = this.open ? 'lr-show' : 'lr-hide';
-    if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
+    if (!this.emit(name, null, { cancelable: true }).defaultPrevented) return;
     this.openVetoed = true;
     this.open = !this.open;
   }
@@ -475,13 +476,13 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   override render(): TemplateResult {
     const label = this.effectiveLabel;
-    const accessibleLabel = this.accessibleLabel || label;
+    const accessibleLabel = this.accessibleLabel ?? label;
     return html`
       <button
         part="trigger"
         type="button"
         ?disabled=${this.disabled || this.loading}
-        aria-label=${this.accessibleLabel || nothing}
+        aria-label=${this.accessibleLabel ?? nothing}
         aria-busy=${this.loading ? 'true' : 'false'}
         aria-haspopup=${this.formats.length > 1 ? 'menu' : nothing}
         aria-expanded=${this.formats.length > 1 ? (this.open ? 'true' : 'false') : nothing}

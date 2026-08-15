@@ -2059,17 +2059,22 @@ it('tracks a pointer drag across the grid and abandons it when the control becom
 it('commits a typed color on Enter and keeps the draft until then', async () => {
   const el = await opened(html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`);
   const field = part(el, 'input') as HTMLInputElement;
+  const publicInputs: InputEvent[] = [];
+  el.addEventListener('input', (event) => publicInputs.push(event as InputEvent));
 
   field.value = '#00ff00';
-  field.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  field.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, data: '0' }));
   await el.updateComplete;
   expect(el.value).to.equal('#ff0000');
+  expect(publicInputs).to.have.lengthOf(0);
 
   const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true });
   field.dispatchEvent(enter);
   await el.updateComplete;
   expect(enter.defaultPrevented).to.equal(true);
   expect(el.value.toLowerCase()).to.equal('#00ff00');
+  expect(publicInputs).to.have.lengthOf(1);
+  expect(publicInputs[0]!.target === el).to.equal(true);
 
   const ignored = new KeyboardEvent('keydown', { key: 'a', bubbles: true, composed: true, cancelable: true });
   field.dispatchEvent(ignored);

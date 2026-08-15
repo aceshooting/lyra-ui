@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -20,8 +20,9 @@ deep-link event that lands a chunk in `lr-document-viewer`. Never fetches, ranks
 opens documents itself.
 
 **Properties:**
+
 - `chunks: LyraChunk[] = []` (attribute: false) — `LyraChunk { id: string; text: string; score:
-  number; sourceId: string; title?: string; page?: string | number; anchor?: LyraChunkAnchor }`;
+number; sourceId: string; title?: string; page?: string | number; anchor?: LyraChunkAnchor }`;
   `score` is 0–1, `title` falls back to a localized "untitled source", `anchor` (the same
   discriminated union `lr-document-viewer.anchor` accepts — page/text-quote/fragment/line-range/
   cell-range/cfi/time-range/region/node-path) is carried through `lr-chunk-open` verbatim; finite
@@ -36,7 +37,8 @@ opens documents itself.
 - `activeId: string = ''` (attribute `active-id`)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `compact: boolean = false` (reflected) — hides the text preview/toggle, title/score row only
-- `label: string = ''`
+- `label: string = ''` — fallback name for the populated result group. A non-empty host
+  `aria-label` makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-chunk-open` (`detail: { id, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
@@ -58,7 +60,7 @@ collapsed; dropped once expanded), `toggle` ("Show more"/"Show less", omitted wh
 
 Every row-level part is reachable through `::part()` in both rendering paths: above
 `virtualize-at` the row lives in the internal `lr-virtual-list`'s shadow root and its parts are
-re-exported from there under the same names. Row *state* is exposed as an additional part name
+re-exported from there under the same names. Row _state_ is exposed as an additional part name
 rather than as an attribute on the part, because Shadow Parts forbids an attribute selector after
 `::part()` — `::part(chunk)[aria-current='true']` is invalid CSS. The equivalent attributes
 (`aria-current`, `data-tone`, `data-clamped`) are still present on the elements. A state part is a
@@ -69,7 +71,7 @@ one that matches inside a tree.
 `var(--lr-color-brand-quiet)`) — the background of the chunk matching `activeId`.
 `--lr-chunk-inspector-current-color` (default `var(--lr-color-text)`) — the text color of that
 chunk's `score` line (`::part(score-current)`). Both are inline `var()` fallbacks at the point of
-use rather than `:host` declarations, so either can be set on the element *or on any ancestor*:
+use rather than `:host` declarations, so either can be set on the element _or on any ancestor_:
 `::part(chunk)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — which is why the current-chunk state is also published as its own part name
 (`chunk-current`, `score-current`); either the custom properties or `::part(chunk-current)` will
@@ -86,15 +88,25 @@ Plus shared tokens otherwise.
 ```html
 <lr-chunk-inspector></lr-chunk-inspector>
 <script>
-  const inspector = document.querySelector('lr-chunk-inspector');
+  const inspector = document.querySelector("lr-chunk-inspector");
   inspector.chunks = [
-    { id: 'c1', text: 'Revenue grew 12% year over year…', score: 0.91, sourceId: 'doc-1', title: 'Q3 report', page: 4 },
+    {
+      id: "c1",
+      text: "Revenue grew 12% year over year…",
+      score: 0.91,
+      sourceId: "doc-1",
+      title: "Q3 report",
+      page: 4,
+    },
   ];
-  inspector.addEventListener('lr-chunk-open', (e) => documentViewer.openAt(e.detail.sourceId, e.detail.anchor));
+  inspector.addEventListener("lr-chunk-open", (e) =>
+    documentViewer.openAt(e.detail.sourceId, e.detail.anchor)
+  );
 </script>
 ```
 
 **Known gotchas:**
+
 - `title` and `open-button` are split into two separate parts (rather than one dual-part-name
   element) because an exact-match `[part="..."]` CSS attribute selector — as this component's own
   tests use — cannot match a multi-token `part` attribute value.

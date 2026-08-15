@@ -23,23 +23,32 @@ A host `aria-label` names the nested dialog by attribute presence, including an 
 value, without suppressing the visible `name` heading.
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — opens or closes the viewer dialog.
 - `name: string = ''` — display name passed to the renderer and used as the dialog heading.
 - `mimeType: string = ''` (attribute `mime-type`) — MIME type used for exact renderer dispatch.
 - `src: string = ''` — source URL passed to the selected renderer or the fallback preview.
+- `payload?: LyraDocumentRendererPayload` (attribute: false) — opt-in renderer-specific input.
+  Assignment immediately clones, validates, bounds, and freezes the payload. While set,
+  `payload.file` is authoritative for MIME dispatch, the dialog heading, renderer/fallback input,
+  anchors/highlights, and download; the scalar `name`, `mimeType`, `src`, `anchor`, `highlights`,
+  and `alt` properties resume their legacy behavior when `payload` is reset to `undefined`.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry override;
-  the module-level registry is used when unset. A throwing consumer matcher or renderer is
-  contained as the localized error state rather than escaping the update.
+  when unset, the instance owns an immutable snapshot of the built-ins registered when it was
+  constructed. A later module import/registration cannot mutate an existing viewer. A throwing
+  consumer matcher or renderer is contained as the localized error state rather than escaping the
+  update.
 - `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
   `hasChanged: () => true`, so re-assigning the same value (e.g. re-clicking the same citation
   badge) still re-fires.
-- `highlights: LyraHighlight[] = []` (attribute: false) — highlights forwarded to the resolved
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — highlights forwarded to the resolved
   renderer.
 
 **Events:**
+
 - `lr-close` — `detail: DocumentViewerCloseReason`, the viewer shell dialog's dismissal reason.
   The event is emitted after the viewer sets `open` to `false`. A registered renderer may compose
   its own descendant dialog; closing that inner dialog keeps its normal `lr-dialog-close` path and
@@ -65,14 +74,44 @@ polite and assertive sinks, respectively;
 size of `[part="body"]` before the dialog body scrolls internally.
 
 **Renderer registry exports:**
-- `DocumentFile` — `{ name: string; mimeType: string; src: string }`, the value passed to renderers.
-- `DocumentRendererDefinition` — optional `render(file)`, `matches(file)`, and lazy `load()` hooks.
-- `DocumentRendererRegistry` — `Map<string, DocumentRendererDefinition>`.
-- `registerDocumentRenderer(key, definition)` — adds or replaces a default-registry entry.
-- `findDocumentRenderer(file, registry?)` — checks an exact MIME-type key, then the first matching
-  `matches()` entry in registration order.
-- `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy definition; rejected loads
-  are retried on the next call.
+
+- `DocumentFile` — the compatible mutable file object passed unchanged to legacy `render(file)` and
+  `matches(file)` callbacks: `{ name, mimeType, src, anchor?, highlights?, alt? }`.
+- `LyraDocumentFile` — the readonly file snapshot wrapped by every discriminated payload.
+- `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av'` discriminated input wrapping an
+  immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at most 10,000
+  cues and 64 tracks, clone and freeze every retained record, and bound every retained string.
+- `LyraGenericDocumentRendererPayload` / `LyraAvDocumentRendererPayload` — the concrete
+  `kind: 'document'` and `kind: 'av'` branches. `LyraDocumentRendererPayloadKind` names their kind
+  union, and `LyraDocumentRendererPayloadFor<K>` extracts one branch for adapter authoring.
+- `LyraDocumentRendererAdapterDefinition<K>` / `LyraDocumentRendererAdapter` — strongly typed
+  authoring input and its factory-created, type-erased registry form. The callbacks adapt the legacy
+  file to one payload kind, derive capabilities from that retained payload, and render it.
+- `DocumentRendererDefinition` (also `LyraDocumentRendererDefinition`) — a validated direct
+  `{ render, matches?, capabilities? }`, adapted `{ adapter, matches? }`, or lazy
+  `{ load, matches?, capabilities? }` definition; exactly one of `render`, `adapter`, and `load` is
+  required. Static capabilities are rejected on adapted definitions so their adapter remains the
+  single source of truth. Adapted definitions register eagerly; a lazy definition resolves a
+  legacy direct renderer, keeping the static and payload-derived capability branches distinct.
+- `LyraAdaptedDocumentRendererDefinition` / `LyraResolvedDocumentRendererDefinition` — the adapted
+  registry branch and the union of both immediately renderable branches. `LyraAdaptedDocumentRenderer`
+  is the frozen payload/capabilities/render invocation returned by `adaptDocumentRenderer()`.
+- `DocumentRendererRegistry` — `ReadonlyMap<string, DocumentRendererDefinition>`.
+- `createDocumentRendererAdapter(definition)` — preserves discriminator-specific callback types
+  while producing the validated adapter accepted by a registry definition.
+- `adaptDocumentRenderer(definition, file, payload?)` — binds one resolved definition to an
+  immutable payload and derives its frozen capabilities. A legacy definition still receives the
+  original `DocumentFile` object by identity.
+- `snapshotLyraDocumentRendererPayload(payload)` — returns the same validated, bounded, frozen
+  assignment snapshot used by `<lr-document-viewer>`.
+- `createDocumentRendererRegistry(overrides?)` — returns a truly immutable built-in snapshot plus
+  optional per-instance overrides. MIME keys are trimmed, lowercased, and reduced to their essence.
+- `registerDocumentRenderer(key, definition)` — adds or replaces a built-in-builder entry for
+  registry snapshots created later; it never mutates existing instances.
+- `findDocumentRenderer(file, registry?)` — checks normalized MIME essence (case-insensitive and
+  parameter-independent), then the first matching `matches()` entry in registration order.
+- `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy direct definition;
+  rejected loads are retried on the next call.
 
 ```html
 <lr-document-viewer
@@ -83,15 +122,34 @@ size of `[part="body"]` before the dialog body scrolls internally.
 ></lr-document-viewer>
 ```
 
-Register a renderer once during application setup. The definition may load a heavy optional viewer
-only when a matching document is opened:
+Construct and inject a renderer registry per application/viewer. The definition may load a heavy
+optional viewer only when a matching document is opened:
 
 ```ts
-import { registerDocumentRenderer } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';
+import { createDocumentRendererRegistry } from "@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js";
 
-registerDocumentRenderer('application/x-example', {
-  render: (file) => `Preview: ${file.name}`,
-});
+const registry = createDocumentRendererRegistry([
+  ["application/x-example", { render: (file) => `Preview: ${file.name}` }],
+]);
+
+html`<lr-document-viewer .registry=${registry}></lr-document-viewer>`;
+```
+
+Supply AV metadata without widening every legacy renderer callback. The built-in AV adapter always
+declares `time-range` anchors and declares search only when the retained cue snapshot contains
+non-whitespace transcript or speaker text:
+
+```ts
+import type { LyraDocumentRendererPayload } from "@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js";
+
+const payload = {
+  kind: "av",
+  file: { name: "episode.mp4", mimeType: "video/mp4", src: "/episode.mp4" },
+  cues: [{ id: "intro", start: 0, text: "Welcome", speaker: "Host" }],
+  tracks: [{ src: "/episode-en.vtt", kind: "captions", srclang: "en", label: "English" }],
+} satisfies LyraDocumentRendererPayload;
+
+html`<lr-document-viewer open .payload=${payload}></lr-document-viewer>`;
 ```
 
 When no renderer matches, the viewer renders `<lr-document-preview>`, which handles text and images

@@ -16,6 +16,49 @@ function stubClipboard(target: Navigator, value: unknown): () => void {
 }
 
 describe('lr-document-compare', () => {
+  it('normalizes unsupported view and diff-layout attributes and untyped property writes', async () => {
+    const el = (await fixture(html`
+      <lr-document-compare view="columns" diff-layout="columns"></lr-document-compare>
+    `)) as LyraDocumentCompare;
+    expect(el.view).to.equal('diff');
+    expect(el.getAttribute('view')).to.equal('diff');
+    expect(el.diffLayout).to.equal('unified');
+    expect(el.getAttribute('diff-layout')).to.equal('unified');
+
+    el.view = 'side-by-side';
+    el.diffLayout = 'split';
+    await el.updateComplete;
+    const foreign = el as unknown as Record<string, unknown>;
+    foreign.view = 'columns';
+    foreign.diffLayout = 'columns';
+    await el.updateComplete;
+    expect(el.view).to.equal('diff');
+    expect(el.getAttribute('view')).to.equal('diff');
+    expect(el.diffLayout).to.equal('unified');
+    expect(el.getAttribute('diff-layout')).to.equal('unified');
+    expect(el.shadowRoot!.querySelector('lr-diff-view')).to.not.equal(null);
+  });
+
+  it('makes a nonempty host aria-label the sole semantic owner and restores the shadow group dynamically', async () => {
+    const el = (await fixture(html`
+      <lr-document-compare aria-label="Release comparison"></lr-document-compare>
+    `)) as LyraDocumentCompare;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(el.getAttribute('aria-label')).to.equal('Release comparison');
+    expect(base.hasAttribute('role')).to.be.false;
+    expect(base.hasAttribute('aria-label')).to.be.false;
+
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    expect(base.getAttribute('role')).to.equal('group');
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base.getAttribute('role')).to.equal('group');
+    expect(base.getAttribute('aria-label')).to.equal('Document comparison');
+  });
+
   describe('view="diff" (default)', () => {
     it('renders an internal lr-diff-view forwarding oldVersion.text/newVersion.text', async () => {
       const el = (await fixture(html`

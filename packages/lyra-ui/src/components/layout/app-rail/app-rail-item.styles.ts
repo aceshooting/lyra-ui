@@ -22,7 +22,7 @@ export const styles = css`
     text-decoration: none;
     cursor: pointer;
   }
-  [part="base"]:hover {
+  [part="base"]:not([aria-disabled="true"]):hover {
     background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-app-rail-item-hover-color, var(--lr-color-brand));
   }
@@ -30,7 +30,7 @@ export const styles = css`
      mixed toward --lr-color-mix-partner (which follows the text colour), so it deepens on a light
      theme and lightens on a dark one rather than depending on which way a brightness multiplier
      happens to push this particular fill. */
-  [part="base"]:active {
+  [part="base"]:not([aria-disabled="true"]):active {
     background: var(
       --lr-app-rail-item-active-bg,
       color-mix(

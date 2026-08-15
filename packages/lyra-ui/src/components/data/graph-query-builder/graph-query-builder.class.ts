@@ -153,13 +153,15 @@ function normalizeGraphQuery(value: unknown): GraphQuery {
     nodeTypes: stringArray(ownValue(record, 'nodeTypes')),
     direction: direction === 'out' || direction === 'in' || direction === 'both' ? direction : 'both',
     minHops: finiteInteger(
-      typeof ownValue(record, 'minHops') === 'number' ? ownValue(record, 'minHops') as number : EMPTY_VALUE.minHops,
+      typeof ownValue(record, 'minHops') === 'number' ? (ownValue(record, 'minHops') as number)
+        : EMPTY_VALUE.minHops,
       EMPTY_VALUE.minHops,
       1,
       20
     ),
     maxHops: finiteInteger(
-      typeof ownValue(record, 'maxHops') === 'number' ? ownValue(record, 'maxHops') as number : EMPTY_VALUE.maxHops,
+      typeof ownValue(record, 'maxHops') === 'number' ? (ownValue(record, 'maxHops') as number)
+        : EMPTY_VALUE.maxHops,
       EMPTY_VALUE.maxHops,
       1,
       20
@@ -201,7 +203,7 @@ function normalizeSavedQueries(value: unknown): readonly GraphQuerySavedItem[] {
 }
 
 export interface LyraGraphQueryBuilderEventMap {
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
   'lr-input': CustomEvent<{ readonly value: GraphQuery }>;
   'lr-validity-change': CustomEvent<{
     readonly valid: boolean;
@@ -487,7 +489,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.internals = this.safeAttachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) => this.emit('lr-invalid', undefined, init));
+    installInvalidEventAlias(this, (init: { cancelable: true }) => this.emit('lr-invalid', null, init));
     this.syncFormState();
   }
 
@@ -619,7 +621,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   [VALIDITY_ANCHOR](): HTMLElement | undefined {
     const firstInvalidPart = Object.keys(this._errors)[0];
     if (!firstInvalidPart || !this.renderRoot) return undefined;
-    return (this.renderRoot.querySelector(`[part="${firstInvalidPart}"]`) as HTMLElement | null) ?? undefined;
+    return (
+      (this.renderRoot.querySelector(`[part="${firstInvalidPart}"]`) as HTMLElement | null) ?? undefined
+    );
   }
 
   private computeValidation(): {
@@ -862,37 +866,40 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   private runQuery(): void {
     if (this.effectiveDisabled) return;
     if (!this.reportValidity()) return;
-    const detail: GraphQueryRunDetail = Object.freeze({ query: normalizeGraphQuery(this._value) });
-    if (this.emit('lr-before-query-run', detail, { cancelable: true }).defaultPrevented) return;
-    this.emit('lr-query-run', detail);
+    const detail = (): GraphQueryRunDetail =>
+      Object.freeze({ query: normalizeGraphQuery(this._value) });
+    if (this.emit('lr-before-query-run', detail(), { cancelable: true }).defaultPrevented) return;
+    this.emit('lr-query-run', detail());
   }
 
   private saveQuery(): void {
     if (this.effectiveDisabled) return;
     const name = this.saveName.trim();
     if (!name) return;
-    const detail: GraphQuerySaveDetail = Object.freeze({ name, query: normalizeGraphQuery(this._value) });
-    if (this.emit('lr-before-query-save', detail, { cancelable: true }).defaultPrevented) return;
+    const detail = (): GraphQuerySaveDetail =>
+      Object.freeze({ name, query: normalizeGraphQuery(this._value) });
+    if (this.emit('lr-before-query-save', detail(), { cancelable: true }).defaultPrevented) return;
     this.saveName = '';
-    this.emit('lr-query-save', detail);
+    this.emit('lr-query-save', detail());
   }
 
   private loadQuery(item: GraphQuerySavedItem): void {
     if (this.effectiveDisabled) return;
-    const requested: GraphQueryLoadDetail = Object.freeze({
+    const detail = (): GraphQueryLoadDetail =>
+      Object.freeze({
       id: item.id,
       query: normalizeGraphQuery(item.query),
     });
-    if (this.emit('lr-before-query-load', requested, { cancelable: true }).defaultPrevented) return;
+    if (this.emit('lr-before-query-load', detail(), { cancelable: true }).defaultPrevented) return;
     this.setValue({ ...EMPTY_VALUE, ...item.query });
-    this.emit('lr-query-load', requested);
+    this.emit('lr-query-load', detail());
   }
 
   private deleteQuery(item: GraphQuerySavedItem): void {
     if (this.effectiveDisabled) return;
-    const detail: GraphQueryDeleteDetail = Object.freeze({ id: item.id });
-    if (this.emit('lr-before-query-delete', detail, { cancelable: true }).defaultPrevented) return;
-    this.emit('lr-query-delete', detail);
+    const detail = (): GraphQueryDeleteDetail => Object.freeze({ id: item.id });
+    if (this.emit('lr-before-query-delete', detail(), { cancelable: true }).defaultPrevented) return;
+    this.emit('lr-query-delete', detail());
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -903,7 +910,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     if (active?.getAttribute('part') !== 'saved-delete-button') return;
     const focusedId = active.closest<HTMLElement>('[data-query-id]')?.dataset['queryId'];
     if (!focusedId || this.savedQueries.some((item) => item.id === focusedId)) return;
-    const previous = (changed.get('savedQueries') as readonly GraphQuerySavedItem[] | undefined) ?? [];
+    const previous = (changed.get('savedQueries') as
+        | readonly GraphQuerySavedItem[] | undefined) ?? [];
     const index = previous.findIndex((item) => item.id === focusedId);
     const target = this.savedQueries[Math.min(Math.max(index, 0), this.savedQueries.length - 1)];
     this.pendingRemovalFocus = { kind: 'saved', targetId: target?.id };
@@ -966,7 +974,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const slot = event.currentTarget as HTMLSlotElement;
     const hasContent = slot
       .assignedNodes({ flatten: true })
-      .some((node) => (node.nodeType === Node.TEXT_NODE ? Boolean(node.textContent?.trim()) : true));
+      .some((node) =>
+        node.nodeType === Node.TEXT_NODE ? Boolean(node.textContent?.trim()) : true);
     if (slot.name === 'hint') this.hasHintSlot = hasContent;
     else if (slot.name === 'error') this.hasErrorSlot = hasContent;
   };

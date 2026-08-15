@@ -58,6 +58,13 @@ type SvgFetchState =
   | { kind: 'loaded'; markup: string }
   | { kind: 'error'; message: string };
 
+type ResolvedRegionHighlight = LyraHighlight & {
+  anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } };
+};
+
+const MAX_PAINTED_HIGHLIGHTS = 100;
+const MAX_HIGHLIGHT_CANDIDATES = 1_000;
+
 export interface LyraSvgViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
@@ -73,7 +80,8 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * or structural equality of its `rect` (and optional `page`) -- `scrollToAnchor()`/a declarative
  * `anchor` assignment scrolls the matching `[part="region-highlight"]` into view and fires
  * `lr-anchor-result`. No other anchor kind resolves here -- a sanitized SVG document has neither
- * pages nor extractable text to quote.
+ * pages nor extractable text to quote. At most 100 valid region highlights are painted after
+ * inspecting 1,000 candidates; `activeHighlightId` is inspected first and retained inside the cap.
  *
  * @customElement lr-svg-viewer
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.
@@ -224,11 +232,12 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     }
   }
 
-  private renderBody(): TemplateResult {
+  private renderBody(regionHighlights: ResolvedRegionHighlight[]): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded':
         return this.renderZoomableWrapper(
           html`<div part="svg">${unsafeSVG(this.fetchState.markup)}</div>`,
+          regionHighlights,
         );
       case 'loading':
         return renderViewerLoading(this.localize('loadingDocument'));
@@ -247,8 +256,10 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   /** Wraps `content` in the internal `<lr-pan-zoom>` when `zoomable`; otherwise renders it
    *  (plus the highlight layer, which needs the same relatively-positioned sibling context either
    *  way) unwrapped, preserving pre-`zoomable` DOM exactly. */
-  private renderZoomableWrapper(content: TemplateResult): TemplateResult {
-    const regionHighlights = this.regionHighlights();
+  private renderZoomableWrapper(
+    content: TemplateResult,
+    regionHighlights: ResolvedRegionHighlight[],
+  ): TemplateResult {
     const inner = html`<div class="zoom-content">
       ${content}${this.renderHighlightLayer(regionHighlights, regionHighlights.length === 1)}
     </div>`;
@@ -259,28 +270,28 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     return html`${frame}${this.renderHighlightActions(regionHighlights)}`;
   }
 
-  private regionHighlights(): Array<
-    LyraHighlight & {
-      anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } };
+  private regionHighlights(): ResolvedRegionHighlight[] {
+    const active = this.highlights.find((highlight) => highlight.id === this.activeHighlightId);
+    const candidates: LyraHighlight[] = active ? [active] : [];
+    let inspected = candidates.length;
+    for (const highlight of this.highlights) {
+      if (highlight === active) continue;
+      if (inspected >= MAX_HIGHLIGHT_CANDIDATES) break;
+      inspected++;
+      candidates.push(highlight);
     }
-  > {
-    return this.highlights.flatMap((highlight) => {
-      if (highlight.anchor.kind !== 'region') return [];
+    const seen = new Set<string>();
+    const resolved: ResolvedRegionHighlight[] = [];
+    for (const highlight of candidates) {
+      if (seen.has(highlight.id)) continue;
+      seen.add(highlight.id);
+      if (highlight.anchor.kind !== 'region') continue;
       const rect = sanitizePercentRect(highlight.anchor.rect);
-      return rect
-        ? [
-            {
-              ...highlight,
-              anchor: { ...highlight.anchor, rect },
-            } as LyraHighlight & {
-              anchor: {
-                kind: 'region';
-                rect: { x: number; y: number; width: number; height: number };
-              };
-            },
-          ]
-        : [];
-    });
+      if (!rect) continue;
+      resolved.push({ ...highlight, anchor: { ...highlight.anchor, rect } });
+      if (resolved.length >= MAX_PAINTED_HIGHLIGHTS) break;
+    }
+    return resolved;
   }
 
   private highlightActionLabel(
@@ -299,7 +310,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   }
 
   private renderHighlightLayer(
-    regionHighlights: ReturnType<LyraSvgViewer['regionHighlights']>,
+    regionHighlights: ResolvedRegionHighlight[],
     interactive: boolean,
   ): TemplateResult | typeof nothing {
     if (!regionHighlights.length) return nothing;
@@ -342,7 +353,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   }
 
   private renderHighlightActions(
-    regionHighlights: ReturnType<LyraSvgViewer['regionHighlights']>,
+    regionHighlights: ResolvedRegionHighlight[],
   ): TemplateResult | typeof nothing {
     if (regionHighlights.length < 2) return nothing;
     return html`<div part="highlight-actions">
@@ -388,9 +399,10 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
 
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
-    const surfaceRole = this.zoomable || this.regionHighlights().length > 0 ? 'region' : 'img';
+    const regionHighlights = this.regionHighlights();
+    const surfaceRole = this.zoomable || regionHighlights.length > 0 ? 'region' : 'img';
     return html`<div part="base" role=${viewerSemanticRole(this, surfaceRole) ?? nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('svgViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'} style=${maxHeight ? styleMap({ '--lr-svg-viewer-max-height': maxHeight }) : nothing}>
-      <div part="body">${this.renderBody()}</div>
+      <div part="body">${this.renderBody(regionHighlights)}</div>
       ${this.renderAnchorLiveRegion()}
     </div>`;
   }

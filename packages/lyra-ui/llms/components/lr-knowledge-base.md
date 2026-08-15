@@ -17,21 +17,22 @@
 
 Controlled source list for a retrieval knowledge base: sync status, indexing health, permissions, and
 per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-stat`, and a per-row
-`lr-menu`. Never syncs or indexes anything itself.
+`lr-dropdown` containing `lr-menu`. Never syncs or indexes anything itself.
 
 **Properties:**
+
 - `sources: KnowledgeSource[] = []` (attribute: false) — `KnowledgeSource { id: string; name: string;
-  type?: string; syncStatus: KnowledgeSourceSyncStatus; indexingHealth?: KnowledgeSourceIndexingHealth;
-  permission?: KnowledgeSourcePermission; documentCount?: number; lastSyncedAt?: Date | string;
-  errorMessage?: string }` (all four types exported here), where
+type?: string; syncStatus: KnowledgeSourceSyncStatus; indexingHealth?: KnowledgeSourceIndexingHealth;
+permission?: KnowledgeSourcePermission; documentCount?: number; lastSyncedAt?: Date | string;
+errorMessage?: string }` (all four types exported here), where
   `KnowledgeSourceSyncStatus = 'idle' | 'syncing' | 'paused' | 'synced' | 'error'`,
   `KnowledgeSourceIndexingHealth = 'healthy' | 'degraded' | 'failed' | 'unknown'` (absent is treated
   as `'unknown'`), and `KnowledgeSourcePermission = 'owner' | 'editor' | 'viewer' | 'restricted'`.
   `type` is a free-form connector kind (`'drive'`, `'notion'`, `'upload'`, `'url'`, …) rendered
   as-is. `lastSyncedAt` follows this library's `Date | string` timestamp convention (epoch ms Date or
   ISO-8601); absent/unparseable renders "never synced". `errorMessage` shows only while
-  `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a *connector
-  feeding* documents, not a document, so the rest of the fields are its own
+  `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
+  feeding_ documents, not a document, so the rest of the fields are its own
 - `label: string = ''` — heading text and the table's accessible name; falls back to a localized default
 - `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — hides the aggregate
   total/synced/syncing/needs-attention row
@@ -60,6 +61,7 @@ unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - `permission` is rendered informationally only — the per-row action menu is never gated by it.
   Authorization enforcement is the host's concern.
 - "Sync now" is disabled only while `syncStatus === 'syncing'` (including on `'error'` rows, so

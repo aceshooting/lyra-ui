@@ -28,8 +28,10 @@ immediately) or multi-format (click opens a small menu).
 - `label?: string` — trigger button text; `undefined` uses the localized `exportButtonLabel`
   default. Every supplied string, including `''` and `'Export'`, is caller-owned. The effective
   label also feeds the format-choice menu's localized accessible name
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the trigger's accessible
-  name and feeds the localized format-menu name without changing the visible label
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the trigger's
+  accessible name and feeds the localized format-menu name without changing the visible label.
+  Presence is authoritative, so an explicit empty string is preserved; `null` restores naming from
+  the visible label
 - `open: boolean = false` (reflected)
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
@@ -177,6 +179,10 @@ state, and composed-event matching follow the active trigger without exposing th
 - `lr-toolbar-actions-change` (no detail) — bubbling/composed coordination event emitted when the
   logical action's disabled state or backing trigger changes, so an enclosing
   `<lr-message-actions>` can repair its roving tab stop.
+
+The nested tooltip's `lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide` lifecycle is internal
+implementation detail and is contained at the copy-button boundary; it is not part of this event
+surface and cannot be canceled through an ancestor of `<lr-copy-button>`.
 
 **Slots:** default custom trigger, plus `copy-icon`, `success-icon`, and `error-icon` overrides for
 the built-in button. Exactly one named icon is rendered at a time.
@@ -565,7 +571,8 @@ behind as an `aria-hidden` mirror of the latest text.
 
 - `mode: 'polite' | 'assertive' = 'polite'` (reflected) — selects which shared region announcements
   land in: `'polite'` uses the `role="status"` + `aria-live="polite"` one (waits for the user to be
-  idle), `'assertive'` the `role="alert"` + `aria-live="assertive"` one (interrupts)
+  idle), `'assertive'` the `role="alert"` + `aria-live="assertive"` one (interrupts). Unsupported
+  attributes and untyped property writes normalize to reflected `polite`
 - `throttleMs: number = 500` (attribute `throttle-ms`) — the coalescing window; see `Announcer`
   above
 
@@ -903,7 +910,8 @@ First-party invention (no Web Awesome equivalent).
   `false` (the default) renders no button.
 - `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders today's
   single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
-  the same diff alignment.
+  the same diff alignment. Unsupported attributes and untyped property writes normalize to
+  reflected `unified`.
 - `language: string = ''` — a shiki-recognized language id. Highlighting activates only when this
   has a matching entry in `languages` — there is deliberately no default full-table
   `lr-code-block`-style fallback, so this component never reaches shiki's ~200-language
@@ -1647,6 +1655,11 @@ and detached elements use the normal missing-target path instead of throwing. `h
 becomes the panel's accessible name; a defensive blank/whitespace heading uses the localized
 "Step X of Y" string instead, including when progress is visually hidden or the target is missing.
 `content` renders as plain text (no HTML/markdown parsing).
+Assigning `steps` clone-normalizes at most 256 own-data plain records into an immutable snapshot;
+accessor/inherited/malformed rows and invalid optional fields are omitted while later valid siblings
+remain usable. Step ids and headings are bounded to 256 and 4,096 characters, target selector
+strings to 8,192, and body content to 65,536. Per-step spotlight padding is finite, non-negative,
+and capped at 10,000px. Provider mutation after assignment cannot change rendering or event detail.
 `LyraTourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | (string & {})`.
 
 **Methods:** `start(index = 0)` (clamps, opens, emits `lr-tour-start`), `next()` (on the last step
@@ -1718,3 +1731,99 @@ rather than per component.
   `prefers-reduced-motion: reduce`.
 - Changing `placement`, `distance`, or tour-level `spotlightPadding` while open repositions/repaints
   the current step live without scrolling again or emitting a duplicate `lr-tour-target-missing`.
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-utility-diff-view-diff-line-diff-contracts`** — Supporting data types and helpers for this component family.
+  `computeLineDiff(/* public names: oldLines, newLines */): unknown`
+  `LyraDiffOp {
+    type: unknown;
+    text: unknown;
+  }`
+
+- **`components-utility-export-button-csv-contracts`** — Supporting data types and helpers for this component family.
+  `buildCsv(/* public names: rows, columns */): unknown`
+  `downloadBlob(/* public names: content, filename, mime, ownerDocument */): unknown`
+  `escapeCsvField(/* public names: value */): unknown`
+  `LyraCsvColumn {
+    key: unknown;
+    label: unknown;
+  }`
+
+- **`components-utility-export-button-export-button-contracts`** — Supporting data types and helpers for this component family.
+  `LyraExportFormatDescriptor {
+    formatId: unknown;
+    label: unknown;
+    description: unknown;
+    extension: unknown;
+  }`
+
+- **`components-utility-icon-icon-library-contracts`** — Supporting data types and helpers for this component family.
+  `getIconLibrary(/* public names: name */): unknown`
+  `LyraIconLibrary {
+    name: unknown;
+    resolver: unknown;
+    mutator: unknown;
+  }`
+  `LyraIconLibraryOptions {
+    resolver: unknown;
+    mutator: unknown;
+  }`
+  `registerIconLibrary(/* public names: name, options */): unknown`
+  `unregisterIconLibrary(/* public names: name */): unknown`
+
+- **`components-utility-known-date-known-date-contracts`** — Supporting data types and helpers for this component family.
+  `LyraKnownDateEventDetail {
+    value: unknown;
+    day: unknown;
+    month: unknown;
+    year: unknown;
+    field: unknown;
+  }`
+  `LyraKnownDateParts {
+    day: unknown;
+    month: unknown;
+    year: unknown;
+  }`
+
+- **`components-utility-mention-popover-mention-popover-contracts`** — Supporting data types and helpers for this component family.
+  `LyraMentionFocusOptions {
+    ownsFocus: unknown;
+  }`
+  `LyraMentionItem {
+    suggestionId: unknown;
+    label: unknown;
+    description: unknown;
+    icon: unknown;
+  }`
+  `LyraMentionSelectDetail {
+    suggestionId: unknown;
+    index: unknown;
+    label: unknown;
+  }`
+
+- **`components-utility-tour-tour-contracts`** — Supporting data types and helpers for this component family.
+  `LyraTourStep {
+    stepId: unknown;
+    target: unknown;
+    heading: unknown;
+    content: unknown;
+    placement: unknown;
+    spotlightPadding: unknown;
+    interactiveTarget: unknown;
+    hidePrevious: unknown;
+  }`
+
+- **`internal-clipboard-contracts`** — Shared utility contracts.
+  `LyraClipboardWriteFailure {
+    ok: unknown;
+    text: unknown;
+    reason: unknown;
+    error: unknown;
+  }`
+  `LyraClipboardWriteSuccess {
+    ok: unknown;
+    text: unknown;
+  }`

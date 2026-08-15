@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,41 +29,45 @@ actionable: there is no per-cell click/activation event, so unlike `<lr-heatmap>
 to fire on Enter/Space. Setting `showLegend` additionally renders a static `[part="legend"]` key
 below the strip, so the color-to-category mapping is readable without visiting each cell.
 
-A standard host `aria-label` dynamically names the internal list and wins over the
-`accessible-label` alias, which in turn wins over the generated category-count summary. When an
+A standard host `aria-label` names the host itself and is not copied verbatim to the internal
+list; `accessible-label` remains the list-specific override and otherwise the generated
+category-count summary names it. When an
 `items` refresh occurs while a cell owns focus, its `id` remains the sole roving stop; removal
 clamps focus to the nearest survivor, or to the stable list base when no cells remain. Unfocused
 refreshes do not move focus. A queued Arrow/Home/End focus is bound to the current item-array
 identity and connection generation, so a same-turn replacement or disconnect/reconnect cannot
 focus an unrelated cell that merely inherited the old numeric index.
 
-High-cardinality strips use a dense-collapse policy rather than a horizontal scrollport: cells may
-flex below their ordinary 2px visual target to keep 200 items inside the 320px responsive baseline;
-above 320 items the decorative 1px gaps collapse too, keeping 500 items contained. Every item still
-renders as its own named `role="listitem"`, remains reachable through the same roving keyboard model,
-and shows its detail tooltip on focus — density changes only the visual spacing, never the data or
-accessibility surface.
+High-cardinality strips mount a bounded window of at most 200 cells around the roving stop rather
+than creating one DOM node per input item. `aria-posinset`/`aria-setsize` retain positions and the
+total count from the complete canonical model; Home/End and arrows shift the window before moving
+focus, so every item remains keyboard reachable. `[part="window-range"]` visibly discloses the
+currently projected numeric range and total. The optional legend likewise mounts at most 200
+categories and exposes `[part="legend-limit"]` as a rendered/total numeric disclosure.
 
 **Properties:**
 
-- `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
+- `items: readonly SequenceStripItem[] = []` (attribute: false) — `{ readonly id, readonly
+  categoryId, readonly marker?, readonly label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
   subagent-dispatched turn); `label` is per-item hover/focus tooltip text _and_ that cell's own
   `role="listitem"` accessible name, falling back to the matching category's own `label` (or its
-  `key`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
+  `id`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
-- `categories: SequenceStripCategory[] = []` (attribute: false) — `{ key, color, label? }`; `color`
-  is the cell background for every item whose `category` matches `key`; invalid CSS colors,
+- `categories: readonly SequenceStripCategory[] = []` (attribute: false) — `{ readonly id,
+  readonly color, readonly label? }`; `color`
+  is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,
   declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
   used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
-  back to `key` itself when unset
+  back to `id` itself when unset. Both collection properties are cloned and frozen at assignment;
+  duplicate ids use the first valid entry, so identity is deterministic
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
-  summary from `items`/`categories`; a standard host `aria-label` takes precedence over this alias
+  summary from `items`/`categories`; a standard host `aria-label` remains a distinct host name
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
   order. The key describes the _scheme_, not the current data: a category with no matching item
-  still gets a row, and an item whose `category` matches no entry adds none. Deliberately
+  still gets a row, and an item whose `categoryId` matches no entry adds none. Deliberately
   non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
   filtering legend). Because it only repeats the category names `[part="base"]`'s own `aria-label`
   summary already announces, the legend is `aria-hidden` — visible on screen, announced exactly
@@ -92,8 +96,8 @@ as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label p
 `categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the
 color chip, matching that category's cell color), `legend-marker-swatch` (the marker row's chip
 instead: a neutral chip carrying the same bottom bar a `marker: true` cell paints, in the same
-`--lr-sequence-strip-marker-color`), `legend-label` (the category's `label`, or its `key` when
-unset).
+`--lr-sequence-strip-marker-color`), `legend-label` (the category's `label`, or its `id` when
+unset), `window-range` (bounded item projection/total), and `legend-limit` (bounded legend/total).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
 block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
@@ -113,13 +117,13 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 <script>
   const strip = document.querySelector("lr-sequence-strip");
   strip.categories = [
-    { key: "text", color: "#4f46e5", label: "Text" },
-    { key: "tool", color: "#16a34a", label: "Tool" },
+    { id: "text", color: "#4f46e5", label: "Text" },
+    { id: "tool", color: "#16a34a", label: "Tool" },
   ];
   strip.items = [
-    { id: "1", category: "text", label: "Turn 1: text" },
-    { id: "2", category: "tool", marker: true, label: "Turn 2: tool call" },
-    { id: "3", category: "text", label: "Turn 3: text" },
+    { id: "1", categoryId: "text", label: "Turn 1: text" },
+    { id: "2", categoryId: "tool", marker: true, label: "Turn 2: tool call" },
+    { id: "3", categoryId: "text", label: "Turn 3: text" },
   ];
 </script>
 ```
@@ -129,8 +133,11 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 - there is no `lr-cell-click`/keyboard-interaction model at all — unlike `lr-heatmap`'s
   canvas cells, a strip cell is purely a hover target; build a click handler outside this component
   (e.g. on a wrapping element) if per-item activation is needed.
-- an `items` entry whose `category` has no matching `categories` entry still renders its own cell
+- an `items` entry whose `categoryId` has no matching `categories` entry still renders its own cell
   (background `transparent`) rather than being dropped, so a strip stays the same length as `items`
   regardless of `categories` coverage.
+- **9.0 migration:** rename category `{ key }` to `{ id }` and item `{ category }` to
+  `{ categoryId }`. Reassign after changes; caller mutation no longer changes the installed
+  snapshot. Category clauses use effective-locale `Intl.ListFormat` punctuation.
 
 ---

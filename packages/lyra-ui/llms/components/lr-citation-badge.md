@@ -22,19 +22,21 @@ elsewhere on the page (a sibling component in this family) — this component ne
 anything about `<lr-source-card>`, it only carries the id through its event details.
 
 **Properties:**
+
 - `index: number = 1` — the citation number shown, e.g. `3` renders as `[3]`.
 - `status: CitationBadgeStatus = 'default'` (reflected) — one of `'default' | 'high' | 'medium' |
-  'low' | 'verified' | 'unverified'`; drives the badge's color and (unless `label` is set) part of
+'low' | 'verified' | 'unverified'`; drives the badge's color and (unless `label` is set) part of
   its accessible name.
 - `sourceId: string = ''` (attribute `source-id`) — id of a corresponding `<lr-source-card>`,
   echoed back verbatim in both events; never read or validated by this component.
 - `href: string = ''` — optional direct link target for the citation's source, carried into
   `lr-citation-open`'s detail as-is; this component never navigates.
-- `label: string = ''` — adds caller-supplied context to the localized citation name while retaining
-  the visible citation number (for example, `"Citation 3, Annual report"`). A host `aria-label`
-  remains the exact highest-precedence override.
+- `label: string = ''` — adds caller-supplied context to the localized citation-button name while
+  retaining the visible citation number (for example, `"Citation 3, Annual report"`). Authored host
+  `aria-label` independently names the component and is not cloned onto that nested button
 
 **Events:**
+
 - `lr-citation-activate` (`detail: { sourceId: string; index: number }`) — fires on click, or on
   Enter while focused (native `<button>` behavior, no listener needed for the Enter case). The
   lightweight "jump to this source" signal.
@@ -44,7 +46,7 @@ anything about `<lr-source-card>`, it only carries the id through its event deta
   constituent click, standard browser `dblclick` behavior) in addition to the one `lr-citation-open`.
 
 **Slots:** default — rich preview/tooltip content (e.g. a filename + excerpt), shown in a floating
-popover on hover/focus. This is *not* the badge's visible content (the badge always renders
+popover on hover/focus. This is _not_ the badge's visible content (the badge always renders
 `[index]`); nothing renders at all (no hover affordance) when this slot is empty.
 When populated, the button carries `aria-describedby` referencing the same-shadow-tree popover,
 which owns `role="tooltip"` whether currently shown or hidden.
@@ -63,7 +65,7 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 > Retheming a badge from outside `<lr-citation-badge>` (e.g. per-source or per-confidence colors)?
 > Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
 > "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
-> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+> wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none.
 
@@ -71,13 +73,15 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 <p>
   Revenue grew 12% year over year
   <lr-citation-badge index="1" status="verified" source-id="doc-1">
-    <strong>annual_report.pdf</strong> — "Revenue grew 12% year over year, driven primarily by..."
-  </lr-citation-badge>.
+    <strong>annual_report.pdf</strong> — "Revenue grew 12% year over year,
+    driven primarily by..." </lr-citation-badge
+  >.
 </p>
 <script type="module">
-  document.addEventListener('lr-citation-activate', (e) => {
-    document.querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`)
-      ?.scrollIntoView({ block: 'center' });
+  document.addEventListener("lr-citation-activate", (e) => {
+    document
+      .querySelector(`lr-source-card[source-id="${e.detail.sourceId}"]`)
+      ?.scrollIntoView({ block: "center" });
   });
 </script>
 ```
@@ -94,11 +98,12 @@ and blur (Tab away) close it immediately instead, with no delay.
 
 Status coloring follows a semantic scheme: `verified`/`high` use the success tones (a claim that's
 been checked, or the model is confident in); `medium`/`low` use warning tones; `unverified` uses the
-*danger* tone — deliberately distinct from `low`, since "hasn't been checked at all" is a different
+_danger_ tone — deliberately distinct from `low`, since "hasn't been checked at all" is a different
 (arguably riskier) claim than "checked but uncertain". `default` renders as plain neutral text with
 no background tint, for citations that carry no confidence/verification signal at all.
 
 **Known gotchas:**
+
 - Enter and Space are given distinct meanings (Enter = activate via native `<button>` click, Space =
   open) — Space's native click-on-keyup is pre-empted with `preventDefault()` on keydown so it fires
   `lr-citation-open` instead of triggering a second `lr-citation-activate`.

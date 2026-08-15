@@ -3,9 +3,9 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
+import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { loadHtmlSanitizer } from './dompurify-loader.js';
 import { styles } from './html-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -13,6 +13,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_htmlViewerLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -27,7 +28,7 @@ type HtmlFetchState =
 
 export interface LyraHtmlViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
 }
@@ -37,12 +38,14 @@ class LyraHtmlViewerBase extends LyraElement<LyraHtmlViewerEventMap> {}
 /**
  * Fetches and safely renders an inline HTML document. The sanitized surface establishes paint
  * containment so retained author styles cannot position content over the surrounding application.
+ * A nonempty host `aria-label` makes the host the sole named semantic owner; otherwise the loaded
+ * shadow document owns the explicit-empty, `name`, or localized fallback label.
  *
  * @customElement lr-html-viewer
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.
- * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
- *   Fired whenever search state changes. `detail: { query: string; matchCount: number;
- *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change -
+ *   Fired whenever search state changes. `matchCountExact=false` makes the retained count a lower
+ *   bound. Bubbling, composed, and non-cancelable.
  * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
  *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
  *   non-cancelable.
@@ -161,7 +164,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<div part="html" role="document" aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('htmlViewerLabel'))}>${unsafeHTML(this.fetchState.markup)}</div>`;
+      case 'loaded': return html`<div part="html" role=${viewerSemanticRole(this, 'document') ?? nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('htmlViewerLabel')) ?? nothing}>${unsafeHTML(this.fetchState.markup)}</div>`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle':

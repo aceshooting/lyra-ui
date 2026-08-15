@@ -19,6 +19,9 @@ First-party "no data" state (no Web Awesome equivalent).
 
 **Properties:**
 - `heading: string = ''`
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
+  either the string heading or rich `heading` slot at that semantic level; invalid untyped values
+  retain level 3, while `none` keeps the visible text without heading semantics
 - `description: string = ''`
 - `compact: boolean = false` (reflected) — tighter, left-aligned rendering (less padding, a lighter
   heading weight) for use inside a constrained space like a widget body or table cell, instead of
@@ -45,7 +48,7 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 **Optional peer deps:** none.
 
 ```html
-<lr-empty heading="No results" description="Try a different search.">
+<lr-empty heading="No results" heading-level="2" description="Try a different search.">
   <svg slot="" ...></svg> <!-- default slot: any icon/illustration -->
   <div slot="actions"><button>Clear filters</button></div>
 </lr-empty>

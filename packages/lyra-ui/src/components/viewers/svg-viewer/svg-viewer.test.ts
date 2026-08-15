@@ -533,6 +533,30 @@ describe('region highlights', () => {
     }
   });
 
+  it('bounds painted regions while retaining an active highlight beyond the candidate cap', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = Array.from({ length: 1_001 }, (_, index) => ({
+        id: `h${index}`,
+        anchor: {
+          kind: 'region' as const,
+          rect: { x: index % 100, y: index % 100, width: 1, height: 1 },
+        },
+      }));
+      el.activeHighlightId = 'h1000';
+      await el.updateComplete;
+
+      expect(el.shadowRoot!.querySelectorAll('[part="region-highlight"]').length).to.equal(100);
+      expect(el.shadowRoot!.querySelector('[part="region-highlight"][data-id="h1000"][data-active]') !== null).to.be.true;
+      expect(el.shadowRoot!.querySelector('[part="region-highlight"][data-id="h99"]') === null).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
   it('scrollToAnchor() by id scrolls the matching region, not just the first one, when several are rendered', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');

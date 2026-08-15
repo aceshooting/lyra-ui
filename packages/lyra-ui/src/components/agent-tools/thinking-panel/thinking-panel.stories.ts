@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A collapsible panel for an AI agent\'s intermediate reasoning, distinct from its final response. `mode="live"` shows a pulsing "Thinking…" placeholder and auto-follows new content appended to the default slot while expanded (unless the reader has scrolled up); `mode="post-hoc"` is a static, non-auto-scrolling review of already-finished reasoning.',
+          'A collapsible panel for an AI agent\'s intermediate reasoning, distinct from its final response. `mode="live"` shows a pulsing "Thinking…" placeholder and auto-follows new content appended to the default slot while expanded (unless the reader has scrolled up); `mode="post-hoc"` is a static, non-auto-scrolling review of already-finished reasoning. Omit `label` to localize the header; any supplied string, including "Thinking" or an empty string, is a verbatim override.',
       },
     },
   },

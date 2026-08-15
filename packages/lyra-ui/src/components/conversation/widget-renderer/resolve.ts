@@ -5,34 +5,214 @@
  */
 import {
   isWidgetTypeRegistry,
-  type WidgetTypeDefinition,
-  type WidgetTypeRegistry,
+  type LyraWidgetTypeDefinition,
+  type LyraWidgetTypeRegistry,
 } from "./registry.js";
+import {
+  readWidgetPointer,
+  WIDGET_MAX_DEPTH,
+  WIDGET_MAX_NODES,
+  WIDGET_MAX_PROPS_PER_NODE,
+  WIDGET_MAX_WARNINGS,
+} from "../../../internal/widget-resolver.js";
 
-export interface WidgetNode {
-  type: string;
-  id?: string;
-  props?: Record<string, unknown>;
-  children?: (WidgetNode | string)[];
-  slot?: string;
-  actionId?: string;
-  payload?: unknown;
+export interface LyraWidgetNode {
+  readonly type: string;
+  readonly id?: string;
+  readonly props?: Readonly<Record<string, unknown>>;
+  readonly children?: readonly (LyraWidgetNode | string)[];
+  readonly slot?: string;
+  readonly actionId?: string;
+  readonly payload?: unknown;
 }
 
-export interface WidgetBinding {
-  $bind: string;
-  fallback?: string | number | boolean | null;
+export interface LyraWidgetBinding {
+  readonly $bind: string;
+  readonly fallback?: string | number | boolean | null;
 }
 
 /** Version-two document. Controlled binding state is supplied separately through `bindingState`. */
 export interface LyraWidgetDocument {
-  version: "2";
-  root: WidgetNode;
+  readonly version: "2";
+  readonly root: LyraWidgetNode;
 }
 
-/** Mechanical migration helper for the former `.tree` property. */
-export function createWidgetDocument(root: WidgetNode): LyraWidgetDocument {
-  return { version: "2", root };
+const DOCUMENT_INVALID = Symbol("invalid-widget-document");
+const DOCUMENT_MISSING = Symbol("missing-widget-document-field");
+
+interface DocumentSnapshotContext {
+  readonly ancestors: Set<object>;
+  readonly ids: Set<string>;
+  remaining: number;
+}
+
+function readDocumentField(
+  input: object,
+  key: PropertyKey
+): unknown | typeof DOCUMENT_INVALID | typeof DOCUMENT_MISSING {
+  try {
+    return Object.hasOwn(input, key)
+      ? Reflect.get(input, key)
+      : DOCUMENT_MISSING;
+  } catch {
+    return DOCUMENT_INVALID;
+  }
+}
+
+function snapshotDocumentProps(
+  input: object
+): Readonly<Record<string, unknown>> | typeof DOCUMENT_INVALID {
+  const output: Record<string, unknown> = {};
+  let admitted = 0;
+  try {
+    for (const key in input) {
+      if (!Object.hasOwn(input, key)) continue;
+      if (admitted >= WIDGET_MAX_PROPS_PER_NODE) break;
+      const value = Reflect.get(input, key);
+      admitted += 1;
+      output[key] = value;
+    }
+  } catch {
+    return DOCUMENT_INVALID;
+  }
+  return Object.freeze(output);
+}
+
+function snapshotDocumentNode(
+  input: unknown,
+  depth: number,
+  context: DocumentSnapshotContext
+): LyraWidgetNode | typeof DOCUMENT_INVALID | null {
+  if (depth > WIDGET_MAX_DEPTH || context.remaining <= 0) return null;
+  context.remaining -= 1;
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    return DOCUMENT_INVALID;
+  }
+  if (context.ancestors.has(input)) return DOCUMENT_INVALID;
+
+  const type = readDocumentField(input, "type");
+  if (typeof type !== "string") return DOCUMENT_INVALID;
+  const id = readDocumentField(input, "id");
+  const slot = readDocumentField(input, "slot");
+  const actionId = readDocumentField(input, "actionId");
+  const propsInput = readDocumentField(input, "props");
+  const childrenInput = readDocumentField(input, "children");
+  if (
+    [id, slot, actionId, propsInput, childrenInput].includes(DOCUMENT_INVALID)
+  ) {
+    return DOCUMENT_INVALID;
+  }
+  if (
+    id !== DOCUMENT_MISSING &&
+    (typeof id !== "string" || id.length === 0 || id !== id.trim())
+  ) {
+    return DOCUMENT_INVALID;
+  }
+  if (typeof id === "string") {
+    if (context.ids.has(id)) return DOCUMENT_INVALID;
+    context.ids.add(id);
+  }
+  if (
+    slot !== DOCUMENT_MISSING &&
+    (typeof slot !== "string" || slot.length === 0 || slot !== slot.trim())
+  ) {
+    return DOCUMENT_INVALID;
+  }
+  if (
+    actionId !== DOCUMENT_MISSING &&
+    (typeof actionId !== "string" ||
+      actionId.length === 0 ||
+      actionId !== actionId.trim())
+  ) {
+    return DOCUMENT_INVALID;
+  }
+  if (
+    propsInput !== DOCUMENT_MISSING &&
+    (propsInput === null ||
+      typeof propsInput !== "object" ||
+      Array.isArray(propsInput))
+  ) {
+    return DOCUMENT_INVALID;
+  }
+  if (
+    childrenInput !== DOCUMENT_MISSING &&
+    !Array.isArray(childrenInput)
+  ) {
+    return DOCUMENT_INVALID;
+  }
+
+  const props =
+    propsInput === DOCUMENT_MISSING
+      ? undefined
+      : snapshotDocumentProps(propsInput as object);
+  if (props === DOCUMENT_INVALID) return DOCUMENT_INVALID;
+  let payload: unknown | typeof DOCUMENT_MISSING = DOCUMENT_MISSING;
+  if (actionId !== DOCUMENT_MISSING) {
+    payload = readDocumentField(input, "payload");
+    if (payload === DOCUMENT_INVALID) return DOCUMENT_INVALID;
+  }
+
+  const children: Array<LyraWidgetNode | string> = [];
+  if (childrenInput !== DOCUMENT_MISSING && depth < WIDGET_MAX_DEPTH) {
+    const length = readDocumentField(childrenInput, "length");
+    if (
+      typeof length !== "number" ||
+      !Number.isSafeInteger(length) ||
+      length < 0
+    ) {
+      return DOCUMENT_INVALID;
+    }
+    context.ancestors.add(input);
+    try {
+      for (let index = 0; index < length && context.remaining > 0; index++) {
+        const child = readDocumentField(childrenInput, index);
+        if (child === DOCUMENT_INVALID || child === DOCUMENT_MISSING) {
+          return DOCUMENT_INVALID;
+        }
+        if (typeof child === "string") {
+          context.remaining -= 1;
+          children.push(child);
+          continue;
+        }
+        const snapshot = snapshotDocumentNode(child, depth + 1, context);
+        if (snapshot === DOCUMENT_INVALID) return DOCUMENT_INVALID;
+        if (snapshot) children.push(snapshot);
+      }
+    } finally {
+      context.ancestors.delete(input);
+    }
+  }
+
+  return Object.freeze({
+    type,
+    ...(typeof id === "string" ? { id } : {}),
+    ...(typeof slot === "string" ? { slot } : {}),
+    ...(typeof actionId === "string"
+      ? {
+          actionId,
+          payload: payload === DOCUMENT_MISSING ? undefined : payload,
+        }
+      : {}),
+    ...(props === undefined ? {} : { props }),
+    ...(children.length === 0 ? {} : { children: Object.freeze(children) }),
+  });
+}
+
+/**
+ * Creates an immediate, bounded, frozen version-two document snapshot. Widget-owned structure and
+ * prop records are copied; opaque prop values and action payloads intentionally retain identity.
+ * Malformed, cyclic, duplicate-id, or hostile input throws `TypeError` before a document escapes.
+ */
+export function createWidgetDocument(root: LyraWidgetNode): LyraWidgetDocument {
+  const snapshot = snapshotDocumentNode(root, 0, {
+    ancestors: new Set(),
+    ids: new Set(),
+    remaining: WIDGET_MAX_NODES,
+  });
+  if (snapshot === DOCUMENT_INVALID || snapshot === null) {
+    throw new TypeError("A widget document root must be a valid bounded widget node.");
+  }
+  return Object.freeze({ version: "2", root: snapshot });
 }
 
 export interface ResolvedText {
@@ -67,17 +247,12 @@ export interface ResolvedElement {
 export type ResolvedNode = ResolvedText | ResolvedElement;
 
 export interface ResolveContext {
-  registry: WidgetTypeRegistry;
+  registry: LyraWidgetTypeRegistry;
   bindingState: unknown;
   /** Warning keys retained for one renderer document/registry generation. */
   warned: Set<string>;
   warn?: (message: string) => void;
 }
-
-export const WIDGET_MAX_DEPTH = 32;
-export const WIDGET_MAX_NODES = 5000;
-export const WIDGET_MAX_PROPS_PER_NODE = 100;
-export const WIDGET_MAX_WARNINGS = 100;
 
 const WARNING_SUPPRESSION_KEY = "__warning-cap__";
 const INVALID = Symbol("invalid-widget-input");
@@ -102,67 +277,13 @@ function warnOnce(ctx: ResolveContext, key: string, message: string): void {
   (ctx.warn ?? console.warn)(`[lr-widget-renderer] ${message}`);
 }
 
-function isBinding(value: unknown): value is WidgetBinding {
+function isBinding(value: unknown): value is LyraWidgetBinding {
   return Boolean(
     value &&
       typeof value === "object" &&
       !Array.isArray(value) &&
-      typeof (value as WidgetBinding).$bind === "string"
+      typeof (value as LyraWidgetBinding).$bind === "string"
   );
-}
-
-function decodePointerSegment(raw: string): string | undefined {
-  let decoded = "";
-  for (let index = 0; index < raw.length; index++) {
-    const character = raw[index]!;
-    if (character !== "~") {
-      decoded += character;
-      continue;
-    }
-    const escaped = raw[++index];
-    if (escaped === "0") decoded += "~";
-    else if (escaped === "1") decoded += "/";
-    else return undefined;
-  }
-  return decoded;
-}
-
-function canonicalArrayIndex(segment: string): number | undefined {
-  if (!/^(?:0|[1-9][0-9]*)$/.test(segment)) return undefined;
-  const index = Number(segment);
-  return Number.isSafeInteger(index) ? index : undefined;
-}
-
-/** Resolves an RFC 6901 pointer without accepting noncanonical array-index spellings. */
-export function readWidgetPointer(root: unknown, path: string): unknown {
-  if (path === "") return root;
-  if (!path.startsWith("/")) return undefined;
-  let current = root;
-  for (const raw of path.slice(1).split("/")) {
-    const segment = decodePointerSegment(raw);
-    if (segment === undefined) return undefined;
-    if (
-      segment === "__proto__" ||
-      segment === "prototype" ||
-      segment === "constructor"
-    ) {
-      return undefined;
-    }
-    if (Array.isArray(current)) {
-      const index = canonicalArrayIndex(segment);
-      if (index === undefined || index >= current.length) return undefined;
-      current = current[index];
-    } else if (
-      current &&
-      typeof current === "object" &&
-      Object.hasOwn(current, segment)
-    ) {
-      current = (current as Record<string, unknown>)[segment];
-    } else {
-      return undefined;
-    }
-  }
-  return current;
 }
 
 function resolveValue(
@@ -177,8 +298,8 @@ function resolveValue(
   };
 }
 
-interface SnapshotNode extends WidgetNode {
-  children?: (SnapshotNode | string)[];
+interface SnapshotNode extends LyraWidgetNode {
+  readonly children?: readonly (SnapshotNode | string)[];
 }
 
 interface SnapshotContext {
@@ -225,8 +346,8 @@ function snapshotProps(
 
 function definitionFor(
   type: string,
-  registry: WidgetTypeRegistry
-): Readonly<WidgetTypeDefinition> | undefined {
+  registry: LyraWidgetTypeRegistry
+): Readonly<LyraWidgetTypeDefinition> | undefined {
   return registry.get(type);
 }
 
@@ -336,8 +457,7 @@ function snapshotNode(
   } finally {
     snapshot.ancestors.delete(input);
   }
-  if (children.length > 0) node.children = children;
-  return node;
+  return children.length > 0 ? { ...node, children } : node;
 }
 
 function filterRowColProps(
@@ -354,7 +474,7 @@ function filterRowColProps(
 
 function filterMappedProps(
   props: Record<string, unknown> | undefined,
-  def: Readonly<WidgetTypeDefinition>,
+  def: Readonly<LyraWidgetTypeDefinition>,
   ctx: ResolveContext,
   type: string
 ): {
@@ -544,7 +664,7 @@ function hasDuplicateAuthoredIds(
 /** Resolves one bounded immutable snapshot through `ctx.registry`. Structural invalidity returns
  * `null`; throwing getters/registry access propagate so the renderer can emit one normalized error. */
 export function resolveTree(
-  root: WidgetNode | null | undefined,
+  root: LyraWidgetNode | null | undefined,
   ctx: ResolveContext
 ): ResolvedNode | null {
   if (root == null) return null;

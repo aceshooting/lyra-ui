@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,10 +21,13 @@ but shares the same overlay infrastructure as `<lr-dialog>`/`<lr-command-palette
 trap, Escape/backdrop dismissal, scroll lock, and focus return.
 
 **Properties:**
-- `open: boolean = false` (reflected) — set this or call `close()`; there is no `show()`/`hide()`.
-- `images: LyraLightboxImage[] = []` (attribute: false) — `LyraLightboxImage { src: string; alt?:
-  string; caption?: string }`. `src` is passed to the embedded frame, which runs it through
-  `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
+- `open: boolean = false` (reflected) — post-render writes run the same cancelable lifecycle as
+  `show()`/`hide()`/`close()`. Initial `open` markup is state and emits no lifecycle events.
+- `images: readonly LyraLightboxImage[] = []` (attribute: false) —
+  `LyraLightboxImage { readonly src: string; readonly alt?: string; readonly caption?: string }`.
+  Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
+  are omitted and updates require a new collection assignment. `src` is passed to the embedded
+  frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
 - `index: number = 0` (reflected) — clamped defensively for rendering and silently re-synced (no
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
@@ -44,16 +47,21 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
   overriding the localized `lightboxLabel`.
 
-**Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `goTo()` ignores a non-finite
+**Methods:** promise-based `show()`, `hide()`, and `close(reason?)`, plus `next()`, `previous()`, and
+`goTo(index)`. `show()`/`hide()` resolve after the successful rendered transition; a veto resolves
+without changing state. `goTo()` ignores a non-finite
 index without changing state or emitting `lr-index-change`. A finite fractional index is truncated
 toward zero before clamping or loop wrapping, so `lr-index-change.detail.index` is always the
 actual rendered integer index; `reason` defaults to `'api'` and is forwarded as the close event's
 detail.
 
-**Events:** `lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
+**Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
+cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`), then
+`lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
 'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks
-closing on every path, including a consumer's own `close()` call. Also fires with `'unmount'` when
-the element is removed from the DOM while still open); `lr-index-change` (`detail: { index }`, fired
+closing on every path, including a consumer's own `close()` call), followed after a successful
+closed render by `lr-after-hide`. Removal while open emits the settled non-vetoable
+hide/close/after-hide order with reason `'unmount'`. `lr-index-change` (`detail: { index }`, fired
 only for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
 `goTo()`; **not** when a consumer sets `index`/`images` directly); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
@@ -68,7 +76,8 @@ including a consumer-driven one, appends the localized position to the document'
 `[data-lr-live-region="polite"]` sink; initial mount and reconnect are silent), `actions` (wrapper,
 `hidden` when nothing is slotted),
 `close-button` (always rendered — unlike `<lr-dialog>`'s opt-in `closable`), `stage`, `frame` (the
-embedded `<lr-pan-zoom>`; its internal parts are not re-exported), `previous-button`,
+embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
+`previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its
 `id` is the panel's `aria-describedby` target).
 
@@ -82,13 +91,14 @@ photo content.
 **Optional peer deps:** none.
 
 **Known gotchas:**
-- keyboard navigation is RTL-aware and bound on `[part="panel"]`, so it also sees keydowns bubbling
-  out of the embedded frame's shadow tree: Arrow forward/back (mirrored under `rtl`), `Home`, `End`.
-  It never collides with the frame's own `+`/`-`/`0` zoom shortcuts.
+- keyboard navigation is RTL-aware on panel/chrome: Arrow forward/back (mirrored under `rtl`),
+  `Home`, `End`. When the embedded pan/zoom viewport owns focus, those keys remain with its native
+  scroll surface and never change gallery item; `+`/`-`/`0` remain its zoom shortcuts.
 - initial focus deliberately goes to `close-button`, not the first tabbable element — a slotted
   `actions` button placed before it does not steal focus.
 - zoom/pan reset on navigation is imperative (`resetView()` from `updated()`), not a binding; the
   frame element is reused across navigations rather than recreated, so a keyboard user who tabbed
   into the viewport keeps focus.
 - scope for v1: no per-image slotted content (data-driven via `images` only), no dot indicators, no
-  open/close transition, no click-image-to-navigate, no touch-swipe.
+  visual open/close animation, no click-image-to-navigate, no touch-swipe. Lifecycle phases are
+  still observable through the before/after events and methods above.

@@ -85,7 +85,7 @@ describe('autoloader', () => {
       async () =>
         class extends HTMLElement {
           readonly updateComplete = updateComplete;
-        }
+        },
     );
     const root = await fixture<HTMLElement>(html`<div><lr-kbd></lr-kbd></div>`);
     const element = root.querySelector(tag)!;
@@ -138,7 +138,7 @@ describe('autoloader', () => {
         finishUpdate(): void {
           this.resolveUpdate();
         }
-      }
+      },
     );
     await customElements.whenDefined(tag);
 
@@ -173,7 +173,7 @@ describe('autoloader', () => {
           shadow.append(document.createElement(childTag));
           this.resolveUpdate();
         }
-      }
+      },
     );
     const root = await fixture<HTMLElement>(html`<div></div>`);
     await start(root);
@@ -449,6 +449,293 @@ describe('autoloader', () => {
     expect(customElements.get(tag)).to.be.a('function');
   });
 
+  it('rejects when a loader throws undefined', async () => {
+    const tag = 'lr-rating';
+    override(tag, async () => {
+      throw undefined;
+    });
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    const element = document.createElement(tag);
+    shadow.append(element);
+
+    try {
+      let rejected = false;
+      try {
+        await discover(host);
+      } catch (error) {
+        rejected = true;
+        expect(error).to.equal(undefined);
+      }
+      expect(rejected).to.equal(true);
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('finishes valid siblings and their rendered shadow content when another import fails', async () => {
+    const failedTag = 'lr-rating';
+    const validTag = 'lr-card';
+    const childTag = 'lr-badge';
+    const failure = new Error('synthetic sibling import failure');
+    override(failedTag, async () => {
+      throw failure;
+    });
+    override(validTag, async () => constructorForTag());
+    override(childTag, async () => constructorForTag());
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    const failed = document.createElement(failedTag);
+    const valid = document.createElement(validTag);
+    Object.defineProperty(valid, 'updateComplete', {
+      configurable: true,
+      value: Promise.resolve().then(() => {
+        const rendered = valid.attachShadow({ mode: 'open' });
+        Object.defineProperty(rendered, 'customElementRegistry', {
+          configurable: true,
+          value: registry,
+        });
+        rendered.append(document.createElement(childTag));
+      }),
+    });
+    shadow.append(failed, valid);
+
+    try {
+      let error: unknown;
+      try {
+        await discover(host);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error).to.equal(failure);
+      expect(typeof registry.get(failedTag)).to.equal('undefined');
+      expect(typeof registry.get(validTag)).to.equal('function');
+      expect(typeof registry.get(childTag)).to.equal('function');
+      expect(failed.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+      expect(valid.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+      const rendered = valid.shadowRoot;
+      if (rendered) delete (rendered as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('clears a failed import marker without waiting for a valid sibling render', async () => {
+    const failedTag = 'lr-rating';
+    const validTag = 'lr-card';
+    const failure = new Error('synthetic sibling import failure');
+    override(failedTag, async () => {
+      throw failure;
+    });
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    registry.define(validTag, constructorForTag());
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    const failed = document.createElement(failedTag);
+    const valid = document.createElement(validTag);
+    let resolveValid!: () => void;
+    Object.defineProperty(valid, 'updateComplete', {
+      configurable: true,
+      value: new Promise<void>((resolve) => {
+        resolveValid = resolve;
+      }),
+    });
+    shadow.append(failed, valid);
+
+    try {
+      const importError = oneEvent(host, 'lr-autoload-error');
+      const pending = discover(host, { events: true });
+      await importError;
+      await aTimeout(0);
+      expect(failed.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+      expect(valid.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+
+      resolveValid();
+      let error: unknown;
+      try {
+        await pending;
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error).to.equal(failure);
+      expect(valid.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      resolveValid();
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('fails soft for a hostile first-update getter while finishing a valid sibling', async () => {
+    const hostileTag = 'lr-rating';
+    const validTag = 'lr-card';
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    registry.define(hostileTag, constructorForTag());
+    registry.define(validTag, constructorForTag());
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    const hostile = document.createElement(hostileTag);
+    Object.defineProperty(hostile, 'updateComplete', {
+      configurable: true,
+      get(): never {
+        throw new Error('hostile updateComplete');
+      },
+    });
+    let validUpdateReads = 0;
+    const valid = document.createElement(validTag);
+    Object.defineProperty(valid, 'updateComplete', {
+      configurable: true,
+      get() {
+        validUpdateReads += 1;
+        return Promise.resolve();
+      },
+    });
+    shadow.append(hostile, valid);
+
+    try {
+      await discover(host);
+      expect(validUpdateReads).to.equal(1);
+      expect(hostile.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+      expect(valid.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('serializes overlapping observer batches without clearing a later first-update marker', async () => {
+    const tag = 'lr-rating';
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    registry.define(tag, constructorForTag());
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    const resolvers: Array<() => void> = [];
+    const element = document.createElement(tag);
+    Object.defineProperty(element, 'updateComplete', {
+      configurable: true,
+      get() {
+        return new Promise<void>((resolve) => resolvers.push(resolve));
+      },
+    });
+
+    try {
+      await start(host);
+      shadow.append(element);
+      await aTimeout(0);
+      expect(resolvers.length).to.equal(1);
+      element.remove();
+      shadow.append(element);
+      await aTimeout(0);
+      expect(resolvers.length).to.equal(1);
+
+      resolvers[0]!();
+      await aTimeout(0);
+      await aTimeout(0);
+      expect(resolvers.length).to.equal(2);
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+
+      resolvers[1]!();
+      await aTimeout(0);
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      for (const resolve of resolvers) resolve();
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('retains the first-update marker across concurrent discovery contexts', async () => {
+    const tag = 'lr-rating';
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    registry.define(tag, constructorForTag());
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    const resolvers: Array<() => void> = [];
+    const element = document.createElement(tag);
+    Object.defineProperty(element, 'updateComplete', {
+      configurable: true,
+      get() {
+        return new Promise<void>((resolve) => resolvers.push(resolve));
+      },
+    });
+
+    try {
+      await start(host);
+      shadow.append(element);
+      for (let attempts = 0; attempts < 10 && resolvers.length < 1; attempts += 1) await aTimeout(0);
+      expect(resolvers.length).to.equal(1);
+
+      const explicitDiscovery = discover(host);
+      for (let attempts = 0; attempts < 10 && resolvers.length < 2; attempts += 1) await aTimeout(0);
+      expect(resolvers.length).to.equal(2);
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+
+      resolvers[0]!();
+      await aTimeout(0);
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+
+      resolvers[1]!();
+      await explicitDiscovery;
+      await aTimeout(0);
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      for (const resolve of resolvers) resolve();
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('preserves rendered depth when first-update shadow content is discovered', async () => {
+    const tag = 'lr-rating';
+    const element = document.createElement(tag);
+    const registry = createScopedRegistry();
+    registry.define(tag, constructorForTag());
+    Object.defineProperty(element, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    Object.defineProperty(element, 'updateComplete', {
+      configurable: true,
+      value: Promise.resolve().then(() => element.attachShadow({ mode: 'open' })),
+    });
+
+    try {
+      let error: unknown;
+      try {
+        await discover(element, { maxDepth: 0 });
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error instanceof Error).to.equal(true);
+      expect((error as Error).message).to.include('maxDepth');
+    } finally {
+      delete (element as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
   it('retries an observer-driven failure on the next insertion', async () => {
     const tag = 'lr-divider';
     let calls = 0;
@@ -640,6 +927,38 @@ describe('autoloader', () => {
     }
   });
 
+  it('charges observer ancestry work to maxWork and emits the traversal failure', async () => {
+    const tag = 'lr-rating';
+    let loads = 0;
+    override(tag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+
+    try {
+      await start(shadow, { events: true, maxWork: 1 });
+      const traversalError = oneEvent(shadow, 'lr-autoload-traversal-error');
+      const element = document.createElement(tag);
+      shadow.append(element);
+      const event = (await traversalError) as CustomEvent<{ limit: string; maximum: number }>;
+
+      expect(event.detail.limit).to.equal('maxWork');
+      expect(event.detail.maximum).to.equal(1);
+      expect(loads).to.equal(0);
+      expect(registry.get(tag)).to.equal(undefined);
+      expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
   it('rejects invalid traversal and concurrency ceilings before walking the tree', async () => {
     for (const options of [
       { maxElements: -1 },
@@ -693,6 +1012,41 @@ describe('autoloader', () => {
     expect(loads).to.equal(0);
 
     root.append(document.createElement(tag));
+    await customElements.whenDefined(tag);
+    expect(loads).to.equal(1);
+  });
+
+  it('bypasses hostile added-node type and parent getters without blocking a valid sibling', async () => {
+    const tag = 'lr-zoomable-frame';
+    let loads = 0;
+    override(tag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    const root = await fixture<HTMLElement>(html`<div></div>`);
+    await start(root);
+    const hostile = document.createElement('div');
+    Object.defineProperty(hostile, 'nodeType', {
+      configurable: true,
+      get(): never {
+        throw new Error('hostile nodeType');
+      },
+    });
+    Object.defineProperty(hostile, 'localName', {
+      configurable: true,
+      get(): never {
+        throw new Error('hostile localName');
+      },
+    });
+    const cyclicParent = document.createElement('div');
+    Object.defineProperty(cyclicParent, 'parentNode', {
+      configurable: true,
+      get() {
+        return cyclicParent;
+      },
+    });
+
+    root.append(hostile, cyclicParent, document.createElement(tag));
     await customElements.whenDefined(tag);
     expect(loads).to.equal(1);
   });

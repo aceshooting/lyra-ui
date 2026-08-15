@@ -33,7 +33,7 @@ export interface LyraRagCitationSelectDetail extends CitationSelectEventDetail {
 export interface LyraRagAnswerEventMap {
   "lr-citation-select": CustomEvent<LyraRagCitationSelectDetail>;
   "lr-claim-select": CustomEvent<{ claim: GroundedClaim }>;
-  "lr-retry": CustomEvent<undefined>;
+  "lr-retry": CustomEvent<null>;
 }
 
 /**

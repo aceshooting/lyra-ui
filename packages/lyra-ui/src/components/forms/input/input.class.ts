@@ -7,7 +7,7 @@ import { lengthViolations } from '../../../internal/length-constraints.js';
 import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
 import { styles } from './input.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import {
   autocorrectConverter,
   normalizeAutocorrect,
@@ -51,12 +51,6 @@ const INPUT_TYPES = new Set<LyraInputType>([
   'tel',
   'url',
 ]);
-/** Alias of the canonical six-step size ladder. The `size` property itself accepts
- *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
-export type LyraInputSize = LyraSizeStep;
-/** Alias of the library's one `appearance` (fill-treatment) vocabulary. */
-export type LyraInputAppearance = LyraAppearance;
-
 /** The `type`s whose native `<input>` honors `minlength`/`maxlength` at all. The platform ignores
  *  both on `number`/`time`, so the dirty-value supplement in `updateValidity()` must ignore them
  *  there too rather than being stricter than the control it wraps. */
@@ -74,12 +68,12 @@ export interface LyraInputEventMap {
   change: Event;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
-  'lr-clear': CustomEvent<undefined>;
+  'lr-clear': CustomEvent<null>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 class LyraInputBase extends LyraElement<LyraInputEventMap> {}
 

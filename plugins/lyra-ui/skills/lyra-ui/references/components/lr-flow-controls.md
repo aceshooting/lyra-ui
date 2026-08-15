@@ -30,9 +30,8 @@ otherwise available direction.
   vocabulary. `'plain'` drops `[part="base"]`'s border, background, padding, corner radius and its
   floating-surface `box-shadow`, for a cluster placed in a host toolbar or panel that already draws
   its own surface. There is deliberately no `compact`: the padding is already the smallest spacing
-  step and the only remaining room is the buttons' `--lr-icon-button-size` hit-area floor.
-  **Renamed from `appearance` in 8.0.0**, with no alias — the type is still exported as
-  `FlowControlsAppearance` so existing type imports keep resolving
+  step and the only remaining room is the buttons' `--lr-icon-button-size` hit-area floor. The
+  canonical type is `LyraFrame`; the former component-local appearance alias is removed.
 
 **Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
 `zoomOut()`/`fit()`, or toggles its `locked` property.
@@ -49,7 +48,7 @@ page gives it.
 
 **Themeable custom properties:** `--lr-flow-controls-lock-active-color` (default
 `var(--lr-color-brand)`, pressed lock-button foreground), plus shared tokens —
-`--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow`,
+`--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow-m`,
 `--lr-color-surface`, `--lr-color-border`, `--lr-radius`, `--lr-space-2xs`,
 `--lr-focus-ring-width`/`-color`/`-offset`.
 
@@ -63,12 +62,15 @@ page gives it.
 
 **Known gotchas:**
 
-- `for` resolution is identical to `lr-flow-minimap`/`lr-flow-run-overlay`: an explicit id, else
-  the nearest ancestor canvas — none of the three companions import `LyraFlowCanvas` as a value, only
-  its types, so registration order between them and the canvas never matters.
+- `for` resolution is identical across all three companions: a non-empty `for` is strict and never
+  falls back; only an empty `for` chooses the nearest ancestor. Id changes, target replacement, and
+  a canvas that upgrades after the companion are observed in the companion's own document/root.
+  Wrong-tag or wrong-capability targets fail closed.
 - `frame="plain"` drops the `box-shadow` along with the border and background — unlike most
   `plain` escapes in this library, which only reset the border/background/padding/radius. A lift
   shadow with no surface under it reads as a stray smudge, so the whole floating-surface treatment
-  goes together (same as `lr-flow-run-overlay`'s `plain`).
+  goes together (same as `lr-flow-run-status`'s `plain`).
+- Under a narrow allocation the group wraps without overflowing, while each button retains the
+  shared hit-area floor.
 
 ---

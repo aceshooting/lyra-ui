@@ -2254,8 +2254,31 @@ describe('search', () => {
       await waitFor(el, '[part="toolbar"]');
       (el as unknown as { getPageText: (page: number) => Promise<string> }).getPageText = (page: number) =>
         page === 2 ? Promise.reject(new Error('boom')) : Promise.resolve(page === 1 ? 'the cat sat' : 'the CAT ran');
+      let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
       const count = await el.search('cat');
       expect(count).to.equal(2); // page 2 silently skipped, matches on pages 1 and 3 still found
+      expect(detail).to.deep.include({ matchCount: 2, matchCountExact: false });
+    } finally {
+      restore();
+    }
+  });
+
+  it('reports a retained lower bound when more than 10,000 matches exist', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      (el as unknown as { getPageText: () => Promise<string> }).getPageText = () =>
+        Promise.resolve('x '.repeat(10_001));
+      (el as unknown as { focusSearchMatch: () => Promise<void> }).focusSearchMatch = () => Promise.resolve();
+      let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
+
+      expect(await el.search('x')).to.equal(10_000);
+      expect(detail).to.deep.include({ matchCount: 10_000, matchCountExact: false });
     } finally {
       restore();
     }
@@ -2329,7 +2352,7 @@ describe('search', () => {
       await el.search('cat');
       const eventPromise = oneEvent(el, 'lr-search-change');
       el.clearSearch();
-      expect((await eventPromise).detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+      expect((await eventPromise).detail).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
     } finally {
       restore();
     }

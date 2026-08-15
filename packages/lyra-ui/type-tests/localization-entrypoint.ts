@@ -35,7 +35,7 @@ const unsubscribe = subscribeLyraLocaleRegistry(() => undefined);
 // inside it — while the raw catalog entry is now the wider `LyraMessage`.
 const values: [
   string,
-  string[],
+  readonly string[],
   string,
   'ltr' | 'rtl',
   string,

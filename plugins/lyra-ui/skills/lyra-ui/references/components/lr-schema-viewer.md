@@ -8,7 +8,7 @@
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -44,8 +44,10 @@ to an `error`, which read as a false alarm. Both are inline `var()` fallbacks at
 so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
 invalid CSS, so this is the only way to recolor one severity without touching the others.
 
-**Themeable custom properties:** `--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see
-above); otherwise shared tokens only.
+**Themeable custom properties:** `--lr-schema-viewer-max-indent` (default `var(--lr-size-12rem)`)
+caps visual nesting indentation while preserving complete JSON Pointer paths;
+`--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see above); otherwise shared tokens
+only.
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
 `issue-limit` show their respective truncation as ordinary, non-live status text. Newly reaching or
@@ -55,7 +57,7 @@ path once before recursive rendering instead of rescanning the full input for ev
 at the repeated node rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
+import "@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js";
 ```
 
 **Additional API surface:**

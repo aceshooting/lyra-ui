@@ -28,6 +28,8 @@ color alone; it tones the badge as `allow` → success, `deny` → danger, `need
 while the always-visible explanation remains plain text. `detail` is optional richer evidence
 (matched rule text, policy id) revealed through
 progressive disclosure. Controlled and never mutated — pass a new array to update it.
+`id` is the stable decision identity; later duplicates are omitted before counts, disclosure state,
+and rows are derived.
 
 **Events:** none. Read-only and display-only: this component never mutates a decision and offers no
 resolve/acknowledge action — see `lr-tool-approval-dialog`/`lr-confirm-bar` for a real approve/deny

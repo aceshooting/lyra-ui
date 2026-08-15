@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,25 +22,32 @@ type wins; filename extension fallback is used only for an empty or `application
 MIME type. Unknown values return a generic file result.
 
 **Properties:** `mimeType` (attribute `mime-type`), `name`, `bytes` (file size **in bytes**, shown
-next to the label in `variant="label"` mode; `0`, the default, renders no size), `label`,
-`decorative`, and `variant: 'icon' | 'label'`. A host `aria-label` wins over the computed localized
-file-type/size name. `decorative` changes the semantic owner to presentation and renders
-`aria-hidden="true"` explicitly.
+next to the label in `mode="label"`; `0`, the default, renders no size), `label`, `decorative`,
+`mode: LyraFileIconMode = 'icon' | 'label'` (invalid values normalize to `icon`), and
+`registry: LyraFileTypeMetadataRegistry` (property-only, defaulting to the immutable built-in
+registry). A host `aria-label` wins over the computed localized file-type/size name. `decorative`
+changes the semantic owner to presentation and renders `aria-hidden="true"` explicitly.
 
 **Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size`. Everywhere else in this
 library `size` names a tier on the shared size ladder, and a numeric byte count answering to the
 same property name is a collision a consumer only discovers at runtime. A leftover `size="245000"`
 is an unknown attribute now: `bytes` stays `0` and the badge silently renders without a size.
 
-**CSS parts:** `base`, `icon`, `label`, and `size` (the part keeps its name — it is the rendered
-size *text*, and renaming a part would break shipped `::part()` rules for no gain).
+**CSS parts:** `base`, `icon`, `label`, `description` (consumer-authored registry metadata in label
+mode), and `size` (the part keeps its name — it is the rendered size *text*, and renaming a part
+would break shipped `::part()` rules for no gain).
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
 format badge's inline and block size).
 
-**Exports:** `LyraFileTypeMetadata`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,
-`getFileTypeMetadata()`, and `registerFileTypeMetadata()` for application-specific mappings.
+**Exports:** `LyraFileTypeMetadata`, `LyraFileTypeMetadataEntry`, `LyraResolvedFileTypeMetadata`,
+`LyraFileTypeMetadataRegistry`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,
+`createFileTypeMetadataRegistry(entries)`, `defaultFileTypeMetadataRegistry`, and the compatibility
+lookup `getFileTypeMetadata()`. Registries validate and deeply snapshot records, use deterministic
+longest registered-suffix matching (including multi-dot/punctuation suffixes), and isolate custom
+mappings per instance instead of mutating module-global state. Consumer labels/descriptions remain
+verbatim; built-in labels route through localization.
 
 ```html
-<lr-file-icon mime-type="application/pdf" variant="label" bytes="245000"></lr-file-icon>
+<lr-file-icon mime-type="application/pdf" mode="label" bytes="245000"></lr-file-icon>
 ```

@@ -27,6 +27,7 @@ it; `active: boolean = false` (reflected) — SSR visibility hint, synchronized 
 after hydration. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** `base`
 (the content wrapper); the owning group also exposes its outer `panel` wrapper. **Themeable custom
 properties:** `--padding` (default `0`) — inner padding on the panel's own `base` wrapper.
+
 ---
 
 ---

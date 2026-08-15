@@ -19,30 +19,41 @@ The per-message action toolbar for `lr-chat-message`'s `actions` slot: opt-in bu
 regenerate / edit / feedback) that emit intent events, plus a default slot for custom controls (e.g.
 a slotted `lr-branch-picker`). `role="toolbar"` with WAI-ARIA APG roving-tabindex; ArrowLeft/
 ArrowRight (RTL-aware) plus Home/End move focus across every stop — built-ins and slotted controls
-alike — via `.focus()`. Only the plain-button built-ins (`regenerate`/`edit`) get their `tabindex`
-toggled by this component itself; a composite child (`lr-copy-button`, the `feedback` built-in, any
-slotted custom element) remains independently reachable via the page's native Tab order alongside the
-toolbar's single roving stop, since a shadow-root-internal focusable element can't be suppressed from
-outside its own component. Disabled, hidden, `aria-hidden`, and inert controls (including controls
-beneath an inert ancestor) are excluded from arrow navigation before the usable roving fallback is
-chosen.
+alike. Composite controls expose ordered logical actions through the exported
+`LyraToolbarActionProvider` protocol, so implementation nodes stay private while the toolbar can
+focus and set each logical tab stop. Providers announce order/availability changes with
+`lr-toolbar-actions-change`; plain authored controls remain observed in light DOM.
+Disabled, hidden, `aria-hidden`, `aria-disabled`, inert, or no-longer-actionable controls (including
+controls beneath an unavailable ancestor) are excluded before the usable roving fallback is chosen.
+Those states and `tabindex` are observed live, not only at mount/slot assignment; former stops are
+cleared immediately. Slotted custom elements contribute their actual composed action targets rather
+than their host merely because it has a `focus()` method; multiple nested actions (for example both
+feedback thumbs or branch-picker buttons) remain distinct stops. If the focused action is removed or
+becomes unavailable, focus moves to the nearest survivor or the stable toolbar, without overriding a
+newer external focus move. Keyboard movement starts from the action that actually received the event,
+even after a controlled state write changed the remembered stop.
 
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins
 render, in that order. `copyText: string = ''`
-(attribute `copy-text`) — required for the `copy` built-in to render at all. `feedbackValue: 'up' |
-'down' | null = null` (attribute `feedback-value`) — forwarded to the embedded, thumbs-only
-`lr-message-feedback` (its `reasons`/`commentable`/`detailFor` are never forwarded, so its detail
-panel never opens). `revealOnHover: boolean = false` (reflected, attribute `reveal-on-hover`) — hides
-the bar until the closest `lr-chat-message` ancestor is hovered or a control inside has focus.
+(attribute `copy-text`) — required for the `copy` built-in to render at all. `feedbackRating:
+MessageFeedbackValue = null` (attribute `feedback-rating`) — forwarded to the embedded, thumbs-only
+`lr-message-feedback` (its `detail`/`detailFor` are never forwarded, so its detail panel never
+opens). `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
+the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus.
 `label: string = ''` — accessible name override for the toolbar. `accessibleLabel: string | null =
 null` (attribute `aria-label`) — overrides the toolbar's computed accessible name, winning over
 `label` and the localized default; attribute-reflects from a host-level `aria-label`.
 
-**Events:** `lr-regenerate`/`lr-edit` — a built-in was activated, no detail. `lr-copy` —
-`detail: { text }`, surfaced by the embedded `lr-copy-button` (bubbles/composed already, not
-re-emitted). `lr-change`/`lr-submit` — bubble unchanged from the embedded, thumbs-only
-`lr-message-feedback`.
+**Events:** `lr-regenerate`/`lr-edit` — a built-in was activated, `detail: null`. `lr-copy` —
+frozen `detail: { ok: true, text }`, emitted only after the embedded `lr-copy-button`'s clipboard
+write fulfills (bubbles/composed already, not re-emitted). A failed write surfaces generic
+`lr-error` (`detail: null`) plus `lr-copy-error` with frozen
+`detail: { ok: false, text, reason, error }`; `reason` is `'unsupported' | 'denied' | 'failed'`.
+`lr-feedback-change`/`lr-feedback-submit` — bubble unchanged from the embedded,
+thumbs-only `lr-message-feedback`. A colliding event from an
+arbitrary slotted child is contained at that slot boundary rather than being mistaken for a
+built-in action.
 
 **Slots:** default — additional controls (e.g. `lr-copy-button`, `lr-icon-button`,
 `lr-branch-picker`) appended after the built-ins; they participate in the toolbar's arrow-key

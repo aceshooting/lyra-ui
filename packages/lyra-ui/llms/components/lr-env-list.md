@@ -20,11 +20,16 @@ Masking is presentational, not a security boundary: the real value sits in a DOM
 regardless of mask state. Names, revealed values, and localized action text wrap within narrow
 allocations; the name track uses at most 40% of the available inline size.
 
-**Properties:** `entries: EnvEntry[] = []` (attribute: false), `revealable: boolean = true`
-(reflected), `copyable: boolean = true` (reflected), and `label: string = ''`.
+**Properties:** `entries: readonly EnvEntry[] = []` (attribute: false; clone-owned/frozen snapshots,
+malformed records skipped), `revealable: boolean = true` (reflected), `copyable: boolean = true`
+(reflected), and `label: string = ''`.
 
-**Events:** `lr-reveal-change` (`detail: { name, revealed }`) and `lr-copy` (`detail: { text }`,
-the real unmasked value).
+**Events:** `lr-reveal-change` (frozen readonly `detail: { name, revealed }`); `lr-copy` (frozen
+readonly `detail: { ok: true, text }`, emitted only after clipboard fulfillment, with `text` equal
+to the real unmasked value); `lr-copy-error` (frozen readonly
+`detail: { ok: false, text, reason, error }`); and `lr-error` (compatibility failure notification
+without raw platform error text). Failure is announced through the localized `copyFailed` string
+in the owning document's shared polite live region; copy intent is never announced as success.
 
 **CSS parts:** `base` (the `<dl>` root), `name` (the `<dt>` text), `value-cell` (the `<dd>` wrapping
 an entry's value text and buttons), `value` (carries `data-masked`), `reveal-button`, and

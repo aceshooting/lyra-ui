@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,22 +18,25 @@
 Shell around one agent-generated artifact: a title/kind header, a preview↔code toggle, version
 navigation with restore, a streaming indicator, and built-in copy/download actions. Renders none of
 the artifact itself — content is slotted. No content rendering of its own (slots own it), no
-dialog/dock chrome (compose `lr-dialog`/`lr-dock-panel`/`lr-split`), no version storage or
+dialog/dock chrome (compose `lr-dialog`/`lr-dock-panel`/`lr-multi-split`), no version storage or
 diffing (host state; diffs via `lr-diff-view`), no code editing (`lr-code-editor`).
 
 **Properties:** `label: string = ''` — the artifact's title, shown in the header. `kind: string = ''`
 — a short kind label (e.g. `document`, `code`), shown as a badge next to `label`. `view: 'preview' |
 'code' = 'preview'` (reflected) — which slot is currently visible. `versions: ArtifactVersion[] = []`
 (attribute: false, each `{ id, label? }`) — the artifact's version history, oldest first; the last
-entry is the latest version. `activeVersionId: string | null = null` (attribute
-`active-version-id`) — the currently viewed version's id, or `null` for "the latest version."
+entry is the latest version. Later duplicate ids are omitted before navigation, active lookup,
+position counts, and restore events. The active entry's optional `label` renders beside its localized
+position. `activeVersionId: string | null = null` (attribute `active-version-id`) — the currently
+viewed version's id, or `null` for "the latest version." Removing the named version reconciles the
+property to `null` without a user-action event, so reinserting that id cannot unexpectedly repin it.
 `streaming: boolean = false` (reflected) — whether the artifact is still being generated; sets
 `aria-busy` on the body and shows a text indicator (not animated, so it stays legible under reduced
 motion). `copyText: string = ''` (attribute `copy-text`) — the text copied to the clipboard by the
 copy button; empty hides the button. `downloadSrc: string = ''` (attribute `download-src`) — the
 download URL, sanitized through `safeDownloadHref()` (`http:`/`https:`/`blob:` only — narrower than
 the media/resource allowlist, which also permits `data:`); an empty value hides the button. The
-sanitizer runs at click time, not render time, so a *non-empty but rejected* URL still renders the
+sanitizer runs at click time, not render time, so a _non-empty but rejected_ URL still renders the
 button and simply emits nothing when pressed. The component never navigates on its own: it emits
 `lr-download` with the sanitized `src` and leaves the actual download to the host.
 `downloadName: string = ''` (attribute `download-name`) — the suggested filename reported in the
@@ -41,22 +44,25 @@ button and simply emits nothing when pressed. The component never navigates on i
 
 **Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
 code-view content (typically a `lr-code-block`); the preview/code toggle only renders once this
-slot has assigned content. `actions` — extra header controls, rendered between the version
+slot has assigned content. Assigning `view='code'` without assigned code content normalizes back to
+`preview`, including after mount. `actions` — extra header controls, rendered between the version
 navigation and the built-in copy/download buttons.
 
 **Events:** `lr-view-change` (`detail: { view }`), `lr-version-change` (`detail: { versionId }`,
 fired when the previous/next navigation moves to a different version), `lr-restore` (`detail: {
 versionId }`, fired by the restore-this-version button; mutates nothing itself), `lr-copy`
-(`detail: { text }`, after a best-effort clipboard write), `lr-download` (`detail: { filename,
-src? }`, with the sanitized download URL).
+(`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus
+`lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
+`lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
 
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
 (rendered only once `versions` is non-empty), `version-previous`, `version-previous-glyph` (the `‹`
 chevron inside `version-previous`, mirrored via `scaleX(-1)` under `:dir(rtl)`), `version-next`,
 `version-next-glyph` (the `›` chevron inside `version-next`, mirrored the same way), `version-position`
-(the "Version N of M" text), `restore-button` (rendered only while the active version isn't the
-latest), `actions`, `copy-button` (rendered only while `copyText` is non-empty), `download-button`
+(the "Version N of M" text), `version-label` (the active version's optional caller-supplied label),
+`restore-button` (rendered only while the active version isn't the latest), `actions`, `copy-button`
+(rendered only while `copyText` is non-empty), `download-button`
 (rendered only while `downloadSrc` is non-empty), `body`, `streaming-indicator` (rendered only while
 `streaming`).
 

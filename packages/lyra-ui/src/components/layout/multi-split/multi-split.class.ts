@@ -27,6 +27,34 @@ import { LYRA_DEFAULT_resizeDivider } from '../../../internal/default-strings.ge
 
 const KEYBOARD_STEP = 2;
 
+interface PersistedPanelSize {
+  readonly panelId: string;
+  readonly size: number;
+}
+
+interface PersistedPanelLayout {
+  readonly version: 1;
+  readonly panels: readonly PersistedPanelSize[];
+}
+
+function isPersistedPanelLayout(value: unknown): value is PersistedPanelLayout {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<PersistedPanelLayout>;
+  if (candidate.version !== 1 || !Array.isArray(candidate.panels)) return false;
+  return candidate.panels.every((panel) => {
+    if (typeof panel !== 'object' || panel === null) return false;
+    const record = panel as Partial<PersistedPanelSize>;
+    return (
+      typeof record.panelId === 'string' &&
+      record.panelId !== '' &&
+      record.panelId.trim() === record.panelId &&
+      typeof record.size === 'number' &&
+      Number.isFinite(record.size) &&
+      record.size >= 0
+    );
+  });
+}
+
 // Sentinel fallbacks so a one-sided constraint (only `minPx` or only
 // `maxPx`) can still be expressed as a 3-argument CSS `clamp()` in the
 // static layout, instead of needing two different flex-basis shapes.
@@ -139,7 +167,11 @@ export interface LyraMultiSplitEventMap {
 }
 /**
  * `<lr-multi-split>` — resizable panels for dashboard layouts. Direct light-DOM
- * children are the panels; a divider is auto-inserted between each pair.
+ * children are the panels; a divider is auto-inserted between each pair. Give every panel a
+ * unique, nonempty `panel-id` when using `storageKey`: persistence records `panelId`/size pairs,
+ * so reordered or replaced panels recover the size belonging to their business identity instead
+ * of whichever panel happens to occupy the old array index. Missing or duplicate identities fail
+ * persistence closed while leaving the live, non-persisted split usable.
  * In a fixed block allocation, each direct panel is a scroll container
  * (`min-block-size: 0; overflow: auto`) so long content stays within the
  * split instead of escaping into following content. Set an individual
@@ -211,7 +243,7 @@ export interface LyraMultiSplitEventMap {
  *   interaction and falls back to a normalized percent minimum.
  * @event lr-multi-split-orientation-change - `detail: { orientation }`, fired when an enabled
  *   `orientationBreakpoint` changes the effective resize/layout axis.
- * @slot - Panels to arrange side by side (or stacked, when `orientation="vertical"`); each direct child becomes one resizable panel.
+ * @slot - Panels to arrange side by side (or stacked, when `orientation="vertical"`); each direct child becomes one resizable panel. Set a unique nonempty `panel-id` on every panel when using persistence.
  * @csspart base - The flex layout wrapper (`position: relative`, so the `'floating'` collapse state can anchor to it).
  * @csspart divider - Each `role="separator"` between two panels. `aria-valuenow` is the leading
  *   panel's percentage; `aria-valuemin`/`aria-valuemax` are that divider's currently achievable
@@ -224,7 +256,7 @@ export interface LyraMultiSplitEventMap {
  *   The real layout gutter reserved for each divider along the resize axis. The narrow visual rule
  *   is centered inside this owned track, so the target never overlaps either adjacent panel.
  * @status stable
- * @since 4.0.0
+ * @since unreleased
  */
 export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
@@ -790,8 +822,71 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   private get storageFullKey(): string | undefined {
     return this.storageKey
-      ? `lr-multi-split:${this.storageKey}:${this.panelCount}`
+      ? `lr-multi-split:${this.storageKey}:panels`
       : undefined;
+  }
+
+  /** Reads the domain identities for a complete panel sequence. A single missing/blank/duplicate
+   *  value invalidates the whole identity model so persistence can never silently fall back to
+   *  positional ownership. Whitespace is trimmed for comparison/storage without rewriting caller
+   *  markup. */
+  private panelIdsFor(panels: readonly HTMLElement[]): string[] | null {
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    for (const panel of panels) {
+      const panelId = panel.getAttribute('panel-id')?.trim() ?? '';
+      if (!panelId || seen.has(panelId)) return null;
+      seen.add(panelId);
+      ids.push(panelId);
+    }
+    return ids;
+  }
+
+  /** Maps the live percentages from the previous ordered panel sequence onto the next sequence by
+   *  `panelId`. Existing panels retain their relative proportions, new identities receive one
+   *  equal-share slot, and removed identities release their share proportionally. */
+  private reconcileIdentitySizes(
+    previousIds: readonly string[],
+    previousValues: readonly number[],
+    nextIds: readonly string[]
+  ): number[] | null {
+    if (previousIds.length !== previousValues.length || nextIds.length === 0)
+      return null;
+    const previousSizes = new Map<string, number>();
+    previousIds.forEach((panelId, index) => {
+      previousSizes.set(panelId, previousValues[index]!);
+    });
+    const retainedTotal = nextIds.reduce(
+      (total, panelId) => total + (previousSizes.get(panelId) ?? 0),
+      0
+    );
+    const missingCount = nextIds.filter(
+      (panelId) => !previousSizes.has(panelId)
+    ).length;
+    if (!(retainedTotal > 0)) {
+      const equal = 100 / nextIds.length;
+      return nextIds.map(() => equal);
+    }
+
+    const newShare = 100 / nextIds.length;
+    const retainedTarget = 100 - newShare * missingCount;
+    const retainedScale = retainedTarget / retainedTotal;
+    return nextIds.map((panelId) => {
+      const previous = previousSizes.get(panelId);
+      return previous === undefined ? newShare : previous * retainedScale;
+    });
+  }
+
+  private reconcileSizesByPanelId(
+    previousPanels: readonly HTMLElement[],
+    nextPanels: readonly HTMLElement[]
+  ): number[] | null {
+    if (previousPanels.length !== this.sizes.length || nextPanels.length === 0)
+      return null;
+    const previousIds = this.panelIdsFor(previousPanels);
+    const nextIds = this.panelIdsFor(nextPanels);
+    if (!previousIds || !nextIds) return null;
+    return this.reconcileIdentitySizes(previousIds, this.sizes, nextIds);
   }
 
   private validInitialSizes(value: number[]): boolean {
@@ -868,18 +963,51 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private loadPersisted(): boolean {
-    const parsed = readPersistedState(this.storageFullKey, (v): v is number[] =>
-      Array.isArray(v)
+    const panelIds = this.panelIdsFor(this.ownedPanels);
+    if (!panelIds) return false;
+    const parsed = readPersistedState(
+      this.storageFullKey,
+      isPersistedPanelLayout
     );
-    if (parsed && this.validInitialSizes(parsed)) {
-      this.sizes = parsed;
+    if (!parsed || parsed.panels.length === 0) return false;
+    const persistedIds: string[] = [];
+    const persistedSizes: number[] = [];
+    const seen = new Set<string>();
+    for (const panel of parsed.panels) {
+      if (seen.has(panel.panelId)) return false;
+      seen.add(panel.panelId);
+      persistedIds.push(panel.panelId);
+      persistedSizes.push(panel.size);
+    }
+    if (
+      Math.abs(persistedSizes.reduce((sum, size) => sum + size, 0) - 100) >=
+      0.01
+    )
+      return false;
+    const normalized = this.reconcileIdentitySizes(
+      persistedIds,
+      persistedSizes,
+      panelIds
+    );
+    if (!normalized) return false;
+    if (this.validInitialSizes(normalized)) {
+      this.sizes = normalized;
       return true;
     }
     return false;
   }
 
   private persist(): void {
-    writePersistedState(this.storageFullKey, this.sizes);
+    const panelIds = this.panelIdsFor(this.ownedPanels);
+    if (!panelIds || panelIds.length !== this.sizes.length) return;
+    const layout: PersistedPanelLayout = {
+      version: 1,
+      panels: panelIds.map((panelId, index) => ({
+        panelId,
+        size: this.sizes[index]!,
+      })),
+    };
+    writePersistedState(this.storageFullKey, layout);
   }
 
   private ensureSizes(): void {
@@ -1116,6 +1244,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const next = [...this.children] as HTMLElement[];
     if (this.samePanelSequence(next)) return;
 
+    const previousPanels = this.ownedPanels;
+    const identitySizes = reconcileSizes
+      ? this.reconcileSizesByPanelId(previousPanels, next)
+      : null;
     const previousEffective = this.collapseState;
     const nextSet = new Set(next);
     for (const panel of this.ownedPanels) {
@@ -1143,7 +1275,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.collapseState,
       this.hasUpdated
     );
-    if (countChanged && reconcileSizes) {
+    if (identitySizes) {
+      this.sizesReconciledForMembership = true;
+      this.sizes = identitySizes;
+    } else if (countChanged && reconcileSizes) {
       this.sizesReconciledForMembership = true;
       this.ensureSizes();
     }

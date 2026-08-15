@@ -7,8 +7,8 @@
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom`, `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
+- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,7 +35,8 @@ metadata?: Record<string, unknown> }`. Each entry renders as an `lr-chat-message
   `role`/`status`/`timestamp` come straight across. A nonempty `parts` array renders in order through
   `lr-message-parts` and takes precedence over the legacy `text` shortcut; otherwise `text` renders
   as sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
-  richer bodies. Host owns ordering, updates, and persistence
+  richer bodies. The latest 500 authored entries are considered; within that window the first
+  occurrence of each id wins. Host owns ordering, updates, and persistence
 - `follow: boolean = true` (reflected) — forwarded to the internal `lr-chat-viewport`
 - `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — forwarded to the viewport
 
@@ -57,8 +58,8 @@ redactedFields?: string[]; needsApproval?: boolean; approved?: boolean }`
 - `selectedRetrievalIds: string[] = []` (attribute: false) — controlled selection forwarded to
   `lr-retrieval-results.selectedIds`
 - `retrievalLoading: boolean = false` (attribute `retrieval-loading`), `retrievalHasMore: boolean =
-false` (attribute `retrieval-has-more`), `retrievalError: string = ''` (attribute
-  `retrieval-error`, caller-supplied text) — all forwarded to `lr-retrieval-results`
+false` (attribute `retrieval-has-more`), `retrievalErrorText: string = ''` (attribute
+  `retrieval-error-text`, caller-supplied text) — all forwarded to `lr-retrieval-results`
 - `groundingAssessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`
   from `@aceshooting/lyra-ui/ai`**: `{ supportedClaims, unsupportedClaims, coverage, confidence?,
 warnings? }`
@@ -89,7 +90,7 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 **Events:**
 
 - `lr-input` (`detail: { value: string }`) / `lr-submit` (`detail: { value: string }`) / `lr-stop`
-  (`detail: undefined`) — forwarded from the built-in composer.
+  (`detail: null`) — forwarded from the built-in composer.
 - `lr-message-retry` (`detail: { messageId: string }`) — a data-driven message's retry action.
 - `lr-follow-change` (`detail: { following: boolean }`) — forwarded from the transcript viewport.
 - `lr-retrieval-select` (`detail: RetrievalResultsSelectDetail` = `{ ids: string[]; chunks:
@@ -100,20 +101,27 @@ RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
 { args?: unknown }` = `{ invocationId: string; approved: boolean; args?: unknown }`) — forwarded
   from the built-in tool timeline; `args` is present only on approval and may differ from what the
   entry originally proposed (the dialog's inline edit step).
-- `lr-cancel` (`detail: undefined`) / `lr-retry` (`detail: RetryEventDetail` = `{ attempt: number;
-messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the built-in agent run.
+- `lr-cancel` (`detail: CancelEventDetail = { reason?: string }`) / `lr-run-retry` (`detail: RetryEventDetail` =
+  `{ attempt: number; messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the
+  built-in agent run. The distinct retry name prevents a rendered message or attachment retry from
+  being mistaken for a whole-run retry.
 
-**Slots:** `messages` (replaces the data-driven transcript message list), `details` (replaces the
+**Slots:** `messages` (replaces the data-driven transcript message list; assign ordinary messages
+directly, or exactly one `lr-virtual-list` when the slot itself owns virtualization), `details` (replaces the
 built-in run/tool/retrieval/grounding/context details pane while keeping the responsive shell),
 `composer` (replaces the built-in plain-frame `lr-chat-composer`; supplied content keeps its own
 frame), `header-actions` (model selection, settings, export controls).
 
 **CSS parts:** `base`, `header`, `heading`, `header-actions`, `body`, `conversation`, `viewport` (the
 composed `lr-chat-viewport`), `messages`, `messages-empty`, `details`, `details-content`, `section`
-(one run/tools/retrieval/grounding/context section), `section-heading`, `composer`, `composer-input`
+(one run/tools/retrieval/grounding/context section), `section-heading`, `composer`, `composer-input`,
+`message`
 (the composed `lr-chat-composer`).
 
 **Themeable custom properties:** shared tokens only.
 
 **Optional peer deps:** none of its own; the composed `lr-markdown` keeps its `marked`/`dompurify`
 optional-peer fallback.
+
+Every public data/value property is controlled: forwarded child intents bubble without mutating
+`messages`, `composerValue`, selections, run state, or persistence-owned data inside the shell.

@@ -68,7 +68,7 @@ export const styles = css`
   [part='bar'] {
     position: absolute;
     inset-block: 0;
-    min-inline-size: 1.5%;
+    min-inline-size: var(--lr-size-1-5rem);
     border: none;
     border-radius: var(--lr-radius-xs);
     padding: 0;

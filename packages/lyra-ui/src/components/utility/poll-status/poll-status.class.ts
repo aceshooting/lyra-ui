@@ -14,7 +14,7 @@ import { LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPau
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraPollStatusEventMap {
-  'lr-poll-due': CustomEvent<undefined>;
+  'lr-poll-due': CustomEvent<null>;
   'lr-pause-change': CustomEvent<{ readonly paused: boolean }>;
 }
 

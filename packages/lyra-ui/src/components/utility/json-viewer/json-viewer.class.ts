@@ -137,7 +137,7 @@ function formatPrimitive(value: unknown, type: JsonValueType): string {
 
 export interface LyraJsonViewerEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
-  'lr-error': CustomEvent<undefined>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-search-change': CustomEvent<{
     query: string;

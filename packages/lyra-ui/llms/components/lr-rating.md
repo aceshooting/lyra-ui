@@ -44,6 +44,18 @@ associated external label focuses the host-owned slider without changing its val
 property is visible label text, since a rating is a bare row of symbols with no field frame of its
 own; wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
 
+**Static constructor API:** `LyraRating.validators` is the mirrored callable validator catalog.
+Each access returns a fresh `LyraFormValidator<LyraRating>[]`; its entry observes
+`required`/`disabled`/`readonly`/`value`/`max`, and `checkValidity(element)` projects the element's
+current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
+
+```ts
+import { LyraRating } from '@aceshooting/lyra-ui/components/overlays/rating/rating.js';
+
+const rating = document.querySelector('lr-rating')!;
+const result = LyraRating.validators[0].checkValidity(rating);
+```
+
 The host is the one focusable `role="slider"` owner and carries `tabindex`, its accessible name,
 `aria-valuemin`/`aria-valuemax`/`aria-valuenow`/`aria-valuetext`, and explicit true/false disabled,
 readonly and required states. The shadow star row is `aria-hidden` presentation only, so custom
@@ -84,7 +96,9 @@ Left unset, the built-in star outline/solid pair is unchanged.
 - `lr-invalid` — no detail; fired when a validity check finds the rating invalid.
 
 **Methods:** `focus()`, `blur()` and `click()` operate on the host-owned slider and are gated while
-disabled.
+disabled. `rating: HTMLElement | null` is the live presentational symbol row (the element carrying
+the `rating`/`base` parts), or `null` before rendering; its identity remains stable across ordinary
+updates and reconnection.
 `getForm()` returns the browser-resolved owning form. `checkValidity()` and `reportValidity()`
 behave as on a native form control — `reportValidity()`
 additionally shows the browser's validation UI, and counts as interaction, so a failed submit is
@@ -131,7 +145,8 @@ Pointer selection resolves the position within the clicked star and snaps upward
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
 input as well as keyboard/value updates. The host-owned slider's presentational symbol row keeps a
 40×40px minimum activation area even for the degenerate `max=0`/`max=1` cases; larger ratings
-naturally grow wider.
+naturally grow wider, while symbols may shrink within a narrow allocation instead of forcing the
+host beyond its container.
 
 ```html
 <lr-rating

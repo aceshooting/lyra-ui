@@ -469,6 +469,57 @@ it('maps the reflected custom-error property to custom validity without losing i
   expect(ctl.validationMessage).to.equal('This field is required.');
 });
 
+it('keeps the mixin validity method, property, and reflected attribute in one clearing transaction', async () => {
+  const ctl = (await fixture(html`<lr-demo-ctl></lr-demo-ctl>`)) as unknown as Ctl & {
+    customError: string | null;
+  };
+  const host = ctl as unknown as HTMLElement;
+
+  ctl.setCustomValidity('Rejected by the server.');
+  expect(ctl.customError).to.equal('Rejected by the server.');
+  expect(host.getAttribute('custom-error')).to.equal('Rejected by the server.');
+
+  ctl.setCustomValidity('');
+  expect(ctl.customError).to.equal(null);
+  expect(host.hasAttribute('custom-error')).to.equal(false);
+
+  ctl.customError = 'Rejected again.';
+  ctl.resetValidity();
+  expect(ctl.customError).to.equal(null);
+  expect(host.hasAttribute('custom-error')).to.equal(false);
+
+  ctl.customError = '';
+  expect(ctl.customError).to.equal(null);
+  expect(host.hasAttribute('custom-error')).to.equal(false);
+});
+
+it('keeps direct-FACE validity methods and reflected custom-error state atomic across families', async () => {
+  const controls = [
+    await fixture<LyraCheckbox>(html`<lr-checkbox>Accept</lr-checkbox>`),
+    await fixture<LyraSelect>(html`<lr-select label="Fruit"></lr-select>`),
+    await fixture<LyraRating>(html`<lr-rating aria-label="Score"></lr-rating>`),
+  ];
+
+  for (const control of controls) {
+    control.setCustomValidity('Rejected by the server.');
+    expect(control.customError).to.equal('Rejected by the server.');
+    expect(control.getAttribute('custom-error')).to.equal('Rejected by the server.');
+
+    control.setCustomValidity('');
+    expect(control.customError).to.equal(null);
+    expect(control.hasAttribute('custom-error')).to.equal(false);
+
+    control.customError = 'Rejected again.';
+    control.resetValidity();
+    expect(control.customError).to.equal(null);
+    expect(control.hasAttribute('custom-error')).to.equal(false);
+
+    control.customError = '';
+    expect(control.customError).to.equal(null);
+    expect(control.hasAttribute('custom-error')).to.equal(false);
+  }
+});
+
 it('emits exactly one bubbling, composed, cancelable lr-invalid alias for a failed check', async () => {
   const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
   const aliases: CustomEvent[] = [];

@@ -186,7 +186,7 @@ describe('lr-knowledge-base', () => {
     expect((button) != null).to.equal(true);
     const listener = oneEvent(el, 'lr-source-create');
     button.click();
-    const event = (await listener) as CustomEvent<undefined>;
+    const event = (await listener) as CustomEvent<null>;
     // CustomEventInit's `detail` member defaults to `null` when omitted/undefined -- WebIDL
     // dictionary conversion substitutes the default for an explicitly-`undefined` value too, so
     // this.emit('lr-source-create') (no 2nd argument) still reads back as `null`, not `undefined`.

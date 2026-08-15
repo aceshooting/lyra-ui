@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   TextViewerTarget,
+  type LyraSearchChangeDetail,
   type LyraTextViewerTargetEventMap,
 } from '../../../internal/text-viewer-target.js';
 import {
@@ -461,11 +462,7 @@ type GeoJsonViewerState =
 export interface LyraGeoJsonViewerEventMap
   extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
-  'lr-search-change': CustomEvent<{
-    query: string;
-    matchCount: number;
-    activeIndex: number;
-  }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
 }
@@ -479,9 +476,9 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  *
  * @customElement lr-geojson-viewer
  * @event lr-render-error - Fetch, parse, or shape-validation failure. `detail: { error }`.
- * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
- *   Fired whenever searchable metadata state changes. `detail: { query: string; matchCount: number;
- *   activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change - Fired whenever searchable
+ *   metadata state changes. `matchCountExact=false` makes the retained count a lower bound.
+ *   Bubbling, composed, and non-cancelable.
  * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
  *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
  *   non-cancelable.
@@ -501,7 +498,7 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  * @csspart spinner - The decorative loading placeholder and its ordinary visually-hidden label;
  *   transitions announce through the shared document-level polite region.
  * @status stable
- * @since 4.0.0
+ * @since unreleased
  */
 export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   // GENERATED DEFAULT-STRING SLICE: START

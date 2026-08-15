@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A real two-string line diff (LCS-aligned), rendered as interleaved unified-diff output. A one-line change inside a longer block renders as one red/green pair near the change, not every old line followed by every new line.',
+          'A real two-string line diff (LCS-aligned), rendered as interleaved unified-diff output. A one-line change inside a longer block renders as one red/green pair near the change, not every old line followed by every new line. Unsupported `layout` values normalize to reflected `unified`.',
       },
     },
   },

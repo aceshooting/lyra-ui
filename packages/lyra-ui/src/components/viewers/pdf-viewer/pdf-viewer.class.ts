@@ -42,6 +42,7 @@ import {
 } from './pdf-loader.js';
 import { styles } from './pdf-viewer.styles.js';
 import { getNumberFormat, getSegmenter } from '../../../internal/intl-cache.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut } from '../../../internal/default-strings.generated.js';
@@ -223,7 +224,7 @@ export interface LyraPdfViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-page-change': CustomEvent<{ page: number; pageCount: number }>;
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
   'lr-load': CustomEvent<{ pageCount: number }>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-page-viewer-state-change': CustomEvent<LyraPageViewerStateChangeDetail>;
 }
 
@@ -254,7 +255,8 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  *   `detail: { found }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
- *   matchCount, activeIndex }`.
+ *   matchCount, matchCountExact, activeIndex }`. At most 10,000 matches are retained; a false
+ *   `matchCountExact` makes `matchCount` a lower bound (including when a page could not be read).
  * @event lr-page-viewer-state-change - Correlated page lifecycle state. `detail.snapshot` is the
  *   same readonly value exposed by `pageViewerSnapshot`; its `identity` changes for every load.
  * @csspart base - The named root viewer container with explicit `aria-busy`.
@@ -374,6 +376,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private pdfPageSource: VirtualListIndexedSource<number> = this.createPageSource(0);
 
   @state() private searchMatches: PdfSearchMatch[] = [];
+  private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
   private searchGeneration = 0;
@@ -407,6 +410,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.searchGeneration++;
       this.searchQuery = '';
       this.searchMatches = [];
+      this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
     }
   }
@@ -1106,13 +1110,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  stored in `getPageText()`'s own raw coordinate space via a normalized/raw offset table (see
    *  `normalizeForSearch()`), never touching `highlights` -- painting is a self-contained overlay
    *  scoped to search only (see `paintSearchMatches()`). An empty/whitespace-only query behaves like
-   *  `clearSearch()` and resolves `0`. */
+   *  `clearSearch()` and resolves `0`. Returns at most 10,000 retained matches;
+   *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
   async search(query: string): Promise<number> {
     const generation = ++this.searchGeneration;
     this.searchQuery = query;
     this.clearSearchPaint();
     if (this.loadState.kind !== 'ready' || !query.trim()) {
       this.searchMatches = [];
+      this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.emitSearchChange();
       return 0;
@@ -1120,12 +1126,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const { pageCount } = this.loadState;
     const normalizedQuery = normalizeForSearch(query.trim(), this.effectiveLocale).text;
     const matches: PdfSearchMatch[] = [];
+    let matchCountExact = true;
+    let matchCeilingExceeded = false;
     for (let page = 1; page <= pageCount; page++) {
       if (generation !== this.searchGeneration) return this.searchMatches.length;
       let raw: string;
       try {
         raw = await this.getPageText(page);
       } catch {
+        matchCountExact = false;
         continue;
       }
       if (generation !== this.searchGeneration) return this.searchMatches.length;
@@ -1135,14 +1144,19 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       while ((idx = text.indexOf(normalizedQuery, from)) !== -1) {
         const rawStart = rawStarts[idx] ?? 0;
         const rawEndExclusive = rawEnds[idx + normalizedQuery.length - 1] ?? rawStart;
+        if (matches.length === MAX_SEARCH_MATCHES) {
+          matchCountExact = false;
+          matchCeilingExceeded = true;
+          break;
+        }
         matches.push({ page, start: rawStart, length: rawEndExclusive - rawStart });
-        if (matches.length >= MAX_SEARCH_MATCHES) break;
         from = idx + Math.max(1, normalizedQuery.length);
       }
-      if (matches.length >= MAX_SEARCH_MATCHES) break;
+      if (matchCeilingExceeded) break;
     }
     if (generation !== this.searchGeneration) return this.searchMatches.length;
     this.searchMatches = matches;
+    this.searchMatchCountExact = matchCountExact;
     this.searchActiveIndex = matches.length > 0 ? 0 : -1;
     this.emitSearchChange();
     if (this.searchActiveIndex >= 0) await this.focusSearchMatch(this.searchActiveIndex);
@@ -1175,15 +1189,17 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.searchGeneration++;
     this.searchQuery = '';
     this.searchMatches = [];
+    this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
     this.clearSearchPaint();
-    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
   }
 
   private emitSearchChange(): void {
     this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
+      matchCountExact: this.searchMatchCountExact,
       activeIndex: this.searchActiveIndex,
     });
   }

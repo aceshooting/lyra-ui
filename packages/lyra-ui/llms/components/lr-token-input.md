@@ -16,16 +16,18 @@
 ## `lr-token-input`
 
 An editable form-associated token list. Enter, comma, or blur commits a token; Backspace removes
-the last token. `value` is a `string[]` and repeated values are submitted under `name`.
+the last token. `value` is a readonly owned `readonly string[]` snapshot and repeated values are
+submitted under `name`; mutate a new array and reassign it to change the list.
 
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
 (`error-text`), `placeholder`, `name`,
 `required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the input wrapper
 and draft text input; precedence is presence-based, so `aria-label=""` remains an explicit empty
-override and suppresses visible-label linkage), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
-(attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
-and the inline token editor — `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
+override and suppresses visible-label linkage), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autocorrect` (read: `boolean = true`; write: `boolean | string`, attribute values
+`on`/`off`) — all three native text-entry hints are forwarded to both the draft input and the inline
+token editor. The former camel-case `autoCorrect` property is removed; use the native-shaped
+lowercase IDL. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
 same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
 tiers, and both `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` are accepted; the remove
 button's hit area stays fixed at `40px` across all sizes), `pill` (reflected, default `false` —
@@ -37,8 +39,13 @@ rounds the token row's corners to a full pill by re-assigning `--lr-token-input-
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the tokens), `end` (adornment after
 the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-combobox`'s identical
 `start`/`end`.
-**Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
-`focus` and `blur` re-dispatched from the draft and inline-editor text inputs, `lr-add` (`detail: { value }`),
+**Events:** native `InputEvent` `input`, `lr-input`, native `Event` `change`, then `lr-change` for
+each list mutation; native events have no detail and both aliases carry a frozen
+`{ value: readonly string[] }` snapshot.
+Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
+`relatedTarget`, followed by `lr-focus`/`lr-blur`. `lr-add`
+(`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
+readonly, complete ordered and deduplicated set of tokens added by that commit),
 `lr-remove`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
@@ -74,8 +81,10 @@ editor on that token; ArrowLeft/ArrowRight move between tokens (swapped under RT
 previous/next _visually_), Home/End jump to the first/last. Inside the editor, Enter commits and
 returns focus to the token, Escape cancels (and is consumed rather than left to bubble, so an
 enclosing dialog or popover does not also close), and blurring commits _without_ pulling focus
-back — a blur means the user already aimed focus elsewhere. Both the draft and inline editor relay
-one bubbling/composed host `focus` or `blur` event while their native source event stays internal.
+back — a blur means the user already aimed focus elsewhere. A changed inline edit commits and emits
+its native/alias input-change sequence before the public native/alias blur sequence. Both the draft
+and inline editor relay one native bubbling/composed host `focus` or `blur` event while their source
+event stays internal.
 `lr-token-edit` fires only for an edit
 that actually changed something: a reverted, unchanged, emptied, or (under the default
 `allowDuplicates = false`) duplicate-colliding edit is discarded silently, mirroring how a

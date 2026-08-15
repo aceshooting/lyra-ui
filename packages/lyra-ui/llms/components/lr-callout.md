@@ -31,16 +31,26 @@ accepting both spellings of the aliased tiers (`s`/`small`, `m`/`medium`, `l`/`l
 from `wa-callout` needs no attribute rewrite. An unset nested callout inherits its ancestor's size
 context; standalone fallback is `m`. Explicitly writing even the same-default `m` pins the local
 medium mapping, and removing the attribute restores contextual inheritance), `heading: string = ''`,
+`headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected; `1`–`6` expose the
+property and rich-slot heading wrapper at that semantic level, invalid untyped values retain level
+3, and `none` is the visual-only opt-out),
 `closable: boolean = false` (reflected), `inline: boolean = false` (reflected), `open: boolean = true`
 (reflected as a presence attribute — `open="false"` is accepted in plain markup; `false` removes the
 semantic content and hides the host surface), and `accessibleLabel: string = ''`
 (`accessible-label`; used only when the host has no `aria-label` attribute). A host `aria-label`
 has highest precedence by presence, including an explicitly empty value.
 
+Every reflected closed set normalizes identically from markup and untyped JavaScript writes:
+unsupported `variant`, `size`, and `heading-level` values become reflected `brand`, `m`, and `3`,
+while an unsupported `appearance` becomes the omitted state.
+
 **Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
 unless a listener calls `preventDefault()`.
+When accepted close or a direct `open = false` write removes the focused close action, focus moves
+to the nearest available composed action. Vetoed close and newer external focus are preserved.
 
-**Slots:** default message, `heading` (rendered alongside the `heading` property), `icon`.
+**Slots:** default message, `heading` (rendered alongside the `heading` property inside the
+configured semantic heading wrapper), `icon`.
 
 **CSS parts:** `base` (the transparent grid wrapper inside the host-owned surface), `icon`
 (hidden while the `icon` slot is empty), `content`, `heading`,
@@ -57,7 +67,9 @@ and padding.
 `--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
 as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
-same brand fallback when there is no surrounding context. `--lr-callout-close-hover-bg`
+same brand fallback when there is no surrounding context. Public callout hooks are consumed at use
+sites through private defaults, so a value inherited from a theme ancestor has the same authority
+as one set directly on the callout. `--lr-callout-close-hover-bg`
 (default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
 decoupled from `--lr-callout-background` (which every explicit `variant`, including `neutral`,
 retargets for the panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
@@ -79,7 +91,10 @@ them).
 Initial content and initially distributed slots are silent. After that first render/slot
 distribution settles, heading-property changes and direct or nested default/heading-slot additions,
 removals, and text changes are appended to Lyra's shared light-DOM polite sink (`assertive` for
-`danger`). Announcement text is whitespace-normalized, honors meaningful `aria-label` values, and
+`danger`). An unset callout resolves that urgency from the nearest composed ancestor carrying an
+explicit semantic `variant`, matching the palette it inherits without inspecting computed RGB.
+Ancestor changes, removal, reconnect, and adoption are resolved live; an explicit local variant
+pins both presentation and urgency. Announcement text is whitespace-normalized, honors meaningful `aria-label` values, and
 excludes the icon/close chrome plus content hidden by `hidden`, `inert`, or `aria-hidden="true"` at
 any nested level. `display:none`/`content-visibility:hidden` prune a branch; a
 `visibility:hidden|collapse` wrapper suppresses its own text while a descendant that restores

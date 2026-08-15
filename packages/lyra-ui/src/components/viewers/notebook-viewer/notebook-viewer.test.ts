@@ -939,7 +939,7 @@ describe('search', () => {
     await el.search('hi');
     const eventPromise = oneEvent(el, 'lr-search-change');
     el.clearSearch();
-    expect((await eventPromise).detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+    expect((await eventPromise).detail).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
   });
 
   it('search() clears matches for a whitespace-only query without matching every cell', async () => {
@@ -1003,7 +1003,7 @@ describe('search', () => {
 
     let eventPromise = oneEvent(el, 'lr-search-change');
     el.searchNext();
-    expect((await eventPromise).detail).to.deep.equal({ query: 'needle', matchCount: 2, activeIndex: 1 });
+    expect((await eventPromise).detail).to.deep.equal({ query: 'needle', matchCount: 2, matchCountExact: true, activeIndex: 1 });
 
     eventPromise = oneEvent(el, 'lr-search-change');
     el.searchNext();

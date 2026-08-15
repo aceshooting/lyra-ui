@@ -1,4 +1,5 @@
 import {
+  adaptDocumentRenderer,
   agentStatusKind,
   agentStatusLabel,
   agentStatusMessage,
@@ -6,6 +7,7 @@ import {
   animations,
   approvalAction,
   approvalDecision,
+  createDocumentRendererAdapter,
   createDocumentRendererRegistry,
   createFileTypeMetadataRegistry,
   createWidgetDocument,
@@ -46,6 +48,7 @@ import {
   setFlagUrlResolver,
   SNAP_NONE,
   STACK_TRACE_LIMITS,
+  snapshotLyraDocumentRendererPayload,
   isWidgetTypeRegistry,
 } from '../src/lyra.js';
 import type {
@@ -144,7 +147,6 @@ import type {
   LyraClipboardWriteFailure,
   LyraClipboardWriteOutcome,
   LyraClipboardWriteSuccess,
-  LyraComboboxAppearance,
   LyraComboboxPlacement,
   LyraComboboxTagRenderer,
   LyraCsvColumn,
@@ -163,7 +165,6 @@ import type {
   LyraDockPanelEdge,
   LyraDockPanelEventMap,
   LyraDockPanelResizeDetail,
-  LyraEmojiPickerSize,
   LyraEvalDataset,
   LyraExportFormat,
   LyraExportFormatDescriptor,
@@ -217,7 +218,6 @@ import type {
   LyraMentionFocusOptions,
   LyraMentionItem,
   LyraMentionSelectDetail,
-  LyraModelSelectSize,
   LyraMultiSplitCollapseChangeDetail,
   LyraMultiSplitCollapseMode,
   LyraMultiSplitCollapseState,
@@ -265,8 +265,6 @@ import type {
   LyraSize,
   LyraCodeEditorResize,
   LyraCodeEditorWrap,
-  LyraTimeRangeSize,
-  LyraTokenInputSize,
   LyraToolbarAction,
   LyraToolbarActionProvider,
   LyraToastIcon,
@@ -345,8 +343,27 @@ import type {
   LyraRatingSize,
   LyraReorderDetail,
   LyraResolvedElementAnimation,
+  LyraAdaptedDocumentRenderer,
+  LyraAdaptedDocumentRendererDefinition,
+  LyraAvDocumentRendererPayload,
+  LyraDocumentFile,
+  LyraDocumentRendererAdapter,
+  LyraDocumentRendererAdapterDefinition,
+  LyraDocumentRendererDefinition,
+  LyraDocumentRendererPayload,
+  LyraDocumentRendererPayloadFor,
+  LyraDocumentRendererPayloadKind,
+  LyraGenericDocumentRendererPayload,
+  LyraResolvedDocumentRendererDefinition,
   LyraTimestamp,
+  LyraChatThread,
+  LyraWidgetBinding,
   LyraWidgetDocument,
+  LyraWidgetInteraction,
+  LyraWidgetNode,
+  LyraWidgetPropType,
+  LyraWidgetTypeDefinition,
+  LyraWidgetTypeRegistry,
   LyraZoomableFrameLoading,
   PushToTalkAudioConstraints,
   ToastSize,
@@ -357,12 +374,6 @@ import type {
   VirtualAnchor,
   VideoState,
   LyraWidgetView,
-  WidgetBinding,
-  WidgetInteraction,
-  WidgetNode,
-  WidgetPropType,
-  WidgetTypeDefinition,
-  WidgetTypeRegistry,
   KbdPlatform,
   LyraViewerSource,
   LyraImageFit,
@@ -480,6 +491,44 @@ import type { TreeBadgeTone as RemovedTreeBadgeTone } from '../src/lyra.js';
 import type { LyraLocalePickerSize as RemovedLyraLocalePickerSize } from '../src/lyra.js';
 // @ts-expect-error LyraColorPickerSize was removed in favor of the shared LyraSize.
 import type { LyraColorPickerSize as RemovedLyraColorPickerSize } from '../src/lyra.js';
+// @ts-expect-error ButtonSize was removed in favor of the shared LyraSize.
+import type { ButtonSize as RemovedButtonSize } from '../src/lyra.js';
+// @ts-expect-error LyraComboboxSize was removed in favor of the shared LyraSize.
+import type { LyraComboboxSize as RemovedLyraComboboxSize } from '../src/lyra.js';
+// @ts-expect-error LyraComboboxAppearance was removed in favor of the shared LyraAppearance.
+import type { LyraComboboxAppearance as RemovedLyraComboboxAppearance } from '../src/lyra.js';
+// @ts-expect-error LyraDateInputSize was removed in favor of the shared LyraSize.
+import type { LyraDateInputSize as RemovedLyraDateInputSize } from '../src/lyra.js';
+// @ts-expect-error LyraDateInputAppearance was removed in favor of the shared LyraAppearance.
+import type { LyraDateInputAppearance as RemovedLyraDateInputAppearance } from '../src/lyra.js';
+// @ts-expect-error LyraDatePickerSize was removed in favor of the shared LyraSize.
+import type { LyraDatePickerSize as RemovedLyraDatePickerSize } from '../src/lyra.js';
+// @ts-expect-error LyraEmojiPickerSize was removed in favor of the shared LyraSize.
+import type { LyraEmojiPickerSize as RemovedLyraEmojiPickerSize } from '../src/lyra.js';
+// @ts-expect-error LyraInputSize was removed in favor of the shared LyraSize.
+import type { LyraInputSize as RemovedLyraInputSize } from '../src/lyra.js';
+// @ts-expect-error LyraInputAppearance was removed in favor of the shared LyraAppearance.
+import type { LyraInputAppearance as RemovedLyraInputAppearance } from '../src/lyra.js';
+// @ts-expect-error LyraPhoneInputSize was removed in favor of the shared LyraSize.
+import type { LyraPhoneInputSize as RemovedLyraPhoneInputSize } from '../src/lyra.js';
+// @ts-expect-error LyraSelectSize was removed in favor of the shared LyraSize.
+import type { LyraSelectSize as RemovedLyraSelectSize } from '../src/lyra.js';
+// @ts-expect-error LyraSelectAppearance was removed in favor of the shared LyraAppearance.
+import type { LyraSelectAppearance as RemovedLyraSelectAppearance } from '../src/lyra.js';
+// @ts-expect-error LyraSwatchPickerSize was removed in favor of the shared LyraSize.
+import type { LyraSwatchPickerSize as RemovedLyraSwatchPickerSize } from '../src/lyra.js';
+// @ts-expect-error TextareaSize was removed in favor of the shared LyraSize.
+import type { TextareaSize as RemovedTextareaSize } from '../src/lyra.js';
+// @ts-expect-error TextareaAppearance was removed in favor of the shared LyraAppearance.
+import type { TextareaAppearance as RemovedTextareaAppearance } from '../src/lyra.js';
+// @ts-expect-error LyraTimeRangeSize was removed in favor of the shared LyraSize.
+import type { LyraTimeRangeSize as RemovedLyraTimeRangeSize } from '../src/lyra.js';
+// @ts-expect-error LyraTokenInputSize was removed in favor of the shared LyraSize.
+import type { LyraTokenInputSize as RemovedLyraTokenInputSize } from '../src/lyra.js';
+// @ts-expect-error CardAppearance was removed in favor of the shared LyraAppearance.
+import type { CardAppearance as RemovedCardAppearance } from '../src/lyra.js';
+// @ts-expect-error LyraModelSelectSize was removed in favor of the shared LyraSize.
+import type { LyraModelSelectSize as RemovedLyraModelSelectSize } from '../src/lyra.js';
 // @ts-expect-error PhoneCountry was replaced by the canonical LyraPhoneCountry.
 import type { PhoneCountry as RemovedPhoneCountry } from '../src/lyra.js';
 // @ts-expect-error PhoneInputSelectionDirection was replaced by LyraPhoneInputSelectionDirection.
@@ -650,6 +699,40 @@ import { clearWidgetTypes as removedClearWidgetTypes } from '../src/lyra.js';
 import { getDefaultWidgetTypeRegistry as removedGetDefaultWidgetTypeRegistry } from '../src/lyra.js';
 // @ts-expect-error import-time default mutation was replaced by DEFAULT_WIDGET_TYPE_REGISTRY.
 import { registerDefaultWidgetTypes as removedRegisterDefaultWidgetTypes } from '../src/lyra.js';
+// @ts-expect-error ChatThread was replaced by the root-safe LyraChatThread authoring name.
+import type { ChatThread as RemovedChatThread } from '../src/lyra.js';
+// @ts-expect-error WidgetNode was replaced by LyraWidgetNode at the curated root.
+import type { WidgetNode as RemovedWidgetNode } from '../src/lyra.js';
+// @ts-expect-error WidgetBinding was replaced by LyraWidgetBinding at the curated root.
+import type { WidgetBinding as RemovedWidgetBinding } from '../src/lyra.js';
+// @ts-expect-error WidgetPropType was replaced by LyraWidgetPropType at the curated root.
+import type { WidgetPropType as RemovedWidgetPropType } from '../src/lyra.js';
+// @ts-expect-error WidgetInteraction was replaced by LyraWidgetInteraction at the curated root.
+import type { WidgetInteraction as RemovedWidgetInteraction } from '../src/lyra.js';
+// @ts-expect-error WidgetTypeDefinition was replaced by LyraWidgetTypeDefinition at the curated root.
+import type { WidgetTypeDefinition as RemovedWidgetTypeDefinition } from '../src/lyra.js';
+// @ts-expect-error WidgetTypeRegistry was replaced by LyraWidgetTypeRegistry at the curated root.
+import type { WidgetTypeRegistry as RemovedWidgetTypeRegistry } from '../src/lyra.js';
+// @ts-expect-error resolver implementation context is available only from its expert granular entry.
+import type { ResolveContext as RemovedRootResolveContext } from '../src/lyra.js';
+// @ts-expect-error resolved widget nodes are available only from the resolver expert entry.
+import type { ResolvedNode as RemovedRootResolvedNode } from '../src/lyra.js';
+// @ts-expect-error resolved widget text is available only from the resolver expert entry.
+import type { ResolvedText as RemovedRootResolvedText } from '../src/lyra.js';
+// @ts-expect-error resolved widget elements are available only from the resolver expert entry.
+import type { ResolvedElement as RemovedRootResolvedElement } from '../src/lyra.js';
+// @ts-expect-error widget tree resolution is available only from the resolver expert entry.
+import { resolveTree as removedRootResolveTree } from '../src/lyra.js';
+// @ts-expect-error widget pointer resolution is available only from the resolver expert entry.
+import { readWidgetPointer as removedRootReadWidgetPointer } from '../src/lyra.js';
+// @ts-expect-error resolver depth limits are available only from the resolver expert entry.
+import { WIDGET_MAX_DEPTH as removedRootWidgetMaxDepth } from '../src/lyra.js';
+// @ts-expect-error resolver node limits are available only from the resolver expert entry.
+import { WIDGET_MAX_NODES as removedRootWidgetMaxNodes } from '../src/lyra.js';
+// @ts-expect-error resolver prop limits are available only from the resolver expert entry.
+import { WIDGET_MAX_PROPS_PER_NODE as removedRootWidgetMaxPropsPerNode } from '../src/lyra.js';
+// @ts-expect-error resolver warning limits are available only from the resolver expert entry.
+import { WIDGET_MAX_WARNINGS as removedRootWidgetMaxWarnings } from '../src/lyra.js';
 
 declare const removedV9Aliases: [
   RemovedActivityEntryTone,
@@ -703,6 +786,25 @@ declare const removedV9Aliases: [
   RemovedTreeBadgeTone,
   RemovedLyraLocalePickerSize,
   RemovedLyraColorPickerSize,
+  RemovedButtonSize,
+  RemovedLyraComboboxSize,
+  RemovedLyraComboboxAppearance,
+  RemovedLyraDateInputSize,
+  RemovedLyraDateInputAppearance,
+  RemovedLyraDatePickerSize,
+  RemovedLyraEmojiPickerSize,
+  RemovedLyraInputSize,
+  RemovedLyraInputAppearance,
+  RemovedLyraPhoneInputSize,
+  RemovedLyraSelectSize,
+  RemovedLyraSelectAppearance,
+  RemovedLyraSwatchPickerSize,
+  RemovedTextareaSize,
+  RemovedTextareaAppearance,
+  RemovedLyraTimeRangeSize,
+  RemovedLyraTokenInputSize,
+  RemovedCardAppearance,
+  RemovedLyraModelSelectSize,
   RemovedPhoneCountry,
   RemovedPhoneInputSelectionDirection,
   RemovedPhoneNumberAdapter,
@@ -779,6 +881,17 @@ declare const removedV9Aliases: [
   RemovedTerminalCell,
   RemovedTerminalLine,
   RemovedToolParamFormSchema,
+  RemovedChatThread,
+  RemovedWidgetNode,
+  RemovedWidgetBinding,
+  RemovedWidgetPropType,
+  RemovedWidgetInteraction,
+  RemovedWidgetTypeDefinition,
+  RemovedWidgetTypeRegistry,
+  RemovedRootResolveContext,
+  RemovedRootResolvedNode,
+  RemovedRootResolvedText,
+  RemovedRootResolvedElement,
 ];
 void removedV9Aliases;
 void removedLyraSplit;
@@ -790,6 +903,12 @@ void removedRegisterWidgetType;
 void removedClearWidgetTypes;
 void removedGetDefaultWidgetTypeRegistry;
 void removedRegisterDefaultWidgetTypes;
+void removedRootResolveTree;
+void removedRootReadWidgetPointer;
+void removedRootWidgetMaxDepth;
+void removedRootWidgetMaxNodes;
+void removedRootWidgetMaxPropsPerNode;
+void removedRootWidgetMaxWarnings;
 
 // Registration-free package-root reachability for public property/configuration types. Keeping
 // them in one tuple makes an accidental removal fail `test:types` even when the same name remains
@@ -891,7 +1010,6 @@ const rootPublicTypes:
       LyraClipboardWriteFailure,
       LyraClipboardWriteOutcome,
       LyraClipboardWriteSuccess,
-      LyraComboboxAppearance,
       LyraComboboxPlacement,
       LyraComboboxTagRenderer,
       LyraCsvColumn,
@@ -909,7 +1027,6 @@ const rootPublicTypes:
       LyraDockPanelEdge,
       LyraDockPanelEventMap,
       LyraDockPanelResizeDetail,
-      LyraEmojiPickerSize,
       LyraExportFormat,
       LyraExportFormatDescriptor,
       LyraExportFormatOption,
@@ -964,7 +1081,6 @@ const rootPublicTypes:
       LyraMentionFocusOptions,
       LyraMentionItem,
       LyraMentionSelectDetail,
-      LyraModelSelectSize,
       LyraMultiSplitCollapseChangeDetail,
       LyraMultiSplitCollapseMode,
       LyraMultiSplitCollapseState,
@@ -1012,8 +1128,6 @@ const rootPublicTypes:
       LyraSize,
       LyraCodeEditorResize,
       LyraCodeEditorWrap,
-      LyraTimeRangeSize,
-      LyraTokenInputSize,
       LyraToolbarAction,
       LyraToolbarActionProvider,
       LyraToastIcon,
@@ -1092,8 +1206,26 @@ const rootPublicTypes:
       LyraReorderDetail,
       LyraResolvedElementAnimation,
       LyraResolvedFileTypeMetadata,
+      LyraAdaptedDocumentRenderer,
+      LyraAdaptedDocumentRendererDefinition,
+      LyraAvDocumentRendererPayload,
+      LyraDocumentFile,
+      LyraDocumentRendererAdapter,
+      LyraDocumentRendererAdapterDefinition<LyraDocumentRendererPayloadKind>,
+      LyraDocumentRendererDefinition,
+      LyraDocumentRendererPayload,
+      LyraDocumentRendererPayloadFor<LyraDocumentRendererPayloadKind>,
+      LyraGenericDocumentRendererPayload,
+      LyraResolvedDocumentRendererDefinition,
       LyraTimestamp,
+      LyraChatThread,
+      LyraWidgetBinding,
       LyraWidgetDocument,
+      LyraWidgetInteraction,
+      LyraWidgetNode,
+      LyraWidgetPropType,
+      LyraWidgetTypeDefinition,
+      LyraWidgetTypeRegistry,
       LyraZoomableFrameLoading,
       PushToTalkAudioConstraints,
       ToastSize,
@@ -1104,12 +1236,6 @@ const rootPublicTypes:
       VirtualAnchor,
       VideoState,
       LyraWidgetView,
-      WidgetBinding,
-      WidgetInteraction,
-      WidgetNode,
-      WidgetPropType,
-      WidgetTypeDefinition,
-      WidgetTypeRegistry,
       LyraImageFit,
       LyraImageRegionRect,
       LyraImageRotation,
@@ -1122,6 +1248,7 @@ const rootPublicTypes:
   | undefined = undefined;
 
 void rootPublicTypes;
+void adaptDocumentRenderer;
 void agentStatusKind;
 void agentStatusLabel;
 void agentStatusMessage;
@@ -1129,6 +1256,7 @@ void agentStatusVariant;
 void animations;
 void approvalAction;
 void approvalDecision;
+void createDocumentRendererAdapter;
 void createDocumentRendererRegistry;
 void createFileTypeMetadataRegistry;
 void createWidgetDocument;
@@ -1173,6 +1301,7 @@ void registerDocumentRenderer;
 void setFlagUrlResolver;
 void SNAP_NONE;
 void STACK_TRACE_LIMITS;
+void snapshotLyraDocumentRendererPayload;
 void isWidgetTypeRegistry;
 
 const mirroredTokenSpellings: [BadgeVariant, BadgeSize, TagVariant, LyraRatingSize, ToastSize] = [

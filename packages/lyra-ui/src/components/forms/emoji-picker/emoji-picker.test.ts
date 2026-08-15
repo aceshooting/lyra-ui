@@ -3,6 +3,7 @@ import './emoji-picker.js';
 import type { LyraEmojiPicker, EmojiPickerGroup } from './emoji-picker.js';
 import { styles } from './emoji-picker.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const groups: EmojiPickerGroup[] = [
   {
@@ -71,6 +72,38 @@ async function connectEmojiPicker(
   await el.updateComplete;
   return el;
 }
+
+it('renders the inherited pressed-emoji hook while a direct host value still wins', async () => {
+  const wrapper = document.createElement('div');
+  wrapper.style.setProperty('--lr-emoji-picker-pressed-bg', 'rgb(1, 2, 3)');
+  created.push(wrapper);
+  document.body.append(wrapper);
+
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+  (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () =>
+    Promise.resolve(null);
+  el.groups = groups;
+  wrapper.append(el);
+  await el.updateComplete;
+  const emoji = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLButtonElement;
+  const rect = emoji.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+
+  try {
+    await sendMouse({ type: 'move', position });
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(emoji).backgroundColor === 'rgb(1, 2, 3)');
+
+    el.style.setProperty('--lr-emoji-picker-pressed-bg', 'rgb(4, 5, 6)');
+    await waitUntil(() => getComputedStyle(emoji).backgroundColor === 'rgb(4, 5, 6)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
 
 it('forwards host focus, blur, and click to the live search control with disabled guards', async () => {
   const el = await connectEmojiPicker();

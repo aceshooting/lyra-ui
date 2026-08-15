@@ -31,7 +31,7 @@ export interface LyraArtifactPanelEventMap {
   'lr-version-change': CustomEvent<{ versionId: string }>;
   'lr-restore': CustomEvent<{ versionId: string }>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
-  'lr-error': CustomEvent<undefined>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-download': CustomEvent<{ filename: string; src: string }>;
 }

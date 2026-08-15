@@ -20,26 +20,33 @@ immediately) or multi-format (click opens a small menu).
 
 **Properties:**
 
-- `rows: Record<string, unknown>[] = []` (attribute: false)
-- `columns: CsvColumn[] = []` (attribute: false) — `{ key, label }`; acts as a field allow-list **and**
+- `rows: readonly Readonly<Record<string, unknown>>[] = []` (attribute: false) — assignment takes
+  shallow frozen snapshots of the collection and row records; nested cell values remain opaque
+- `columns: readonly Readonly<LyraCsvColumn>[] = []` (attribute: false) — assignment takes a
+  shallow frozen snapshot. `{ key, label }` acts as a field allow-list **and**
   CSV header-label source for **both** export formats when non-empty. Left empty, **both** CSV and
   JSON fall back to the union of the rows' own keys (`key`/`label` both set to the key name) instead
   of CSV degrading to a header-less/blank file while only JSON had a fallback — so an unconfigured
   export still produces a proper header + data file in either format
 - `filename: string = 'export'`
-- `formats: ExportFormatOption[] = ['csv']` (attribute: false), where `ExportFormatOption` is the
-  built-in `ExportFormat = 'csv' | 'json'` or an `ExportFormatDescriptor = { id: string; label:
-string; description?: string; extension?: string }`. Descriptor labels/descriptions are
-  consumer-supplied, already-localized copy. Custom ids are event-only; no custom encoder is bundled
+- `formats: readonly LyraExportFormatOption[] = ['csv']` (attribute: false; shallow frozen
+  snapshot), where
+  `LyraExportFormatOption` is the built-in `LyraExportFormat = 'csv' | 'json'` or a
+  `LyraExportFormatDescriptor = { formatId: string; label: string; description?: string;
+  extension?: string }`. Descriptor labels/descriptions are consumer-supplied, already-localized
+  copy. Custom format ids are event-only; no custom encoder is bundled
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
   export; sets host/trigger `aria-busy` and disables the trigger and menu items. The component does
   not toggle it automatically
-- `label: string = 'Export'` — trigger button text; also feeds the format-choice menu's `aria-label`
-  as `` `${label} format` `` so assistive tech gets an accessible name for the menu
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the trigger's accessible
-  name and feeds the localized format-menu name without changing the visible label
+- `label?: string` — trigger button text; `undefined` uses the localized `exportButtonLabel`
+  default. Every supplied string, including `''` and `'Export'`, is caller-owned. The effective
+  label also feeds the format-choice menu's localized accessible name
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the trigger's
+  accessible name and feeds the localized format-menu name without changing the visible label.
+  Presence is authoritative, so an explicit empty string is preserved; `null` restores naming from
+  the visible label
 - `open: boolean = false` (reflected)
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
@@ -79,7 +86,7 @@ shared-clamp note.
   exp.formats = [
     'csv',
     {
-      id: 'xlsx',
+      formatId: 'xlsx',
       label: 'Excel workbook',
       description: 'Preserves spreadsheet data types',
       extension: 'xlsx',
@@ -104,18 +111,21 @@ escapeCsvField, buildCsv, downloadBlob } from
 
 ```ts
 escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
-buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
+buildCsv(rows: readonly Readonly<Record<string, unknown>>[], columns: readonly LyraCsvColumn[]): string  // CRLF-joined, header row included
 downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Document): void // triggers a browser download in the supplied document realm
 ```
 
 **Known gotchas:**
 
 - CSV and JSON are the only built-in encoders. To offer XLSX/PDF/etc., pass an
-  `ExportFormatDescriptor` and handle its id from `lr-export`; custom formats never trigger a
+  `LyraExportFormatDescriptor` and handle its `formatId` from `lr-export`; custom formats never trigger a
   download or `lr-export-complete` on their own. A descriptor's optional `extension` is metadata
   for that handler, not automatic filename handling.
 - CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari
   cancelling in-flight downloads on immediate revoke) are genuine, safe-to-rely-on strengths.
+  Finite JavaScript numbers remain numeric CSV cells (including negative and decimal values);
+  caller-supplied strings such as `"-12"` still take the formula-safe text path. `NaN` and
+  infinities are non-numeric values and are escaped as text.
 - `open` is valid only when `formats` contains more than one choice. An invalid open request is
   normalized closed without a false `lr-show`/`lr-hide` pair; shrinking an open menu to one format,
   or becoming `disabled`/`loading`, closes it and repairs focus. JSON projection safely preserves

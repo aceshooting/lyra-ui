@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -21,23 +21,26 @@ above an `lr-tab-group` strip for Relationships (`lr-neighbor-list`), Supporting
 or mutates graph/document state.
 
 **Properties:**
+
 - `entity: LyraEntity | null = null` (attribute: false) — `lr-entity-card`'s own `LyraEntity`;
   `null` renders the shared `lr-empty` `noData` state in place of the whole dossier
 - `confidence: LyraEntityDossierConfidence | null = null` (attribute: false) —
-  `LyraEntityDossierConfidence { label: string; value: string; unit?: string; variant?: StatVariant;
-  exactValue?: string; caption?: string; rows?: StatRow[] }` (exported by this module; `StatVariant`
-  and `StatRow` are `lr-stat`'s own types). All caller-supplied domain data, never routed through
+  readonly `LyraEntityDossierConfidence { label: string; value: string; unit?: string; variant?:
+LyraVariant; exactValue?: string; caption?: string; rows?: readonly StatRow[] }` (exported by this
+  module; `LyraVariant`
+  is the shared semantic variant vocabulary and `StatRow` is `lr-stat`'s row type). All
+  caller-supplied domain data, never routed through
   `localize()`. `null` omits the stat entirely — no placeholder
 - `neighbors: LyraNeighborRow[] = []` (attribute: false) — forwarded verbatim to
   `lr-neighbor-list.rows` (`{ relation: string; direction: 'in' | 'out' | 'both'; node: LyraEntity }`)
 - `chunks: LyraChunk[] = []` (attribute: false) — forwarded to `lr-chunk-inspector.chunks`; the
-  evidence for *this entity's own* summary/properties
+  evidence for _this entity's own_ summary/properties
 - `provenance: LyraProvenance | null = null` (attribute: false) — forwarded to
   `lr-provenance-panel.provenance`; deliberately a separate input from `chunks` (the broader
   grounding chain, which may span other entities/relationships/communities). Pass the same array to
   both when the two genuinely coincide
-- `types: NodeTypeStyle[] = []` (attribute: false) — `{ id: string; label: string; color?: string;
-  shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape; forwarded to both
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — readonly `{ id: string; label: string; color?: string;
+shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape; forwarded to both
   `lr-entity-card` and `lr-provenance-panel`
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   forwarded to both `lr-chunk-inspector` and `lr-provenance-panel`
@@ -45,8 +48,9 @@ or mutates graph/document state.
 - `expandable: boolean = false` — forwarded to `lr-neighbor-list`
 - `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to `lr-entity-card`
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name for the internal
-  `lr-tab-group` strip; unset renders the strip with no `aria-label`
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
+  the host attribute is absent, names the internal `lr-tab-group` strip. Authored host
+  `aria-label` names the dossier as a whole and is not cloned onto the strip
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
 (`composed: true`): `lr-entity-activate` (`detail: { id }`), `lr-node-expand` (`detail: { id }`),
@@ -70,6 +74,7 @@ relationship path-strip edge).
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - The active tab is internal `@state`, not a controlled property — `lr-tab-group` already owns it, and a
   stale public property re-bound on an unrelated re-render would fight the user's own click.
 - Tab labels reuse each composed child's own `localize()` key (`neighborListLabel`,

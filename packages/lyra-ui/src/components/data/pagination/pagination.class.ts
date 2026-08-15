@@ -293,7 +293,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    *  A string uses `{page}` as the placeholder (`/products?page={page}`); a function receives the
    *  page number and returns the URL. A page whose resolved URL is not a safe navigation target
    *  falls back to a button. */
-  @property({ attribute: 'href-template' }) hrefTemplate: string | ((page: number) => string) = '';
+  @property({ attribute: 'href-template' }) hrefTemplate:
+    | string | ((page: number) => string) = '';
   /** Resting look of every control. The applied page stays a solid brand chip in all of them, so
    *  it is never the appearance that decides whether the current page is identifiable. */
   @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
@@ -303,11 +304,13 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** Accessible name forwarded from the host to the internal navigation landmark. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() label = '';
-  @property({ attribute: 'page-label' }) pageLabel = 'Page';
-  @property({ attribute: 'previous-label' }) previousLabel = 'Previous';
-  @property({ attribute: 'next-label' }) nextLabel = 'Next';
-  @property({ attribute: 'first-label' }) firstLabel = 'First page';
-  @property({ attribute: 'last-label' }) lastLabel = 'Last page';
+  /** Optional control-label overrides. Omission localizes the matching message key; supplied
+   * strings, including the built-in English text or an empty string, render verbatim. */
+  @property({ attribute: 'page-label' }) pageLabel?: string;
+  @property({ attribute: 'previous-label' }) previousLabel?: string;
+  @property({ attribute: 'next-label' }) nextLabel?: string;
+  @property({ attribute: 'first-label' }) firstLabel?: string;
+  @property({ attribute: 'last-label' }) lastLabel?: string;
 
   @state() private draftPage = '';
   @state() private invalidDraft = false;
@@ -354,7 +357,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   private get primaryControl(): HTMLElement | undefined {
     return this.format === 'compact'
       ? this.pageInput
-      : (this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]') ?? undefined);
+      : this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]') ?? undefined;
   }
 
   /** Focus the current-page button/link, or the editable page-jump input in compact format. */
@@ -427,7 +430,9 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   private get hasHrefTemplate(): boolean {
     const template = this.hrefTemplate;
-    return typeof template === 'function' || (typeof template === 'string' && template !== '');
+    return (
+      typeof template === 'function' || (typeof template === 'string' && template !== '')
+    );
   }
 
   /** Resolve a URL only for a control that can navigate. Configured link mode keeps inactive
@@ -441,8 +446,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     return { href, renderAnchor: href !== null };
   }
 
-  private localizedProperty(key: string, defaultValue: string, value: string): string {
-    return this.localize(key, value === defaultValue ? undefined : value);
+  private localizedProperty(key: string, value: string | undefined): string {
+    return value == null ? this.localize(key) : value;
   }
 
   private formatNumber(value: number): string {
@@ -517,15 +522,16 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       return;
     }
     const focusOrigin = deepActiveElementIn(this.ownerDocument);
-    const detail: LyraPaginationChangeDetail = Object.freeze({ page, pageSize: this.normalizedPageSize });
-    if (this.emit('lr-before-page-change', detail, { cancelable: true }).defaultPrevented) {
+    const detail = (): LyraPaginationChangeDetail =>
+      Object.freeze({ page, pageSize: this.normalizedPageSize });
+    if (this.emit('lr-before-page-change', detail(), { cancelable: true }).defaultPrevented) {
       this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
       this.invalidDraft = false;
       return;
     }
     this.pendingFocusPage = page;
     this.pendingFocusOrigin = focusOrigin;
-    this.emit('lr-page-change', detail);
+    this.emit('lr-page-change', detail());
     // A controlled input reflects the applied property again after a request.
     this.draftPage = this.calculatedTotalPages === 0 ? '' : String(this.currentPage);
     this.invalidDraft = false;
@@ -566,8 +572,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const isPrevious = direction === 'previous';
     const current = this.currentPage;
     const label = isPrevious
-      ? this.localizedProperty('previous', 'Previous', this.previousLabel)
-      : this.localizedProperty('next', 'Next', this.nextLabel);
+      ? this.localizedProperty('previous', this.previousLabel)
+      : this.localizedProperty('next', this.nextLabel);
     const spent = isPrevious ? current <= 1 : current >= this.calculatedTotalPages;
     const target = isPrevious ? current - 1 : current + 1;
     const inactive = this.controlsDisabled || spent;
@@ -608,8 +614,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const isFirst = edge === 'first';
     const current = this.currentPage;
     const label = isFirst
-      ? this.localizedProperty('paginationFirstPage', 'First page', this.firstLabel)
-      : this.localizedProperty('paginationLastPage', 'Last page', this.lastLabel);
+      ? this.localizedProperty('paginationFirstPage', this.firstLabel)
+      : this.localizedProperty('paginationLastPage', this.lastLabel);
     const spent = isFirst ? current <= 1 : current >= this.calculatedTotalPages;
     const target = isFirst ? 1 : this.calculatedTotalPages;
     const inactive = this.controlsDisabled || spent;
@@ -732,7 +738,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   private renderPageField(): TemplateResult {
-    const pageLabel = this.localizedProperty('paginationPage', 'Page', this.pageLabel);
+    const pageLabel = this.localizedProperty('paginationPage', this.pageLabel);
 
     return html`<span part="page-field label">
       <input

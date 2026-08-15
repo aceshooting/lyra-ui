@@ -23,35 +23,35 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 - `language?: string` (BCP-47-ish tag, e.g. `"en"`/`"en-US"`, resolved to a representative country
   via `languageToCountry()`)
 - `src?: string` (a pre-resolved flag image URL — takes precedence over `country`/`language` and
-  skips the peer-package lookup/loading-skeleton round trip entirely; mainly useful to avoid even
+  skips the peer-package lookup; mainly useful to avoid even
   the small per-flag async hop when you already have the URL at build time, e.g. from
   `import frUrl from '@aceshooting/lyra-flags/flags/fr.svg?url'`. `label` is effectively required
   alongside `src` since there's no `country`/`language` to derive a fallback `alt` from.)
 - `label?: string` (accessible name / `alt` text — **defaults to a localized, human-readable region
   name derived from the *resolved country* code via `Intl.DisplayNames` if omitted**, see gotchas)
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — takes precedence over `label`
-  and the derived region name; an explicit empty value marks the image decorative
-- `round: boolean = false` (reflected — circular crop)
-- `variant?: 'compact' | 'standard' | 'detailed'` (attribute `variant`, not reflected — picks a
+- host `aria-label` takes precedence over `label` and the derived region name; an explicit empty
+  value marks the image decorative
+- `shape: LyraFlagShape = 'rect'` (reflected, `'rect' | 'circle'`)
+- `fidelity: LyraFlagFidelity = 'standard'` (reflected — picks a
   fidelity tier for the ~65 codes whose source art embeds a coat of arms/seal/emblem; every other
-  code resolves to the same file regardless of `variant`. `'compact'` = a tiny WebP raster for
-  icon-scale use (menus, language pickers, ~12–28px); `'standard'` (the effective default, when
-  `variant` is unset) = the icon-optimized vector for card/row sizes (~28–96px); `'detailed'` = the
+  code resolves to the same file regardless of `fidelity`. `'compact'` = a tiny WebP raster for
+  icon-scale use (menus, language pickers, ~12–28px); `'standard'` = the icon-optimized vector for
+  card/row sizes (~28–96px); `'detailed'` = the
   pristine full-fidelity vector for hero-scale display. No effect when `src` is set.)
 
-**Removed in 8.0.0:** the boolean `detailed` attribute. `variant="detailed"` selects the same tier.
-A leftover `detailed` is now an unknown attribute — it renders the `standard` tier silently, so
-rewrite it rather than leaving it in place.
+The v9 vocabulary replaces `round` with `shape="circle"` and `variant` with `fidelity`; exported
+authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolver`.
 
 **Events:** none.
 
 **Slots:** none.
 
-**CSS parts:** `image` (the underlying `<img>`, present only once a URL has resolved), `error`
-(ordinary localized visible text rendered instead when the peer resolver is unavailable or rejects)
+**CSS parts:** `image` (the underlying `<img>`, exposed once native loading succeeds), `error`
+(contained localized visible text rendered when URL validation, peer resolution, or native image
+loading fails). The host reflects the terminal error state with `data-error`.
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
-non-`round` corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
+rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 `--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border` for the inset ring.
 
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
@@ -85,7 +85,7 @@ surface, a different active-state marker, or a layout `<lr-locale-picker>` doesn
 `<lr-popover>` supplies the light-dismiss surface, `<lr-flag>` the country mark,
 `localeNativeName()` the endonym, and `aria-current="true"` marks the active choice. Which locales
 exist is the app's decision, so the app owns the list. Set `lang` on each row so assistive tech
-pronounces the endonym in its own language, and use `variant="compact"` at icon scale.
+pronounces the endonym in its own language, and use `fidelity="compact"` at icon scale.
 
 ```html
 <lr-popover placement="bottom-start">
@@ -111,13 +111,13 @@ const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
 
 ```html
 <lr-flag country="fr" label="France"></lr-flag>
-<lr-flag language="en-US" round></lr-flag>
-<lr-flag country="es" variant="compact"></lr-flag>  <!-- tiny WebP raster, icon-scale -->
-<lr-flag country="es" variant="detailed"></lr-flag> <!-- pristine full-fidelity vector -->
+<lr-flag language="en-US" shape="circle"></lr-flag>
+<lr-flag country="es" fidelity="compact"></lr-flag>  <!-- tiny WebP raster, icon-scale -->
+<lr-flag country="es" fidelity="detailed"></lr-flag> <!-- pristine full-fidelity vector -->
 ```
 
 ```bash
-pnpm add @aceshooting/lyra-flags   # required peer — without it, <lr-flag> renders nothing
+pnpm add @aceshooting/lyra-flags   # required for country/language lookup; failures render error text
 ```
 
 ```js
@@ -129,7 +129,7 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   `@aceshooting/lyra-ui/components/media/flag/flag-peer.js`; `all.js`
   registers the component without importing the optional flag asset graph. Requires the optional
   peer `@aceshooting/lyra-flags` to actually render an image; without it the component still shows a
-  decorative `<lr-skeleton variant="rect" announce="false">` placeholder while resolving. The
+  decorative `<lr-skeleton shape="rect" announce="false">` placeholder while resolving. The
   host exposes `aria-busy="true"`, and ordinary sr-only text preserves the localized `loading`
   label without creating a shadow live region. Resolution failure then **fails closed** into ordinary localized
   `<span part="error">` text (the `flagLoadError` message key, `"Flag unavailable"` by default).
@@ -163,15 +163,16 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   fetches one requested flag at runtime. A bundler may still emit the complete reachable lazy-chunk
   graph because every supported code has a literal loader import; use a literal asset subpath
   import when the deployment artifact must be pruned. If you already have a flag's URL at build
-  time, `src` skips the peer-package round trip (and its loading-skeleton flash) entirely.
+  time, `src` skips the peer-package round trip; native image loading still uses the same bounded
+  loading/error transaction.
 - 65 of `@aceshooting/lyra-flags`' 249 flags (any whose design includes a detailed coat of
-  arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the `variant`
-  property (`flagUrl(code, { variant })` under the hood): `"compact"` — a tiny WebP raster for
+  arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the
+  `fidelity` property (`flagUrl(code, { variant: fidelity })` under the hood): `"compact"` — a tiny WebP raster for
   icon-scale use (menus, language pickers, dense lists); `"standard"` — the default, the
   icon-optimized vector for card/row sizes, ~84% smaller on average than the pristine source for the
   65 affected codes with no visible fidelity loss at that scale; `"detailed"` — the pristine
   full-fidelity vector, for hero-scale display where the extra illustrative detail is actually
-  visible. The other 184 codes resolve to the same file regardless of `variant` — a safe no-op.
+  visible. The other 184 codes resolve to the same file regardless of `fidelity` — a safe no-op.
 
 **Additional API surface:**
 

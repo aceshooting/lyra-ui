@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,7 +29,10 @@ by the host (e.g. `"$0.0012"`) and rendered verbatim, never parsed or summed. On
 both this component (timeline projection via `startMs`/`endMs`) and `lr-trace-tree` (hierarchy
 projection via `parentId`) — never two shapes. Foreign runtime `kind` and `status` values render
 as `'other'` and `'pending'` rather than throwing, although hosts should continue to use the
-documented literal sets. `activeSpanId: string | null = null`
+documented literal sets. At most 500 unique valid spans mount; when `activeSpanId` resolves beyond
+the ordinary input-order budget, that span and its ancestor path reserve positions so the
+controlled active state remains visible. A localized `[part="limit"]` note exposes truncation.
+`activeSpanId: string | null = null`
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
 window, `hideAxis: boolean = false` (attribute `hide-axis`), and `label: string = ''`.
@@ -46,7 +49,9 @@ Space).
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `hideAxis`), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
-when `spans` is empty), and `live-region`.
+when `spans` is empty), `limit` (the 500-span projection notice), and `live-region`.
+The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
+paint width would otherwise be only a few pixels.
 
 The terminal axis tick is end-aligned so its label remains inside the allocated chart width. Roving
 keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span
@@ -69,7 +74,7 @@ contrasting background, and `--lr-span-waterfall-pending-border-color` (default
 
 That last one follows the convention every **state-scoped** custom property in this family uses, and
 it is worth reading once: it is an inline `var()` fallback at its point of use and is deliberately
-**not** declared on `:host`, so it can be set on the element *or on any ancestor* and still reach the
+**not** declared on `:host`, so it can be set on the element _or on any ancestor_ and still reach the
 rule that consumes it. It exists because Shadow Parts forbids an attribute selector after `::part()`
 — `::part(row)[data-active]` and every selector like it is invalid CSS — so before it, the only way
 to restyle a state-dependent surface was to override a library-wide `--lr-color-*` token, which repaints

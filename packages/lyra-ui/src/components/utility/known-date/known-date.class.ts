@@ -98,11 +98,11 @@ export interface LyraKnownDateEventDetail {
 }
 
 export interface LyraKnownDateEventMap {
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
   input: InputEvent & { readonly detail: LyraKnownDateEventDetail };
   change: Event & { readonly detail: LyraKnownDateEventDetail };
-  focus: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
+  focus: CustomEvent<null>;
+  blur: CustomEvent<null>;
 }
 
 class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,9 +23,18 @@ alongside the plain failure message.
 name: string; tests: TestCaseResult[] }` and `TestCaseResult { id: string; name: string; status:
 TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed' | 'failed' |
 'skipped' | 'running'` (all three exported here). `statusFilter: TestStatus[] =
-[]` (attribute: false) — empty shows every status; and `autoExpandFailures: boolean = true`
+[]` (attribute: false) — empty shows every status. `runId: string | null = null` (attribute
+`run-id`) identifies the source run, and `runState: TestRunState = 'idle'` (attribute `run-state`,
+reflected) exposes its lifecycle. `autoExpandFailures: boolean = true`
 (attribute `auto-expand-failures`). A duration renders only when it is finite and non-negative;
-invalid/negative values are omitted rather than reaching `Intl.NumberFormat`.
+invalid/negative values are omitted rather than reaching `Intl.NumberFormat`. Suite ids, then test
+ids within each suite, use deterministic first-wins identity. Foreign runtime statuses normalize
+once to the localized neutral `skipped` state, so every accepted row contributes to one coherent
+summary count and renders a label/glyph.
+
+Summary counts cover the complete normalized input. At most 1,000 rows mount for the active filter;
+manually expanded identities reserve positions first, failed rows next, then ordinary input-order
+rows. A localized `[part="limit"]` note exposes truncation without losing the complete counts.
 
 **Slots:** `detail-{encodedSuiteId}:{encodedTestId}` — collision-free suite-scoped rich detail for
 a test. Derive the complete name with the exported
@@ -43,11 +52,9 @@ row's disclosure.
 **Events:** `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
 activated), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
 component updates its own `statusFilter` first, then emits),
-and `lr-toggle` (`detail: { id: string; suiteId?: string; expanded: boolean }`, a row's failure
-detail was expanded/collapsed). To preserve the established exact event shape, `suiteId` is omitted
-for a globally unique test id and included when the id occurs in more than one suite. Manual
-expansion state is always keyed by the suite+test pair, so toggling one duplicate never toggles its
-sibling.
+and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }`, a row's failure
+detail was expanded/collapsed). The suite-scoped identity shape is invariant even when `testId` is
+globally unique. Manual expansion state is keyed by that same suite+test pair.
 Each expand/collapse action's localized accessible name includes both suite and test names, so
 repeated row controls remain distinguishable.
 
@@ -57,7 +64,7 @@ adjacent localized status word carries the meaning. Running rows use the decorat
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
 `data-status`), `test-status`, `test-name`, `test-duration`, `test-expand-toggle`, `failure`
-(hidden while collapsed), and `failure-message`.
+(hidden while collapsed), `failure-message`, `limit`, and `empty`.
 
 **Themeable custom properties:** `--lr-test-results-filter-active-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default

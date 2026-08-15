@@ -6,10 +6,9 @@
 - **Class** `LyraChatComposer`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-composer/chat-composer.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated slot** `leading` since `8.2.3`; use slot `slot="start"`; removal not before `10.0.0` — The start slot follows the shared adornment vocabulary; leading remains available as a compatibility alias during the deprecation window.
-- **Deprecated slot** `trailing` since `8.2.3`; use slot `slot="end"`; removal not before `10.0.0` — The end slot follows the shared adornment vocabulary; trailing remains available as a compatibility alias during the deprecation window.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -54,14 +53,16 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   submission without disabling the textarea or a busy-state Stop action
 - `stoppable: boolean = true` (reflected) — when false, busy states keep a disabled Send button
   instead of exposing a Stop action
+- `readOnly: boolean = false` (attribute `readonly`, reflected) — native read-only editing state;
+  intrinsic required/length constraints are barred while set
+- `minLength?: number` (attribute `minlength`) and `maxLength?: number` (attribute `maxlength`) —
+  forwarded native text-length constraints; invalid/unset values impose no bound
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — names the internal textarea;
   wins over placeholder and the localized composer label
 - `spellcheck: boolean = true` — forwarded to the internal `<textarea>`
 - `autocapitalize: string = ''` — forwarded to the internal `<textarea>`; empty omits the attribute
-- `autoCorrect: string = ''` (attribute `autocorrect`) — forwarded to the internal `<textarea>`
-  (Safari/WebKit-specific); empty omits the attribute. Named `autoCorrect`, not `autocorrect`, only
-  to dodge a `lib.dom.d.ts` collision with `HTMLElement`'s own `boolean`-typed `autocorrect` IDL
-  member; the host attribute is explicitly mapped to plain `autocorrect`.
+- `autocorrect: boolean = true` — forwarded to the internal `<textarea>` and reflected canonically
+  as `autocorrect="on"|"off"`; JavaScript writes also accept legacy `'off'`/`'false'` strings
 - `wrap: 'hard' | 'soft' | 'off' = 'soft'`, `autocomplete: string = ''`, `inputMode: string = ''`
   (attribute `inputmode`), and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to
   the native textarea
@@ -77,27 +78,26 @@ validity and recomputes the current intrinsic constraints.
 
 **Events:**
 
+- `input` / `change` — one realm-correct native event relayed from the textarea per native edit or
+  commit; `focus` / `blur` similarly preserve `relatedTarget`
 - `lr-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
   programmatic `.value` assignment
+- `lr-change` (`detail: { value }`) — paired with the native `change` event
 - `lr-submit` (`detail: { value }`) — fired by Enter (per `submit-on-enter`) or the built-in
   button while `status="idle"` and `submitDisabled` is false. `detail.value` is always the exact, untrimmed current value;
   trimming is left to the consumer. Submitting does **not** clear `value`
 - `lr-stop` (no detail) — fired by the built-in button while `status` is `"sending"` or
   `"streaming"`
-- `blur` (no detail) — re-dispatched from the internal `<textarea>`'s own `blur`, bubbling and
-  composed unlike the native event
-- `focus` (no detail) — re-dispatched from the internal `<textarea>`'s own `focus`, for the same
-  reason as `blur`
+- `lr-blur` / `lr-focus` (`detail: null`) — prefixed notifications paired with native focus events
 - `lr-invalid` (no detail) — one bubbling/composed, cancelable alias when native validity fails;
   preventing it also prevents the native `invalid` event that produced it
 
 **Slots:** `start` (content before the textarea, e.g. an attach-file trigger button), `end`
 (overrides the built-in send/stop button entirely when it has assigned content), `chips` (an
-attachment tray rendered above the input row), plus the deprecated compatibility aliases `leading`
-for `start` and `trailing` for `end`. Canonical and compatibility spellings may coexist; either end
-spelling suppresses the built-in action until both end slots are empty.
+attachment tray rendered above the input row).
 
-**CSS parts:** `base`, `chips`, `row`, `leading`, `textarea`, `trailing`, `action-button`
+**CSS parts:** `base`, `chips`, `row`, `start`, `textarea`, `end`, `send-glyph`, `stop-glyph`,
+`action-button`
 
 **Themeable custom properties:** `--lr-chat-composer-busy-bg` (default `var(--lr-color-text-quiet)`)
 — `[part="action-button"]`'s background while `status` is `"sending"` or `"streaming"` (the busy/stop
@@ -157,11 +157,11 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
 - Auto-resize requires a concrete, unitless `line-height` on the textarea (the component sets
   `line-height: 1.5` in its own styles) — the UA default of `normal` has no single resolved px
   figure to measure rows against, so overriding `line-height` to a keyword breaks row sizing.
-- The `end` slot (or its deprecated `trailing` alias) fully replaces the built-in action button rather than rendering alongside it —
+- The `end` slot fully replaces the built-in action button rather than rendering alongside it —
   once it has assigned content, the library's send/stop icon, its `aria-label`, and its
   `status`-driven busy styling all disappear, so a custom end control needs its own send/stop
   handling.
-- `[part="chips"]`/`[part="leading"]` are hidden via a JS-tracked `[hidden]` attribute rather than a
+- `[part="chips"]`/`[part="start"]` are hidden via a JS-tracked `[hidden]` attribute rather than a
   CSS `:empty` selector, because each always contains a literal `<slot>` child regardless of
   assigned content.
 - Under `frame="card"` the only focus affordance is a border-color shift on `[part="base"]`

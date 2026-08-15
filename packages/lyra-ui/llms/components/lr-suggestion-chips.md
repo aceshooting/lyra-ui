@@ -18,17 +18,21 @@
 Starter prompts (empty thread) and follow-up suggestions (after a response) as a horizontally
 scrollable chip row; activation hands the prompt to the host, which decides whether to compose it
 into an input or send it directly. Never writes into a composer or sends anything itself.
-Streaming-friendly: chips render through a keyed `repeat()` on `id`, so replacing follow-ups
-mid-conversation preserves focus on any chip whose `id` survives.
+Streaming-friendly: chips render through a keyed `repeat()` on `suggestionId`, so replacing
+follow-ups mid-conversation preserves focus on any chip whose identifier survives; when the focused
+identifier disappears, focus repairs to the nearest surviving occurrence without overriding a newer
+external focus move.
 
-**Properties:** `suggestions: ChatSuggestion[] = []` (attribute: false) — `ChatSuggestion { id:
-string; label: string; icon?: string; detail?: string }` (exported here); `icon` is an optional
+**Properties:** `suggestions: readonly LyraChatSuggestion[] = []` (attribute: false) —
+`LyraChatSuggestion { suggestionId: string; label: string; icon?: string; detail?: string }`
+(exported here). Identifiers must be nonempty and unique; invalid/later duplicates are omitted with
+the first valid occurrence winning. `icon` is an optional
 peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
 `detail` is an optional secondary line. Empty renders nothing at all. `wrap: boolean = false`
 (reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label:
 string = ''` — accessible name for the group, defaults to the localized `suggestionsLabel`.
 
-**Events:** `lr-suggestion-select` — `detail: { id, label }`.
+**Events:** `lr-suggestion-select` — `detail: { suggestionId, label }`.
 
 **CSS parts:** `base` (the labeled group), `row` (the flex container holding the chips, present in
 both the wrapping and the scrolling layout), `chip` (each suggestion button), `chip-icon` (the

@@ -18,12 +18,16 @@
 Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
 
 **Properties:**
+
 - `examples: EvalExample[] = []` (attribute: false) — `EvalExample { id: string; input: string;
-  expectedOutput?: string; tags?: string[]; metadata?: Record<string, unknown> }` (exported here).
+expectedOutput?: string; tags?: string[]; metadata?: Record<string, unknown> }` (exported here).
   Deliberately its own small shape rather than reusing anything from `src/ai/types.ts` — none of that
   module's interfaces models "one row of a labeled eval dataset". `input`/`expectedOutput` are plain
   strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
-  controlled: add/remove/import/export are all *requests*; the host mutates and passes the array back
+  controlled: add/remove/import/export are all _requests_; the host mutates and passes the array
+  back. Later duplicate ids are omitted before selection, filtering, mutation requests, and the
+  nested grid are derived. Distinct tag chips are ordered with the component's effective-locale
+  collation
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
@@ -37,12 +41,15 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
   internal `lr-export-button`
 - `disabled: boolean = false` (reflected) — disables every add/remove/import/export affordance, e.g.
   while a host-side mutation is still in flight
-- `label: string = ''` — accessible name for the grid region; defaults to the localized
-  `evalDatasetLabel`
+- `label: string = ''` — purpose-specific accessible name for the nested grid; defaults to the
+  localized `evalDatasetLabel`. A host `aria-label` remains on the custom-element host as its
+  overall name and is not cloned onto the independently interactive grid
 
-**Events:** `lr-example-select` (`detail: { id: string | null }`), `lr-example-add-request`
-(`detail: undefined`), `lr-example-remove-request` (`detail: { id: string }`), `lr-import-request`
-(`detail: { files: File[] }`), `lr-export-request` (`detail: { format: string }`). `focus`/`blur` —
+**Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
+`lr-example-add-request` (`detail: undefined`), `lr-example-remove-request` (`detail: { exampleId:
+string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {
+format: string }`), and the deliberate nested-table pass-through `lr-sort` (`detail: { key:
+string }`). `focus`/`blur` —
 re-dispatched (no detail) when the internal search field (only rendered while `searchable`) gains or
 loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 
@@ -50,8 +57,10 @@ loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 `add-button`, `remove-button`, `import`, `export`.
 
 **Known gotchas:**
+
 - Shrinking `examples` out from under live UI state is handled: a `selectedId` that no longer matches
   any row resets to `null`, and an active tag filter that no longer matches any row's `tags` is
   dropped rather than silently matching zero rows forever.
 - A search or tag filter that hides the selected row also clears that selection and emits
-  `lr-example-select` with `{ id: null }`, so the Remove control never acts on an invisible row.
+  `lr-example-select` with `{ exampleId: null }`, so the Remove control never acts on an invisible
+  row.

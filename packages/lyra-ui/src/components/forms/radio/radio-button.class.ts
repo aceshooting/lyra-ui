@@ -57,7 +57,8 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
  * rather than `invalid`: a pristine required control is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
  * @csspart base - The interactive button. Carries `checked` and `disabled` in the part name so a
- * consumer can target either state through `::part()`.
+ * consumer can target either state through `::part()`. Every size tier retains a 24px minimum
+ * target in both axes, including an empty-label control.
  * @csspart button - Shoelace name for the interactive button.
  * @csspart button--checked - Shoelace state alias on the selected button.
  * @csspart control - Compatibility alias for the interactive control.

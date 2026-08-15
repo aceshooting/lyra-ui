@@ -15,6 +15,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData, LYRA_DEFAULT_spreadsheetViewerLabel, LYRA_DEFAULT_spreadsheetViewerUnavailable } from '../../../internal/default-strings.generated.js';
@@ -48,7 +49,7 @@ export interface LyraSpreadsheetViewerEventMap extends Omit<LyraAnchorTargetEven
   'lr-render-error': CustomEvent<{ error: unknown }>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
 }
 
 class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMap> {}
@@ -77,7 +78,8 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   call is applied. `detail: { found }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
- *   matchCount, activeIndex }`.
+ *   matchCount, matchCountExact, activeIndex }`. At most 1,000 matches are retained; when more
+ *   exist, `matchCount` is 1,000 and `matchCountExact` is `false`.
  * @csspart base - The root wrapper.
  * @csspart body - The scrollable wrapper around the fetched-state content, capped by `max-height`.
  * @csspart tabs - The sheet-switching `<lr-tab-group>`, rendered only for a multi-sheet workbook.
@@ -146,6 +148,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
    *  `<lr-virtual-list>`'s own `active-id`. */
   @state() private activeRowKey: number | '' = '';
   @state() private searchMatches: { sheetIndex: number; row: number; col: number }[] = [];
+  private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
   private lastSearchLocale = '';
@@ -205,6 +208,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
       // (no event), mirroring <lr-pdf-viewer>'s identical src-change reset.
       this.searchQuery = '';
       this.searchMatches = [];
+      this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.activeRowKey = '';
       this.activeSheetIndex = 0;
@@ -471,12 +475,14 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   /** Case-insensitive substring search over every sheet's raw-grid cells (the same stringification
    *  `cell()` renders), ordered sheet then row then column -- each sheet's header row is included,
    *  the same raw-grid convention `cell-range` anchors use. An empty/whitespace-only query behaves
-   *  like `clearSearch()` and resolves `0`. */
+   *  like `clearSearch()` and resolves `0`. Returns at most 1,000 retained matches;
+   *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
   async search(query: string): Promise<number> {
     this.searchQuery = query;
     this.lastSearchLocale = this.effectiveLocale;
     const trimmed = query.trim().toLocaleLowerCase(this.effectiveLocale);
     const matches: { sheetIndex: number; row: number; col: number }[] = [];
+    let matchCountExact = true;
     if (trimmed && this.fetchState.kind === 'loaded') {
       searchCells: for (let sheetIndex = 0; sheetIndex < this.fetchState.sheets.length; sheetIndex++) {
         const sheet = this.fetchState.sheets[sheetIndex]!;
@@ -484,14 +490,18 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
           const row = sheet.rows[r]!;
           for (let c = 0; c < row.length; c++) {
             if (cell(row[c], this.effectiveLocale).toLocaleLowerCase(this.effectiveLocale).includes(trimmed)) {
+              if (matches.length === MAX_SEARCH_MATCHES) {
+                matchCountExact = false;
+                break searchCells;
+              }
               matches.push({ sheetIndex, row: r + 1, col: c });
-              if (matches.length >= MAX_SEARCH_MATCHES) break searchCells;
             }
           }
         }
       }
     }
     this.searchMatches = matches;
+    this.searchMatchCountExact = matchCountExact;
     this.searchActiveIndex = matches.length > 0 ? 0 : -1;
     this.emitSearchChange();
     if (this.searchActiveIndex >= 0) {
@@ -528,12 +538,13 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   clearSearch(): void {
     this.searchQuery = '';
     this.searchMatches = [];
+    this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
-    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
   }
 
   private emitSearchChange(): void {
-    this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.searchActiveIndex });
+    this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, matchCountExact: this.searchMatchCountExact, activeIndex: this.searchActiveIndex });
   }
 
   private stopInternalEvent = (event: Event): void => { event.stopPropagation(); };

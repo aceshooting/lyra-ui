@@ -1,6 +1,7 @@
 import { prefersReducedMotion } from '../internal/motion.js';
 
-/** A component animation expressed in the native Web Animations API vocabulary. */
+/** A component animation expressed in the native Web Animations API vocabulary. Each logical
+ * direction is snapshotted at registration/resolution time and bounded to 512 keyframes. */
 export interface LyraElementAnimation {
   readonly keyframes: readonly Readonly<Keyframe>[];
   /** Logical-direction alternative. Falls back to `keyframes` when omitted. */
@@ -16,13 +17,13 @@ export interface LyraResolvedElementAnimation {
 
 export interface LyraGetAnimationOptions {
   /** Text direction used to select `rtlKeyframes`. Inferred from the element when omitted. */
-  dir?: 'ltr' | 'rtl';
+  readonly dir?: 'ltr' | 'rtl';
   /** Component-owned animation used when neither registry level has an entry. Registry timing
    * overrides are merged over this fallback's options so token-derived duration/easing survive a
    * keyframes-only customization. */
-  fallback?: LyraElementAnimation | null;
+  readonly fallback?: LyraElementAnimation | null;
   /** Defaults to true. Set false only when the caller owns a stronger reduced-motion policy. */
-  respectReducedMotion?: boolean;
+  readonly respectReducedMotion?: boolean;
 }
 
 /** Idempotently removes the exact registration made by one setter call. */
@@ -30,6 +31,10 @@ export type LyraAnimationCleanup = () => void;
 
 const INVALID_ANIMATION = Symbol('invalid-animation');
 type StoredAnimation = LyraElementAnimation | null | typeof INVALID_ANIMATION;
+
+const MAX_ANIMATION_KEYFRAMES = 512;
+const MAX_KEYFRAME_PROPERTIES = 256;
+const MAX_ANIMATION_OPTION_PROPERTIES = 64;
 
 interface RegistryEntry {
   animation: StoredAnimation;
@@ -87,7 +92,9 @@ function register(
 /**
  * Sets a page-wide animation override. Pass `null` to disable that named animation while keeping
  * component show/hide lifecycle promises intact. The returned cleanup restores the preceding
- * active registration and is safe to call more than once.
+ * active registration and is safe to call more than once. Malformed, oversized, or getter-
+ * throwing JavaScript records register inertly so they cannot throw later from a component's
+ * render path.
  */
 export function setDefaultAnimation(
   animationName: string,
@@ -100,6 +107,8 @@ export function setDefaultAnimation(
  * Sets one element's animation override. Per-element state is stored in a `WeakMap`, so the
  * registry cannot retain a detached element. The override survives a reconnect of the same
  * element instance until the returned cleanup is called; `null` explicitly disables the name.
+ * Malformed, oversized, or getter-throwing JavaScript records register inertly and resolve to a
+ * valid caller fallback (or the disabled result) instead of escaping into component rendering.
  */
 export function setAnimation(
   element: Element,
@@ -115,29 +124,83 @@ export function setAnimation(
   return register(registry, animationName, animation);
 }
 
-function cloneKeyframes(keyframes: readonly Readonly<Keyframe>[]): Readonly<Keyframe>[] {
-  return keyframes.map((keyframe) => ({ ...keyframe }));
+function snapshotRecord<Value extends object>(
+  value: unknown,
+  maximumProperties: number,
+): Readonly<Value> | typeof INVALID_ANIMATION {
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null) {
+    return INVALID_ANIMATION;
+  }
+  try {
+    if (Array.isArray(value)) return INVALID_ANIMATION;
+    const snapshot: Record<string, unknown> = {};
+    let propertyCount = 0;
+    for (const key in value) {
+      propertyCount += 1;
+      if (propertyCount > maximumProperties) return INVALID_ANIMATION;
+      if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+      Object.defineProperty(snapshot, key, {
+        configurable: false,
+        enumerable: true,
+        value: (value as Record<string, unknown>)[key],
+        writable: false,
+      });
+    }
+    return Object.freeze(snapshot) as Readonly<Value>;
+  } catch {
+    return INVALID_ANIMATION;
+  }
 }
 
-function isElementAnimation(animation: unknown): animation is LyraElementAnimation {
-  return typeof animation === 'object' &&
-    animation !== null &&
-    Array.isArray((animation as Partial<LyraElementAnimation>).keyframes);
+function snapshotKeyframes(
+  value: unknown,
+): readonly Readonly<Keyframe>[] | typeof INVALID_ANIMATION {
+  try {
+    if (!Array.isArray(value)) return INVALID_ANIMATION;
+    const length = value.length;
+    if (length > MAX_ANIMATION_KEYFRAMES) return INVALID_ANIMATION;
+    const snapshot: Readonly<Keyframe>[] = [];
+    for (let index = 0; index < length; index += 1) {
+      const keyframe = snapshotRecord<Keyframe>(value[index], MAX_KEYFRAME_PROPERTIES);
+      if (keyframe === INVALID_ANIMATION) return INVALID_ANIMATION;
+      snapshot.push(keyframe);
+    }
+    return Object.freeze(snapshot);
+  } catch {
+    return INVALID_ANIMATION;
+  }
 }
 
-function snapshotAnimation(animation: LyraElementAnimation | null): StoredAnimation {
+function snapshotOptions(
+  value: unknown,
+): Readonly<KeyframeAnimationOptions> | typeof INVALID_ANIMATION {
+  return snapshotRecord<KeyframeAnimationOptions>(value, MAX_ANIMATION_OPTION_PROPERTIES);
+}
+
+function snapshotAnimation(animation: unknown): StoredAnimation {
   if (animation === null) return null;
-  if (!isElementAnimation(animation)) return INVALID_ANIMATION;
-  const keyframes = Object.freeze(
-    animation.keyframes.map((keyframe) => Object.freeze({ ...keyframe })),
-  );
-  const rtlKeyframes = Array.isArray(animation.rtlKeyframes)
-    ? Object.freeze(animation.rtlKeyframes.map((keyframe) => Object.freeze({ ...keyframe })))
-    : undefined;
-  const options = animation.options === undefined
-    ? undefined
-    : Object.freeze({ ...animation.options });
-  return Object.freeze({ keyframes, rtlKeyframes, options });
+  if (typeof animation !== 'object' || animation === null) return INVALID_ANIMATION;
+  try {
+    const candidate = animation as Partial<LyraElementAnimation>;
+    const keyframes = snapshotKeyframes(candidate.keyframes);
+    if (keyframes === INVALID_ANIMATION) return INVALID_ANIMATION;
+
+    const rtlCandidate = candidate.rtlKeyframes;
+    const rtlKeyframes = rtlCandidate === undefined
+      ? undefined
+      : snapshotKeyframes(rtlCandidate);
+    if (rtlKeyframes === INVALID_ANIMATION) return INVALID_ANIMATION;
+
+    const optionsCandidate = candidate.options;
+    const options = optionsCandidate === undefined
+      ? undefined
+      : snapshotOptions(optionsCandidate);
+    if (options === INVALID_ANIMATION) return INVALID_ANIMATION;
+
+    return Object.freeze({ keyframes, rtlKeyframes, options });
+  } catch {
+    return INVALID_ANIMATION;
+  }
 }
 
 function inferredDirection(element: Element): 'ltr' | 'rtl' {
@@ -150,9 +213,17 @@ function resolvedAnimation(
   keyframes: readonly Readonly<Keyframe>[],
   options: Readonly<KeyframeAnimationOptions>,
 ): LyraResolvedElementAnimation {
+  const keyframeSnapshot = snapshotKeyframes(keyframes);
+  const optionsSnapshot = snapshotOptions(options);
+  if (keyframeSnapshot === INVALID_ANIMATION || optionsSnapshot === INVALID_ANIMATION) {
+    return Object.freeze({
+      keyframes: Object.freeze([]),
+      options: Object.freeze({ duration: 0 }),
+    });
+  }
   return Object.freeze({
-    keyframes: Object.freeze(keyframes.map((keyframe) => Object.freeze({ ...keyframe }))),
-    options: Object.freeze({ ...options }),
+    keyframes: keyframeSnapshot,
+    options: optionsSnapshot,
   });
 }
 
@@ -182,27 +253,53 @@ export function getAnimation(
   const configured = entry?.animation;
   if (entry && configured === null) return disabledAnimation();
 
-  const fallback = isElementAnimation(options.fallback) ? options.fallback : undefined;
-  if (!entry && options.fallback === null) return disabledAnimation();
+  let fallbackCandidate: unknown;
+  try {
+    fallbackCandidate = options?.fallback;
+  } catch {
+    fallbackCandidate = undefined;
+  }
+  const fallbackSnapshot = snapshotAnimation(fallbackCandidate);
+  const fallback = fallbackSnapshot !== INVALID_ANIMATION && fallbackSnapshot !== null
+    ? fallbackSnapshot
+    : undefined;
+  if (!entry && fallbackSnapshot === null) return disabledAnimation();
   // JavaScript consumers can bypass the public TypeScript shape, and a previously valid object
   // can be mutated after registration. Treat a structurally malformed override as unavailable so
   // component callers still reach their sanitized fallback instead of throwing during render.
-  const selected = isElementAnimation(configured) ? configured : fallback;
+  const selected = configured !== INVALID_ANIMATION && configured !== undefined
+    ? configured
+    : fallback;
   if (!selected) return disabledAnimation();
 
-  const direction = options.dir ?? inferredDirection(element);
-  const keyframes = cloneKeyframes(
-    direction === 'rtl' && Array.isArray(selected.rtlKeyframes) ? selected.rtlKeyframes : selected.keyframes,
-  );
+  let requestedDirection: unknown;
+  try {
+    requestedDirection = options?.dir;
+  } catch {
+    requestedDirection = undefined;
+  }
+  const direction = requestedDirection === 'ltr' || requestedDirection === 'rtl'
+    ? requestedDirection
+    : inferredDirection(element);
+  const keyframes = direction === 'rtl' && selected.rtlKeyframes
+    ? selected.rtlKeyframes
+    : selected.keyframes;
   const resolvedOptions: KeyframeAnimationOptions = {
     ...(entry && fallback ? fallback.options : undefined),
     ...selected.options,
   };
 
+  let respectReducedMotion: unknown;
+  try {
+    respectReducedMotion = options?.respectReducedMotion;
+  } catch {
+    respectReducedMotion = undefined;
+  }
+
   // The element's OWN browsing context is what is queried: an element adopted into an iframe can
   // sit in a document whose media state differs from the top-level window's.
   if (
-    options.respectReducedMotion !== false &&
+    respectReducedMotion !== false &&
     prefersReducedMotion(element.ownerDocument?.defaultView)
   ) {
     resolvedOptions.delay = 0;

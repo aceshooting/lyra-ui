@@ -15,15 +15,17 @@
  */
 export type MenuFocusTarget = 'first' | 'last' | 'none';
 
-/** Private activation bridge between a menu item and the menu that currently owns it. Keeping
- * this behind a symbol avoids publishing a second selection event solely for child-to-parent
- * plumbing. */
+/** @internal Private activation bridge between a menu item and the menu that currently owns it.
+ * Keeping this behind a symbol avoids publishing a second selection event solely for
+ * child-to-parent plumbing. */
 export const menuItemOwner = Symbol('lyra-menu-item-owner');
 
+/** @internal */
 export interface MenuItemOwner {
   activate(item: HTMLElement): void;
 }
 
+/** @internal */
 export interface MenuItemOwned {
   [menuItemOwner](
     owner: MenuItemOwner | null,
@@ -31,10 +33,12 @@ export interface MenuItemOwned {
   ): void;
 }
 
-/** Private submenu presentation bridge. Root menus stay the exact inline semantic controller
- * mapped from Shoelace; only a menu item can attach this internal floating presentation. */
+/** @internal Private submenu presentation bridge. Root menus stay the exact inline semantic
+ * controller mapped from Shoelace; only a menu item can attach this internal floating
+ * presentation. */
 export const submenuPanelController = Symbol('lyra-submenu-panel-controller');
 
+/** @internal */
 export interface SubmenuPanelController {
   readonly open: boolean;
   attach(anchor: HTMLElement, onStateChange: (open: boolean) => void): void;
@@ -43,7 +47,7 @@ export interface SubmenuPanelController {
   hide(options?: { focusTrigger?: boolean }): Promise<void>;
 }
 
-/**
+/** @internal
  * The slice of `<lr-menu>`'s API an `<lr-menu-item>` drives when a menu is assigned to its
  * `submenu` slot. Declared structurally rather than imported for the cycle reason above; the
  * assigned element is matched by tag name, so an element that has not upgraded yet is simply not
@@ -54,8 +58,9 @@ export interface SubmenuPanel extends HTMLElement {
   updateComplete?: Promise<unknown>;
 }
 
-/** The small owner surface used when `<lr-menu>` supplies its interaction engine to another
- * trigger/popup component. Kept structural so the menu layer does not import an overlay class. */
+/** @internal The small owner surface used when `<lr-menu>` supplies its interaction engine to
+ * another trigger/popup component. Kept structural so the menu layer does not import an overlay
+ * class. */
 export interface ContainedMenuOwner {
   open: boolean;
   show(): void | Promise<void>;

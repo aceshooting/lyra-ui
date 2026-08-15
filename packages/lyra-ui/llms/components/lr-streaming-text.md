@@ -27,15 +27,14 @@ not a delta — this component does no accumulation or ordering of its own.
   reflects so a host can also target `lr-streaming-text[streaming]` in CSS.
 - `coalesceMs: number = 50` (attribute `coalesce-ms`) — trailing-edge coalesce window, in ms, for
   `content` updates (see prose below).
-- `markdown?: boolean` (attribute `markdown`, tri-state via a custom `ComplexAttributeConverter`) —
-  `undefined` (attribute absent, the default) auto-detects via `looksLikeMarkdown`; the attribute
-  present with no value or `="true"` forces `true`; `markdown="false"` forces `false`. An explicit
-  `true`/`false` always wins over the heuristic.
+- `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
+  uses `looksLikeMarkdown`; `plain` and `markdown` force their named paths. Invalid values render as
+  `auto` without installing a stale memoized decision.
 
 **Exported helper:** `looksLikeMarkdown(text: string): boolean` — runs a fixed, ordered list of
 lightweight regexes (ATX heading, fenced code block, `**bold**`, `_italic_`, inline code, bullet
 list item, numbered list item, `[text](url)` link, blockquote) against the whole string and returns
-`true` on the first match. Used internally whenever `markdown` is left unset; exported standalone
+`true` on the first match. Used internally in `contentMode="auto"`; exported standalone
 so the heuristic is directly testable without going through the component's render cycle. None of
 the patterns need to be airtight — a false positive just routes ordinary prose harmlessly through
 `<lr-markdown>`; a false negative just shows literal `**`/backticks/etc. as plain text until more
@@ -47,18 +46,16 @@ of the stream arrives.
 
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`)
 
-**Themeable custom properties:** `--lr-streaming-text-cursor-width` (default
-`var(--lr-size-0-125rem)`, i.e. `0.125rem` — the cursor bar's inline size),
-`--lr-streaming-text-cursor-height` (default `var(--lr-size-1em)`, i.e.
-`1em`, so the bar tracks the surrounding text size) — both
-component-specific, since no shared "inline cursor bar" token exists, the same pattern
-`<lr-typing-indicator>`'s own `--lr-typing-cursor-width`/`-height` use, plus shared
+**Themeable custom properties:** `--lr-inline-cursor-width` (default
+`var(--lr-size-0-125rem)`, the shared inline cursor width), `--lr-inline-cursor-height` (default
+`var(--lr-size-1em)`, so the bar tracks surrounding text). These are shared with
+`<lr-typing-indicator>`, inherit from ancestors, and use local fallbacks only at the point of use; plus shared
 `--lr-space-xs` (cursor's `margin-inline-start`) and `--lr-transition-ambient` (blink animation
 cycle length).
 
 **Optional peer deps:** the registration entry imports and auto-registers `<lr-markdown>` (the host
 does not register it separately), so its optional-peer module graph includes `marked`, `dompurify`,
-`shiki`, and `katex`. The runtime matrix is narrower: `markdown="false"` and auto-detected plain text
+`shiki`, and `katex`. The runtime matrix is narrower: `content-mode="plain"` and auto-detected plain text
 stay on the peer-free plain-text path; Markdown rendering lazy-loads `marked` plus the default
 `dompurify` sanitizer and falls back to readable plain text if either is unavailable. Fenced code
 can additionally use `shiki`, whose absence only leaves code unhighlighted. The composed Markdown
@@ -104,8 +101,8 @@ happens to end with.
   every later assignment is throttled normally except when it lands in the same update as a
   `streaming` transition (either `true → false` or `false → true`), which also forces an immediate
   flush.
-- `markdown="false"` (any string value other than exactly `"false"` is treated as `true` by the
-  converter) forces plain-text mode even if the text obviously contains Markdown syntax.
+- `content-mode="plain"` forces plain text even if the text obviously contains Markdown syntax;
+  `content-mode="markdown"` forces the Markdown path.
 - Purely presentational: no events, and it does not announce anything to assistive tech itself — a
   host that needs streamed text announced needs `<lr-live-region>` for that (e.g. composed inside
   `<lr-chat-message>`).

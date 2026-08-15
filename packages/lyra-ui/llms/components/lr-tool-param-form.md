@@ -18,32 +18,44 @@
 Renders one form control per top-level property of a JSON Schema object, for ad hoc tool invocation or
 approval-editing UIs (e.g. "the agent wants to call `create_event(title, attendees, allDay)` — let the
 user tweak the arguments before running it"). First-party invention (no Web Awesome equivalent).
-The `base` part is an accessible `role="group"`: a host `aria-label` or native external `<label for>`
-names the whole parameter form without replacing the individual generated fields' names.
+With no host name, the `base` part is the accessible `role="group"`; a native external `<label for>`
+can name the form-associated host. A non-empty host `aria-label` remains on the host as the sole
+aggregate semantic owner, so `base` omits its duplicate role/name. The individual generated fields
+keep their own purpose-specific names in every case.
 
-**Supported schema subset:** a *flat* object whose properties use one primitive `type`
+**Supported schema subset:** a _flat_ object whose properties use one primitive `type`
 (`'string'`, `'number'`, `'integer'`, or `'boolean'`), `required` property presence, string `enum`,
 primitive `const`, and the `title`/`description`/`default` annotations. Nested objects, arrays, type
 unions, `oneOf`/`anyOf`/`allOf`, `$ref`, string/numeric constraints, and schema-valued
 `additionalProperties` are not interpreted. An unsupported property type renders a visible fallback
-and makes the form invalid instead of being silently accepted.
+and makes the form invalid instead of being silently accepted. Schemas are bounded to 100 fields
+and 500 enum choices per field; exceeding either ceiling leaves only the bounded prefix mounted and
+fails the form closed with a localized form-wide error. A null, array, or other malformed property
+definition is a schema-shape error, never misreported as a value-serialization failure.
 
 **Exported types:**
+
 - `ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean'` — the four leaf property
   types this renderer understands
 - `ToolParamFormPrimitive = string | number | boolean` — values accepted by the supported `const`
 - `ToolParamFormProperty { type: ToolParamFormPropertyType; enum?: string[]; description?: string;
-  title?: string; default?: unknown; const?: ToolParamFormPrimitive }` — one `schema.properties`
+title?: string; default?: unknown; const?: ToolParamFormPrimitive; autocomplete?: string;
+spellcheck?: boolean; autocapitalize?: string; autoCorrect?: string; inputMode?: string;
+enterKeyHint?: string }` — one `schema.properties`
   entry. `enum` is only meaningful when `type` is `'string'` (rendered as a `<lr-select>`); `const`
   enforces one exact primitive value; `title` is the display label; `description` is helper text;
-  `default` pre-fills a field whenever `value` doesn't already have that key.
-- `ToolParamFormSchema { type: 'object'; properties: Record<string, ToolParamFormProperty>; required?:
-  string[] }` — the (intentionally flat) schema shape this component can render.
+  `default` pre-fills a field whenever `value` doesn't already have that key. For a free-form
+  string field, `autocomplete`, `spellcheck`, `autocapitalize`, `autoCorrect`, `inputMode`, and
+  `enterKeyHint` forward the corresponding native editing hints to the rendered text input;
+  `spellcheck` defaults to `true`, and the other hints are omitted unless supplied.
+- `FlatToolParamSchema { type: 'object'; properties: Record<string, ToolParamFormProperty>; required?:
+string[] }` — the (intentionally flat) schema shape this component can render.
 
 **Properties:**
-- `schema: ToolParamFormSchema = { type: 'object', properties: {} }` (attribute: false)
+
+- `schema: FlatToolParamSchema = { type: 'object', properties: {} }` (attribute: false)
 - `value: Record<string, unknown> = {}` (attribute: false) — exactly what the consumer last set it to.
-  A field with no entry in `value` but a schema `default` *displays* (and is *emitted*, via
+  A field with no entry in `value` but a schema `default` _displays_ (and is _emitted_, via
   `lr-input`) as that default, but the `value` property itself is left alone until the user actually
   edits that field. JSON Schema ordinarily treats `default` as an annotation; this renderer
   deliberately materializes it before validation/submission, so a valid default can satisfy
@@ -57,17 +69,20 @@ and makes the form invalid instead of being silently accepted.
   `willValidate: boolean`, and `effectiveDisabled: boolean` expose the native FACE state
 
 **Getters:**
+
 - `effectiveValue: Record<string, unknown>` — `value` with every property missing from it filled in
   from `schema`'s own `default`; this is what actually renders and what `lr-input`'s detail carries.
   A key the user has explicitly cleared (a real own property set to `undefined`) stays cleared rather
   than snapping back to its default — only a key genuinely absent from `value` falls back.
-- `errors: Record<string, string>` — the current per-field validation errors (`{ [propertyKey]:
-  message }`) for required presence, primitive type, finite number/integer, enum, const, and
-  unsupported type; independent of which fields have been visited.
+- `errors: Readonly<Record<string, string>>` — a frozen effective validation-error snapshot.
+  Intrinsic errors use their schema property key; a schema-wide/serialization error or consumer
+  custom-validity message uses `base`, the whole-control part. It is independent of which fields
+  have been visited.
 - `formError: string` — a schema-wide/JSON-serialization error that has no honest field key; empty
   when the current effective value is safe to submit.
 
 **Methods:**
+
 - `getForm(): HTMLFormElement | null` — returns the browser-resolved owning form.
 - `checkValidity(): boolean` — synchronously re-snapshots even an in-place-mutated value/schema,
   updates `ElementInternals`, and returns validity without revealing inline errors.
@@ -85,23 +100,25 @@ and makes the form invalid instead of being silently accepted.
   with its own message restored, and clearing never forces a form with an unmet `required` property
   valid. The consumer's error survives every intrinsic recomputation in between (each field edit
   re-runs the validity sync) and a `form.reset()`, matching a native control. The message is
-  whole-control state, so it is deliberately absent from `errors`, which is keyed by schema
-  property; it is caller-supplied content and is used verbatim, never localized.
+  whole-control state exposed as `errors.base`; it is caller-supplied content and is used verbatim,
+  never localized.
 - `click(): void` — forwards a host click to the first generated field's control, so the form
   behaves like a single control under both a `<label>`-driven and a programmatic click; a no-op
   while `disabled`.
 
 **Events:** `lr-input` (`detail: { value: Record<string, unknown> }` — the full current value
 object, every property with defaults resolved, not just the field that changed), `lr-validity-change`
-(`detail: { valid: boolean; errors: Record<string, string> }` — fired whenever overall validity or
-the field-error set changes, including once up front at connect time; serialization-only failures
-set `valid: false` while `formError`, rather than a fabricated field key, carries the root message),
-and no-detail `focus`/`blur` events for generated native text/number inputs. The composed
-`<lr-select>`/`<lr-checkbox>` controls already bubble their own focus/blur bridges through the host.
+(frozen `detail: { valid: boolean; errors: Readonly<Record<string, string>> }` — deduplicated on
+effective native validity, including consumer custom errors and own/fieldset validation barring;
+fired once up front at connect time and after every effective change; serialization-only failures
+publish their root message as `errors.base` and `formError`), and no-detail `focus`/`blur` events for
+generated native text/number inputs. The composed
+`<lr-select>` controls already bubble their own focus/blur bridges through the host.
 Their implementation events (`input`, `change`, `lr-change`, select show/hide, and option mutation)
 are contained at the form boundary; consumers receive the single form-level `lr-input` contract.
-`lr-invalid` (no detail) is the bubbling/composed alias emitted when the complete parameter form
-fails a native validity check.
+`lr-invalid` (no detail) is the bubbling/composed, cancelable alias emitted when the complete
+parameter form fails a native validity check; preventing it also prevents the native `invalid`
+event's default validation UI.
 
 **Slots:** none.
 
@@ -114,15 +131,16 @@ too (see `llms/shared.md` → "The required-field marker"). Requiredness here is
 the host carries no `required` attribute, so the marker keys off a `data-required` attribute the
 component sets on each `[part="field"]` wrapper. That attribute is component-owned bookkeeping —
 never write it, and note that `::part(field)[data-required]` is invalid CSS (an attribute selector
-cannot follow `::part()`), so it is not a selector hook you can use from outside. An enum field
-renders as an `<lr-select>` that receives the same `required`, and marks itself through its own
-label.
+cannot follow `::part()`), so it is not a selector hook you can use from outside. Enum and boolean
+fields render as `<lr-select>` controls with their own labels. The outer schema validator owns
+presence, so the nested control stays `.required=false` while its host receives
+`aria-required="true"` for a required property.
 
 **CSS parts:** `base` (the aggregate `role="group"`), `field`, `label`, `control`, `description`,
 `error`, `unsupported`, `empty`.
 `control` is the native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field — one
-shared part name across both the text and number inputs, and deliberately *not* present on the
-`'boolean'` (`<lr-checkbox>`), enum (`<lr-select>`), or unsupported-type fallback branches, which are
+shared part name across both the text and number inputs, and deliberately _not_ present on the
+`'boolean'`/enum (`<lr-select>`), or unsupported-type fallback branches, which are
 composed components with their own part surfaces rather than raw natives. It is purely an additive
 external theming hook: the internal `.control` class the stylesheet targets is unchanged.
 
@@ -134,8 +152,8 @@ form: `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-sur
 `--lr-color-danger`, `--lr-color-text-quiet`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-opacity-disabled`.
 
-**Optional peer deps:** none — internally renders `<lr-select>`, `<lr-option>`, and
-`<lr-checkbox>`, all bundled dependencies of this package imported directly, not optional peers.
+**Optional peer deps:** none — internally renders `<lr-select>` and `<lr-option>`, both bundled
+dependencies of this package imported directly, not optional peers.
 
 ```html
 <lr-tool-param-form
@@ -160,17 +178,13 @@ This component owns no Submit/Cancel/Approve chrome — a consumer composes it i
 (insertion order). A `'string'` property with a non-empty `enum` renders as a `<lr-select>` of
 `<lr-option>`s; a plain `'string'` renders a text `<input>`; `'number'`/`'integer'` render a numeric
 `<input type="number">` (`step="1"` for integer, `step="any"` for number); `'boolean'` renders a
-`<lr-checkbox>` with the field's label projected into its default slot — real slotted content, since
-that's `<lr-checkbox>`'s documented way to give itself an accessible name. Enum descriptions/errors
-flow through `<lr-select>`'s `.hint`/`.errorText` control chrome. Boolean descriptions/errors stay
-adjacent `[part="description"]`/`[part="error"]` nodes whose ids are passed through the checkbox
-host's `aria-describedby`; `<lr-checkbox>` resolves those ids onto its internal `role="checkbox"`
-through `ariaDescribedByElements`. Supporting text therefore keeps description semantics instead of
-being folded into an `aria-label`. The outer component owns JSON Schema validity: `required` means
-an own property is present, so `''`, `0`, and `false` are valid present values. A plain required
-boolean consequently does not set `<lr-checkbox>.required`'s must-check semantics. Use
-`{ type: 'boolean', const: true }` together with `required` for a must-confirm checkbox; that exact
-combination does set the nested checkbox's matching native/ARIA required state.
+tri-state `<lr-select>` with localized Unset/True/False choices. This preserves the semantic
+difference between an absent optional property and an explicit `false`. Enum and boolean
+descriptions/errors flow through `<lr-select>`'s `.hint`/`.errorText` control chrome. The outer
+component owns JSON Schema validity: `required` means an own property is present, so `''`, `0`, and
+`false` are valid present values. Use `{ type: 'boolean', const: true }` together with `required`
+for a must-confirm field; the select still does not impose its own nonempty semantics, while the
+outer validator enforces both presence and the exact `true` value.
 
 Visible field and root validation errors remain ordinary descriptive text. When user interaction or
 `reportValidity()` makes one or more new errors visible, their distinct messages are coalesced into
@@ -191,9 +205,10 @@ The same safe serialized object is used as session-history/autofill state. Resto
 a JSON object, falls back to `{}` for malformed/non-object state, and does not emit `lr-input`.
 
 **Known gotchas:**
+
 - a schema property whose `type` isn't `'string'`/`'number'`/`'integer'`/`'boolean'` renders an inline
-  "Unsupported field type" message (a plain `.unsupported`-classed element, not one of the documented
-  CSS parts) and fails closed with custom validity instead of throwing or being silently dropped.
+  "Unsupported field type" message exposed as `[part="unsupported"]` and fails closed with custom
+  validity instead of throwing or being silently dropped.
 - inline per-field errors only render once a field has been visited (`focusout`) at least once, or
   after an explicit `reportValidity()` call — `checkValidity()` alone never reveals them, matching
   every other form control in this library (`<lr-select>`/`<lr-combobox>`/`<lr-model-select>`

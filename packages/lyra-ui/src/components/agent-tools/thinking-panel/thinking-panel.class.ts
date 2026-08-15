@@ -8,7 +8,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { durationMessageValue } from '../../../internal/duration.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styles } from './thinking-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -19,6 +19,11 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilli
 /** Whether the panel is streaming a run live or replaying a finished one -- the library's shared
  *  transcript-mode vocabulary, identical to `<lr-activity-feed>`'s `ActivityFeedMode`. */
 export type ThinkingPanelMode = LyraTranscriptMode;
+
+const THINKING_PANEL_MODE = literalSetConverter<ThinkingPanelMode>(
+  ['live', 'post-hoc'],
+  'live',
+);
 
 /** Visual chrome for `<lr-thinking-panel>`'s root — the library's shared container-frame vocabulary. */
 export type ThinkingPanelAppearance = LyraFrame;
@@ -157,9 +162,9 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Header text. Localized (`thinkingPanelLabel`) when left at its default
-   *  `'Thinking'`; any other value is shown as-is. */
-  @property() label = 'Thinking';
+  /** Optional header-text override. Omission localizes `thinkingPanelLabel`; any supplied string,
+   *  including `'Thinking'` or `''`, is rendered verbatim. */
+  @property() label?: string;
 
   /** Tighter header/body padding and header gap for dense transcript contexts. Defaults to
    *  `false`, preserving the regular-density treatment. This changes density only; the outer
@@ -180,7 +185,19 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   /** `'live'` while reasoning is actively streaming in right now; `'post-hoc'`
    *  once it's complete and being reviewed after the fact. See the class doc
    *  for the concrete behavior differences this drives. */
-  @property({ reflect: true }) mode: ThinkingPanelMode = 'live';
+  private _mode: ThinkingPanelMode = 'live';
+
+  @property({ reflect: true, converter: THINKING_PANEL_MODE })
+  get mode(): ThinkingPanelMode {
+    return this._mode;
+  }
+  set mode(next: ThinkingPanelMode) {
+    const normalized = THINKING_PANEL_MODE.normalizeReflected(this, 'mode', next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate('mode', old);
+  }
 
   /** Whether live, expanded content follows the transcript tail. User scrolling updates this
    *  property and emits `lr-follow-change`; direct assignments are controlled input and do not
@@ -377,11 +394,9 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   // part of a larger message.
   override render(): TemplateResult {
     const duration = this.durationDisplay;
-    // `this.localize()` checks `.strings` overrides before any fallback, so
-    // passing `this.label` as a fallback wouldn't stop a `.strings.thinkingPanelLabel`
-    // override from winning over an explicitly-customized `label` -- bypass
-    // localize() entirely once `label` has been changed from its built-in default.
-    const label = this.label === 'Thinking' ? this.localize('thinkingPanelLabel') : this.label;
+    // Explicit property overrides outrank catalogs, including when they equal the built-in English
+    // text or are empty; only omission enters localization.
+    const label = this.label == null ? this.localize('thinkingPanelLabel') : this.label;
 
     return html`
       <div part="base">

@@ -83,6 +83,53 @@ describe('registry dispatch', () => {
     expect(lazy!.textContent).to.equal('report.pdf');
   });
 
+  it('drops a lazy renderer result that resolves after detach and resolves afresh on reconnect', async () => {
+    let settleLoader!: (definition: { render: (file: DocumentFile) => unknown }) => void;
+    let renderCalls = 0;
+    registerDocumentRenderer('application/x-deferred', {
+      load: () => new Promise((resolve) => {
+        settleLoader = resolve;
+      }),
+    });
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer
+        open
+        name="deferred.bin"
+        mime-type="application/x-deferred"
+        src="https://example.test/deferred.bin"
+      ></lr-document-viewer>
+    `);
+    await el.updateComplete;
+
+    // Hold the nested dialog's queued unmount-close callback so this assertion proves the viewer
+    // invalidates its own async work synchronously on detach. Native Promise continuations still
+    // run, which lets the deferred renderer try to settle while the host is disconnected.
+    const originalQueueMicrotask = globalThis.queueMicrotask;
+    const pendingMicrotasks: VoidFunction[] = [];
+    globalThis.queueMicrotask = (callback: VoidFunction): void => {
+      pendingMicrotasks.push(callback);
+    };
+    try {
+      el.remove();
+      settleLoader({
+        render: (file) => {
+          renderCalls++;
+          return html`<p id="deferred-output">${file.name}</p>`;
+        },
+      });
+      await aTimeout(20);
+      expect(renderCalls).to.equal(0);
+      document.body.append(el);
+    } finally {
+      globalThis.queueMicrotask = originalQueueMicrotask;
+      for (const callback of pendingMicrotasks) originalQueueMicrotask(callback);
+    }
+    await aTimeout(20);
+    await el.updateComplete;
+    expect(renderCalls).to.equal(1);
+    expect(el.shadowRoot!.querySelector('#deferred-output')?.textContent).to.equal('deferred.bin');
+  });
+
   it('re-dispatches when MIME type changes to another registered format', async () => {
     registerDocumentRenderer('application/pdf', { render: () => html`<p id="pdf-output"></p>` });
     registerDocumentRenderer('application/json', { render: () => html`<p id="json-output"></p>` });
@@ -579,6 +626,13 @@ describe('renderer payload authority', () => {
     const download = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;
     expect(download.href).to.equal('https://example.test/payload.lyra');
     expect(download.download).to.equal('payload.lyra');
+    download.addEventListener('click', (event) => event.preventDefault(), { once: true });
+    const eventPromise = oneEvent(el, 'lr-download');
+    download.click();
+    expect((await eventPromise).detail).to.deep.equal({
+      src: 'https://example.test/payload.lyra',
+      filename: 'payload.lyra',
+    });
   });
 
   it('snapshots an AV payload immediately so later author mutations cannot change an assignment', async () => {
@@ -633,6 +687,36 @@ describe('renderer payload authority', () => {
     expect(el.shadowRoot!.querySelector('[part="body"]')?.textContent).to.include('two');
   });
 
+  it('does not re-dispatch when ignored scalar file properties change under payload authority', async () => {
+    let renders = 0;
+    registerDocumentRenderer('application/x-authoritative', {
+      render: (file) => {
+        renders++;
+        return html`<p>${file.name}</p>`;
+      },
+    });
+    const el = await fixture<LyraDocumentViewer>(html`<lr-document-viewer open></lr-document-viewer>`);
+    el.payload = {
+      kind: 'document',
+      file: {
+        name: 'authoritative.lyra',
+        mimeType: 'application/x-authoritative',
+        src: 'https://example.test/authoritative.lyra',
+      },
+    };
+    await el.updateComplete;
+    expect(renders).to.equal(1);
+
+    el.name = 'ignored-name';
+    el.mimeType = 'application/x-ignored';
+    el.src = 'https://example.test/ignored';
+    el.anchor = { kind: 'page', page: 99 };
+    el.highlights = [{ id: 'ignored', anchor: { kind: 'page', page: 99 } }];
+    el.alt = 'ignored alt';
+    await el.updateComplete;
+    expect(renders).to.equal(1);
+  });
+
   it('keeps legacy scalar-property rendering unchanged while payload is unset', async () => {
     registerDocumentRenderer('application/pdf', {
       render: (file) => html`<p id="legacy-file">${file.name}|${file.mimeType}|${file.src}</p>`,
@@ -649,5 +733,38 @@ describe('renderer payload authority', () => {
     expect(el.payload).to.equal(undefined);
     expect(el.shadowRoot!.querySelector('#legacy-file')?.textContent)
       .to.equal('legacy.pdf|application/pdf|https://example.test/legacy.pdf');
+  });
+
+  it('restores scalar-property authority when the opt-in payload is reset to undefined', async () => {
+    registerDocumentRenderer('application/x-legacy-reset', {
+      render: (file) => html`<p id="reset-file">${file.name}|${file.mimeType}|${file.src}</p>`,
+    });
+    registerDocumentRenderer('application/x-payload-reset', {
+      render: (file) => html`<p id="reset-file">${file.name}|${file.mimeType}|${file.src}</p>`,
+    });
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer
+        open
+        name="legacy-reset.lyra"
+        mime-type="application/x-legacy-reset"
+        src="https://example.test/legacy-reset.lyra"
+      ></lr-document-viewer>
+    `);
+    el.payload = {
+      kind: 'document',
+      file: {
+        name: 'payload-reset.lyra',
+        mimeType: 'application/x-payload-reset',
+        src: 'https://example.test/payload-reset.lyra',
+      },
+    };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('#reset-file')?.textContent)
+      .to.equal('payload-reset.lyra|application/x-payload-reset|https://example.test/payload-reset.lyra');
+
+    el.payload = undefined;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('#reset-file')?.textContent)
+      .to.equal('legacy-reset.lyra|application/x-legacy-reset|https://example.test/legacy-reset.lyra');
   });
 });

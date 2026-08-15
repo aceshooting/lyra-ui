@@ -8,6 +8,7 @@ import {
   scopeFromElement,
   scopeFromItems,
   resolveTextQuote,
+  rangeFromTextQuoteMatch,
   findTextQuoteRanges,
   buildQuoteAnchor,
 } from './text-quote.js';
@@ -24,6 +25,30 @@ describe('bounded text quote indexing', () => {
       expect(scope.segments).to.have.lengthOf(1);
       expect(scope.segments[0]!.rawOffsetRuns).to.be.instanceOf(Uint32Array);
       expect(scope.segments[0]!.rawOffsetRuns).to.have.lengthOf(0);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('clamps hostile limit and work-budget overrides to the hard ceilings', () => {
+    const root = document.createElement('div');
+    root.textContent = 'a'.repeat(TEXT_QUOTE_LIMITS.maxCorpusCodeUnits + 1);
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root, {
+        maxCorpusCodeUnits: Infinity,
+        maxNodes: Number.MAX_SAFE_INTEGER,
+        maxNormalizationWorkCodeUnits: Infinity,
+      });
+      expect(scope.text).to.have.lengthOf(TEXT_QUOTE_LIMITS.maxCorpusCodeUnits);
+      expect(scope.truncated).to.be.true;
+      const index = createTextQuoteIndex(scope);
+      expect(index.createWorkBudget(Infinity).remainingCodeUnits).to.equal(
+        TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits,
+      );
+      expect(index.createWorkBudget(Number.NaN).remainingCodeUnits).to.equal(
+        TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits,
+      );
     } finally {
       root.remove();
     }
@@ -56,6 +81,54 @@ describe('bounded text quote indexing', () => {
     } finally {
       root.remove();
     }
+  });
+
+  it('bounds element-only traversal before a late text node', () => {
+    const root = document.createElement('div');
+    for (let index = 0; index < 50; index++) root.appendChild(document.createElement('span'));
+    root.append('late text');
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root, { maxTraversalNodes: 10 });
+      expect(scope.text).to.equal('');
+      expect(scope.truncated).to.be.true;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('collapses whitespace once across DOM-node and synthetic item boundaries', () => {
+    const root = document.createElement('div');
+    root.append(document.createTextNode('foo '), document.createTextNode(' bar'));
+    const itemRoot = document.createElement('div');
+    const first = document.createElement('span');
+    const second = document.createElement('span');
+    first.textContent = 'foo ';
+    second.textContent = ' bar';
+    itemRoot.append(first, second);
+    document.body.append(root, itemRoot);
+    try {
+      const domScope = scopeFromElement(root);
+      const itemScope = scopeFromItems([
+        { text: 'foo ', element: first },
+        { text: ' bar', element: second },
+      ]);
+      expect(domScope.text).to.equal('foo bar');
+      expect(itemScope.text).to.equal('foo bar');
+      expect(resolveTextQuote(domScope, { quote: 'foo bar' })?.toString()).to.equal('foo  bar');
+      expect(resolveTextQuote(itemScope, { quote: 'foo bar' })?.toString()).to.equal('foo  bar');
+    } finally {
+      root.remove();
+      itemRoot.remove();
+    }
+  });
+
+  it('bounds child inspection for malformed item elements with no direct text child', () => {
+    const element = document.createElement('span');
+    for (let index = 0; index < 100; index++) element.appendChild(document.createElement('i'));
+    const scope = scopeFromItems([{ text: 'hidden', element }], { maxTraversalNodes: 5 });
+    expect(scope.text).to.equal('');
+    expect(scope.truncated).to.be.true;
   });
 
   it('packs matches and distinguishes an exact cap boundary from a lower bound', () => {
@@ -128,7 +201,7 @@ describe('normalizeQuoteText', () => {
   });
 
   it('NFC-normalizes decomposed accented characters', () => {
-    const decomposed = 'café'; // "café" as e + combining acute accent
+    const decomposed = 'cafe\u0301';
     expect(normalizeQuoteText(decomposed)).to.equal('café');
   });
 });
@@ -235,17 +308,29 @@ describe('scopeFromElement + resolveTextQuote', () => {
     }
   });
 
-  it('keeps original codepoints for a text node where NFC composition changes length', () => {
+  it('NFC-normalizes a text node where composition changes length and maps back to raw', () => {
     const decomposed = 'café'; // "e" + combining acute accent -- 5 UTF-16 units
     const root = makeContent(`<p>${decomposed} society</p>`);
     try {
       const scope = scopeFromElement(root);
-      // NFC-composing "café" changes its length (4 vs 5), so normalizeSegment keeps the raw
-      // decomposed codepoints for this node rather than the shorter precomposed form.
-      expect(scope.text).to.equal(`${decomposed} society`);
-      expect(scope.text.normalize('NFC')).to.equal('café society');
+      expect(scope.text).to.equal('café society');
+      expect(resolveTextQuote(scope, { quote: 'café' })?.toString()).to.equal(decomposed);
       const range = resolveTextQuote(scope, { quote: 'society' });
       expect(range).to.exist;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('maps same-length canonical reordering back to the complete raw grapheme', () => {
+    const raw = 'q\u0315\u0300x';
+    const root = makeContent(`<p>${raw}</p>`);
+    try {
+      const scope = scopeFromElement(root);
+      expect(scope.text).to.equal('q\u0300\u0315x');
+      const range = resolveTextQuote(scope, { quote: 'q\u0300' });
+      expect(range !== null).to.be.true;
+      expect(range!.toString()).to.equal('q\u0315\u0300');
     } finally {
       root.remove();
     }
@@ -416,7 +501,7 @@ describe('locale-aware search ranges', () => {
 });
 
 describe('resolveTextQuote defensive edge cases against hand-built scopes', () => {
-  it('resolves an end offset landing exactly at a segment boundary gap without stepping into the next segment', () => {
+  it('fails closed when a hand-built match ends in an unmapped segment gap', () => {
     // A hand-built scope whose `text` has an unmapped character ('X' at index 2) between two
     // segments -- exactly the shape produced by `scopeFromItems`' synthetic joining space, which no
     // legitimate (trimmed) search needle can ever start or end on. Constructing it directly exercises
@@ -432,12 +517,7 @@ describe('resolveTextQuote defensive edge cases against hand-built scopes', () =
       truncated: false,
     };
     const range = resolveTextQuote(scope, { quote: 'abX' });
-    expect(range).to.exist;
-    // Resolved to one past segment 0's last mapped character (offset 2, i.e. the end of "ab") rather
-    // than incorrectly landing inside segment 1.
-    expect(range!.toString()).to.equal('ab');
-    expect(range!.endOffset).to.equal(2);
-    expect(range!.endContainer === node1).to.be.true;
+    expect(range).to.be.null;
   });
 
   it('returns null when the scope text matches but has no segments to map the match to', () => {
@@ -445,7 +525,28 @@ describe('resolveTextQuote defensive edge cases against hand-built scopes', () =
     expect(resolveTextQuote(scope, { quote: 'hello' })).to.be.null;
   });
 
-  it('resolves an offset landing on a hand-built zero-length segment', () => {
+  it('returns null instead of throwing for stale nodes, malformed offsets, and bad item mappings', () => {
+    const root = document.createElement('div');
+    root.textContent = 'needle';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const match = findTextQuoteMatches(scope, 'needle').at(0)!;
+      root.firstChild!.textContent = 'a';
+      expect(rangeFromTextQuoteMatch(scope, match)).to.be.null;
+      expect(rangeFromTextQuoteMatch(scope, { start: 99, end: 100 })).to.be.null;
+
+      const span = document.createElement('span');
+      span.textContent = 'x';
+      const badItems = scopeFromItems([{ text: 'much longer', element: span }]);
+      const badMatch = findTextQuoteMatches(badItems, 'longer').at(0)!;
+      expect(rangeFromTextQuoteMatch(badItems, badMatch)).to.be.null;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('fails closed on a hand-built zero-length segment', () => {
     // Generated scopes skip empty segments. This hand-built one exercises locate()'s defensive
     // no-last-character fallback when a caller supplies inconsistent segment metadata.
     const node = document.createTextNode('X');
@@ -455,9 +556,80 @@ describe('resolveTextQuote defensive edge cases against hand-built scopes', () =
       truncated: false,
     };
     const range = resolveTextQuote(scope, { quote: 'Y' });
-    expect(range).to.exist;
-    expect(range!.startContainer === node).to.be.true;
-    expect(range!.collapsed).to.be.true;
+    expect(range).to.be.null;
+  });
+});
+
+describe('buildQuoteAnchor deep boundaries', () => {
+  it('resolves deeply nested element boundaries without recursive descent', () => {
+    const root = document.createElement('div');
+    let parent: Element = root;
+    for (let depth = 0; depth < 5_000; depth++) {
+      const child = document.createElement('span');
+      parent.appendChild(child);
+      parent = child;
+    }
+    const node = document.createTextNode('needle');
+    parent.appendChild(node);
+    document.body.appendChild(root);
+    try {
+      const scope: TextQuoteScope = {
+        text: 'needle',
+        segments: [{
+          node,
+          normalizedStart: 0,
+          normalizedLength: 6,
+          rawOffsetRuns: new Uint32Array(),
+          rawClusterRuns: new Uint32Array(),
+          rawLength: 6,
+        }],
+        truncated: false,
+      };
+      const range = document.createRange();
+      range.selectNodeContents(root);
+      expect(buildQuoteAnchor(range, scope)).to.deep.include({ kind: 'text-quote', quote: 'needle' });
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('fails closed without overflowing the stack beyond the traversal ceiling', () => {
+    const root = document.createElement('div');
+    let parent: Element = root;
+    for (let depth = 0; depth <= TEXT_QUOTE_LIMITS.maxTraversalNodes; depth++) {
+      const child = document.createElement('span');
+      parent.appendChild(child);
+      parent = child;
+    }
+    const node = document.createTextNode('needle');
+    parent.appendChild(node);
+    document.body.appendChild(root);
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(root);
+      const scope: TextQuoteScope = { text: '', segments: [], truncated: true };
+      expect(() => buildQuoteAnchor(range, scope)).to.not.throw();
+      expect(buildQuoteAnchor(range, scope)).to.deep.equal({ kind: 'text-quote', quote: '' });
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('caps a selected quote before materializing it', () => {
+    const root = document.createElement('div');
+    root.textContent = 'q'.repeat(TEXT_QUOTE_LIMITS.maxQueryCodeUnits + 1_000);
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const range = document.createRange();
+      range.selectNodeContents(root);
+      const anchor = buildQuoteAnchor(range, scope);
+      expect(anchor.kind).to.equal('text-quote');
+      if (anchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(anchor.quote).to.have.length(TEXT_QUOTE_LIMITS.maxQueryCodeUnits);
+    } finally {
+      root.remove();
+    }
   });
 });
 

@@ -407,6 +407,15 @@ it('forwards a host aria-label to the canvas and keeps the chart role on that se
   expect(canvas.getAttribute('role')).to.equal('application');
   expect(el.getAttribute('role')).to.equal(null);
   expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(1);
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(canvas.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  el.label = '';
+  await el.updateComplete;
+  expect(canvas.getAttribute('aria-label')).to.equal('');
 });
 
 it('parses begin-at-zero="false" as false from plain HTML', async () => {

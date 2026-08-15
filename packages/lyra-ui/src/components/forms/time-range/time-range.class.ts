@@ -13,7 +13,7 @@ import {
   finiteRatio,
   isSliderKey,
 } from '../../../internal/numbers.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './time-range.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -60,10 +60,6 @@ interface DragState {
  *  step, matching the WAI-ARIA APG slider pattern's expected keyboard
  *  interactions (and native `<input type=range>`). */
 const PAGE_STEP_MULTIPLIER = 10;
-
-/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
- *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
-export type LyraTimeRangeSize = LyraSizeStep;
 
 /** A single discrete-preset option for the `presets` property. */
 export interface TimeRangePreset {
@@ -117,9 +113,9 @@ export interface LyraTimeRangeEventMap {
   'lr-change': CustomEvent<{ start: number; end: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 /**
  * `<lr-time-range>` — a two-handle brush/scrubber over a numeric domain.
@@ -352,7 +348,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     );
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     // Blur counts as interaction exactly as it does in the `FormAssociated` mixin. `focusout` is
     // the observable signal: native `blur` neither bubbles nor crosses the shadow boundary, so a
     // host-level `blur` listener would never fire for the internal handles. Registered in the

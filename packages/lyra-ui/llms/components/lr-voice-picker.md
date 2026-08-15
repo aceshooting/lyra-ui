@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,24 +18,31 @@
 A TTS voice selector over a host-supplied `catalog`, mirroring `lr-model-select`'s
 closed-dropdown/free-text-combobox dual mode, stale-value handling, and form-association verbatim
 (see that section for the full mode-switching contract this one shares), extended with a
-TTS-agnostic preview affordance. Preview is event-first: `lr-preview-request` always fires first
-and is cancelable — left un-prevented, a `previewUrl` plays through one internal native `<audio>`
-(validated by `safeMediaSrc()` first); `preventDefault()` or no URL leaves playback to the host's own
-TTS. Requesting the same voice while it's already playing internally stops it instead of
-re-requesting; requesting a different voice switches. Does not synthesize speech, fetch catalogs, or
-persist selection; not a persona picker; `lr-model-select` stays for LLMs.
+TTS-agnostic preview affordance. Each new target is event-first: its cancelable
+`lr-preview-request` fires before that target can start. Left un-prevented, a `previewUrl` plays
+through one internal native `<audio>` (validated by `safeMediaSrc()` first); `preventDefault()` or no
+URL leaves playback to the host's own TTS. Requesting the same voice while it's already playing
+internally stops it instead of re-requesting; requesting a different voice retires the old resource
+and publishes its terminal change before dispatching the new request. Internal playback becomes
+public only after the still-current `audio.play()` promise
+fulfills; a rejected pending play emits neither a false start nor a false stop. Committed-value,
+active-option, and catalog changes likewise retire an internal preview before the visible preview
+control changes target; closing or filtering also retires a row-owned preview once no rendered
+control represents it. Does not synthesize speech, fetch catalogs, or persist selection; not a
+persona picker; `lr-model-select` stays for LLMs.
 
-**Exported types:** `LyraVoiceCatalogEntry { id: string; label: string; language?: string;
+**Exported types:** `LyraVoiceCatalogEntry extends LyraCatalogEntry { language?: string;
 description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
-`[part="option-meta"]` second line. `LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[]` —
-homogeneous, same union contract as `LyraModelCatalog`. `LyraVoicePickerSize` aliases the shared
-canonical `LyraSizeStep`; the public `size` property additionally accepts the long-form aliases in
-`LyraSize`. `LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none'` is the native
+`[part="option-meta"]` second line. Voice catalogs use the shared
+`LyraCatalog<LyraVoiceCatalogEntry>` homogeneous readonly union documented under `lr-model-select`.
+The public `size` property uses `LyraSize`, including the long-form aliases.
+`LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none'` is the native
 selection direction exposed in free-text mode.
 
 **Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
-small leading badge. `catalog?: LyraVoiceCatalog` (attribute: false) — the full voice list; omit (or
-leave empty) to fall back to plain free-text entry. `allowCustom: boolean = false` (attribute
+small leading badge. `catalog?: LyraCatalog<LyraVoiceCatalogEntry>` (attribute: false) — the full
+voice list; omit (or leave empty) to fall back to plain free-text entry; replacing it retires any
+internal preview before the rendered candidate changes. `allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`. `preview:
 boolean = true` (reflected) — whether to render preview affordances at all. `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
@@ -71,13 +78,12 @@ still `valueMissing`. The custom error survives every intrinsic recomputation in
 `form.reset()`, matching a native control, and the message is used verbatim, never localized.
 `getForm()` returns the browser-resolved owning form.
 
-**Methods:** `click()` (override) — same forwarding contract as `lr-model-select`'s own `click()`
-override (see that section for the full rationale): closed-dropdown mode forwards a real `.click()`
-to the trigger `<button>`, whose own `@click` handler opens it; free-text mode instead calls
-`.focus()` on the combobox `<input>`, since a synthetic `.click()` on a text input never dispatches
-`focus` the way a real click's `mousedown` default action does, and this mode's open behavior is
-wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
-`<lr-button>`'s identical host `click()` forwarding.
+**Methods:** `click()` (override) — closed-dropdown mode forwards a real `.click()` to the trigger
+`<button>`, whose own `@click` handler opens it; free-text mode calls `.focus()` on the combobox
+`<input>`, since a synthetic `.click()` on a text input never dispatches `focus` the way a real
+click's `mousedown` default action does, and this mode's open behavior is wired to the input's
+native `focus` event, not a `click` handler on the input itself. Mirrors `<lr-button>`'s host
+`click()` forwarding while retaining voice-picker's focus-only free-text behavior.
 `focus(options?)` and `blur()` forward to whichever internal control the active mode renders.
 In free-text mode, `input: HTMLInputElement | null`, `selectionStart: number | null`,
 `selectionEnd: number | null`, and `selectionDirection: LyraVoicePickerSelectionDirection | null`
@@ -89,9 +95,12 @@ before the input renders.
 
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
-started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` and re-dispatched
-`focus`/`blur` (picker-family contract, same as `lr-model-select`), and one bubbling/composed
-`lr-invalid` alias when native validity fails.
+started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
+neither. Plus owner-realm native `input`/`change` (retaining each free-text `InputEvent` payload)
+and native `FocusEvent` `focus`/`blur` (retaining `relatedTarget`), with `lr-focus`/`lr-blur`
+compatibility aliases. The trigger/input, listbox popup, and sibling preview control form one focus
+boundary, so moving within them does not close or touch the picker and only leaving the component
+emits the outer pair. One bubbling/composed `lr-invalid` alias fires when native validity fails.
 
 **Slots:** `label` (custom visible label content), `hint`, `error`.
 
@@ -128,11 +137,15 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   standalone `[part="preview-button"]` beside the trigger (previews the active option while open,
   else the committed value) — the per-row `[part="option-preview"]` icon is a pointer-only
   duplicate (`tabindex="-1"`, `aria-hidden="true"`).
-- `catalog` must be homogeneous — the same constraint `lr-model-select`'s `LyraModelCatalog` union
-  documents.
+- `catalog` must be homogeneous — the same shared `LyraCatalog<T>` constraint documented for
+  `lr-model-select`.
 
 **Additional API surface:**
 
+- `--lr-voice-picker-gap` — Gap between the field and preview action, and between trigger,
+  combobox, and option children. Default: `var(--lr-space-xs)`.
+- `--lr-voice-picker-radius` — Trigger, combobox, listbox, option, and preview-action corner radius.
+  Default: `var(--lr-form-control-radius)`.
 - `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.

@@ -29,10 +29,11 @@ keyboard actions are exposed only for highlights whose quote resolves in the cur
 document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`). A host `aria-label` names the rendered document by attribute presence, including an
-explicitly empty value; `name` and the localized label are fallbacks. `maxHeight` caps the
+`max-height`). A nonempty host `aria-label` makes the host the sole named semantic owner. With an
+explicitly empty host label, the shadow document keeps `role="document"` and an empty accessible
+name; when the attribute is absent, `name` and the localized label are fallbacks. `maxHeight` caps the
 scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
-ignored. The inherited anchor-target properties are `highlights: LyraHighlight[] = []` (property
+ignored. The inherited anchor-target properties are `highlights: readonly LyraHighlight[] = []` (property
 only; reassign after mutation), `activeHighlightId: string | null = null` (attribute
 `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (property only), and
 `anchorKinds: readonly LyraAnchorKind[] = ['fragment', 'text-quote']` (this viewer's supported
@@ -45,9 +46,11 @@ like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back throu
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching, conversion, sanitization, or a
-non-fatal Mammoth conversion message occurs. `lr-search-change` (`detail: { query, matchCount,
-activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+**Events:** `lr-render-error` with `detail.error` only when fetching, conversion, or sanitization
+fails terminally. Non-fatal Mammoth conversion messages emit `lr-viewer-diagnostic` instead;
+`detail.diagnostic` is readonly `{ code: 'docx-conversion-message', severity: 'warning', fatal:
+false, source: 'mammoth', cause }`. `lr-search-change` (`detail: { query, matchCount,
+matchCountExact, activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 `lr-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked or its
 resolved keyboard action was activated.
 `lr-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered
@@ -87,5 +90,9 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the document.
 
 ```html
-<lr-docx-viewer src="/files/report.docx" name="report.docx" max-height="32rem"></lr-docx-viewer>
+<lr-docx-viewer
+  src="/files/report.docx"
+  name="report.docx"
+  max-height="32rem"
+></lr-docx-viewer>
 ```

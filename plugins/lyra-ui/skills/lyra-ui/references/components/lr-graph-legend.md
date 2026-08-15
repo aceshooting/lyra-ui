@@ -21,9 +21,9 @@ as visibility filters. Never reads or writes a graph directly — the host forwa
 same event-decoupled contract every sibling in this family follows.
 
 **Properties:**
-- `types: LyraGraphLegendType[] = []` (attribute: false) — `{ id: string; label: string; color?:
-  string; shape?: 'circle' | 'square' | 'diamond' }`, the exact `lr-graph.nodeTypes` entry shape
-  (declared locally, not imported, so this stays a zero-dependency component). A color is used only
+
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — `{ id: string; label: string; color?:
+string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTypes` entry shape. A color is used only
   when valid for CSS `color`; declaration breaks and `url()` fall back to the categorical palette
 - `counts?: Record<string, number>` (attribute: false) — optional per-type count shown alongside the
   label
@@ -31,7 +31,9 @@ same event-decoupled contract every sibling in this family follows.
   `lr-visibility-change`
 - `interactive: boolean = true` (reflected) — renders each row as a toggle `<button>`; `false` renders
   plain, non-interactive rows
-- `label: string = ''` — accessible name for the `role="group"` wrapper
+- `label: string = ''` — fallback accessible name for the `role="group"` wrapper. A non-empty host
+  `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
+  an explicitly empty host label stays empty on the wrapper
 
 **Events:** `lr-visibility-change` (`detail: { hiddenTypes }`, the complete updated array, fired
 after each toggle).
@@ -54,10 +56,13 @@ only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through
 <lr-graph-legend id="legend"></lr-graph-legend>
 <lr-graph id="graph" style="height:480px"></lr-graph>
 <script>
-  const graph = document.getElementById('graph');
-  const legend = document.getElementById('legend');
-  legend.types = [{ id: 'person', label: 'Person', color: '#0969da' }, { id: 'org', label: 'Organization' }];
-  legend.addEventListener('lr-visibility-change', (e) => {
+  const graph = document.getElementById("graph");
+  const legend = document.getElementById("legend");
+  legend.types = [
+    { id: "person", label: "Person", color: "#0969da" },
+    { id: "org", label: "Organization" },
+  ];
+  legend.addEventListener("lr-visibility-change", (e) => {
     legend.hiddenTypes = e.detail.hiddenTypes;
     graph.hiddenTypes = e.detail.hiddenTypes;
   });
@@ -65,6 +70,7 @@ only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through
 ```
 
 **Known gotchas:**
+
 - Ships no coupling to `lr-graph`'s optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers —
   `types`/`counts`/`hiddenTypes` are plain data the host derives from a graph, never a live reference
   to one.

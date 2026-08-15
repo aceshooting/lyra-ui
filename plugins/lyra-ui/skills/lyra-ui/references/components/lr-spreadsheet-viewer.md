@@ -41,7 +41,7 @@ matches, and painted marks.
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
-`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
+`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
@@ -54,6 +54,8 @@ placeholders), `rows`, `spinner`, and
 `error`. `data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the
 internal `<lr-virtual-list>` and forwarded via
 `exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.
+The spinner always includes visible localized loading text alongside its decorative ring; the text
+remains understandable without CSS or animation and the ring stops under reduced motion.
 
 **Themeable custom properties:** `--lr-spreadsheet-viewer-highlight-color` (default
 `var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it

@@ -17,8 +17,9 @@ property).
 - `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. `'y'` is Chart.js's own
   mechanism for horizontal bars (it also flips `line`/`area` types onto a horizontal category axis).
   The `horizontal` boolean that used to alias `'y'` was removed in 9.0.0 — use `index-axis="y"`
-- `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence;
-  additive `accessibleLabel` remains the fallback alias
+- `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence
+  by presence, including an explicit empty string; additive `accessibleLabel: string | null = null`
+  remains the fallback alias with the same explicit-empty behavior
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
@@ -523,7 +524,7 @@ instead of materializing an unbounded hidden DOM or SVG tree.
 **Slots:** `data-table` — optional consumer-provided complete, paginated, or virtualized accessible
 data alternative.
 
-**CSS parts:** `base`, `grid-line`, `axis-label`, `axis-title`, `bar` and `point` (each carries
+**CSS parts:** `base`, `description`, `grid-line`, `axis-label`, `axis-title`, `bar` and `point` (each carries
 `data-selected` when its category index is in `selectedIndices`, with explicit pressed state on every
 mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
@@ -552,8 +553,9 @@ suppresses the generated sample and notice.
 as `lr-chart`; it always wins over the `height` property's private fallback);
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
-`--lr-chart-color-1` … `--lr-chart-color-8` (each defaulting to the matching
-`var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
+`--lr-chart-color-1`, `--lr-chart-color-2`, `--lr-chart-color-3`, `--lr-chart-color-4`,
+`--lr-chart-color-5`, `--lr-chart-color-6`, `--lr-chart-color-7`, and `--lr-chart-color-8` (each
+defaulting to the matching `var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
 without moving the library-wide ramp; `--lr-chart-legend-side-max` (default
 `var(--lr-size-15rem)`) caps side legend allocation; `--lr-lite-chart-selected-outline-color` (default
 `var(--lr-color-brand)`) — the stroke drawn on
@@ -653,7 +655,7 @@ failure transition is announced through the shared document-level light-DOM asse
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
-`--lr-chart-pattern-step` — all inherited from `LyraChart`, identical in meaning and default (see
+`--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
 `lr-chart` above); each of the eight variants below reads the same set, so one rule retunes them
 together. The mirrored hooks are `--border-color-1`,
 `--border-color-2`, `--border-color-3`, `--border-color-4`, `--border-color-5`,
@@ -715,7 +717,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
 `appendData()` remains a deprecated compatibility adapter.
 
-**Events:** `lr-zoom`, `lr-point-click`, `lr-before-legend-visibility-change` (cancelable), and
+**Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-legend-visibility-change` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
 `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
 
@@ -733,7 +735,7 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
 `--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
-`--lr-chart-pattern-step` — inherited from `LyraChart`, identical in meaning, together with the
+`--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
 mirrored `--border-color-1`,
 `--border-color-2`,
 `--border-color-3`, `--border-color-4`, `--border-color-5`, `--border-color-6`, `--fill-color-1`,
@@ -796,7 +798,9 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
-  and description; host `aria-label` wins. The `accessible*` spellings remain deprecated aliases
+  and description; host `aria-label` wins by presence, including an explicit empty string. The
+  `accessibleLabel` (attribute `accessible-label`) and `accessibleDescription` (attribute
+  `accessible-description`) remain nullable deprecated aliases with the same explicit-empty behavior
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
@@ -853,7 +857,8 @@ that sets no `color` is assigned an entry from the same `--lr-color-chart-1..8` 
 so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-pattern-step`
 (default `var(--lr-space-2xs)`) sizes the forced-colors legend texture and
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
-hover outline, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
+hover outline, `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
+pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
 `lr-chart`.
 
 **Forced colors:** under `forced-colors: active` the eight-color ramp is remapped onto the small
@@ -908,3 +913,225 @@ These helpers do not download files; compose them with
 For route-level warming, the side-effect-free chart preload entry exports
 `preloadCharts({ zoom?, dataLabels?, boxPlot? })`. Core Chart.js is always requested and optional
 capabilities only when flagged; the result reports which requested capabilities are available.
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-charts-chart-box-plot-contracts`** — Supporting data types and helpers for this component family.
+  `LyraBoxPlotPointDetail {
+    datasetIndex: unknown;
+    index: unknown;
+    label: unknown;
+    value: unknown;
+  }`
+  `LyraBoxPlotSeries {
+    label: unknown;
+    data: unknown;
+    color: unknown;
+  }`
+  `LyraBoxPlotSummary {
+    min: unknown;
+    q1: unknown;
+    median: unknown;
+    q3: unknown;
+    max: unknown;
+  }`
+
+- **`components-charts-chart-chart-colors-contracts`** — Supporting data types and helpers for this component family.
+  `seriesPalette(/* public names: element */): unknown`
+  `translucentAreaColor(/* public names: scope, color */): unknown`
+
+- **`components-charts-chart-chart-core-loader-contracts`** — Supporting data types and helpers for this component family.
+  `ChartJsModule {
+    Chart: unknown;
+    defaults: unknown;
+    plugins: unknown;
+    legend: unknown;
+    labels: unknown;
+    generateLabels: unknown;
+    chart: unknown;
+    LineController: unknown;
+    BarController: unknown;
+    ScatterController: unknown;
+    DoughnutController: unknown;
+    PieController: unknown;
+    RadarController: unknown;
+    PolarAreaController: unknown;
+    BubbleController: unknown;
+    LineElement: unknown;
+    PointElement: unknown;
+    BarElement: unknown;
+    ArcElement: unknown;
+    LinearScale: unknown;
+    CategoryScale: unknown;
+    RadialLinearScale: unknown;
+    Filler: unknown;
+    Tooltip: unknown;
+    Legend: unknown;
+  }`
+  `loadAndRegisterChartModule(/* public names: importChart, register, mod */): unknown`
+  `loadChartJs(): unknown`
+  `loadChartModule(/* public names: importChart */): unknown`
+
+- **`components-charts-chart-chart-feature-loader-contracts`** — Supporting data types and helpers for this component family.
+  `ChartPluginCapability {
+    id: unknown;
+  }`
+
+- **`components-charts-chart-chart-legend-visibility-contracts`** — Supporting data types and helpers for this component family.
+  `LyraChartLegendVisibilityChangeDetail {
+    datasetIndex: unknown;
+    visible: unknown;
+    hiddenDatasets: unknown;
+  }`
+
+- **`components-charts-chart-chart-loader-contracts`** — Supporting data types and helpers for this component family.
+  `loadChartAndZoom(/* public names: importChart, importZoom, needsZoom, mod, zoomPlugin */): unknown`
+  `loadChartJsWithDataLabels(/* public names: importDataLabels, mod, plugin */): unknown`
+  `loadChartJsWithDataLabelsResult(/* public names: importDataLabels */): unknown`
+  `loadChartJsWithZoom(/* public names: importZoom */): unknown`
+  `loadChartJsWithZoomResult(/* public names: importZoom */): unknown`
+  `loadDataLabelsPlugin(/* public names: importDataLabels */): unknown`
+
+- **`components-charts-chart-chart-preload-contracts`** — Supporting data types and helpers for this component family.
+  `LyraChartPreloadOptions {
+    zoom: unknown;
+    dataLabels: unknown;
+    boxPlot: unknown;
+  }`
+  `LyraChartPreloadResult {
+    core: unknown;
+    zoom: unknown;
+    dataLabels: unknown;
+    boxPlot: unknown;
+  }`
+  `preloadCharts(/* public names: options */): unknown`
+
+- **`components-charts-chart-chart-contracts`** — Supporting data types and helpers for this component family.
+  `lockChartType(/* public names: ctor, value */): unknown`
+  `LyraChartArea {
+    top: unknown;
+    left: unknown;
+    right: unknown;
+    bottom: unknown;
+    width: unknown;
+    height: unknown;
+  }`
+  `LyraChartConfiguration {
+    type: unknown;
+    data: unknown;
+    options: unknown;
+    plugins: unknown;
+  }`
+  `LyraChartDataConfiguration {
+    labels: unknown;
+    datasets: unknown;
+  }`
+  `LyraChartDatasetConfiguration {
+    type: unknown;
+    label: unknown;
+    data: unknown;
+    hidden: unknown;
+    axis: unknown;
+    yAxisID: unknown;
+    noTooltip: unknown;
+    fill: unknown;
+    backgroundColor: unknown;
+    borderColor: unknown;
+    borderRadius: unknown;
+    borderWidth: unknown;
+    borderDash: unknown;
+    color: unknown;
+    pointStyle: unknown;
+    pointBackgroundColor: unknown;
+    pointRadius: unknown;
+    segment: unknown;
+  }`
+  `LyraChartDatumActivateDetail {
+    kind: unknown;
+    datasetIndex: unknown;
+    index: unknown;
+    label: unknown;
+    value: unknown;
+  }`
+  `LyraChartFormatterContext {
+    value: unknown;
+    surface: unknown;
+    datasetIndex: unknown;
+    index: unknown;
+    label: unknown;
+    seriesLabel: unknown;
+    statistic: unknown;
+  }`
+  `LyraChartInstance {
+    data: unknown;
+    labels: unknown;
+    datasets: unknown;
+    options: unknown;
+    config: unknown;
+    type: unknown;
+    legend: unknown;
+    chartArea: unknown;
+    destroy: unknown;
+    update: unknown;
+    mode: unknown;
+    toBase64Image: unknown;
+    getElementsAtEventForMode: unknown;
+    event: unknown;
+    useFinalPosition: unknown;
+    getDatasetMeta: unknown;
+    index: unknown;
+    hidden: unknown;
+    isDatasetVisible: unknown;
+    setDatasetVisibility: unknown;
+    visible: unknown;
+  }`
+  `LyraChartPlugin {
+    id: unknown;
+  }`
+  `LyraChartPoint {
+    x: unknown;
+    y: unknown;
+    r: unknown;
+    label: unknown;
+  }`
+  `LyraChartSeries {
+    label: unknown;
+    data: unknown;
+    points: unknown;
+    color: unknown;
+    fill: unknown;
+    width: unknown;
+    dash: unknown;
+    noTooltip: unknown;
+    axis: unknown;
+    pointColors: unknown;
+    pointRadius: unknown;
+    segmentColors: unknown;
+    type: unknown;
+  }`
+
+- **`components-charts-chart-histogram-bin-contracts`** — Supporting data types and helpers for this component family.
+  `binValues(/* public names: values, binCount, locale */): unknown`
+  `HistogramBucket {
+    label: unknown;
+    count: unknown;
+  }`
+
+- **`components-charts-chart-histogram-contracts`** — Supporting data types and helpers for this component family.
+  `binnedBuckets(/* public names: el */): unknown`
+
+- **`components-charts-chart-lite-chart-contracts`** — Supporting data types and helpers for this component family.
+  `LyraLiteChartSeries {
+    label: unknown;
+    data: unknown;
+    color: unknown;
+  }`
+  `LyraLiteChartTableCellContext {
+    kind: unknown;
+    datasetIndex: unknown;
+    index: unknown;
+    label: unknown;
+    seriesLabel: unknown;
+  }`

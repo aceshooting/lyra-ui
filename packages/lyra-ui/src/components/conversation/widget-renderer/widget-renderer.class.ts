@@ -11,9 +11,9 @@ import {
   type LyraWidgetDocument,
   type ResolvedNode,
   type ResolvedElement,
-  type WidgetNode,
+  type LyraWidgetNode,
 } from "./resolve.js";
-import { type WidgetTypeRegistry } from "./registry.js";
+import { type LyraWidgetTypeRegistry } from "./registry.js";
 import { DEFAULT_WIDGET_TYPE_REGISTRY } from "./default-registry.js";
 
 const GAP_TOKEN: Record<string, string> = {
@@ -128,15 +128,15 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
   /** Immutable type registry owned by this renderer. Assign a snapshot returned by
    * `createWidgetTypeRegistry()` to override the built-ins without affecting another instance. */
-  @property({ attribute: false }) registry: WidgetTypeRegistry =
+  @property({ attribute: false }) registry: LyraWidgetTypeRegistry =
     DEFAULT_WIDGET_TYPE_REGISTRY;
 
   @state() private resolved: ResolvedNode | null = null;
 
   private readonly warned = new Set<string>();
   private warningScope?: {
-    root: WidgetNode | null;
-    registry: WidgetTypeRegistry;
+    root: LyraWidgetNode | null;
+    registry: LyraWidgetTypeRegistry;
   };
   private readonly actionHandlers = new WeakMap<
     HTMLElement,
@@ -163,7 +163,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       try {
         const registry = this.registry;
         const widgetDocument = this.document;
-        let root: WidgetNode | null = null;
+        let root: LyraWidgetNode | null = null;
         if (widgetDocument !== null) {
           if (widgetDocument.version !== "2") {
             throw new Error("lr-widget-renderer: unsupported document version");

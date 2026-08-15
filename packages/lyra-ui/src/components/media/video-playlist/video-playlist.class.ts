@@ -67,8 +67,8 @@ export interface LyraVideoPlaylistEventMap {
   'lr-video-change': CustomEvent<LyraVideoPlaylistChangeDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 
 interface VideoListeners {

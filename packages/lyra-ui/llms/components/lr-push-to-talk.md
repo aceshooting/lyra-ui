@@ -24,16 +24,18 @@ default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to
 While recording, the optional elapsed timer uses the effective locale's decimal digits, suppresses
 grouping, and pads its seconds field to two locale-aware digits.
 
-**Properties:** `mode: 'hold' | 'toggle' = 'hold'` (reflected), `timesliceMs: number = 0` (attribute
+**Properties:** `mode: PushToTalkMode = 'hold'` (`'hold' | 'toggle'`, reflected; invalid writes
+normalize to `hold`), `timesliceMs: number = 0` (attribute
 `timeslice-ms`) — `> 0` passes a timeslice to `MediaRecorder.start()` and emits `lr-record-chunk` per
 slice, `mimeType: string = ''` (attribute `mime-type`) — a `MediaRecorder` MIME type, `deviceId:
 string = ''` (attribute `device-id`) — a specific input device, `audioConstraints?:
-MediaTrackConstraints` (attribute: false) — merged into the `getUserMedia` audio constraints,
+PushToTalkAudioConstraints` (attribute: false) — merged into the `getUserMedia` audio constraints;
+it deliberately excludes `deviceId`, whose single authority is the dedicated property,
 `levelEvents: boolean = false` (attribute `level-events`) — opt in to `lr-level`, `maxDurationMs:
 number = 0` (attribute `max-duration-ms`) — auto-stop cap, `0` disables it, `showTimer: boolean =
-true` (attribute `show-timer`), `disabled: boolean = false` (reflected), plus two readonly
-properties: `state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' = 'idle'` (reflected to
-`data-state`) and `stream: MediaStream | null` (the live capture stream, assignable straight onto
+true` (attribute `show-timer`), `disabled: boolean = false` (reflected), plus two getter-only
+properties: `state: PushToTalkState` (`'idle' | 'requesting' | 'denied' | 'recording' | 'error'`,
+mirrored to `data-state`) and `stream: MediaStream | null` (the live capture stream, assignable straight onto
 `lr-audio-visualizer.stream`).
 
 `levelEvents`, `maxDurationMs`, and `showTimer` stay reactive during an active recording: changing
@@ -44,16 +46,16 @@ setting it to `0` removes the deadline.
 **Methods:** `start()`, `stop()`, and `cancel()` drive the capture lifecycle imperatively (mirroring
 the pointer/keyboard gestures).
 
-**Slots:** `microphone-icon` is the canonical replacement for the default mic glyph and takes
-precedence when both it and the established `icon` alias have content. `icon` remains the fallback
-mic-glyph alias. `recording-icon` replaces the default recording-state pulse glyph. All three are
+**Slots:** `microphone-icon` replaces the default mic glyph. `recording-icon` replaces the default
+recording-state pulse glyph. Both are
 decorative inside the named trigger: their flattened content is inert and hidden from accessibility
 APIs, so do not place a second interactive control there.
 
 **Events:** `lr-record-start` (`detail: { stream: MediaStream }`), `lr-record-chunk` (`detail: { blob:
 Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
-}`), `lr-record-cancel` (no detail), `lr-record-error` (`detail: { error: unknown }`), `lr-level`
-(`detail: { level: number }` — 0–1 amplitude, opt-in via `level-events`), and `lr-state-change`
+}`), `lr-record-cancel` (`detail: null`), `lr-record-error`
+(`detail: { error: DOMException | Error }`, including recorder runtime errors), `lr-level`
+(`detail: { level: number }` — 0–1 amplitude, opt-in via `level-events`), and `lr-record-state-change`
 (`detail: { state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' }`).
 
 **CSS parts:** `trigger` (the capture button), `icon`, `pulse` (rendered only while recording),

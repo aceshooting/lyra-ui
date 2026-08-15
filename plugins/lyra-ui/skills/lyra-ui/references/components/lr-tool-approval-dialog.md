@@ -22,22 +22,29 @@ keeps its own panel template rather than nesting `<lr-dialog>`, so it has no dep
 general-purpose dialog component, while its modal behavior participates in the shared overlay stack.
 
 Approve/Deny/Edit are built-in chrome, not a `footer` slot a consumer must assemble — there is exactly
-one correct action set for "approve this call". The `footer` slot is offered only for *supplementary*
+one correct action set for "approve this call". The `footer` slot is offered only for _supplementary_
 content alongside those buttons (e.g. a "remember this choice for this tool" checkbox); its content
 renders at the start of the action row, before Deny/Edit/Approve.
 
 **Exported types:**
+
+- `ApprovalAction = 'approve' | 'deny'` — shared imperative vocabulary for an approval operation
+  that is proposed or awaiting persistence
+- `ApprovalDecision = 'approved' | 'denied'` — shared final-outcome vocabulary, deliberately
+  separate from `ApprovalAction`
 - `ToolApprovalDialogCloseReason = 'escape' | 'backdrop' | 'approve' | 'deny' | 'api' | string` — the
   `lr-close` detail; `'escape'`/`'backdrop'`/`'approve'`/`'deny'` come from the dialog's own built-in
   dismiss triggers, any other string is whatever a caller passes to `close()` directly.
 
 **Properties:**
-- `open: boolean = false` (reflected) — set this (or call `close()`) to dismiss; there is no separate
-  `show()`/`hide()` pair
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — directly names the internal
-  dialog panel; otherwise the tool-name heading supplies `aria-labelledby`. Mirrors
-  `<lr-tool-result-dialog>`'s/`<lr-tool-select-dialog>`'s own host-`aria-label` override pattern; fed
-  only by a host `aria-label`
+
+- `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
+  host; the panel remains labelled by its visible heading rather than cloning the same name. A
+  direct property assignment made without the attribute can name the panel
+- `proposalKey: string = ''` (attribute `proposal-key`) — immutable identity/generation for the
+  open proposal. Change it whenever a source reuses the same visible tool name/arguments for a new
+  proposal; draft, editing, validation-announcement, and pending-decision state reset immediately
 - `toolName: string = ''` (attribute `tool-name`) — the proposed call's name, e.g. `web_search`;
   drives the heading and the dialog's accessible name
 - `args: unknown = {}` (attribute: false) — the proposed call's arguments, rendered via
@@ -59,9 +66,9 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
   state; `pending` also resets to `null` every time the dialog re-opens.
 
-**Methods:** `close(reason: ToolApprovalDialogCloseReason = 'api'): void` — closes the dialog, emits
-`lr-close` with `reason`, and returns focus to whatever had it before the dialog opened; a no-op if
-already closed.
+**Methods:** `show(): void` opens the dialog; `hide(reason: ToolApprovalDialogCloseReason = 'api'):
+void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,
+and return focus to whatever had it before opening; all are no-ops when already in the target state.
 
 **Events:** `lr-approve` (`detail: { args: unknown }` — the current, already-parsed arguments: the
 original `args` prop, or the user's edited-and-validated version if an edit was in progress.
@@ -122,10 +129,10 @@ pre-filled with `JSON.stringify(args, null, 2)`. Every keystroke re-validates wi
 Approve button is `disabled` for as long as the current textarea content fails to parse, so a
 malformed edit can never be silently approved as either the broken text or a stale copy of the
 original args. The same button relabels to "Cancel" while editing; clicking it discards the draft
-entirely and returns to the read-only view of the *original* `args` — there is no separate "save"
+entirely and returns to the read-only view of the _original_ `args` — there is no separate "save"
 step independent of Approve itself. Both `editing` and any in-progress draft reset back to the
-read-only view every time the dialog transitions from closed to open, so a reused instance never
-leaks one proposal's half-finished edit into the next.
+read-only view whenever the dialog opens or `proposalKey`/`toolName`/`args` identifies a replacement
+proposal, so a reused instance never leaks one proposal's half-finished edit into the next.
 
 The raw-JSON editor deliberately fixes native `resize` to `vertical`, so a user can make a long
 draft taller without changing the dialog's constrained inline size. This focused approval flow has
@@ -137,7 +144,7 @@ invalid JSON is additionally appended once to the shared assertive light-DOM ann
 further invalid keystrokes do not repeat it. An invalid draft already present at initial mount or
 reconnect establishes a silent baseline rather than replaying stale context.
 
-Initial focus deliberately does *not* land on Approve: approving a tool call is a consequential,
+Initial focus deliberately does _not_ land on Approve: approving a tool call is a consequential,
 potentially irreversible action, so a user who opens the dialog and reflexively presses Enter/Space
 before reading anything should deny, not approve. Deny gets the initial focus instead — the same
 "focus the safe action" convention a native destructive-confirmation dialog typically follows for its
@@ -146,6 +153,7 @@ own Cancel button. Tab/Shift+Tab are bounded to the panel's own focusable conten
 shared composed-tree focus traversal used by the other modal families.
 
 **Known gotchas:**
+
 - `editable` defaults to `true` and reflects — see the property note above about overriding it with a
   property binding, not a boolean-attribute binding.
 - `lr-deny` has no detail payload: its `event.detail` is `null`, not `undefined`.

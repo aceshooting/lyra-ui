@@ -41,13 +41,13 @@ export interface LyraSequencePlaybackStepDetail {
 }
 
 export interface LyraSequencePlaybackEventMap {
-  'lr-play': CustomEvent<undefined>;
-  'lr-pause': CustomEvent<undefined>;
+  'lr-play': CustomEvent<null>;
+  'lr-pause': CustomEvent<null>;
   'lr-sequence-step': CustomEvent<LyraSequencePlaybackStepDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 /**
  * `<lr-sequence-playback>` — steps a current index through `[0, itemCount)` on a fixed
@@ -74,7 +74,7 @@ export interface LyraSequencePlaybackEventMap {
  * @cssprop [--lr-sequence-playback-play-button-active-border-color=var(--lr-color-brand)] - Pressed
  *   play/pause button border color; read as an inline fallback so an ancestor value inherits.
  * @status stable
- * @since 9.0.0
+ * @since unreleased
  */
 export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

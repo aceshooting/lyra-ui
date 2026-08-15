@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { srOnly } from '../../../internal/a11y.js';
 import {
   isAbortError,
   isResourceLimitError,
@@ -14,10 +14,20 @@ import {
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { invalidateLyraLocaleCache } from '../../../internal/localization-runtime.js';
-import { getSegmenter, resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
-import { scopeFromElement, resolveTextQuote, buildQuoteAnchor } from '../../../internal/text-quote.js';
+import {
+  buildQuoteAnchor,
+  createTextQuoteIndex,
+  emptyTextQuoteMatches,
+  rangeFromTextQuoteMatch,
+  resolveTextQuote,
+  scopeFromElement,
+  TEXT_QUOTE_LIMITS,
+  type TextQuoteIndex,
+  type TextQuoteMatches,
+  type TextQuoteScope,
+} from '../../../internal/text-quote.js';
 import { acquireHighlightHandle, supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type {
   LyraAnchor,
@@ -37,6 +47,8 @@ export type {
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_docxViewerLabel, LYRA_DEFAULT_docxViewerMissingConverter, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -59,169 +71,48 @@ export interface DocxHeadingItem {
   level: number;
 }
 
-/** One `search()` match, as absolute offsets into the rendered content's concatenated text-node
- *  data (see `buildTextIndex()`) -- kept as plain numbers rather than a live `Range` so a repaint
- *  (`paintSearchMatches()`) can always recompute fresh `Range`s against the current DOM instead of
- *  reusing references that a previous paint pass's own text-node splitting may have invalidated. */
-interface DocxSearchMatch {
-  start: number;
-  end: number;
-}
-
-/** One text node's contribution to a `buildTextIndex()` corpus: it occupies `[start, end)` in the
- *  concatenated raw text. */
-interface DocxTextIndexEntry {
-  node: Text;
-  start: number;
-  end: number;
-}
-
 /** Every `LyraHighlightTone`, used to always call `HighlightHandle.setRanges()` once per tone on
  *  every repaint (with an empty array for an unused tone) -- `setRanges()` replaces a tone's ranges
  *  wholesale per call, so a tone this pass has nothing for still needs an explicit empty call to
  *  clear whatever it painted last pass. */
 const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
 const MAX_DOCX_SEARCH_MATCHES = 1_000;
-
-interface FoldedDocxSearchText {
-  text: string;
-  /** Inclusive raw UTF-16 start for each folded UTF-16 unit. */
-  rawStarts: number[];
-  /** Exclusive raw UTF-16 end for each folded UTF-16 unit. */
-  rawEnds: number[];
-}
-
-interface DocxCaseSegment { text: string; start: number; end: number }
-
-function foldDocxSearchCase(value: string, locale: string): string {
-  return value.toLocaleLowerCase(resolveIntlLocale(locale)).replaceAll('ς', 'σ');
-}
-
-function docxCaseSegments(value: string, locale: string): DocxCaseSegment[] {
-  if (typeof Intl.Segmenter === 'function') {
-    let segments: Intl.Segments;
-    try {
-      segments = getSegmenter(locale, { granularity: 'grapheme' }).segment(value);
-    } catch (error) {
-      if (!(error instanceof RangeError)) throw error;
-      segments = getSegmenter(undefined, { granularity: 'grapheme' }).segment(value);
-    }
-    return [...segments].map(({ segment, index }) => ({
-      text: segment,
-      start: index,
-      end: index + segment.length,
-    }));
-  }
-  const segments: DocxCaseSegment[] = [];
-  let start = 0;
-  for (const text of value) {
-    segments.push({ text, start, end: start + text.length });
-    start += text.length;
-  }
-  return segments;
-}
-
-/** Locale-folds a search corpus while retaining raw DOM offsets. Every unit produced by a
- *  length-changing grapheme maps to that complete raw grapheme, so a match can never paint a
- *  combining mark or expanded case-fold unit onto an adjacent character. */
-function foldDocxSearchText(raw: string, locale: string): FoldedDocxSearchText {
-  const text = foldDocxSearchCase(raw, locale);
-  if (text.length === raw.length) {
-    return {
-      text,
-      rawStarts: Array.from({ length: raw.length }, (_, index) => index),
-      rawEnds: Array.from({ length: raw.length }, (_, index) => index + 1),
-    };
-  }
-
-  const segments = docxCaseSegments(raw, locale);
-  const isolatedLength = segments.reduce(
-    (length, segment) => length + foldDocxSearchCase(segment.text, locale).length,
-    0,
-  );
-  const rawStarts: number[] = [];
-  const rawEnds: number[] = [];
-  let foldedStart = 0;
-  for (const segment of segments) {
-    const foldedEnd = segment.end === raw.length
-      ? text.length
-      : isolatedLength === text.length
-        ? foldedStart + foldDocxSearchCase(segment.text, locale).length
-        : foldDocxSearchCase(raw.slice(0, segment.end), locale).length;
-    const foldedLength = foldedEnd - foldedStart;
-    const rawLength = segment.end - segment.start;
-    if (foldedLength === rawLength) {
-      for (let offset = 0; offset < foldedLength; offset++) {
-        rawStarts.push(segment.start + offset);
-        rawEnds.push(segment.start + offset + 1);
-      }
-    } else {
-      for (let offset = 0; offset < foldedLength; offset++) {
-        rawStarts.push(segment.start);
-        rawEnds.push(segment.end);
-      }
-    }
-    foldedStart = foldedEnd;
-  }
-  return { text, rawStarts, rawEnds };
-}
-
-/** Walks `root`'s text nodes in document order and returns their concatenated raw text alongside
- *  an offset table (`entries`) mapping each contiguous span back to the `Text` node that produced
- *  it -- the corpus both `search()` (case-insensitive substring matching) and `paintSearchMatches()`
- *  (re-locating a stored `{ start, end }` match back into the live DOM) share. */
-function buildTextIndex(root: Element): { text: string; entries: DocxTextIndexEntry[] } {
-  const doc = root.ownerDocument;
-  const walker = doc.createTreeWalker(root, doc.defaultView?.NodeFilter.SHOW_TEXT ?? 4);
-  const entries: DocxTextIndexEntry[] = [];
-  let text = '';
-  let node: Node | null;
-  while ((node = walker.nextNode())) {
-    const textNode = node as Text;
-    if (textNode.data.length === 0) continue;
-    entries.push({ node: textNode, start: text.length, end: text.length + textNode.data.length });
-    text += textNode.data;
-  }
-  return { text, entries };
-}
-
-/** Resolves an absolute offset into a `buildTextIndex()` corpus back to a `(Text node, local
- *  offset)` point -- a boundary offset shared by two adjacent entries resolves to the end of the
- *  earlier one, which is still a valid `Range` boundary. `entries` is always in strictly ascending,
- *  contiguous document order (see `buildTextIndex()`), so this binary-searches for the leftmost
- *  entry whose `end` reaches `offset` rather than scanning linearly -- called twice per match from
- *  `paintSearchMatches()`, which can run up to `MAX_DOCX_SEARCH_MATCHES` times per repaint.
- *
- *  `entries` may be reused across several `paintSearchMatches()` calls (see `textIndexCache`), so an
- *  entry's `start`/`end` -- fixed at the moment its index was built -- can outlive DOM changes that
- *  shrink that same `Text` node's *live* `.data` (e.g. content replaced out from under the component
- *  between paints). The resolved local offset is re-checked against the node's current
- *  `.data.length` so a stale entry degrades to "no longer resolves to any text node" (`null`,
- *  tolerated by every caller) instead of handing back an out-of-range `Range` boundary. */
-function pointAtOffset(entries: DocxTextIndexEntry[], offset: number): { node: Text; offset: number } | null {
-  let low = 0;
-  let high = entries.length - 1;
-  while (low <= high) {
-    const mid = (low + high) >> 1;
-    if (offset > entries[mid]!.end) low = mid + 1;
-    else high = mid - 1;
-  }
-  const entry = entries[low];
-  if (!entry || offset < entry.start) return null;
-  const localOffset = offset - entry.start;
-  if (localOffset > entry.node.data.length) return null;
-  return { node: entry.node, offset: localOffset };
-}
+const MAX_DOCX_PAINTED_SEARCH_MATCHES = 200;
+const MAX_DOCX_PAINTED_HIGHLIGHTS = 100;
+const MAX_DOCX_HIGHLIGHT_CANDIDATES = 1_000;
 
 /** Wraps the text covered by `range` in one or more `<mark part="...">` elements, splitting any
  *  text node the range only partially covers -- handles a match spanning an inline element
  *  boundary, not just a single text node. */
-function wrapRangeInSearchMarks(range: Range, part: string): HTMLElement[] {
+interface DocxPaintWorkBudget {
+  traversalNodes: number;
+  codeUnits: number;
+}
+
+function nextDocxPaintNode(node: Node, root: Node): Node | null {
+  if (node.firstChild) return node.firstChild;
+  let cursor: Node | null = node;
+  while (cursor && cursor !== root) {
+    if (cursor.nextSibling) return cursor.nextSibling;
+    cursor = cursor.parentNode;
+  }
+  return null;
+}
+
+function wrapRangeInSearchMarks(
+  range: Range,
+  part: string,
+  budget: DocxPaintWorkBudget,
+): HTMLElement[] {
   const doc = range.startContainer.ownerDocument;
   if (!doc) return [];
   const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
   if (range.startContainer === range.endContainer && range.startContainer.nodeType === textNodeType) {
     const textNode = range.startContainer as Text;
+    const selectedLength = Math.max(0, range.endOffset - range.startOffset);
+    if (budget.traversalNodes <= 0 || selectedLength > budget.codeUnits) return [];
+    budget.traversalNodes--;
+    budget.codeUnits -= selectedLength;
     let target = textNode;
     if (range.endOffset < target.data.length) target.splitText(range.endOffset);
     if (range.startOffset > 0) target = target.splitText(range.startOffset);
@@ -233,12 +124,21 @@ function wrapRangeInSearchMarks(range: Range, part: string): HTMLElement[] {
     return [mark];
   }
   const ancestor = range.commonAncestorContainer;
-  const walkRoot = ancestor.nodeType === textNodeType ? ancestor.parentNode! : ancestor;
-  const walker = doc.createTreeWalker(walkRoot, doc.defaultView?.NodeFilter.SHOW_TEXT ?? 4);
   const covered: Text[] = [];
-  let node: Node | null;
-  while ((node = walker.nextNode())) {
-    if (range.intersectsNode(node) && (node as Text).data.length > 0) covered.push(node as Text);
+  let node: Node | null = ancestor;
+  while (node && budget.traversalNodes > 0 && budget.codeUnits > 0) {
+    budget.traversalNodes--;
+    if (node.nodeType === textNodeType) {
+      const textNode = node as Text;
+      if (textNode.data.length > budget.codeUnits) break;
+      budget.codeUnits -= textNode.data.length;
+      try {
+        if (textNode.data.length > 0 && range.intersectsNode(textNode)) covered.push(textNode);
+      } catch {
+        return [];
+      }
+    }
+    node = nextDocxPaintNode(node, ancestor);
   }
   const marks: HTMLElement[] = [];
   for (const textNode of covered) {
@@ -270,7 +170,7 @@ function unwrapSearchMark(mark: HTMLElement): void {
 export interface LyraDocxViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
 }
 
 class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
@@ -289,7 +189,9 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * against that outline, `text-quote` anchors via `internal/text-quote.ts`'s shared scope/resolve
  * helpers; `highlights` re-resolve by quote after every render (never by node identity), so a
  * highlight painted before its quote is in the rendered markup yet simply paints once a later load
- * contains it. Keyboard-accessible highlight actions are rendered only for quotes that resolved
+ * contains it. At most 100 quotes are painted per pass after inspecting 1,000 highlight entries;
+ * `activeHighlightId` is resolved first and retained inside that cap. Keyboard-accessible
+ * highlight actions are rendered only for quotes that resolved
  * against the currently loaded document, so an action never presents an enabled no-op. Highlight
  * painting uses `internal/text-highlights.ts`'s `acquireHighlightHandle()` --
  * the CSS Custom Highlight API where the browser supports it (no DOM mutation at all), a `<mark>`-wrap
@@ -298,6 +200,8 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * `<mark part="search-match">` (the active one also carrying `search-match-active`) -- a separate,
  * always-real-DOM-element mechanism from the tone-based highlight painting above, since search needs
  * many simultaneously-visible matches rather than one set of themed spans.
+ * A nonempty host `aria-label` makes the host the sole named semantic owner; otherwise the loaded
+ * shadow document owns the explicit-empty, `name`, or localized fallback label.
  *
  * @customElement lr-docx-viewer
  * @event lr-render-error - Fired only when loading, conversion, or sanitization fails terminally.
@@ -305,7 +209,8 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  *   has code `docx-conversion-message`, severity, source, and the original peer value as `cause`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
- *   matchCount, activeIndex }`.
+ *   matchCount, matchCountExact, activeIndex }`. At most 1,000 matches are retained; a false
+ *   `matchCountExact` makes `matchCount` a lower bound.
  * @event lr-highlight-activate - A painted `text-quote` highlight was clicked or its resolved
  *   keyboard action was activated. `detail: { id }`.
  * @event lr-text-select - Fired on selection end inside the rendered content. `detail: { text,
@@ -374,7 +279,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   override readonly anchorKinds = ['fragment', 'text-quote'] as const;
 
   @state() private fetchState: FetchState = { kind: 'idle' };
-  @state() private searchMatches: DocxSearchMatch[] = [];
+  @state() private searchMatches: TextQuoteMatches = emptyTextQuoteMatches();
+  private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
   @state() private resolvedHighlightActions: LyraHighlight[] = [];
 
@@ -400,12 +306,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   private searchQuery = '';
   private paintedSearchMarks: HTMLElement[] = [];
 
-  /** Memoizes `buildTextIndex()`'s whole-document `TreeWalker` walk across every `search()`/
-   *  `searchNext()`/`searchPrevious()`/`paintSearchMatches()` call within one loaded document's
-   *  lifetime -- invalidated in `updated()` on every `fetchState` transition (a `contentRoot()`
-   *  change), not merely on a new `'loaded'` state, since the corpus is equally stale once the
-   *  content root is gone (idle/loading/error) or about to be replaced. */
-  private textIndexCache: { text: string; entries: DocxTextIndexEntry[] } | null = null;
+  /** Bounded normalized corpus plus reusable occurrence cache for the current loaded document. */
+  private textIndexCache: { scope: TextQuoteScope; index: TextQuoteIndex; locale: string } | null = null;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -434,16 +336,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     if (changed.has('src') || changed.has('highlights')) {
       this.resetResolvedHighlightActions();
     }
-    if (changed.has('src')) {
-      // Search match offsets are only meaningful for the document they were found in -- reset
-      // silently (no lr-search-change) rather than emit, mirroring <lr-pdf-viewer>'s identical
-      // src-change behavior. Folded into this same update cycle (not updated()) so re-assigning
-      // these @state() fields doesn't schedule a follow-up one.
-      this.searchQuery = '';
-      this.searchMatches = [];
-      this.searchActiveIndex = -1;
-      this.clearSearchPaint();
-    }
+    if (changed.has('src') || changed.has('fetchState')) this.resetSearchForContentChange();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -472,6 +365,23 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private contentRoot(): Element | null {
     return this.renderRoot.querySelector('[part="content"]');
+  }
+
+  private resetSearchForContentChange(): void {
+    const shouldEmit = this.searchQuery !== '' || this.searchMatches.length > 0 || this.searchActiveIndex !== -1;
+    this.searchQuery = '';
+    this.searchMatches = emptyTextQuoteMatches();
+    this.searchMatchCountExact = true;
+    this.searchActiveIndex = -1;
+    this.clearSearchPaint();
+    if (shouldEmit) {
+      this.emit('lr-search-change', {
+        query: '',
+        matchCount: 0,
+        matchCountExact: true,
+        activeIndex: -1,
+      });
+    }
   }
 
   private async load(): Promise<void> {
@@ -660,11 +570,30 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       return;
     }
     const scope = scopeFromElement(root);
+    const index = createTextQuoteIndex(scope, this.effectiveLocale);
+    const workBudget = index.createWorkBudget();
     const rangesByTone = new Map<LyraHighlightTone, Range[]>(HIGHLIGHT_TONES.map((tone) => [tone, []]));
     let activeRange: Range | null = null;
-    for (const highlight of this.highlights) {
+    let active: LyraHighlight | undefined;
+    const candidates: LyraHighlight[] = [];
+    const candidateCount = Math.min(this.highlights.length, MAX_DOCX_HIGHLIGHT_CANDIDATES);
+    for (let index = 0; index < candidateCount; index++) {
+      const highlight = this.highlights[index]!;
+      candidates.push(highlight);
+      if (highlight.id === this.activeHighlightId) active = highlight;
+    }
+    if (active) {
+      const activeIndex = candidates.indexOf(active);
+      if (activeIndex > 0) {
+        candidates.splice(activeIndex, 1);
+        candidates.unshift(active);
+      }
+    }
+    for (const highlight of candidates) {
+      if (this.resolvedHighlightRanges.length >= MAX_DOCX_PAINTED_HIGHLIGHTS) break;
       if (highlight.anchor.kind !== 'text-quote') continue;
-      const range = resolveTextQuote(scope, highlight.anchor, this.effectiveLocale);
+      const match = index.resolve(highlight.anchor, workBudget);
+      const range = match ? rangeFromTextQuoteMatch(scope, match) : null;
       if (!range) continue;
       rangesByTone.get(highlight.tone ?? 'accent')!.push(range);
       this.resolvedHighlightRanges.push({ highlight, range });
@@ -786,19 +715,38 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   // -- search ----------------------------------------------------------------------------------------
 
-  /** Returns `textIndexCache`, building it (`buildTextIndex()`, a whole-document `TreeWalker` walk)
-   *  only the first time it's needed after the cache was last invalidated -- `search()`,
-   *  `searchNext()`, and `searchPrevious()` all resolve against the same loaded document's corpus,
-   *  so none of them need to re-walk it on every call. */
-  private getTextIndex(root: Element): { text: string; entries: DocxTextIndexEntry[] } {
-    this.textIndexCache ??= buildTextIndex(root);
+  private getTextIndex(root: Element): { scope: TextQuoteScope; index: TextQuoteIndex; locale: string } {
+    const locale = this.effectiveLocale;
+    if (!this.textIndexCache || this.textIndexCache.locale !== locale) {
+      const scope = scopeFromElement(root);
+      this.textIndexCache = {
+        scope,
+        index: createTextQuoteIndex(scope, locale, { maxMatches: MAX_DOCX_SEARCH_MATCHES }),
+        locale,
+      };
+    }
     return this.textIndexCache;
+  }
+
+  /** Rebuilds only the node-bearing scope after fallback `<mark>` writes, preserving occurrence
+   * offsets and the folded corpus when the normalized text is unchanged. */
+  private refreshTextIndexMapping(root: Element): { scope: TextQuoteScope; index: TextQuoteIndex; locale: string } {
+    const cached = this.getTextIndex(root);
+    const scope = scopeFromElement(root);
+    if (cached.index.rebindScope(scope)) {
+      cached.scope = scope;
+      return cached;
+    }
+    this.textIndexCache = null;
+    return this.getTextIndex(root);
   }
 
   /** Case-insensitive substring search over the rendered content's text (via `getTextIndex()`).
    *  An empty/whitespace-only query, or no loaded content, behaves like `clearSearch()` and resolves
-   *  `0`. Every match is painted immediately (see `paintSearchMatches()`), with the first one scrolled
-   *  into view. */
+   *  `0`. Up to 1,000 matches are retained and a 200-match window is painted (see
+   *  `paintSearchMatches()`), with the first one scrolled into view;
+   *  `lr-search-change.detail.matchCountExact=false` identifies the resolved return as a lower
+   *  bound. */
   async search(query: string): Promise<number> {
     // `lang` is a platform property rather than a Lit property, so it can change between user
     // searches without scheduling a render pass to invalidate LyraElement's per-update locale
@@ -806,28 +754,35 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     invalidateLyraLocaleCache(this);
     this.searchQuery = query;
     const root = this.contentRoot();
-    const trimmed = query.trim();
-    if (!root || !trimmed) {
-      this.searchMatches = [];
+    if (!root) {
+      this.searchMatches = emptyTextQuoteMatches();
+      this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.clearSearchPaint();
       this.emitSearchChange();
       return 0;
     }
-    const { text } = this.getTextIndex(root);
-    const { text: haystack, rawStarts, rawEnds } = foldDocxSearchText(text, this.effectiveLocale);
-    const needle = foldDocxSearchCase(trimmed, this.effectiveLocale);
-    const matches: DocxSearchMatch[] = [];
-    let from = 0;
-    let idx: number;
-    while ((idx = haystack.indexOf(needle, from)) !== -1) {
-      const start = rawStarts[idx];
-      const end = rawEnds[idx + needle.length - 1];
-      if (start !== undefined && end !== undefined) matches.push({ start, end });
-      if (matches.length >= MAX_DOCX_SEARCH_MATCHES) break;
-      from = idx + Math.max(1, needle.length);
+    if (query.length > TEXT_QUOTE_LIMITS.maxQueryCodeUnits) {
+      this.searchMatches = emptyTextQuoteMatches();
+      this.searchMatchCountExact = false;
+      this.searchActiveIndex = -1;
+      this.clearSearchPaint();
+      this.emitSearchChange();
+      return 0;
     }
+    const trimmed = query.trim();
+    if (!trimmed) {
+      this.searchMatches = emptyTextQuoteMatches();
+      this.searchMatchCountExact = true;
+      this.searchActiveIndex = -1;
+      this.clearSearchPaint();
+      this.emitSearchChange();
+      return 0;
+    }
+    const { index } = this.getTextIndex(root);
+    const matches = index.search(trimmed, index.createWorkBudget());
     this.searchMatches = matches;
+    this.searchMatchCountExact = matches.matchCountExact;
     this.searchActiveIndex = matches.length > 0 ? 0 : -1;
     this.emitSearchChange();
     this.paintSearchMatches();
@@ -861,16 +816,18 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
    *  0-match/no-active-index state. */
   clearSearch(): void {
     this.searchQuery = '';
-    this.searchMatches = [];
+    this.searchMatches = emptyTextQuoteMatches();
+    this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
     this.clearSearchPaint();
-    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
   }
 
   private emitSearchChange(): void {
     this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
+      matchCountExact: this.searchMatchCountExact,
       activeIndex: this.searchActiveIndex,
     });
   }
@@ -897,18 +854,27 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     this.clearSearchPaint();
     const root = this.contentRoot();
     if (!root || this.searchMatches.length === 0) return;
-    const { entries } = this.getTextIndex(root);
+    const { scope } = this.refreshTextIndexMapping(root);
     const marks: HTMLElement[] = [];
-    for (let i = this.searchMatches.length - 1; i >= 0; i--) {
-      const match = this.searchMatches[i]!; // safe: i in [0, length)
-      const startPoint = pointAtOffset(entries, match.start);
-      const endPoint = pointAtOffset(entries, match.end);
-      if (!startPoint || !endPoint) continue;
-      const range = root.ownerDocument.createRange();
-      range.setStart(startPoint.node, startPoint.offset);
-      range.setEnd(endPoint.node, endPoint.offset);
-      const part = i === this.searchActiveIndex ? 'search-match search-match-active' : 'search-match';
-      marks.push(...wrapRangeInSearchMarks(range, part));
+    const count = Math.min(this.searchMatches.length, MAX_DOCX_PAINTED_SEARCH_MATCHES);
+    const half = MAX_DOCX_PAINTED_SEARCH_MATCHES >> 1;
+    const centre = this.searchActiveIndex < 0 ? 0 : this.searchActiveIndex;
+    const start = Math.max(0, Math.min(centre - half, this.searchMatches.length - count));
+    const budget: DocxPaintWorkBudget = {
+      traversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes,
+      codeUnits: TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
+    };
+    const ranges: Array<{ index: number; range: Range }> = [];
+    for (let i = start + count - 1; i >= start; i--) {
+      const match = this.searchMatches.at(i);
+      if (!match) continue;
+      const range = rangeFromTextQuoteMatch(scope, match);
+      if (!range) continue;
+      ranges.push({ index: i, range });
+    }
+    for (const { index, range } of ranges) {
+      const part = index === this.searchActiveIndex ? 'search-match search-match-active' : 'search-match';
+      marks.push(...wrapRangeInSearchMarks(range, part, budget));
     }
     this.paintedSearchMarks = marks;
   }
@@ -919,8 +885,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         return html`
           <div
             part="content"
-            role="document"
-            aria-label=${hostAriaLabel(this) ?? (this.name || this.localize('docxViewerLabel'))}
+            role=${viewerSemanticRole(this, 'document') ?? nothing}
+            aria-label=${viewerSemanticLabel(this, this.name || this.localize('docxViewerLabel')) ?? nothing}
             @click=${this.onContentClick}
           >
             ${unsafeHTML(this.fetchState.markup)}

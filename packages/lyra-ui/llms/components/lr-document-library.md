@@ -16,16 +16,37 @@
 ## `lr-document-library`
 
 Controlled searchable and filterable document inventory with versions, tags, owners, freshness,
-sorting, and bulk selection.
+sorting, and bulk selection. It composes the table's bounded 100-row default, so a large document
+collection stays reachable through pagination without mounting an unbounded grid.
 
-**Properties:** `documents`, `filter`, `label`, `loading`, `selectedIds`, `sortKey`, `sortDirection`,
-`tagFilter`. **Events:** `lr-filter-change`, `lr-open`, `lr-selection-change`, `lr-sort`. **CSS
-parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
+**9.0 migration:** `lr-filter-change.detail.text` is now `searchTerm`, backed by the public
+`searchTerm`/`search-term` axis. Replace `sortDirection: 'ascending'|'descending'` with
+`sortDir: 'asc'|'desc'`; document sorting now uses the same cancelable `lr-sort-request` followed
+by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary as `lr-table`.
+
+**Properties:** clone-owned frozen `documents: readonly LibraryDocument[] = []` (document records,
+nested tags, and dates are snapshotted on assignment; reads are detached so `Date` mutators cannot
+reach retained state), `filter`, `label`, `loading`, clone-owned
+frozen `selectedIds: readonly string[] = []`, public controlled `searchTerm: string = ''`
+(`search-term`), `sortKey: LibraryDocumentSortKey = 'name'` (`sort-key`), canonical
+`sortDir: 'asc'|'desc' = 'asc'` (`sort-dir`), and clone-owned frozen
+`tagFilter: readonly string[] = []`.
+
+**Events:** `lr-filter-change` emits a fresh frozen readonly
+`{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly
+`{ phase: 'request', sortKey, sortDir }`; accepted `lr-sort` commits the same canonical vocabulary
+with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ ids }`; and `lr-open`
+emits frozen readonly `{ id }`.
+
+**CSS parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
 `clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
 
 `selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
 selection stays silent; every post-mount `selectedIds` change appends the localized selected count
 to the document's shared light-DOM polite sink, including zero and repeated equal counts.
-Internal search `lr-input`, tag-filter `change`, and checkbox `lr-change` events stop at the
-component's translation boundary. Listen for `lr-filter-change` and `lr-selection-change`; one
-interaction emits one documented host contract without also leaking the composed child event.
+Internal search, tag-filter, and checkbox native `input`/`change` plus prefixed `lr-input`/
+`lr-change` aliases, table pagination, and the table's click-anywhere selection event stop at the
+component's translation boundary. The table is still in multiple-selection semantics so
+`selectedIds` reaches row `aria-selected`; document selection itself remains checkbox-owned, while
+row activation opens the document. Listen for the document-library events above; one interaction
+emits one documented host contract without also leaking a composed child event.

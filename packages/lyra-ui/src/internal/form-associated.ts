@@ -291,6 +291,7 @@ function readNativeWillValidate(internals: ElementInternals): boolean | undefine
 
 interface DirectCustomErrorHost extends LitElement {
   setCustomValidity(message: string): void;
+  resetValidity?(): void;
 }
 
 /**
@@ -303,29 +304,69 @@ export function installCustomErrorProperty(
   getCustomValidityMessage: () => string,
 ): void {
   if (Object.prototype.hasOwnProperty.call(host, 'customError')) return;
-  let reflecting = false;
+  const setValidity = host.setCustomValidity.bind(host);
+  const resetValidity = host.resetValidity?.bind(host);
+  let committing = false;
+  let resetting = false;
+
+  const reflectMessage = (message: string): void => {
+    if (message) {
+      if (host.getAttribute('custom-error') !== message) host.setAttribute('custom-error', message);
+    } else if (host.hasAttribute('custom-error')) {
+      host.removeAttribute('custom-error');
+    }
+  };
+
+  const commit = (next: string | null | undefined): void => {
+    if (committing) {
+      // A component reset implementation may intentionally delegate to its own public setter.
+      // Attribute reflection re-entry, by contrast, is already part of the active transaction.
+      if (resetting) setValidity(next ?? '');
+      return;
+    }
+    const old = getCustomValidityMessage() || null;
+    const message = next ?? '';
+    committing = true;
+    try {
+      setValidity(message);
+      reflectMessage(getCustomValidityMessage() || '');
+    } finally {
+      committing = false;
+    }
+    host.requestUpdate('customError', old);
+  };
+
   Object.defineProperty(host, 'customError', {
     configurable: true,
     enumerable: true,
     get: (): string | null => getCustomValidityMessage() || null,
-    set: (next: string | null): void => {
-      if (reflecting) return;
-      const old = getCustomValidityMessage() || null;
-      const message = next ?? '';
-      reflecting = true;
-      try {
-        if (next == null) {
-          if (host.hasAttribute('custom-error')) host.removeAttribute('custom-error');
-        } else if (host.getAttribute('custom-error') !== message) {
-          host.setAttribute('custom-error', message);
-        }
-      } finally {
-        reflecting = false;
-      }
-      host.setCustomValidity(message);
-      host.requestUpdate('customError', old);
-    },
+    set: commit,
   });
+  Object.defineProperty(host, 'setCustomValidity', {
+    configurable: true,
+    writable: true,
+    value: commit,
+  });
+  if (resetValidity) {
+    Object.defineProperty(host, 'resetValidity', {
+      configurable: true,
+      writable: true,
+      value: (): void => {
+        if (committing) return;
+        const old = getCustomValidityMessage() || null;
+        committing = true;
+        resetting = true;
+        try {
+          resetValidity();
+          reflectMessage(getCustomValidityMessage() || '');
+        } finally {
+          resetting = false;
+          committing = false;
+        }
+        host.requestUpdate('customError', old);
+      },
+    });
+  }
 }
 
 /**
@@ -498,9 +539,9 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       installInvalidEventAlias(this, (init: { cancelable: true }) =>
         (
           this as unknown as {
-            emit(name: string, detail?: undefined, options?: { cancelable: boolean }): CustomEvent<undefined>;
+            emit(name: string, detail?: null, options?: { cancelable: boolean }): CustomEvent<null>;
           }
-        ).emit('lr-invalid', undefined, init),
+        ).emit('lr-invalid', null, init),
       );
       // Interaction signals, listened for on the host itself so subclasses need no wiring:
       // `input`/`change` from an internal native control are composed and reach the host (as are
@@ -585,14 +626,29 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      *
      * The message is caller-supplied content, so it is used verbatim and never localized here.
      */
-    setCustomValidity(message: string): void {
-      this.validityController.setCustomValidity(message ?? '');
+    private commitCustomValidity(message: string | null | undefined): void {
+      const old = this.customError;
+      const normalized = message ?? '';
+      this.validityController.setCustomValidity(normalized);
       this.syncValidityStates();
+
+      this.reflectingCustomError = true;
+      try {
+        if (normalized) this.setAttribute('custom-error', normalized);
+        else this.removeAttribute('custom-error');
+      } finally {
+        this.reflectingCustomError = false;
+      }
+      this.requestUpdate('customError', old);
+    }
+
+    setCustomValidity(message: string): void {
+      this.commitCustomValidity(message);
     }
 
     /** Clears consumer-supplied validity and restores the current intrinsic constraints. */
     resetValidity(): void {
-      this.validityController.setCustomValidity('');
+      this.commitCustomValidity('');
       this.updateValidity();
       this.syncValidityStates();
     }
@@ -719,19 +775,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
 
     set customError(next: string | null) {
       if (this.reflectingCustomError) return;
-      const old = this.customError;
-      const message = next ?? '';
-
-      this.reflectingCustomError = true;
-      try {
-        if (next == null) this.removeAttribute('custom-error');
-        else this.setAttribute('custom-error', message);
-      } finally {
-        this.reflectingCustomError = false;
-      }
-
-      this.setCustomValidity(message);
-      this.requestUpdate('customError', old);
+      this.commitCustomValidity(next);
     }
 
     get disabled(): boolean {

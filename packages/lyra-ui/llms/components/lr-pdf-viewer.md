@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `pdfjs-dist` — see `llms/peers.md`
-- **Themeable via** 17 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,16 +23,16 @@ paint through one `<lr-highlight-layer>` per page, stacked between the canvas an
 (canvas → highlights → text layer) so starting a text selection over a cited passage keeps working.
 Pointer activation is hit-tested at the page-wrapper level (the text layer on top intercepts most
 direct pointer events); keyboard activation reaches the highlight layer's own roving-tabindex rects
-directly, since z-stacking doesn't affect tab order. Residual: a click that *ends a text-selection
-drag* over a highlighted passage never activates it — the selection-in-progress check exists exactly
+directly, since z-stacking doesn't affect tab order. Residual: a click that _ends a text-selection
+drag_ over a highlighted passage never activates it — the selection-in-progress check exists exactly
 to tell that apart from a genuine activation click.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `page: number = 1` is the one-based
 current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
- page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
- declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
+page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
+declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
 anchor-target contract). The other inherited anchor-target properties are `highlights:
 LyraHighlight[] = []` (property only; reassign after mutation), `activeHighlightId: string | null =
@@ -42,14 +42,15 @@ and are rejected rather than clamped; region rectangles also require finite coor
 nonnegative dimensions.
 
 **Events:**
+
 - `lr-render-error` — `detail: { error }` — fetching, parsing, or rendering (page canvas or text
   layer) failed.
 - `lr-load` — `detail: { pageCount }` — the document reached `ready`. `page` is reset to `1` first.
 - `lr-page-change` — `detail: { page, pageCount }` — fired for scroll-driven page crossings as well
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
 - `lr-zoom-change` — `detail: { zoom }`.
-- `lr-search-change` — `detail: { query, matchCount, activeIndex }` — from `search()`/`searchNext()`/
-  `searchPrevious()`/`clearSearch()`. A `src` change resets search state *silently* (no event), since
+- `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
+  `searchPrevious()`/`clearSearch()`. A `src` change resets search state _silently_ (no event), since
   match page/offset coordinates only mean anything for the document they were found in.
 - `lr-highlight-activate` — `detail: { id }` — a painted highlight was clicked or activated via
   Enter/Space. On a pointer hit-test, the last entry of `highlights` covering the point wins.
@@ -58,11 +59,15 @@ nonnegative dimensions.
   when it is a `text-quote`.
 - `lr-anchor-result` — `detail: { found }` — fired after an `anchor` assignment or a
   `scrollToAnchor()` call.
+- `lr-page-viewer-state-change` — `detail.snapshot` is the same immutable atomic state exposed by
+  `pageViewerSnapshot` (`identity`, `status`, `page`, `pageCount`). `identity` changes for every load,
+  including same-count replacements.
 
 **Methods:** `nextPage()`, `previousPage()`, `zoomIn()`, and `zoomOut()` update the corresponding
 controlled state within its supported range. `getPageText(page)` resolves the raw reading-order text
 of one page (per-page LRU-cached, 64 pages), rejecting on no loaded document or an out-of-range page.
-`renderPageThumbnail(page, canvas, options?)` renders `page` into a caller-owned `canvas` at
+`pageViewerSnapshot` is a synchronously readable readonly lifecycle/page/count snapshot for page
+rails and other late subscribers. `renderPageThumbnail(page, canvas, options?)` renders `page` into a caller-owned `canvas` at
 `options.width` CSS px (default 96), devicePixelRatio-aware, resolving `false` when not ready or out
 of range. `goToPage(page)` scrolls the virtualized list to `page`, resolving `true` once mounted (or
 `false` for an out-of-range value, without changing `page`). `getOutline()` resolves the document's
@@ -81,7 +86,7 @@ carries its own part name), `page-indicator`, `zoom-indicator`, `pages`, `page`,
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
 text layer around one search match), `search-match-active` (the currently active match, also carries
-`search-match`), `spinner`, and `error`. Search painting is best-effort: a page outside the
+`search-match`), `page-error`, `page-error-visible`, `spinner`, and `error`. Search painting is best-effort: a page outside the
 virtualized render window is skipped and repainted once its text layer mounts, and a match spanning a
 text-layer span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable
 via `searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden

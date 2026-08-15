@@ -21,6 +21,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_csvViewerLabel, LYRA_DEFAULT_csvViewerUnavailable, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
@@ -51,7 +52,7 @@ export interface LyraCsvViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'l
   'lr-render-error': CustomEvent<{ error: unknown }>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
 }
 
 class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
@@ -83,7 +84,8 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  *   call is applied. `detail: { found }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
- *   matchCount, activeIndex }`.
+ *   matchCount, matchCountExact, activeIndex }`. At most 1,000 matches are retained; when more
+ *   exist, `matchCount` is 1,000 and `matchCountExact` is `false`.
  * @csspart base - The root wrapper with explicit `aria-busy` loading state.
  * @csspart body - The scrollable wrapper around the fetched-state content, capped by `max-height`.
  * @csspart sheet - The wrapper around the header row and virtualized body.
@@ -147,6 +149,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
    *  navigation -- bound to `<lr-virtual-list>`'s own `active-id`. */
   @state() private activeRowKey: number | '' = '';
   @state() private searchMatches: { row: number; col: number }[] = [];
+  private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
   private lastSearchLocale = '';
@@ -206,6 +209,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       // event), mirroring <lr-pdf-viewer>'s identical src-change reset.
       this.searchQuery = '';
       this.searchMatches = [];
+      this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.activeRowKey = '';
     }
@@ -367,25 +371,31 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   /** Case-insensitive substring search over every raw-grid cell's stringified value (the same
    *  stringification `cell()` renders), ordered row then column -- the header row is included when
    *  present, the same raw-grid convention `cell-range` anchors use. An empty/whitespace-only query
-   *  behaves like `clearSearch()` and resolves `0`. */
+   *  behaves like `clearSearch()` and resolves `0`. Returns at most 1,000 retained matches;
+   *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
   async search(query: string): Promise<number> {
     this.searchQuery = query;
     this.lastSearchLocale = this.effectiveLocale;
     const trimmed = query.trim().toLocaleLowerCase(this.effectiveLocale);
     const matches: { row: number; col: number }[] = [];
+    let matchCountExact = true;
     if (trimmed && this.fetchState.kind === 'loaded') {
       const { rows } = this.fetchState;
       searchRows: for (let r = 0; r < rows.length; r++) {
         const row = rows[r]!;
         for (let c = 0; c < row.length; c++) {
           if (cell(row[c]).toLocaleLowerCase(this.effectiveLocale).includes(trimmed)) {
+            if (matches.length === MAX_SEARCH_MATCHES) {
+              matchCountExact = false;
+              break searchRows;
+            }
             matches.push({ row: r + 1, col: c });
-            if (matches.length >= MAX_SEARCH_MATCHES) break searchRows;
           }
         }
       }
     }
     this.searchMatches = matches;
+    this.searchMatchCountExact = matchCountExact;
     this.searchActiveIndex = matches.length > 0 ? 0 : -1;
     this.emitSearchChange();
     if (this.searchActiveIndex >= 0) await this.jumpToCell(matches[0]!.row, matches[0]!.col);
@@ -419,12 +429,13 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   clearSearch(): void {
     this.searchQuery = '';
     this.searchMatches = [];
+    this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
-    this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+    this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
   }
 
   private emitSearchChange(): void {
-    this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.searchActiveIndex });
+    this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, matchCountExact: this.searchMatchCountExact, activeIndex: this.searchActiveIndex });
   }
 
   private stopInternalEvent = (event: Event): void => { event.stopPropagation(); };

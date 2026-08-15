@@ -60,18 +60,28 @@ export const styles = css`
      !important. */
   :where([part='base'][href]):hover,
   :where(.linked-shell:hover > [part='base']) {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-stat-link-hover-border-color, var(--lr-color-brand));
     /* One step of lift on an otherwise flat resting card -- a hovered tile is still resting chrome,
        not an overlay, so it stops at the card step. */
-    box-shadow: var(--lr-shadow-s);
+    box-shadow: var(--lr-stat-link-hover-shadow, var(--lr-shadow-s));
   }
   /* The pressed tile keeps the hovered border and lift and adds a fill: a shadow change alone is
      nearly invisible on a card this large, and the tint mixes toward --lr-color-mix-partner (the
      text colour) so it darkens a light theme and lightens a dark one rather than always doing one. */
   :where([part='base'][href]):active {
-    border-color: var(--lr-color-brand);
-    box-shadow: var(--lr-shadow-s);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: var(
+      --lr-stat-link-active-border-color,
+      var(--lr-stat-link-hover-border-color, var(--lr-color-brand))
+    );
+    box-shadow: var(--lr-stat-link-active-shadow, var(--lr-stat-link-hover-shadow, var(--lr-shadow-s)));
+    background: var(
+      --lr-stat-link-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-surface),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
   }
   [part='base'][href]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

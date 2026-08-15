@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,16 +22,19 @@ sections, and processing instructions, preserved in their original mixed-child s
 Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
 matching. Every document type declaration is rejected before `DOMParser`, preventing external
 entity access and browser-specific internal-entity expansion. Not `lr-json-viewer` (JS values); not `lr-html-viewer`
-(sanitized *rendered* HTML). No XPath/XSLT evaluation, no editing, no schema validation.
+(sanitized _rendered_ HTML). No XPath/XSLT evaluation, no editing, no schema validation.
 
 **Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
 string` (property only) — raw XML text to parse and render; wins over `src`, and setting it parses
-synchronously. `name: string = ''` — accessible label. `collapsedDepth?: number` (attribute
+synchronously. Assigning `undefined` relinquishes inline authority and immediately resumes an
+already configured `src`, or exposes idle when none exists. `source: LyraXmlViewerSource` is the
+readonly discriminated effective authority (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or
+`null`). `name: string = ''` — accessible label. `collapsedDepth?: number` (attribute
 `collapsed-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed. `copyable:
 boolean = false` (reflected) — shows copy-to-clipboard affordances, one for the whole document plus
 one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
-contract) — each numeric path segment is the 0-based index within the parent's *element* children,
+contract) — each numeric path segment is the 0-based index within the parent's _element_ children,
 and an optional trailing string segment `'@attrName'` addresses one existing, nonempty-named
 attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 
@@ -54,8 +57,12 @@ adds `data-active-highlight` to the matching row. Entries are deduplicated by `i
 anchor kind or path this document cannot resolve is dropped whole rather than painted at some
 coarser granularity, and an entry inside a collapsed subtree paints once that subtree is expanded.
 
-**Events:** `lr-copy` — `detail: { text }`. `lr-search-change` — `detail: { query, matchCount,
-activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
+**Events:** `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
+`detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
+show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-error` with
+`detail: { ok: false, text, reason, error }`; `reason` is `'unsupported'`, `'denied'`, or `'failed'`.
+`lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`.
+`lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
 parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
 boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
 `lr-highlight-activate` — non-cancelable; `detail: { id }`, fired when a highlight's
@@ -72,14 +79,16 @@ tree, rather than resolving indistinguishably from the bare element path),
 `attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
 `toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
 elements), `highlight-action` (the focusable button a resolved `highlights` entry adds to its element
-row), `error`, `spinner`.
+row), `toggle-placeholder` (the empty toggle-column spacer on leaf rows), `error`, `spinner`.
+The spinner always includes visible localized loading text alongside its decorative ring; the text
+remains understandable without CSS or animation and the ring stops under reduced motion.
 
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
 of the scrollable body; also settable via the `max-height` property.
 `--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the
-`[part='node']` holding the *current* search match, leaving every other match on its dashed
+`[part='node']` holding the _current_ search match, leaving every other match on its dashed
 `--lr-xml-viewer-match-color` outline. It is an inline `var()` fallback at the point of use rather
-than a `:host` declaration, so it can be set on the element *or on any ancestor*:
+than a `:host` declaration, so it can be set on the element _or on any ancestor_:
 `::part(node)[data-active-match]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — so distinguishing the active match previously meant re-pointing the shared
 `--lr-color-warning` token, which recolored every other match (and every other warning surface)
@@ -105,14 +114,14 @@ latter, so a neutral highlight tinted with it would render as unhighlighted.
 by `activeHighlightId`, and `--lr-xml-viewer-active-attribute-color` (default `var(--lr-color-brand)`)
 outlines the `[part='attribute']` an attribute-addressing `node-path` anchor resolved to.
 
-`[part='toggle']`'s glyph box stays compact (`1.25rem`) while its *interactive* box takes the shared
+`[part='toggle']`'s glyph box stays compact (`1.25rem`) while its _interactive_ box takes the shared
 minimum target size as a floor via `--lr-icon-button-size`. That token is a floor, not a fixed size,
 so lowering it never squashes the chevron below its own box — the visible glyph keeps its size while
 the hit target follows the token, and it can never fall under the accessible minimum from this
 component's own rules.
 
 ```ts
-const viewer = document.querySelector('lr-xml-viewer');
+const viewer = document.querySelector("lr-xml-viewer");
 viewer.xml = payload;
 viewer.collapsedDepth = 2;
 viewer.copyable = true;

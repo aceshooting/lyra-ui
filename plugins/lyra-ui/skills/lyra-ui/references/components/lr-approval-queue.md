@@ -19,13 +19,19 @@ Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-
 It never executes tools or persists decisions.
 
 **Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
-`{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`; `selectedId: string = ''`;
-`open: boolean = false`; `editable: boolean = true`; `label: string = ''`.
+`{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`; `selectedId: string | null = null`;
+`open: boolean = false`; `editable: boolean = true`; `label: string = ''`. Later duplicate request
+ids are omitted before count, selection, dialog lookup, or decision events are derived.
 
 **Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision` (`{ invocationId,
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 `lr-approval-decision` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
 request and keeps the decision dialog pending.
+
+Resolved rows (`approved`/`denied`) are never actionable. Replacing `requests` reconciles stale
+selection and dialog state before another activation can use it; a request that disappears or is
+resolved while open closes the dialog, and reentrant host updates during selection cannot reopen a
+stale request.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`

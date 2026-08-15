@@ -19,22 +19,34 @@ An audio/video player built on a native `<audio>`/`<video>` element, plus a cue 
 `currentTime`, `time-range` anchor/highlight support, an optional dependency-free waveform (peaks
 in, no in-component decoding), and playback-rate control. Owns recorded-media transcript sync —
 distinct from `<lr-transcript-feed>` (live captions for an in-progress voice session) and
-`<lr-playback>` (an index stepper, no media). Adopts `DocumentAnchorTarget` with
+`<lr-sequence-playback>` (a discrete sequence stepper, no native media). Adopts
+`DocumentAnchorTarget` with
 `anchorKinds: ['time-range']` only — no text selection is bound. The transcript virtualizes through
 `<lr-virtual-list>` the same way `lr-pdf-viewer` virtualizes pages.
+
+The default document-viewer renderer advertises `time-range` anchors but not search: the generic
+document payload has no cue/transcript field, so advertising search there would expose a control
+whose result is always empty. Standalone `<lr-av-player>` search remains available whenever the
+consumer supplies `cues` directly.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `kind?: 'audio' | 'video'`
 (attribute-backed auto-detection override), `mimeType: string = ''` (attribute `mime-type`), `poster: string =
 ''`, `loop: boolean = false`, `muted: boolean = false`, `preload: 'none' | 'metadata' | 'auto' =
-'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected), `rates: number[] =
-[0.75, 1, 1.25, 1.5, 2]` (attribute: false), `cues: LyraAvCue[] = []` (attribute: false), `peaks:
-number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: false). The inherited
-anchor-target surface is `highlights: LyraHighlight[] = []` (property only; reassign after
-mutation), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
+'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected),
+`volume: number = 1` (attribute `volume`, reflected; normalized to `0..1`),
+`rates: readonly number[] = [0.75, 1, 1.25, 1.5, 2]` (attribute: false),
+`cues: readonly LyraAvCue[] = []` (attribute: false), `peaks: readonly number[] = []`
+(attribute: false), and `tracks: readonly LyraAvTrack[] = []` (attribute: false). Each collection is
+normalized synchronously on assignment into a bounded, cloned, frozen snapshot; mutate by assigning a
+new collection. The inherited
+anchor-target surface is `highlights: readonly LyraHighlight[] = []` (property only; assign a new
+collection to update), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
 `anchorKinds: readonly LyraAnchorKind[] = ['time-range']`.
-`LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
-'captions' | 'descriptions', srclang, label, default? }`.
+`LyraAvCue = { readonly id, readonly start, readonly end?, readonly text, readonly speaker? }`;
+`LyraAvTrack = { readonly src, readonly kind: 'subtitles' | 'captions' | 'descriptions', readonly
+srclang, readonly label, readonly default? }`. Their retained records are frozen as well as the
+outer arrays.
 
 Only exact `kind="audio"` and `kind="video"` values override MIME auto-detection. An unrecognized
 runtime or attribute value falls back to `mimeType` (`audio/*` renders audio; every other value
@@ -67,15 +79,17 @@ unsupported or unresolved targets report `false` through the return value and `l
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
-`lr-rate-change` (`detail: { rate }`), `lr-cue-change` (`detail: { id }`, `id` is `null` when no
-cue is active), `lr-highlight-activate` (`detail: { id }`), `lr-anchor-result` (`detail: {
+`lr-rate-change` (`detail: { rate }`), `lr-cue-change`
+(`detail: { readonly cueId, readonly index }`; `cueId` is `null` and `index` is `-1` when no cue is active),
+`lr-highlight-activate` (`detail: { id }`), `lr-anchor-result` (`detail: {
 found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
 `lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
 `play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
-`lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are
-additionally bridged as bubbling, composed host events. `lr-text-select` is not part of this
+`lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are relayed
+exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
+`relatedTarget`), followed by `lr-focus`/`lr-blur`. `lr-text-select` is not part of this
 player's event contract: transcript rows live inside the embedded virtual list's nested shadow
 root, so no selection binding is installed.
 

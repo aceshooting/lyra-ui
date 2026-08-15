@@ -182,7 +182,12 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  [part='option']:hover,
+  [part='option']:hover {
+    background: var(
+      --lr-locale-picker-option-active-bg,
+      var(--lr-color-brand-quiet)
+    );
+  }
   [part='option'][data-active] {
     background: var(--lr-locale-picker-option-active-bg, var(--lr-color-brand-quiet));
   }
@@ -199,6 +204,24 @@ export const styles = css`
     border-color: var(--lr-locale-picker-option-selected-border-color, var(--lr-color-brand));
     color: var(--lr-locale-picker-option-selected-color, var(--lr-color-brand));
     font-weight: var(--lr-locale-picker-option-selected-font-weight, var(--lr-font-weight-semibold));
+  }
+  @media (forced-colors: active) {
+    :where([part='trigger']):hover:where(:not(:disabled)) {
+      outline: var(--lr-border-width-thin) dashed Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
+    }
+    :where([part="trigger"]):active:where(:not(:disabled)) {
+      outline-style: double;
+      outline-width: var(--lr-border-width-medium);
+    }
+    [part="option"][data-active] {
+      outline: var(--lr-border-width-thin) dashed Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
+    }
+    [part="option"][aria-selected="true"] {
+      border-color: Highlight;
+      border-style: double;
+    }
   }
   [part='option-flag'] {
     flex: 0 0 auto;

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -32,7 +32,8 @@ shared hit target (42px including the row border at the default theme); `l` and 
 **Properties:**
 
 - `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search' |
-'date' | 'datetime-local' | 'tel' | 'url'`
+'date' | 'datetime-local' | 'tel' | 'url'`. Unsupported attribute or direct-property strings
+  normalize to reflected `text` before native validity and type-dependent chrome are projected
 - `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
   (reflected) — the shared field-surface vocabulary. `outlined` (the mapped default) draws a border
@@ -212,6 +213,10 @@ without a `::part(input-wrapper)` rule and without leaving the `appearance` voca
 actions and `lr-number-input` steppers share `--lr-input-action-color`,
 `--lr-input-action-hover-color`, `--lr-input-action-active-color`, and
 `--lr-input-action-active-bg`; all fall back to the previous text/surface semantic tokens.
+For `type="time"`, the browser-native picker indicator gains disabled-gated hover and focus-visible
+affordances through `--lr-input-time-picker-hover-bg`, `--lr-input-time-picker-active-bg`,
+`--lr-input-time-picker-focus-bg`, and `--lr-input-time-picker-focus-ring` (falling back to
+brand-quiet/brand and the canonical focus-ring token).
 
 ### Shared form vocabulary — `size`, `appearance`, `pill`, and custom validity
 
@@ -323,15 +328,26 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 <lr-input type="email" label="Email" required></lr-input>
 <lr-input size="s" placeholder="Compact"></lr-input>
 <lr-input appearance="plain" pill placeholder="Pill, no chrome"></lr-input>
-<lr-input type="number" min="0" max="10" step="0.5" without-spin-buttons label="Weight"></lr-input>
-<lr-input type="search" clearable value="workflow" aria-label="Search"><span slot="start">⌕</span></lr-input>
+<lr-input
+  type="number"
+  min="0"
+  max="10"
+  step="0.5"
+  without-spin-buttons
+  label="Weight"
+></lr-input>
+<lr-input type="search" clearable value="workflow" aria-label="Search"
+  ><span slot="start">⌕</span></lr-input
+>
 <lr-input type="time" label="Reminder" id="reminder"></lr-input>
 <button type="button" id="open-picker">Pick a time</button>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/input/input.js';
-  const time = document.getElementById('reminder');
+  import "@aceshooting/lyra-ui/components/forms/input/input.js";
+  const time = document.getElementById("reminder");
   // showPicker() needs user activation, so drive it from a real click.
-  document.getElementById('open-picker').addEventListener('click', () => time.showPicker());
+  document
+    .getElementById("open-picker")
+    .addEventListener("click", () => time.showPicker());
 </script>
 ```
 

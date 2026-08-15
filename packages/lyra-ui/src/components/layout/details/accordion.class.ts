@@ -12,13 +12,13 @@ import type {
   LyraAccordionAppearance,
   LyraAccordionHeadingLevel,
   LyraAccordionIconPlacement,
-} from "./accordion-item.class.js";
+} from "./accordion-types.js";
 import {
   applyAccordionItemOwnerState,
   bindAccordionItemOwner,
   releaseAccordionItemOwner,
-  type AccordionItemTransitionSource,
 } from "./accordion-owner.js";
+import type { AccordionItemTransitionSource } from "./accordion-types.js";
 import { styles } from "./accordion.styles.js";
 
 export type LyraAccordionMode = "single" | "single-collapsible" | "multiple";

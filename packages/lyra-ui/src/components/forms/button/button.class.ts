@@ -12,7 +12,6 @@ import { variants } from '../../../internal/variants.styles.js';
 import type {
   LyraAppearance,
   LyraSize,
-  LyraSizeStep,
   LyraVariant,
 } from '../../../internal/variants.js';
 import { styles } from './button.styles.js';
@@ -46,9 +45,6 @@ export type ButtonVariant = LyraVariant | 'default' | 'primary' | 'text';
 /** The shared appearance vocabulary (`accent`/`filled`/`outlined`/`filled-outlined`/`plain`) plus
  *  this component's two own tiers, `link` and `quiet`. */
 export type ButtonAppearance = LyraAppearance | 'link' | 'quiet';
-/** Alias of the canonical six-step size ladder. The `size` property itself accepts
- *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
-export type ButtonSize = LyraSizeStep;
 export type ButtonType = 'button' | 'submit' | 'reset';
 /** Native `formenctype` vocabulary, applied to the submission this button triggers. */
 export type ButtonFormEnctype =
@@ -61,9 +57,9 @@ export type ButtonFormMethod = 'get' | 'post' | 'dialog';
 export interface LyraButtonEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 
 /**
@@ -122,15 +118,16 @@ export interface LyraButtonEventMap {
  * @event blur - Native blur relayed once from the internal button or anchor.
  * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-invalid - The button failed a validity check.
+ * @event lr-invalid - The button failed a validity check. Cancelable; preventing it also prevents
+ *   the native `invalid` event's default validation UI.
  * @slot - Default slot: the button's label content.
  * @slot start - Leading icon/content, rendered before the label.
  * @slot prefix - Shoelace alias for `start`, rendered through the same wrapper.
  * @slot end - Trailing icon/content, rendered after the label.
  * @slot suffix - Shoelace alias for `end`, rendered through the same wrapper.
  * @attr form - ID of an external form owner. The `form` property still reads as the resolved form.
- * @attr rel - Compatibility input whose rendered value is always derived from `target`; author
- *   values never weaken the `noopener noreferrer` reverse-tabnabbing guard.
+ * @attr rel - Independently settable author relationship tokens (no default). `opener` is always
+ *   stripped, and any `target` force-adds the non-removable `noopener noreferrer` guard.
  * @csspart base - Compatibility name for the internal control; use `button`.
  * @csspart button - The internal native `<button>` (or an `<a>` for a safe link). It is the same
  *   node as `base`. Circle and icon-only states retain the shared minimum icon-button target.
@@ -332,7 +329,9 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', null, init),
+    );
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(
       this,

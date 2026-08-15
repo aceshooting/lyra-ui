@@ -7,7 +7,8 @@ import {
 
 it('normalizes string shorthand without changing complete records', () => {
   const full = { id: 'b', label: 'Beta', description: 'Second' };
-  expect(normalizeCatalog(['a', full])).to.deep.equal([{ id: 'a', label: 'a' }, full]);
+  expect(normalizeCatalog(['a'])).to.deep.equal([{ id: 'a', label: 'a' }]);
+  expect(normalizeCatalog([full])).to.deep.equal([full]);
 });
 
 it('adds one synthetic stale value without mutating the source catalog', () => {
@@ -28,4 +29,3 @@ it('filters locale-aware across caller-selected searchable fields', () => {
     entries[1],
   ]);
 });
-

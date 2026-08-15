@@ -21,8 +21,10 @@ are as described under `lr-format-number` above.
 
 **Properties:**
 
-- `date: string | number | Date = new Date()` — the target instant; unset means now. **Changed in
-  8.0.0:** the former empty-string default rendered no content
+- `date: string | number | Date = new Date()` — the target instant; unset means now. Numeric HTML
+  attributes are epoch milliseconds, matching numeric property assignment (including zero and
+  negative epochs); nonnumeric strings retain ordinary date/ISO parsing. **Changed in 8.0.0:** the
+  former empty-string default rendered no content
 - `unit: 'second'|'minute'|'hour'|'day'|'week'|'month'|'quarter'|'year'|'auto' = 'auto'` — `'auto'`
   picks the largest unit whose own length fits inside the elapsed time, then rounds; naming a unit
   forces it (so a 90-minute delta with `unit="day"` rounds to "today"/0 days)

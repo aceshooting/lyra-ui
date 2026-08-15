@@ -1,20 +1,107 @@
 import { expect } from "@open-wc/testing";
 import {
+  createWidgetDocument,
   resolveTree,
+  type ResolveContext,
+  type LyraWidgetNode,
+} from "./resolve.js";
+import {
   readWidgetPointer,
   WIDGET_MAX_NODES,
   WIDGET_MAX_PROPS_PER_NODE,
   WIDGET_MAX_WARNINGS,
-  type ResolveContext,
-  type WidgetNode,
-} from "./resolve.js";
+} from "../../../internal/widget-resolver.js";
 import {
   createWidgetTypeRegistry,
-  type WidgetTypeRegistry,
+  type LyraWidgetTypeRegistry,
 } from "./registry.js";
 
+describe("createWidgetDocument", () => {
+  it("takes an immediate frozen structural snapshot without cloning opaque leaves", () => {
+    const propLeaf = { value: 1 };
+    const payload = { request: "open" };
+    const child: LyraWidgetNode = {
+      type: "button",
+      id: "open",
+      props: { data: propLeaf },
+      actionId: "open-action",
+      payload,
+    };
+    const children: Array<LyraWidgetNode | string> = [child, "before"];
+    const root: LyraWidgetNode = { type: "row", children };
+
+    const document = createWidgetDocument(root);
+    child.type = "mutated";
+    children[1] = "after";
+    children.push({ type: "text" });
+
+    expect(document).to.deep.include({ version: "2" });
+    expect(document.root.children).to.have.length(2);
+    expect(document.root.children?.[0]).to.deep.include({ type: "button" });
+    expect(document.root.children?.[1]).to.equal("before");
+    expect(Object.isFrozen(document)).to.be.true;
+    expect(Object.isFrozen(document.root)).to.be.true;
+    expect(Object.isFrozen(document.root.children)).to.be.true;
+    const snappedChild = document.root.children?.[0] as LyraWidgetNode;
+    expect(Object.isFrozen(snappedChild)).to.be.true;
+    expect(Object.isFrozen(snappedChild.props)).to.be.true;
+    expect(snappedChild.props?.["data"]).to.equal(propLeaf);
+    expect(snappedChild.payload).to.equal(payload);
+    expect(Object.isFrozen(propLeaf)).to.be.false;
+    expect(Object.isFrozen(payload)).to.be.false;
+  });
+
+  it("uses the renderer node budget without reading a sibling outside it", () => {
+    const children = Array.from(
+      { length: WIDGET_MAX_NODES + 1 },
+      () => ({ type: "text" }) as LyraWidgetNode
+    );
+    Object.defineProperty(children, WIDGET_MAX_NODES - 1, {
+      configurable: true,
+      get(): never {
+        throw new Error("outside the admitted prefix");
+      },
+    });
+
+    const document = createWidgetDocument({ type: "row", children });
+    expect(document.root.children).to.have.length(WIDGET_MAX_NODES - 1);
+  });
+
+  it("fails closed for malformed, cyclic, duplicate-id, and hostile structures", () => {
+    const cyclic: { type: string; children?: unknown[] } = { type: "row" };
+    cyclic.children = [cyclic];
+    const hostile = {
+      get type(): never {
+        throw new Error("hostile type");
+      },
+    };
+    const invalid: unknown[] = [
+      null,
+      { children: [] },
+      { type: "row", props: [] },
+      { type: "row", children: [null] },
+      { type: "text", id: "" },
+      cyclic,
+      hostile,
+      {
+        type: "row",
+        children: [
+          { type: "text", id: "same" },
+          { type: "text", id: "same" },
+        ],
+      },
+    ];
+
+    for (const root of invalid) {
+      expect(() => createWidgetDocument(root as LyraWidgetNode)).to.throw(
+        TypeError
+      );
+    }
+  });
+});
+
 function ctx(
-  registry: WidgetTypeRegistry = createWidgetTypeRegistry(),
+  registry: LyraWidgetTypeRegistry = createWidgetTypeRegistry(),
   warnings: string[] = [],
   bindingState: unknown = undefined
 ): ResolveContext {
@@ -116,7 +203,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
   });
 
   it("fails closed for malformed roots, nested shapes and cycles", () => {
-    const cyclic: WidgetNode = { type: "row" };
+    const cyclic: LyraWidgetNode = { type: "row" };
     cyclic.children = [cyclic];
     const malformed: unknown[] = [
       null,
@@ -128,12 +215,12 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       cyclic,
     ];
     for (const input of malformed) {
-      expect(resolveTree(input as WidgetNode, ctx())).to.be.null;
+      expect(resolveTree(input as LyraWidgetNode, ctx())).to.be.null;
     }
   });
 
   it("bounds depth and node count", () => {
-    let deep: WidgetNode = { type: "row" };
+    let deep: LyraWidgetNode = { type: "row" };
     for (let index = 0; index < 40; index++) {
       deep = { type: "row", children: [deep] };
     }
@@ -145,7 +232,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
     );
 
     const nodeWarnings: string[] = [];
-    const wide: WidgetNode = {
+    const wide: LyraWidgetNode = {
       type: "row",
       children: Array.from({ length: WIDGET_MAX_NODES + 10 }, () => ({
         type: "row",
@@ -164,7 +251,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
   it("never dereferences a sibling outside the one shared node budget", () => {
     const children = Array.from(
       { length: WIDGET_MAX_NODES + 2 },
-      () => ({ type: "row" } as WidgetNode)
+      () => ({ type: "row" } as LyraWidgetNode)
     );
     Object.defineProperty(children, WIDGET_MAX_NODES - 1, {
       configurable: true,
@@ -227,7 +314,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
         throw "unreadable type";
       },
     };
-    expect(() => resolveTree(root as WidgetNode, ctx())).to.throw();
+    expect(() => resolveTree(root as LyraWidgetNode, ctx())).to.throw();
   });
 
   it("requires unique, nonempty authored ids", () => {
@@ -246,7 +333,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
     expect(warnings.some((warning) => warning.includes("duplicate"))).to.equal(
       true
     );
-    expect(resolveTree({ type: "text", id: "" } as WidgetNode, ctx())).to.be
+    expect(resolveTree({ type: "text", id: "" } as LyraWidgetNode, ctx())).to.be
       .null;
   });
 

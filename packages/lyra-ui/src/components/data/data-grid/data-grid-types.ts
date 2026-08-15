@@ -60,34 +60,34 @@ export type DataGridAggregation<Row = unknown> =
 
 /** One column in a data grid. `field` accepts dot-separated property paths. */
 export interface DataGridColumn<Row = Record<string, unknown>> {
-  id?: string;
-  field?: string;
-  label?: string;
-  align?: 'left' | 'center' | 'right' | 'start' | 'end';
-  width?: number;
-  minWidth?: number;
-  maxWidth?: number;
-  flex?: number;
-  formatter?: (value: unknown, row: Row) => string | TemplateResult | Node | unknown;
-  value?: (row: Row) => unknown;
-  sortable?: boolean;
-  sortFn?: DataGridSortAlgorithm;
-  comparator?: (left: unknown, right: unknown, leftRow: Row, rightRow: Row) => number;
-  sortDescFirst?: boolean;
-  sortUndefined?: 'first' | 'last' | 1 | -1;
-  searchable?: boolean;
-  filterable?: boolean;
-  filterType?: DataGridFilterType;
-  filterFn?: (value: unknown, filter: unknown, row: Row) => boolean;
-  hidden?: boolean;
-  hideable?: boolean;
-  resizable?: boolean;
-  movable?: boolean;
-  pinnable?: boolean;
-  pinned?: DataGridPinSide;
-  footer?: string | ((rows: readonly Row[]) => unknown);
-  aggregation?: DataGridAggregation<Row>;
-  aggregatedFormatter?: (value: unknown, rows: readonly Row[]) => string | TemplateResult | Node | unknown;
+  readonly id?: string;
+  readonly field?: string;
+  readonly label?: string;
+  readonly align?: 'left' | 'center' | 'right' | 'start' | 'end';
+  readonly width?: number;
+  readonly minWidth?: number;
+  readonly maxWidth?: number;
+  readonly flex?: number;
+  readonly formatter?: (value: unknown, row: Row) => string | TemplateResult | Node | unknown;
+  readonly value?: (row: Row) => unknown;
+  readonly sortable?: boolean;
+  readonly sortFn?: DataGridSortAlgorithm;
+  readonly comparator?: (left: unknown, right: unknown, leftRow: Row, rightRow: Row) => number;
+  readonly sortDescFirst?: boolean;
+  readonly sortUndefined?: 'first' | 'last' | 1 | -1;
+  readonly searchable?: boolean;
+  readonly filterable?: boolean;
+  readonly filterType?: DataGridFilterType;
+  readonly filterFn?: (value: unknown, filter: unknown, row: Row) => boolean;
+  readonly hidden?: boolean;
+  readonly hideable?: boolean;
+  readonly resizable?: boolean;
+  readonly movable?: boolean;
+  readonly pinnable?: boolean;
+  readonly pinned?: DataGridPinSide;
+  readonly footer?: string | ((rows: readonly Row[]) => unknown);
+  readonly aggregation?: DataGridAggregation<Row>;
+  readonly aggregatedFormatter?: (value: unknown, rows: readonly Row[]) => string | TemplateResult | Node | unknown;
 }
 
 export interface DataGridSort {
@@ -265,5 +265,5 @@ export interface LyraDataGridEventMap<Row = Record<string, unknown>> {
   'lr-row-expand': CustomEvent<DataGridRowDetail<Row>>;
   'lr-row-select': CustomEvent<DataGridSelectionDetail<Row>>;
   'lr-sort-change': CustomEvent<Readonly<{ sort: DataGridSortingState }>>;
-  'lr-error': CustomEvent<void>;
+  'lr-error': CustomEvent<null>;
 }

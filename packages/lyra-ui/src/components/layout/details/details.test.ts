@@ -200,6 +200,31 @@ it("blocks both pointer and synthesized keyboard activation while disabled", asy
   expect(base.open).to.be.false;
 });
 
+it('keeps disabled summary paint unchanged on hover and press', async () => {
+  const el = (await fixture(html`
+    <lr-details
+      summary="More"
+      disabled
+      style="--lr-details-summary-hover-bg:rgb(1,2,3);--lr-details-summary-active-bg:rgb(4,5,6)"
+    >Content</lr-details>
+  `)) as LyraDetails;
+  const summary = el.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!;
+  const rest = getComputedStyle(summary).backgroundColor;
+  const rect = summary.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(summary).backgroundColor).to.equal(rest);
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(summary).backgroundColor).to.equal(rest);
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
 it("keeps the disclosure marker vertical under RTL in both states", () => {
   const css = detailsStyles.cssText.replace(/\s+/g, " ");
   expect(css).to.include(".icon-fallback { display: inline-flex; transform: rotate(90deg)");

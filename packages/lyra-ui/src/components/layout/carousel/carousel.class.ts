@@ -195,7 +195,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   @property({ type: Boolean, reflect: true }) loop = false;
   @property({ type: Boolean, reflect: true }) autoplay = false;
-  @property({ type: Number, attribute: "autoplay-interval" })
+  @property({ type: Number, attribute: "autoplay-interval", useDefault: true })
   autoplayInterval = 3000;
   @property({ type: Boolean, reflect: true }) navigation = false;
 
@@ -209,11 +209,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.setPaginationState(Boolean(value));
   }
 
-  @property() orientation: LyraCarouselOrientation = "horizontal";
+  @property({ useDefault: true }) orientation: LyraCarouselOrientation = "horizontal";
   @property({ type: Boolean, attribute: "mouse-dragging", reflect: true })
   mouseDragging = false;
-  @property({ type: Number, attribute: "slides-per-page" }) slidesPerPage = 1;
-  @property({ type: Number, attribute: "slides-per-move" }) slidesPerMove = 1;
+  @property({ type: Number, attribute: "slides-per-page", useDefault: true }) slidesPerPage = 1;
+  @property({ type: Number, attribute: "slides-per-move", useDefault: true }) slidesPerMove = 1;
   /** Live count of assigned slides.
    * @default 0 */
   get slides(): number {

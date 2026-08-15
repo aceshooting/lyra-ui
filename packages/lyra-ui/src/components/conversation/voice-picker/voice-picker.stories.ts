@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './voice-picker.js';
-import type { LyraVoiceCatalogEntry, LyraVoicePicker } from './voice-picker.class.js';
+import type { LyraCatalog, LyraVoiceCatalogEntry, LyraVoicePicker } from './voice-picker.class.js';
 
 const meta: Meta = {
   title: 'Voice Picker',
@@ -11,7 +11,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const catalog: LyraVoiceCatalogEntry[] = [
+const catalog = [
   {
     id: 'aria',
     label: 'Aria',
@@ -27,16 +27,16 @@ const catalog: LyraVoiceCatalogEntry[] = [
     description: 'Bright, energetic',
     previewUrl: 'https://example.com/nova.mp3',
   },
-];
+] as const satisfies LyraCatalog<LyraVoiceCatalogEntry>;
 const narrowUnbrokenVoiceText = 'VoiceIdentifierWithoutNaturalBreaks'.repeat(8);
-const narrowRtlCatalog: LyraVoiceCatalogEntry[] = [
+const narrowRtlCatalog = [
   {
     id: narrowUnbrokenVoiceText,
     label: narrowUnbrokenVoiceText,
     language: narrowUnbrokenVoiceText,
     description: narrowUnbrokenVoiceText,
   },
-];
+] as const satisfies LyraCatalog<LyraVoiceCatalogEntry>;
 
 /** A fixed catalog with `allow-custom` unset renders a plain closed dropdown, plus a standalone
  *  preview toggle beside the trigger for voices that carry a `previewUrl`. */

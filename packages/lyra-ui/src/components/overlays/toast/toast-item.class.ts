@@ -86,10 +86,10 @@ function truncateGraphemes(
 }
 
 export interface LyraToastItemEventMap {
-  'lr-show': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-after-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
 }
 /**
  * `<lr-toast-item>` — a single toast notification. Its normalized message is announced through a
@@ -490,7 +490,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     // Keep the surface hidden as well as inert throughout the veto point. Mounting it before event
     // dispatch would expose an opacity-zero box to hit testing, accessibility inspection, and
     // authored layout observers even when the request is rejected.
-    if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
+    if (this.emit('lr-show', null, { cancelable: true }).defaultPrevented) {
       if (generation !== this.showGeneration) return;
       const owner = this.regionOwner;
       if (owner) owner[TOAST_REGION_REJECT](this);
@@ -883,7 +883,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     // instead of half-dismissed. A timeout has no remaining countdown once its callback runs, so
     // restart it from the full current duration after a veto; repeated vetoes therefore retry at
     // deterministic intervals instead of making the toast immortal.
-    if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+    if (this.emit('lr-hide', null, { cancelable: true }).defaultPrevented) {
       if (source === 'timer') {
         this.elapsedMs = 0;
         this.startedAt = 0;

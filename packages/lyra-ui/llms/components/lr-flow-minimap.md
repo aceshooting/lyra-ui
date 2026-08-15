@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,22 +33,19 @@ disagree.
 **Slots:** none.
 
 **CSS parts:** `base`, `map` (the scaled SVG), `node` (one rect per node), `viewport` (the
-draggable, focusable view rectangle), `instructions` (visually hidden keyboard help), and
-`live-region` (the `aria-hidden` mirror of the latest viewport-change text).
+exact visible view rectangle), `viewport-hit-area` (the transparent draggable/focusable target),
+`instructions` (visually hidden keyboard help), and `live-region` (the `aria-hidden` mirror of the
+latest viewport-change text).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
-`--lr-flow-minimap-block-size` (default `8rem`), `--lr-flow-minimap-node-color` for a node without
-an execution status, and `--lr-flow-minimap-node-{pending|running|success|error|denied}-color` for
-each status-specific rectangle. The status hooks default to the shared border-strong, brand,
-success, danger, and warning colors respectively. Their expanded names are
-`--lr-flow-minimap-node-pending-color`, `--lr-flow-minimap-node-running-color`,
-`--lr-flow-minimap-node-success-color`, `--lr-flow-minimap-node-error-color`, and
-`--lr-flow-minimap-node-denied-color`.
-`--lr-flow-minimap-viewport-min-size` (default `var(--lr-size-1-5rem)`, i.e. WCAG 2.2 SC 2.5.8's
-24px minimum target size) is the smallest rendered size the draggable `viewport` rectangle may take
-along either axis. It is deliberately not declared on `:host`, so setting it on any ancestor — the
-canvas, a page theme wrapper — reaches the minimap. Set it to `0` to opt out and render the exact
-viewport-to-content ratio instead.
+`--lr-flow-minimap-block-size` (default `8rem`), plus the shared
+`--lr-flow-status-color` and the explicit palette hooks
+`--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,
+`--lr-flow-status-success-color`, `--lr-flow-status-error-color`, and
+`--lr-flow-status-denied-color`.
+`--lr-flow-minimap-viewport-min-size` (default `var(--lr-icon-button-size)`, normally 40px) floors
+only the transparent `viewport-hit-area` along each axis. The visible `viewport` remains the exact
+viewport-to-content ratio. The token inherits from ancestors; set it to `0` to opt out.
 
 **Optional peer deps:** none.
 
@@ -63,17 +60,16 @@ viewport-to-content ratio instead.
 - Never resolves `nodes`/`edges` on its own — it subscribes to `registerCompanion()` and repaints
   from whatever snapshot the canvas last pushed, so it can only ever show what the canvas itself
   currently renders.
+- A locked snapshot makes the hit area unfocusable and inert: no pointer, click, wheel, or keyboard
+  shortcut can mutate the canvas.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
   event to wire up. A completed drag consumes only the browser-synthesized click following its
   `pointerup`; a canceled or lost-capture drag leaves the next genuine map click available for
   click-to-center navigation.
 - On a canvas whose node bounds dwarf the visible viewport — the case the minimap exists for — the
-  raw viewport rectangle would collapse to a couple of physical pixels, leaving the only
-  pointer-drag handle for panning effectively unclickable. It is therefore floored at
-  `--lr-flow-minimap-viewport-min-size`, growing symmetrically about its own centre so it still
-  points at the part of the graph the viewport shows. Keyboard panning and the drag math read the
-  canvas viewport directly and are unaffected, so a floored rectangle is a display floor, not a
-  change to what a gesture does.
+  raw viewport rectangle can collapse to a couple of pixels. The separate transparent hit area is
+  floored and grown symmetrically around the exact visible rectangle; keyboard and drag math still
+  read the canvas viewport directly.
 
 **Additional API surface:**
 

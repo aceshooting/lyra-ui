@@ -189,7 +189,9 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * @csspart node-card-handle - Every fallback card handle.
  * @csspart node-card-handle-input - A fallback card input handle.
  * @csspart node-card-handle-output - A fallback card output handle.
- * @csspart node-type-* - A normalized `FlowNode.type` hook on the fallback card.
+ * Fallback cards additionally expose a normalized `node-type-<type>` part derived from
+ * `FlowNode.type`; wildcard part names are described here rather than published as literal CEM
+ * members.
  * @csspart edge-hit-area - The transparent wide pointer target behind an edge.
  * @csspart empty - The `lr-empty` shown when `nodes` is empty.
  * @csspart layout-limit - A visible localized notice shown when layered layout reaches its bounded

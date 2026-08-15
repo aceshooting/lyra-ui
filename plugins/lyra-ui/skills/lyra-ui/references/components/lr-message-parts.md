@@ -8,7 +8,7 @@
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,24 +22,28 @@ parse/highlight work; replacing that same-id part with `state: 'complete'` flush
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
-**Properties:** `parts: MessagePart[] = []` (attribute: false); `renderMarkdown: boolean = true`
-(attribute `render-markdown`, reflected) and `showReasoning: boolean = true` (attribute
-`show-reasoning`, reflected), both with string-aware true-default conversion;
+**Properties:** `parts: MessagePart[] = []` (attribute: false); `contentMode: 'plain' | 'markdown' =
+'markdown'` (attribute `content-mode`, reflected) and `showReasoning: boolean = true` (attribute
+`show-reasoning`, reflected, with string-aware true-default conversion);
 `renderPart?: MessagePartRenderer` (attribute: false), where returning `undefined` delegates that
-part to the built-in renderer; `label: string = ''`; `accessibleLabel: string | null = null`
-(attribute `aria-label`, highest naming precedence).
+part to the built-in renderer; `accessibleLabel: string | null = null` (attribute `aria-label`).
 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
-discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath.
+discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath. Tool results are a strict
+success/error union: a success has `result` and cannot have `error`; an error has `error` and may
+retain partial `result`. Audio is a single `{ type: 'audio'; src?; transcript?; mimeType? }` part,
+and data parts carry exactly one of `data` or `widget`. Empty ids and later duplicate occurrences
+are ignored so each rendered identity and announcement remains unambiguous.
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
 events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
-`lr-highlight-activate`, `lr-link-click`, `lr-preview`, `lr-remove`, `lr-render-error`, `lr-retry`,
+`lr-highlight-activate`, `lr-link-click`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
 `lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`, `lr-widget-action`,
 and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
-`citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
+`tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
+`audio-transcript`, `error`, `retry`.
 
 **Themeable custom properties:** `--lr-message-parts-streaming-color` (default
 `var(--lr-color-text-quiet)`) controls a streaming wrapper's inherited text color.
@@ -70,7 +74,7 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-copy` event — Passthrough from rendered JSON content.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
 - `lr-link-click` event — Passthrough from rendered Markdown.
-- `lr-preview` event — Passthrough from a rendered attachment.
+- `lr-preview-request` event — Cancelable passthrough from a rendered attachment.
 - `lr-remove` event — Passthrough from a rendered attachment.
 - `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content.
 - `lr-retry` event — Passthrough from a rendered attachment.

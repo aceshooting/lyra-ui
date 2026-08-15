@@ -21,17 +21,20 @@ automatically under `prefers-reduced-motion: reduce`.
 **Properties:**
 - `src: string = ''` — re-validated through `safeMediaSrc()` (same allowlist as `lr-media-card`)
   before reaching the real `<img src>`.
-- `alt: string = ''` — falls back to the localized `animatedImageDefaultAlt` when empty; an explicit
-  `alt=""` does **not** mark the image decorative.
+- `alt?: string` — forwarded to the live image and frozen canvas. An absent or explicitly empty
+  value keeps both visual owners decorative; a nonempty value names whichever one is exposed. The
+  independent play/pause action still uses localized context when no nonempty `alt` is available.
 - `play: boolean = false` — the caller's *intent* (reflected).
 - `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the *effective*
   state after reduced-motion arbitration: `play && !(respectReducedMotion && <OS prefers reduce>)`.
-  Assigning to it is a silent no-op; drive playback via `play`.
+  It is a genuine getter-only property, so assigning to it from a strict JavaScript module throws a
+  `TypeError`; drive playback via `play`.
 - `respectReducedMotion: boolean = true` (reflected, attribute `respect-reduced-motion`) — while
   `true` and the OS reports `prefers-reduced-motion: reduce`, playback stays frozen and
   `[part="play-button"]` is `disabled` regardless of `play`.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `[part="play-button"]`'s
-  computed Play/Pause label verbatim in *both* states (it does not itself vary by state). Never
+- `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present,
+  including explicitly empty, it overrides `[part="play-button"]`'s computed Play/Pause label
+  verbatim in *both* states (it does not itself vary by state). Never
   touches the image's `alt`/the canvas's `aria-label`. For state-sensitive custom wording, override
   the `playWithContext`/`pauseWithContext`/`animatedImageDefaultAlt` strings instead.
 
@@ -41,8 +44,9 @@ automatically under `prefers-reduced-motion: reduce`.
 `lr-error` (native decode failure, or a non-empty `src` that failed the safe-URL check — never for
 an empty `src`), `lr-play`/`lr-pause` (real transitions of the effective `playing` value only, so a
 `play = true` that reduced motion blocks emits nothing, while a live reduced-motion change that
-forces a freeze does emit `lr-pause`); internal `focus`/`blur` are re-dispatched as bubbling,
-composed host events.
+forces a freeze does emit `lr-pause`). Internal `focus`/`blur` are relayed exactly once as
+owner-realm native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
+the `lr-focus`/`lr-blur` compatibility aliases.
 
 **Slots:** `play-icon`, `pause-icon` — decorative custom glyphs for the frozen/paused and playing
 states. Both stay mounted and are toggled via the native `hidden` attribute. Their assigned content

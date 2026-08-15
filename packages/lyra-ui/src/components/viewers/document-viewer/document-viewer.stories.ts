@@ -2,7 +2,9 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './document-viewer.js';
 import { createDocumentRendererRegistry } from './registry.js';
+import type { LyraDocumentRendererPayload } from './registry.js';
 import '../pdf-viewer/pdf-viewer.js';
+import '../../media/av-player/av-player.js';
 import '../../retrieval/citation-badge/citation-badge.js';
 import type { CitationActivateDetail } from '../../retrieval/citation-badge/citation-badge.class.js';
 import type { AnchorResultDetail } from './anchors.js';
@@ -15,7 +17,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A dialog-hosted, format-dispatching document viewer. Each instance owns an immutable built-in registry snapshot and may receive an explicit registry; other formats fall back to lr-document-preview. A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty value, without suppressing the visible `name` heading.',
+          'A dialog-hosted, format-dispatching document viewer. Each instance owns an immutable built-in registry snapshot and may receive an explicit registry; an opt-in readonly discriminated payload carries renderer-specific metadata while the legacy scalar file properties remain the default. Other formats fall back to lr-document-preview. A host `aria-label` names the nested dialog by attribute presence, including an explicitly empty value, without suppressing the visible `name` heading.',
       },
     },
   },
@@ -55,6 +57,47 @@ export const RegisteredRenderer: Story = {
       mime-type="application/x-lr-demo"
       src="https://example.com/demo.lyra"
       .registry=${demoRegistry}
+    ></lr-document-viewer>
+  `,
+};
+
+const AV_PAYLOAD: LyraDocumentRendererPayload = {
+  kind: 'av',
+  file: {
+    name: 'Searchable episode.mp4',
+    mimeType: 'video/mp4',
+    src: '/fixtures/sample-video.mp4',
+  },
+  cues: [
+    { id: 'intro', start: 0, end: 1, speaker: 'Host', text: 'Welcome to the searchable transcript.' },
+    { id: 'topic', start: 1, end: 2, speaker: 'Guest', text: 'Renderer capabilities follow retained cue data.' },
+  ],
+  tracks: [{
+    src: 'data:text/vtt;charset=utf-8,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A01.000%0AWelcome',
+    kind: 'captions',
+    srclang: 'en',
+    label: 'English',
+    default: true,
+  }],
+};
+
+export const AudioVideoPayload: Story = {
+  name: 'Renderer-specific AV payload',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The discriminated payload is authoritative over the legacy scalar file properties. Its bounded cue snapshot enables the AV renderer\'s search capability; the native caption-track metadata is forwarded with the same immutable assignment semantics.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-document-viewer
+      .open=${context.viewMode !== 'docs'}
+      name="ignored.txt"
+      mime-type="text/plain"
+      src="/ignored.txt"
+      .payload=${AV_PAYLOAD}
     ></lr-document-viewer>
   `,
 };

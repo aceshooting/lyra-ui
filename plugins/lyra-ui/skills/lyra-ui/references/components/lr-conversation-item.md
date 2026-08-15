@@ -6,7 +6,7 @@
 - **Class** `LyraConversationItem`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated slot** `leading` since `8.2.3`; use slot `slot="start"`; removal not before `10.0.0` — The start slot follows the shared adornment vocabulary; leading remains available as a compatibility alias during the deprecation window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -21,18 +21,21 @@ First-party invention (no Web Awesome equivalent).
 
 **Properties:**
 
-- `title: string = ''` — the session's display title. Falls back to "Untitled conversation" when empty
-  (display only — the property itself is never mutated by that fallback).
+- `conversationId: string = ''` (attribute `conversation-id`) — stable domain identity carried by
+  both selection and rename details. Native `id` remains ordinary document/CSS/ARIA identity.
+- `label: string = ''` — the session's visible label. Falls back to "Untitled conversation" when
+  empty (display only — the property itself is never mutated by that fallback). Native `title`
+  remains available for tooltip semantics.
 - `excerpt: string = ''` — a short preview snippet of the last message. Omit for no excerpt line.
   Ignored entirely once the `excerpt` slot has assigned content.
-- `timestamp?: Date | string` (attribute: false) — accepts a `Date` or anything `new Date()` can parse
-  (e.g. an ISO 8601 string); invalid input is treated as unset (no `<time>` rendered).
+- `timestamp?: LyraTimestamp` (attribute: false) — accepts a `Date`, ISO/date string, or epoch-ms
+  number; invalid and TimeClip-out-of-range input is treated as unset (no `<time>` rendered).
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default absolute-time
   rendering (clock time for same-day timestamps, otherwise a calendar date). Not a fuzzy "2 hours ago"
   relative string — bucketed relative grouping is a list-level concern, not this row's job.
 - `active: boolean = false` (reflected) — whether this is the currently-selected/open session; drives
   the brand-quiet background treatment.
-- `editable: boolean = true` (reflected) — whether inline-rename is available at all. When `false`, the
+- `renamable: boolean = true` (reflected) — whether inline-rename is available at all. When `false`, the
   rename button never renders and the row can never enter its editing state; flipping it to `false`
   while a rename is already in progress cancels that edit (discards the draft, like Escape) rather
   than leaving it stranded and still committable.
@@ -43,27 +46,21 @@ First-party invention (no Web Awesome equivalent).
   changes nothing else: it does **not** shrink `[part='rename-button']` below the shared
   `--lr-icon-button-size` target floor, hide the excerpt, or reduce the excerpt/timestamp font
   sizes — so a row carrying a rename button or slotted `actions` still floors at roughly that icon
-  size plus the compact padding, while a row with `editable=false` and no actions collapses much
+  size plus the compact padding, while a row with `renamable=false` and no actions collapses much
   further.
 - `spellcheck: boolean = true` — forwarded to the in-place rename `<input>`; `spellcheck="false"` is
   parsed as false (not Lit's default boolean-attribute behavior)
 - `autocapitalize: string = ''` — forwarded to the in-place rename `<input>`; empty omits the attribute
-- `autoCorrect: string = ''` (attribute `autocorrect`) — forwarded to the in-place rename `<input>`
-  (Safari/WebKit-specific); empty omits the attribute. Named `autoCorrect` to avoid
-  `HTMLElement.autocorrect`'s incompatible DOM typing.
+- `autocorrect: boolean = true` — forwarded canonically as `autocorrect="on"|"off"`; JavaScript
+  writes also accept legacy `'off'`/`'false'` strings and normalize reads to boolean.
 
 **Methods:** `click()` activates the selectable row like its internal button; while an inline rename
-is active, it forwards to the title input instead and does not re-select the conversation.
+is active, it forwards to the label input instead and does not re-select the conversation.
 
-**Events:** `lr-select` (no detail payload — identify the row via the platform `id` attribute on the
-event's `target`/`currentTarget`, the same convention `<lr-attachment-chip>` uses; fires on a click on
-`[part="option"]` outside the rename button/`actions` slot, or Enter/Space while it's focused, only
-while not currently renaming), `lr-rename` (`detail: { title: string }` — an in-place rename was
-committed via Enter or blur-while-editing; does not mutate `title` itself, this is a controlled
-component — not fired when the trimmed draft is empty or unchanged from the original `title`, treated
-as an implicit cancel), `blur` (no detail — re-dispatched from the in-place rename `<input>`'s own
-`blur`, bubbling and composed unlike the native event), `focus` (no detail — re-dispatched from the
-in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
+**Events:** `lr-select` (`detail: { conversationId }`; fires from the selectable region on click or
+Enter/Space while not renaming), `lr-rename` (`detail: { conversationId, label }`; a controlled
+rename request that never mutates `label`, and is omitted for an empty or unchanged trimmed draft),
+plus bubbling/composed `blur` and `focus` with `null` detail relayed from the rename input.
 
 **Slots:**
 
@@ -71,19 +68,18 @@ in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
   pin/delete control); only visually shown once it actually has assigned elements. The only slot that
   may hold focusable content.
 - `start` — non-interactive leading content (avatar, purpose icon, status dot), rendered inside the
-  selectable region before the title/excerpt content. The deprecated `leading` compatibility alias
-  shares the same wrapper and may coexist with `start`.
-- `content` — replaces the built-in title + excerpt + meta content area with host-supplied
+  selectable region before the label/excerpt content.
+- `content` — replaces the built-in label + excerpt + meta content area with host-supplied
   non-interactive row content.
 - `excerpt` — full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`);
   wins over the `excerpt` property whenever it has assigned content.
-- `meta` — small, non-focusable structured fields below the title/excerpt (a day label, cost, request
+- `meta` — small, non-focusable structured fields below the label/excerpt (a day label, cost, request
   count); entirely app-supplied, this component computes none of it.
 
-`start`/`leading`/`content`/`excerpt`/`meta` must all stay non-focusable — see the `role="button"` note below.
+`start`/`content`/`excerpt`/`meta` must all stay non-focusable — see the `role="button"` note below.
 
-**CSS parts:** `base`, `active-indicator` (decorative, rendered only while `active`), `option`,
-`leading`, `content`, `title`, `title-input`, `rename-button`, `excerpt`, `meta`, `timestamp`,
+**CSS parts:** `base`, `active-indicator` (decorative, rendered only while `active`),
+`select-button`, `start`, `content`, `label`, `label-input`, `rename-button`, `excerpt`, `meta`, `timestamp`,
 `actions`
 
 **Themeable custom properties:** `--lr-conversation-item-active-bg` (default
@@ -99,8 +95,8 @@ used before.
 **These two are a contrast-sensitive pair — override them together, never one alone.** The
 `-active-color` hook exists precisely because the quiet text tone only reaches about 4.25:1 against
 the default active background; keep any override at 4.5:1 or better against it. And note that
-`[part='title']` is _not_ restyled by the pair — it keeps `--lr-color-text` regardless — so a dark
-custom active background needs its own title color set alongside them, or the title drops below
+`[part='label']` is _not_ restyled by the pair — it keeps `--lr-color-text` regardless — so a dark
+custom active background needs its own label color set alongside them, or the label drops below
 contrast while the excerpt stays legible.
 
 `--lr-conversation-item-active-indicator-color` (default `var(--lr-color-brand)`) controls the
@@ -127,45 +123,43 @@ Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
 
 ```html
 <lr-conversation-item
-  id="sess_123"
-  title="Q3 roadmap planning"
+  conversation-id="sess_123"
+  label="Q3 roadmap planning"
   excerpt="Let's revisit the timeline for the launch…"
   .timestamp=${session.updatedAt}
   ?active=${session.id === currentSessionId}
-  @lr-select=${(e) => openSession(e.currentTarget.id)}
-  @lr-rename=${(e) => renameSession(e.currentTarget.id, e.detail.title)}
+  @lr-select=${(e) => openSession(e.detail.conversationId)}
+  @lr-rename=${(e) => renameSession(e.detail.conversationId, e.detail.label)}
 >
   <button slot="actions" aria-label="Delete conversation">✕</button>
 </lr-conversation-item>
 ```
 
-`role="button"` (not `"option"`) lives on `[part="option"]` — despite the part name — so the row has
+`role="button"` lives on `[part="select-button"]`, so the row has
 valid semantics both standalone and inside a larger history-list layout: it activates one current
 session rather than being a listbox option, so it requires no particular owner role. Selection is
 conveyed via `aria-current="true"` while `active`, not `aria-selected`. Because `role="button"`
 forbids focusable descendants (axe-core's `nested-interactive` rule), the rename button and the
-`actions` slot are rendered as DOM _siblings_ of `[part="option"]` inside `[part="base"]`, not nested
+`actions` slot are rendered as DOM _siblings_ of `[part="select-button"]` inside `[part="base"]`, not nested
 inside it — the same constraint the in-place rename `<input>` runs into one level deeper, which is
-why `[part="option"]` sheds its `role`/`tabindex`/`aria-current`/`aria-label` entirely for the
+why `[part="select-button"]` sheds its `role`/`tabindex`/`aria-current`/`aria-label` entirely for the
 duration of an edit rather than just visually swapping content (a row mid-edit _is_ a text field).
 
 **Known gotchas:**
 
-- `lr-select` carries no detail payload at all — read the session id off the event's own `target`/
-  `currentTarget`, not a `detail` field.
-- Renaming is a controlled interaction: committing `lr-rename` never updates `title` locally: the
-  consumer must apply the new title once it's actually persisted.
+- Both `lr-select` and `lr-rename` carry the stable `conversationId`; do not overload native `id`
+  as domain identity.
+- Renaming is a controlled interaction: committing `lr-rename` never updates `label` locally: the
+  consumer must apply the new label once it's actually persisted.
 - An empty or unchanged (post-trim) rename draft is treated as an implicit cancel — no `lr-rename`
-  fires, and the row silently reverts to showing `title`.
-- Rename is triggered only by the dedicated pencil-icon button, never a double-click on the title —
+  fires, and the row silently reverts to showing `label`.
+- Rename is triggered only by the dedicated pencil-icon button, never a double-click on the label —
   double-click has no keyboard/screen-reader equivalent and would also swallow the row's own
   single-click `lr-select`.
-- While renaming, `[part="option"]` has no `role`/`tabindex`/`aria-current`/`aria-label` at all — a
+- While renaming, `[part="select-button"]` has no `role`/`tabindex`/`aria-current`/`aria-label` at all — a
   screen reader briefly stops announcing it as a button for the duration of the edit.
-- The part is named `option` for historical reasons but carries `role="button"`; don't write CSS or
-  ARIA assumptions that expect a listbox option.
-- Setting `editable = false` mid-rename silently discards the in-progress draft (no `lr-rename`
-  fires) — a consumer toggling `editable` off (e.g. in response to some other row entering rename
+- Setting `renamable = false` mid-rename silently discards the in-progress draft (no `lr-rename`
+  fires) — a consumer toggling `renamable` off (e.g. in response to some other row entering rename
   mode) should not expect the previous edit to be committed first.
 - `compact` is a spacing knob only — it never lowers the rename button's `--lr-icon-button-size`
   floor. A compact row that still shows a rename button (or slotted `actions` at the same floor)

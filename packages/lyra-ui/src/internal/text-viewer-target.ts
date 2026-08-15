@@ -1,15 +1,27 @@
 import { type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
-import { DocumentAnchorTarget, type LyraAnchorTarget, type LyraAnchorTargetEventMap } from './anchor-target.js';
 import {
-  findTextQuoteMatches,
+  DocumentAnchorTarget,
+  HIGHLIGHT_CANDIDATE_LIMIT,
+  type LyraAnchorTarget,
+  type LyraAnchorTargetEventMap,
+} from './anchor-target.js';
+import {
+  createTextQuoteIndex,
+  emptyTextQuoteMatches,
   rangeFromTextQuoteMatch,
-  resolveTextQuote,
   scopeFromElement,
+  type TextQuoteIndex,
   type TextQuoteMatch,
+  type TextQuoteMatches,
+  type TextQuoteScope,
 } from './text-quote.js';
-import { acquireHighlightHandle, type HighlightHandle } from './text-highlights.js';
+import {
+  acquireHighlightHandle,
+  supportsCustomHighlights,
+  type HighlightHandle,
+} from './text-highlights.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
@@ -23,12 +35,23 @@ type MixedConstructor<Base extends PublicConstructor<object>, Added> = Base & (
   new (...args: ConstructorParameters<Base>) => InstanceType<Base> & Added
 );
 
+export interface LyraSearchChangeDetail {
+  query: string;
+  /** Retained matches. A false `matchCountExact` makes this a lower bound. */
+  matchCount: number;
+  /** False when a corpus, query, match, or work ceiling prevented an exact count. */
+  matchCountExact: boolean;
+  activeIndex: number;
+}
+
 export interface LyraTextViewerTargetEventMap
   extends Omit<LyraAnchorTargetEventMap, 'lr-highlight-activate'> {
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
 }
 
 export interface LyraTextViewerTarget extends LyraAnchorTarget {
+  /** Resolves the retained match count. Inspect `lr-search-change.matchCountExact` to distinguish
+   * an exact total from a lower bound when a resource ceiling is reached. */
   search(query: string): Promise<number>;
   searchNext(): Promise<boolean>;
   searchPrevious(): Promise<boolean>;
@@ -44,9 +67,11 @@ export interface LyraTextViewerTarget extends LyraAnchorTarget {
 /** How many search matches are materialized into live Ranges at once. A live Range is revalidated
  *  by the engine on every DOM mutation in its document, so retaining one per match turned a
  *  one-letter query over a large document into a multi-thousand-fold mutation slowdown. The window
- *  only bounds *painting*: `matchCount` and next/previous still cover every match. */
+ *  bounds painting independently of the quote engine's 10,000 retained-match ceiling;
+ *  `matchCountExact=false` makes a capped `matchCount` an explicit lower bound. */
 const SEARCH_PAINT_WINDOW = 200;
-
+/** Host-supplied text quotes painted at once. The active quote is always retained inside the cap. */
+const HIGHLIGHT_PAINT_LIMIT = 100;
 /** @internal Source-only overload preserving subclass statics and protected members. */
 export function TextViewerTarget<
   T extends InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
@@ -68,18 +93,34 @@ export function TextViewerTarget(
     override readonly anchorKinds: readonly LyraAnchorKind[] = ['text-quote', 'fragment'];
 
     @state() private searchQuery = '';
-    /** Matches as inert offsets, never as retained live `Range`s -- see `TextQuoteMatch`. The
-     *  full set is kept so `matchCount` and next/previous stay exact; only `SEARCH_PAINT_WINDOW`
-     *  of them are materialized into Ranges at a time. */
-    @state() private searchMatches: TextQuoteMatch[] = [];
+    /** Matches as packed inert offsets, never as retained live `Range`s. Search ceilings can make
+     *  this a truthful lower-bound collection; only `SEARCH_PAINT_WINDOW` are live at once. */
+    @state() private searchMatches: TextQuoteMatches = emptyTextQuoteMatches();
+    private searchMatchCountExact = true;
     private paintedRangeCount = 0;
+    private highlightedRangeCount = 0;
     @state() private searchActiveIndex = -1;
 
     private selectionRoot: Element | null = null;
-    private lastSearchText = '';
+    private textScope?: TextQuoteScope;
+    private textIndex?: TextQuoteIndex;
+    private textIndexLocale = '';
+    private textScopeBuilds = 0;
+    private observedContentGeneration = 0;
+    private observedNodeMappingGeneration = 0;
+    private lastSearchGeneration = -1;
     private lastSearchLocale = '';
+    private contentObserver?: MutationObserver;
+    private contentObserverDocument?: Document;
     private searchRecomputePending = false;
     private searchHandle?: HighlightHandle;
+    private lastPaintRoot: Element | null = null;
+    private lastPaintMappingGeneration = -1;
+    private lastPaintHighlights?: readonly LyraHighlight[];
+    private lastPaintActiveHighlightId: string | null = null;
+    private lastPaintSearchMatches?: TextQuoteMatches;
+    private lastPaintSearchActiveIndex = -2;
+    private lastPaintHandle?: HighlightHandle;
     private readonly disconnectWaiters = new Set<() => void>();
 
     /** Viewer-specific hook for the rendered document region. */
@@ -104,17 +145,27 @@ export function TextViewerTarget(
       // requests a fresh update above and restores both resources then.
       if (!this.isConnected) return;
       const root = this.textContentRoot();
-      if (root !== this.selectionRoot) {
+      if (root !== this.selectionRoot || root?.ownerDocument !== this.contentObserverDocument) {
         (this as unknown as { unbindTextSelection(): void }).unbindTextSelection();
+        this.contentObserver?.disconnect();
+        this.contentObserver = undefined;
+        this.contentObserverDocument = undefined;
         this.selectionRoot = root;
-        if (root) (this as unknown as { bindTextSelection(contentRoot: Element): void }).bindTextSelection(root);
+        this.invalidateTextContent();
+        if (root) {
+          (this as unknown as { bindTextSelection(contentRoot: Element): void }).bindTextSelection(root);
+          this.observeTextContent(root);
+        }
+      } else if (root && (this.contentObserver?.takeRecords().length ?? 0) > 0) {
+        const semanticChange = this.refreshTextScopeAfterMutation(root);
+        if (semanticChange && this.searchQuery) this.scheduleSearchRecompute();
       }
-      const searchText = root ? scopeFromElement(root).text : '';
       const localeChanged = this.effectiveLocale !== this.lastSearchLocale;
+      if (this.textIndex && this.textIndexLocale !== this.effectiveLocale) this.invalidateTextIndex();
       if (
         this.searchQuery &&
         !changed.has('searchQuery') &&
-        (searchText !== this.lastSearchText || localeChanged)
+        (this.observedContentGeneration !== this.lastSearchGeneration || localeChanged)
       ) {
         // updateSearchRanges() assigns reactive searchMatches. Defer that assignment until this
         // update has completed; doing it directly from updated() schedules a second Lit update
@@ -131,8 +182,114 @@ export function TextViewerTarget(
       this.disconnectWaiters.clear();
       this.searchHandle?.release();
       this.searchHandle = undefined;
+      this.contentObserver?.disconnect();
+      this.contentObserver = undefined;
+      this.contentObserverDocument = undefined;
       this.selectionRoot = null;
+      this.invalidateTextContent();
       super.disconnectedCallback();
+    }
+
+    private observeTextContent(root: Element): void {
+      const Observer = root.ownerDocument.defaultView?.MutationObserver;
+      if (!Observer) return;
+      this.contentObserverDocument = root.ownerDocument;
+      this.contentObserver = new Observer((records) => {
+        if (records.length === 0 || root !== this.selectionRoot) return;
+        const semanticChange = this.refreshTextScopeAfterMutation(root);
+        if (semanticChange && this.searchQuery) this.scheduleSearchRecompute();
+        this.requestUpdate();
+      });
+      this.contentObserver.observe(root, { childList: true, characterData: true, subtree: true });
+    }
+
+    private invalidateTextIndex(): void {
+      this.textIndex = undefined;
+      this.textIndexLocale = '';
+    }
+
+    private invalidateTextContent(): void {
+      this.textScope = undefined;
+      this.invalidateTextIndex();
+      this.observedContentGeneration++;
+      this.observedNodeMappingGeneration++;
+    }
+
+    /** Refreshes node-bearing scope data after a DOM mutation. Structurally different markup with
+     * the same normalized text (including the `<mark>` fallback's wrapping/unwrapping) preserves
+     * search offsets and does not pretend the searchable content changed. */
+    private refreshTextScopeAfterMutation(root: Element): boolean {
+      const previous = this.textScope;
+      if (!previous) {
+        this.invalidateTextContent();
+        return true;
+      }
+      const next = scopeFromElement(root);
+      this.textScopeBuilds++;
+      this.textScope = next;
+      const semanticChange = previous.text !== next.text || previous.truncated !== next.truncated;
+      this.observedNodeMappingGeneration++;
+      if (semanticChange) {
+        this.invalidateTextIndex();
+        this.observedContentGeneration++;
+      } else if (this.textIndex && !this.textIndex.rebindScope(next)) {
+        this.invalidateTextIndex();
+      }
+      return semanticChange;
+    }
+
+    /** Drains records synchronously so an imperative navigation call made in the same task as an
+     * external DOM edit can never emit the previous generation's match count. */
+    private drainTextMutations(): boolean {
+      const root = this.selectionRoot;
+      if (!root || (this.contentObserver?.takeRecords().length ?? 0) === 0) return false;
+      return this.refreshTextScopeAfterMutation(root);
+    }
+
+    private cachedTextScope(root: Element): TextQuoteScope {
+      if (this.selectionRoot === root) {
+        const semanticChange = this.drainTextMutations();
+        if (semanticChange && this.searchQuery) this.scheduleSearchRecompute();
+      }
+      if (!this.textScope) {
+        this.textScope = scopeFromElement(root);
+        this.textScopeBuilds++;
+      }
+      return this.textScope;
+    }
+
+    private cachedTextIndex(root: Element): TextQuoteIndex {
+      const scope = this.cachedTextScope(root);
+      if (!this.textIndex || this.textIndex.scope !== scope || this.textIndexLocale !== this.effectiveLocale) {
+        this.textIndex = createTextQuoteIndex(scope, this.effectiveLocale);
+        this.textIndexLocale = this.effectiveLocale;
+      }
+      return this.textIndex;
+    }
+
+    /** The fallback highlighter wraps text in `<mark>` and therefore replaces text nodes without
+     * changing their semantic content. Rebind the cached index to the replacement nodes while
+     * preserving its folded corpus and occurrence cache. */
+    private discardFallbackNodeCache(): void {
+      if (supportsCustomHighlights(this.ownerDocument)) return;
+      this.contentObserver?.takeRecords();
+      const root = this.selectionRoot;
+      if (!root) {
+        this.textScope = undefined;
+        this.invalidateTextIndex();
+        return;
+      }
+      const previous = this.textScope;
+      const next = scopeFromElement(root);
+      this.textScope = next;
+      this.textScopeBuilds++;
+      this.observedNodeMappingGeneration++;
+      if (!previous || previous.text !== next.text || previous.truncated !== next.truncated) {
+        this.invalidateTextIndex();
+        this.observedContentGeneration++;
+      } else if (this.textIndex && !this.textIndex.rebindScope(next)) {
+        this.invalidateTextIndex();
+      }
     }
 
     protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
@@ -145,20 +302,27 @@ export function TextViewerTarget(
         return true;
       }
       if (anchor.kind !== 'text-quote') return false;
-      const range = resolveTextQuote(scopeFromElement(root), anchor, this.effectiveLocale);
+      const index = this.cachedTextIndex(root);
+      const match = index.resolve(anchor, index.createWorkBudget());
+      const range = match ? rangeFromTextQuoteMatch(index.scope, match) : null;
       if (!range) return false;
       const target = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
         ? range.commonAncestorContainer as Element
         : range.commonAncestorContainer.parentElement;
       target?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
       this.searchHandle?.flash(range);
+      this.discardFallbackNodeCache();
       return true;
     }
 
+    /** Resolves the retained match count. The emitted `matchCountExact` is false when that return
+     * value is only a lower bound because a corpus, query, match, or work ceiling was reached. */
     async search(query: string): Promise<number> {
       this.searchQuery = query;
       this.searchActiveIndex = -1;
-      this.lastSearchText = '';
+      this.searchMatches = emptyTextQuoteMatches();
+      this.searchMatchCountExact = true;
+      this.lastSearchGeneration = -1;
       this.lastSearchLocale = '';
       if (!(await this.waitForUpdateOrDisconnect())) return 0;
       this.updateSearchRanges();
@@ -167,6 +331,7 @@ export function TextViewerTarget(
       this.emit('lr-search-change', {
         query: this.searchQuery,
         matchCount: this.searchMatches.length,
+        matchCountExact: this.searchMatchCountExact,
         activeIndex: this.searchActiveIndex,
       });
       await this.scrollSearchMatch();
@@ -174,7 +339,11 @@ export function TextViewerTarget(
     }
 
     async searchNext(): Promise<boolean> {
-      if (!this.searchMatches.length) return false;
+      const recomputed = this.recomputeSearchSynchronouslyIfStale();
+      if (!this.searchMatches.length) {
+        if (recomputed) this.emitSearchChange();
+        return false;
+      }
       this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
       this.paintRanges();
       this.emitSearchChange();
@@ -183,7 +352,11 @@ export function TextViewerTarget(
     }
 
     async searchPrevious(): Promise<boolean> {
-      if (!this.searchMatches.length) return false;
+      const recomputed = this.recomputeSearchSynchronouslyIfStale();
+      if (!this.searchMatches.length) {
+        if (recomputed) this.emitSearchChange();
+        return false;
+      }
       this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
       this.paintRanges();
       this.emitSearchChange();
@@ -193,22 +366,42 @@ export function TextViewerTarget(
 
     clearSearch(): void {
       this.searchQuery = '';
-      this.lastSearchText = '';
+      this.lastSearchGeneration = this.observedContentGeneration;
       this.lastSearchLocale = '';
-      this.searchMatches = [];
+      this.searchMatches = emptyTextQuoteMatches();
+      this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.paintRanges();
-      this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+      this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
     }
 
     private updateSearchRanges(): void {
       const root = this.textContentRoot();
-      const scope = root ? scopeFromElement(root) : null;
-      this.lastSearchText = scope?.text ?? '';
+      const index = root ? this.cachedTextIndex(root) : null;
+      this.lastSearchGeneration = this.observedContentGeneration;
       this.lastSearchLocale = this.effectiveLocale;
-      this.searchMatches = scope
-        ? findTextQuoteMatches(scope, this.searchQuery, this.effectiveLocale)
-        : [];
+      this.searchMatches = index
+        ? index.search(this.searchQuery, index.createWorkBudget())
+        : emptyTextQuoteMatches();
+      this.searchMatchCountExact = this.searchMatches.matchCountExact;
+    }
+
+    private recomputeSearchSynchronouslyIfStale(): boolean {
+      this.drainTextMutations();
+      if (
+        !this.searchQuery ||
+        (this.lastSearchGeneration === this.observedContentGeneration &&
+          this.lastSearchLocale === this.effectiveLocale)
+      ) {
+        return false;
+      }
+      const previousIndex = this.searchActiveIndex;
+      this.updateSearchRanges();
+      this.searchActiveIndex = this.searchMatches.length > 0
+        ? Math.min(Math.max(previousIndex, 0), this.searchMatches.length - 1)
+        : -1;
+      this.paintRanges();
+      return true;
     }
 
     private scheduleSearchRecompute(): void {
@@ -217,6 +410,10 @@ export function TextViewerTarget(
       queueMicrotask(() => {
         this.searchRecomputePending = false;
         if (!this.isConnected || !this.searchQuery) return;
+        if (
+          this.lastSearchGeneration === this.observedContentGeneration &&
+          this.lastSearchLocale === this.effectiveLocale
+        ) return;
         const previousIndex = this.searchActiveIndex;
         this.updateSearchRanges();
         this.searchActiveIndex = this.searchMatches.length > 0
@@ -231,6 +428,7 @@ export function TextViewerTarget(
       this.emit('lr-search-change', {
         query: this.searchQuery,
         matchCount: this.searchMatches.length,
+        matchCountExact: this.searchMatchCountExact,
         activeIndex: this.searchActiveIndex,
       });
     }
@@ -269,21 +467,31 @@ export function TextViewerTarget(
 
     /** The slice of `searchMatches` painted right now: the active match plus the neighbours on
      *  either side, clamped to the array. Wrapping past either end re-centres the window. */
-    private searchPaintWindow(): TextQuoteMatch[] {
-      if (this.searchMatches.length <= SEARCH_PAINT_WINDOW) return this.searchMatches;
+    private searchPaintWindow(): Array<{ index: number; match: TextQuoteMatch }> {
       const centre = this.searchActiveIndex < 0 ? 0 : this.searchActiveIndex;
       const half = SEARCH_PAINT_WINDOW >> 1;
-      const start = Math.max(0, Math.min(centre - half, this.searchMatches.length - SEARCH_PAINT_WINDOW));
-      return this.searchMatches.slice(start, start + SEARCH_PAINT_WINDOW);
+      const count = Math.min(this.searchMatches.length, SEARCH_PAINT_WINDOW);
+      const start = Math.max(0, Math.min(centre - half, this.searchMatches.length - count));
+      const matches: Array<{ index: number; match: TextQuoteMatch }> = [];
+      for (let index = start; index < start + count; index++) {
+        const match = this.searchMatches.at(index);
+        if (match) matches.push({ index, match });
+      }
+      return matches;
     }
 
     /** Materializes just the active match. Separate from the painted window because the active
      *  Range is also what `scrollSearchMatch()` scrolls to. */
     private activeSearchRange(): Range | null {
-      const match = this.searchMatches[this.searchActiveIndex];
+      if (this.lastSearchGeneration !== this.observedContentGeneration) return null;
+      const match = this.searchMatches.at(this.searchActiveIndex);
       if (!match) return null;
       const root = this.textContentRoot();
-      return root ? rangeFromTextQuoteMatch(scopeFromElement(root), match) : null;
+      if (!root) return null;
+      const scope = this.cachedTextScope(root);
+      return this.lastSearchGeneration === this.observedContentGeneration
+        ? rangeFromTextQuoteMatch(scope, match)
+        : null;
     }
 
     /** How many live Ranges the last paint actually retained. `protected`, not public API: it
@@ -291,6 +499,21 @@ export function TextViewerTarget(
      *  otherwise only observable through engine-internal Highlight registry state. */
     protected searchPaintedRangeCount(): number {
       return this.paintedRangeCount;
+    }
+
+    /** @internal Test seam proving one scope is retained for a stable content generation. */
+    protected textScopeBuildCount(): number {
+      return this.textScopeBuilds;
+    }
+
+    /** @internal Test seam for the bounded/reused occurrence-index work contract. */
+    protected textQuoteScanCount(): number {
+      return this.textIndex?.scanCount ?? 0;
+    }
+
+    /** @internal Test seam for the host-highlight cardinality ceiling. */
+    protected highlightPaintedRangeCount(): number {
+      return this.highlightedRangeCount;
     }
 
     private paintRanges(): void {
@@ -306,6 +529,15 @@ export function TextViewerTarget(
         return;
       }
       this.searchHandle ??= acquireHighlightHandle(this, this.ownerDocument);
+      if (
+        this.lastPaintRoot === root &&
+        this.lastPaintMappingGeneration === this.observedNodeMappingGeneration &&
+        this.lastPaintHighlights === this.highlights &&
+        this.lastPaintActiveHighlightId === this.activeHighlightId &&
+        this.lastPaintSearchMatches === this.searchMatches &&
+        this.lastPaintSearchActiveIndex === this.searchActiveIndex &&
+        this.lastPaintHandle === this.searchHandle
+      ) return;
       const rangesByTone = new Map<LyraHighlightTone, Range[]>();
       const add = (tone: LyraHighlightTone, range: Range | null): void => {
         if (!range) return;
@@ -313,37 +545,74 @@ export function TextViewerTarget(
         ranges.push(range);
         rangesByTone.set(tone, ranges);
       };
-      for (const highlight of this.highlights) {
-        if (highlight.anchor.kind === 'text-quote') {
-          add(
-            highlight.tone ?? 'accent',
-            resolveTextQuote(scopeFromElement(root), highlight.anchor, this.effectiveLocale),
-          );
+      type TextHighlight = Omit<LyraHighlight, 'anchor'> & {
+        anchor: Extract<LyraAnchor, { kind: 'text-quote' }>;
+      };
+      const isTextHighlight = (highlight: LyraHighlight): highlight is TextHighlight =>
+        highlight.anchor.kind === 'text-quote';
+      const highlightsToPaint: TextHighlight[] = [];
+      let activeHighlight: TextHighlight | undefined;
+      const candidateCount = Math.min(this.highlights.length, HIGHLIGHT_CANDIDATE_LIMIT);
+      for (let candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++) {
+        const highlight = this.highlights[candidateIndex]!;
+        if (!isTextHighlight(highlight)) continue;
+        highlightsToPaint.push(highlight);
+        if (highlight.id === this.activeHighlightId) activeHighlight = highlight;
+      }
+      if (activeHighlight) {
+        const activeIndex = highlightsToPaint.indexOf(activeHighlight);
+        if (activeIndex > 0) {
+          highlightsToPaint.splice(activeIndex, 1);
+          highlightsToPaint.unshift(activeHighlight);
         }
       }
+
+      const searchGenerationIsCurrent = this.lastSearchGeneration === this.observedContentGeneration;
+      const needsScope = highlightsToPaint.length > 0 ||
+        (searchGenerationIsCurrent && this.searchMatches.length > 0);
+      const index = needsScope ? this.cachedTextIndex(root) : null;
+      const highlightBudget = index?.createWorkBudget();
+      let activeHostRange: Range | null = null;
+      let highlighted = 0;
+      for (const highlight of highlightsToPaint) {
+        if (highlight !== activeHighlight && highlighted >= HIGHLIGHT_PAINT_LIMIT) break;
+        const match = index?.resolve(highlight.anchor, highlightBudget);
+        const range = match && index ? rangeFromTextQuoteMatch(index.scope, match) : null;
+        add(highlight.tone ?? 'accent', range);
+        if (range) highlighted++;
+        if (highlight === activeHighlight) activeHostRange = range;
+      }
+      this.highlightedRangeCount = highlighted;
       // Materialize only a bounded window around the active match. Everything outside it is off
       // screen by construction (the viewport can't show 800 matches at once), and each Range
       // handed to the Highlight API is retained live for as long as it is painted.
-      const scope = this.searchMatches.length > 0 ? scopeFromElement(root) : null;
+      const scope = searchGenerationIsCurrent && this.searchMatches.length > 0
+        ? (index?.scope ?? this.cachedTextScope(root))
+        : null;
       let painted = 0;
+      let activeSearchRange: Range | null = null;
       if (scope) {
-        for (const match of this.searchPaintWindow()) {
+        for (const { index: matchIndex, match } of this.searchPaintWindow()) {
           const range = rangeFromTextQuoteMatch(scope, match);
           if (range) {
             add('accent', range);
             painted++;
+            if (matchIndex === this.searchActiveIndex) activeSearchRange = range;
           }
         }
       }
       this.paintedRangeCount = painted;
       const tones: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
       for (const tone of tones) this.searchHandle.setRanges(tone, rangesByTone.get(tone) ?? []);
-      const active = this.highlights.find((highlight: LyraHighlight) => highlight.id === this.activeHighlightId);
-      this.searchHandle.setActive(
-        active?.anchor.kind === 'text-quote'
-          ? resolveTextQuote(scopeFromElement(root), active.anchor, this.effectiveLocale)
-          : this.activeSearchRange(),
-      );
+      this.searchHandle.setActive(activeHostRange ?? activeSearchRange);
+      this.discardFallbackNodeCache();
+      this.lastPaintRoot = root;
+      this.lastPaintMappingGeneration = this.observedNodeMappingGeneration;
+      this.lastPaintHighlights = this.highlights;
+      this.lastPaintActiveHighlightId = this.activeHighlightId;
+      this.lastPaintSearchMatches = this.searchMatches;
+      this.lastPaintSearchActiveIndex = this.searchActiveIndex;
+      this.lastPaintHandle = this.searchHandle;
     }
   }
   return TextViewerTargetElement as InternalMixinConstructor<

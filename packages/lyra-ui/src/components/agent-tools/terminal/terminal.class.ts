@@ -133,7 +133,7 @@ interface SearchState {
 
 export interface LyraTerminalEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
-  'lr-error': CustomEvent<undefined>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-download': CustomEvent<{ filename: string }>;
   'lr-follow-change': CustomEvent<{ following: boolean }>;
@@ -275,7 +275,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   /** Feature-detectable capability mirror -- the same pattern `DocumentAnchorTarget`-adopting
    *  viewers use for their own `anchorKinds` field. This component isn't document-viewer-registry-
    *  routed, so it has no registry `capabilities.anchors` entry to declare this on instead. */
-  readonly anchorKinds = ['line-range'] as const satisfies readonly LyraAnchor['kind'][];
+  readonly anchorKinds: readonly LyraAnchor['kind'][] = ['line-range'];
 
   @state() private lines: TerminalLine[] = [];
   @state() private scrollTargetLineNumber: number | null = null;

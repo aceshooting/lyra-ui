@@ -19,8 +19,9 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src: string = ''`, `name: string = ''`, `label: string = ''`, and `maxHeight:
-string = ''` (attribute `max-height`). A host
+**Properties:** `src: string = ''`, `name: string = ''`, `label: string = ''`, `page: number = 1`
+(reflected, one-based current slide), and `maxHeight: string = ''` (attribute `max-height`). Assigning
+`page` while ready navigates to that slide. A host
 `aria-label` takes precedence over
 `label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,
@@ -28,20 +29,37 @@ and `anchorKinds`
 (`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
 DOM text.
 
-**Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation.
-`search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()` are
-available for renderer output that exposes DOM text.
+**Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation using the
+renderer's zero-based index. `renderPageThumbnailToContainer(page, container, options?)` renders a
+one-based, width-bounded DOM/SVG slide preview and resolves to a caller-owned disposable handle (or
+`false` when unavailable/invalid); it generation-checks asynchronous preview resources after they
+settle.
+`search(query)` searches the renderer's complete presentation model, not its windowed DOM, retains
+at most 10,000 validated results, navigates the matching slide, and paints a renderer-owned node
+overlay. `searchNext()`, `searchPrevious()`, and `clearSearch()` navigate/dispose those model
+results. `scrollToAnchor()` remains available for renderer output that exposes DOM text.
 
 **Events:**
+
 - `lr-load` — `detail: { slideCount }` — fired after a presentation opens.
 - `lr-slide-change` — `detail: { index, count }` — fired when the active slide changes.
-- `lr-render-error` with `detail.error` when fetching or rendering fails.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-page-viewer-state-change` — `detail.snapshot` is the same atomic readonly value exposed by
+  `pageViewerSnapshot`: `{ identity, status, page, pageCount }`. `identity` changes at the start of
+  every load so a rail can discard same-count replacement thumbnails without inferring identity
+  from `src`.
+- `lr-render-error` with `detail.error` only when fetching/opening fails or a post-load peer event is
+  explicitly classified fatal.
+- `lr-viewer-diagnostic` — `detail.diagnostic` is a readonly structured slide/node/search
+  diagnostic with stable `code`, `severity`, `fatal`, `source`, `cause`, and correlated `page` or
+  `nodeId` when valid. Recoverable events keep the mounted deck usable and do not also emit
+  `lr-render-error`; fatal events enter the localized error state, destroy the adapter, and emit the
+  terminal event once.
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-presentation search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered presentation.
+DOMRect[] }`) — fired after a selection ends inside the rendered presentation.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted renderer-text
 highlights are passive and cannot be activated.
@@ -69,3 +87,13 @@ renderer opens the archive; exceeding either ceiling surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the presentation. The optional peer must also
 expose its complete recommended ZIP-limits capability within Lyra's safety ceilings. Missing,
 malformed, or more-permissive limits make the peer unavailable and the viewer fails closed.
+
+The peer instance is immediately wrapped in a validated `PptxViewerAdapter`; the component observes
+only readonly slide metadata, complete-model search/navigation/highlight/thumbnail capabilities and
+normalized correlated events. Raw renderer DOM windowing and event payloads do not become component
+state.
+`PptxViewerAdapter`, `PptxViewerAdapterEvent`, `PptxTextSearchResult`, and
+`PptxSearchHighlightHandle`/`PptxThumbnailHandle` are exported from the granular PPTX loader module.
+The shared diagnostic
+types are `LyraViewerDiagnostic`, `LyraViewerDiagnosticCode`, `LyraViewerDiagnosticSeverity`, and
+`LyraViewerDiagnosticEventDetail`.

@@ -14,6 +14,7 @@ const meta: Meta = {
   title: 'Observability/Span Waterfall',
   component: 'lr-span-waterfall',
   tags: ['autodocs'],
+  parameters: { docs: { description: { component: 'Every interactive span bar retains a 24px target in both axes, even when a very short duration paints more narrowly on the timeline.' } } },
 };
 export default meta;
 type Story = StoryObj;

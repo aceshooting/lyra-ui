@@ -20,7 +20,39 @@ beforeEach(() => {
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
-    }) as unknown as MediaQueryList) as typeof window.matchMedia;
+    } as unknown as MediaQueryList)) as typeof window.matchMedia;
+});
+
+it("restores breakpoint, persistence, width, and automatic mode defaults after attribute removal", async () => {
+  const automatic = (await fixture(
+    html`<lr-app-rail></lr-app-rail>`
+  )) as LyraAppRail;
+  const el = (await fixture(html`
+    <lr-app-rail
+      mode="mobile"
+      icon-only-breakpoint="1200px"
+      mobile-breakpoint="800px"
+      persist="width"
+      min-rail-width-px="240"
+      max-rail-width-px="600"
+    ></lr-app-rail>
+  `)) as LyraAppRail;
+  for (const name of [
+    "mode",
+    "icon-only-breakpoint",
+    "mobile-breakpoint",
+    "persist",
+    "min-rail-width-px",
+    "max-rail-width-px",
+  ])
+    el.removeAttribute(name);
+  await el.updateComplete;
+  expect(el.iconOnlyBreakpoint).to.equal("960px");
+  expect(el.mobileBreakpoint).to.equal("600px");
+  expect(el.persist).to.equal("open width");
+  expect(el.minRailWidthPx).to.equal(190);
+  expect(el.maxRailWidthPx).to.equal(440);
+  expect(el.mode).to.equal(automatic.mode);
 });
 
 it('inherits independent toggle and resizer hover/pressed paint from an ancestor', async function () {
@@ -165,7 +197,8 @@ it('hides app-rail-item labels visually in icon-only mode while retaining their 
       </lr-app-rail-item>
     </lr-app-rail>
   `)) as LyraAppRail;
-  const item = el.querySelector('lr-app-rail-item')! as HTMLElement & { updateComplete: Promise<unknown> };
+  const item = el.querySelector('lr-app-rail-item')! as HTMLElement & { updateComplete: Promise<unknown>;
+  };
   await item.updateComplete;
 
   expect(item.hasAttribute('icon-only')).to.be.true;
@@ -250,7 +283,7 @@ it('resolves the correct mode on the first rendered frame, before any matchMedia
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
-    }) as unknown as MediaQueryList) as typeof window.matchMedia;
+    } as unknown as MediaQueryList)) as typeof window.matchMedia;
   try {
     const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
     // Assert on the very first update -- no second `await el.updateComplete` and no manual
@@ -301,7 +334,8 @@ it('does not emit lr-mode-change for a redundant reassignment to the current mod
 });
 
 it('detaches the old MediaQueryList listener and attaches a new one when icon-only-breakpoint changes', async () => {
-  const created: Array<{ query: string; addCalls: number; removeCalls: number }> = [];
+  const created: Array<{ query: string; addCalls: number; removeCalls: number;
+  }> = [];
   window.matchMedia = ((query: string) => {
     const entry = { query, addCalls: 0, removeCalls: 0 };
     created.push(entry);
@@ -330,7 +364,8 @@ it('detaches the old MediaQueryList listener and attaches a new one when icon-on
 });
 
 it('does not arm breakpoint listeners for updates while detached and uses the latest values on reconnect', async () => {
-  const created: Array<{ query: string; addCalls: number; removeCalls: number }> = [];
+  const created: Array<{ query: string; addCalls: number; removeCalls: number;
+  }> = [];
   window.matchMedia = ((query: string) => {
     const entry = { query, addCalls: 0, removeCalls: 0 };
     created.push(entry);
@@ -711,7 +746,7 @@ it('moves focus to the first focusable nav item when the overlay opens', async (
   el.open = true;
   await el.updateComplete;
 
-  expect((document.activeElement) === (first)).to.equal(true);
+  expect(document.activeElement === first).to.equal(true);
 });
 
 it('focuses the panel itself as a fallback when there is nothing focusable', async () => {
@@ -723,7 +758,7 @@ it('focuses the panel itself as a fallback when there is nothing focusable', asy
   // Compared by id, not `.to.equal(panel)` -- a live-DOM-node equality failure would carry two
   // Elements into @web/test-runner-mocha's session-finished message, which structuredClone can't
   // serialize, silently hanging the whole file until the per-file watchdog kills it.
-  expect((active) !== (null), 'the panel must be the focused element').to.equal(true);
+  expect(active !== null, 'the panel must be the focused element').to.equal(true);
   expect(active!.id).to.equal(panel.id);
   expect(active!.getAttribute('part')).to.equal('panel');
 });
@@ -744,7 +779,7 @@ it('traps Tab focus across header, nav, and footer slots, wrapping last->first a
   const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
   document.dispatchEvent(tabForward);
   expect(tabForward.defaultPrevented).to.be.true;
-  expect((document.activeElement) === (first)).to.equal(true);
+  expect(document.activeElement === first).to.equal(true);
 
   const tabBackward = new KeyboardEvent('keydown', {
     key: 'Tab',
@@ -754,7 +789,7 @@ it('traps Tab focus across header, nav, and footer slots, wrapping last->first a
   });
   document.dispatchEvent(tabBackward);
   expect(tabBackward.defaultPrevented).to.be.true;
-  expect((document.activeElement) === (last)).to.equal(true);
+  expect(document.activeElement === last).to.equal(true);
 });
 
 it('returns focus to the toggle button after closing', async () => {
@@ -770,7 +805,7 @@ it('returns focus to the toggle button after closing', async () => {
   // slotted light-DOM nav items focused elsewhere in this file) -- focusing
   // it makes `document.activeElement` resolve to the *host*, not the button
   // itself, so the check has to look inside the shadow root directly.
-  expect((el.shadowRoot!.activeElement) === (toggle)).to.equal(true);
+  expect(el.shadowRoot!.activeElement === toggle).to.equal(true);
 });
 
 it('returns focus to whatever triggered it (via Escape) even when opened by setting `open` directly rather than clicking the built-in toggle', async () => {
@@ -785,7 +820,7 @@ it('returns focus to whatever triggered it (via Escape) even when opened by sett
   await el.updateComplete;
 
   expect(el.open).to.be.false;
-  expect((document.activeElement) === (outsideTrigger)).to.equal(true);
+  expect(document.activeElement === outsideTrigger).to.equal(true);
   outsideTrigger.remove();
 });
 
@@ -985,10 +1020,10 @@ describe('resizable', () => {
   it('renders no resizer when resizable is false (default)', async () => {
     const el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="resizer"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="resizer"]') == null).to.be.true;
   });
 
-  it('renders a resizer with role="separator" and correct aria bounds only in \'full\' mode', async () => {
+  it("renders a resizer with role=\"separator\" and correct aria bounds only in 'full' mode", async () => {
     const el = (await fixture(
       html`<lr-app-rail mode="full" resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lr-app-rail>`,
     )) as LyraAppRail;
@@ -1016,7 +1051,7 @@ describe('resizable', () => {
   it('does not render a resizer in icon-only or mobile mode even when resizable', async () => {
     const el = (await fixture(html`<lr-app-rail resizable mode="icon-only"></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="resizer"]')) == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="resizer"]') == null).to.be.true;
   });
 
   it('emits a cancelable resize request before the existing non-cancelable committed resize event', async () => {
@@ -1025,8 +1060,10 @@ describe('resizable', () => {
     )) as LyraAppRail;
     await el.updateComplete;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
-    let request: { widthPx: number; cancelable: boolean; widthAtDispatch: number } | undefined;
-    let committed: { widthPx: number; cancelable: boolean; widthAtDispatch: number } | undefined;
+    let request:
+      | { widthPx: number; cancelable: boolean; widthAtDispatch: number } | undefined;
+    let committed:
+      | { widthPx: number; cancelable: boolean; widthAtDispatch: number } | undefined;
     el.addEventListener('lr-rail-resize-request', (event) => {
       const resize = event as CustomEvent<{ widthPx: number }>;
       request = {
@@ -1103,8 +1140,8 @@ describe('resizable', () => {
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
     let requests = 0;
     let commits = 0;
-    el.addEventListener('lr-rail-resize-request', () => requests += 1);
-    el.addEventListener('lr-rail-resize', () => commits += 1);
+    el.addEventListener('lr-rail-resize-request', () => (requests += 1));
+    el.addEventListener('lr-rail-resize', () => (commits += 1));
     const event = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
     resizer.dispatchEvent(event);
     expect(event.defaultPrevented).to.be.false;
@@ -1126,7 +1163,8 @@ describe('resizable', () => {
       ></lr-app-rail>`,
     )) as LyraAppRail;
     const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
-    const proposals: Array<{ widthPx: number; cancelable: boolean; widthAtDispatch: number }> = [];
+    const proposals: Array<{ widthPx: number; cancelable: boolean; widthAtDispatch: number;
+    }> = [];
     let committedEvents = 0;
     const veto = (event: Event): void => {
       const resize = event as CustomEvent<{ widthPx: number }>;
@@ -1188,7 +1226,7 @@ describe('resizable', () => {
     }
   });
 
-  it('sets [part=base]\'s inline-size from railWidthPx only while resizable and in \'full\' mode', async () => {
+  it("sets [part=base]'s inline-size from railWidthPx only while resizable and in 'full' mode", async () => {
     const el = (await fixture(html`<lr-app-rail resizable rail-width-px="300"></lr-app-rail>`)) as LyraAppRail;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -1398,7 +1436,7 @@ describe('hideToggle', () => {
 });
 
 describe('aria-label forwarding', () => {
-  it('unset host aria-label reproduces today\'s exact localized-default/label-prop output', async () => {
+  it("unset host aria-label reproduces today's exact localized-default/label-prop output", async () => {
     const withDefault = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
     expect(withDefault.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal(
       'Navigation',

@@ -29,16 +29,21 @@ the move open (mirroring `lr-confirm-bar`'s cancelable approve/deny pattern) unt
 ### `lr-reorder-list`
 
 **Properties:**
+
 - `label: string = ''` — accessible name for the internal `role="list"`; when empty, a host
   `aria-label` is forwarded as a fallback.
 - `disabled: boolean = false` (reflected) — disables every item's move buttons and the Ctrl/Cmd+
   Arrow shortcut, without mutating any item's own `disabled` attribute.
 
-**Events:** `lr-reorder` (`detail: { order: string[], fromIndex: number, toIndex: number }`,
-cancelable — fired before a move is applied; `order` is every item's `value` (or its
-DOM-position-index fallback) in the order the move WOULD produce. Uncanceled, the move applies
-synchronously right after. `preventDefault()` holds the move instead: the affected item reflects
-`pending`, and no other move can start until the host resolves it — see **Methods** below.
+**Events:** `lr-reorder`
+(`detail: LyraReorderDetail { readonly order: readonly string[], readonly fromIndex: number,
+readonly toIndex: number }`, cancelable) — fired before a move is applied; `order` is an immutable
+snapshot of every valid item's stable `value` in the order the move WOULD produce. Uncanceled, the
+move applies synchronously only if the exact mover, target, membership, order, identities, and
+availability remain valid after dispatch. `preventDefault()` holds the move instead: the internal
+list exposes `aria-busy="true"`, every move action is disabled, the affected item exposes
+`:state(pending)`, and no other move can start until the host resolves it — see **Methods** below.
+Synchronous finalize/revert calls from the canceling listener are supported.
 
 **Methods:** `finalizePendingMove()` — applies a move held via `preventDefault()`.
 `revertPendingMove()` — discards a held move, restoring the prior order. Both no-op when nothing
@@ -60,9 +65,13 @@ between rows.
 ```
 
 **Known gotchas:**
-- Boundary-disabled state (`atStart`/`atEnd`) and the `listDisabled` cascade are computed and
-  pushed onto each `<lr-reorder-item>` by this list, on every slot change and every move — an item
-  alone can't know its own position.
+
+- Boundary-disabled state (`atStart`/`atEnd`), `listDisabled`, and `pending` are readonly effective
+  state computed by the owning list and exposed through item custom states.
+- Every item requires a unique, nonempty stable `value`. Missing, whitespace-only, and later
+  duplicate identities remain visible but their move actions are unavailable until corrected.
+- Ctrl/Cmd+Arrow is consumed only for a valid owned move. A boundary/no-op gesture or one from a
+  nested input, select, link, button, editable region, or custom control retains its native action.
 - No pointer drag-and-drop; move-up/move-down buttons and the keyboard shortcut only.
 
 ---
@@ -70,16 +79,17 @@ between rows.
 ### `lr-reorder-item`
 
 **Properties:**
-- `value?: string` — stable identifier included in the parent's `lr-reorder` order array; falls
-  back to this item's live DOM-position index when unset.
+
+- `value: string = ''` — required unique, nonempty stable identifier included in the parent's
+  `lr-reorder` order array.
+- `accessibleLabel?: string` (attribute `accessible-label`) — explicit row identity appended to
+  each repeated move action's accessible name; otherwise the item derives a bounded accessible
+  text projection from its row content.
 - `disabled: boolean = false` (reflected) — disables this row's own move buttons only; does not
   hide its slotted content.
-- `atStart: boolean = false`, `atEnd: boolean = false`, `listDisabled: boolean = false`
-  (attribute: false) — pushed down by the parent `<lr-reorder-list>`; normally set internally, not
-  by consumers.
-- `pending: boolean = false` (reflected) — set while this item's move is held via the parent's
-  `lr-reorder` `preventDefault()`. Informational only (doesn't itself disable the item's buttons);
-  style via `lr-reorder-item[pending]`. Pushed down by the parent; normally set internally.
+- `atStart: boolean`, `atEnd: boolean`, `listDisabled: boolean`, `pending: boolean` (readonly) —
+  effective owner state. Corresponding custom states include `:state(at-start)`, `:state(at-end)`,
+  `:state(list-disabled)`, `:state(pending)`, and `:state(busy)`.
 
 **Events:** `lr-move-request` (`detail: { direction: 'up' | 'down' }` — a move button was activated
 while not disabled; handled by the parent `<lr-reorder-list>`, which performs the actual move)

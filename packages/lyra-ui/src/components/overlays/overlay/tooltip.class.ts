@@ -75,10 +75,10 @@ type TooltipContentSnapshot = {
 };
 
 export interface LyraTooltipEventMap {
-  'lr-show': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-after-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
 }
 
 /**
@@ -617,7 +617,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.cancelPendingTransition();
     if (this.disabled || this._open) return Promise.resolve();
     return this.transitionGate.request(true, () => {
-      if (this.emit('lr-show', undefined, { cancelable: true }).defaultPrevented) {
+      if (this.emit('lr-show', null, { cancelable: true }).defaultPrevented) {
         this.syncOpenAttribute();
         return;
       }
@@ -635,7 +635,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.cancelPendingTransition();
     if (!this._open) return Promise.resolve();
     return this.transitionGate.request(false, () => {
-      if (this.emit('lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+      if (this.emit('lr-hide', null, { cancelable: true }).defaultPrevented) {
         this.syncOpenAttribute();
         return;
       }

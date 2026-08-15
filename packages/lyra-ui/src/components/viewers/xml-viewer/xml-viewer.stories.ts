@@ -62,7 +62,7 @@ export const Highlights: Story = {
     docs: {
       description: {
         story:
-          'Every `highlights` entry whose anchor is a `node-path` this document resolves tints its element row with the entry tone and adds a focusable `highlight-action` button that emits `lr-highlight-activate`. `activeHighlightId` outlines the entry a host is currently showing. Retune each tone through `--lr-xml-viewer-highlight-<tone>-background`, and the active outline through `--lr-xml-viewer-highlight-active-outline`.',
+          'Resolved `node-path` entries tint their rows and add focusable `highlight-action` buttons. Painting retains at most 100 entries after inspecting 1,000 candidates; `activeHighlightId` is inspected first and remains painted inside that cap. Retune tones through `--lr-xml-viewer-highlight-<tone>-background`, and the active outline through `--lr-xml-viewer-highlight-active-outline`.',
       },
     },
   },

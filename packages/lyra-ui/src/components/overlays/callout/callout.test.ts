@@ -77,6 +77,42 @@ it('renders status content and a localized close action', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('normalizes every unsupported closed-set attribute and untyped property write', async () => {
+  const el = (await fixture(html`
+    <lr-callout variant="primary" appearance="quiet" size="huge" heading-level="7">
+      Message
+    </lr-callout>
+  `)) as LyraCallout;
+  expect(el.variant).to.equal('brand');
+  expect(el.getAttribute('variant')).to.equal('brand');
+  expect(el.appearance).to.equal(undefined);
+  expect(el.hasAttribute('appearance')).to.be.false;
+  expect(el.size).to.equal('m');
+  expect(el.getAttribute('size')).to.equal('m');
+  expect(el.headingLevel).to.equal('3');
+  expect(el.getAttribute('heading-level')).to.equal('3');
+
+  el.variant = 'success';
+  el.appearance = 'outlined';
+  el.size = 'small';
+  el.headingLevel = '2';
+  await el.updateComplete;
+  const foreign = el as unknown as Record<string, unknown>;
+  foreign.variant = 'primary';
+  foreign.appearance = 'quiet';
+  foreign.size = 'huge';
+  foreign.headingLevel = '7';
+  await el.updateComplete;
+  expect(el.variant).to.equal('brand');
+  expect(el.getAttribute('variant')).to.equal('brand');
+  expect(el.appearance).to.equal(undefined);
+  expect(el.hasAttribute('appearance')).to.be.false;
+  expect(el.size).to.equal('m');
+  expect(el.getAttribute('size')).to.equal('m');
+  expect(el.headingLevel).to.equal('3');
+  expect(el.getAttribute('heading-level')).to.equal('3');
+});
+
 it('lets per-instance close strings reach the rendered action', async () => {
   const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
   el.strings = { close: 'Dismiss callout' };

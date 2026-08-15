@@ -20,7 +20,8 @@ A plain closed-list dropdown — a direct `<lr-*>` counterpart to `<wa-select>`/
 as `lr-combobox`, see the shared-foundation notes above). The trigger is a `<button>`, not a text
 input: click/Enter/Space/ArrowDown opens it, and there's no typing-to-filter. Options are
 `<lr-option value>` children — the same element `<lr-combobox>` uses — reconciled the same way
-combobox does, and the popup reuses `internal/positioner.ts` for placement.
+combobox does. The popup reuses `internal/positioner.ts` for placement and participates in Lyra's
+shared nonmodal overlay stack.
 Session-history/autofill restoration assigns the stored string through the same synchronous
 value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
 `lr-change`.
@@ -38,7 +39,12 @@ stay inside exact-320px LTR and RTL containers alongside start/end adornments.
 overlaid on the real trigger, so every built-in tag remove button is valid independently-focusable
 interactive content rather than a button nested inside another button. Picking a selected row,
 Backspace/Delete on the focused trigger, and the `with-clear` action remain equivalent removal
-paths. Turning `multiple` back off collapses
+paths. Selection identity is the option occurrence, not just its string: two same-valued rows may
+both remain selected, render their own labels, submit duplicate entries, and be removed separately.
+The trigger retains one genuinely visually-hidden current-value node containing **every**
+selected label, even past `max-options-visible`; painted built-in chip labels and the overflow chip
+are hidden from the accessibility tree so that value is announced once rather than truncated or
+duplicated. Turning `multiple` back off collapses
 the selection to its first entry, so the single-mode string and the submitted entry can never
 disagree with what the trigger shows.
 
@@ -55,8 +61,9 @@ consumer that read it as a plain string needs a narrowing step —
 
 **Single-option auto-commit.** Opt-in via `autoCommitSingleOption` (default `false` — a select always
 renders the normal combobox/listbox/chevron trigger unless enabled, matching pre-1.3.0 behavior).
-When set and exactly one option is enabled (regardless of how many disabled ones exist alongside
-it), the popup never opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the trigger
+When set and exactly one option is available (neither disabled nor inert, including through an
+inert ancestor), the popup never opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the
+trigger
 commits that sole option directly, and the trigger renders as a plain `role="button"` with no
 chevron/`aria-haspopup`/`aria-expanded`/`aria-controls`/`aria-activedescendant` rather than a
 combobox with a permanently inert popup state — opening a one-row list to pick the only available
@@ -74,7 +81,9 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `hint: string = ''`
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
-- `open: boolean = false` (reflected)
+- `open: boolean = false` (reflected). Direct or fieldset-cascaded disablement synchronously forces
+  it closed; every later property or attribute attempt to open remains normalized to `false` until
+  the control is enabled again
 - `size: LyraSize = 'm'` (reflected — the shared control ladder, same scale as
   `lr-input`/`lr-combobox`/`lr-button`, for compact toolbar placements that don't fit the default
   trigger height. Both spellings of every tier are accepted: `2xs`/`xs`/`s`/`m`/`l`/`xl` and
@@ -91,9 +100,11 @@ exactly like the multi-option case, until the trigger is actually activated.
   from an outer-tree rule) still wins over it
 - `placement: Placement = 'bottom'` (reflected) — preferred listbox placement, from the
   Floating UI vocabulary (`'top'`, `'bottom-end'`, …). `flip`/`shift` may still move the popup to
-  keep it in view, and the `left`/`right` component is swapped under RTL
+  keep it in view, and the `left`/`right` component is swapped under RTL. Assignment while open
+  refreshes positioning in place without closing, firing lifecycle events, or changing stack order
 - `hoist: boolean = false` (reflected) — switches Floating UI from its mapped absolute strategy to
-  fixed positioning, escaping clipping containers
+  fixed positioning, escaping clipping containers. It also switches live while open; an effective
+  direction change refreshes logical left/right placement by the same path
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled trigger treatment
 - `autofocus: boolean = false` / `title: string = ''` — forwarded to the internal trigger
 - `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
@@ -156,20 +167,26 @@ announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
 trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
 its unprefixed counterpart. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
-non-cancelable only for the disconnect-driven close, where a veto cannot be honoured.
+non-cancelable only for the disconnect-driven close, where a veto cannot be honoured. A direct or
+fieldset-cascaded disablement is a policy closure rather than a user-requested transition: it
+synchronously closes without the vetoable `lr-hide` or settled `lr-after-hide` lifecycle, and a
+listener cannot hold a disabled popup open.
 `lr-after-show` and `lr-after-hide` fire after the corresponding listbox transition has settled; an
 interrupted transition drops its stale after-event.
 `lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `help-text` (alias), `error` (overrides
 the `errorText` attribute when provided), `start`/`prefix` (aliases before the selected-value label),
-`end`/`suffix` (aliases after the label), plus `clear-icon` and `expand-icon`. The adornments live
-inside the native trigger `<button>`, so never place links, buttons, inputs, or other interactive
-content in either slot.
+`end`/`suffix` (aliases after the label), plus `clear-icon` and `expand-icon`. Because the adornments
+live inside the native trigger `<button>`, both wrappers are unconditionally inert,
+`aria-hidden="true"`, and non-hit-testable. The names remain mirrored for decorative glyphs and
+text, but links, buttons, inputs, and other supplied controls cannot become nested interaction or
+accessibility stops.
 
-When hint/error content is present, the trigger's `aria-describedby` references stable shadow-local
-IDs for both messages (error first, then hint), so the visible supporting text is part of the
-control's accessible description.
+In populated multiple mode, the trigger's `aria-describedby` first references the complete
+visually-hidden selected-value node. When hint/error content is present it then references stable
+shadow-local IDs for both messages (error before hint), so the current value and visible supporting
+text are part of the focused control's accessible description.
 
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `trigger`, `display-input`, `start`, `prefix`, `end`, `suffix`, `tags` (the legal sibling
@@ -178,10 +195,11 @@ control's accessible description.
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
 is encoded in the part name instead), `clear-button` (the `with-clear` button, present only while
-there is a selection to clear), `listbox`,
+there is a selection to clear), `listbox` (the managed nonmodal popup, layered by
+`--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback),
 `group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
-the previous one's — a presentational `<div>`, not a `role="group"`; options with an empty `group`
-get no heading),
+the previous one's — its stable ID labels a `role="group"` wrapper that semantically owns the
+following option rows; options with an empty `group` get no heading or group wrapper),
 `option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
@@ -252,24 +270,34 @@ invalid CSS and never matches — which is exactly why these tokens exist.
   <lr-option value="b" selected>Banana</lr-option>
 </lr-select>
 <script type="module">
-  document.getElementById('sel').addEventListener('change', (e) => console.log(e.target.value));
+  document
+    .getElementById("sel")
+    .addEventListener("change", (e) => console.log(e.target.value));
 </script>
 ```
 
 ```html
 <!-- Multi-select with chips, a cap, and a clear button: -->
-<lr-select id="tags" label="Labels" multiple with-clear max-options-visible="2" appearance="filled" pill>
+<lr-select
+  id="tags"
+  label="Labels"
+  multiple
+  with-clear
+  max-options-visible="2"
+  appearance="filled"
+  pill
+>
   <lr-option value="bug">Bug</lr-option>
   <lr-option value="docs">Docs</lr-option>
   <lr-option value="perf">Performance</lr-option>
 </lr-select>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/select/select.js';
-  const sel = document.getElementById('tags');
+  import "@aceshooting/lyra-ui/components/forms/select/select.js";
+  const sel = document.getElementById("tags");
   // A custom chip: return a node, and re-declare part="tag" to keep the built-in styling hooks.
   sel.getTag = (option, index) => `${index + 1}. ${option.label}`; // a string renders as text
-  sel.addEventListener('change', (e) => console.log(e.detail.value)); // string[] in multiple mode
-  sel.addEventListener('lr-clear', () => console.log('selection emptied'));
+  sel.addEventListener("change", (e) => console.log(e.currentTarget.value)); // string[] in multiple mode
+  sel.addEventListener("lr-clear", () => console.log("selection emptied"));
 </script>
 ```
 
@@ -279,11 +307,20 @@ invalid CSS and never matches — which is exactly why these tokens exist.
   `aria-activedescendant`, never actual focus, matching the WAI-ARIA "select-only combobox" pattern
   (as opposed to `lr-combobox`'s editable-input pattern).
 - While open, live option reorders preserve the active row by option identity. Removing or
-  disabling that option rehomes activity to the nearest navigable survivor (preferring the
-  following row on a tie); removing every navigable option clears `aria-activedescendant`.
+  disabling/inerting that option rehomes activity to the nearest available survivor (preferring the
+  following row on a tie); removing every available option clears `aria-activedescendant`.
+- One availability rule governs keyboard navigation, type-ahead, single-option auto-commit,
+  pointer selection, and each proxy row's `aria-disabled`: an option is unavailable when it is
+  disabled, inert itself, or inside an inert ancestor. Pointer activation of such a row is a no-op.
+- The floating listbox participates in Lyra's shared nonmodal overlay stack. Its computed
+  `--lr-overlay-stack-index`, Escape owner, capture-phase outside-pointer dismissal, and focus
+  handoff follow the newest open overlay rather than DOM order. A single dismissal therefore closes
+  only the visual top layer, even when target code stops pointer bubbling.
 - No typing-to-filter, but a printable keypress still jumps to (while open) or directly selects
-  (while closed) the next non-disabled option whose label starts with what's been typed, matching a
-  native `<select>`'s own type-ahead; the buffer resets ~500ms after the last keystroke.
+  (while closed) the next available option whose label starts with what's been typed, matching a
+  native `<select>`'s own type-ahead; the buffer resets ~500ms after the last keystroke. In closed
+  `multiple` mode the bounded search skips already-selected option occurrences and continues to a
+  later unselected match, including a distinct row that carries the same public string value.
 - `<lr-option value="b" selected>` sets that option's `defaultSelected`, seeds the live selection,
   and supplies the `form.reset()` baseline, mirroring native `<select><option selected>`. Later
   `defaultSelected`/attribute changes update that reset baseline without clobbering a dirty live
@@ -291,15 +328,16 @@ invalid CSS and never matches — which is exactly why these tokens exist.
   attribute/default.
 - `aria-required` on the trigger reflects `required` immediately; `aria-invalid` only reflects once
   the trigger has been blurred (touched) at least once, mirroring `lr-combobox`'s own input.
-  Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup.
+  Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup,
+  without restoring focus and undoing the browser's native Tab/Shift+Tab destination.
 - The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling
   back to `label`/`placeholder`/`"Select"` — a plain `aria-label` on `<lr-select>` is no longer
   silently ignored. Precedence is presence-based: `aria-label=""` remains an explicit empty
   override rather than restoring any fallback.
-- With `autoCommitSingleOption` set, a select with exactly one enabled option never exposes
+- With `autoCommitSingleOption` set, a select with exactly one available option never exposes
   `role="combobox"`/opens a listbox at all — see "Single-option auto-commit" above.
   Testing/automation code that always expects a `role="combobox"` trigger, or that opens the
-  listbox before asserting on a row, either needs at least two enabled options or should leave
+  listbox before asserting on a row, either needs at least two available options or should leave
   `autoCommitSingleOption` unset to observe the normal dropdown chrome.
 
 ---

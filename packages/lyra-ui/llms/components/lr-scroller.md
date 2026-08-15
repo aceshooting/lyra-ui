@@ -20,11 +20,11 @@ consumer's content, and the viewport is a native scroll container that works in 
 well as full-width layouts.
 
 **Properties:**
+
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
 - `controls: boolean = false` (reflected) — show previous/next controls
-- `hideScrollbar: boolean = false` (attribute `hide-scrollbar`, reflected) and
-  `withoutScrollbar: boolean = false` (attribute `without-scrollbar`, reflected) — retained Lyra
-  and upstream spellings of the same native-scrollbar opt-out; either one hides it
+- `withoutScrollbar: boolean = false` (attribute `without-scrollbar`, reflected) — hides the
+  native scrollbar while preserving scrolling
 - `withoutShadow: boolean = false` (attribute `without-shadow`, reflected) — suppresses both
   logical edge cues without changing native scrolling or the optional controls
 - `scrollStep: number = 0` (attribute `scroll-step`) — custom step; zero uses 80% of the viewport
@@ -42,7 +42,8 @@ for scroll-linked layout work.
 `control` (shared by `previous` and `next`), and `previous-glyph`/`next-glyph` (the chevron inside
 each, mirrored under RTL). Each shadow is hidden at its corresponding measured edge and uses
 logical positioning, so both cues and gradients mirror under RTL and rotate to the block axis in a
-vertical scroller.
+vertical scroller. Before the first client measurement, both cues are hidden and both optional
+controls are disabled, so server-rendered markup never advertises a false scroll direction.
 
 **Themeable custom properties:** `--lr-scroller-control-size` (default `var(--lr-size-2rem)`) — the
 previous/next control's box size; the interactive target never shrinks below `--lr-icon-button-size`

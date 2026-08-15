@@ -42,7 +42,7 @@ export type StackTraceAppearance = LyraFrame;
 export interface LyraStackTraceEventMap {
   'lr-frame-select': CustomEvent<{ file: string; line: number; column?: number; raw: string }>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
-  'lr-error': CustomEvent<undefined>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 

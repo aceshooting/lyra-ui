@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** none
+- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -20,15 +20,17 @@ Communities / Text chunks) composing this family's own pieces. The chat ↔ grap
 component. Pure projection + event conduit: no fetching, no graph/viewer imports, no persistence.
 
 **Properties:**
+
 - `provenance: LyraProvenance | null = null` (attribute: false) — `LyraProvenance { entities?:
-  LyraEntity[]; relationships?: { path: LyraPathElement[] }[]; communities?: LyraCommunity[]; chunks?:
-  LyraChunk[] }`; each present array renders through the matching sibling component (`lr-entity-
-  chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-inspector`);
+LyraEntity[]; relationships?: { path: LyraPathElement[] }[]; communities?: LyraCommunity[]; chunks?:
+LyraChunk[] }`; each present array renders through the matching sibling component (`lr-entity-
+chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-inspector`);
   `null` or every section empty renders the overall empty state
-- `types: NodeTypeStyle[] = []` (attribute: false) — forwarded to the Entities section's chips
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — forwarded to the Entities section's chips
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   forwarded to the Text chunks section's `lr-chunk-inspector`
-- `label: string = ''`
+- `label: string = ''` — fallback name for the stable overall group. A non-empty host `aria-label`
+  makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
@@ -55,14 +57,17 @@ Plus shared tokens.
 ```html
 <lr-provenance-panel></lr-provenance-panel>
 <script>
-  document.querySelector('lr-provenance-panel').provenance = {
-    entities: [{ id: 'e1', label: 'Ada Lovelace', type: 'person' }],
-    chunks: [{ id: 'c1', text: 'Revenue grew 12%…', score: 0.91, sourceId: 'doc-1' }],
+  document.querySelector("lr-provenance-panel").provenance = {
+    entities: [{ id: "e1", label: "Ada Lovelace", type: "person" }],
+    chunks: [
+      { id: "c1", text: "Revenue grew 12%…", score: 0.91, sourceId: "doc-1" },
+    ],
   };
 </script>
 ```
 
 **Known gotchas:**
+
 - Composes `lr-entity-chip`, `lr-path-strip`, `lr-community-card`, and `lr-chunk-inspector`
   directly rather than reimplementing their rendering — events from those inner components (e.g.
   `lr-entity-activate`, `lr-chunk-open`) still bubble/compose up through this panel's light DOM

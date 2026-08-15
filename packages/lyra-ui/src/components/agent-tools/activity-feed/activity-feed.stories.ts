@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'An append-only streaming log of granular agent actions, collapsing to a "Completed N steps" summary once the run is over.',
+          'An append-only streaming log of granular agent actions, collapsing to a "Completed N steps" summary once the run is over. Omit `label` to localize the header; any supplied string, including "Activity" or an empty string, is a verbatim override.',
       },
     },
   },

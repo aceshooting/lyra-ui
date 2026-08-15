@@ -14,6 +14,8 @@ export interface TextQuoteLimits {
   maxCorpusCodeUnits: number;
   /** Maximum text nodes/items visited while building one corpus. */
   maxNodes: number;
+  /** Maximum DOM nodes/direct item children traversed while locating those text nodes. */
+  maxTraversalNodes: number;
   /** Maximum UTF-16 code units inspected from any single text node/item. */
   maxNodeCodeUnits: number;
   /** Maximum source UTF-16 code units inspected while normalizing one corpus. */
@@ -33,6 +35,7 @@ export interface TextQuoteLimits {
 export const TEXT_QUOTE_LIMITS: Readonly<TextQuoteLimits> = Object.freeze({
   maxCorpusCodeUnits: 1_000_000,
   maxNodes: 20_000,
+  maxTraversalNodes: 20_000,
   maxNodeCodeUnits: 1_000_000,
   maxNormalizationWorkCodeUnits: 2_000_000,
   maxQueryCodeUnits: 4_096,
@@ -42,23 +45,29 @@ export const TEXT_QUOTE_LIMITS: Readonly<TextQuoteLimits> = Object.freeze({
 });
 
 function resolvedLimits(overrides?: Partial<TextQuoteLimits>): TextQuoteLimits {
-  const positiveInteger = (value: number | undefined, fallback: number): number =>
-    Number.isFinite(value) ? Math.max(0, Math.floor(value!)) : fallback;
+  const boundedInteger = (value: number | undefined, hardMaximum: number): number =>
+    Number.isFinite(value)
+      ? Math.min(hardMaximum, Math.max(0, Math.floor(value!)))
+      : hardMaximum;
   return {
-    maxCorpusCodeUnits: positiveInteger(overrides?.maxCorpusCodeUnits, TEXT_QUOTE_LIMITS.maxCorpusCodeUnits),
-    maxNodes: positiveInteger(overrides?.maxNodes, TEXT_QUOTE_LIMITS.maxNodes),
-    maxNodeCodeUnits: positiveInteger(overrides?.maxNodeCodeUnits, TEXT_QUOTE_LIMITS.maxNodeCodeUnits),
-    maxNormalizationWorkCodeUnits: positiveInteger(
+    maxCorpusCodeUnits: boundedInteger(overrides?.maxCorpusCodeUnits, TEXT_QUOTE_LIMITS.maxCorpusCodeUnits),
+    maxNodes: boundedInteger(overrides?.maxNodes, TEXT_QUOTE_LIMITS.maxNodes),
+    maxTraversalNodes: boundedInteger(
+      overrides?.maxTraversalNodes,
+      TEXT_QUOTE_LIMITS.maxTraversalNodes,
+    ),
+    maxNodeCodeUnits: boundedInteger(overrides?.maxNodeCodeUnits, TEXT_QUOTE_LIMITS.maxNodeCodeUnits),
+    maxNormalizationWorkCodeUnits: boundedInteger(
       overrides?.maxNormalizationWorkCodeUnits,
       TEXT_QUOTE_LIMITS.maxNormalizationWorkCodeUnits,
     ),
-    maxQueryCodeUnits: positiveInteger(overrides?.maxQueryCodeUnits, TEXT_QUOTE_LIMITS.maxQueryCodeUnits),
-    maxMatches: positiveInteger(overrides?.maxMatches, TEXT_QUOTE_LIMITS.maxMatches),
-    maxSearchWorkCodeUnits: positiveInteger(
+    maxQueryCodeUnits: boundedInteger(overrides?.maxQueryCodeUnits, TEXT_QUOTE_LIMITS.maxQueryCodeUnits),
+    maxMatches: boundedInteger(overrides?.maxMatches, TEXT_QUOTE_LIMITS.maxMatches),
+    maxSearchWorkCodeUnits: boundedInteger(
       overrides?.maxSearchWorkCodeUnits,
       TEXT_QUOTE_LIMITS.maxSearchWorkCodeUnits,
     ),
-    maxCacheEntries: positiveInteger(overrides?.maxCacheEntries, TEXT_QUOTE_LIMITS.maxCacheEntries),
+    maxCacheEntries: boundedInteger(overrides?.maxCacheEntries, TEXT_QUOTE_LIMITS.maxCacheEntries),
   };
 }
 
@@ -67,7 +76,7 @@ function resolvedLimits(overrides?: Partial<TextQuoteLimits>): TextQuoteLimits {
  *  `prefix`/`suffix`, or a fully-selected Range's text. Building a scope's own per-node corpus uses
  *  a related, non-trimming variant internally (see `normalizeSegment`) so inter-node spacing survives. */
 export function normalizeQuoteText(s: string): string {
-  return collapseWhitespaceAndSoftHyphen(s).trim();
+  return collapseWhitespaceAndSoftHyphen(s.normalize('NFC')).trim();
 }
 
 function collapseWhitespaceAndSoftHyphen(s: string): string {
@@ -95,6 +104,10 @@ export interface TextQuoteSegment {
   normalizedStart: number;
   normalizedLength: number;
   rawOffsetRuns: Uint32Array;
+  /** Canonically changed graphemes as packed `[normalizedStart, normalizedEnd, rawStart, rawEnd]`. */
+  rawClusterRuns?: Uint32Array;
+  /** Raw node length at scope construction, used to fail closed after stale DOM mutations. */
+  rawLength?: number;
 }
 
 /** A bounded searchable corpus with a sparse offset map back to DOM positions. `truncated=true`
@@ -107,61 +120,89 @@ export interface TextQuoteScope {
 
 /** Normalizes `raw` (NOT trimmed -- trimming per-node would eat meaningful inter-node spacing, e.g.
  *  the single space between `</em>` and following text living in its own text node) and returns both
- *  the normalized text and a same-length array mapping each output character back to its raw index.
- *  NFC-composes first, but only keeps the composed form when it doesn't change the character count
- *  for this node -- the overwhelmingly common case, since browsers already store most DOM text
- *  precomposed. A rare node whose content is genuinely decomposed (composition changes length) keeps
- *  its original codepoints for offset-mapping purposes rather than needing full per-codepoint
- *  composition tracking, which isn't worth building for that narrow case. */
+ *  the normalized text and sparse typed offset runs for the places where raw/normalized offsets
+ *  diverge.
+ *  NFC-changed graphemes retain coarse raw cluster boundaries, so canonical composition or
+ *  reordering maps a match back to the complete source grapheme without a per-character JS array. */
+interface NormalizedSegment {
+  text: string;
+  rawOffsetRuns: Uint32Array;
+  rawClusterRuns: Uint32Array;
+  workCodeUnits: number;
+  truncated: boolean;
+  lastWasSpace: boolean;
+}
+
+interface NormalizationCluster {
+  text: string;
+  rawStart: number;
+  rawEnd: number;
+}
+
+const MARK_RE = /\p{Mark}/u;
+
+function* normalizationClusters(value: string): Generator<NormalizationCluster> {
+  if (typeof Intl.Segmenter === 'function') {
+    for (const { segment, index } of segmenterFor().segment(value)) {
+      yield { text: segment, rawStart: index, rawEnd: index + segment.length };
+    }
+    return;
+  }
+  let cluster = '';
+  let rawStart = 0;
+  let rawEnd = 0;
+  let joinsNext = false;
+  for (const char of value) {
+    const continuation = cluster !== '' && (MARK_RE.test(char) || char === '\ufe0f' || joinsNext);
+    if (!continuation && cluster) {
+      yield { text: cluster, rawStart, rawEnd };
+      cluster = '';
+      rawStart = rawEnd;
+    }
+    cluster += char;
+    rawEnd += char.length;
+    joinsNext = char === '\u200d';
+  }
+  if (cluster) yield { text: cluster, rawStart, rawEnd };
+}
+
 function normalizeSegment(
   raw: string,
   maxOutputCodeUnits: number,
   maxWorkCodeUnits: number,
-): { text: string; rawOffsetRuns: Uint32Array; workCodeUnits: number; truncated: boolean } {
+  initialLastWasSpace = false,
+): NormalizedSegment {
   const inspectedLength = Math.min(raw.length, maxWorkCodeUnits);
   const inspected = raw.slice(0, inspectedLength);
   const nfc = inspected.normalize('NFC');
-  const base = nfc.length === inspected.length ? nfc : inspected;
   const chunks: string[] = [];
   let chunk = '';
   let normalizedLength = 0;
   const rawOffsetRuns: number[] = [];
+  const rawClusterRuns: number[] = [];
   let currentDelta = 0;
-  let lastWasSpace = false;
-  for (let i = 0; i < base.length; i++) {
-    const ch = base[i]!; // safe: i < base.length
-    if (ch === SOFT_HYPHEN) continue;
+  let lastWasSpace = initialLastWasSpace;
+  let outputTruncated = false;
+
+  const appendUnit = (ch: string, rawIndex: number): boolean => {
+    if (ch === SOFT_HYPHEN) return true;
     if (WHITESPACE_CHAR_RE.test(ch)) {
-      if (lastWasSpace) continue;
+      if (lastWasSpace) return true;
       lastWasSpace = true;
-      if (normalizedLength >= maxOutputCodeUnits) {
-        return {
-          text: chunks.join('') + chunk,
-          rawOffsetRuns: Uint32Array.from(rawOffsetRuns),
-          workCodeUnits: inspectedLength,
-          truncated: true,
-        };
-      }
-      const delta = i - normalizedLength;
+      if (normalizedLength >= maxOutputCodeUnits) return false;
+      const delta = rawIndex - normalizedLength;
       if (delta !== currentDelta) {
-        rawOffsetRuns.push(normalizedLength, i);
+        rawOffsetRuns.push(normalizedLength, rawIndex);
         currentDelta = delta;
       }
       chunk += ' ';
       normalizedLength++;
     } else {
       lastWasSpace = false;
-      if (normalizedLength >= maxOutputCodeUnits) {
-        return {
-          text: chunks.join('') + chunk,
-          rawOffsetRuns: Uint32Array.from(rawOffsetRuns),
-          workCodeUnits: inspectedLength,
-          truncated: true,
-        };
-      }
-      const delta = i - normalizedLength;
+      if (normalizedLength >= maxOutputCodeUnits) return false;
+      const delta = rawIndex - normalizedLength;
       if (delta !== currentDelta) {
-        rawOffsetRuns.push(normalizedLength, i);
+        rawOffsetRuns.push(normalizedLength, rawIndex);
         currentDelta = delta;
       }
       chunk += ch;
@@ -171,16 +212,69 @@ function normalizeSegment(
       chunks.push(chunk);
       chunk = '';
     }
+    return true;
+  };
+
+  if (nfc === inspected) {
+    for (let rawIndex = 0; rawIndex < inspected.length; rawIndex++) {
+      if (!appendUnit(inspected[rawIndex]!, rawIndex)) {
+        outputTruncated = true;
+        break;
+      }
+    }
+  } else {
+    for (const cluster of normalizationClusters(inspected)) {
+      const normalizedCluster = cluster.text.normalize('NFC');
+      if (normalizedCluster === cluster.text) {
+        for (let local = 0; local < cluster.text.length; local++) {
+          if (!appendUnit(cluster.text[local]!, cluster.rawStart + local)) {
+            outputTruncated = true;
+            break;
+          }
+        }
+        if (outputTruncated) break;
+        continue;
+      }
+      const normalizedVisible = collapseWhitespaceAndSoftHyphen(normalizedCluster);
+      if (!normalizedVisible) continue;
+      if (normalizedLength + normalizedVisible.length > maxOutputCodeUnits) {
+        outputTruncated = true;
+        break;
+      }
+      const normalizedStart = normalizedLength;
+      chunk += normalizedVisible;
+      normalizedLength += normalizedVisible.length;
+      lastWasSpace = normalizedVisible.endsWith(' ');
+      rawClusterRuns.push(normalizedStart, normalizedLength, cluster.rawStart, cluster.rawEnd);
+      if (chunk.length >= 4_096) {
+        chunks.push(chunk);
+        chunk = '';
+      }
+    }
   }
+  const terminalDelta = inspectedLength - normalizedLength;
+  if (terminalDelta !== currentDelta) rawOffsetRuns.push(normalizedLength, inspectedLength);
   return {
     text: chunks.join('') + chunk,
     rawOffsetRuns: Uint32Array.from(rawOffsetRuns),
+    rawClusterRuns: Uint32Array.from(rawClusterRuns),
     workCodeUnits: inspectedLength,
-    truncated: inspectedLength < raw.length,
+    truncated: outputTruncated || inspectedLength < raw.length,
+    lastWasSpace,
   };
 }
 
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT']);
+
+function nextNodeWithin(root: Node, node: Node, descend: boolean): Node | null {
+  if (descend && node.firstChild) return node.firstChild;
+  let current: Node | null = node;
+  while (current && current !== root) {
+    if (current.nextSibling) return current.nextSibling;
+    current = current.parentNode;
+  }
+  return null;
+}
 
 /** Builds a scope by walking `root`'s text nodes in document order (skipping
  *  script/style/template/noscript), concatenating each node's normalized text. Callers pass their
@@ -190,27 +284,33 @@ export function scopeFromElement(
   limitOverrides?: Partial<TextQuoteLimits>,
 ): TextQuoteScope {
   const limits = resolvedLimits(limitOverrides);
-  const doc = root.ownerDocument;
-  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode(node: Node): number {
-      const parent = node.parentElement;
-      if (parent && SKIP_TAGS.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
-      return NodeFilter.FILTER_ACCEPT;
-    },
-  });
   const segments: TextQuoteSegment[] = [];
   const textChunks: string[] = [];
   let textLength = 0;
-  let nodesVisited = 0;
+  let textNodesVisited = 0;
+  let traversalNodesVisited = 0;
   let workCodeUnits = 0;
+  let lastWasSpace = false;
   let truncated = false;
-  let node: Node | null;
-  while ((node = walker.nextNode())) {
-    if (nodesVisited >= limits.maxNodes) {
+  let node: Node | null = root.firstChild;
+  while (node) {
+    if (traversalNodesVisited >= limits.maxTraversalNodes) {
       truncated = true;
       break;
     }
-    nodesVisited++;
+    traversalNodesVisited++;
+    const skipChildren = node.nodeType === Node.ELEMENT_NODE
+      && SKIP_TAGS.has((node as Element).tagName);
+    const next = nextNodeWithin(root, node, !skipChildren);
+    if (node.nodeType !== Node.TEXT_NODE) {
+      node = next;
+      continue;
+    }
+    if (textNodesVisited >= limits.maxNodes) {
+      truncated = true;
+      break;
+    }
+    textNodesVisited++;
     const textNode = node as Text;
     const workRemaining = Math.max(0, limits.maxNormalizationWorkCodeUnits - workCodeUnits);
     if (workRemaining === 0) {
@@ -218,18 +318,28 @@ export function scopeFromElement(
       break;
     }
     const nodeWork = Math.min(limits.maxNodeCodeUnits, workRemaining);
-    const { text: segText, rawOffsetRuns, workCodeUnits: used, truncated: segmentTruncated } =
+    const {
+      text: segText,
+      rawOffsetRuns,
+      rawClusterRuns,
+      workCodeUnits: used,
+      truncated: segmentTruncated,
+      lastWasSpace: nextLastWasSpace,
+    } =
       normalizeSegment(
         textNode.data,
         Math.max(0, limits.maxCorpusCodeUnits - textLength),
         nodeWork,
+        lastWasSpace,
       );
     workCodeUnits += used;
+    lastWasSpace = nextLastWasSpace;
     if (segText.length === 0) {
       if (segmentTruncated) {
         truncated = true;
         break;
       }
+      node = next;
       continue;
     }
     segments.push({
@@ -237,6 +347,8 @@ export function scopeFromElement(
       normalizedStart: textLength,
       normalizedLength: segText.length,
       rawOffsetRuns,
+      rawClusterRuns,
+      rawLength: textNode.data.length,
     });
     textChunks.push(segText);
     textLength += segText.length;
@@ -245,18 +357,26 @@ export function scopeFromElement(
       break;
     }
     if (textLength === limits.maxCorpusCodeUnits) {
-      truncated = walker.nextNode() !== null;
+      truncated = next !== null;
       break;
     }
+    node = next;
   }
   return { text: textChunks.join(''), segments, truncated };
 }
 
-function firstTextNode(element: Element): Text | null {
-  for (const child of Array.from(element.childNodes)) {
-    if (child.nodeType === Node.TEXT_NODE) return child as Text;
+function firstTextNode(
+  element: Element,
+  traversalRemaining: number,
+): { node: Text | null; inspected: number; truncated: boolean } {
+  let inspected = 0;
+  let child: ChildNode | null = element.firstChild;
+  while (child && inspected < traversalRemaining) {
+    inspected++;
+    if (child.nodeType === Node.TEXT_NODE) return { node: child as Text, inspected, truncated: false };
+    child = child.nextSibling;
   }
-  return null;
+  return { node: null, inspected, truncated: child !== null };
 }
 
 /** Builds a scope from an ordered list of `{ text, element }` items -- pdf.js text-layer spans
@@ -273,6 +393,8 @@ export function scopeFromItems(
   const textChunks: string[] = [];
   let textLength = 0;
   let workCodeUnits = 0;
+  let traversalNodesVisited = 0;
+  let lastWasSpace = false;
   let truncated = false;
   for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
     if (itemIndex >= limits.maxNodes) {
@@ -280,21 +402,39 @@ export function scopeFromItems(
       break;
     }
     const item = items[itemIndex]!;
-    const node = firstTextNode(item.element);
+    const located = firstTextNode(
+      item.element,
+      Math.max(0, limits.maxTraversalNodes - traversalNodesVisited),
+    );
+    traversalNodesVisited += located.inspected;
+    if (located.truncated) {
+      truncated = true;
+      break;
+    }
+    const node = located.node;
     if (!node) continue;
-    const joinLength = textLength > 0 ? 1 : 0;
     const workRemaining = Math.max(0, limits.maxNormalizationWorkCodeUnits - workCodeUnits);
     if (workRemaining === 0) {
       truncated = true;
       break;
     }
-    const { text: segText, rawOffsetRuns, workCodeUnits: used, truncated: segmentTruncated } =
+    const {
+      text: segText,
+      rawOffsetRuns,
+      rawClusterRuns,
+      workCodeUnits: used,
+      truncated: segmentTruncated,
+      lastWasSpace: nextLastWasSpace,
+    } =
       normalizeSegment(
         item.text,
-        Math.max(0, limits.maxCorpusCodeUnits - textLength - joinLength),
+        Math.max(0, limits.maxCorpusCodeUnits - textLength - (textLength > 0 && !lastWasSpace ? 1 : 0)),
         Math.min(limits.maxNodeCodeUnits, workRemaining),
+        lastWasSpace,
       );
     workCodeUnits += used;
+    const needsSyntheticJoin = textLength > 0 && !lastWasSpace && !segText.startsWith(' ');
+    lastWasSpace = nextLastWasSpace;
     if (segText.length === 0) {
       if (segmentTruncated) {
         truncated = true;
@@ -302,7 +442,11 @@ export function scopeFromItems(
       }
       continue;
     }
-    if (joinLength) {
+    if (needsSyntheticJoin) {
+      if (textLength >= limits.maxCorpusCodeUnits) {
+        truncated = true;
+        break;
+      }
       textChunks.push(' ');
       textLength++;
     }
@@ -311,6 +455,8 @@ export function scopeFromItems(
       normalizedStart: textLength,
       normalizedLength: segText.length,
       rawOffsetRuns,
+      rawClusterRuns,
+      rawLength: node.data.length,
     });
     textChunks.push(segText);
     textLength += segText.length;
@@ -394,19 +540,15 @@ function foldText(value: string, locale?: string): FoldedText {
   const text = caseFold(value, locale);
   if (text.length === value.length) return { text, expansions: [] };
 
-  let isolatedTotal = 0;
-  for (const segment of caseMappingSegments(value, locale)) {
-    isolatedTotal += caseFold(segment.text, locale).length;
-  }
-
   const expansions: CaseExpansion[] = [];
   let foldedStart = 0;
   for (const segment of caseMappingSegments(value, locale)) {
+    // Length-changing special casing is grapheme-local. Contextual casing such as Greek final
+    // sigma changes code points but not UTF-16 length, so it does not need an offset entry.
+    const isolatedLength = caseFold(segment.text, locale).length;
     const foldedEnd = segment.rawEnd === value.length
       ? text.length
-      : isolatedTotal === text.length
-        ? foldedStart + caseFold(segment.text, locale).length
-        : caseFold(value.slice(0, segment.rawEnd), locale).length;
+      : Math.min(text.length, foldedStart + isolatedLength);
     if (foldedEnd - foldedStart !== segment.rawEnd - segment.rawStart) {
       expansions.push({
         rawStart: segment.rawStart,
@@ -421,27 +563,41 @@ function foldText(value: string, locale?: string): FoldedText {
 }
 
 function rawStartForFoldedOffset(folded: FoldedText, foldedOffset: number): number {
-  let adjustment = 0;
-  for (const expansion of folded.expansions) {
-    if (foldedOffset < expansion.foldedStart) break;
-    if (foldedOffset < expansion.foldedEnd) return expansion.rawStart;
-    adjustment +=
-      (expansion.foldedEnd - expansion.foldedStart) -
-      (expansion.rawEnd - expansion.rawStart);
+  let lo = 0;
+  let hi = folded.expansions.length - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (folded.expansions[mid]!.foldedStart <= foldedOffset) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
   }
-  return foldedOffset - adjustment;
+  if (found < 0) return foldedOffset;
+  const expansion = folded.expansions[found]!;
+  if (foldedOffset < expansion.foldedEnd) return expansion.rawStart;
+  return foldedOffset - (expansion.foldedEnd - expansion.rawEnd);
 }
 
 function rawEndForFoldedOffset(folded: FoldedText, foldedOffset: number): number {
-  let adjustment = 0;
-  for (const expansion of folded.expansions) {
-    if (foldedOffset <= expansion.foldedStart) break;
-    if (foldedOffset <= expansion.foldedEnd) return expansion.rawEnd;
-    adjustment +=
-      (expansion.foldedEnd - expansion.foldedStart) -
-      (expansion.rawEnd - expansion.rawStart);
+  let lo = 0;
+  let hi = folded.expansions.length - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (folded.expansions[mid]!.foldedStart < foldedOffset) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
   }
-  return foldedOffset - adjustment;
+  if (found < 0) return foldedOffset;
+  const expansion = folded.expansions[found]!;
+  if (foldedOffset <= expansion.foldedEnd) return expansion.rawEnd;
+  return foldedOffset - (expansion.foldedEnd - expansion.rawEnd);
 }
 
 export interface TextQuoteMatch {
@@ -489,6 +645,11 @@ function emptyMatches(matchCountExact: boolean, scanComplete = matchCountExact):
   return new PackedTextQuoteMatches(new Uint32Array(), matchCountExact, scanComplete);
 }
 
+/** An exact, allocation-light empty occurrence collection for viewer state initialization/reset. */
+export function emptyTextQuoteMatches(): TextQuoteMatches {
+  return emptyMatches(true, true);
+}
+
 function scanOccurrences(
   haystack: string,
   needle: string,
@@ -525,27 +686,41 @@ function scanOccurrences(
 }
 
 function foldedStartForRawOffset(folded: FoldedText, rawOffset: number): number {
-  let adjustment = 0;
-  for (const expansion of folded.expansions) {
-    if (rawOffset < expansion.rawStart) break;
-    if (rawOffset < expansion.rawEnd) return expansion.foldedStart;
-    adjustment +=
-      (expansion.foldedEnd - expansion.foldedStart) -
-      (expansion.rawEnd - expansion.rawStart);
+  let lo = 0;
+  let hi = folded.expansions.length - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (folded.expansions[mid]!.rawStart <= rawOffset) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
   }
-  return rawOffset + adjustment;
+  if (found < 0) return rawOffset;
+  const expansion = folded.expansions[found]!;
+  if (rawOffset < expansion.rawEnd) return expansion.foldedStart;
+  return rawOffset + (expansion.foldedEnd - expansion.rawEnd);
 }
 
 function foldedEndForRawOffset(folded: FoldedText, rawOffset: number): number {
-  let adjustment = 0;
-  for (const expansion of folded.expansions) {
-    if (rawOffset <= expansion.rawStart) break;
-    if (rawOffset <= expansion.rawEnd) return expansion.foldedEnd;
-    adjustment +=
-      (expansion.foldedEnd - expansion.foldedStart) -
-      (expansion.rawEnd - expansion.rawStart);
+  let lo = 0;
+  let hi = folded.expansions.length - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (folded.expansions[mid]!.rawStart < rawOffset) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
   }
-  return rawOffset + adjustment;
+  if (found < 0) return rawOffset;
+  const expansion = folded.expansions[found]!;
+  if (rawOffset <= expansion.rawEnd) return expansion.foldedEnd;
+  return rawOffset + (expansion.foldedEnd - expansion.rawEnd);
 }
 
 function rawOffsetAt(segment: TextQuoteSegment, normalizedOffset: number): number {
@@ -568,6 +743,62 @@ function rawOffsetAt(segment: TextQuoteSegment, normalizedOffset: number): numbe
   return rawStart + normalizedOffset - normalizedStart;
 }
 
+interface RawClusterRun {
+  normalizedStart: number;
+  normalizedEnd: number;
+  rawStart: number;
+  rawEnd: number;
+}
+
+function clusterAtNormalizedOffset(
+  segment: TextQuoteSegment,
+  normalizedOffset: number,
+): RawClusterRun | null {
+  const runs = segment.rawClusterRuns ?? new Uint32Array();
+  let lo = 0;
+  let hi = (runs.length >> 2) - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (runs[mid * 4]! <= normalizedOffset) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  if (found < 0 || normalizedOffset >= runs[found * 4 + 1]!) return null;
+  return {
+    normalizedStart: runs[found * 4]!,
+    normalizedEnd: runs[found * 4 + 1]!,
+    rawStart: runs[found * 4 + 2]!,
+    rawEnd: runs[found * 4 + 3]!,
+  };
+}
+
+function clusterAtRawOffset(segment: TextQuoteSegment, rawOffset: number): RawClusterRun | null {
+  const runs = segment.rawClusterRuns ?? new Uint32Array();
+  let lo = 0;
+  let hi = (runs.length >> 2) - 1;
+  let found = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (runs[mid * 4 + 2]! <= rawOffset) {
+      found = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  if (found < 0 || rawOffset >= runs[found * 4 + 3]!) return null;
+  return {
+    normalizedStart: runs[found * 4]!,
+    normalizedEnd: runs[found * 4 + 1]!,
+    rawStart: runs[found * 4 + 2]!,
+    rawEnd: runs[found * 4 + 3]!,
+  };
+}
+
 function normalizedOffsetAtOrAfterRaw(segment: TextQuoteSegment, rawOffset: number): number {
   let lo = 0;
   let hi = segment.normalizedLength;
@@ -579,9 +810,29 @@ function normalizedOffsetAtOrAfterRaw(segment: TextQuoteSegment, rawOffset: numb
   return lo;
 }
 
+function normalizedBoundaryAtRaw(
+  segment: TextQuoteSegment,
+  rawOffset: number,
+  endBoundary: boolean,
+): number {
+  const cluster = clusterAtRawOffset(segment, rawOffset);
+  if (cluster) {
+    if (rawOffset === cluster.rawStart) return cluster.normalizedStart;
+    return endBoundary ? cluster.normalizedEnd : cluster.normalizedStart;
+  }
+  return normalizedOffsetAtOrAfterRaw(segment, rawOffset);
+}
+
 /** Binary-searches `scope.segments` (sorted by `normalizedStart`) for the segment containing
  *  `normalizedOffset`, then maps it to a DOM position through that segment's sparse offset runs. */
-function locate(scope: TextQuoteScope, normalizedOffset: number): { node: Text; offset: number } | null {
+function locate(
+  scope: TextQuoteScope,
+  normalizedOffset: number,
+  endCharacter: boolean,
+): { node: Text; offset: number } | null {
+  if (!Number.isInteger(normalizedOffset) || normalizedOffset < 0 || normalizedOffset >= scope.text.length) {
+    return null;
+  }
   let lo = 0;
   let hi = scope.segments.length - 1;
   let found = -1;
@@ -597,27 +848,35 @@ function locate(scope: TextQuoteScope, normalizedOffset: number): { node: Text; 
   if (found === -1) return null;
   const segment = scope.segments[found]!; // safe: found is an in-bounds index (set from mid, != -1)
   const local = normalizedOffset - segment.normalizedStart;
-  if (local >= segment.normalizedLength) {
-    // The offset lands exactly at (or past) this segment's own end -- resolve to one past its last
-    // mapped raw character rather than stepping into the next segment (any offset strictly inside
-    // the next segment is found directly via its own `normalizedStart` instead).
-    const lastRaw = segment.normalizedLength > 0
-      ? rawOffsetAt(segment, segment.normalizedLength - 1)
-      : 0;
-    return { node: segment.node, offset: Math.min(segment.node.data.length, lastRaw + 1) };
-  }
-  return { node: segment.node, offset: rawOffsetAt(segment, local) };
+  if (local < 0 || local >= segment.normalizedLength) return null;
+  if (segment.rawLength !== undefined && segment.node.data.length !== segment.rawLength) return null;
+  const cluster = clusterAtNormalizedOffset(segment, local);
+  const offset = cluster
+    ? endCharacter ? cluster.rawEnd - 1 : cluster.rawStart
+    : rawOffsetAt(segment, local);
+  return offset >= 0 && offset < segment.node.data.length ? { node: segment.node, offset } : null;
 }
 
 function rangeFromOffsets(scope: TextQuoteScope, start: number, end: number): Range | null {
-  const startPos = locate(scope, start);
-  const endPos = locate(scope, Math.max(start, end - 1)); // last included character
+  if (
+    !Number.isInteger(start)
+    || !Number.isInteger(end)
+    || start < 0
+    || end <= start
+    || end > scope.text.length
+  ) return null;
+  const startPos = locate(scope, start, false);
+  const endPos = locate(scope, end - 1, true); // last included character
   if (!startPos || !endPos) return null;
-  const range = startPos.node.ownerDocument!.createRange();
-  range.setStart(startPos.node, startPos.offset);
-  const endOffset = Math.min(endPos.node.data.length, endPos.offset + 1);
-  range.setEnd(endPos.node, endOffset);
-  return range;
+  if (startPos.node.ownerDocument !== endPos.node.ownerDocument) return null;
+  try {
+    const range = startPos.node.ownerDocument.createRange();
+    range.setStart(startPos.node, startPos.offset);
+    range.setEnd(endPos.node, endPos.offset + 1);
+    return range.collapsed ? null : range;
+  } catch {
+    return null;
+  }
 }
 
 export interface TextQuoteWorkBudget {
@@ -632,13 +891,27 @@ export class TextQuoteIndex {
   private readonly occurrenceCache = new Map<string, TextQuoteMatches>();
   private foldedScope?: FoldedText;
   private _scanCount = 0;
+  private _scope: TextQuoteScope;
 
   constructor(
-    readonly scope: TextQuoteScope,
+    scope: TextQuoteScope,
     readonly locale?: string,
     limitOverrides?: Partial<TextQuoteLimits>,
   ) {
+    this._scope = scope;
     this.limits = resolvedLimits(limitOverrides);
+  }
+
+  get scope(): TextQuoteScope {
+    return this._scope;
+  }
+
+  /** Rebinds offset-to-node materialization after a structurally different but semantically
+   * identical DOM paint, preserving the folded corpus and occurrence cache. */
+  rebindScope(scope: TextQuoteScope): boolean {
+    if (scope.text !== this._scope.text || scope.truncated !== this._scope.truncated) return false;
+    this._scope = scope;
+    return true;
   }
 
   get scanCount(): number {
@@ -646,11 +919,14 @@ export class TextQuoteIndex {
   }
 
   createWorkBudget(maxCodeUnits = this.limits.maxSearchWorkCodeUnits): TextQuoteWorkBudget {
-    return { remainingCodeUnits: Math.max(0, Math.floor(maxCodeUnits)) };
+    const bounded = Number.isFinite(maxCodeUnits)
+      ? Math.min(this.limits.maxSearchWorkCodeUnits, Math.max(0, Math.floor(maxCodeUnits)))
+      : this.limits.maxSearchWorkCodeUnits;
+    return { remainingCodeUnits: bounded };
   }
 
   private consumeWork(budget: TextQuoteWorkBudget, amount: number): boolean {
-    if (budget.remainingCodeUnits < amount) return false;
+    if (!Number.isFinite(budget.remainingCodeUnits) || budget.remainingCodeUnits < amount) return false;
     budget.remainingCodeUnits -= amount;
     return true;
   }
@@ -683,7 +959,7 @@ export class TextQuoteIndex {
     caseInsensitive: boolean,
     budget: TextQuoteWorkBudget,
   ): TextQuoteMatches {
-    const folded = caseInsensitive ? this.foldedFor(budget) : undefined;
+    const folded = caseInsensitive ? this.foldedFor(budget) ?? undefined : undefined;
     if (caseInsensitive && !folded) return emptyMatches(false, false);
     const searchableNeedle = caseInsensitive ? caseFold(needle, this.locale) : needle;
     const haystack = folded?.text ?? this.scope.text;
@@ -739,17 +1015,26 @@ export class TextQuoteIndex {
     let best = first;
     let bestScore = -1;
     for (const candidate of candidates) {
+      const contextWork = (foldedPrefix?.length ?? 0) + (foldedSuffix?.length ?? 0);
+      if (!this.consumeWork(budget, contextWork)) break;
       let score = 0;
       const foldedStart = foldedStartForRawOffset(foldedScope, candidate.start);
       const foldedEnd = foldedEndForRawOffset(foldedScope, candidate.end);
       if (foldedPrefix) {
-        const availableBefore = foldedScope.text.slice(0, foldedStart).trimEnd();
-        const before = availableBefore.slice(Math.max(0, availableBefore.length - foldedPrefix.length));
-        if (before === foldedPrefix) score++;
+        let beforeEnd = foldedStart;
+        while (beforeEnd > 0 && WHITESPACE_CHAR_RE.test(foldedScope.text[beforeEnd - 1]!)) {
+          if (!this.consumeWork(budget, 1)) return best;
+          beforeEnd--;
+        }
+        if (foldedScope.text.endsWith(foldedPrefix, beforeEnd)) score++;
       }
       if (foldedSuffix) {
-        const after = foldedScope.text.slice(foldedEnd).trimStart().slice(0, foldedSuffix.length);
-        if (after === foldedSuffix) score++;
+        let afterStart = foldedEnd;
+        while (afterStart < foldedScope.text.length && WHITESPACE_CHAR_RE.test(foldedScope.text[afterStart]!)) {
+          if (!this.consumeWork(budget, 1)) return best;
+          afterStart++;
+        }
+        if (foldedScope.text.startsWith(foldedSuffix, afterStart)) score++;
       }
       if (score > bestScore) {
         bestScore = score;
@@ -805,49 +1090,40 @@ export function findTextQuoteRanges(scope: TextQuoteScope, query: string, locale
   return ranges;
 }
 
-/** Finds the first Text node descendant of `node` in document order, e.g. to resolve a boundary
- *  point whose container is an Element (a Range from `selectNodeContents()` reports its container as
- *  the element itself, not the text node it contains). */
-function firstTextNodeDeep(node: Node): Text | null {
-  if (node.nodeType === Node.TEXT_NODE) return node as Text;
-  for (const child of Array.from(node.childNodes)) {
-    const found = firstTextNodeDeep(child);
-    if (found) return found;
-  }
-  return null;
-}
-
 /** Resolves a DOM boundary point `(container, offset)` to a concrete `(Text node, offset)` pair.
  *  `container` is already a Text node for a Selection-derived Range, but a Range built via
  *  `selectNodeContents(element)` reports the element itself with `offset` as a child index, so that
- *  case is resolved to the first text descendant of the child at that index. */
-function resolveBoundaryTextNode(container: Node, offset: number): { node: Text; offset: number } | null {
+ *  case is resolved from the already-bounded scope segments, never recursive DOM descent. */
+function resolveBoundaryTextNode(
+  container: Node,
+  offset: number,
+  scope: TextQuoteScope,
+): { node: Text; offset: number } | null {
   if (container.nodeType === Node.TEXT_NODE) return { node: container as Text, offset };
   const child = container.childNodes[offset];
   if (!child) return null;
-  const node = firstTextNodeDeep(child);
-  return node ? { node, offset: 0 } : null;
+  let traversalRemaining = TEXT_QUOTE_LIMITS.maxTraversalNodes;
+  for (const segment of scope.segments) {
+    let cursor: Node | null = segment.node;
+    while (cursor && traversalRemaining > 0) {
+      traversalRemaining--;
+      if (cursor === child) return { node: segment.node, offset: 0 };
+      if (cursor === container) break;
+      cursor = cursor.parentNode;
+    }
+    if (traversalRemaining === 0) return null;
+  }
+  return null;
 }
 
 function findRangeStartInScope(scope: TextQuoteScope, range: Range): number | null {
-  const boundary = resolveBoundaryTextNode(range.startContainer, range.startOffset);
+  const boundary = resolveBoundaryTextNode(range.startContainer, range.startOffset, scope);
   if (!boundary) return null;
   const segment = scope.segments.find((s) => s.node === boundary.node);
   if (!segment) return null;
-  const local = normalizedOffsetAtOrAfterRaw(segment, boundary.offset);
+  if (boundary.offset < 0 || boundary.offset > boundary.node.data.length) return null;
+  const local = normalizedBoundaryAtRaw(segment, boundary.offset, false);
   return segment.normalizedStart + local;
-}
-
-/** Finds the last Text node descendant of `node` in document order (the mirror of
- *  `firstTextNodeDeep`), used to resolve an end boundary whose container is an element. */
-function lastTextNodeDeep(node: Node): Text | null {
-  if (node.nodeType === Node.TEXT_NODE) return node as Text;
-  const children = node.childNodes;
-  for (let i = children.length - 1; i >= 0; i--) {
-    const found = lastTextNodeDeep(children[i]!); // safe: 0 <= i < children.length
-    if (found) return found;
-  }
-  return null;
 }
 
 /** Resolves a DOM *end* boundary point `(container, offset)` to a concrete `(Text node, offset)`
@@ -855,22 +1131,38 @@ function lastTextNodeDeep(node: Node): Text | null {
  *  directly, but a Range built via `selectNodeContents(element)` reports its end as the element
  *  with `offset` one past the last included child index, so that case resolves to the full length
  *  of the last text descendant of the child immediately before that index. */
-function resolveEndBoundaryTextNode(container: Node, offset: number): { node: Text; offset: number } | null {
+function resolveEndBoundaryTextNode(
+  container: Node,
+  offset: number,
+  scope: TextQuoteScope,
+): { node: Text; offset: number } | null {
   if (container.nodeType === Node.TEXT_NODE) return { node: container as Text, offset };
   const child = container.childNodes[offset - 1];
   if (!child) return null;
-  const node = lastTextNodeDeep(child);
-  return node ? { node, offset: node.data.length } : null;
+  let traversalRemaining = TEXT_QUOTE_LIMITS.maxTraversalNodes;
+  for (let index = scope.segments.length - 1; index >= 0; index--) {
+    const segment = scope.segments[index]!;
+    let cursor: Node | null = segment.node;
+    while (cursor && traversalRemaining > 0) {
+      traversalRemaining--;
+      if (cursor === child) return { node: segment.node, offset: segment.node.data.length };
+      if (cursor === container) break;
+      cursor = cursor.parentNode;
+    }
+    if (traversalRemaining === 0) return null;
+  }
+  return null;
 }
 
 /** Same mapping as `findRangeStartInScope`, but for a range's end boundary: returns the exclusive
  *  normalized offset one past the range's last included character. */
 function findRangeEndInScope(scope: TextQuoteScope, range: Range): number | null {
-  const boundary = resolveEndBoundaryTextNode(range.endContainer, range.endOffset);
+  const boundary = resolveEndBoundaryTextNode(range.endContainer, range.endOffset, scope);
   if (!boundary) return null;
   const segment = scope.segments.find((s) => s.node === boundary.node);
   if (!segment) return null;
-  const local = normalizedOffsetAtOrAfterRaw(segment, boundary.offset);
+  if (boundary.offset < 0 || boundary.offset > boundary.node.data.length) return null;
+  const local = normalizedBoundaryAtRaw(segment, boundary.offset, true);
   return segment.normalizedStart + local;
 }
 
@@ -880,16 +1172,56 @@ function findRangeEndInScope(scope: TextQuoteScope, range: Range): number | null
  *  rather than `range.toString()` -- a range spanning multiple sibling elements with no DOM
  *  whitespace between them (e.g. one `<span>` per pdf.js text-layer word) stringifies with no
  *  inter-word spaces, which `scope.text`'s own synthesized word-joining space already accounts for.
- *  Falls back to `normalizeQuoteText(range.toString())` when the range's boundaries can't be mapped
- *  into `scope` at all (e.g. a selection outside the scoped content). Per-format `page` enrichment
- *  is the caller's job (e.g. pdf-viewer sets `page` from the page containing the range start). */
+ *  Falls back to a bounded DOM walk when the range's boundaries can't be mapped into `scope` at
+ *  all (e.g. a selection outside the scoped content). Quotes are capped at the shared 4,096-code-
+ *  unit query ceiling. Per-format `page` enrichment is the caller's job. */
+function boundedRangeText(range: Range, maxCodeUnits: number): string {
+  if (maxCodeUnits <= 0) return '';
+  if (range.startContainer === range.endContainer && range.startContainer.nodeType === Node.TEXT_NODE) {
+    return (range.startContainer as Text).data.slice(
+      range.startOffset,
+      Math.min(range.endOffset, range.startOffset + maxCodeUnits),
+    );
+  }
+  const root = range.commonAncestorContainer;
+  let node: Node | null = root.nodeType === Node.TEXT_NODE ? root : root.firstChild;
+  let visited = 0;
+  let text = '';
+  while (node && visited < TEXT_QUOTE_LIMITS.maxTraversalNodes && text.length < maxCodeUnits) {
+    visited++;
+    const next = node === root ? null : nextNodeWithin(root, node, true);
+    if (node.nodeType === Node.TEXT_NODE) {
+      let included = false;
+      try {
+        included = range.intersectsNode(node);
+      } catch {
+        return text;
+      }
+      if (included) {
+        const value = (node as Text).data;
+        const start = node === range.startContainer ? range.startOffset : 0;
+        const end = node === range.endContainer ? range.endOffset : value.length;
+        text += value.slice(start, Math.min(end, start + maxCodeUnits - text.length));
+      }
+    }
+    node = next;
+  }
+  return text;
+}
+
 export function buildQuoteAnchor(range: Range, scope: TextQuoteScope): LyraAnchor {
   const startOffset = findRangeStartInScope(scope, range);
   const endOffset = findRangeEndInScope(scope, range);
-  const quote =
+  const mappedQuote =
     startOffset != null && endOffset != null && endOffset > startOffset
-      ? scope.text.slice(startOffset, endOffset)
-      : normalizeQuoteText(range.toString());
+      ? scope.text.slice(startOffset, Math.min(endOffset, startOffset + TEXT_QUOTE_LIMITS.maxQueryCodeUnits))
+      : '';
+  const fallbackText = mappedQuote
+    ? ''
+    : boundedRangeText(range, TEXT_QUOTE_LIMITS.maxQueryCodeUnits);
+  const quote = normalizeQuoteText(
+    (mappedQuote || fallbackText).slice(0, TEXT_QUOTE_LIMITS.maxQueryCodeUnits),
+  );
   let prefix: string | undefined;
   let suffix: string | undefined;
   if (startOffset != null) {

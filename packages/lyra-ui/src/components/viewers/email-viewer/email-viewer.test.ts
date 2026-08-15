@@ -453,11 +453,23 @@ describe('lr-email-viewer', () => {
     }
   });
 
-  it('uses name as the accessible name, falling back to a host aria-label and then a localized default', async () => {
+  it('uses name or the localized fallback unless a nonempty host label is the sole semantic owner', async () => {
     const named = await fixture<LyraEmailViewer>(html`<lr-email-viewer name="message.eml"></lr-email-viewer>`);
     expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('message.eml');
     const labeled = await fixture<LyraEmailViewer>(html`<lr-email-viewer aria-label="Inbox message"></lr-email-viewer>`);
-    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Inbox message');
+    const labeledBase = labeled.shadowRoot!.querySelector('[part="base"]')!;
+    expect(labeled.getAttribute('aria-label')).to.equal('Inbox message');
+    expect(labeledBase.hasAttribute('aria-label')).to.be.false;
+    expect(labeledBase.hasAttribute('role')).to.be.false;
+
+    labeled.setAttribute('aria-label', '');
+    await labeled.updateComplete;
+    expect(labeledBase.getAttribute('role')).to.equal('region');
+    expect(labeledBase.getAttribute('aria-label')).to.equal('');
+    labeled.removeAttribute('aria-label');
+    await labeled.updateComplete;
+    expect(labeledBase.getAttribute('role')).to.equal('region');
+    expect(labeledBase.getAttribute('aria-label')).to.equal('Email viewer');
     const unnamed = await fixture<LyraEmailViewer>(html`<lr-email-viewer></lr-email-viewer>`);
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Email viewer');
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
@@ -466,6 +478,7 @@ describe('lr-email-viewer', () => {
   it('preserves an explicitly empty host aria-label ahead of name', async () => {
     const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer name="message.eml" aria-label=""></lr-email-viewer>`);
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('region');
     expect(base.hasAttribute('aria-label')).to.be.true;
     expect(base.getAttribute('aria-label')).to.equal('');
   });

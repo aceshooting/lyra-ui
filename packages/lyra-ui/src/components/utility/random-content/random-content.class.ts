@@ -6,6 +6,7 @@ import { pauseIcon, playIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './random-content.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -14,6 +15,11 @@ import { LYRA_DEFAULT_randomContentPause, LYRA_DEFAULT_randomContentResume } fro
 
 export type LyraRandomContentAnimation = 'none' | 'fade' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right';
 export type LyraRandomContentMode = 'unique' | 'random' | 'sequence';
+
+const RANDOM_CONTENT_MODE = literalSetConverter<LyraRandomContentMode>(
+  ['unique', 'random', 'sequence'],
+  'unique',
+);
 
 export interface LyraRandomContentEventMap {
   'lr-content-change': CustomEvent<{ readonly items: readonly Element[] }>;
@@ -116,7 +122,19 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   @property({ type: Number }) items = 1;
 
   /** Selection algorithm — see `randomize()`. */
-  @property({ reflect: true }) mode: LyraRandomContentMode = 'unique';
+  private _mode: LyraRandomContentMode = 'unique';
+
+  @property({ reflect: true, converter: RANDOM_CONTENT_MODE })
+  get mode(): LyraRandomContentMode {
+    return this._mode;
+  }
+  set mode(next: LyraRandomContentMode) {
+    const normalized = RANDOM_CONTENT_MODE.normalizeReflected(this, 'mode', next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate('mode', old);
+  }
 
   @query('slot') private slotEl?: HTMLSlotElement;
 

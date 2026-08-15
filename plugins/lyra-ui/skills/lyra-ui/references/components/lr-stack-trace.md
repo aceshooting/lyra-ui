@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,6 +23,7 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
 (no Web Awesome equivalent).
 
 **Properties:**
+
 - `trace: string = ''` — the raw stack trace text to parse and render.
 - `collapseInternal: boolean = true` (attribute: `collapse-internal`) — folds runs of internal
   frames behind a toggle.
@@ -46,12 +47,16 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
   background stay, so reach for `frame="plain"` to drop the chrome. Added in 9.0.0.
 
 **Events:**
+
 - `lr-frame-select` (`detail: { file: string; line: number; column?: number; raw: string }`) — a
   frame with a safe parsed location was activated. `column` is always undefined for Python frames,
   which carry no column information. Malformed or unsafe locations render as raw text and never
   emit this event.
-- `lr-copy` (`detail: { text: string }`) — the raw, unparsed trace text, fired on copy-button
-  activation regardless of whether the clipboard write actually succeeded.
+- `lr-copy` (`detail: { ok: true; text: string }`) — the raw, unparsed trace text, fired only after the
+  clipboard write resolves successfully.
+- `lr-error` (no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:
+'unsupported'|'denied'|'failed'; error: unknown }`) — compatibility and detailed failure signals. A rejected or
+  unavailable clipboard never enters the success state or emits `lr-copy`.
 
 **Slots:** none.
 
@@ -61,7 +66,7 @@ message text for a group), `group` (one chained-error group of frames), `frame` 
 frame button, carrying `data-internal` for internal frames, or a non-activatable raw row for an
 unsafe location), `frame-function` (the frame's function name), `frame-location` (the frame's
 `file:line:col` text), `internal-toggle` (the collapse/expand toggle for a run of internal frames),
-`raw` (the verbatim fallback when zero structured frames parsed), `copy-button` (only rendered
+`limit` (the resource-ceiling status when additional frames are omitted), `raw` (the verbatim fallback when zero structured frames parsed), `copy-button` (only rendered
 while `copyable`).
 
 **Themeable custom properties:** `--lr-stack-trace-max-height` (default `none`),
@@ -83,9 +88,11 @@ the shared quiet/brand tokens used by surrounding UI. Plus shared tokens
 ```html
 <lr-stack-trace></lr-stack-trace>
 <script type="module">
-  const stackTrace = document.querySelector('lr-stack-trace');
-  stackTrace.trace = 'TypeError: boom\n    at doThing (/app/src/util.js:10:5)';
-  stackTrace.addEventListener('lr-frame-select', (e) => console.log(e.detail.file, e.detail.line));
+  const stackTrace = document.querySelector("lr-stack-trace");
+  stackTrace.trace = "TypeError: boom\n    at doThing (/app/src/util.js:10:5)";
+  stackTrace.addEventListener("lr-frame-select", (e) =>
+    console.log(e.detail.file, e.detail.line)
+  );
 </script>
 ```
 
@@ -95,6 +102,7 @@ RegExp)[]): StackGroup[]` helper (plus `DEFAULT_INTERNAL_PATTERNS`, and the `Sta
 standalone so a consumer can parse or unit-test traces without instantiating the element at all.
 
 **Known gotchas:**
+
 - an internal-frame run only collapses behind the `internal-toggle` when it is two or more
   consecutive internal frames; a single isolated internal frame renders as a normal `frame` button
   (there is nothing useful to fold).

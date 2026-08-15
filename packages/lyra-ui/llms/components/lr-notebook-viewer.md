@@ -29,16 +29,20 @@ Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `pa
 index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, no editing, no
 ipywidgets.
 
-**Properties:** `src: string = ''` — URL to fetch and parse as a notebook; ignored once `notebook` is
-set. `notebook?: object | string` (property only) — an already-parsed notebook document, or its raw
-JSON text; wins over `src` and is parsed (and validated) synchronously. `name: string = ''` —
+**Properties:** `src: string = ''` — URL to fetch and parse as a notebook; ignored while `notebook`
+is present. `notebook?: object | string` (property only) — an already-parsed notebook document, or
+its raw JSON text; presence wins over `src` (including an empty string) and is parsed synchronously.
+Assigning `undefined` clears inline authority and immediately reloads the already configured `src`,
+or exposes the idle state when no URL exists. `source: LyraNotebookViewerSource` is a readonly
+discriminated snapshot (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or `null`).
+`name: string = ''` —
 accessible label, and matched against a `fragment` anchor's cell id. `outputCollapseLines: number =
 40` (attribute `output-collapse-lines`) — a plain-text output longer than this many lines renders
 collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (attribute
 `max-height`) — once set, the notebook scrolls internally past this height; invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for
-the shared anchor-target contract). The inherited carrier fields `highlights: LyraHighlight[] = []`
+the shared anchor-target contract). The inherited carrier fields `highlights: readonly LyraHighlight[] = []`
 (property only) and `activeHighlightId: string | null = null` (attribute `active-highlight-id`) are
 available for structural anchor-target compatibility, but this viewer does not paint them; use
 `anchor: LyraAnchor | string | null = null` or `scrollToAnchor()` for notebook-cell navigation.
@@ -53,7 +57,7 @@ matches.
 
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
-`lr-search-change` — `detail: { query, matchCount, activeIndex }`. `lr-render-error` —
+`lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`. `lr-render-error` —
 `detail: { error }`, fetching, parsing, or validating the notebook failed. `lr-anchor-result` —
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.
@@ -70,10 +74,13 @@ scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
 an error output), `error-output-label` (the label introducing an error output's traceback),
 `output-toggle`, `error`, `spinner`.
+The document-level spinner always includes visible localized loading text alongside its decorative
+ring; the text remains understandable without CSS or animation and the ring stops under reduced
+motion.
 
 Every cell-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
 forwarded back out through `exportparts`, so `lr-notebook-viewer::part(cell)` and friends work from
-a consumer stylesheet. The three state variants are separate part *names* rather than attribute
+a consumer stylesheet. The three state variants are separate part _names_ rather than attribute
 selectors, because Shadow Parts forbids an attribute selector after `::part()` —
 `::part(cell)[data-active]` is invalid CSS, so use `::part(cell-active)`. The `data-*` attributes
 remain on the elements for scripting.

@@ -228,6 +228,9 @@ describe('lr-rubric-form', () => {
     setTimeout(() => group.dispatchEvent(new CustomEvent('lr-change', { detail: { value: ['a', 'b'] } })));
     const ev = await oneEvent(el, 'lr-input');
     expect(ev.detail.value.tags).to.deep.equal(['a', 'b']);
+    expect(Object.isFrozen(ev.detail)).to.equal(true);
+    expect(Object.isFrozen(ev.detail.value)).to.equal(true);
+    expect(Object.isFrozen(ev.detail.value.tags)).to.equal(true);
   });
 
   it('emits one host lr-input event for one bubbling comment-field lr-input event', async () => {
@@ -268,6 +271,27 @@ describe('lr-rubric-form', () => {
     setTimeout(() => submit.click());
     const ev = await oneEvent(el, 'lr-submit');
     expect(ev.detail).to.deep.equal({ value: { accuracy: 5 }, itemId: 'item-1' });
+    expect(Object.isFrozen(ev.detail)).to.equal(true);
+    expect(Object.isFrozen(ev.detail.value)).to.equal(true);
+  });
+
+  it('returns fresh deeply frozen value snapshots without exposing owned arrays', async () => {
+    const el = (await fixture(html`
+      <lr-rubric-form
+        .keys=${[
+          { key: 'tags', type: 'category', multiple: true, options: [{ value: 'a' }] },
+        ]}
+        .value=${{ tags: ['a'] }}
+      ></lr-rubric-form>
+    `)) as LyraRubricForm;
+    const first = el.value;
+    const second = el.value;
+
+    expect(first).to.deep.equal({ tags: ['a'] });
+    expect(Object.isFrozen(first)).to.equal(true);
+    expect(Object.isFrozen(first.tags)).to.equal(true);
+    expect(first === second).to.equal(false);
+    expect(first.tags === second.tags).to.equal(false);
   });
 
   it('does not emit lr-submit when validity fails, and reveals the error', async () => {
@@ -379,6 +403,56 @@ describe('lr-rubric-form', () => {
     } finally {
       container.remove();
     }
+  });
+
+  it("publishes custom, own-disabled, and fieldset-disabled validity as frozen deduplicated snapshots", async () => {
+    const fieldset = await fixture<HTMLFieldSetElement>(html`
+      <fieldset>
+        <lr-rubric-form
+          .keys=${KEYS}
+          .value=${{ accuracy: 3 }}
+        ></lr-rubric-form>
+      </fieldset>
+    `);
+    const el = fieldset.querySelector("lr-rubric-form") as LyraRubricForm;
+    await el.updateComplete;
+    const snapshots: CustomEvent<{
+      valid: boolean;
+      errors: Record<string, string>;
+    }>[] = [];
+    el.addEventListener("lr-validity-change", (event) =>
+      snapshots.push(event)
+    );
+
+    el.setCustomValidity("Rejected by policy.");
+    expect(snapshots).to.have.lengthOf(1);
+    expect(snapshots[0]!.detail).to.deep.equal({
+      valid: false,
+      errors: { base: "Rejected by policy." },
+    });
+    expect(Object.isFrozen(snapshots[0]!.detail)).to.equal(true);
+    expect(Object.isFrozen(snapshots[0]!.detail.errors)).to.equal(true);
+    expect(el.errors).to.deep.equal({ base: "Rejected by policy." });
+
+    el.setCustomValidity("Rejected by policy.");
+    expect(
+      snapshots,
+      "an identical effective snapshot is deduplicated"
+    ).to.have.lengthOf(1);
+
+    el.disabled = true;
+    expect(snapshots[1]!.detail).to.deep.equal({ valid: true, errors: {} });
+    expect(el.willValidate).to.equal(false);
+    el.disabled = false;
+    expect(snapshots[2]!.detail.valid).to.equal(false);
+
+    fieldset.disabled = true;
+    await el.updateComplete;
+    expect(snapshots[3]!.detail).to.deep.equal({ valid: true, errors: {} });
+    expect(el.willValidate).to.equal(false);
+    fieldset.disabled = false;
+    await el.updateComplete;
+    expect(snapshots[4]!.detail.valid).to.equal(false);
   });
 
   it('still focuses the first control on a genuine itemId transition after mount', async () => {
@@ -659,15 +733,14 @@ describe('lr-rubric-form', () => {
     expect(el.willValidate).to.be.true;
   });
 
-  it('exposes a snapshot copy of the current per-key errors via the errors getter', async () => {
+  it('exposes a frozen snapshot of the current per-key errors via the errors getter', async () => {
     const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
     await el.updateComplete;
     el.reportValidity();
     await el.updateComplete;
     expect(el.errors).to.deep.equal({ accuracy: 'This field is required.' });
-    // Mutating the returned object must not leak into internal state -- it's a copy.
     const snapshot = el.errors;
-    snapshot.accuracy = 'mutated';
+    expect(Object.isFrozen(snapshot)).to.equal(true);
     expect(el.errors.accuracy).to.equal('This field is required.');
   });
 
@@ -838,7 +911,9 @@ describe('lr-rubric-form', () => {
     expect(el.value === initialValue).to.equal(false);
     expect((el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')) == null).to.be.true;
 
-    el.value.accuracy = 1;
+    expect(() => {
+      (el.value as Record<string, number>).accuracy = 1;
+    }).to.throw(TypeError);
     form.reset();
     await el.updateComplete;
     expect(el.value).to.deep.equal({ accuracy: 5 });
@@ -972,6 +1047,40 @@ describe('lr-rubric-form', () => {
     expect(skip.disabled).to.be.true;
     expect(getComputedStyle(submit).opacity).to.equal('0.25');
     expect(getComputedStyle(skip).opacity).to.equal('0.25');
+  });
+
+  it('keeps disabled submit and skip paint unchanged on hover and press', async () => {
+    const el = (await fixture(html`
+      <lr-rubric-form
+        .keys=${KEYS}
+        skippable
+        disabled
+        style="
+          --lr-rubric-form-submit-hover-bg:rgb(1,2,3);
+          --lr-rubric-form-submit-active-bg:rgb(4,5,6);
+          --lr-rubric-form-skip-hover-bg:rgb(7,8,9);
+          --lr-rubric-form-skip-active-bg:rgb(10,11,12)
+        "
+      ></lr-rubric-form>
+    `)) as LyraRubricForm;
+    await el.updateComplete;
+    for (const part of ['submit', 'skip'] as const) {
+      const button = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      const rest = getComputedStyle(button).backgroundColor;
+      const rect = button.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        expect(getComputedStyle(button).backgroundColor, `${part} hover`).to.equal(rest);
+        await sendMouse({ type: 'down' });
+        expect(getComputedStyle(button).backgroundColor, `${part} press`).to.equal(rest);
+      } finally {
+        await sendMouse({ type: 'up' });
+        await resetMouse();
+      }
+    }
   });
 
   it('submits on Ctrl/Cmd+Enter, but not on a plain Enter or an unmodified other key (onFormKeyDown)', async () => {
@@ -1519,7 +1628,8 @@ describe('canonical rubric schema/value model', () => {
     expect(new FormData(form).get('rubric')).to.equal('{"bounded":100,"tags":["a","b"]}');
 
     const snapshot = el.value;
-    (snapshot.tags as string[]).push('mutated');
+    expect(() => (snapshot.tags as string[]).push('mutated')).to.throw(TypeError);
+    expect(Object.isFrozen(snapshot.tags)).to.equal(true);
     expect(el.value).to.deep.equal({ bounded: 100, tags: ['a', 'b'] });
   });
 

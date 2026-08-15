@@ -24,12 +24,15 @@ entries, the body renders through an internal `<lr-virtual-list>` instead of a p
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
 text: string; icon?: string; timestamp?: Date | string; variant?: LyraVariant }` (exported here).
 `icon` is a literal glyph hint (e.g. an emoji), the same convention `lr-tool-call-chip.icon` uses; a
-small variant dot renders in its place when omitted. `LyraVariant = 'neutral' | 'brand' | 'success'
+small variant dot renders in its place when omitted. Later duplicate ids are omitted before the
+summary, keyed render, or virtualization path is chosen. `LyraVariant = 'neutral' | 'brand' | 'success'
 | 'warning' | 'danger'` is the library-wide semantic vocabulary, so an entry is toned with the same
 five values as every other `variant` in the library. An invalid `timestamp` string is treated as
 unset. `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
-`label: string = 'Activity'`, `showTimestamps: boolean = false` (attribute `show-timestamps`),
+`label?: string` — omission localizes `activityFeedLabel` (`'Activity'` in the built-in English
+catalog), while any supplied string is a verbatim override, including `'Activity'` under a
+non-English `.strings` catalog and `''` — `showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
@@ -54,7 +57,8 @@ tall the expanded body grows before it scrolls internally; and
 `status-dot` while `mode="live"`, independently retunable without changing other brand surfaces.
 
 **Known gotchas:**
-- The variant dot's color is selected by its *part name*, not by `[data-variant]`: `::part()` cannot
+
+- The variant dot's color is selected by its _part name_, not by `[data-variant]`: `::part()` cannot
   be followed by an attribute selector, so
   `lr-activity-feed::part(variant-dot)[data-variant='success']` never matches. Target
   `lr-activity-feed::part(variant-dot-success)` instead. `data-variant` remains on both the entry

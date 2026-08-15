@@ -161,6 +161,36 @@ it('renders the default label and a live "N of M tools enabled" subtitle', async
   expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent).to.equal('2 of 5 tools enabled');
 });
 
+it('treats supplied heading and search labels literally, including former English defaults and empty strings', async () => {
+  const el = (await fixture(html`
+    <lr-tool-select-dialog
+      label="Select tools"
+      search-placeholder="Search tools…"
+      .strings=${{
+        selectTools: 'Werkzeuge auswählen',
+        searchToolsPlaceholder: 'Werkzeuge suchen…',
+      }}
+    ></lr-tool-select-dialog>
+  `)) as LyraToolSelectDialog;
+  const title = (): string => el.shadowRoot!.querySelector('[part="title"]')!.textContent ?? '';
+  const search = (): HTMLInputElement => el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+
+  expect(title()).to.equal('Select tools');
+  expect(search().placeholder).to.equal('Search tools…');
+
+  el.label = '';
+  el.searchPlaceholder = '';
+  await el.updateComplete;
+  expect(title()).to.equal('');
+  expect(search().placeholder).to.equal('');
+
+  el.label = undefined;
+  el.searchPlaceholder = undefined;
+  await el.updateComplete;
+  expect(title()).to.equal('Werkzeuge auswählen');
+  expect(search().placeholder).to.equal('Werkzeuge suchen…');
+});
+
 it('hides the subtitle entirely when no tools are supplied', async () => {
   const el = (await fixture(
     html`<lr-tool-select-dialog .tools=${[]}></lr-tool-select-dialog>`,
@@ -306,13 +336,40 @@ it('does not render a disabled-reason paragraph for an enabled row', async () =>
   expect((row.querySelector('[part="tool-disabled-reason"]')) == null).to.be.true;
 });
 
-it('folds the disabled reason into the checkbox itself, so it contributes to its accessible name/content instead of going unannounced', async () => {
+it('keeps the tool name as the checkbox name and bridges description/reason as supporting text', async () => {
   const el = (await fixture(
-    html`<lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>`,
+    html`<lr-tool-select-dialog .tools=${[{
+      id: 'run_shell',
+      name: 'Run shell command',
+      description: 'Execute a shell command.',
+      disabled: true,
+      disabledReason: 'Requires admin approval.',
+    }]}></lr-tool-select-dialog>`,
   )) as LyraToolSelectDialog;
   const checkbox = checkboxFor(el, 'run_shell');
-  expect(checkbox.querySelector('[part="tool-disabled-reason"]')).to.exist;
-  expect(checkbox.textContent).to.include('Requires admin approval.');
+  await checkbox.updateComplete;
+  const owner = checkbox.shadowRoot!.querySelector<HTMLElement>('[part~="base"]') as HTMLElement & {
+    ariaDescribedByElements?: Element[] | null;
+  };
+  const label = checkbox.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+  const hint = checkbox.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
+  const assignedText = (container: HTMLElement) => [...container.querySelectorAll('slot')]
+    .flatMap((slot) => slot.assignedNodes({ flatten: true }))
+    .map((node) => node.textContent ?? '')
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  expect(owner.getAttribute('aria-labelledby')).to.equal(label.id);
+  if ('ariaDescribedByElements' in owner) {
+    expect(owner.ariaDescribedByElements).to.include(hint);
+  } else {
+    expect(owner.getAttribute('aria-describedby')).to.equal(hint.id);
+  }
+  expect(assignedText(label)).to.equal('Run shell command');
+  expect(assignedText(hint)).to.equal(
+    'Execute a shell command. Requires admin approval.',
+  );
 });
 
 describe('search filtering', () => {

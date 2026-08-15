@@ -37,7 +37,7 @@ it, so the two can never drift): a confirmation is either routine or destructive
 (reflected) — collapses the bar from a stacked `display: block` card into a single tightly-padded
 inline row, for a confirmation that has to live inside an existing container: a table cell, a card's
 action row, a toolbar. The host becomes `inline-flex`, and the narrow-allocation `@container`
-treatment is switched off — a compact bar is *expected* to be narrow, so stretching the buttons to
+treatment is switched off — a compact bar is _expected_ to be narrow, so stretching the buttons to
 fill would be exactly wrong. It is a density knob only: the border, corner radius and background
 stay. Retune it through `--lr-confirm-bar-compact-padding`/`-gap`. Everything else is unchanged: the
 event shapes, the focus-to-`[part="status"]`-before-unmount contract, and `role="group"` with its
@@ -47,8 +47,8 @@ library's shared container-frame vocabulary and behaving exactly as it does on `
 `'plain'` removes the border, background, padding and corner radius so a bar nested inside a
 container that already draws a border doesn't double it, and wins over `compact` when both are set.
 Before 9.0.0 `compact` alone did both jobs; a bar that relied on that now needs
-`compact frame="plain"`.
-`pending: 'approved' | 'denied' | null = null` (reflected) — which decision is awaiting host
+`compact frame="plain"`. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
+`pending: ApprovalAction | null = null` (reflected) — which action is awaiting host
 resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
 now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set `.decision`
 to finalize, or clear `.pending` back to `null` to bounce back to the undecided state.
@@ -74,7 +74,7 @@ scoped to `[part="base"]` while `compact`: `--lr-confirm-bar-compact-padding` (d
 `var(--lr-space-s)`, any padding shorthand — overridden entirely by `frame="plain"`) and
 `--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items). They
 are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either can
-be set on the element *or on any ancestor*, which is what makes "tighten every compact confirm bar
+be set on the element _or on any ancestor_, which is what makes "tighten every compact confirm bar
 in this panel" a one-rule change on the panel. The chrome-removing
 `--lr-confirm-bar-compact-border`, `--lr-confirm-bar-compact-background` and
 `--lr-confirm-bar-compact-radius` properties were removed in 9.0.0 along with `compact`'s chrome
@@ -90,6 +90,7 @@ decided state previously meant re-pointing the library-wide `--lr-color-success`
 repainting everything else that reads them.
 
 **Known gotchas:**
+
 - `[part="status"]` is always rendered and must never be given `display: none`. Deciding moves focus
   to it synchronously, before the Deny/Approve buttons unmount, so hiding it would drop focus to
   `<body>`. The shipped `:empty` rule on it has never matched, and that is load-bearing.
@@ -117,10 +118,14 @@ An `lr-approve`/`lr-deny` listener that needs to await its own async work before
 `preventDefault()` and sets `.decision` (or clears `.pending`) once it resolves:
 
 ```ts
-bar.addEventListener('lr-approve', (e) => {
+bar.addEventListener("lr-approve", (e) => {
   e.preventDefault();
   runApproval(e.detail.args)
-    .then(() => { bar.decision = 'approved'; })
-    .catch(() => { bar.pending = null; }); // bounce back, retry
+    .then(() => {
+      bar.decision = "approved";
+    })
+    .catch(() => {
+      bar.pending = null;
+    }); // bounce back, retry
 });
 ```

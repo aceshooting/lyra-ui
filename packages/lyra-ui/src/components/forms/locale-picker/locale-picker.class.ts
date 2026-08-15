@@ -17,7 +17,9 @@ import { localeNativeName } from '../../media/flag/language-map.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
-import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import {
+  declaredDefaultConverter,
+  trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   attachInternalsSafely,
   getFormOwner,
@@ -113,12 +115,12 @@ export interface LyraLocaleChangeDetail {
 }
 
 export interface LyraLocalePickerEventMap {
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
   'lr-change': CustomEvent<LyraLocaleChangeDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 
 /**
@@ -295,7 +297,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-select`. The Web Awesome /
    *  Shoelace spellings `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a
    *  tag rename with no attribute rewrite. */
-  @property({ reflect: true }) size: LyraSize = 'm';
+  @property({ reflect: true,
+    converter: declaredDefaultConverter<LyraSize>("m"),
+  }) size: LyraSize = 'm';
 
   @state() private activeIndex = -1;
   @state() private touched = false;
@@ -342,7 +346,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     this.internals.setFormValue('');
   }
 
@@ -938,8 +942,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       >
         ${this.showFlags
           ? entry.country
-            ? html`<lr-flag part="option-flag" country=${entry.country} variant="compact" aria-hidden="true" inert></lr-flag>`
-            : html`<lr-flag part="option-flag" language=${entry.tag} variant="compact" aria-hidden="true" inert></lr-flag>`
+            ? html`<lr-flag part="option-flag" country=${entry.country} fidelity="compact" aria-hidden="true" inert></lr-flag>`
+            : html`<lr-flag part="option-flag" language=${entry.tag} fidelity="compact" aria-hidden="true" inert></lr-flag>`
           : ''}
         <span part="option-label">
           <span>${entry.label}</span>
@@ -986,8 +990,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         >
           ${this.showFlags
             ? previewEntry?.country
-              ? html`<lr-flag part="trigger-flag" country=${previewEntry.country} variant="compact" aria-hidden="true" inert></lr-flag>`
-              : html`<lr-flag part="trigger-flag" language=${previewTag} variant="compact" aria-hidden="true" inert></lr-flag>`
+              ? html`<lr-flag part="trigger-flag" country=${previewEntry.country} fidelity="compact" aria-hidden="true" inert></lr-flag>`
+              : html`<lr-flag part="trigger-flag" language=${previewTag} fidelity="compact" aria-hidden="true" inert></lr-flag>`
             : ''}
           <span class="trigger-label">${this.labelFor(previewTag)}</span>
           <span part="expand-icon" aria-hidden="true" inert>${chevronIcon()}</span>

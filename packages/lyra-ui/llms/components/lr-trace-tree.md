@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,7 +28,13 @@ as a root rather than being dropped. `activeSpanId: string | null = null`
 `show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
 reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
-as its name/status/metrics, and updates when the supplied span data changes.
+as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
+the same bounded runtime projection: provider records are normalized with deterministic first-wins
+identity, then at most 500 mount. The controlled `activeSpanId` and its resolvable ancestor path
+reserve positions before ordinary input-order spans. Non-object records, empty ids, non-finite
+starts/ends, and later duplicate ids are omitted; negative starts clamp to zero, ends clamp to at
+least their start, unknown kinds become `other`, and unknown statuses become `pending`. A localized
+`[part="limit"]` note exposes truncation.
 
 **Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.
 
@@ -38,7 +44,8 @@ as its name/status/metrics, and updates when the supplied span data changes.
 **CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
 `showTokens`/`showCost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
 `duration`, `tokens-in`, `tokens-out` (when `showTokens`), `cost` (when `showCost`), `bar-track`,
-`bar`, `empty` (shown when `spans` is empty), and `live-region`.
+`bar`, `empty` (shown when `spans` is empty), `limit` (the 500-span projection notice), and
+`live-region`.
 
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row — and
@@ -47,6 +54,8 @@ secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the
 `status-text` label). Same state-scoped-property convention described under `lr-span-waterfall`
 above: an inline `var()` fallback rather than a `:host` declaration, so either can be set on the
 element or any ancestor, and they exist because `::part(row)[data-active]` is invalid CSS.
+`--lr-trace-tree-max-indent` (default `var(--lr-size-12rem)`) caps visual nesting indentation;
+semantic `aria-level` remains exact at deeper levels.
 
 **Contrast note:** the active row is more than a tint. Its secondary text would sit at ~4.25:1
 against the default tint if it stayed at `--lr-color-text-quiet`, so it rises to full-strength

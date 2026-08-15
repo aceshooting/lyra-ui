@@ -24,15 +24,15 @@ Format dispatch is intentionally minimal: only `text/*`/`application/json` (a pl
 that) and `image/*` (a contained `<img>`) render inline. Everything else — PDF, office documents,
 video, audio, or any unrecognized MIME type — falls back to a generic "can't preview this" state: a
 file glyph, a short message, and (when `src` is set) a native `<a download>` link. This is a
-deliberate ceiling, not a gap: the component ships a dispatch *shell*, not a format registry. The
+deliberate ceiling, not a gap: the component ships a dispatch _shell_, not a format registry. The
 `unsupported` slot is the escape hatch for every format left out of the built-in three.
 
 `status="converting"` is a second, independent axis from format dispatch. This component doesn't know
 your backend's conversion API shape and owns none of the actual polling/fetch — a host converting a
 non-natively-previewable format server-side (e.g. `.docx` → `.pdf`) polls its own backend and updates
-`status`/`progress`/`src` here as that proceeds; this component only *visualizes* that state (an
+`status`/`progress`/`src` here as that proceeds; this component only _visualizes_ that state (an
 indeterminate spinner, or a determinate one once `progress` is supplied). The one piece of async work
-this component *does* own is fetching a `text/*`/`application/json` `src` itself — there's no other
+this component _does_ own is fetching a `text/*`/`application/json` `src` itself — there's no other
 way to get a `<pre>`'s text content from a URL — gated behind a generation-counter guard
 (`lr-tool-result-view`'s `resolve()` uses the identical pattern) so a `src` reassigned mid-fetch
 can't have a stale response clobber a newer one.
@@ -44,10 +44,11 @@ excludes `data:` (following a `data:text/html` URL can create an active document
 inert media/fetch data). A `src` that fails its sink's check never reaches `fetch()`/`<img>`/the
 anchor: the text preview renders `[part="error"]` with `"Document URL is not allowed."`, the image
 preview silently falls back to the download fallback **directly** — not the generic
-download-or-`unsupported`-slot one, so `<slot name="unsupported">` content is *not* consulted on the
+download-or-`unsupported`-slot one, so `<slot name="unsupported">` content is _not_ consulted on the
 image path — and the generic fallback simply omits `[part="download-link"]` entirely.
 
 **Properties:**
+
 - `src: string = ''` — URL to fetch (for `text`/`application/json`) or display (`image`, or as the
   generic fallback's download `href`). Optional — gracefully absent while, e.g., a conversion is
   still in progress. Validated per-sink before use — see the URL-safety note above; an unsafe/
@@ -77,7 +78,7 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
 - `suppressDownload: boolean = false` (attribute: false) — omits the generic fallback's download
   action when a composing shell already owns that action. This is property-only composition state;
   it does not suppress inline preview rendering.
-- `highlights: LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
   over the image-format preview; ignored for the `text`/`generic` formats. A rectangle renders only
   when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
@@ -91,6 +92,7 @@ matched back to its owning `LyraHighlight` by reference) into view; resolves `fa
 matches, the anchor isn't `region`, or the format isn't currently `image`.
 
 **Events:**
+
 - `lr-download` — `detail: { src, filename }` — fired when the generic-download fallback's link is
   activated. The browser download itself needs no JS (a plain `<a download>` handles it); this is
   purely for a host that wants to observe/log the download.
@@ -100,7 +102,7 @@ matches, the anchor isn't `region`, or the format isn't currently `image`.
 - `lr-highlight-activate` — `detail: { id }` — a region highlight was clicked or activated via
   Enter/Space (image format only).
 
-**Slots:** `unsupported` — escape hatch: when populated, its content renders *instead of* the generic
+**Slots:** `unsupported` — escape hatch: when populated, its content renders _instead of_ the generic
 download fallback for any `mime-type` this component doesn't natively support. Ignored while
 `mime-type` resolves to `text`/`image` dispatch, or while `status` is `"converting"`/`"error"`.
 
@@ -109,7 +111,7 @@ download fallback for any `mime-type` this component doesn't natively support. I
 numeric progress is known — used both for `status="converting"` and this component's own in-flight
 text fetch), `error` (ordinary visible shadow text used both for `status="error"` and a failed text
 fetch; error transitions use the shared document-level assertive sink), `download-link` (only
-rendered when `src` is set *and* passes the link-safe scheme allowlist — see the URL-safety note
+rendered when `src` is set _and_ passes the link-safe scheme allowlist — see the URL-safety note
 above; excludes `data:` even though the other two sinks allow it), `highlight-layer` (wrapper around
 every rendered region highlight, image format only), `region-highlight` (one region highlight,
 `data-tone`, `data-active`; image format only), `region-highlight-target` (transparent activation
@@ -177,9 +179,10 @@ keeps `[part="error"]` as ordinary visible text and appends later error transiti
 document-level assertive sink.
 
 **Known gotchas:**
+
 - `status="converting"`/`status="error"` always win over format dispatch, regardless of
   `mimeType`/`src` — a `text`/`image` source is not shown until `status` returns to `"idle"`/`"ready"`.
-- The component's own text/JSON `fetch(src)` is a *different* async operation from the host-driven
+- The component's own text/JSON `fetch(src)` is a _different_ async operation from the host-driven
   `status="converting"` conversion. A failed fetch fires `lr-render-error` and renders
   `[part="error"]` on its own; it never sets `status="error"` itself.
 - changing `src` aborts the superseded text fetch as well as ignoring any stale completion; removing

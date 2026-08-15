@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import "../../forms/input/input.js";
 import "./widget-renderer.js";
-import { createWidgetDocument, type WidgetNode } from "./resolve.js";
+import { createWidgetDocument, type LyraWidgetNode } from "./resolve.js";
 import { createWidgetTypeRegistry } from "./registry.js";
 import { DEFAULT_WIDGET_TYPE_REGISTRY } from "./default-registry.js";
 import type { LyraWidgetRenderer } from "./widget-renderer.js";
@@ -19,7 +19,7 @@ async function captureWarnings(work: () => Promise<void>): Promise<string[]> {
   return warnings;
 }
 
-function documentFor(root: WidgetNode) {
+function documentFor(root: LyraWidgetNode) {
   return createWidgetDocument(root);
 }
 
@@ -209,7 +209,7 @@ describe("lr-widget-renderer", () => {
 
     el.document = {
       version: "2",
-      root: { type: "row", children: [null] } as unknown as WidgetNode,
+      root: { type: "row", children: [null] } as unknown as LyraWidgetNode,
     };
     await el.updateComplete;
     expect(events).to.have.lengthOf(1);
@@ -501,13 +501,18 @@ describe("lr-widget-renderer", () => {
       html`<lr-widget-renderer></lr-widget-renderer>`
     );
     const error = oneEvent(el, "lr-render-error");
-    el.document = documentFor({
-      type: "row",
-      children: [
-        { type: "stat", id: "duplicate", props: { label: "One", value: "1" } },
-        { type: "stat", id: "duplicate", props: { label: "Two", value: "2" } },
-      ],
-    });
+    // Exercise the renderer's untyped property boundary directly; the public factory rejects this
+    // malformed identity graph before it can become a document.
+    el.document = {
+      version: "2",
+      root: {
+        type: "row",
+        children: [
+          { type: "stat", id: "duplicate", props: { label: "One", value: "1" } },
+          { type: "stat", id: "duplicate", props: { label: "Two", value: "2" } },
+        ],
+      },
+    };
     await el.updateComplete;
     await error;
     expect(el.shadowRoot!.querySelectorAll("lr-stat")).to.have.lengthOf(0);

@@ -96,7 +96,8 @@ export interface LyraSpanWaterfallEventMap {
  * @csspart row - One span's row.
  * @csspart name - The span's name (the row's name gutter).
  * @csspart bar-track - The bar's positioning track.
- * @csspart bar - The interactive, focusable status-toned bar (`role` via `<button>`).
+ * @csspart bar - The interactive, focusable status-toned bar (`role` via `<button>`), with a
+ *   24px minimum target in both axes even when its duration would paint more narrowly.
  * @csspart meta - Secondary row info (status/duration), shown inline under 480px.
  * @csspart status-text - The visible status label.
  * @csspart duration - The formatted duration text.

@@ -252,6 +252,11 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-size-0-125rem);
   }
+  [part='tool-checkbox']::part(hint) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-size-0-125rem);
+  }
   [part='tool-name'] {
     display: inline-flex;
     align-items: center;
@@ -275,10 +280,8 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
   [part='tool-disabled-reason'] {
-    /* Slotted into lr-checkbox's default slot alongside tool-name/
-       tool-description (see tool-select-dialog.ts's renderTool()), so it
-       inherits its indent for free from ::part(label)'s column layout
-       above instead of needing its own guessed padding. */
+    /* Slotted into lr-checkbox's owned hint surface alongside tool-description, so the stable
+       checkbox-hint bridge describes the control without lengthening its accessible name. */
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;

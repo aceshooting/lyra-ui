@@ -17,7 +17,7 @@ For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once a
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
-## Direct theme-backed tokens (262)
+## Direct theme-backed tokens (263)
 
 | Internal token | `--lr-theme-*` input | Light/default fallback | Mode overrides |
 |---|---|---|---|
@@ -65,6 +65,7 @@ override a single element without touching the shared layer.
 | `--lr-color-neutral-on-normal` | `--lr-theme-color-neutral-on-normal` | `var(--lr-ramp-neutral-05)` | dark: `var(--lr-theme-color-neutral-on-normal, var(--lr-ramp-neutral-95))` |
 | `--lr-color-neutral-on-quiet` | `--lr-theme-color-neutral-on-quiet` | `var(--lr-ramp-neutral-05)` | dark: `var(--lr-theme-color-neutral-on-quiet, var(--lr-ramp-neutral-95))` |
 | `--lr-color-no-data` | `--lr-theme-color-no-data` | `rgb(128 128 128 / 25%)` | — |
+| `--lr-color-on-strong-overlay` | `--lr-theme-color-on-strong-overlay` | `#fff` | forcedColors: `CanvasText` |
 | `--lr-color-overlay` | `--lr-theme-color-overlay` | `rgb(0 0 0 / 0.5)` | dark: `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.72))` |
 | `--lr-color-overlay-strong` | `--lr-theme-color-overlay-strong` | `var(--lr-theme-color-overlay, rgb(0 0 0 / 0.92))` | dark: `var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.95)))` |
 | `--lr-color-shadow` | `--lr-theme-color-shadow` | `#000` | — |

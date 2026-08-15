@@ -19,28 +19,40 @@
 
 Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`,
 `label`, `size` (clamped to `1`–`2048` CSS px), `radius` (clamped to `0`–`0.5`), and
-`errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`, default `H`); `fill` and `background` are
-mapped color aliases that take precedence over the equivalent CSS custom properties. `image` accepts
+`errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`, default `H`). Standard host `color` and
+`background-color` control paint; optional `--lr-qr-code-fill` and
+`--lr-qr-code-background` aliases override those host styles, while the legacy `fill` and
+`background` properties remain highest-precedence compatibility overrides. `image` accepts
 a safe media URL for a centered overlay, `imageBackground` (`image-background`) paints its coverage
 box, `imageCoverage` (`image-coverage`, default `0.5`) controls that box as a fraction of the canvas
 side, and `imagePadding` (`image-padding`, default `0`) pads the image within it. Image geometry is
 finite-number guarded and clamped; supplying a valid image forces error correction to `H` so the
 covered modules remain recoverable. Unsafe image URLs are ignored and a failed image load leaves the
-base QR symbol intact.
+base QR symbol intact. Peer output is validated and cloned into an owned finite QR matrix before
+paint; malformed or hostile module shapes fail closed to the localized error state.
 
-The canvas owns `role="img"`; its accessible name uses host `aria-label`, then `label`, then `value`.
-Empty values render an empty state. `generate(): Promise<void>` explicitly re-encodes the current
-value. `refreshTheme(): void` redraws cached modules for consumer-owned token changes; ordinary
-ancestor theme and color-scheme changes redraw automatically. Async peer and image results are
+The host is the single image-semantic owner; its accessible name uses host `aria-label`, then
+`label`, then `value`, and it publishes `aria-busy="true"`/`"false"`. The stable public
+`canvas: HTMLCanvasElement` is presentational and remains the same live node through
+empty/loading/ready/error, reconnect, and adoption (hidden outside ready). Empty values render an
+empty state. `generate(): void` synchronously starts re-encoding the current value.
+`refreshTheme(): void` redraws cached modules for consumer-owned token changes; ordinary ancestor
+theme and color-scheme changes redraw automatically. Async peer and image results are
 generation-guarded, including across disconnect/reconnect.
 `LyraQrCode.preload(): Promise<boolean>` is a static optional-peer warm-up that starts the shared
 `qrcode` import without encoding a value; it resolves to `false` when the peer is unavailable.
+
+At ordinary sizes the backing store is a fixed `2×` the CSS size, independent of device pixel
+ratio. It degrades uniformly only to stay within 4,096 pixels per dimension and 8,388,608 total
+pixels. Modules span the full canvas with no injected quiet zone; add host padding when a scanner
+or physical output needs one.
+
 **CSS parts:** `base` and `qr-code` are aliases on the same outer wrapper; `canvas`, `empty`,
 `loading`, and `error`. **CSS custom properties:**
-`--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme
-changes redraw automatically. The mapped `fill`/`background` properties win when non-empty.
+`--lr-qr-code-fill` and `--lr-qr-code-background`.
 
 `error` is ordinary localized visible text, not a shadow live region. A missing peer or encode
 failure appends the localized message to the document's pre-mounted
 `[data-lr-live-region="assertive"]` sink; identical retries append distinct children, and sink
-ownership is released/reacquired across disconnect or document adoption.
+ownership is released/reacquired across disconnect or document adoption. Meaningful post-mount
+loading transitions use the corresponding polite light-DOM sink; initial mount remains silent.

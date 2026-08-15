@@ -138,15 +138,30 @@ export const styles = css`
   }
   [part='resize-handle']:hover,
   [part='resize-handle']:focus-visible {
-    background: var(--lr-color-brand);
-    opacity: var(--lr-table-resize-handle-opacity, var(--_lr-table-resize-handle-opacity-default));
+    background: var(--lr-table-resize-handle-hover-bg, var(--lr-color-brand));
+    opacity: var(
+      --lr-table-resize-handle-hover-opacity,
+      var(--lr-table-resize-handle-opacity, var(--_lr-table-resize-handle-opacity-default))
+    );
   }
   /* The handle is a drag grip, so its pressed state is also its dragging state and stays applied
-     for the whole gesture. It doubles the same opacity knob rather than introducing a second one,
-     so a consumer that retunes the resting tint retunes the pressed one with it. */
-  [part='resize-handle']:active {
-    background: var(--lr-color-brand);
-    opacity: calc(var(--lr-table-resize-handle-opacity, var(--_lr-table-resize-handle-opacity-default)) * 2);
+     for the whole gesture. The default doubles the hover opacity; the scoped active hook can
+     decouple it when a theme needs a different progression. */
+  [part='resize-handle']:active,
+  [part='resize-handle'][data-resizing] {
+    background: var(
+      --lr-table-resize-handle-active-bg,
+      var(--lr-table-resize-handle-hover-bg, var(--lr-color-brand))
+    );
+    opacity: var(
+      --lr-table-resize-handle-active-opacity,
+      calc(
+        var(
+            --lr-table-resize-handle-hover-opacity,
+            var(--lr-table-resize-handle-opacity, var(--_lr-table-resize-handle-opacity-default))
+          ) * 2
+      )
+    );
   }
   [part='resize-handle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -252,6 +267,16 @@ export const styles = css`
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
+  }
+  @media (forced-colors: active) {
+    :where([part~='row'][aria-selected='true']) {
+      outline: var(--lr-border-width-medium) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
+    :where([part~='row']:hover:not([aria-selected='true'])) {
+      outline: var(--lr-border-width-thin) dashed Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
+    }
   }
   [part='group-cell'] {
     padding: var(--lr-space-xs) var(--lr-space-s);

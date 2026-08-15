@@ -16,7 +16,7 @@ interface ProbeEventMap {
   /** A detail-carrying event: `detail` is required and structurally checked. */
   'lr-probe-change': CustomEvent<{ value: string; count: number }>;
   /** A notification with no payload: `detail` is omittable. */
-  'lr-probe-done': CustomEvent<undefined>;
+  'lr-probe-done': CustomEvent<null>;
 }
 
 class Probe extends LyraElement<ProbeEventMap> {
@@ -24,7 +24,11 @@ class Probe extends LyraElement<ProbeEventMap> {
   correct(): void {
     this.emit('lr-probe-change', { value: 'ok', count: 1 });
     this.emit('lr-probe-done');
-    this.emit('lr-probe-done', undefined, { cancelable: true });
+    this.emit('lr-probe-done', null, { cancelable: true });
+
+    const done = this.emit('lr-probe-done');
+    const noPayload: null = done.detail;
+    void noPayload;
 
     // The return type follows the map too, so a veto point can read its own detail back.
     const vetoable = this.emit('lr-probe-change', { value: 'ok', count: 1 }, { cancelable: true });
@@ -62,7 +66,7 @@ class Probe extends LyraElement<ProbeEventMap> {
 
   /** Passing a detail to an event that declares none is a compile error. */
   unexpectedDetail(): void {
-    // @ts-expect-error - `lr-probe-done`'s detail is `undefined`; there is nothing to carry.
+    // @ts-expect-error - `lr-probe-done`'s detail is `null`; there is nothing to carry.
     this.emit('lr-probe-done', { value: 'ok' });
   }
 }

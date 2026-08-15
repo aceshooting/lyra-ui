@@ -202,9 +202,19 @@ it('toggles maximized and emits lr-maximize-change when the maximize button is c
   (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
   const { detail } = await listener;
 
-  expect(detail).to.be.true;
+  expect(detail).to.deep.equal({ maximized: true });
+  expect(Object.isFrozen(detail)).to.be.true;
   expect(el.maximized).to.be.true;
   expect(el.hasAttribute('maximized')).to.be.true;
+
+  const restoreListener = oneEvent(el, 'lr-maximize-change');
+  (el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).click();
+  const restoreEvent = await restoreListener;
+
+  expect(restoreEvent.detail).to.deep.equal({ maximized: false });
+  expect(Object.isFrozen(restoreEvent.detail)).to.be.true;
+  expect(el.maximized).to.be.false;
+  expect(el.hasAttribute('maximized')).to.be.false;
 });
 
 it('closes on backdrop click and emits lr-close with reason "backdrop"', async () => {

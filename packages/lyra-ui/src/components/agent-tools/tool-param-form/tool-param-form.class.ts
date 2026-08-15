@@ -88,11 +88,14 @@ function cloneFormValue(
 }
 
 export interface LyraToolParamFormEventMap {
-  'lr-invalid': CustomEvent<undefined>;
-  'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
+  'lr-invalid': CustomEvent<null>;
+  'lr-validity-change': CustomEvent<{
+    readonly valid: boolean;
+    readonly errors: Readonly<Record<string, string>>;
+  }>;
   'lr-input': CustomEvent<{ value: Record<string, unknown> }>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: CustomEvent<null>;
+  focus: CustomEvent<null>;
 }
 /**
  * `<lr-tool-param-form>` — renders one form control per top-level property
@@ -170,12 +173,13 @@ export interface LyraToolParamFormEventMap {
  * @event lr-input - A field's value changed. `detail: { value }` — the
  * full current value object (every property, defaults resolved), not just
  * the field that changed.
- * @event lr-validity-change - Overall validity or field errors changed.
- * `detail: { valid: boolean; errors: Record<string, string> }`.
+ * @event lr-validity-change - Effective native validity or errors changed. The frozen
+ * `detail: { valid, errors }` includes custom errors and own/fieldset validation barring.
  * @event focus - Re-dispatched when a generated native text/number input receives focus. Composed
  * controls (`<lr-select>`) already expose their own bubbling, composed bridge.
  * @event blur - Re-dispatched when a generated native text/number input loses focus.
- * @event lr-invalid - The complete parameter form failed a validity check.
+ * @event lr-invalid - The complete parameter form failed a validity check. Cancelable;
+ * preventing it also prevents the native `invalid` event's default validation UI.
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One property's wrapper (label + control + description + error).
  * @csspart label - A field's label.
@@ -299,7 +303,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, () => this.emit('lr-invalid'));
+    installInvalidEventAlias(this, (init: { cancelable: true }) =>
+      this.emit('lr-invalid', null, init),
+    );
     this.syncFormState();
   }
 
@@ -527,16 +533,29 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return this.disabled || this._fieldsetDisabled;
   }
 
-  /**
-   * The current per-field validation errors (`{ [propertyKey]: message }`) —
-   * required presence, primitive type, integer, enum, const, or unsupported
-   * type — mirrors the last `lr-validity-change` event's `errors`.
-   * Independent of which fields have been visited; a consumer wanting the
-   * visited-only, screen-reader-announced subset should read the rendered
-   * `[part="error"]` elements instead.
-   */
-  get errors(): Record<string, string> {
-    return { ...this._errors };
+  /** The current effective validation errors. Intrinsic errors are keyed by their property;
+   * a whole-control or caller-supplied custom error is keyed by the `base` part. */
+  get errors(): Readonly<Record<string, string>> {
+    return this.publicValidityErrors();
+  }
+
+  private publicValidityErrors(): Readonly<Record<string, string>> {
+    const errors: Record<string, string> = { ...this._errors };
+    if (this.willValidate) {
+      const wholeControlError = this.validityController.customValidityMessage || this._formError;
+      if (wholeControlError) errors['base'] = this.validationMessage;
+    }
+    return Object.freeze(errors);
+  }
+
+  private publishValiditySnapshot(): void {
+    if (!this.isConnected) return;
+    const valid = !this.willValidate || this.validity.valid;
+    const errors = valid ? Object.freeze({}) : this.publicValidityErrors();
+    const key = JSON.stringify({ valid, errors });
+    if (key === this.lastValidityKey) return;
+    this.lastValidityKey = key;
+    this.emit('lr-validity-change', Object.freeze({ valid, errors }));
   }
 
   /** A schema-wide or JSON-serialization error that cannot be assigned to one field. */
@@ -682,13 +701,13 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
    * survives every intrinsic recomputation in between (each field edit re-runs `syncFormState()`)
    * and a `form.reset()`, matching a native control.
    *
-   * Whole-control state: the message is deliberately not added to `errors`, which is keyed by the
-   * schema property a message belongs to. It is caller-supplied content, so it is used verbatim and
-   * never localized here.
+   * Whole-control state: the message is exposed as `errors.base`, keyed to this control's `base`
+   * part. It is caller-supplied content, so it is used verbatim and never localized here.
    */
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.syncValidityCustomStates();
+    this.publishValiditySnapshot();
   }
 
   formResetCallback(): void {
@@ -793,6 +812,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       this.validityController.setValidity(this._validityFlags, firstMessage);
     }
     this.syncValidityCustomStates();
+    this.publishValiditySnapshot();
   }
 
   /**
@@ -845,13 +865,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.publishValiditySnapshot();
     if (changed.has('value') || changed.has('schema') || changed.has('_errors') || changed.has('_formError')) {
-      const valid = Object.keys(this._errors).length === 0 && this._formError === '';
-      const key = JSON.stringify({ valid, errors: this._errors, formError: this._formError });
-      if (key !== this.lastValidityKey) {
-        this.lastValidityKey = key;
-        this.emit('lr-validity-change', { valid, errors: { ...this._errors } });
-      }
       const nestedUpdates = Array.from(this.firstInvalidField()?.children ?? [])
         .filter((element) => typeof (element as unknown as Record<PropertyKey, unknown>)[VALIDITY_ANCHOR] === 'function')
         .map((element) => (element as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete)

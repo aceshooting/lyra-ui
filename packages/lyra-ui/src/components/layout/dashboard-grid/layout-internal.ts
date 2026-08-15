@@ -1,10 +1,14 @@
 /** DOM-free normalization, indexing, and collision implementation for `<lr-dashboard-grid>`. */
 import { finiteInteger } from "../../../internal/numbers.js";
+import {
+  createWidgetDocument,
+  type LyraWidgetNode,
+} from "../../conversation/widget-renderer/resolve.js";
 import type {
   LyraDashboardCell,
   LyraDashboardCollisionPolicy,
   LyraDashboardPlacementResult,
-} from "./layout.js";
+} from "./layout-types.js";
 
 export const DASHBOARD_MAX_CELLS = 1_000;
 const DASHBOARD_MAX_COLUMNS = 48;
@@ -77,6 +81,18 @@ function isArray(value: unknown): value is unknown[] {
   }
 }
 
+function snapshotDashboardWidget(
+  value: unknown
+): LyraWidgetNode | null | undefined {
+  if (value === null) return null;
+  if (value === undefined || value === MISSING) return undefined;
+  try {
+    return createWidgetDocument(value as LyraWidgetNode).root;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Reads at most the admitted prefix and copies every dashboard-owned field once. */
 export function snapshotDashboardLayout(
   input: unknown
@@ -130,6 +146,7 @@ export function snapshotDashboardLayout(
       ].includes(INVALID) ||
       typeof id !== "string" ||
       id.length === 0 ||
+      id !== id.trim() ||
       ids.has(id) ||
       x === MISSING ||
       y === MISSING ||
@@ -143,6 +160,7 @@ export function snapshotDashboardLayout(
     const maxW = optionalFiniteInteger(maxWValue, 1, DASHBOARD_MAX_COLUMNS);
     const minH = optionalFiniteInteger(minHValue, 1, Number.MAX_SAFE_INTEGER);
     const maxH = optionalFiniteInteger(maxHValue, 1, Number.MAX_SAFE_INTEGER);
+    const widgetSnapshot = snapshotDashboardWidget(widget);
     const cell: LyraDashboardCell = {
       id,
       x: asFiniteInteger(x, 0, 0, Number.MAX_SAFE_INTEGER),
@@ -155,9 +173,7 @@ export function snapshotDashboardLayout(
       ...(maxH === undefined ? {} : { maxH }),
       ...(locked === true ? { locked: true } : {}),
       ...(typeof label === "string" ? { label } : {}),
-      ...(widget === MISSING || widget === undefined
-        ? {}
-        : { widget: widget as LyraDashboardCell["widget"] }),
+      ...(widgetSnapshot === undefined ? {} : { widget: widgetSnapshot }),
     };
     ids.add(id);
     output.push(Object.freeze(cell));

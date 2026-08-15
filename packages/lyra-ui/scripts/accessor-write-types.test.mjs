@@ -67,6 +67,7 @@ const EXPECTED_BUCKET_B_RUNTIME_DEFAULTS = {
   'lr-breadcrumb-item': { href: "''" },
   'lr-icon': { name: "''", src: "''" },
   'lr-icon-button': { name: "''" },
+  'lr-random-content': { mode: "'unique'" },
   'lr-split-panel': { snap: "''" },
 };
 
@@ -250,6 +251,36 @@ test('recursive alias resolution rejects cycles, ambiguity, unknown members, and
   assert.equal(webTypesValue("Unknown | 'guess'", registry), undefined);
 });
 
+test('multiline Extract matches equivalent string literals without opening opaque operands', () => {
+  const registry = {
+    aliases: new Map([
+      ['Appearance', "'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain'"],
+    ]),
+    ambiguous: new Set(),
+  };
+  const multilineExtract = `Extract<
+    Appearance,
+    "filled" | "outlined" | "filled-outlined"
+  >`;
+
+  assert.equal(
+    expandTypeText(multilineExtract, registry),
+    "'filled' | 'outlined' | 'filled-outlined'",
+  );
+  assert.deepEqual(
+    htmlDataValues(multilineExtract, registry)?.map(({ name }) => name),
+    ['filled', 'outlined', 'filled-outlined'],
+  );
+  assert.deepEqual(webTypesValue(multilineExtract, registry), {
+    type: ["'filled'", "'outlined'", "'filled-outlined'"],
+  });
+  assert.equal(expandTypeText('Extract<string, "filled">', registry), undefined);
+  assert.equal(
+    expandTypeText('Extract<Appearance | { custom: string }, "filled">', registry),
+    undefined,
+  );
+});
+
 test('source scanning marks conflicting or opaque duplicate alias declarations ambiguous', () => {
   const scratch = mkdtempSync(path.join(os.tmpdir(), 'lyra-editor-alias-'));
   try {
@@ -364,21 +395,28 @@ test('fresh no-write CEM retains reviewed runtime and public-document subclass c
     const restore = member(tagName, 'formStateRestoreCallback', 'method');
     assert.equal(restore?.parameters?.[1]?.name, 'reason', `${tagName} restore reason name`);
     assert.equal(restore?.parameters?.[1]?.optional, undefined, `${tagName} restore reason is required`);
-    assert.equal(restore?.parameters?.[1]?.type?.text, "'autocomplete' | 'restore'");
+    assert.equal(
+      restore?.parameters?.[1]?.type?.text.replaceAll('"', "'"),
+      "'autocomplete' | 'restore'",
+    );
+  }
+  for (const [tagName, name] of [['lr-data-grid', 'selectedRows']]) {
+    const projectedMember = member(tagName, name);
+    assert.ok(projectedMember, `${tagName}.${name} is public`);
+    assert.notEqual(projectedMember.readonly, true, `${tagName}.${name} is writable`);
   }
   for (const [tagName, name] of [
-    ['lr-data-grid', 'selectedRows'],
     ['lr-file-input', 'dragging'],
     ['lr-file-input', 'fileCount'],
   ]) {
     const projectedMember = member(tagName, name);
     assert.ok(projectedMember, `${tagName}.${name} is public`);
-    assert.notEqual(projectedMember.readonly, true, `${tagName}.${name} is writable`);
+    assert.equal(projectedMember.readonly, true, `${tagName}.${name} is readonly`);
   }
   assert.equal(member('lr-split-panel', 'snap')?.reflects, true);
   assert.ok(
-    declaration('lr-image-comparer')?.events?.some(({ name }) => name === 'lr-change'),
-    'lr-image-comparer publishes lr-change',
+    declaration('lr-image-comparer')?.events?.some(({ name }) => name === 'change'),
+    'lr-image-comparer publishes native change',
   );
   assert.equal(attribute('lr-video', 'currentTime')?.fieldName, 'currentTime');
 });

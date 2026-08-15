@@ -23,11 +23,19 @@ export interface RenderedTreeTraversalLimits {
 
 export interface RenderedTreeTraversalState {
   work: number;
+  /** Optional operation-wide retained-element set shared by repeated scans. */
+  readonly elements?: Set<Element>;
+  /** Optional operation-wide retained-root set shared by repeated scans. */
+  readonly roots?: Set<LyraDefinitionRoot>;
 }
 
 export interface RenderedTreeTraversalResult {
   readonly roots: readonly LyraDefinitionRoot[];
   readonly elements: readonly Element[];
+  /** Rendered-tree depth for every newly retained root in this scan. */
+  readonly rootDepths: ReadonlyMap<LyraDefinitionRoot, number>;
+  /** Rendered-tree depth for every newly retained element in this scan. */
+  readonly elementDepths: ReadonlyMap<Element, number>;
 }
 
 /** A truthful, inspectable failure instead of a partial traversal result. */
@@ -50,7 +58,7 @@ function finiteLimit(
   value: number | undefined,
   fallback: number,
   operation: string,
-  name: RenderedTreeTraversalLimit
+  name: RenderedTreeTraversalLimit,
 ): number {
   const resolved = value ?? fallback;
   if (!Number.isFinite(resolved) || !Number.isInteger(resolved) || resolved < 0) {
@@ -61,14 +69,14 @@ function finiteLimit(
 
 export function renderedTreeTraversalLimits(
   options: RenderedTreeTraversalOptions,
-  operation: string
+  operation: string,
 ): RenderedTreeTraversalLimits {
   return {
     maxElements: finiteLimit(
       options.maxElements,
       DEFAULT_RENDERED_TREE_TRAVERSAL_LIMITS.maxElements,
       operation,
-      'maxElements'
+      'maxElements',
     ),
     maxRoots: finiteLimit(options.maxRoots, DEFAULT_RENDERED_TREE_TRAVERSAL_LIMITS.maxRoots, operation, 'maxRoots'),
     maxDepth: finiteLimit(options.maxDepth, DEFAULT_RENDERED_TREE_TRAVERSAL_LIMITS.maxDepth, operation, 'maxDepth'),
@@ -86,8 +94,74 @@ interface ElementWork {
   readonly depth: number;
 }
 
+function nativeNodeType(node: Node): number | undefined {
+  try {
+    const NodeConstructor = typeof Node === 'undefined' ? undefined : Node;
+    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'nodeType')?.get;
+    return (getter?.call(node) as number | undefined) ?? node.nodeType;
+  } catch {
+    return undefined;
+  }
+}
+
 function isElement(node: Node): node is Element {
-  return node.nodeType === 1;
+  return nativeNodeType(node) === 1;
+}
+
+function ownerDocumentFor(node: Node): Document | undefined {
+  if (nativeNodeType(node) === 9) return node as Document;
+  try {
+    const ambientGetter =
+      typeof Node === 'undefined' ? undefined : Object.getOwnPropertyDescriptor(Node.prototype, 'ownerDocument')?.get;
+    return (ambientGetter?.call(node) as Document | null | undefined) ?? node.ownerDocument ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Uses the owner realm's native accessor so an own consumer getter cannot abort sibling work. */
+export function nativeElementLocalName(element: Element): string | undefined {
+  try {
+    const ownerWindow = ownerDocumentFor(element)?.defaultView;
+    const ElementConstructor = ownerWindow?.Element ?? (typeof Element === 'undefined' ? undefined : Element);
+    const getter =
+      ElementConstructor && Object.getOwnPropertyDescriptor(ElementConstructor.prototype, 'localName')?.get;
+    const localName = getter?.call(element) as unknown;
+    return typeof localName === 'string' ? localName : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Uses the owner realm's native accessors so hostile own getters cannot block valid siblings. */
+function childElements(node: Node): readonly Element[] {
+  try {
+    const ownerWindow = ownerDocumentFor(node)?.defaultView;
+    const NodeConstructor = ownerWindow?.Node ?? (typeof Node === 'undefined' ? undefined : Node);
+    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'childNodes')?.get;
+    const childNodes = (getter?.call(node) ?? node.childNodes) as NodeListOf<ChildNode>;
+    const elements: Element[] = [];
+    for (let index = 0; index < childNodes.length; index += 1) {
+      const child = childNodes.item(index);
+      if (child && isElement(child)) elements.push(child);
+    }
+    return elements;
+  } catch {
+    return [];
+  }
+}
+
+/** Returns only an open shadow root and fails soft for consumer-shadowed native accessors. */
+function openShadowRoot(element: Element): ShadowRoot | undefined {
+  try {
+    const ownerWindow = ownerDocumentFor(element)?.defaultView;
+    const ElementConstructor = ownerWindow?.Element ?? (typeof Element === 'undefined' ? undefined : Element);
+    const getter =
+      ElementConstructor && Object.getOwnPropertyDescriptor(ElementConstructor.prototype, 'shadowRoot')?.get;
+    return (getter?.call(element) as ShadowRoot | null | undefined) ?? undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -98,10 +172,13 @@ export function collectRenderedTree(
   root: LyraDefinitionRoot,
   limits: RenderedTreeTraversalLimits,
   state: RenderedTreeTraversalState,
-  operation: string
+  operation: string,
+  initialDepth = 0,
 ): RenderedTreeTraversalResult {
   const roots: LyraDefinitionRoot[] = [];
   const elements: Element[] = [];
+  const rootDepths = new Map<LyraDefinitionRoot, number>();
+  const elementDepths = new Map<Element, number>();
   const seenRoots = new Set<LyraDefinitionRoot>();
   const seenElements = new Set<Element>();
   const rootWork: RootWork[] = [];
@@ -125,46 +202,55 @@ export function collectRenderedTree(
   const enqueueRoot = (candidate: LyraDefinitionRoot, depth: number): void => {
     if (seenRoots.has(candidate)) return;
     checkDepth(depth);
-    if (seenRoots.size >= limits.maxRoots) {
+    const retainedRoots = state.roots ?? seenRoots;
+    const isNew = !retainedRoots.has(candidate);
+    if (isNew && retainedRoots.size >= limits.maxRoots) {
       throw new RenderedTreeTraversalError(operation, 'maxRoots', limits.maxRoots);
     }
     spendWork();
     seenRoots.add(candidate);
-    roots.push(candidate);
     rootWork.push({ root: candidate, depth });
+    if (isNew) {
+      retainedRoots.add(candidate);
+      roots.push(candidate);
+      rootDepths.set(candidate, depth);
+    }
   };
 
   const enqueueElement = (element: Element, depth: number): void => {
     if (seenElements.has(element)) return;
     checkDepth(depth);
-    if (seenElements.size >= limits.maxElements) {
+    const retainedElements = state.elements ?? seenElements;
+    const isNew = !retainedElements.has(element);
+    if (isNew && retainedElements.size >= limits.maxElements) {
       throw new RenderedTreeTraversalError(operation, 'maxElements', limits.maxElements);
     }
     spendWork();
     seenElements.add(element);
-    elements.push(element);
     elementWork.push({ element, depth });
+    if (isNew) {
+      retainedElements.add(element);
+      elements.push(element);
+      elementDepths.set(element, depth);
+    }
   };
 
-  enqueueRoot(root, 0);
+  enqueueRoot(root, initialDepth);
   while (rootIndex < rootWork.length || elementIndex < elementWork.length) {
     while (rootIndex < rootWork.length) {
       const current = rootWork[rootIndex++]!;
       if (isElement(current.root)) enqueueElement(current.root, current.depth);
       else {
-        for (let child = current.root.firstElementChild; child; child = child.nextElementSibling) {
-          enqueueElement(child, current.depth);
-        }
+        for (const child of childElements(current.root)) enqueueElement(child, current.depth);
       }
     }
 
     if (elementIndex >= elementWork.length) continue;
     const current = elementWork[elementIndex++]!;
-    for (let child = current.element.firstElementChild; child; child = child.nextElementSibling) {
-      enqueueElement(child, current.depth + 1);
-    }
-    if (current.element.shadowRoot) enqueueRoot(current.element.shadowRoot, current.depth + 1);
+    for (const child of childElements(current.element)) enqueueElement(child, current.depth + 1);
+    const shadowRoot = openShadowRoot(current.element);
+    if (shadowRoot) enqueueRoot(shadowRoot, current.depth + 1);
   }
 
-  return { roots, elements };
+  return { roots, elements, rootDepths, elementDepths };
 }

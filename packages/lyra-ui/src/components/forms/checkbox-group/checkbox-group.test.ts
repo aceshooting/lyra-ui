@@ -58,6 +58,33 @@ it('collects checked children and emits a group change', async () => {
   expect(result.detail.value).to.deep.equal(['a']);
 });
 
+it("publishes fresh immutable value snapshots through its getter and each group event", async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group
+      ><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group
+    >
+  `)) as LyraCheckboxGroup;
+  const values: Array<readonly string[]> = [];
+  for (const name of ["input", "change", "lr-change"] as const) {
+    el.addEventListener(name, (event) => values.push(event.detail.value));
+  }
+
+  (
+    el
+      .querySelector("lr-checkbox")!
+      .shadowRoot!.querySelector('[part~="base"]') as HTMLElement
+  ).click();
+
+  const first = el.value;
+  const second = el.value;
+  expect(Object.isFrozen(first)).to.equal(true);
+  expect(Object.isFrozen(second)).to.equal(true);
+  expect(first === second).to.equal(false);
+  expect(values).to.have.length(3);
+  expect(values.every(Object.isFrozen)).to.equal(true);
+  expect(new Set(values).size).to.equal(3);
+});
+
 it('gives host focus and click their native meanings on the first enabled checkbox', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
     <div>
@@ -301,7 +328,7 @@ describe('ElementInternals availability', () => {
       // Confirm the fallback keeps the rest of the public surface usable rather than merely
       // swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
-      expect((el!.form) === (null)).to.equal(true);
+      expect(el!.form === null).to.equal(true);
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
@@ -357,7 +384,9 @@ it('cascades fieldset-disabled state to children through an internal channel, ne
   fieldset.disabled = true;
   expect(group.effectiveDisabled, 'the group reflects inherited fieldset state').to.be.true;
   expect(a.effectiveDisabled, 'a plain child reflects the inherited state via the internal channel').to.be.true;
-  expect(a.disabled, 'the anti-pattern this guards against: fieldset state must never mutate a child\'s own disabled property').to.be.false;
+  expect(a.disabled,
+    "the anti-pattern this guards against: fieldset state must never mutate a child's own disabled property"
+  ).to.be.false;
   expect(a.hasAttribute('disabled'), 'the child host attribute must not be mutated either').to.be.false;
   expect(b.disabled, 'an already-explicitly-disabled child is unaffected').to.be.true;
   expect(b.effectiveDisabled).to.be.true;
@@ -431,7 +460,9 @@ it('reflects its own disabled property synchronously and propagates it to childr
   expect(el.hasAttribute('disabled'), 'the host attribute must be set synchronously').to.be.true;
   expect(el.effectiveDisabled).to.be.true;
   expect(a.effectiveDisabled, 'a plain child reflects the group state synchronously').to.be.true;
-  expect(a.disabled, 'the group must never mutate a child\'s own disabled property').to.be.false;
+  expect(a.disabled,
+    "the group must never mutate a child's own disabled property"
+  ).to.be.false;
   expect(b.disabled, 'an already explicitly-disabled child is unaffected').to.be.true;
   expect(b.effectiveDisabled).to.be.true;
 
@@ -474,7 +505,8 @@ it('exposes value as a defensive readonly snapshot of child state', async () => 
     </lr-checkbox-group>
   `);
   const snapshot = el.value as string[];
-  snapshot.push('forged');
+  expect(() => snapshot.push('forged')).to.throw(TypeError);
+  expect(Object.isFrozen(snapshot)).to.equal(true);
   expect(el.value).to.deep.equal(['a']);
 });
 
@@ -518,7 +550,8 @@ it('consumes child native-style events before emitting one group event surface',
   const el = (await fixture(html`
     <lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
   `)) as LyraCheckboxGroup;
-  const events: Array<{ type: string; target: EventTarget | null; detail: unknown }> = [];
+  const events: Array<{ type: string; target: EventTarget | null; detail: unknown;
+  }> = [];
   el.addEventListener('input', (event) => events.push({
     type: event.type,
     target: event.target,
@@ -884,7 +917,8 @@ describe('ElementInternals fallback', () => {
     impl: undefined | (() => never),
     assertion: (el: LyraCheckboxGroup) => void,
   ): Promise<void> => {
-    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown;
+    };
     const original = proto.attachInternals;
     if (impl === undefined) delete proto.attachInternals;
     else proto.attachInternals = impl;
@@ -901,7 +935,7 @@ describe('ElementInternals fallback', () => {
 
   it('answers inertly when attachInternals is missing', async () => {
     await withoutAttachInternals(undefined, (el) => {
-      expect((el.form) === null).to.equal(true);
+      expect(el.form === null).to.equal(true);
       expect(el.willValidate).to.be.false;
       expect(el.validationMessage).to.equal('');
       expect(el.checkValidity()).to.be.true;
@@ -1412,7 +1446,8 @@ it('renders the required marker from the shared themeable rule, not a literal sp
   await el.updateComplete;
   const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
   expect(getComputedStyle(label, '::after').content).to.contain('*');
-  expect((label.querySelector('span[aria-hidden]')) === (null), 'no hand-rolled glyph element').to.equal(true);
+  expect(
+    label.querySelector('span[aria-hidden]') === null, 'no hand-rolled glyph element').to.equal(true);
 
   el.style.setProperty('--lr-form-control-required-content', "''");
   await el.updateComplete;

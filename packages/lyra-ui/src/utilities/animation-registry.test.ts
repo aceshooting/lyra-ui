@@ -156,3 +156,129 @@ it('fails a structurally malformed JavaScript override closed to the caller fall
     cleanup();
   }
 });
+
+it('fails oversized logical-direction keyframe collections closed before retaining them', () => {
+  const el = document.createElement('div');
+  const keyframes = Array.from({ length: 600 }, (_, index) => ({ opacity: index / 600 }));
+  const rtlKeyframes = Array.from({ length: 600 }, (_, index) => ({ opacity: 1 - index / 600 }));
+  const fallback = animation(0.3, { duration: 55 });
+  for (const [name, candidate] of [
+    ['base', { keyframes }],
+    ['rtl', { keyframes: [{ opacity: 0 }, { opacity: 1 }], rtlKeyframes }],
+  ] as const) {
+    const cleanup = setDefaultAnimation(`test.bounded.${name}`, candidate);
+    try {
+      const resolved = getAnimation(el, `test.bounded.${name}`, { dir: 'rtl', fallback });
+      expect(resolved.keyframes.length).to.equal(2);
+      expect(resolved.keyframes[1]?.opacity).to.equal(0.3);
+      expect(resolved.options.duration).to.equal(55);
+    } finally {
+      cleanup();
+    }
+  }
+});
+
+it('fails an oversized animation-options record closed instead of retaining an unbounded copy', () => {
+  const el = document.createElement('div');
+  const oversizedOptions = Object.fromEntries(
+    Array.from({ length: 65 }, (_, index) => [`option${index}`, index]),
+  ) as KeyframeAnimationOptions;
+  const cleanup = setAnimation(el, 'test.bounded-options', {
+    keyframes: [{ opacity: 1 }],
+    options: oversizedOptions,
+  });
+  try {
+    const resolved = getAnimation(el, 'test.bounded-options', {
+      dir: 'ltr',
+      fallback: animation(0.35, { duration: 60 }),
+    });
+    expect(resolved.keyframes[1]?.opacity).to.equal(0.35);
+    expect(resolved.options.duration).to.equal(60);
+  } finally {
+    cleanup();
+  }
+});
+
+it('fails an oversized keyframe record closed instead of retaining an unbounded copy', () => {
+  const el = document.createElement('div');
+  const oversizedKeyframe = Object.fromEntries(
+    Array.from({ length: 257 }, (_, index) => [`property${index}`, index]),
+  ) as Keyframe;
+  const cleanup = setAnimation(el, 'test.bounded-keyframe', {
+    keyframes: [oversizedKeyframe],
+  });
+  try {
+    const resolved = getAnimation(el, 'test.bounded-keyframe', {
+      dir: 'ltr',
+      fallback: animation(0.25, { duration: 50 }),
+    });
+    expect(resolved.keyframes[1]?.opacity).to.equal(0.25);
+    expect(resolved.options.duration).to.equal(50);
+  } finally {
+    cleanup();
+  }
+});
+
+it('fails hostile registration getters and keyframe spreads closed to the caller fallback', () => {
+  const el = document.createElement('div');
+  const fallback = animation(0.45, { duration: 75 });
+  const hostileTopLevel = Object.create(null) as LyraElementAnimation;
+  Object.defineProperty(hostileTopLevel, 'keyframes', {
+    enumerable: true,
+    get(): never {
+      throw new Error('hostile keyframes getter');
+    },
+  });
+  const hostileKeyframe = Object.create(null) as Keyframe;
+  Object.defineProperty(hostileKeyframe, 'opacity', {
+    enumerable: true,
+    get(): never {
+      throw new Error('hostile keyframe member');
+    },
+  });
+  const hostileOptions = Object.create(null) as KeyframeAnimationOptions;
+  Object.defineProperty(hostileOptions, 'duration', {
+    enumerable: true,
+    get(): never {
+      throw new Error('hostile options member');
+    },
+  });
+
+  for (const [name, candidate] of [
+    ['top-level', hostileTopLevel],
+    ['keyframe', { keyframes: [hostileKeyframe] }],
+    ['options', { keyframes: [{ opacity: 1 }], options: hostileOptions }],
+  ] as const) {
+    let cleanup: (() => void) | undefined;
+    expect(() => {
+      cleanup = setAnimation(el, `test.hostile.${name}`, candidate);
+    }).not.to.throw();
+    try {
+      const resolved = getAnimation(el, `test.hostile.${name}`, { dir: 'ltr', fallback });
+      expect(resolved.keyframes[1]?.opacity).to.equal(0.45);
+      expect(resolved.options.duration).to.equal(75);
+    } finally {
+      cleanup?.();
+    }
+  }
+});
+
+it('fails hostile fallback getters closed without throwing during resolution', () => {
+  const el = document.createElement('div');
+  const hostileFallback = Object.create(null) as LyraElementAnimation;
+  Object.defineProperty(hostileFallback, 'keyframes', {
+    enumerable: true,
+    get(): never {
+      throw new Error('hostile fallback keyframes getter');
+    },
+  });
+  let resolved: ReturnType<typeof getAnimation> | undefined;
+  expect(() => {
+    resolved = getAnimation(el, 'test.hostile-fallback', {
+      dir: 'ltr',
+      fallback: hostileFallback,
+    });
+  }).not.to.throw();
+  expect(resolved?.keyframes).to.deep.equal([]);
+  expect(resolved?.options.duration).to.equal(0);
+});

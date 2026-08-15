@@ -134,6 +134,24 @@ describe('loadDocumentRenderer()', () => {
     expect((await loadDocumentRenderer(def)).render(PDF_FILE)).to.equal('lazy-output');
   });
 
+  it('rejects a lazy adapter so its derived capabilities cannot conflict with legacy static ones', async () => {
+    const adapter = createDocumentRendererAdapter({
+      kind: 'document',
+      adapt: (file) => ({ kind: 'document', file }),
+      capabilities: () => ({ search: false }),
+      render: (payload) => payload.file.name,
+    });
+    const invalid = {
+      capabilities: { search: true },
+      load: () => Promise.resolve({ adapter }),
+    } as unknown as DocumentRendererDefinition;
+    let rejection: unknown;
+    await loadDocumentRenderer(invalid).catch((error: unknown) => {
+      rejection = error;
+    });
+    expect(rejection).to.be.instanceOf(TypeError);
+  });
+
   it('calls load() at most once for the same definition, caching by identity', async () => {
     let callCount = 0;
     const def: DocumentRendererDefinition = {
@@ -202,13 +220,18 @@ describe('LyraDocumentRendererPayload adapters', () => {
     const cues = Array.from({ length: 10_005 }, (_unused, index) => ({
       id: `cue-${index}`,
       start: index,
-      text: index === 10_004 ? 'Only omitted content is searchable' : '',
+      text: index === 0
+        ? 't'.repeat(120_000)
+        : index === 10_004
+          ? 'Only omitted content is searchable'
+          : '',
+      ...(index === 0 ? { speaker: 's'.repeat(5_000) } : {}),
     }));
     const tracks = Array.from({ length: 70 }, (_unused, index) => ({
       src: `${'x'.repeat(20_000)}-${index}.vtt`,
       kind: 'captions' as const,
-      srclang: 'en',
-      label: `Track ${index}`,
+      srclang: index === 0 ? 'e'.repeat(200) : 'en',
+      label: index === 0 ? 'l'.repeat(5_000) : `Track ${index}`,
     }));
 
     const payload = snapshotLyraDocumentRendererPayload({
@@ -222,7 +245,11 @@ describe('LyraDocumentRendererPayload adapters', () => {
     const av = payload as LyraAvDocumentRendererPayload;
     expect(av.cues).to.have.length(10_000);
     expect(av.tracks).to.have.length(64);
+    expect(av.cues[0]!.text).to.have.length(100_000);
+    expect(av.cues[0]!.speaker).to.have.length(4_096);
     expect(av.tracks[0]!.src.length).to.be.at.most(16_384);
+    expect(av.tracks[0]!.srclang).to.have.length(128);
+    expect(av.tracks[0]!.label).to.have.length(4_096);
     expect(Object.isFrozen(av)).to.equal(true);
     expect(Object.isFrozen(av.file)).to.equal(true);
     expect(Object.isFrozen(av.cues)).to.equal(true);
@@ -232,8 +259,8 @@ describe('LyraDocumentRendererPayload adapters', () => {
 
     cues[0]!.text = 'mutated after assignment';
     tracks[0]!.label = 'mutated after assignment';
-    expect(av.cues[0]!.text).to.equal('');
-    expect(av.tracks[0]!.label).to.equal('Track 0');
+    expect(av.cues[0]!.text[0]).to.equal('t');
+    expect(av.tracks[0]!.label[0]).to.equal('l');
   });
 
   it('keeps an ordinary render(file) callback on the legacy DocumentFile path', () => {
@@ -255,6 +282,20 @@ describe('LyraDocumentRendererPayload adapters', () => {
     expect(adapted.render()).to.equal('report.pdf');
     expect(received).to.equal(PDF_FILE);
     expect(adapted.capabilities).to.equal(undefined);
+  });
+
+  it('snapshots adapter callbacks and freezes the factory-created adapter', () => {
+    const authoring = {
+      kind: 'document' as const,
+      adapt: (file: DocumentFile) => ({ kind: 'document' as const, file }),
+      capabilities: () => ({ search: false }),
+      render: (payload: import('./registry.js').LyraGenericDocumentRendererPayload) => payload.file.name,
+    };
+    const adapter = createDocumentRendererAdapter(authoring);
+    authoring.render = () => 'mutated callback';
+
+    expect(Object.isFrozen(adapter)).to.equal(true);
+    expect(adaptDocumentRenderer({ adapter }, PDF_FILE).render()).to.equal('report.pdf');
   });
 
   it('derives AV capabilities only from the retained adapter payload', () => {
@@ -296,6 +337,7 @@ describe('LyraDocumentRendererPayload adapters', () => {
     });
     expect(searchable.capabilities).to.deep.equal({ anchors: ['time-range'], search: true });
     expect(Object.isFrozen(searchable.capabilities)).to.equal(true);
+    expect(Object.isFrozen(searchable.capabilities!.anchors!)).to.equal(true);
   });
 
   it('rejects an adapter whose returned discriminator differs from its declared kind', () => {
@@ -317,6 +359,9 @@ describe('LyraDocumentRendererPayload adapters', () => {
     });
     expect(() => createDocumentRendererRegistry([
       ['application/x-invalid', { adapter, render: () => 'ambiguous' } as never],
+    ])).to.throw(TypeError);
+    expect(() => createDocumentRendererRegistry([
+      ['application/x-invalid', { adapter, capabilities: { search: true } } as never],
     ])).to.throw(TypeError);
   });
 });

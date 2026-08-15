@@ -14,10 +14,10 @@ export const buttonChromeStyles = css`
     align-items: center;
     justify-content: center;
     gap: var(--lr-radio-button-gap, var(--lr-space-xs));
-    min-inline-size: 0;
+    min-inline-size: var(--lr-size-1-5rem);
     max-inline-size: 100%;
-    /* WCAG 2.5.8: the whole button is the target. The size ladder drives the height, floored at
-       1.5rem/24px so even the 2xs tier stays a conformant target. */
+    /* WCAG 2.5.8: the whole button is the target. Both axes retain a 1.5rem/24px floor, so even
+       an empty 2xs tier remains a conformant target. */
     min-block-size: max(var(--lr-form-control-height), var(--lr-size-1-5rem));
     padding-inline: var(--lr-form-control-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

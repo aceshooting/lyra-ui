@@ -31,6 +31,11 @@ string. First-party invention (no Web Awesome equivalent).
   arrow glyphs, `plus`/`minus` → literal "+"/"−" as an escape hatch since `+` is the token
   delimiter and can't appear as a literal token itself), or, failing that, renders as typed
   (single letters/digits upper-cased).
+- `platform: 'auto'|'mac'|'windows'|'linux' = 'auto'` (reflected) — `auto` detects the current
+  runtime once; an explicit value makes SSR, screenshots, documentation, and tests deterministic.
+- `effectivePlatform: 'mac'|'windows'|'linux'` (read-only) — the concrete platform currently used.
+  It is serialized as `data-effective-platform` on `[part="base"]`; hydration adopts a server's
+  serialized auto choice instead of re-sniffing and replacing its key caps in another realm.
 
 **Exported types/functions (also directly usable standalone):** `KbdKeyLabel { visual: string;
 word: string }` — one resolved token's rendered glyph and spelled-out word; `KbdLocalize = (key:
@@ -65,11 +70,12 @@ absent.
 <lr-kbd keys="esc"></lr-kbd>
 ```
 
-Platform detection (`IS_MAC`, computed once at module scope, not per-instance/per-render, since a
+Automatic platform detection (computed once at module scope, not per-instance/per-render, since a
 page's platform never changes mid-session) prefers `navigator.userAgentData` (Client Hints, so far
 Chromium-only) when available, falling back through `navigator.platform` (long-deprecated) and
-finally a `navigator.userAgent` substring check — all three are deprecated/non-standard to varying
-degrees but remain, in combination, the practical cross-browser way to answer "is this macOS" today.
+finally a `navigator.userAgent` substring check. A server without `navigator` uses `linux`; its
+serialized effective value is retained by hydration. Set `platform` explicitly whenever the
+rendered documentation should target a different platform.
 The rendered chip carries `role="img"` with a single spelled-out `aria-label` (e.g. "Command+K")
 rather than exposing each glyph/`+`-separator as separate accessible-tree text, since the individual
 pieces aren't real words and would read worse piecemeal than as one label — glyphs like ⌘/⇧/⌥ are

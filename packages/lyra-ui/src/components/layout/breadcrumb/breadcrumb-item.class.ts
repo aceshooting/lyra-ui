@@ -63,7 +63,7 @@ export class LyraBreadcrumbItem extends LyraElement {
    *  Defaults to `'noreferrer noopener'`, which is what BOTH `wa-breadcrumb-item` and
    *  `sl-breadcrumb-item` declare — unlike `lr-button`, where the two upstreams disagree and Lyra
    *  therefore keeps no default. */
-  @property() rel = 'noreferrer noopener';
+  @property({ useDefault: true }) rel = 'noreferrer noopener';
 
   /** Author tokens minus `opener`, plus the guard whenever `target` is set. `undefined` when
    *  nothing remains, so the attribute is omitted rather than rendered empty. */

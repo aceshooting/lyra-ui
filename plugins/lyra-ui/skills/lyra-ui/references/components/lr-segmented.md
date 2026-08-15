@@ -20,12 +20,18 @@ A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 both select immediately, like a native radio group), cyclic Arrow/Home/End navigation among
 non-disabled items. First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
 labeled options, rendered as a button row" is ubiquitous settings/filter-panel UI.
+Navigation starts from the segment that actually received the keyboard event, even when a
+controlled `value` write changed the selected or remembered roving item first.
 
 **Properties:**
-- `items: SegmentedItem[] = []` (attribute: false) — `SegmentedItem { value: string; label: string;
-  icon?: unknown; disabled?: boolean }`; `icon` renders as an inert, `aria-hidden` decorative leading
+
+- `items: readonly LyraSegmentedItem[] = []` (attribute: false) — `LyraSegmentedItem { value:
+string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as an inert,
+  `aria-hidden` decorative leading
   visual inside `segment-icon`. It does not replace the required text label or provide an independent
-  action or accessible name.
+  action or accessible name. Input is read through a realm-neutral bounded schema snapshot (at most
+  256 positions); malformed/hostile entries are skipped, later duplicate values use
+  first-valid-value-wins, and the frozen returned array/records never alias caller-owned objects.
 - `value: string = ''` — the currently selected item's `value`.
 - `label: string = ''` — accessible-name fallback copied to the internal `role="radiogroup"`. A
   host-level `aria-label` wins by attribute presence, including an explicitly empty value.
@@ -42,6 +48,7 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 keyboard.
 
 **Methods:**
+
 - `scrollToValue(value: string): void` — scroll the segment with the given `value` into view within
   the (possibly overflowing) track, without changing the selection. Honors
   `prefers-reduced-motion` (falls back to `behavior: 'auto'`). This runs automatically when `value`
@@ -56,7 +63,8 @@ segment's label text).
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
-that fits is never dimmed). `--lr-segmented-track-min-height` (default
+that fits is never dimmed). Forced-colors mode removes the decorative mask while preserving the
+native horizontal scroll owner. `--lr-segmented-track-min-height` (default
 `var(--lr-form-control-height)`), `--lr-segmented-segment-padding` (default
 `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`), and
 `--lr-segmented-font-size` (default `var(--lr-form-control-font-size)`) are the three knobs the
@@ -72,7 +80,7 @@ exact-height hatch only works as an undeclared sentinel, because `auto` is itsel
 would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
 dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
 The floor at the two compact tiers is the ladder's own (20px at `2xs`, 24px at `xs`), but every
-`2xs`/`xs` *segment* separately carries a 24×24px minimum box, so the tappable target holds even
+`2xs`/`xs` _segment_ separately carries a 24×24px minimum box, so the tappable target holds even
 when a label is a single character and the track ends up taller than its nominal floor.
 
 `--lr-segmented-selected-bg` (default `var(--lr-color-surface)`), `--lr-segmented-selected-color`
@@ -83,8 +91,8 @@ thumb lifted a hair off its own track) style the checked segment's pill;
 `--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
 bleeds onto hover. These five existing state hooks are inline `var()` fallbacks at the
-point of use rather than `:host` declarations, so each can be set on the element *or on any
-ancestor*; unset, each falls back to the token its rule used before. They exist because
+point of use rather than `:host` declarations, so each can be set on the element _or on any
+ancestor_; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
 after `::part()` — which previously left hijacking the library-wide
 `--lr-color-surface`/`--lr-color-text` tokens as the only way to restyle a selected segment,
@@ -107,18 +115,19 @@ resolves.
 ```html
 <lr-segmented></lr-segmented>
 <script type="module">
-  const seg = document.querySelector('lr-segmented');
+  const seg = document.querySelector("lr-segmented");
   seg.items = [
-    { value: 'day', label: 'Day', icon: '☀' },
-    { value: 'week', label: 'Week', icon: '▦' },
-    { value: 'month', label: 'Month' },
+    { value: "day", label: "Day", icon: "☀" },
+    { value: "week", label: "Week", icon: "▦" },
+    { value: "month", label: "Month" },
   ];
-  seg.value = 'week';
-  seg.addEventListener('lr-change', (e) => console.log(e.detail.value));
+  seg.value = "week";
+  seg.addEventListener("lr-change", (e) => console.log(e.detail.value));
 </script>
 ```
 
 **Known gotchas:**
+
 - arrow-key navigation cycles (past the last non-disabled item wraps to the first, and vice versa)
   rather than clamping at the first/last item, unlike `lr-stepper`'s clamped Left/Right.
 - this component self-selects on navigation: clicking or arrow-navigating to an item immediately

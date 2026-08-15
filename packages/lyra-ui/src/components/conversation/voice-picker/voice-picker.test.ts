@@ -1,5 +1,5 @@
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
-import { sendKeys } from '@web/test-runner-commands';
+import { sendKeys, sendMouse } from '@web/test-runner-commands';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 import { styles } from './voice-picker.styles.js';
@@ -388,6 +388,74 @@ it('emits native input/change events after adoption into a document without a wi
   }
 });
 
+describe('shared catalog-picker native event relays', () => {
+  async function expectFocusContract(
+    wrapper: HTMLElement,
+    el: LyraVoicePicker,
+    control: HTMLElement,
+  ): Promise<void> {
+    const before = document.createElement('button');
+    const after = document.createElement('button');
+    wrapper.prepend(before);
+    wrapper.append(after);
+    const nativeEvents: FocusEvent[] = [];
+    const aliases: string[] = [];
+    wrapper.addEventListener('focus', (event) => nativeEvents.push(event as FocusEvent));
+    wrapper.addEventListener('blur', (event) => nativeEvents.push(event as FocusEvent));
+    wrapper.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+    wrapper.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+
+    before.focus();
+    control.focus();
+    after.focus();
+
+    expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
+    expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
+    expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
+    expect(nativeEvents[0]!.relatedTarget === before).to.be.true;
+    expect(nativeEvents[1]!.relatedTarget === after).to.be.true;
+    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  }
+
+  it('relays exactly one native focus/blur pair and prefixed aliases in both modes', async () => {
+    const closedWrapper = await fixture<HTMLElement>(html`
+      <div><lr-voice-picker .catalog=${CATALOG}></lr-voice-picker></div>
+    `);
+    const closed = closedWrapper.querySelector('lr-voice-picker') as LyraVoicePicker;
+    await expectFocusContract(closedWrapper, closed, trigger(closed));
+
+    const freeWrapper = await fixture<HTMLElement>(html`<div><lr-voice-picker></lr-voice-picker></div>`);
+    const free = freeWrapper.querySelector('lr-voice-picker') as LyraVoicePicker;
+    await expectFocusContract(freeWrapper, free, input(free));
+  });
+
+  it('preserves the free-text InputEvent payload without a shadow duplicate', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><lr-voice-picker></lr-voice-picker></div>`);
+    const el = wrapper.querySelector('lr-voice-picker') as LyraVoicePicker;
+    const control = input(el);
+    const events: InputEvent[] = [];
+    wrapper.addEventListener('input', (event) => events.push(event as InputEvent));
+
+    control.value = 'a';
+    control.dispatchEvent(
+      new InputEvent('input', {
+        bubbles: true,
+        composed: true,
+        data: 'a',
+        inputType: 'insertText',
+        isComposing: true,
+      }),
+    );
+
+    expect(events).to.have.lengthOf(1);
+    expect(events[0] instanceof InputEvent).to.be.true;
+    expect(events[0]!.target === el && events[0]!.bubbles && events[0]!.composed).to.be.true;
+    expect(events[0]!.data).to.equal('a');
+    expect(events[0]!.inputType).to.equal('insertText');
+    expect(events[0]!.isComposing).to.be.true;
+  });
+});
+
 it('free-text filtering also matches language and description', async () => {
   const el = (await fixture(
     html`<lr-voice-picker allow-custom .catalog=${OBJECT_CATALOG}></lr-voice-picker>`
@@ -703,6 +771,31 @@ it('retires the playing voice before catalog replacement changes the rendered ca
   }
 });
 
+it('retires a different row preview when the committed value is reassigned unchanged', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${PREVIEW_CATALOG} value="sage"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    el.open = true;
+    await el.updateComplete;
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+
+    const ariaPreview = rows(el)[0]!.querySelector('[part="option-preview"]') as HTMLElement;
+    ariaPreview.click();
+    await waitUntil(() => changes.length === 1, 'the row preview never started');
+
+    el.value = 'sage';
+    await el.updateComplete;
+
+    expect(changes).to.deep.equal(['aria', null]);
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
 it('retires a row preview when closing hides it while no option is keyboard-active', async () => {
   const restore = stubMediaPlay(() => Promise.resolve());
   try {
@@ -876,7 +969,7 @@ it('keeps a closed picker open and pristine when real Tab moves from its trigger
   const after = wrapper.querySelector('#after-closed') as HTMLButtonElement;
   let boundaryBlurs = 0;
   el.addEventListener('blur', (event) => {
-    if (event instanceof CustomEvent) boundaryBlurs++;
+    if (event instanceof FocusEvent) boundaryBlurs++;
   });
 
   trigger(el).focus();
@@ -926,7 +1019,7 @@ it('keeps a free-text picker open and pristine when real Tab moves from its inpu
   const after = wrapper.querySelector('#after-free-text') as HTMLButtonElement;
   let boundaryBlurs = 0;
   el.addEventListener('blur', (event) => {
-    if (event instanceof CustomEvent) boundaryBlurs++;
+    if (event instanceof FocusEvent) boundaryBlurs++;
   });
 
   input(el).focus();
@@ -1190,6 +1283,17 @@ it('normalizes a nullish defaultValue write and clears the reflected default for
   expect(el.hasAttribute('value')).to.be.false;
 });
 
+it('normalizes an explicitly empty value attribute to the canonical absent default', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker value="" .catalog=${CATALOG}></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  await el.updateComplete;
+
+  expect(el.defaultValue).to.equal('');
+  expect(el.value).to.equal('');
+  expect(el.hasAttribute('value')).to.be.false;
+});
+
 it('mounting with no initial value never schedules an update after the first update completes', async () => {
   // `defaultValue` uses `useDefault: true`, which marks it "changed" on the component's very
   // first update even when no consumer ever assigned it. A post-commit `updated()` correction
@@ -1250,10 +1354,13 @@ it('forwards host .click() to the trigger button in closed-dropdown mode, since 
 
 it('forwards host .click() to the combobox input in free-text mode', async () => {
   const el = (await fixture(html`<lr-voice-picker allow-custom></lr-voice-picker>`)) as LyraVoicePicker;
+  let relayedClicks = 0;
+  el.addEventListener('click', () => (relayedClicks += 1));
   expect(el.open).to.be.false;
   el.click();
   await el.updateComplete;
   expect(el.open).to.be.true;
+  expect(relayedClicks, 'voice-picker retains its focus-only free-text host click').to.equal(0);
 });
 
 it('clicking an open trigger closes it (toggle)', async () => {
@@ -2109,6 +2216,27 @@ it('keeps outside dismissal working after an open catalog refresh', async () => 
   expect(el.open).to.be.false;
 });
 
+it('disconnects and reconnects an open picker without stranding popup state or cleanup', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker open .catalog=${CATALOG}></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+
+  el.remove();
+  expect(el.open, 'disconnect resets transient open state').to.be.false;
+
+  parent.append(el);
+  await el.updateComplete;
+  trigger(el).click();
+  await el.updateComplete;
+  expect(el.open, 'the reconnected picker can open normally').to.be.true;
+
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open, 'the reconnected picker owns a live outside-pointer listener').to.be.false;
+});
+
 it('mousedown on the combobox shell focuses the input without letting the shell take selection', async () => {
   const el = (await fixture(
     html`<lr-voice-picker .catalog=${CATALOG} allow-custom></lr-voice-picker>`
@@ -2122,6 +2250,28 @@ it('mousedown on the combobox shell focuses the input without letting the shell 
   await el.updateComplete;
   expect(event.defaultPrevented).to.be.true;
   expect(el.shadowRoot!.activeElement === input(el)).to.equal(true);
+});
+
+it('preserves the native caret-placement default for a trusted mousedown on the editable input', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker .catalog=${CATALOG} allow-custom value="abcdefghij"></lr-voice-picker>`
+  )) as LyraVoicePicker;
+  const nativeInput = input(el);
+  nativeInput.focus();
+  nativeInput.setSelectionRange(0, nativeInput.value.length);
+  let trustedMouseDown: MouseEvent | undefined;
+  nativeInput.addEventListener('mousedown', (event) => {
+    if (event.isTrusted) trustedMouseDown = event;
+  });
+
+  const rect = nativeInput.getBoundingClientRect();
+  await sendMouse({
+    type: 'click',
+    position: [Math.round(rect.right - 4), Math.round(rect.top + rect.height / 2)],
+  });
+
+  expect(trustedMouseDown?.defaultPrevented).to.equal(false);
+  expect(nativeInput.selectionStart).to.equal(nativeInput.selectionEnd);
 });
 
 it('mousedown on the combobox shell is inert while disabled', async () => {

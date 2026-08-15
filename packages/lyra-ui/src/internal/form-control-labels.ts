@@ -122,20 +122,22 @@ interface AssociationSubscription {
   readonly host: HTMLElement;
   readonly listener: () => void;
   id: string;
-  implicit: boolean;
+  implicitLabels: HTMLLabelElement[];
+  fallbackGeneration: number;
   active: boolean;
 }
 
 interface AssociationRootObservation {
   readonly subscriptions: Set<AssociationSubscription>;
   readonly subscriptionsById: Map<string, Set<AssociationSubscription>>;
-  readonly implicitSubscriptions: Set<AssociationSubscription>;
+  readonly implicitSubscriptionsByLabel: WeakMap<HTMLLabelElement, Set<AssociationSubscription>>;
   readonly subscriptionsByHost: WeakMap<HTMLElement, AssociationSubscription>;
   readonly pending: Set<AssociationSubscription>;
   readonly observer?: MutationObserver;
-  drainQueued: boolean;
+  readonly ownerWindow: Window | null;
+  cancelContinuation?: () => void;
   fallbackIterator?: SetIterator<AssociationSubscription>;
-  restartFallback: boolean;
+  fallbackGeneration: number;
 }
 
 interface AssociationRootSubscription {
@@ -183,7 +185,10 @@ function isShadowRootNode(node: Node | null | undefined): node is ShadowRoot {
 function isCurrentlyAssociatedLabel(label: HTMLLabelElement, host: HTMLElement): boolean {
   const root = host.getRootNode();
   if (label.getRootNode() !== root) return false;
-  if (!label.hasAttribute('for')) return label.contains(host);
+  if (!label.hasAttribute('for')) {
+    const control = 'control' in label ? label.control : undefined;
+    return control === undefined || control === null ? label.contains(host) : control === host;
+  }
   const id = label.htmlFor;
   if (id === '') return false;
   if ('getElementById' in root && typeof root.getElementById === 'function') {
@@ -221,34 +226,108 @@ function updateSubscriptionId(
   addSubscriptionById(observation, subscription);
 }
 
-function drainAssociationRefreshes(observation: AssociationRootObservation): void {
-  observation.drainQueued = false;
+function addImplicitSubscription(
+  observation: AssociationRootObservation,
+  label: HTMLLabelElement,
+  subscription: AssociationSubscription,
+): void {
+  const subscriptions = observation.implicitSubscriptionsByLabel.get(label) ?? new Set<AssociationSubscription>();
+  subscriptions.add(subscription);
+  observation.implicitSubscriptionsByLabel.set(label, subscriptions);
+}
+
+function removeImplicitSubscription(
+  observation: AssociationRootObservation,
+  label: HTMLLabelElement,
+  subscription: AssociationSubscription,
+): void {
+  const subscriptions = observation.implicitSubscriptionsByLabel.get(label);
+  subscriptions?.delete(subscription);
+  if (subscriptions?.size === 0) observation.implicitSubscriptionsByLabel.delete(label);
+}
+
+function updateImplicitSubscriptions(
+  observation: AssociationRootObservation,
+  subscription: AssociationSubscription,
+  labels: readonly HTMLLabelElement[],
+): void {
+  const next = labels.filter((label) => !label.hasAttribute('for'));
+  for (const label of subscription.implicitLabels) {
+    if (!next.includes(label)) removeImplicitSubscription(observation, label, subscription);
+  }
+  for (const label of next) {
+    if (!subscription.implicitLabels.includes(label)) {
+      addImplicitSubscription(observation, label, subscription);
+    }
+  }
+  subscription.implicitLabels = next;
+}
+
+function hasAssociationRefreshes(observation: AssociationRootObservation): boolean {
+  return observation.pending.size > 0 || observation.fallbackIterator !== undefined;
+}
+
+function cancelAssociationContinuation(observation: AssociationRootObservation): void {
+  observation.cancelContinuation?.();
+  observation.cancelContinuation = undefined;
+}
+
+function scheduleAssociationContinuation(observation: AssociationRootObservation): void {
+  if (!hasAssociationRefreshes(observation) || observation.cancelContinuation !== undefined) return;
+  const callback = () => {
+    observation.cancelContinuation = undefined;
+    drainAssociationRefreshes(observation);
+  };
+  if (observation.ownerWindow) {
+    const handle = observation.ownerWindow.setTimeout(callback, 0);
+    observation.cancelContinuation = () => observation.ownerWindow?.clearTimeout(handle);
+  } else {
+    const handle = globalThis.setTimeout(callback, 0);
+    observation.cancelContinuation = () => globalThis.clearTimeout(handle);
+  }
+}
+
+function refreshAssociationSubscription(
+  observation: AssociationRootObservation,
+  subscription: AssociationSubscription,
+): void {
+  if (!subscription.active) return;
+  subscription.listener();
+  if (observation.fallbackIterator) {
+    subscription.fallbackGeneration = observation.fallbackGeneration;
+  }
+}
+
+function drainTargetedAssociationRefreshes(observation: AssociationRootObservation): void {
   let remaining = MAX_ASSOCIATION_REFRESHES_PER_TASK;
   for (const subscription of observation.pending) {
     observation.pending.delete(subscription);
-    if (subscription.active) subscription.listener();
+    refreshAssociationSubscription(observation, subscription);
+    if (--remaining === 0) break;
+  }
+  scheduleAssociationContinuation(observation);
+}
+
+function drainAssociationRefreshes(observation: AssociationRootObservation): void {
+  let remaining = MAX_ASSOCIATION_REFRESHES_PER_TASK;
+  for (const subscription of observation.pending) {
+    observation.pending.delete(subscription);
+    refreshAssociationSubscription(observation, subscription);
     if (--remaining === 0) break;
   }
   while (remaining > 0 && observation.fallbackIterator) {
     const next = observation.fallbackIterator.next();
     if (next.done) {
       observation.fallbackIterator = undefined;
-      if (observation.restartFallback) {
-        observation.restartFallback = false;
-        observation.fallbackIterator = observation.subscriptions.values();
-        continue;
-      }
       break;
     }
-    if (next.value.active) next.value.listener();
+    if (next.value.active && next.value.fallbackGeneration !== observation.fallbackGeneration) {
+      next.value.listener();
+      next.value.fallbackGeneration = observation.fallbackGeneration;
+    }
     remaining--;
   }
-  if (
-    (observation.pending.size === 0 && observation.fallbackIterator === undefined) ||
-    observation.drainQueued
-  ) return;
-  observation.drainQueued = true;
-  queueMicrotask(() => drainAssociationRefreshes(observation));
+  scheduleAssociationContinuation(observation);
 }
 
 function notifyAssociationSubscriptions(
@@ -256,57 +335,119 @@ function notifyAssociationSubscriptions(
   subscriptions: Iterable<AssociationSubscription>,
   fallbackAll = false,
 ): void {
+  if (fallbackAll) {
+    const continuationPending = observation.cancelContinuation !== undefined;
+    observation.pending.clear();
+    observation.fallbackGeneration++;
+    observation.fallbackIterator = observation.subscriptions.values();
+    for (const subscription of subscriptions) {
+      if (subscription.active) observation.pending.add(subscription);
+    }
+    if (continuationPending) drainTargetedAssociationRefreshes(observation);
+    else drainAssociationRefreshes(observation);
+    return;
+  }
   for (const subscription of subscriptions) {
     if (subscription.active) observation.pending.add(subscription);
   }
-  if (fallbackAll) {
-    if (observation.fallbackIterator) observation.restartFallback = true;
-    else observation.fallbackIterator = observation.subscriptions.values();
-  }
-  if (
-    (observation.pending.size === 0 && observation.fallbackIterator === undefined) ||
-    observation.drainQueued
-  ) return;
-  observation.drainQueued = true;
-  queueMicrotask(() => drainAssociationRefreshes(observation));
+  // Mutation observers registered later in the same root must see the refreshed accessible name.
+  // A continuation may already be draining a conservative all-control fallback, but a small,
+  // precisely indexed mutation remains synchronous and is marked so that fallback will not read
+  // the same control twice.
+  drainTargetedAssociationRefreshes(observation);
 }
 
 interface AssociationCandidates {
   readonly ids: Set<string>;
-  implicit: boolean;
+  readonly implicitLabels: Set<HTMLLabelElement>;
   truncated: boolean;
   work: number;
 }
 
-function collectAssociationElement(element: Element, result: AssociationCandidates): void {
-  if (++result.work > MAX_ASSOCIATION_CANDIDATES_PER_MUTATION) {
-    result.truncated = true;
-    return;
+function isLabelableElement(element: Element): boolean {
+  if (element.localName === 'input') return (element as HTMLInputElement).type !== 'hidden';
+  if (
+    element.localName === 'button' ||
+    element.localName === 'meter' ||
+    element.localName === 'output' ||
+    element.localName === 'progress' ||
+    element.localName === 'select' ||
+    element.localName === 'textarea'
+  ) {
+    return true;
   }
-  const id = element.getAttribute('id');
-  if (id) result.ids.add(id);
-  if (!isLabelElement(element)) return;
-  if (element.hasAttribute('for')) {
-    if (element.htmlFor) result.ids.add(element.htmlFor);
-  } else {
-    result.implicit = true;
-  }
+  return (
+    element.localName.includes('-') && (element.constructor as { formAssociated?: boolean }).formAssociated === true
+  );
 }
 
-function collectAssociationCandidates(node: Node, result: AssociationCandidates): void {
-  if (result.truncated) return;
-  if (node.nodeType === 1) collectAssociationElement(node as Element, result);
-  if (result.truncated) return;
-  const walker = node.ownerDocument?.createTreeWalker(node, NodeFilter.SHOW_ELEMENT);
-  if (!walker) {
-    result.truncated = true;
-    return;
+function collectAssociationElement(element: Element, result: AssociationCandidates): boolean {
+  const id = element.getAttribute('id');
+  if (id) result.ids.add(id);
+  if (isLabelElement(element) && element.hasAttribute('for')) {
+    if (element.htmlFor) result.ids.add(element.htmlFor);
   }
-  let current = walker.nextNode();
+  return isLabelableElement(element);
+}
+
+/** Returns the next node in a subtree without allocating a walker or a descendant array. */
+function nextAssociationNode(root: Node, current: Node): Node | null {
+  if (current.firstChild) return current.firstChild;
+  let cursor: Node | null = current;
+  while (cursor && cursor !== root) {
+    if (cursor.nextSibling) return cursor.nextSibling;
+    cursor = cursor.parentNode;
+  }
+  return null;
+}
+
+function collectAssociationCandidates(node: Node, result: AssociationCandidates): boolean {
+  let containsLabelable = false;
+  let current: Node | null = node;
   while (current) {
-    collectAssociationElement(current as Element, result);
-    if (result.truncated) return;
-    current = walker.nextNode();
+    if (result.work >= MAX_ASSOCIATION_CANDIDATES_PER_MUTATION) {
+      result.truncated = true;
+      break;
+    }
+    result.work++;
+    if (current.nodeType === 1) {
+      containsLabelable = collectAssociationElement(current as Element, result) || containsLabelable;
+    }
+    current = nextAssociationNode(node, current);
+  }
+  return containsLabelable;
+}
+
+function containingImplicitLabel(node: Node): HTMLLabelElement | null {
+  if (isLabelElement(node)) return node.hasAttribute('for') ? null : node;
+  if (node.nodeType !== 1 || !('closest' in node)) return null;
+  const label = (node as Element).closest('label');
+  return label && !label.hasAttribute('for') ? label : null;
+}
+
+function collectFirstImplicitSubscription(
+  observation: AssociationRootObservation,
+  label: HTMLLabelElement,
+  candidates: AssociationCandidates,
+  affected: Set<AssociationSubscription>,
+): void {
+  let current: Node | null = label.firstChild;
+  while (current) {
+    if (candidates.work >= MAX_ASSOCIATION_CANDIDATES_PER_MUTATION) {
+      candidates.truncated = true;
+      return;
+    }
+    candidates.work++;
+    if (
+      current.nodeType === 1 &&
+      (isLabelableElement(current as Element) ||
+        observation.subscriptionsByHost.has(current as HTMLElement))
+    ) {
+      const subscription = observation.subscriptionsByHost.get(current as HTMLElement);
+      if (subscription) affected.add(subscription);
+      return;
+    }
+    current = nextAssociationNode(label, current);
   }
 }
 
@@ -317,11 +458,28 @@ function affectedAssociationSubscriptions(
   const affected = new Set<AssociationSubscription>();
   const candidates: AssociationCandidates = {
     ids: new Set<string>(),
-    implicit: false,
+    implicitLabels: new Set<HTMLLabelElement>(),
     truncated: false,
     work: 0,
   };
+
+  const addIndexedCandidates = (): void => {
+    for (const id of candidates.ids) {
+      for (const subscription of observation.subscriptionsById.get(id) ?? []) affected.add(subscription);
+    }
+    for (const label of candidates.implicitLabels) {
+      for (const subscription of observation.implicitSubscriptionsByLabel.get(label) ?? []) {
+        affected.add(subscription);
+      }
+    }
+  };
+
   for (const mutation of mutations) {
+    if (candidates.work >= MAX_ASSOCIATION_CANDIDATES_PER_MUTATION) {
+      candidates.truncated = true;
+      break;
+    }
+    candidates.work++;
     if (mutation.type === 'attributes') {
       const target = mutation.target as Element;
       if (mutation.attributeName === 'id') {
@@ -335,23 +493,42 @@ function affectedAssociationSubscriptions(
           updateSubscriptionId(observation, hostSubscription);
         }
       } else if (mutation.attributeName === 'for' && isLabelElement(target)) {
-        const oldFor = mutation.oldValue ?? '';
+        const oldFor = mutation.oldValue;
         if (oldFor) candidates.ids.add(oldFor);
         if (target.htmlFor) candidates.ids.add(target.htmlFor);
-        if (!oldFor || !target.hasAttribute('for')) candidates.implicit = true;
+        for (const subscription of observation.implicitSubscriptionsByLabel.get(target) ?? []) {
+          affected.add(subscription);
+        }
+        if (!target.hasAttribute('for')) candidates.implicitLabels.add(target);
+      } else if (mutation.attributeName === 'type' && target.localName === 'input') {
+        const label = containingImplicitLabel(target);
+        if (label) candidates.implicitLabels.add(label);
       }
       continue;
     }
-    for (const node of mutation.addedNodes) collectAssociationCandidates(node, candidates);
-    for (const node of mutation.removedNodes) collectAssociationCandidates(node, candidates);
+    let changedLabelableShape = false;
+    for (const node of mutation.addedNodes) {
+      changedLabelableShape = collectAssociationCandidates(node, candidates) || changedLabelableShape;
+      if (candidates.truncated) break;
+    }
+    if (!candidates.truncated) {
+      for (const node of mutation.removedNodes) {
+        changedLabelableShape = collectAssociationCandidates(node, candidates) || changedLabelableShape;
+        if (candidates.truncated) break;
+      }
+    }
+    if (changedLabelableShape) {
+      const label = containingImplicitLabel(mutation.target);
+      if (label) candidates.implicitLabels.add(label);
+    }
+    if (candidates.truncated) break;
   }
 
+  addIndexedCandidates();
   if (candidates.truncated) return { subscriptions: affected, fallbackAll: true };
-  for (const id of candidates.ids) {
-    for (const subscription of observation.subscriptionsById.get(id) ?? []) affected.add(subscription);
-  }
-  if (candidates.implicit) {
-    for (const subscription of observation.implicitSubscriptions) affected.add(subscription);
+  for (const label of candidates.implicitLabels) {
+    collectFirstImplicitSubscription(observation, label, candidates, affected);
+    if (candidates.truncated) return { subscriptions: affected, fallbackAll: true };
   }
   return { subscriptions: affected, fallbackAll: false };
 }
@@ -363,7 +540,7 @@ function observeAssociationRoot(host: HTMLElement, listener: () => void): Associ
     const Observer = host.ownerDocument.defaultView?.MutationObserver;
     const subscriptions = new Set<AssociationSubscription>();
     const subscriptionsById = new Map<string, Set<AssociationSubscription>>();
-    const implicitSubscriptions = new Set<AssociationSubscription>();
+    const implicitSubscriptionsByLabel = new WeakMap<HTMLLabelElement, Set<AssociationSubscription>>();
     const subscriptionsByHost = new WeakMap<HTMLElement, AssociationSubscription>();
     const pending = new Set<AssociationSubscription>();
     const holder: { observation?: AssociationRootObservation } = {};
@@ -377,7 +554,7 @@ function observeAssociationRoot(host: HTMLElement, listener: () => void): Associ
         });
     observer?.observe(root, {
       attributes: true,
-      attributeFilter: ['for', 'id'],
+      attributeFilter: ['for', 'id', 'type'],
       attributeOldValue: true,
       childList: true,
       subtree: true,
@@ -385,12 +562,12 @@ function observeAssociationRoot(host: HTMLElement, listener: () => void): Associ
     observation = {
       subscriptions,
       subscriptionsById,
-      implicitSubscriptions,
+      implicitSubscriptionsByLabel,
       subscriptionsByHost,
       pending,
       observer,
-      drainQueued: false,
-      restartFallback: false,
+      ownerWindow: host.ownerDocument.defaultView,
+      fallbackGeneration: 0,
     };
     holder.observation = observation;
     associationRootObservations.set(root, observation);
@@ -399,22 +576,18 @@ function observeAssociationRoot(host: HTMLElement, listener: () => void): Associ
     host,
     listener,
     id: host.id,
-    implicit: host.closest('label') !== null,
+    implicitLabels: [],
+    fallbackGeneration: -1,
     active: true,
   };
   observation.subscriptions.add(subscription);
   observation.subscriptionsByHost.set(host, subscription);
   addSubscriptionById(observation, subscription);
-  if (subscription.implicit) observation.implicitSubscriptions.add(subscription);
   return {
     update(labels) {
       if (!subscription.active) return;
       updateSubscriptionId(observation!, subscription);
-      const implicit = labels.some((label) => !label.hasAttribute('for'));
-      if (implicit === subscription.implicit) return;
-      subscription.implicit = implicit;
-      if (implicit) observation!.implicitSubscriptions.add(subscription);
-      else observation!.implicitSubscriptions.delete(subscription);
+      updateImplicitSubscriptions(observation!, subscription, labels);
     },
     disconnect() {
       if (!subscription.active) return;
@@ -422,11 +595,17 @@ function observeAssociationRoot(host: HTMLElement, listener: () => void): Associ
       observation!.pending.delete(subscription);
       observation!.subscriptions.delete(subscription);
       observation!.subscriptionsByHost.delete(host);
-      observation!.implicitSubscriptions.delete(subscription);
+      for (const label of subscription.implicitLabels) {
+        removeImplicitSubscription(observation!, label, subscription);
+      }
+      subscription.implicitLabels = [];
       removeSubscriptionById(observation!, subscription);
       const current = associationRootObservations.get(root);
       if (!current || current.subscriptions.size > 0) return;
       current.observer?.disconnect();
+      cancelAssociationContinuation(current);
+      current.pending.clear();
+      current.fallbackIterator = undefined;
       associationRootObservations.delete(root);
     },
   };

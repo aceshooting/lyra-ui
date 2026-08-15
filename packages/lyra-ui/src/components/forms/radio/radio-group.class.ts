@@ -22,7 +22,9 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import {
+  declaredDefaultConverter,
+  omittedEmptyStringConverter } from '../../../internal/converters.js';
 import {
   isAccessibilitySubtreeExcluded,
   isAriaTrue,
@@ -40,7 +42,7 @@ export interface LyraRadioGroupEventMap {
   change: Event;
   'lr-input': CustomEvent<{ value: string; radio: LyraRadio }>;
   'lr-change': CustomEvent<{ value: string; radio: LyraRadio }>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
 }
 
 export type RadioGroupOrientation = 'horizontal' | 'vertical';
@@ -125,7 +127,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
-    orientation: { reflect: true },
+    orientation: { reflect: true,
+      converter: declaredDefaultConverter<RadioGroupOrientation>("vertical"),
+    },
     form: { noAccessor: true },
   };
   /**
@@ -135,7 +139,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
    * its options off the same `--lr-form-control-*` values the controls themselves use, and
    * projects the effective tier to owned options without rewriting their authored `size` state.
    */
-  @property({ reflect: true }) size: LyraSize = 'm';
+  @property({ reflect: true,
+    converter: declaredDefaultConverter<LyraSize>("m"),
+  }) size: LyraSize = 'm';
   /** Arrow-key axis and option layout. Left/right are mirrored under RTL in horizontal mode. */
   orientation: RadioGroupOrientation = 'vertical';
   @property() label = '';
@@ -222,17 +228,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
   set customError(next: string | null) {
     if (this.reflectingCustomError) return;
-    const old = this.customError;
-    const message = next ?? '';
-    this.reflectingCustomError = true;
-    try {
-      if (next == null) this.removeAttribute('custom-error');
-      else this.setAttribute('custom-error', message);
-    } finally {
-      this.reflectingCustomError = false;
-    }
-    this.setCustomValidity(message);
-    this.requestUpdate('customError', old);
+    this.commitCustomValidity(next);
   }
 
   get required(): boolean { return this._required; }
@@ -293,7 +289,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     // A real veto point, exactly as in `installInvalidEventAlias()`: cancelling the alias cancels
     // the native `invalid` behind it, so an app presenting the failure its own way can suppress
     // the browser's validation bubble.
-    const alias = this.emit('lr-invalid', undefined, { cancelable: true });
+    const alias = this.emit('lr-invalid', null, { cancelable: true });
     if (alias.defaultPrevented) event.preventDefault();
   };
 
@@ -325,7 +321,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
 
   private isButtonRadio(radio: LyraRadio): boolean {
-    return radio.localName === tag('radio-button') || radio.appearance === 'button';
+    return (
+      radio.localName === tag('radio-button') || radio.appearance === 'button'
+    );
   }
 
   private areActuallyAdjacent(first: LyraRadio, second: LyraRadio): boolean {
@@ -485,7 +483,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   /** @internal Whether this group owns the radio through its default option slot. */
   ownsRadio(element: Element): element is LyraRadio {
-    return RADIO_TAGS().includes(element.localName) && this.radioGroupOwner(element) === this;
+    return (
+      RADIO_TAGS().includes(element.localName) && this.radioGroupOwner(element) === this
+    );
   }
 
   private radios(): LyraRadio[] {
@@ -643,10 +643,10 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     const rtl = this.effectiveDirection === 'rtl';
     const forward = this.orientation === 'vertical'
       ? event.key === 'ArrowDown'
-      : (rtl ? event.key === 'ArrowLeft' : event.key === 'ArrowRight');
+      : rtl ? event.key === 'ArrowLeft' : event.key === 'ArrowRight';
     const backward = this.orientation === 'vertical'
       ? event.key === 'ArrowUp'
-      : (rtl ? event.key === 'ArrowRight' : event.key === 'ArrowLeft');
+      : rtl ? event.key === 'ArrowRight' : event.key === 'ArrowLeft';
     const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? radios.length - 1
       : forward ? (index + 1) % radios.length : backward ? (index - 1 + radios.length) % radios.length : index;
     // safe: radios is non-empty (guarded above) and nextIndex is a modulo/clamp into range.
@@ -746,16 +746,27 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     this.updateValidity();
     return this.internals.reportValidity();
   }
-  setCustomValidity(message: string = ''): void {
-    this.validityController.setCustomValidity(message ?? '');
+  private commitCustomValidity(message: string | null | undefined): void {
+    const old = this.customError;
+    const normalized = message ?? "";
+    this.validityController.setCustomValidity(normalized);
     this.reflectValidityStates();
-    this.requestUpdate();
+    this.reflectingCustomError = true;
+    try {
+      if (normalized) this.setAttribute("custom-error", normalized);
+      else this.removeAttribute("custom-error");
+    } finally {
+      this.reflectingCustomError = false;
+    }
+    this.requestUpdate("customError", old);
+  }
+  setCustomValidity(message: string = ""): void {
+    this.commitCustomValidity(message);
   }
   /** Clears consumer-supplied validity and restores the current required/value constraint. */
   resetValidity(): void {
-    this.validityController.setCustomValidity('');
+    this.commitCustomValidity('');
     this.updateValidity();
-    this.requestUpdate();
   }
   formResetCallback(): void {
     this._valueDirty = false;

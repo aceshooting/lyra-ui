@@ -44,8 +44,10 @@ Declaratively animates one slotted element through the native Web Animations API
   `IntersectionObserver` once the target intersects. `playOnVisibleRepeat: boolean = false`
   (attribute `play-on-visible-repeat`, reflected) — re-plays on each re-entry and pauses on exit;
   when unset the observer disconnects after the first trigger. `root: Element | null = null` and
-  `threshold: number | number[] = 0` (both attribute: false) plus `rootMargin: string = '0px'`
-  (attribute `root-margin`) configure that observer.
+  `threshold: number | readonly number[] = 0` (both attribute: false) plus
+  `rootMargin: string = '0px'` (attribute `root-margin`) configure that observer. Threshold arrays
+  are frozen snapshots, retain only finite values from 0 through 1, and inspect at most 1,000
+  candidates per assignment; invalid scalar thresholds normalize to `0`.
 - `currentTime: CSSNumberish` — the underlying `Animation.currentTime` (`0` when no animation
   exists); writable and forwarded when one exists. Non-finite numeric assignments are ignored.
 

@@ -4,6 +4,7 @@ import { DEFAULT_MAX_FILE_SIZE_BYTES, type LyraFileInput } from './file-input.js
 import { styles } from './file-input.styles.js';
 import { resolveValidityAnchor } from '../../../internal/anchored-validity.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { setForcedColors } from "../../../../test/wtr-media.js";
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -503,7 +504,7 @@ it('blur() and click() delegate to the semantic dropzone contract', async () => 
   el.focus();
   expect(el.shadowRoot!.activeElement === base).to.be.true;
   el.blur();
-  expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
 
   el.click();
   expect(pickerClicks).to.equal(1);
@@ -610,7 +611,7 @@ it('adds a :focus-visible outline to the dropzone base using the shared focus-ri
   probe.remove();
 
   base.focus();
-  expect((el.shadowRoot!.activeElement) === (base)).to.equal(true);
+  expect(el.shadowRoot!.activeElement === base).to.equal(true);
   const baseStyle = getComputedStyle(base);
   expect(baseStyle.outlineStyle).to.equal('solid');
   expect(baseStyle.outlineWidth).to.equal(expectedWidth);
@@ -663,6 +664,28 @@ it('renders byte-identical drag accept/reject colors to the pre-hatch shared tok
   expect(getComputedStyle(base).borderTopColor).to.equal(
     resolvedIn(el.shadowRoot!, 'border-color: var(--lr-color-success)', 'border-top-color'),
   );
+});
+
+it("keeps drag accept and reject previews distinguishable without color", async () => {
+  await setForcedColors("active");
+  try {
+    const el = (await fixture(
+      html`<lr-file-input></lr-file-input>`
+    )) as LyraFileInput;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+
+    base.setAttribute("data-drag-state", "accept");
+    const accept = getComputedStyle(base);
+    expect(accept.borderStyle).to.equal("double");
+    expect(accept.outlineStyle).to.equal("solid");
+
+    base.setAttribute("data-drag-state", "reject");
+    const reject = getComputedStyle(base);
+    expect(reject.borderStyle).to.equal("dotted");
+    expect(reject.outlineStyle).to.equal("double");
+  } finally {
+    await setForcedColors("none");
+  }
 });
 
 it('keeps the gap and radius hooks opt-in, inheritable, and subordinate to the compact gap hook', async () => {
@@ -1019,7 +1042,7 @@ it('renders a visible, per-reason rejection region naming the rejected file (reg
   await el.updateComplete;
 
   const rejection = el.shadowRoot!.querySelector('[part="rejection"]') as HTMLElement;
-  expect((rejection) != null).to.equal(true);
+  expect(rejection != null).to.equal(true);
   // Visible text, so it stays readable in the accessibility tree without a shadow live role; the
   // interrupting announcement goes through the shared light-DOM assertive region instead, which is
   // the one assistive tech actually observes.
@@ -1281,7 +1304,8 @@ describe('reviewed Web Awesome Pro file-input surface', () => {
     expect(el.withError).to.be.false;
     expect(el.withHint).to.be.false;
     expect(el.withLabel).to.be.false;
-    expect((el.validationTarget) === (el.shadowRoot!.querySelector('[part~="base"]'))).to.equal(true);
+    expect(
+      el.validationTarget === el.shadowRoot!.querySelector('[part~="base"]')).to.equal(true);
   });
 
   it('keeps dragging and fileCount readonly and derived from real state', async () => {
@@ -1317,17 +1341,17 @@ describe('reviewed Web Awesome Pro file-input surface', () => {
     const override = document.createElement('span');
     el.shadowRoot!.append(override);
 
-    expect((el.validationTarget) === (defaultTarget)).to.equal(true);
-    expect((resolveValidityAnchor(el)) === (el.validationTarget)).to.equal(true);
+    expect(el.validationTarget === defaultTarget).to.equal(true);
+    expect(resolveValidityAnchor(el) === el.validationTarget).to.equal(true);
 
     el.validationTarget = override;
-    expect((el.validationTarget) === (override)).to.equal(true);
-    expect((resolveValidityAnchor(el)) === (el.validationTarget)).to.equal(true);
+    expect(el.validationTarget === override).to.equal(true);
+    expect(resolveValidityAnchor(el) === el.validationTarget).to.equal(true);
     expect(() => el.setCustomValidity('Rejected')).to.not.throw();
 
     el.validationTarget = undefined;
-    expect((el.validationTarget) === (defaultTarget)).to.equal(true);
-    expect((resolveValidityAnchor(el)) === (el.validationTarget)).to.equal(true);
+    expect(el.validationTarget === defaultTarget).to.equal(true);
+    expect(resolveValidityAnchor(el) === el.validationTarget).to.equal(true);
   });
 
   it('stores accepted files, renders the full file-list parts, and emits native input/change before lr-files', async () => {
@@ -1527,8 +1551,8 @@ it('exposes the native form-association surface', async () => {
     </form>
   `);
   const el = form.querySelector<LyraFileInput>('lr-file-input')!;
-  expect((el.form) === (form)).to.equal(true);
-  expect((el.getForm()) === (form)).to.equal(true);
+  expect(el.form === form).to.equal(true);
+  expect(el.getForm() === form).to.equal(true);
   expect(el.willValidate).to.equal(true);
   expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal(['picker-label']);
 
@@ -1552,11 +1576,11 @@ it('detaches from its form owner when the form property is reassigned', async ()
   `);
   const el = root.querySelector<LyraFileInput>('lr-file-input')!;
   const one = root.querySelector<HTMLFormElement>('#one')!;
-  expect((el.form) === (null)).to.equal(true);
+  expect(el.form === null).to.equal(true);
   el.form = one;
   await el.updateComplete;
-  expect((el.form) === (one)).to.equal(true);
-  expect((el.getForm()) === (one)).to.equal(true);
+  expect(el.form === one).to.equal(true);
+  expect(el.getForm() === one).to.equal(true);
   el.form = null;
   await el.updateComplete;
   expect(el.form).to.equal(null);
@@ -1639,7 +1663,8 @@ it('captures unnamed multiple files in restoration state while keeping submissio
 });
 
 it('defers multiple form state without an SSR owner document and resynchronizes on connect', async () => {
-  const globals = globalThis as typeof globalThis & { FormData: typeof FormData };
+  const globals = globalThis as typeof globalThis & { FormData: typeof FormData;
+  };
   const NativeFormData = globals.FormData;
   let ambientConstructions = 0;
   const TrackingFormData = new Proxy(NativeFormData, {
@@ -1657,7 +1682,8 @@ it('defers multiple form state without an SSR owner document and resynchronizes 
   try {
     globals.FormData = TrackingFormData;
     expect(() => {
-      (el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void }).willUpdate(
+      (el as unknown as { willUpdate(changed: Map<PropertyKey, unknown>): void;
+        }).willUpdate(
         new Map<PropertyKey, unknown>([['multiple', false]]),
       );
     }).not.to.throw();
@@ -2070,7 +2096,8 @@ it('falls back to a null multiple form value when FormData cannot be constructed
   const el = (await fixture(
     html`<lr-file-input multiple name="attachment"></lr-file-input>`,
   )) as LyraFileInput;
-  const globals = globalThis as typeof globalThis & { FormData: typeof FormData };
+  const globals = globalThis as typeof globalThis & { FormData: typeof FormData;
+  };
   const NativeFormData = globals.FormData;
   try {
     globals.FormData = undefined as unknown as typeof FormData;

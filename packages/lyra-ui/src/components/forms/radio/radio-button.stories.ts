@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A button-chrome radio. Host `aria-label` is forwarded to the internal radio by attribute presence, including an explicitly empty override.',
+          'A button-chrome radio. Host `aria-label` is forwarded to the internal radio by attribute presence, including an explicitly empty override. Every size tier retains a 24px target in both axes, even with an empty label.',
       },
     },
   },

@@ -62,12 +62,13 @@ the browser parses. `<lr-swatch-picker>` offers exactly its `options` and nothin
 designer-chosen colours; reach for this when it must not.
 
 **Properties:** the shared
-form properties `name`, `value`, `defaultValue` (`value`; Shoelace markup may use the
-`default-value` compatibility attribute), `customError` (`custom-error`), `disabled`, and
+form properties `name`, `value`, `defaultValue` (canonical content attribute `value`),
+`customError` (`custom-error`), `disabled`, and
 `required`, plus `label`, `hint`, `errorText`
-(`error-text`), `accessibleLabel` (`aria-label`), and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'`
+(`error-text`), `accessibleLabel` (`aria-label`), and `size: LyraSize = 'm'`
 (reflected — the same visual-density scale as `lr-input`, applied to the centered visible swatch;
-the interactive target independently retains the `--lr-icon-button-size` floor),
+accepts `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`; the interactive target
+independently retains the `--lr-icon-button-size` floor),
 and:
 
 - `format: 'hex' | 'rgb' | 'hsl' | 'hsv' = 'hex'` — the syntax `value` is **written** in. Parsing is
@@ -253,16 +254,16 @@ the current colour and text direction). Read them if you need the resolved colou
   swatches="#e11d48;#2563eb;#16a34a"
 ></lr-color-picker>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/color-picker/color-picker.js';
-  const picker = document.querySelector('lr-color-picker');
+  import "@aceshooting/lyra-ui/components/forms/color-picker/color-picker.js";
+  const picker = document.querySelector("lr-color-picker");
   // Objects give each entry a real accessible name:
   picker.swatches = [
-    { color: '#e11d48', label: 'Rose' },
-    { color: '#2563eb', label: 'Blue' },
+    { color: "#e11d48", label: "Rose" },
+    { color: "#2563eb", label: "Blue" },
   ];
-  picker.addEventListener('change', () => {
+  picker.addEventListener("change", () => {
     console.log(picker.value); // e.g. "RGBA(225, 29, 72, 1.00)"
-    console.log(picker.getFormattedValue('hexa')); // e.g. "#E11D48FF"
+    console.log(picker.getFormattedValue("hexa")); // e.g. "#E11D48FF"
   });
   picker.show();
 </script>

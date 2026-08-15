@@ -90,7 +90,7 @@ uses for its own `[part="body"]`.
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
   lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
-- `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied `text-quote` highlights;
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — host-supplied `text-quote` highlights;
   reassign the array after mutation so painting is refreshed.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — identifies the
   currently active entry in `highlights` for active paint and outline treatment.
@@ -262,13 +262,14 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced block stays
 unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading-anchors`),
 `math: boolean = false`; plus the same inherited anchor-target properties as `<lr-markdown>`:
-`highlights: LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
+`highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
 and `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']`.
 
 **Methods:** `renderMarkdown(): void` — immediately reruns the current content through the parse,
 sanitize, highlight, and fallback pipeline after changing this instance's `marked` configuration;
-safely no-ops while the parser is unresolved. `getHeadingTree()` — same contract as
+safely no-ops while the parser is unresolved. `refreshTheme(): void` re-reads the resolved theme
+for syntax highlighting. `getHeadingTree()` — same contract as
 `<lr-markdown>`'s own. `LyraMarkdownCore.getMarked(): Marked` and
 `LyraMarkdownCore.updateAll(): void` provide the same variant-scoped compatibility-parser contract
 as the full class; the core route exports its own `Marked` alias.
@@ -288,7 +289,8 @@ read, declared as a `var()` fallback at the point of use rather than on `:host` 
 container-level value reaches it, and carried here in its own right because this element is a
 **sibling** of `<lr-code-block>` rather than an ancestor of it. Markdown code blocks wrap
 (`white-space: pre-wrap`) while `<lr-code-block>` does not, so the same tab width can render
-differently on a wrapped line.
+differently on a wrapped line. `--lr-markdown-font-mono` is the monospace stack used by rendered
+code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
@@ -1046,18 +1048,19 @@ focus move.
 
 **Exported types:**
 
-- `LyraModelCatalogEntry { id: string; label: string; icon?: string }` — one catalog row. An
+- `LyraCatalogEntry { id: string; label: string }` — the shared minimum row vocabulary.
+- `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
+  — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
+  shorthand uses the same string for both id and label; readonly tuples/arrays are accepted.
+- `LyraModelCatalogEntry extends LyraCatalogEntry { icon?: string }` — one model row. An
   optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
   change the option's accessible name.
-- `LyraModelCatalog = string[] | LyraModelCatalogEntry[]` — either every entry is a plain string (used
-  as both id and label) or every entry is a full `{ id, label, icon? }` row; the two shapes are not
-  meant to be mixed within one array.
 
 **Properties:**
 
 - `provider: string = ''` — informational only (e.g. `'ollama'`); rendered as a small leading badge.
-- `catalog?: LyraModelCatalog` (attribute: false) — the full model list. Omit (or leave empty) to fall
-  back to plain free-text entry.
+- `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false) — the full model list. Omit (or
+  leave empty) to fall back to plain free-text entry.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
 - `label: string = ''` — optional visible title above the control, rendered alongside the `label`
@@ -1092,8 +1095,7 @@ focus move.
   `[part="trigger"]`/`[part="combobox"]`'s padding/min-height/font-size through the shared
   `--lr-form-control-*` knobs, so a model select sits at the same height as the `lr-select`,
   `lr-input` or `lr-button` beside it in a toolbar row at every tier, plus `[part="expand-icon"]`'s
-  box size (see the themeable custom properties below). The exported alias `LyraModelSelectSize`
-  names the canonical step (`LyraSizeStep`) a size resolves to.
+  box size (see the themeable custom properties below).
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
   `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
   untouched model-select contributes `''` to `FormData` instead of omitting its key.
@@ -1116,11 +1118,11 @@ since `HTMLElement.prototype.click()` is otherwise a no-op on a custom element w
 semantics of its own (mirrors `<lr-button>`'s identical host `click()` forwarding, so a generic
 form-automation helper or another component calling `.click()` on the host actually opens the picker
 instead of silently doing nothing). Closed-dropdown mode forwards a real `.click()` to the trigger
-`<button>`, whose own `@click` handler opens it. Free-text mode instead calls `.focus()` on the
-combobox `<input>`: unlike a genuine pointer click, `HTMLElement.click()` never moves focus (that's a
-`mousedown` side effect the browser applies only to real pointer interaction), and this mode's open
-behavior is wired to the input's `focus` event (`onInputFocus`), not a `click` handler on the input
-itself.
+`<button>`, whose own `@click` handler opens it. Free-text mode forwards `.click()` to the combobox
+`<input>`, then explicitly calls `.focus()`: unlike a genuine pointer click,
+`HTMLElement.click()` never moves focus (that's a `mousedown` side effect the browser applies only
+to real pointer interaction), and this mode's open behavior is wired to the input's `focus` event
+(`onInputFocus`), not a `click` handler on the input itself.
 
 `focus(options?)` and `blur()` forward to the active semantic control in either rendering mode.
 If a catalog/`allowCustom` update replaces that control while it owns focus, focus follows from the
@@ -1164,14 +1166,14 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
   distinctly from a real catalog pick)
-- `change` (`Event`, no detail) — fired on a committed value alongside `lr-change`, mirroring `<lr-select>`/
-  `<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model`
-  handlers behave consistently across the picker family.
-- `input` — a payload-preserving `InputEvent` for each free-text edit, and a plain `Event` fired
-  immediately before `change` when either mode commits a value.
-- `blur` / `focus` (no detail) — one native `FocusEvent` re-dispatched from the active control in
-  either mode (the closed trigger button or free-text input), bubbling and composed unlike the
-  shadow-internal original.
+- `change` (`Event`, no detail) — an owner-realm native event fired on a committed value alongside
+  `lr-change`, mirroring `<lr-select>`/`<lr-combobox>`'s value-change pair so native form bindings
+  and framework `v-model` handlers behave consistently across the picker family.
+- `input` — a payload-preserving owner-realm `InputEvent` for each free-text edit, and a plain
+  owner-realm `Event` fired immediately before `change` when either mode commits a value.
+- `blur` / `focus` (no detail) — one owner-realm native `FocusEvent` re-dispatched from the active
+  control in either mode (the closed trigger button or free-text input), retaining `relatedTarget`
+  and bubbling/composed unlike the shadow-internal original.
 - `lr-blur` and `lr-focus` (no detail) — prefixed compatibility aliases, each fired immediately
   after its unprefixed counterpart.
 - `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
@@ -1254,8 +1256,8 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 **Known gotchas:**
 
 - `catalog` must be homogeneous — an array of plain strings, or an array of `{ id, label, icon? }`
-  objects, not a mix; `LyraModelCatalog` is a union of two array _types_, not an array of a union
-  item type.
+  objects, not a mix; `LyraCatalog<T>` is a union of two readonly array _types_, not an array of a
+  union item type.
 - The synthetic "not in catalog" row only ever appears when `catalog` is non-empty and `value` isn't one
   of its ids — with no `catalog` at all, there's no catalog list to diff `value` against, so no badge.
 - `value`/form-association here is hand-rolled via `attachInternals()` directly, not the shared
@@ -1516,7 +1518,7 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-activate`.
   Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
   focus, focus follows the clamped surviving line; moving focus elsewhere during that update wins.
-- `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
   code (the shared anchor-target `LyraHighlight` contract from `document-viewer/anchors.ts`). Only
   `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
@@ -1533,6 +1535,7 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
   `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js'`;
   the type-only granular import emits no registration side effect.
+  `refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
   **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
   resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
   when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
@@ -1694,7 +1697,7 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lr-line-activate`.
   Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
   focus, focus follows the clamped surviving line; moving focus elsewhere during that update wins.
-- `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
   code. Only `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its lines).
@@ -1712,6 +1715,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
+`refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
+`refreshTheme(): void` re-reads the resolved theme for syntax highlighting.
 Identical behavior to `<lr-code-block>`'s own method.
 
 **Events:** the same fulfilled-only `lr-copy`, generic `lr-error`, full `lr-copy-error`, cancelable
@@ -1780,9 +1785,9 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
 
 - `provider: string = ''` — informational provider badge, passed straight through to the internal
   `lr-model-select`.
-- `catalog?: LyraModelCatalog` (attribute: false, JS-only) — `string[] | { id: string; label: string
-}[]` (every entry must be one shape or the other, never mixed); passed straight through to the
-  internal `lr-model-select`.
+- `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false, JS-only) — a readonly string
+  catalog or readonly object-row catalog (every entry must be one shape or the other, never mixed);
+  passed straight through to the internal `lr-model-select`.
 - `model: string = ''` — the current model id.
 - `allowCustom: boolean = false` (attribute `allow-custom`) — lets the model control accept a value
   outside `catalog`; passed straight through.
@@ -1910,7 +1915,8 @@ on every message regardless of whether that message actually has multiple branch
 0-based branch and the total branch count. `label: string = ''`.
 
 **Methods:** `focus(options?)` forwards to the currently enabled chevron (falling back to the first
-rendered chevron), `blur()` blurs both chevrons, and `click()` activates that same enabled target.
+rendered chevron), `blur()` blurs both chevrons, `click()` activates that same enabled target, and
+`getToolbarActions()` returns the ordered logical actions used by an enclosing message toolbar.
 
 **Events:** `lr-branch-change` — a branch navigation was requested. `detail: { index }`, always a
 valid target (never past either bound); the consumer applies `index` after switching the displayed
@@ -1991,6 +1997,7 @@ reports busy until that state is resolved.
 
 **Methods:** `focus()` focuses the thumb matching the current `rating` (the up thumb when `null`);
 `blur()` blurs both thumbs; `click()` activates that same thumb when enabled.
+`getToolbarActions()` returns the ordered logical thumb actions used by an enclosing toolbar.
 `finalizePendingSubmit()` completes a prevented submit after persistence succeeds, closing the
 panel, announcing success, and returning focus to the active thumb. `revertPendingSubmit()` releases
 the pending state after failure without clearing the draft or announcing success, leaving the panel
@@ -2317,20 +2324,30 @@ focus. Home/End always resolve the first/last thread from that complete model, e
 starts in a middle window; group records, collapsed-group contents, and unavailable endpoint rows
 are skipped rather than becoming false boundaries.
 
-**Properties:** `threads: ChatThread[] = []` (attribute: false) — `ChatThread { id: string; title:
-string; excerpt?: string; timestamp?: Date | string; pinned?: boolean; archived?: boolean }`
-(exported here). `activeId: string = ''` (attribute `active-id`) — data mode:
+**Exported types:** `LyraChatThread { id: string; title: string; excerpt?: string; timestamp?: Date |
+string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pin' | 'archive' |
+'delete'`; `ThreadListGrouping = 'date' | 'custom' | 'none'`; `ThreadBucketKey = 'pinned' |
+'today' | 'yesterday' | 'previous7' | 'previous30' | `month:${string}` | 'archived'`; and
+`ThreadGroupContext { id: string; threads: readonly LyraChatThread[]; bucket?: ThreadBucketKey;
+date?: Date }`. `LyraThreadList` and `LyraThreadListEventMap` are exported alongside them. The class
+module, normal and stable tag-shaped registration entries, conversation family entry, and package
+root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
+Data-mode thread ids must be nonempty and unique; invalid rows and later duplicates are omitted with
+the first valid occurrence winning, so focus, actions, and emitted `conversationId` values remain
+unambiguous.
+
+**Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeId: string = ''`
+(attribute `active-id`) — data mode:
 marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
 false` (reflected) — shows the built-in search field. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
 (Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
-arbitrary grouping callbacks below, or render a flat list. `groupBy?: (thread: ChatThread) => string`
+arbitrary grouping callbacks below, or render a flat list. `groupBy?: (thread: LyraChatThread) => string`
 (attribute: false) derives each group id in `grouping="custom"`; omitting it leaves the custom mode
 flat. `getGroupLabel?: (context: ThreadGroupContext) => string` (attribute: false) supplies the
 plain-text accessible/visible label; `renderGroupAdornment?: (context) => TemplateResult` supplies
-separate rich content beside the toggle without nesting it inside the button. `ThreadGroupContext`
-is `{ id, threads, bucket?, date? }`. `groupOrder?: string[] | ((a: string, b:
+separate rich content beside the toggle without nesting it inside the button. `groupOrder?: string[] | ((a: string, b:
 string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an
 array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
 controlled collapsed state for both date and custom groups. A collapsed group's header remains in
@@ -2356,25 +2373,25 @@ the real row keeps the `role="heading"`/`aria-level` semantics and the tab order
 is not a second tab stop), while the pinned copy stays clickable and requests the same
 `lr-group-toggle` collapse. Default `false` renders exactly as before; `grouping="none"` has no
 headers to pin, so it is a no-op there. `label: string = ''` — accessible name for the list region,
-defaults to the localized `threadListLabel`. `wrapRow?: (thread: ChatThread, row: TemplateResult) =>
+defaults to the localized `threadListLabel`. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
 TemplateResult` (attribute: false) — data mode only: wraps each row's built-in
 `lr-conversation-item` with host-supplied content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
-`renderActions?: (thread: ChatThread) => TemplateResult` (attribute: false) — data mode only:
+`renderActions?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. an `lr-dropdown` containing `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
 the host normally and never trigger `lr-select`. An open nested `lr-dropdown` keeps its virtual row
 above later rows even if focus temporarily leaves the menu. Unset renders only the built-in
 `rowActions`.
-`renderStart?: (thread: ChatThread) => TemplateResult` (attribute: false) — renders non-interactive
-start-side content in each virtualized row. `renderExcerpt?: (thread: ChatThread) => TemplateResult`
+`renderStart?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — renders non-interactive
+start-side content in each virtualized row. `renderExcerpt?: (thread: LyraChatThread) => TemplateResult`
 (attribute: false) — renders rich content into the row item's own `excerpt` slot, winning over the
 plain-string `excerpt` property (e.g. a server-highlighted search-match snippet), while leaving the
 built-in label layout and inline-rename affordance untouched. `<mark>` descendants returned by this
 hook receive the default, component-themeable highlight treatment documented below.
-`renderMeta?: (thread: ChatThread) => TemplateResult` (attribute: false) — appends structured
+`renderMeta?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — appends structured
 metadata in the row's meta region.
-`renderRowContent?: (thread: ChatThread) => TemplateResult` (attribute: false) — replaces the
+`renderRowContent?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's label/excerpt/meta content area with custom non-interactive row content.
 `formatDate?: (date: Date) => string` (attribute: false) — overrides month-group date formatting.
 Use `getGroupLabel` for every date/custom group label. When `wrapRow` is set, its
@@ -2587,18 +2604,42 @@ must apply every requested change itself.
 
 **Exported types:**
 
-- `WidgetNode { type: string; id?: string; props?: Record<string, unknown>; children?: (WidgetNode |
-string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is a stable public
+- `LyraWidgetNode { readonly type: string; readonly id?: string; readonly props?:
+Readonly<Record<string, unknown>>; readonly children?: readonly (LyraWidgetNode | string)[];
+readonly slot?: string; readonly actionId?: string; readonly payload?: unknown }` — `id` is a stable public
   identity and reconciliation key. Bound/actionable nodes require a unique, nonempty id; other
   nodes fall back to a deterministic structural `nodePath`. `slot` is honored only when the parent
   type allowlists it, `actionId` arms the type's declared action trigger, and `payload` is echoed
   back in `lr-widget-action`.
-- `WidgetBinding { $bind: string; fallback?: string | number | boolean | null }` — an explicit JSON
+- `LyraWidgetBinding { $bind: string; fallback?: string | number | boolean | null }` — an explicit JSON
   Pointer lookup used as an allowlisted prop value. `fallback` is used only when the pointer cannot
   resolve.
-- `LyraWidgetDocument { version: '2'; root: WidgetNode }` — the sole versioned tree source.
-- `createWidgetDocument(root): LyraWidgetDocument` — mechanical migration helper for former
-  unversioned tree assignments.
+- `LyraWidgetDocument { readonly version: '2'; readonly root: LyraWidgetNode }` — the sole versioned tree source.
+- `createWidgetDocument(root: LyraWidgetNode): LyraWidgetDocument` — creates an immediate frozen
+  version-two snapshot for former unversioned tree assignments. Traversal uses the renderer's depth,
+  node, and per-node prop ceilings; malformed, cyclic, duplicate-id, or hostile structure throws
+  `TypeError`. Node records, child arrays, and prop records are copied and frozen, while opaque prop
+  values and action payloads intentionally retain caller identity.
+
+The package root and the normal `widget-renderer.js` registration entry expose the renderer
+`LyraWidgetRenderer`/`LyraWidgetRendererEventMap` together with the complete stable authoring
+surface: `LyraWidgetNode`, `LyraWidgetBinding`, `LyraWidgetDocument`, `createWidgetDocument`,
+`LyraWidgetPropType`, `LyraWidgetInteraction`, `LyraWidgetTypeDefinition`,
+`LyraWidgetTypeRegistry`, `createWidgetTypeRegistry`, `isWidgetTypeRegistry`, and
+`DEFAULT_WIDGET_TYPE_REGISTRY`. Advanced consumers that need `resolveTree`, `ResolveContext`,
+`ResolvedNode`, `ResolvedText`, or `ResolvedElement` import the explicit expert route
+`@aceshooting/lyra-ui/components/conversation/widget-renderer/resolve.js`. Pointer-reading helpers
+and the resolver's hard safety ceilings remain internal implementation details.
+
+The expert route's exact resolver contracts are `ResolvedText { nodeKey: string; nodePath: string;
+kind: 'text'; text: string; slot?: string }`, `ResolvedElement { nodeId?: string; nodeKey: string;
+nodePath: string; kind: 'builtin-row' | 'builtin-col' | 'builtin-text' | 'mapped'; tag?: string;
+interactive: boolean; props: Record<string, unknown>; actionEvent?: string; actionId?: string;
+payload?: unknown; bindings: Array<{ prop: string; path: string; event?: string }>; children:
+ResolvedNode[]; slot?: string }`, and `ResolveContext { registry: LyraWidgetTypeRegistry;
+bindingState: unknown; warned: Set<string>; warn?: (message: string) => void }`.
+`resolveTree(root: LyraWidgetNode | null | undefined, ctx: ResolveContext): ResolvedNode | null`
+resolves one bounded snapshot; invalid structure returns `null`.
 
 **Properties:**
 
@@ -2607,17 +2648,22 @@ string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is a 
   output, and emits exactly one `lr-render-error`.
 - `bindingState?: unknown` (property only) — explicit controlled binding state. `null` is a real
   state value, not an absence sentinel.
-- `registry: WidgetTypeRegistry = DEFAULT_WIDGET_TYPE_REGISTRY` (property only) — immutable
+- `registry: LyraWidgetTypeRegistry = DEFAULT_WIDGET_TYPE_REGISTRY` (property only) — immutable
   per-instance registry; mutable structural `Map` values are rejected.
 
-**Registry module (`widget-renderer/registry.js`):** `createWidgetTypeRegistry(entries)` validates,
-snapshots, and freezes a unique-key registry. `WidgetTypeDefinition { tag: string; interaction:
+**Registry module (`widget-renderer/registry.js`):**
+`createWidgetTypeRegistry(entries?: Iterable<readonly [string, LyraWidgetTypeDefinition]>):
+LyraWidgetTypeRegistry` validates, snapshots, and freezes a unique-key registry;
+`isWidgetTypeRegistry(value: unknown): value is LyraWidgetTypeRegistry` is its untyped-boundary
+guard. `LyraWidgetTypeRegistry extends ReadonlyMap<string,
+Readonly<LyraWidgetTypeDefinition>> {}` is an opaque branded snapshot, so a mutable structural
+`Map` is not assignable. `LyraWidgetTypeDefinition { tag: string; interaction:
 'none' | 'control'; props?:
 Record<string, 'string' | 'number' | 'boolean'>; forcedProps?: Record<string, unknown>; slots?:
 string[]; action?: { event: string }; bindings?: Record<string, { event: string }> }` — `tag` is
 resolved prefix-aware, `props` is a prop allowlist (a prop absent here, or whose runtime type doesn't
 match, is silently skipped — never assigned),
-`forcedProps` always apply and are never overridable by `WidgetNode.props`, `slots` allowlists child
+`forcedProps` always apply and are never overridable by `LyraWidgetNode.props`, `slots` allowlists child
 `slot` names (a disallowed one renders unslotted rather than being dropped), and `action.event` is
 the native/custom DOM event that arms `lr-widget-action` when a node also sets `actionId`.
 `bindings?: Record<string, { event: string }>` maps an allowlisted prop to the control event that
@@ -2748,18 +2794,18 @@ control changes target; closing or filtering also retires a row-owned preview on
 control represents it. Does not synthesize speech, fetch catalogs, or persist selection; not a
 persona picker; `lr-model-select` stays for LLMs.
 
-**Exported types:** `LyraVoiceCatalogEntry { id: string; label: string; language?: string;
+**Exported types:** `LyraVoiceCatalogEntry extends LyraCatalogEntry { language?: string;
 description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
-`[part="option-meta"]` second line. `LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[]` —
-homogeneous, same union contract as `LyraModelCatalog`. `LyraVoicePickerSize` aliases the shared
-canonical `LyraSizeStep`; the public `size` property additionally accepts the long-form aliases in
-`LyraSize`. `LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none'` is the native
+`[part="option-meta"]` second line. Voice catalogs use the shared
+`LyraCatalog<LyraVoiceCatalogEntry>` homogeneous readonly union documented under `lr-model-select`.
+The public `size` property uses `LyraSize`, including the long-form aliases.
+`LyraVoicePickerSelectionDirection = 'forward' | 'backward' | 'none'` is the native
 selection direction exposed in free-text mode.
 
 **Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
-small leading badge. `catalog?: LyraVoiceCatalog` (attribute: false) — the full voice list; omit (or
-leave empty) to fall back to plain free-text entry; replacing it retires any internal preview before
-the rendered candidate changes. `allowCustom: boolean = false` (attribute
+small leading badge. `catalog?: LyraCatalog<LyraVoiceCatalogEntry>` (attribute: false) — the full
+voice list; omit (or leave empty) to fall back to plain free-text entry; replacing it retires any
+internal preview before the rendered candidate changes. `allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`. `preview:
 boolean = true` (reflected) — whether to render preview affordances at all. `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
@@ -2795,13 +2841,12 @@ still `valueMissing`. The custom error survives every intrinsic recomputation in
 `form.reset()`, matching a native control, and the message is used verbatim, never localized.
 `getForm()` returns the browser-resolved owning form.
 
-**Methods:** `click()` (override) — same forwarding contract as `lr-model-select`'s own `click()`
-override (see that section for the full rationale): closed-dropdown mode forwards a real `.click()`
-to the trigger `<button>`, whose own `@click` handler opens it; free-text mode instead calls
-`.focus()` on the combobox `<input>`, since a synthetic `.click()` on a text input never dispatches
-`focus` the way a real click's `mousedown` default action does, and this mode's open behavior is
-wired to the input's native `focus` event, not a `click` handler on the input itself. Mirrors
-`<lr-button>`'s identical host `click()` forwarding.
+**Methods:** `click()` (override) — closed-dropdown mode forwards a real `.click()` to the trigger
+`<button>`, whose own `@click` handler opens it; free-text mode calls `.focus()` on the combobox
+`<input>`, since a synthetic `.click()` on a text input never dispatches `focus` the way a real
+click's `mousedown` default action does, and this mode's open behavior is wired to the input's
+native `focus` event, not a `click` handler on the input itself. Mirrors `<lr-button>`'s host
+`click()` forwarding while retaining voice-picker's focus-only free-text behavior.
 `focus(options?)` and `blur()` forward to whichever internal control the active mode renders.
 In free-text mode, `input: HTMLInputElement | null`, `selectionStart: number | null`,
 `selectionEnd: number | null`, and `selectionDirection: LyraVoicePickerSelectionDirection | null`
@@ -2814,10 +2859,11 @@ before the input renders.
 **Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
-neither. Plus mirrored native `input`/`change` and re-dispatched `focus`/`blur`: the trigger/input,
-listbox popup, and sibling preview control form one focus boundary, so moving within them does not
-close or touch the picker and only leaving the component emits the outer `blur`. One
-bubbling/composed `lr-invalid` alias fires when native validity fails.
+neither. Plus owner-realm native `input`/`change` (retaining each free-text `InputEvent` payload)
+and native `FocusEvent` `focus`/`blur` (retaining `relatedTarget`), with `lr-focus`/`lr-blur`
+compatibility aliases. The trigger/input, listbox popup, and sibling preview control form one focus
+boundary, so moving within them does not close or touch the picker and only leaving the component
+emits the outer pair. One bubbling/composed `lr-invalid` alias fires when native validity fails.
 
 **Slots:** `label` (custom visible label content), `hint`, `error`.
 
@@ -2854,8 +2900,8 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   standalone `[part="preview-button"]` beside the trigger (previews the active option while open,
   else the committed value) — the per-row `[part="option-preview"]` icon is a pointer-only
   duplicate (`tabindex="-1"`, `aria-hidden="true"`).
-- `catalog` must be homogeneous — the same constraint `lr-model-select`'s `LyraModelCatalog` union
-  documents.
+- `catalog` must be homogeneous — the same shared `LyraCatalog<T>` constraint documented for
+  `lr-model-select`.
 
 **Additional API surface:**
 
@@ -2978,7 +3024,8 @@ frame), `header-actions` (model selection, settings, export controls).
 
 **CSS parts:** `base`, `header`, `heading`, `header-actions`, `body`, `conversation`, `viewport` (the
 composed `lr-chat-viewport`), `messages`, `messages-empty`, `details`, `details-content`, `section`
-(one run/tools/retrieval/grounding/context section), `section-heading`, `composer`, `composer-input`
+(one run/tools/retrieval/grounding/context section), `section-heading`, `composer`, `composer-input`,
+`message`
 (the composed `lr-chat-composer`).
 
 **Themeable custom properties:** shared tokens only.
@@ -3084,8 +3131,9 @@ request. `label` names the prompt section; it is not generic field chrome.
 textarea; empty string hints preserve the browser default.
 `attachments: readonly LyraPromptInputAttachment[] = []`, `attachmentCapabilities: readonly
 LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: LyraPromptSuggestion[] =
-[]`, `commandItems: LyraPromptSuggestion[] = []`, `modelCatalog?: LyraModelCatalog`,
-`voiceCatalog?: LyraVoiceCatalog`,
+[]`, `commandItems: LyraPromptSuggestion[] = []`,
+`modelCatalog?: LyraCatalog<LyraModelCatalogEntry>`,
+`voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>`,
 `sources: LyraSourceEntry[] = []`, `selectedSourceIds: string[] = []`, and `queue:
 PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
@@ -3266,3 +3314,237 @@ remain host-owned.
 ```ts
 import "@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js";
 ```
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-conversation-chat-message-chat-message-contracts`** — Supporting data types and helpers for this component family.
+  `ChatMessageToggleDetail {
+    collapsed: unknown;
+  }`
+
+- **`components-conversation-checkpoint-checkpoint-contracts`** — Supporting data types and helpers for this component family.
+  `CheckpointRestoreDetail {
+    checkpointId: unknown;
+    label: unknown;
+  }`
+
+- **`components-conversation-code-block-code-loader-contracts`** — Supporting data types and helpers for this component family.
+  `loadShikiHighlighter(): unknown`
+  `loadShikiLanguage(/* public names: hl, lang */): unknown`
+
+- **`components-conversation-code-block-shiki-types-contracts`** — Supporting data types and helpers for this component family.
+  `loadShikiHighlighterCore(/* public names: languages */): unknown`
+  `normalizeShikiLanguage(/* public names: lang */): unknown`
+  `ShikiHighlighter {
+    codeToHtml: unknown;
+    code: unknown;
+    options: unknown;
+    getLoadedLanguages: unknown;
+    loadLanguage: unknown;
+    language: unknown;
+  }`
+  `ShikiLanguageInput {
+    name: unknown;
+    scopeName: unknown;
+    displayName: unknown;
+    aliases: unknown;
+    patterns: unknown;
+    repository: unknown;
+  }`
+
+- **`components-conversation-conversation-item-conversation-item-contracts`** — Supporting data types and helpers for this component family.
+  `ConversationItemRenameDetail {
+    conversationId: unknown;
+    label: unknown;
+  }`
+  `ConversationItemSelectDetail {
+    conversationId: unknown;
+  }`
+
+- **`components-conversation-markdown-markdown-loader-contracts`** — Supporting data types and helpers for this component family.
+  `getMarkdownDepsIfLoaded(): unknown`
+  `loadMarkdownAndSanitizer(/* public names: importMarked, importDompurify */): unknown`
+  `loadMarkdownDeps(): unknown`
+  `LyraMarkedParser {
+    defaults: unknown;
+    use: unknown;
+    extensions: unknown;
+    parse: unknown;
+    source: unknown;
+    options: unknown;
+    async: unknown;
+  }`
+  `MarkdownDeps {
+    marked: unknown;
+    DOMPurify: unknown;
+  }`
+  `MarkedExtension {
+    renderer: unknown;
+    extensions: unknown;
+  }`
+  `MarkedModule {
+    Marked: unknown;
+  }`
+  `MarkedParserContext {
+    parser: unknown;
+    parse: unknown;
+    tokens: unknown;
+    parseInline: unknown;
+    renderer: unknown;
+    textRenderer: unknown;
+    listitem: unknown;
+    token: unknown;
+    tablecell: unknown;
+    tablerow: unknown;
+    text: unknown;
+  }`
+  `MarkedRenderer {
+    heading: unknown;
+    this: unknown;
+    token: unknown;
+    depth: unknown;
+    paragraph: unknown;
+    list: unknown;
+    ordered: unknown;
+    start: unknown;
+    items: unknown;
+    code: unknown;
+    lang: unknown;
+    text: unknown;
+    escaped: unknown;
+    codespan: unknown;
+    blockquote: unknown;
+    table: unknown;
+    header: unknown;
+    align: unknown;
+    rows: unknown;
+    link: unknown;
+    href: unknown;
+    title: unknown;
+    image: unknown;
+    html: unknown;
+  }`
+  `preloadMarkdown(): unknown`
+
+- **`components-conversation-message-actions-toolbar-actions-contracts`** — Supporting data types and helpers for this component family.
+  `isLyraToolbarActionProvider(/* public names: value */): unknown`
+  `LyraToolbarAction {
+    id: unknown;
+    disabled: unknown;
+    focus: unknown;
+    options: unknown;
+    setTabIndex: unknown;
+    tabIndex: unknown;
+    matchesEventPath: unknown;
+    path: unknown;
+  }`
+  `LyraToolbarActionProvider {
+    getToolbarActions: unknown;
+  }`
+
+- **`components-conversation-message-feedback-message-feedback-contracts`** — Supporting data types and helpers for this component family.
+  `MessageFeedbackDetailConfiguration {
+    reasons: unknown;
+    commentable: unknown;
+  }`
+  `MessageFeedbackReason {
+    id: unknown;
+    label: unknown;
+  }`
+  `MessageFeedbackSubmitDetail {
+    rating: unknown;
+    reasonIds: unknown;
+    comment: unknown;
+  }`
+
+- **`components-conversation-model-select-model-select-contracts`** — Supporting data types and helpers for this component family.
+  `LyraModelCatalogEntry {
+    icon: unknown;
+    id: unknown;
+    label: unknown;
+  }`
+
+- **`components-conversation-model-settings-panel-model-settings-panel-contracts`** — Supporting data types and helpers for this component family.
+  `ModelSettingsChangeDetail {
+    model: unknown;
+    inCatalog: unknown;
+    temperature: unknown;
+  }`
+
+- **`components-conversation-prompt-input-prompt-input-contracts`** — Supporting data types and helpers for this component family.
+  `LyraPromptInputAttachment {
+    attachmentId: unknown;
+    file: unknown;
+    bytes: unknown;
+    status: unknown;
+    progress: unknown;
+    name: unknown;
+    mimeType: unknown;
+    uri: unknown;
+    version: unknown;
+  }`
+  `LyraPromptSuggestion {
+    insertText: unknown;
+    suggestionId: unknown;
+    label: unknown;
+    description: unknown;
+    icon: unknown;
+  }`
+
+- **`components-conversation-prompt-queue-prompt-queue-contracts`** — Supporting data types and helpers for this component family.
+  `PromptQueueChangeDetail {
+    items: unknown;
+    reason: unknown;
+    itemId: unknown;
+  }`
+  `PromptQueueItem {
+    id: unknown;
+    value: unknown;
+    attachments: unknown;
+    createdAt: unknown;
+    metadata: unknown;
+  }`
+
+- **`components-conversation-selection-toolbar-selection-toolbar-contracts`** — Supporting data types and helpers for this component family.
+  `SelectionActionDetail {
+    action: unknown;
+    text: unknown;
+    anchor: unknown;
+  }`
+
+- **`components-conversation-streaming-text-streaming-text-contracts`** — Supporting data types and helpers for this component family.
+  `looksLikeMarkdown(/* public names: text */): unknown`
+
+- **`components-conversation-suggestion-chips-suggestion-chips-contracts`** — Supporting data types and helpers for this component family.
+  `LyraChatSuggestion {
+    suggestionId: unknown;
+    label: unknown;
+    icon: unknown;
+    detail: unknown;
+  }`
+
+- **`components-conversation-transcript-feed-transcript-feed-contracts`** — Supporting data types and helpers for this component family.
+  `LyraTranscriptEntry {
+    id: unknown;
+    speaker: unknown;
+    text: unknown;
+    interim: unknown;
+    timestamp: unknown;
+  }`
+
+- **`components-conversation-voice-picker-voice-picker-contracts`** — Supporting data types and helpers for this component family.
+  `LyraVoiceCatalogEntry {
+    language: unknown;
+    description: unknown;
+    previewUrl: unknown;
+    id: unknown;
+    label: unknown;
+  }`
+
+- **`internal-catalog-picker-contracts`** — Shared utility contracts.
+  `LyraCatalogEntry {
+    id: unknown;
+    label: unknown;
+  }`

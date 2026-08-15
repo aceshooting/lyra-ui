@@ -106,7 +106,7 @@ describe('lr-commit-card', () => {
       const detailedError = oneEvent(el, 'lr-copy-error');
       button.click();
       const [genericEvent, detailedEvent] = await Promise.all([genericError, detailedError]) as [
-        CustomEvent<undefined>,
+        CustomEvent<null>,
         CustomEvent<{ ok: false; text: string; reason: string; error: unknown }>,
       ];
       await el.updateComplete;

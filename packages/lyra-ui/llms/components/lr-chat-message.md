@@ -22,21 +22,21 @@ chrome: alignment/coloring by `role`, an avatar/badges header row, an optional c
 attachments strip, and a status-aware footer (a live-updating status dot + text, the formatted
 `timestamp`, a built-in retry affordance for `status="failed"`, and an `actions` slot for everything
 else). No built-in copy button is rendered — slot a copy control into `actions` and fire
-`lr-copy` (`detail: { text: string }`) from it if you want one (matching `<lr-json-viewer>`'s
-and `<lr-code-block>`'s copy-affordance event name/shape, for anything listening at the
-conversation-surface level).
+`lr-copy` (fulfilled-only frozen `detail: { ok: true, text }`) from it if you want one (matching
+`<lr-code-block>`'s copy-affordance contract for anything listening at the conversation-surface
+level).
 
 **Properties:**
 
-- `role: ChatMessageRole = 'assistant'` (`'user' | 'assistant' | 'system'`) — reflects to
-  `data-role`, **not** the bare `role` attribute (those role strings aren't valid ARIA role tokens
-  and reflecting to `role` would collide with the element's own ARIA role); a plain `role="..."`
-  attribute set directly in markup is ignored entirely
+- `messageRole: ChatMessageRole = 'assistant'` (`'user' | 'assistant' | 'system'`, attribute
+  `message-role`, reflected) — identifies the author without colliding with the platform `role`
+  attribute. The internal article receives the localized author name and styling exposes the same
+  state through `data-role`; a bare `role="assistant"` is never an authoring API.
 - `status: ChatMessageStatus = 'sent'` (`'sending' | 'sent' | 'failed' | 'streaming'`, reflected) —
   drives the footer's status dot/text, `status="failed"`'s danger treatment on the bubble, and the
   built-in retry button
-- `timestamp?: Date | string` (attribute: false) — accepts a `Date` or anything `new Date()` can
-  parse; invalid input is treated the same as unset (no timestamp rendered)
+- `timestamp?: LyraTimestamp` (`Date | string | number`, attribute: false) — normalizes through the
+  ECMAScript TimeClip domain; invalid or throwing input is treated as unset (no timestamp rendered)
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default
   `hour:minute` (`Intl.DateTimeFormat`, runtime locale) rendering of `timestamp`
 - `collapsible: boolean = false` (reflected) — shows the built-in collapse/expand toggle in the header
@@ -45,16 +45,17 @@ conversation-surface level).
   rendered) — mirrors `lr-widget`'s identical `collapsible`/`collapsed` pair
 - `attachmentsPosition: 'before'|'after' = 'after'` (attribute `attachments-position`) — places the
   `attachments` slot before or after the message body; both the visual and reading order follow it
-- `actionsOutsideBubble: boolean = false` (attribute `actions-outside-bubble`, reflected) — renders
-  the `actions` slot's content as a sibling immediately after `[part="bubble"]` instead of nested
-  inside `[part="footer"]`'s own padding/background box, for a consumer whose action row (e.g. a
-  hover-reveal copy button) must sit visually outside the bubble's chrome
+- `actionsPosition: ChatMessageActionsPosition = 'inside'` (`'inside' | 'outside'`, attribute
+  `actions-position`, reflected) — `'outside'` renders the `actions` slot's content as a sibling
+  immediately after `[part="bubble"]` instead of nested inside `[part="footer"]`'s own
+  padding/background box, for an action row that must sit visually outside the bubble's chrome
 - `messageId: string = ''` (attribute `message-id`, reflected) — optional stable application id;
-  included in `lr-retry` detail when the built-in retry control is activated
+  included in `lr-message-retry` detail when the built-in retry control is activated
 
-**Events:** `lr-retry` (`detail: { messageId?: string }`; fired by the built-in retry button, only
-rendered when `status="failed"`), `lr-collapse-toggle` (`detail: boolean`, the new `collapsed` state — fired when
-the user activates the built-in collapse button)
+**Events:** `lr-message-retry` (`detail: { messageId?: string }`; fired by the built-in retry button,
+only rendered when `status="failed"`). `lr-toggle-request` is cancelable and carries
+`{ collapsed: boolean }`; preventing it vetoes the built-in collapse/expand transaction.
+`lr-toggle` carries that same detail after the accepted state is committed.
 
 **Slots:** default (the message body), `avatar` (an avatar/icon for the message author), `badges`
 (small status/metric chips — e.g. token count, latency, model name — entirely app-supplied), `actions`
@@ -70,7 +71,7 @@ entirely; unset, `status="failed"` renders exactly as before)
 decorative `aria-hidden` dot, absent while `status="sent"`), `status-text` (the visible text twin of
 `status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"` and the
 `failure` slot is empty), `actions` (rendered inside the footer by default; a sibling immediately
-after `bubble` when `actionsOutsideBubble` is set), `failure` (`display: contents` wrapper for the
+after `bubble` when `actionsPosition="outside"`), `failure` (`display: contents` wrapper for the
 `failure` slot; contributes no box when the slot is empty)
 
 **Themeable custom properties:** `--lr-chat-message-max-width` (default `80%` — the bubble's max
@@ -101,13 +102,11 @@ Two matching geometry properties cover the bubble's box:
   shared `--lr-radius`, so a rounder bubble never desyncs those controls from the rest of the
   library.
 
-**Use these instead of a `::part(bubble)` padding/radius override.** A `::part` declaration written
-in the consumer's tree outranks _every_ rule inside this component's shadow tree, so a
-`::part(bubble) { padding: … }` rule silently suppresses the per-`status` treatments layered on the
-same element — `status="failed"`'s danger tint, `status="streaming"`'s border — along with the
-per-role fills above. The two properties are declared as `var()` fallbacks at the point of use and
-never on `:host`, both so they can't shadow an inherited value and so a container can set them once
-above a whole transcript rather than per message.
+**Prefer these to a `::part(bubble)` padding/radius override.** A consumer `::part()` rule wins only
+for the CSS properties it actually declares; changing padding or radius does not erase unrelated
+role/status colors or borders. The named hooks are the stable, narrow geometry contract and can be
+set once above a whole transcript. They are consumed as inline `var()` fallbacks rather than
+declared on `:host`, so the host cannot shadow an inherited value.
 
 Plus shared tokens `--lr-space-xs/-m`, `--lr-color-border`, `--lr-color-surface`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-text-quiet`, `--lr-color-danger`,
@@ -130,7 +129,7 @@ component, auto-imported alongside this one, not an npm peer) for the status-tra
 announcements described below.
 
 ```html
-<lr-chat-message data-role="assistant" status="streaming">
+<lr-chat-message message-role="assistant" status="streaming">
   <span slot="avatar">🤖</span>
   <span slot="badges">gpt-5.4 · 1.2s</span>
   <lr-markdown content="Here's what I found…"></lr-markdown>
@@ -139,7 +138,7 @@ announcements described below.
 <script>
   document
     .querySelector("lr-chat-message")
-    .addEventListener("lr-retry", () => resend());
+    .addEventListener("lr-message-retry", () => resend());
 </script>
 ```
 
@@ -159,7 +158,7 @@ between several values across a single element's lifetime.
 - mounting a message with `status="failed"` (or any other non-`"sent"` status) already set does
   **not** announce anything — only a genuine _later_ transition (`changed.get('status') !==
 undefined`, i.e. not the very first update) triggers the live-region announcement.
-- `lr-retry` carries `{ messageId?: string }`; the field is the component's `messageId` when set,
+- `lr-message-retry` carries `{ messageId?: string }`; the field is the component's `messageId` when set,
   and is omitted otherwise.
 - the header/footer/avatar/badges/attachments/actions wrappers are shown/hidden via the `hidden`
   attribute, not conditional templating. Whether each slot currently has content is checked once via
@@ -168,8 +167,8 @@ undefined`, i.e. not the very first update) triggers the live-region announcemen
   `appendChild` after first paint still triggers native `slotchange`, so this works transparently,
   but any code that manually re-parents already-slotted nodes without a real slot-assignment change
   won't refresh the corresponding wrapper's visibility.
-- `role` intentionally reflects to `data-role`; CSS or selectors that key off role must target
-  `[data-role="user"]` etc., not `[role="user"]`.
+- `messageRole` reflects as `message-role`; the shadow tree separately mirrors it to `data-role` for
+  component styling. Never use `[role="user"]` as author state.
 
 **Additional API surface:**
 

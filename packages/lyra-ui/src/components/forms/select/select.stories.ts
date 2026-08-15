@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraSelect, LyraSelectAppearance, LyraSelectSize } from './select.js';
+import type { LyraSelect } from './select.js';
+import type { LyraAppearance, LyraSizeStep } from '../../../internal/variants.js';
 import type { LyraOption } from '../combobox/option.class.js';
 
 const meta: Meta = {
@@ -167,7 +168,7 @@ export const RichRows: Story = {
  */
 export const Sizes: Story = {
   render: () => {
-    const sizes: LyraSelectSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    const sizes: LyraSizeStep[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
     return html`
       <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
         ${sizes.map(
@@ -399,7 +400,7 @@ export const MigrationAliases: Story = {
 /** `appearance` retunes the trigger surface; `pill` rounds its corners. */
 export const Appearances: Story = {
   render: () => {
-    const appearances: LyraSelectAppearance[] = [
+    const appearances: LyraAppearance[] = [
       'accent',
       'filled',
       'outlined',

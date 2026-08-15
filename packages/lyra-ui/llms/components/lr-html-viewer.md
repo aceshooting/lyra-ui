@@ -20,21 +20,24 @@ inside a bounded, scrollable body.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
-`max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
-precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+`max-height` values, declaration breaks, and `url()` are ignored. A nonempty host `aria-label`
+makes the host the sole named semantic owner; an explicitly empty host label keeps the shadow
+`document` role with an empty name, and an absent host label falls back to `name` or the localized
+label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
 
 **Events:**
+
 - `lr-render-error` with `detail.error` when fetching or sanitizing fails.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-document search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the rendered document.
+DOMRect[] }`) — fired after a selection ends inside the rendered document.
 
 `lr-highlight-activate` is not part of this viewer's event contract: painted sanitized-text
 highlights are passive and cannot be activated.

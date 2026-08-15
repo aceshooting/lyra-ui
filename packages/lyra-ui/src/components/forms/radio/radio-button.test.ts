@@ -183,10 +183,12 @@ describe('size and pill', () => {
     expect(small.height).to.be.closeTo(s.height, 0.5);
   });
 
-  it('keeps every tier at or above the WCAG 2.5.8 24px target height', async () => {
+  it('keeps every tier at or above the WCAG 2.5.8 24px target floor in both axes', async () => {
     for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
-      const base = await baseOf(html`<lr-radio-button size=${size} value="a">A</lr-radio-button>`);
-      expect(base.getBoundingClientRect().height, `${size} height`).to.be.at.least(24);
+      const base = await baseOf(html`<lr-radio-button size=${size} value="a"></lr-radio-button>`);
+      const rect = base.getBoundingClientRect();
+      expect(rect.width, `${size} width`).to.be.at.least(24);
+      expect(rect.height, `${size} height`).to.be.at.least(24);
     }
   });
 

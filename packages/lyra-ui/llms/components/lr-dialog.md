@@ -33,6 +33,10 @@ read, and neither is deprecated.
   therefore emits the full close lifecycle and can be vetoed, where it used to be a silent state
   flip. Markup that renders open from the start (`<lr-dialog open>`) emits nothing.
 - `label: string = ''` — mapped visible title. The richer `label` slot wins over it.
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
+  the generated visible title (string property or rich `label` slot) at that semantic level;
+  invalid untyped values retain level 3, while `none` keeps visual title text without heading
+  semantics. A direct light-DOM heading retains its own native/ARIA level.
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — explicit accessible-only name;
   unlike `label`, it never renders visible text
 - `heading?: string` — legacy visible-title fallback, after the `label` slot and `label` property;
@@ -179,7 +183,7 @@ Otherwise shared tokens include `--lr-space-l/-m/-s`, `--lr-color-surface/-borde
 **Optional peer deps:** none.
 
 ```html
-<lr-dialog id="dlg" closable>
+<lr-dialog id="dlg" heading-level="2" closable>
   <span slot="label">Delete item?</span>
   <button slot="header-actions" type="button">Help</button>
   <p>This cannot be undone.</p>
@@ -278,14 +282,13 @@ button all resolve `false`. It sets `lightDismiss = true` on its transient dialo
 backdrop-click branch survives 8.0.0's flip of that property's own default to `false`. Mounts a
 transient `<lr-dialog>` on `document.body` for the duration
 of the call and removes it once settled, rather than reusing a persistent page-level region
-(contrast `lr-toast`'s `toaster.ts`): a confirmation modal has no stacking/queueing concerns —
-only one is ever meant to be open at a time — so a mount-and-remove per call keeps its lifetime
-trivially tied to the returned promise. `title` becomes a slotted `<h2>`, which per `<lr-dialog>`'s
+(contrast `lr-toast`'s `toaster.ts`). Concurrent calls are distinct dialogs in the shared overlay
+stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
-a slotted `<p>`. `tone: 'danger'` fills the confirm button with `--lr-color-danger` instead of
-`--lr-color-brand`, for destructive actions. Confirm/cancel buttons are plain inline-styled
-`<button>` elements (no shared button component exists in this library yet), but every color value
-used is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
+a direct light-DOM `<p>`. `tone: 'danger'` fills the confirm button with `--lr-color-danger` instead
+of `--lr-color-brand`, for destructive actions. Confirm/cancel actions deliberately use native
+inline-styled `<button>` elements so this helper does not register or import the broader button
+component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
 states as every other control in the library: a hover/pressed fill mixed toward
 `--lr-color-mix-partner` by `--lr-color-mix-hover`/`--lr-color-mix-active`, and a
 `--lr-focus-ring-width`/`--lr-focus-ring-color`/`--lr-focus-ring-offset` `:focus-visible` ring. An
@@ -305,8 +308,8 @@ their `data-lr-confirm-action` attribute.
   `--lr-color-<variant>-on-loud`), which in turn reads the matching `--lr-theme-color-*` hook and
   falls back to the shared neutral ramp — so retheming the grid retints the confirm button with no
   `::part()` rule, in light and dark alike.
-- Importing `confirm` alone is enough to register `<lr-dialog>` — `confirm.ts` imports
-  `./dialog.js` for its side effect, so a consumer doesn't need a separate import for the dialog
-  element.
+- Importing `confirm` is side-effect free and does not register `<lr-dialog>`. Invoking the helper
+  synchronously registers exactly the dialog class it creates before mounting the transient
+  element; consumers do not need a separate registration import for helper-created dialogs.
 
 ---

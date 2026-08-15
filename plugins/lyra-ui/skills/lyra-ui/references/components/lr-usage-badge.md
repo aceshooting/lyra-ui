@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,7 +19,7 @@ Compact, static resource strip for one message or run — tokens in/out, cost, l
 hover/focus tooltip breakdown. Purely formatting: computes no counts, rates, or prices; every segment
 is independently optional, and with nothing set, nothing renders at all (not even a focusable shell).
 The tooltip reuses `lr-tool-call-chip`'s hover/focus/Escape/`aria-describedby` contract wholesale.
-Not `lr-context-meter` (occupancy of a fixed capacity); not `lr-generation-status` (live, with a
+Not `lr-context-meter` (occupancy of a fixed capacity); not `lr-generation-metrics` (live, with a
 Stop button) — this is static after the fact.
 
 **Properties:** `tokensIn?: number` (attribute `tokens-in`) — input tokens, normalized to a
@@ -33,16 +33,19 @@ algorithm (which has no minutes/hours tier) in both the visible strip and the to
 counts render via `Intl.NumberFormat` `notation: 'compact'` (`12345 -> "12K"`); the tooltip always
 shows full grouped figures. This badge has no density mode: the old `compact` spelling of this
 property was removed in 9.0.0 (it collided with `compact`'s density meaning everywhere else in the
-library) — rename `compact` to `abbreviate`; a stale `compact` attribute is inert.
+library) — rename `compact` to `abbreviate`; a stale `compact` attribute is inert. `summary: string =
+''` supplies visible fallback text when no built-in segment is present.
 
-**Slots:** default — extra rows appended below the built-in tooltip breakdown (e.g. cache-read
-tokens); the visible strip itself is prop-driven only.
+**Slots:** `summary` — visible summary when no built-in segment is set (takes precedence over the
+property); `details` — extra rows appended below the built-in tooltip breakdown (e.g. cache-read
+tokens). Interactive descendants are inert because this is a tooltip, while their accessible text
+is mirrored into the trigger description. Details without a visible summary remain non-focusable.
 
-**CSS parts:** `base` (a focusable non-button `role="group"`, only rendered while at least one
-segment or the default slot has content), `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`.
+**CSS parts:** `base` (a focusable non-button `role="group"` only when content is both visible and
+describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`.
 
 ```html
-<lr-chat-message data-role="assistant" status="sent">
+<lr-chat-message message-role="assistant" status="sent">
   <lr-usage-badge
     slot="badges"
     tokens-in="1204"

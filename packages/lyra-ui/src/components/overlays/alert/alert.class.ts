@@ -13,6 +13,7 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { getToastRegion } from '../toast/toast-region.js';
@@ -36,11 +37,27 @@ export type AlertCountdown = 'rtl' | 'ltr' | undefined;
 /** Shoelace's alert tones; `primary` resolves through Lyra's shared brand row. */
 export type AlertVariant = Exclude<LyraVariant, 'brand'> | 'primary';
 
+const ALERT_VARIANT = literalSetConverter<AlertVariant>(
+  ['neutral', 'primary', 'success', 'warning', 'danger'],
+  'primary',
+);
+const ALERT_COUNTDOWN_VALUES = new Set<Exclude<AlertCountdown, undefined>>(['rtl', 'ltr']);
+
+const normalizeAlertCountdown = (value: unknown): AlertCountdown =>
+  typeof value === 'string' && ALERT_COUNTDOWN_VALUES.has(value as Exclude<AlertCountdown, undefined>)
+    ? value as Exclude<AlertCountdown, undefined>
+    : undefined;
+
+const alertCountdownConverter = {
+  fromAttribute: normalizeAlertCountdown,
+  toAttribute: (value: AlertCountdown): string | null => normalizeAlertCountdown(value) ?? null,
+};
+
 export interface LyraAlertEventMap {
-  'lr-show': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-after-hide': CustomEvent<undefined>;
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
 }
 
 interface AlertTransitionRequest {
@@ -150,7 +167,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
       // observes and awaits this exact request instead of starting a second veto point.
       this.openRequest = request;
       this.transitionPromise = completion;
-      if (this.emit(normalized ? 'lr-show' : 'lr-hide', undefined, { cancelable: true }).defaultPrevented) {
+      if (this.emit(normalized ? 'lr-show' : 'lr-hide', null, { cancelable: true }).defaultPrevented) {
         // A veto that arrived through the reflected attribute would otherwise leave the attribute
         // disagreeing with the property.
         this.toggleAttribute('open', this._open);
@@ -175,14 +192,43 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   /** Enables the localized close action. */
   @property({ type: Boolean, reflect: true }) closable = false;
 
-  /** Physical direction in which the optional visual countdown empties. */
-  @property({ reflect: true }) countdown: AlertCountdown;
+  /** Physical direction in which the optional visual countdown empties. Unsupported values
+   *  normalize to the omitted default. */
+  private _countdown: AlertCountdown;
+
+  @property({ reflect: true, converter: alertCountdownConverter })
+  get countdown(): AlertCountdown {
+    return this._countdown;
+  }
+  set countdown(next: AlertCountdown) {
+    const normalized = normalizeAlertCountdown(next);
+    if (this.hasAttribute('countdown') && this.getAttribute('countdown') !== normalized) {
+      if (normalized === undefined) this.removeAttribute('countdown');
+      else this.setAttribute('countdown', normalized);
+    }
+    const old = this._countdown;
+    if (old === normalized) return;
+    this._countdown = normalized;
+    this.requestUpdate('countdown', old);
+  }
 
   /** Milliseconds before automatic dismissal; `Infinity` disables automatic dismissal. */
   @property({ type: Number }) duration: number = Infinity;
 
-  /** Semantic alert tone. */
-  @property({ reflect: true }) variant: AlertVariant = 'primary';
+  /** Semantic alert tone. Unsupported values normalize to `primary`. */
+  private _variant: AlertVariant = 'primary';
+
+  @property({ reflect: true, converter: ALERT_VARIANT })
+  get variant(): AlertVariant {
+    return this._variant;
+  }
+  set variant(next: AlertVariant) {
+    const normalized = ALERT_VARIANT.normalizeReflected(this, 'variant', next);
+    const old = this._variant;
+    if (old === normalized) return;
+    this._variant = normalized;
+    this.requestUpdate('variant', old);
+  }
 
   // Seeded from real light DOM before the first render, so an initially-slotted icon never waits
   // for `slotchange` and fallback-only/empty content never reserves an icon column.

@@ -18,9 +18,10 @@
 A form-associated, country-aware telephone field. The submitted `value` is either canonical E.164
 (for example `+352621123456`) or `''` while the editable input is empty, incomplete, or invalid.
 Numbering-plan metadata and national formatting stay outside Lyra's base bundle: supply a
-synchronous `PhoneNumberAdapter`, or lazily create one from a `libphonenumber-js`-compatible module
+synchronous `LyraPhoneNumberAdapter`, or lazily create one from a `libphonenumber-js`-compatible module
 with `loadLibphonenumberAdapter()`. Without an adapter, already-international E.164 input still
-normalizes and validates; national input remains editable with `incomplete` validity.
+normalizes and validates; national input remains editable with `incomplete` validity. The loader
+returns its discovered country catalog as a frozen array of frozen records.
 
 The country selector keeps the real native `<select>` (localized full country names in its popup,
 native mobile pickers, keyboard type-ahead) but stretches it invisibly over a compact decorative
@@ -36,24 +37,30 @@ the same rendered action-height ladder as input, number-input, and segmented tim
 **Types:**
 
 ```ts
-type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
+type LyraPhoneNumberStatus = "empty" | "incomplete" | "invalid" | "valid";
 
-interface PhoneCountry {
-  code: string; // ISO 3166-1 alpha-2
-  callingCode: string; // no leading "+"
-  label?: string; // overrides Intl.DisplayNames
+interface LyraPhoneCountry {
+  readonly code: string; // ISO 3166-1 alpha-2
+  readonly callingCode: string; // no leading "+"
+  readonly label?: string; // overrides Intl.DisplayNames
 }
 
-interface PhoneNumberParseResult {
-  status: PhoneNumberStatus;
-  e164?: string; // required for status: 'valid'
-  formatted?: string; // best-effort editable display text
-  country?: string; // detected ISO alpha-2 code
-}
+type LyraPhoneNumberParseResult =
+  | {
+      status: "empty" | "incomplete" | "invalid";
+      formatted?: string; // best-effort editable display text
+      country?: string; // detected ISO alpha-2 code
+    }
+  | {
+      status: "valid";
+      e164: string; // required and E.164-shaped on the only successful branch
+      formatted?: string;
+      country?: string;
+    };
 
-interface PhoneNumberAdapter {
-  readonly countries?: readonly PhoneCountry[];
-  parse(input: string, country?: string): PhoneNumberParseResult;
+interface LyraPhoneNumberAdapter {
+  readonly countries?: readonly LyraPhoneCountry[];
+  parse(input: string, country?: string): LyraPhoneNumberParseResult;
 }
 ```
 
@@ -66,10 +73,15 @@ interface PhoneNumberAdapter {
   through `effectiveDisabled`.
 - `defaultValue: string = ''` (attribute `value`) is the reset target, and `customError: string |
 null` (attribute `custom-error`) carries a consumer-supplied validation message.
-- `adapter?: PhoneNumberAdapter` (attribute: false) — synchronous numbering-plan parser/formatter.
-  No metadata implementation is imported by the component itself.
-- `countries: readonly PhoneCountry[] = []` (attribute: false) — explicit selector rows; takes
-  precedence over `adapter.countries`.
+- `adapter?: LyraPhoneNumberAdapter` (attribute: false) — synchronous numbering-plan
+  parser/formatter. No metadata implementation is imported by the component itself. Runtime
+  results are validated exhaustively: unknown statuses, hostile getters, wrong optional-field
+  types, and a `valid` result without E.164 all fail closed to `invalid`.
+- `countries?: readonly LyraPhoneCountry[]` (attribute: false) — `undefined` discovers
+  `adapter.countries`; every supplied array, including `[]`, is authoritative. Rows are copied and
+  validated at the boundary; a row without a two-letter code or 1–3 digit calling code, a duplicate,
+  or a throwing getter is skipped without hiding later valid rows. Explicit and adapter-provided
+  catalogs are bounded to 512 rows and captured as frozen owned snapshots when assigned.
 - `defaultCountry: string = ''` (attribute `default-country`) — selected when `country` has not been
   set explicitly.
 - `flags: boolean = false` (reflected) — show the selected country's flag in the country trigger as
@@ -89,7 +101,10 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   `lr-input`'s own `pill`. It re-assigns `--lr-phone-input-radius` to `--lr-radius-pill`, and the
   country trigger's leading corners follow, since both read that one knob
 - `country: string` — current uppercase ISO alpha-2 selection; falls back to `defaultCountry`, then
-  the first explicit/adapter country. Changing the country reparses the editable number.
+  the first explicit/adapter country. A requested or adapter-detected country absent from the
+  effective catalog resolves to that same valid fallback before property, trigger, native select,
+  calling-code, and parser projection. An empty effective catalog resolves to `''`. Changing the
+  country reparses the editable number.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
   visible form-field chrome; each has a matching named slot.
 - `placeholder: string = ''` — forwarded to the native telephone input.
@@ -115,15 +130,28 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   message, localized through the same shared key while left at its default.
 - `autocomplete: string = 'tel'`, `inputmode: 'tel'|'numeric'|'text' = 'tel'`,
   `enterkeyhint: string = ''` — forwarded to the internal `<input type="tel">`.
+- `readonly: boolean = false` (reflected) — forwards to the native telephone input, locks the
+  country selector and all user edit handlers, and bars validation while retaining focus,
+  selection/copying, canonical form value, and submission.
+- `autofocus: boolean = false` (reflected) — forwarded to the actual native telephone input; it is
+  never stranded on the non-focusable host.
 - readonly `input: HTMLInputElement | undefined` — the internal native telephone input.
 - readonly `inputValue: string` — editable formatted/partial text, which remains available even when
   canonical `value` is `''`.
 - `selectionStart`, `selectionEnd`, and `selectionDirection` — native selection getters/setters
   forwarded to the telephone input
-- readonly `phoneStatus: PhoneNumberStatus` — current parse state. The host also reflects it through
+- readonly `phoneStatus: LyraPhoneNumberStatus` — current parse state. The host also reflects it through
   `data-phone-status`.
 - readonly `form`, `labels`, `validity`, `validationMessage`, `willValidate`, and
   `effectiveDisabled` — the shared form-associated native-like getters.
+
+**Events:** each text edit emits native `InputEvent` `input` then `lr-input`; telephone-input commit
+emits native `Event` `change` then `lr-change`; and a country pick emits both pairs in order:
+`input`, `lr-input`, `change`, `lr-change`. Native events carry no custom detail; the aliases carry
+`{ value, inputValue, country, valid, status }`.
+Internal `focus`/`blur` are relayed once as realm-correct native `FocusEvent`s preserving `relatedTarget`,
+followed by `lr-focus`/`lr-blur`. `lr-invalid` has no detail and is the one bubbling/composed alias
+when native validity fails. Programmatic value writes remain silent.
 
 **Validity:** empty + `required` sets `valueMissing`; incomplete dial-like input sets `badInput`;
 completed-invalid input sets `typeMismatch`; valid E.164 input clears all three. Partial or invalid
@@ -140,18 +168,6 @@ control's intrinsic phone-number validity. `resetValidity()` clears only that co
 recomputes the current phone-number constraints; it does not change the editable/canonical value,
 the reset default, or prior interaction state.
 `form.reset()` restores the original declarative `value` and the default country.
-
-**Events:**
-
-- `input` — every user edit and country change.
-- `change` — native telephone-input commit timing and every country change.
-- `focus` / `blur` — bubbling, composed bridges for the internal native input's non-crossing focus
-  events.
-- `lr-invalid` — no detail; one bubbling/composed alias when native validity fails.
-
-`input`/`change` detail is
-`{ value: string; inputValue: string; country: string; valid: boolean; status: PhoneNumberStatus }`.
-Programmatic property assignments and form reset/state restoration are silent.
 
 **Slots:** `label`, `hint`, `error`, `country-prefix` (optional visual before the country selector,
 such as a consumer-owned `<lr-flag>`; no flag package is imported automatically).
@@ -180,6 +196,9 @@ to pin an exact input-wrapper height (both floors and caps it — use it for pix
 as a floor only). The phone-number input and calling code are deliberately `dir="ltr"`/isolated
 because telephone numbers are algorithmic content; surrounding form chrome and the country selector
 inherit LTR/RTL and use logical spacing/borders.
+The native country selector's hover and press backgrounds are supplemented in forced-colors mode
+with dashed/solid `Highlight` outlines, so those states do not collapse when the UA flattens the
+background tint to `Canvas`.
 
 **Optional peer deps:** `libphonenumber-js` is declared optional but never imported by Lyra itself.
 For full national parsing/formatting, install it in the consuming app and pass it through the
@@ -187,11 +206,13 @@ consumer-supplied lazy loader below. Because the import expression lives in cons
 numbering metadata enters a bundle that does not opt in.
 
 ```ts
-import '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js';
-import { loadLibphonenumberAdapter } from '@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js';
+import "@aceshooting/lyra-ui/components/forms/phone-input/phone-input.js";
+import { loadLibphonenumberAdapter } from "@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js";
 
-const phone = document.querySelector('lr-phone-input');
-phone.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'));
+const phone = document.querySelector("lr-phone-input");
+phone.adapter = await loadLibphonenumberAdapter(
+  () => import("libphonenumber-js/min")
+);
 ```
 
 ```html
@@ -206,21 +227,26 @@ phone.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/
 
 ```ts
 // Country flags in the trigger (optional): same peer contract as a standalone <lr-flag>.
-import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
+import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 ```
 
 ```html
-<lr-phone-input label="Mobile number" flags default-country="LU"></lr-phone-input>
+<lr-phone-input
+  label="Mobile number"
+  flags
+  default-country="LU"
+></lr-phone-input>
 ```
 
 **Known gotchas:**
 
 - An adapter's `parse()` method is synchronous because it runs on every keystroke. Load any optional
-  module first, then assign the resolved adapter. Adapter exceptions degrade to the E.164-only
-  fallback rather than breaking editing.
-- A valid adapter result must include an E.164-shaped `e164`; a malformed "valid" result is treated
-  as invalid instead of entering form submission.
-- Country names use `Intl.DisplayNames` and fall back to the ISO code; set `PhoneCountry.label` for
+  module first, then assign the resolved adapter. Once an adapter is assigned, exceptions and
+  malformed results fail closed to `invalid`; only the no-adapter mode uses the E.164-only fallback.
+- A valid adapter result must include an E.164-shaped `e164`; the discriminated result type makes
+  that requirement statically visible and runtime normalization prevents malformed success from
+  entering form submission.
+- Country names use `Intl.DisplayNames` and fall back to the ISO code; set `LyraPhoneCountry.label` for
   a product-specific name. Calling codes are data, not derived by the component.
 - The component never imports `@aceshooting/lyra-flags` itself, with `flags` or without. `flags`
   lazily registers only the `<lr-flag>` element; the artwork resolver comes from the consumer's own

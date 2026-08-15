@@ -21,12 +21,13 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
 `focusNode(id, options?)`.
 
 **Properties:**
+
 - `entity: LyraEntity | null = null` (attribute: false) — `LyraEntity { id: string; label: string;
-  type?: string; description?: string; properties?: Record<string, string | number>; degree?:
-  number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `GraphNode`
+type?: string; description?: string; properties?: Record<string, string | number>; degree?:
+number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `LyraGraphNode`
   additions, so a graph node adapts into a `LyraEntity` with no mapping table; `null` renders the
   empty state
-- `types: NodeTypeStyle[] = []` (attribute: false) — the same `lr-graph.nodeTypes`/
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — the same `lr-graph.nodeTypes`/
   `lr-graph-legend.types` entry shape, resolving `entity.type` to a label/color for the badge
 - `communityLabel: string = ''` (attribute `community-label`) — override text for the community chip
 - `showFocusButton: boolean = true` (attribute `show-focus-button`)
@@ -64,15 +65,24 @@ from tokens.
 ```html
 <lr-entity-card id="card"></lr-entity-card>
 <script>
-  document.getElementById('card').entity = {
-    id: 'e1', label: 'Ada Lovelace', type: 'person',
-    description: 'Mathematician', properties: { born: 1815 }, degree: 4,
+  document.getElementById("card").entity = {
+    id: "e1",
+    label: "Ada Lovelace",
+    type: "person",
+    description: "Mathematician",
+    properties: { born: 1815 },
+    degree: 4,
   };
-  document.getElementById('card').addEventListener('lr-entity-activate', (e) => graph.focusNode(e.detail.id));
+  document
+    .getElementById("card")
+    .addEventListener("lr-entity-activate", (e) =>
+      graph.focusNode(e.detail.id)
+    );
 </script>
 ```
 
 **Known gotchas:**
+
 - The type badge's data-driven background uses an 8% (not this codebase's usual 16%) quiet-tint mix
   against `--lr-color-surface` — the lower percentage is required to hold WCAG AA 4.5:1 text
   contrast for arbitrary, unvetted type colors (even 10% isn't safe margin for every hue in the

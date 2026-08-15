@@ -5,17 +5,23 @@ import { styles } from './button.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-button', () => {
-  it('bridges a host invalid check to one non-cancelable lr-invalid alias', async () => {
+  it('emits a cancelable lr-invalid alias and forwards its veto to the native invalid event', async () => {
     const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
-    const aliases: CustomEvent[] = [];
-    el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
+    let alias: CustomEvent | undefined;
+    let aliasTargetedHost = false;
+    el.addEventListener('lr-invalid', (event) => {
+      alias = event;
+      aliasTargetedHost = event.target === el;
+      event.preventDefault();
+    });
+    const native = new Event('invalid', { cancelable: true });
 
-    el.dispatchEvent(new Event('invalid', { cancelable: true }));
-
-    expect(aliases).to.have.lengthOf(1);
-    expect((aliases[0].target) === (el)).to.equal(true);
-    expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-    expect(aliases[0].cancelable).to.be.false;
+    expect(el.dispatchEvent(native)).to.equal(false);
+    expect(aliasTargetedHost).to.equal(true);
+    expect(alias?.bubbles && alias.composed).to.equal(true);
+    expect(alias?.cancelable).to.equal(true);
+    expect(alias?.defaultPrevented).to.equal(true);
+    expect(native.defaultPrevented).to.equal(true);
   });
 
   it('defaults to neutral/accent/m/button with a slotted label', async () => {

@@ -5,6 +5,18 @@ visible `[part="spinner"]` treatment. Its localized label is ordinary readable t
 without CSS), its decorative ring stops under reduced motion, and `[part="base"]` exposes explicit
 `aria-busy="true"|"false"` while transition announcements remain in the shared document-level sink.
 
+Viewer search events use `detail: { query, matchCount, matchCountExact, activeIndex }`.
+`matchCountExact: false` means the retained `matchCount` is a known lower bound, never an exact
+total. Viewers built on the shared DOM-text target index at most 1,000,000 UTF-16 code units /
+20,000 text nodes, accept query and text-quote fields up to 4,096 code units, retain 10,000 matches,
+and bound one search/paint pass to 4,000,000 scanned code units; they paint at most 200 search ranges
+and 100 host highlights after inspecting 1,000 highlight entries, while always reserving the active
+host highlight. DOCX quote painting uses the same corpus/query/work ceilings and the same
+1,000-candidate/100-painted limits. CSV, dataset, spreadsheet, and DOCX search retain 1,000
+matches; PDF, PPTX, ebook, and XML retain 10,000. Counts at the exact boundary remain exact after an
+extra-match check. SVG/XML paint at most 100 resolved host highlights after inspecting 1,000
+candidates, with `activeHighlightId` inspected first.
+
 ## `lr-document-preview`
 
 A format-dispatching viewer for one document/attachment, plus the visual state machine for an async
@@ -70,7 +82,7 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
 - `suppressDownload: boolean = false` (attribute: false) — omits the generic fallback's download
   action when a composing shell already owns that action. This is property-only composition state;
   it does not suppress inline preview rendering.
-- `highlights: LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
   over the image-format preview; ignored for the `text`/`generic` formats. A rectangle renders only
   when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
@@ -218,6 +230,11 @@ value, without suppressing the visible `name` heading.
 - `name: string = ''` — display name passed to the renderer and used as the dialog heading.
 - `mimeType: string = ''` (attribute `mime-type`) — MIME type used for exact renderer dispatch.
 - `src: string = ''` — source URL passed to the selected renderer or the fallback preview.
+- `payload?: LyraDocumentRendererPayload` (attribute: false) — opt-in renderer-specific input.
+  Assignment immediately clones, validates, bounds, and freezes the payload. While set,
+  `payload.file` is authoritative for MIME dispatch, the dialog heading, renderer/fallback input,
+  anchors/highlights, and download; the scalar `name`, `mimeType`, `src`, `anchor`, `highlights`,
+  and `alt` properties resume their legacy behavior when `payload` is reset to `undefined`.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry override;
   when unset, the instance owns an immutable snapshot of the built-ins registered when it was
   constructed. A later module import/registration cannot mutate an existing viewer. A throwing
@@ -229,7 +246,7 @@ value, without suppressing the visible `name` heading.
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
   `hasChanged: () => true`, so re-assigning the same value (e.g. re-clicking the same citation
   badge) still re-fires.
-- `highlights: LyraHighlight[] = []` (attribute: false) — highlights forwarded to the resolved
+- `highlights: readonly LyraHighlight[] = []` (attribute: false) — highlights forwarded to the resolved
   renderer.
 
 **Events:**
@@ -260,19 +277,43 @@ size of `[part="body"]` before the dialog body scrolls internally.
 
 **Renderer registry exports:**
 
-- `DocumentFile` — `{ name: string; mimeType: string; src: string }`, the value passed to renderers.
-- `DocumentRendererDefinition` — a validated discriminated direct `{ render, matches?,
-capabilities? }` or lazy `{ load, matches?, capabilities? }` definition; exactly one of `render`
-  and `load` is required.
+- `DocumentFile` — the compatible mutable file object passed unchanged to legacy `render(file)` and
+  `matches(file)` callbacks: `{ name, mimeType, src, anchor?, highlights?, alt? }`.
+- `LyraDocumentFile` — the readonly file snapshot wrapped by every discriminated payload.
+- `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av'` discriminated input wrapping an
+  immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at most 10,000
+  cues and 64 tracks, clone and freeze every retained record, and bound every retained string.
+- `LyraGenericDocumentRendererPayload` / `LyraAvDocumentRendererPayload` — the concrete
+  `kind: 'document'` and `kind: 'av'` branches. `LyraDocumentRendererPayloadKind` names their kind
+  union, and `LyraDocumentRendererPayloadFor<K>` extracts one branch for adapter authoring.
+- `LyraDocumentRendererAdapterDefinition<K>` / `LyraDocumentRendererAdapter` — strongly typed
+  authoring input and its factory-created, type-erased registry form. The callbacks adapt the legacy
+  file to one payload kind, derive capabilities from that retained payload, and render it.
+- `DocumentRendererDefinition` (also `LyraDocumentRendererDefinition`) — a validated direct
+  `{ render, matches?, capabilities? }`, adapted `{ adapter, matches? }`, or lazy
+  `{ load, matches?, capabilities? }` definition; exactly one of `render`, `adapter`, and `load` is
+  required. Static capabilities are rejected on adapted definitions so their adapter remains the
+  single source of truth. Adapted definitions register eagerly; a lazy definition resolves a
+  legacy direct renderer, keeping the static and payload-derived capability branches distinct.
+- `LyraAdaptedDocumentRendererDefinition` / `LyraResolvedDocumentRendererDefinition` — the adapted
+  registry branch and the union of both immediately renderable branches. `LyraAdaptedDocumentRenderer`
+  is the frozen payload/capabilities/render invocation returned by `adaptDocumentRenderer()`.
 - `DocumentRendererRegistry` — `ReadonlyMap<string, DocumentRendererDefinition>`.
+- `createDocumentRendererAdapter(definition)` — preserves discriminator-specific callback types
+  while producing the validated adapter accepted by a registry definition.
+- `adaptDocumentRenderer(definition, file, payload?)` — binds one resolved definition to an
+  immutable payload and derives its frozen capabilities. A legacy definition still receives the
+  original `DocumentFile` object by identity.
+- `snapshotLyraDocumentRendererPayload(payload)` — returns the same validated, bounded, frozen
+  assignment snapshot used by `<lr-document-viewer>`.
 - `createDocumentRendererRegistry(overrides?)` — returns a truly immutable built-in snapshot plus
   optional per-instance overrides. MIME keys are trimmed, lowercased, and reduced to their essence.
 - `registerDocumentRenderer(key, definition)` — adds or replaces a built-in-builder entry for
   registry snapshots created later; it never mutates existing instances.
 - `findDocumentRenderer(file, registry?)` — checks normalized MIME essence (case-insensitive and
   parameter-independent), then the first matching `matches()` entry in registration order.
-- `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy definition; rejected loads
-  are retried on the next call.
+- `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy direct definition;
+  rejected loads are retried on the next call.
 
 ```html
 <lr-document-viewer
@@ -294,6 +335,23 @@ const registry = createDocumentRendererRegistry([
 ]);
 
 html`<lr-document-viewer .registry=${registry}></lr-document-viewer>`;
+```
+
+Supply AV metadata without widening every legacy renderer callback. The built-in AV adapter always
+declares `time-range` anchors and declares search only when the retained cue snapshot contains
+non-whitespace transcript or speaker text:
+
+```ts
+import type { LyraDocumentRendererPayload } from "@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js";
+
+const payload = {
+  kind: "av",
+  file: { name: "episode.mp4", mimeType: "video/mp4", src: "/episode.mp4" },
+  cues: [{ id: "intro", start: 0, text: "Welcome", speaker: "Host" }],
+  tracks: [{ src: "/episode-en.vtt", kind: "captions", srclang: "en", label: "English" }],
+} satisfies LyraDocumentRendererPayload;
+
+html`<lr-document-viewer open .payload=${payload}></lr-document-viewer>`;
 ```
 
 When no renderer matches, the viewer renders `<lr-document-preview>`, which handles text and images
@@ -319,10 +377,11 @@ keyboard actions are exposed only for highlights whose quote resolves in the cur
 document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`). A host `aria-label` names the rendered document by attribute presence, including an
-explicitly empty value; `name` and the localized label are fallbacks. `maxHeight` caps the
+`max-height`). A nonempty host `aria-label` makes the host the sole named semantic owner. With an
+explicitly empty host label, the shadow document keeps `role="document"` and an empty accessible
+name; when the attribute is absent, `name` and the localized label are fallbacks. `maxHeight` caps the
 scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
-ignored. The inherited anchor-target properties are `highlights: LyraHighlight[] = []` (property
+ignored. The inherited anchor-target properties are `highlights: readonly LyraHighlight[] = []` (property
 only; reassign after mutation), `activeHighlightId: string | null = null` (attribute
 `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (property only), and
 `anchorKinds: readonly LyraAnchorKind[] = ['fragment', 'text-quote']` (this viewer's supported
@@ -338,8 +397,8 @@ painted marks.
 **Events:** `lr-render-error` with `detail.error` only when fetching, conversion, or sanitization
 fails terminally. Non-fatal Mammoth conversion messages emit `lr-viewer-diagnostic` instead;
 `detail.diagnostic` is readonly `{ code: 'docx-conversion-message', severity: 'warning', fatal:
-false, source: 'mammoth', cause }`. `lr-search-change` (`detail: { query, matchCount, activeIndex
-}`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+false, source: 'mammoth', cause }`. `lr-search-change` (`detail: { query, matchCount,
+matchCountExact, activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 `lr-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked or its
 resolved keyboard action was activated.
 `lr-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered
@@ -404,8 +463,10 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
 (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
-localized show/hide toggle. `false` (the default) preserves the full body rendering. A host
-`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+localized show/hide toggle. `false` (the default) preserves the full body rendering. A nonempty
+host `aria-label` makes the host the sole named semantic owner; an explicitly empty host label
+keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
+localized label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
@@ -416,7 +477,7 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
   `Uint8Array` of the decoded attachment — an attachment button was activated.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-message search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
@@ -467,7 +528,7 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 **Events:**
 
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-calendar search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
@@ -517,7 +578,7 @@ reassignment mid-flight, or whose row cannot be located after the wait, reports 
 rather than a phantom success.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
-`lr-search-change` (`detail: { query, matchCount, activeIndex }`) from search, navigation, and
+`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search, navigation, and
 clear; `lr-text-select` (`detail: { text, anchor, rects }`) for a selection contained within one
 entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution.
 `lr-highlight-activate` is not part of this viewer's event contract: archive entry-path highlights
@@ -591,7 +652,7 @@ clears the query, matches, and painted search annotation.
 
 **Events:** `lr-render-error` with `detail.error` when fetching, opening, or rendering fails;
 `lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
-`lr-search-change` (`detail: { query, matchCount, activeIndex }`) from `search()`/`searchNext()`/
+`lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from `search()`/`searchNext()`/
 `searchPrevious()`/`clearSearch()`; `lr-anchor-result` (`detail: { found }`) after an anchor is
 applied; `lr-highlight-activate` (`detail: { id }`) when a painted CFI highlight is clicked; and
 `lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
@@ -674,7 +735,7 @@ results. `scrollToAnchor()` remains available for renderer output that exposes D
   `nodeId` when valid. Recoverable events keep the mounted deck usable and do not also emit
   `lr-render-error`; fatal events enter the localized error state, destroy the adapter, and emit the
   terminal event once.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-presentation search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
@@ -743,7 +804,7 @@ inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable 
 an inspection surface opts in. `anchor: LyraAnchor | string | null = null` (attribute: false) —
 declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry's `id`). Assigning it
 calls `scrollToAnchor()` and fires `lr-anchor-result`; re-assigning the same value re-triggers the
-scroll, it is not reference-gated. `highlights: LyraHighlight[] = []` (attribute: false) —
+scroll, it is not reference-gated. `highlights: readonly LyraHighlight[] = []` (attribute: false) —
 display-only `region` highlights painted over the rendered SVG; unchanged behavior, now inherited
 from `DocumentAnchorTarget` rather than declared locally. A region rectangle renders/resolves only
 when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
@@ -809,8 +870,10 @@ inside a bounded, scrollable body.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
-`max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
-precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+`max-height` values, declaration breaks, and `url()` are ignored. A nonempty host `aria-label`
+makes the host the sole named semantic owner; an explicitly empty host label keeps the shadow
+`document` role with an empty name, and an absent host label falls back to `name` or the localized
+label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
@@ -819,7 +882,7 @@ precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 **Events:**
 
 - `lr-render-error` with `detail.error` when fetching or sanitizing fails.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-document search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
@@ -884,7 +947,7 @@ malformed or extra cells are never silently presented as a clean parse; exceedin
 budget is a resource-limit error instead.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
-`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
+`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
@@ -943,7 +1006,7 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 **Events:**
 
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-contact search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
@@ -1003,7 +1066,7 @@ nonnegative dimensions.
 - `lr-page-change` — `detail: { page, pageCount }` — fired for scroll-driven page crossings as well
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
 - `lr-zoom-change` — `detail: { zoom }`.
-- `lr-search-change` — `detail: { query, matchCount, activeIndex }` — from `search()`/`searchNext()`/
+- `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
   `searchPrevious()`/`clearSearch()`. A `src` change resets search state _silently_ (no event), since
   match page/offset coordinates only mean anything for the document they were found in.
 - `lr-highlight-activate` — `detail: { id }` — a painted highlight was clicked or activated via
@@ -1040,7 +1103,7 @@ carries its own part name), `page-indicator`, `zoom-indicator`, `pages`, `page`,
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
 text layer around one search match), `search-match-active` (the currently active match, also carries
-`search-match`), `spinner`, and `error`. Search painting is best-effort: a page outside the
+`search-match`), `page-error`, `page-error-visible`, `spinner`, and `error`. Search painting is best-effort: a page outside the
 virtualized render window is skipped and repainted once its text layer mounts, and a match spanning a
 text-layer span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable
 via `searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden
@@ -1106,7 +1169,7 @@ matches, and painted marks.
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
-`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
+`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
@@ -1171,7 +1234,7 @@ painted marks.
 resource-limit error instead.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
-`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
+`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
@@ -1264,7 +1327,7 @@ against the new fragment rather than leaving results from the previous content.
   also the name every other Lyra component uses for a load failure, so a generic page-level
   listener catches this one too. Listening to both names on the same element runs your handler
   twice for one failure.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever included-content search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
@@ -1357,7 +1420,7 @@ truth.
 **Properties:** `viewer: PageThumbnailSource | null = null` (attribute: false) — the wired viewer.
 `for: string = ''` — an id selector alternative to setting `viewer` directly. `pageCount: number = 0`
 (attribute `page-count`) and `page: number = 1` (reflected) — mediated-mode page state.
-`highlights: LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers.
+`highlights: readonly LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers.
 `thumbWidth: number = 96` (attribute `thumb-width`) and `label: string = ''`. A wired
 `PageThumbnailSource` provides its one-based `page`, optionally exposes the atomic
 `pageViewerSnapshot`/`lr-page-viewer-state-change` protocol, and supplies at least one lazy preview
@@ -1432,7 +1495,7 @@ collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (at
 `max-height`) — once set, the notebook scrolls internally past this height; invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for
-the shared anchor-target contract). The inherited carrier fields `highlights: LyraHighlight[] = []`
+the shared anchor-target contract). The inherited carrier fields `highlights: readonly LyraHighlight[] = []`
 (property only) and `activeHighlightId: string | null = null` (attribute `active-highlight-id`) are
 available for structural anchor-target compatibility, but this viewer does not paint them; use
 `anchor: LyraAnchor | string | null = null` or `scrollToAnchor()` for notebook-cell navigation.
@@ -1447,7 +1510,7 @@ matches.
 
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
-`lr-search-change` — `detail: { query, matchCount, activeIndex }`. `lr-render-error` —
+`lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`. `lr-render-error` —
 `detail: { error }`, fetching, parsing, or validating the notebook failed. `lr-anchor-result` —
 non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment or a
 `scrollToAnchor()` call is applied.
@@ -1546,8 +1609,8 @@ coarser granularity, and an entry inside a collapsed subtree paints once that su
 `detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
 show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-error` with
 `detail: { ok: false, text, reason, error }`; `reason` is `'unsupported'`, `'denied'`, or `'failed'`.
-`lr-search-change` — `detail: { query, matchCount,
-activeIndex }`. `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
+`lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }`.
+`lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
 parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
 boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
 `lr-highlight-activate` — non-cancelable; `detail: { id }`, fired when a highlight's
@@ -1564,7 +1627,7 @@ tree, rather than resolving indistinguishably from the bare element path),
 `attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
 `toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
 elements), `highlight-action` (the focusable button a resolved `highlights` entry adds to its element
-row), `error`, `spinner`.
+row), `toggle-placeholder` (the empty toggle-column spacer on leaf rows), `error`, `spinner`.
 The spinner always includes visible localized loading text alongside its decorative ring; the text
 remains understandable without CSS or animation and the ring stops under reduced motion.
 
@@ -1622,8 +1685,9 @@ instruction children rather than only element descendants.
 Comparison surface for two document versions, using `lr-diff-view` for textual diffs and
 `lr-document-preview` for side-by-side rendered content.
 
-A host `aria-label` names the comparison group by attribute presence, including an explicitly empty
-value; the localized comparison label is used only when that attribute is absent.
+A nonempty host `aria-label` makes the host the sole named semantic owner. With an explicitly empty
+host label, the shadow comparison group keeps `role="group"` and an empty name; when the attribute
+is absent, it uses the localized comparison label. Dynamic host-label changes update that ownership.
 
 **Properties:**
 
@@ -1632,9 +1696,11 @@ value; the localized comparison label is used only when that attribute is absent
   (`id`, `name`, `mimeType?`, `uri?`, `version?`) with `text?: string` for diff mode and
   `highlights?: LyraHighlight[]` for its own preview pane.
 - `view: 'diff' | 'side-by-side' = 'diff'` (reflected) — one inline text diff or two rendered
-  preview panes.
+  preview panes. Invalid property or attribute values normalize to `diff` and repair the reflected
+  attribute.
 - `diffLayout: 'unified' | 'split' = 'unified'` (attribute `diff-layout`, reflected) — forwarded
-  to `lr-diff-view` in diff mode.
+  to `lr-diff-view` in diff mode. Invalid property or attribute values normalize to `unified` and
+  repair the reflected attribute.
 - `copyable: boolean = false` — forwards the diff copy action.
 - `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
   attribute: false) — optional syntax highlighting forwarded to the diff.
@@ -1665,7 +1731,7 @@ clipboard failure bubbles `lr-error` plus `lr-copy-error`
 **Themeable custom properties:** `--lr-document-compare-pane-max-height` (default
 `var(--lr-size-24rem)`) — maximum block size of a `side-by-side` pane before it scrolls internally.
 
-## `lr-geojson-viewer`
+## `lr-geojson-viewer` / `lr-geojson-view`
 
 Document-registry bridge that fetches, validates, and renders a GeoJSON file through `<lr-map>`'s
 `dataLayers`. The canonical class is `LyraGeoJsonViewer`; the pre-v9 `lr-geojson-view` tag and
@@ -1700,7 +1766,7 @@ text, independent of whether the optional map peer is available.
 **Events:**
 
 - `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever serialized-metadata search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
@@ -1736,3 +1802,381 @@ message instead of the map. Lyra supports MapLibre v5 and v6; consumers must imp
 MapLibre v5's standard build includes its worker, while v6 is ESM-only, requires WebGL2, and needs
 its module-worker URL configured for the bundler before this viewer constructs the nested map. See
 `llms/components/lr-map.md` for the Vite v6 example and the other bundler variants.
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-viewers-archive-viewer-archive-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `ArchiveEntry {
+    name: unknown;
+    dir: unknown;
+    size: unknown;
+  }`
+
+- **`components-viewers-calendar-viewer-calendar-loader-contracts`** — Supporting data types and helpers for this component family.
+  `clearIcalCache(): unknown`
+  `IcalApi {
+    parse: unknown;
+    source: unknown;
+    Component: unknown;
+    Event: unknown;
+  }`
+  `IcalComponentApi {
+    getAllSubcomponents: unknown;
+    name: unknown;
+  }`
+  `IcalEventApi {
+    uid: unknown;
+    summary: unknown;
+    startDate: unknown;
+    endDate: unknown;
+    location: unknown;
+    description: unknown;
+  }`
+  `IcalTimeApi {
+    toJSDate: unknown;
+    isDate: unknown;
+    year: unknown;
+    month: unknown;
+    day: unknown;
+  }`
+  `loadIcalDeps(/* public names: importIcal */): unknown`
+  `loadIcal(): unknown`
+
+- **`components-viewers-calendar-viewer-calendar-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `ParsedCalendarEvent {
+    uid: unknown;
+    summary: unknown;
+    start: unknown;
+    end: unknown;
+    startKind: unknown;
+    endKind: unknown;
+    location: unknown;
+    description: unknown;
+  }`
+
+- **`components-viewers-contact-viewer-vcard-contracts`** — Supporting data types and helpers for this component family.
+  `parseVCards(/* public names: text, options */): unknown`
+  `ParseVCardsOptions {
+    maxContacts: unknown;
+  }`
+  `VCardAddress {
+    poBox: unknown;
+    extendedAddress: unknown;
+    streetAddress: unknown;
+    locality: unknown;
+    region: unknown;
+    postalCode: unknown;
+    country: unknown;
+    types: unknown;
+  }`
+  `VCardContact {
+    fn: unknown;
+    n: unknown;
+    org: unknown;
+    tel: unknown;
+    email: unknown;
+    adr: unknown;
+  }`
+  `VCardName {
+    familyNames: unknown;
+    givenNames: unknown;
+    additionalNames: unknown;
+    honorificPrefixes: unknown;
+    honorificSuffixes: unknown;
+  }`
+  `VCardTypedValue {
+    value: unknown;
+    types: unknown;
+  }`
+
+- **`components-viewers-dataset-viewer-dataset-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `DatasetTable {
+    fields: unknown;
+    rows: unknown;
+  }`
+
+- **`components-viewers-document-compare-document-compare-contracts`** — Supporting data types and helpers for this component family.
+  `DocumentCompareVersion {
+    text: unknown;
+    highlights: unknown;
+    id: unknown;
+    name: unknown;
+    mimeType: unknown;
+    uri: unknown;
+    version: unknown;
+  }`
+
+- **`components-viewers-document-viewer-anchors-contracts`** — Supporting data types and helpers for this component family.
+  `AnchorResultDetail {
+    found: unknown;
+  }`
+  `AnchorTargetCapabilities {
+    anchors: unknown;
+    search: unknown;
+    textSelect: unknown;
+  }`
+  `HighlightActivateDetail {
+    id: unknown;
+  }`
+  `LyraHighlight {
+    id: unknown;
+    anchor: unknown;
+    label: unknown;
+    note: unknown;
+    tone: unknown;
+  }`
+  `TextSelectDetail {
+    text: unknown;
+    anchor: unknown;
+    rects: unknown;
+  }`
+
+- **`components-viewers-document-viewer-registry-contracts`** — Supporting data types and helpers for this component family.
+  `adaptDocumentRenderer(/* public names: candidate, file, supplied */): unknown`
+  `clearDocumentRenderers(): unknown`
+  `createDocumentRendererAdapter(/* public names: definition */): unknown`
+  `createDocumentRendererRegistry(/* public names: overrides */): unknown`
+  `DirectDocumentRendererDefinition {
+    render: unknown;
+    file: unknown;
+    capabilities: unknown;
+    adapter: unknown;
+    load: unknown;
+    matches: unknown;
+  }`
+  `DocumentFile {
+    name: unknown;
+    mimeType: unknown;
+    src: unknown;
+    anchor: unknown;
+    highlights: unknown;
+    alt: unknown;
+  }`
+  `findDocumentRenderer(/* public names: file, registry */): unknown`
+  `getDefaultDocumentRendererRegistry(): unknown`
+  `LazyDocumentRendererDefinition {
+    render: unknown;
+    adapter: unknown;
+    capabilities: unknown;
+    load: unknown;
+    default: unknown;
+    matches: unknown;
+    file: unknown;
+  }`
+  `loadDocumentRenderer(/* public names: candidate */): unknown`
+  `LyraAdaptedDocumentRendererDefinition {
+    adapter: unknown;
+    render: unknown;
+    capabilities: unknown;
+    load: unknown;
+    matches: unknown;
+    file: unknown;
+  }`
+  `LyraAdaptedDocumentRenderer {
+    payload: unknown;
+    capabilities: unknown;
+    render: unknown;
+  }`
+  `LyraAvDocumentRendererPayload {
+    kind: unknown;
+    file: unknown;
+    cues: unknown;
+    tracks: unknown;
+  }`
+  `LyraDocumentFile {
+    name: unknown;
+    mimeType: unknown;
+    src: unknown;
+    anchor: unknown;
+    highlights: unknown;
+    alt: unknown;
+  }`
+  `LyraDocumentRendererAdapterDefinition {
+    kind: unknown;
+    adapt: unknown;
+    file: unknown;
+    supplied: unknown;
+    capabilities: unknown;
+    payload: unknown;
+    render: unknown;
+  }`
+  `LyraDocumentRendererAdapter {
+    kind: unknown;
+    adapt: unknown;
+    file: unknown;
+    supplied: unknown;
+    capabilities: unknown;
+    payload: unknown;
+    render: unknown;
+  }`
+  `LyraGenericDocumentRendererPayload {
+    kind: unknown;
+    file: unknown;
+  }`
+  `registerDocumentRenderer(/* public names: key, definition */): unknown`
+  `snapshotLyraDocumentRendererPayload(/* public names: value */): unknown`
+
+- **`components-viewers-docx-viewer-docx-loader-contracts`** — Supporting data types and helpers for this component family.
+  `clearDocxDepsCache(): unknown`
+  `DocxDeps {
+    mammoth: unknown;
+    DOMPurify: unknown;
+  }`
+  `getDocxDepsIfLoaded(): unknown`
+  `loadDocxDeps(): unknown`
+  `loadMammothAndSanitizer(/* public names: importMammoth, importDompurify */): unknown`
+  `MammothApi {
+    convertToHtml: unknown;
+    input: unknown;
+    arrayBuffer: unknown;
+    value: unknown;
+    messages: unknown;
+  }`
+
+- **`components-viewers-docx-viewer-docx-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `DocxHeadingItem {
+    id: unknown;
+    label: unknown;
+    level: unknown;
+  }`
+
+- **`components-viewers-ebook-viewer-ebook-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `EbookTocItem {
+    id: unknown;
+    label: unknown;
+    href: unknown;
+    level: unknown;
+  }`
+
+- **`components-viewers-email-viewer-email-loader-contracts`** — Supporting data types and helpers for this component family.
+  `clearEmailDepsCache(): unknown`
+  `EmailDeps {
+    PostalMime: unknown;
+    DOMPurify: unknown;
+  }`
+  `getEmailDepsIfLoaded(): unknown`
+  `loadEmailAndSanitizer(/* public names: importPostalMime, importDompurify */): unknown`
+  `loadEmailDeps(): unknown`
+  `PostalAddressApi {
+    name: unknown;
+    address: unknown;
+    group: unknown;
+  }`
+  `PostalAttachmentApi {
+    filename: unknown;
+    mimeType: unknown;
+    content: unknown;
+  }`
+  `PostalMessageApi {
+    html: unknown;
+    text: unknown;
+    from: unknown;
+    to: unknown;
+    subject: unknown;
+    date: unknown;
+    attachments: unknown;
+  }`
+  `PostalMimeApi {
+    parse: unknown;
+    input: unknown;
+  }`
+
+- **`components-viewers-email-viewer-email-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `ParsedEmailAttachment {
+    filename: unknown;
+    mimeType: unknown;
+    size: unknown;
+    content: unknown;
+  }`
+  `ParsedEmail {
+    from: unknown;
+    to: unknown;
+    subject: unknown;
+    date: unknown;
+    bodyHtml: unknown;
+    bodyText: unknown;
+    attachments: unknown;
+  }`
+
+- **`components-viewers-highlight-layer-highlight-layer-contracts`** — Supporting data types and helpers for this component family.
+  `HighlightLayerItem {
+    id: unknown;
+    rects: unknown;
+    x: unknown;
+    y: unknown;
+    width: unknown;
+    height: unknown;
+    label: unknown;
+    tone: unknown;
+  }`
+
+- **`components-viewers-include-include-contracts`** — Supporting data types and helpers for this component family.
+  `LyraIncludeErrorDetail {
+    status: unknown;
+    reason: unknown;
+    error: unknown;
+  }`
+
+- **`components-viewers-page-rail-page-rail-contracts`** — Supporting data types and helpers for this component family.
+  `LyraPageViewerSnapshot {
+    identity: unknown;
+    status: unknown;
+    page: unknown;
+    pageCount: unknown;
+  }`
+  `LyraPageViewerStateChangeDetail {
+    snapshot: unknown;
+  }`
+  `PageThumbnailRenderHandle {
+    dispose: unknown;
+  }`
+  `PageThumbnailSource {
+    page: unknown;
+    pageViewerSnapshot: unknown;
+    renderPageThumbnail: unknown;
+    canvas: unknown;
+    options: unknown;
+    width: unknown;
+    renderPageThumbnailToContainer: unknown;
+    container: unknown;
+  }`
+
+- **`components-viewers-pdf-viewer-pdf-viewer-contracts`** — Supporting data types and helpers for this component family.
+  `PdfOutlineItem {
+    title: unknown;
+    page: unknown;
+    children: unknown;
+  }`
+
+- **`components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts`** — Supporting data types and helpers for this component family.
+  `clearSheetJsCache(): unknown`
+  `loadSheetJsCached(): unknown`
+  `loadSheetJs(/* public names: importXlsx */): unknown`
+  `SheetJsApi {
+    read: unknown;
+    input: unknown;
+    options: unknown;
+    utils: unknown;
+    sheet_to_json: unknown;
+    sheet: unknown;
+  }`
+  `SheetJsWorkbook {
+    SheetNames: unknown;
+    Sheets: unknown;
+  }`
+
+- **`components-viewers-viewer-diagnostics-contracts`** — Supporting data types and helpers for this component family.
+  `LyraViewerDiagnosticEventDetail {
+    diagnostic: unknown;
+  }`
+  `LyraViewerDiagnostic {
+    code: unknown;
+    severity: unknown;
+    fatal: unknown;
+    source: unknown;
+    cause: unknown;
+    page: unknown;
+    nodeId: unknown;
+  }`

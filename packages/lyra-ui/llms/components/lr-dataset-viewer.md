@@ -33,7 +33,7 @@ rather than a phantom success, and a header-row target scrolls with the same
 `max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;
 `name` and the localized row-count caption are fallbacks. The same computed name (host `aria-label`,
-else `name`) also names a persistent `role="region"` landmark on `[part='base']` in *every* fetch
+else `name`) also names a persistent `role="region"` landmark on `[part='base']` in _every_ fetch
 state — idle, loading, empty, error, loaded — so a landmark-navigating screen-reader user reaches the
 viewer before it has any rows, not only after a successful non-empty load. With neither set,
 `[part='base']` stays a plain wrapper rather than an unnamed region. The outer region carries the
@@ -47,12 +47,13 @@ every body cell's raw string value, ordered row then column (empty/whitespace qu
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails. PapaParse
-diagnostics also emit this event when the recoverable partial table remains rendered, so malformed
-or extra cells are never silently presented as a clean parse.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails. Up to 100
+PapaParse diagnostics also emit this event when the recoverable partial table remains rendered, so
+malformed or extra cells are never silently presented as a clean parse; exceeding that diagnostic
+budget is a resource-limit error instead.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
-`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
+`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
@@ -79,6 +80,7 @@ component's stylesheet through; a custom property inherits across that boundary 
 
 **Optional peer dependency:** `papaparse`.
 
-Remote resources are capped at 25 MB, and the parsed table at 10,000 rows and 1,000 columns (the
-same shared default as `lr-csv-viewer`/`lr-spreadsheet-viewer`); exceeding either surfaces the
-localized `documentPreviewResourceTooLarge` message instead of the table.
+Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 data rows,
+1,000 fields in any row, 1,000,000 aggregate cells (including the header), or more than 100 parser
+diagnostics; streaming record callbacks enforce the same ceilings again. Exceeding any ceiling
+surfaces the localized `documentPreviewResourceTooLarge` message instead of a partial table.

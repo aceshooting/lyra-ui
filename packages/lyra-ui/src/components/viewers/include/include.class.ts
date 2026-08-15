@@ -2,8 +2,8 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
+import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
   isAbortError,
   resolveOwnerFetchTarget,
@@ -29,7 +29,10 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 
 export type { LyraIncludeMode } from './include-resource.js';
 
-const VALID_MODES: ReadonlySet<string> = new Set<LyraIncludeMode>(['cors', 'no-cors', 'same-origin']);
+const INCLUDE_MODE = literalSetConverter<LyraIncludeMode>(
+  ['cors', 'no-cors', 'same-origin'],
+  'same-origin',
+);
 
 /**
  * Why a `lr-include-error` fired instead of a successful `lr-load`:
@@ -67,7 +70,7 @@ export interface LyraIncludeEventMap extends LyraTextViewerTargetEventMap {
    * both migrated spellings resolve here. Neither is deprecated.
    */
   'lr-error': CustomEvent<LyraIncludeErrorDetail>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
 }
@@ -192,9 +195,9 @@ function elementWithId(root: ParentNode, id: string): Element | null {
  * @event lr-load - The source fragment was sanitized and written into the light DOM.
  * @event lr-include-error - Loading, selecting, or sanitizing the fragment failed; see `LyraIncludeErrorReason` for `detail.reason`. Mirrors Web Awesome's `wa-include-error`.
  * @event lr-error - The same failure under the spelling Shoelace's `sl-error` migrates to; it always fires alongside `lr-include-error` with the identical detail object. Neither spelling is deprecated.
- * @event {CustomEvent<{ query: string; matchCount: number; activeIndex: number }>} lr-search-change -
- *   Fired whenever included-content search state changes. `detail: { query: string; matchCount:
- *   number; activeIndex: number }`. Bubbling, composed, and non-cancelable.
+ * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change -
+ *   Fired whenever included-content search state changes. `matchCountExact=false` makes the
+ *   retained count a lower bound. Bubbling, composed, and non-cancelable.
  * @event {CustomEvent<AnchorResultDetail>} lr-anchor-result - Fired after an `anchor` assignment or
  *   `scrollToAnchor()` call is applied. `detail: { found: boolean }`. Bubbling, composed, and
  *   non-cancelable.
@@ -239,7 +242,19 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
    * rather than letting `fetch()` throw synchronously for an invalid
    * `RequestMode`.
    */
-  @property({ reflect: true }) mode: LyraIncludeMode = 'same-origin';
+  private _mode: LyraIncludeMode = 'same-origin';
+
+  @property({ reflect: true, converter: INCLUDE_MODE })
+  get mode(): LyraIncludeMode {
+    return this._mode;
+  }
+  set mode(next: LyraIncludeMode) {
+    const normalized = INCLUDE_MODE.normalizeReflected(this, 'mode', next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate('mode', old);
+  }
 
   /** Shares bounded, sanitized remote resources with matching Include requests. Set to false to
    *  opt out of both retained values and in-flight deduplication. */
@@ -290,7 +305,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   }
 
   private get effectiveMode(): LyraIncludeMode {
-    return VALID_MODES.has(this.mode) ? this.mode : 'same-origin';
+    return this.mode;
   }
 
   private resolveSource(): IncludeSource | null {

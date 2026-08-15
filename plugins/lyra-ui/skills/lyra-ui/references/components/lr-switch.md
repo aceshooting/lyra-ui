@@ -27,9 +27,8 @@ control's visible, clickable label (same as `<lr-checkbox>`).
 **Properties:**
 
 - `checked: boolean = false` — the live, non-reflecting state
-- `defaultChecked: boolean = false` (WA attribute `checked`, reflected; Shoelace alias
-  `default-checked`) — the current reset default; changing it updates `checked` only while the live
-  state is pristine
+- `defaultChecked: boolean = false` (canonical attribute `checked`, reflected) — the current reset
+  default; changing it updates `checked` only while the live state is pristine
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `name: string = ''`
@@ -64,6 +63,8 @@ prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires 
 check finds the switch invalid.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control;
+focus/click and stale keyboard/pointer activation are synchronous no-ops as soon as direct or
+fieldset disablement starts, even before the next render;
 `getForm()` returns its owning form (including an external owner selected by `form`).
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("notifications are disabled
 for your plan"): a non-empty message raises `customError` and blocks submission, `''` restores the
@@ -76,9 +77,10 @@ restores the current default before making the control pristine again.
 
 **Slots:**
 
-- default — label text, rendered next to the track. Clicking it toggles the switch, the same as
-  clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the
-  control still has an accessible name. Flattened forwarding-slot assignment and later mutations
+- default — rich label content rendered beside the semantic switch owner. Clicking plain label
+  content toggles like an associated label; activating a nested link or button does not toggle. If
+  left empty, set `aria-label` on the host so the control still has an accessible name. Flattened
+  forwarding-slot assignment and later mutations
   keep the visual wrapper synchronized; element-only and visible `aria-hidden` decorations retain
   it. A host `aria-label` wins by presence, including an explicitly empty value.
 - `hint` — custom hint content.
@@ -86,7 +88,8 @@ restores the current default before making the control pristine again.
 - `error` — custom error content.
 
 **CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `base` /
-`switch` / `wrapper` (the whole interactive `role="switch"` node), `track` / `control` (the
+`switch` / `wrapper` (the semantic interactive `role="switch"` owner; the rich label is its
+sibling), `track` / `control` (the
 pill-shaped background), `thumb` (the circular knob), `label` (wrapper around the default slot),
 `hint` / `form-control-help-text` (the hint message), and `error`.
 
@@ -114,10 +117,10 @@ these hooks touches the label text beside the track. Plus shared tokens
 ```html
 <lr-switch name="notifications" checked>Enable notifications</lr-switch>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/forms/switch/switch.js';
-  const sw = document.querySelector('lr-switch');
-  sw.addEventListener('lr-change', (e) => console.log(e.detail.checked)); // prefixed alias
-  sw.addEventListener('change', (e) => console.log(e.target.checked)); // native-style, no detail
+  import "@aceshooting/lyra-ui/components/forms/switch/switch.js";
+  const sw = document.querySelector("lr-switch");
+  sw.addEventListener("lr-change", (e) => console.log(e.detail.checked)); // prefixed alias
+  sw.addEventListener("change", (e) => console.log(e.target.checked)); // native-style, no detail
 </script>
 ```
 
@@ -132,7 +135,8 @@ checkbox and does not emit `lr-change`.
 
 - `checked` is live and dirty; `defaultChecked`/the `checked` attribute is the current reset default.
   A later `.checked = true` never redefines what `form.reset()` restores to. Shoelace's
-  `default-checked` attribute is accepted as an alias for that reset default.
+  Only the canonical `checked` attribute and property-only `defaultChecked` IDL define that reset
+  default.
 - The rendered `aria-label` is copied from the host's own `aria-label` attribute at render time; with
   neither that nor slotted label text, the control has no accessible name.
 

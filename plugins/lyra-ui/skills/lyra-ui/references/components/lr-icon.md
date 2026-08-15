@@ -30,9 +30,10 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   remain the canonical non-nullable `''`.
 - `path: string = ''` — raw SVG path data for a glyph the built-in set doesn't cover. Takes
   precedence over `name`.
-- `label: string = ''` — accessible name. Left empty (the default) the SVG is `aria-hidden="true"`,
-  which is what you want whenever adjacent text already names the control. A host `aria-label` wins
-  over it, and either one is applied to a fetched icon too.
+- `label: string = ''` — accessible name. Left empty (the default) the stable semantic owner is
+  `aria-hidden="true"`, which is what you want whenever adjacent text already names the control. A
+  host `aria-label` wins over it. For a labeled remote icon the same semantic owner and name remain
+  present through idle, loading, loaded, empty, and error states without double-naming the SVG.
 - `library: string = 'default'` (reflected) — name of a library registered with `registerIconLibrary()`.
   `default` means the built-in glyph set. An **unregistered** name also falls back to the
   built-in set instead of erroring, which is what lets registration happen after first render.
@@ -61,7 +62,7 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
   `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
   `prefers-reduced-motion: reduce`.
-- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon _box_ to
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon *box* to
   `--lr-icon-fixed-width` while the glyph keeps `--lr-icon-size` and centres inside it, so a column
   of differently-shaped icons lines its labels up.
 
@@ -107,7 +108,8 @@ source tree.
   `normal`), `--animation-duration` (default `--lr-duration-icon`, 1s),
   `--animation-iteration-count` (default `infinite`), and `--animation-timing` (default
   `--lr-easing-emphasized`).
-- Animation-specific controls: `--beat-scale`; `--fade-opacity`; `--beat-fade-opacity` and
+- Animation-specific controls: `--beat-scale` (default `1.25`, used exactly once as the beat peak);
+  `--fade-opacity`; `--beat-fade-opacity` and
   `--beat-fade-scale`; `--bounce-height`, `--bounce-jump-scale-x`, `--bounce-jump-scale-y`,
   `--bounce-land-scale-x`, `--bounce-land-scale-y`, `--bounce-rebound`,
   `--bounce-start-scale-x`, `--bounce-start-scale-y`, and `--bounce-anticipation`; `--flip-angle`,
@@ -181,8 +183,11 @@ Promise<string>`, `LyraIconLibraryMutator = (svg: SVGElement) => void`, and
 - Remote loading is fail-closed by construction: the URL must pass the shared fetch allowlist
   (`http:`, `https:`, `blob:`, `data:`, and relative URLs — a `javascript:` URL is never fetched),
   the response is capped at 1 MiB before any parser sees it, and DOMPurify's SVG profile runs
-  unconditionally, sanitizing straight to DOM nodes rather than to a re-parsed string. A response
-  that isn't an SVG document is rejected, and its text never reaches the DOM.
+  unconditionally, sanitizing straight to DOM nodes rather than to a re-parsed string. A strict
+  post-sanitization SVG pass then removes style/foreign-document content and every external
+  `href`, image, CSS `url()`, paint, filter, mask, marker, and related resource sink; only safe
+  same-document fragments survive. A response that isn't an SVG document is rejected, and its
+  text never reaches the DOM.
 - Matching requests share a bounded cache of canonical sanitized SVG nodes. Concurrent icons issue
   one fetch, a disconnected subscriber does not abort work another icon still needs, and retryable
   failures are evicted. The canonical node is never rendered or mutated: each icon deep-clones it,

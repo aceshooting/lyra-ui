@@ -30,7 +30,8 @@ number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: s
   `color`, when supplied, is a sanitized arbitrary CSS color that takes precedence over `tone`.
 - `total: number = 0` — the full capacity segments are measured against (e.g. a model's context
   window size).
-- `variant: 'ring' | 'bar' = 'bar'` (reflected)
+- `shape: ContextMeterShape = 'bar'` (`'bar' | 'ring'`, reflected) — the v9 geometry name;
+  `variant` remains reserved for semantic tone across Lyra.
 - `label: string = ''` — overall accessible caption, e.g. `"128K context window"`. Also rendered
   visually (`[part="label"]`) when set.
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders a static
@@ -41,11 +42,12 @@ number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: s
   sighted user. Non-interactive: it toggles nothing and emits nothing, mirroring
   `lr-sequence-strip`'s `showLegend` rather than the interactive `lr-graph-legend`. The whole
   subtree is `aria-hidden`, since `segment-list` already exposes the same names. Under
-  `variant="ring"` the host stops being a fixed square so the key flows below the ring instead of
+  `shape="ring"` the host stops being a fixed square so the key flows below the ring instead of
   being clipped.
 
-Accessible summaries, segment tooltips, and ring titles format quantities using `effectiveLocale`.
-A host `aria-label` overrides the generated meter summary and is preserved across reactive updates.
+Accessible summaries, segment tooltips, and ring titles format normalized nonnegative quantities
+using `effectiveLocale`. A host `aria-label` names the host without being duplicated on the nested
+meter owner, which retains its generated aggregate summary.
 
 **Events:** none.
 
@@ -79,13 +81,14 @@ sizes a legend chip on both axes. Otherwise the component consumes shared tokens
   ]}
 ></lr-context-meter>
 
-<lr-context-meter variant="ring" total="128000" .segments=${segments}></lr-context-meter>
+<lr-context-meter shape="ring" total="128000" .segments=${segments}></lr-context-meter>
 ```
 
 An internal visually-hidden semantic node carries `role="meter"` plus `aria-valuenow`,
 `aria-valuemin`, and `aria-valuemax` whenever `total > 0`; without a valid positive total it uses
-`role="group"` and omits numeric meter attributes. Its accessible name is the host `aria-label`
-when present, otherwise the generated summary. A separate visually-hidden segment list exposes
+`role="group"` and omits numeric meter attributes. Its accessible name is the generated summary;
+an authored host `aria-label` remains on the host as a distinct overall name. A separate
+visually-hidden segment list exposes
 each labeled quantity, while the visible track, segments, ring SVG, and visible label remain
 `aria-hidden`. The summary's "used" figure is the sum of
 `segments[].value`, clamped to `total` whenever `total > 0` so the announced text can never claim
@@ -104,7 +107,7 @@ numbers, so the two circular-meter components in the library share one visual sc
 - The ring variant's per-segment `<title>` and the bar variant's per-segment `title=` attribute are
   native mouse-hover tooltips only — they sit inside `aria-hidden` markup. Screen readers use the
   hidden meter/group summary and segment list instead.
-- `variant="ring"` fixes the host at `8em × 8em` (`:host([variant='ring'])`) — the bar variant's
+- `shape="ring"` fixes the host at `8em × 8em` (`:host([shape='ring'])`) — the bar shape's
   `inline-size: 100%` does not apply in ring mode; resize it via `font-size` or an explicit
   width/height override on the host instead.
 - Segment order is significant for the ring's cumulative `stroke-dashoffset` — later entries in

@@ -21,13 +21,15 @@ permissions, and connector settings go in the `settings` slot.
 
 **Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
 IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
-`label: string = ''` (visible heading and accessible-name fallback; a host `aria-label` wins);
+`label: string = ''` (the visible heading and the tablist's distinct accessible name; authored host
+`aria-label` independently names the admin component and is not cloned onto either);
 `hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
 An invalid runtime or authored `activeTab` value follows the same fallback instead of leaving every
 tab and panel inactive.
 
-**Events:** `lr-tab-change` (`{ tab }`), `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
+**Events:** `lr-tab-change` (`{ tab }`, emitted only for a distinct accepted selection),
+`lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the
 correlated ids/details from their composed primitives).
 
@@ -39,7 +41,7 @@ correlated ids/details from their composed primitives).
 `var(--lr-color-brand)`) and `--lr-knowledge-base-admin-tab-selected-color` (default
 `var(--lr-color-text)`) — the bottom-border and text color of the selected `[part="tab"]`. State
 hooks: inline `var()` fallbacks at the point of use rather than `:host` declarations, so either can
-be set on the element *or on any ancestor*, and the rule wraps its `[aria-selected='true']` qualifier
+be set on the element _or on any ancestor_, and the rule wraps its `[aria-selected='true']` qualifier
 in `:where()` so a consumer's own `::part(tab)` override still wins. They exist because
 `::part(tab)[aria-selected='true']` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()`. Left unset, rendering is unchanged.

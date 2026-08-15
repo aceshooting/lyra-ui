@@ -17,29 +17,34 @@
 
 A caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete
 inside a plain-text `<textarea>`/`<input>` the host owns. First-party invention (no Web Awesome
-equivalent). On platforms accepting cross-root ARIA element reflection, the host's own input keeps
-focus and `syncActiveDescendant()` points it at the active option. Where that reference is rejected,
-`focusActiveOption()` moves real focus into this component's shadow listbox so the focus owner and
-option share one tree scope. A string `aria-activedescendant` cannot resolve from a host input in
-the document into an option in this component's shadow root.
+equivalent). While open with a text-control `anchor`, the component atomically projects
+`role="combobox"` (unless the author supplied a role), `aria-expanded`, `aria-haspopup`, a
+resolvable controls element, and the active descendant. On platforms accepting cross-root ARIA
+element reflection, the host's own input keeps focus. Where the active-option reference is
+rejected, `focusActiveOption()` moves real focus into this component's shadow listbox so the focus
+owner and option share one tree scope. Every author ARIA value is restored on close, anchor
+replacement, disconnect, or adoption; a cross-root string IDREF is never left behind.
 
 **Properties:**
 
 - `anchor?: HTMLElement` (attribute: false) — the element to position the popup relative to. A
   plain `<textarea>` or single-line text `<input type="text"|"search">` gets caret-precise
   positioning; any other element anchors the whole popup under that element's own box.
-- `items: MentionItem[] = []` (attribute: false) — the full candidate set, pre-`query`-filtering.
+- `items: readonly Readonly<LyraMentionItem>[] = []` (attribute: false) — the full candidate set,
+  pre-`query`-filtering. Assignment takes a shallow frozen snapshot.
 - `query: string = ''` — the text typed since the trigger character; drives the built-in filtering
   (see `filter`).
 - `open: boolean = false` (reflected)
-- `filter: MentionFilter | null = null` (attribute: false) — overrides the built-in
+- `filter: LyraMentionFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive `label`/`description` substring match entirely.
-- `emptyText: string = 'No matches'` (attribute `empty-text`)
-- `label: string = 'Suggestions'` — accessible name for the `role="listbox"` popup. A host-level
-  plain `aria-label` attribute on `<lr-mention-popover>` itself takes priority over this property
-  when present (checked via a plain `getAttribute()` read, not a reactive property) — matches the
-  same fallback on `<lr-combobox>`/`<lr-table>`.
-- `filteredItems: MentionItem[]` — read-only getter; `items` filtered by `query` via `filter` (or
+- `emptyText?: string` (attribute `empty-text`) — `undefined` uses localized `noMatches`; every
+  supplied string, including `''` and `'No matches'`, is caller-owned
+- `label?: string` — accessible name for the `role="listbox"` popup. `undefined` uses localized
+  `mentionSuggestions`; every supplied string, including `''` and `'Suggestions'`, is
+  caller-owned. A host-level plain `aria-label` attribute on `<lr-mention-popover>` itself takes
+  priority over this property when present (checked via a plain `getAttribute()` read, not a
+  reactive property) — matches the same fallback on `<lr-combobox>`/`<lr-table>`.
+- `filteredItems: readonly Readonly<LyraMentionItem>[]` — read-only getter; `items` filtered by `query` via `filter` (or
   the built-in default). Empty `query` returns `items` unfiltered.
 - `activeDescendantId: string | null` — read-only getter; the `id` of the currently-highlighted
   internal row, or `null` while closed or when `filteredItems` is empty. Useful for diagnostics and
@@ -60,16 +65,22 @@ the document into an option in this component's shadow root.
 - `syncActiveDescendant(control: HTMLElement): boolean` — clears any string
   `aria-activedescendant`, then applies `ariaActiveDescendantElement` when the platform accepts the
   cross-root reference. Returns whether that reference was accepted.
-- `focusActiveOption(): Promise<boolean>` — same-tree fallback after a consumed navigation key
-  when `syncActiveDescendant()` returns `false`. Focuses the active option, lets the popover handle
-  subsequent navigation, and restores focus to `anchor` when the popover closes.
+- `focusActiveOption(options?: LyraMentionFocusOptions): Promise<boolean>` — same-tree fallback
+  after a consumed navigation key when `syncActiveDescendant()` returns `false`. Focuses the active
+  option, lets the popover handle subsequent navigation, and restores focus to `anchor` when the
+  popover closes. Pass `ownsFocus: () => boolean` when the caller has its own suggestion-session
+  generation/disabled/focus-exit state; the predicate is rechecked immediately before transfer and
+  during later fallback navigation. Close, candidate/query/filter/anchor replacement,
+  disconnect/adoption, a newer transfer, or failed ownership resolves `false` without moving focus.
 
-**Exported types:** `MentionItem { id: string; label: string; description?: string; icon?: string
-}`; `MentionFilter = (item: MentionItem, query: string) => boolean`; `MentionSelectDetail { id:
-string; label: string }`.
+**Exported types:** `LyraMentionItem { suggestionId: string; label: string; description?: string;
+icon?: string }`; `LyraMentionFilter = (item: LyraMentionItem, query: string) => boolean`;
+`LyraMentionFocusOptions { ownsFocus?: () => boolean }`;
+`LyraMentionSelectDetail { suggestionId: string; index: number; label: string }`.
 
-**Events:** `lr-mention-select` (`detail: MentionSelectDetail`, `{ id, label }` of the row that
-was committed via Enter/Tab/click), `lr-mention-close` (no detail payload —
+**Events:** `lr-mention-select` (`detail: LyraMentionSelectDetail`; `index` is the occurrence in
+the assigned `items` collection before filtering and disambiguates repeated `suggestionId` values),
+`lr-mention-close` (no detail payload —
 `this.emit('lr-mention-close')` is called with no second argument, so `event.detail` is `null`,
 not `undefined`; fires on Escape or any other `open: true -> false` transition, but never for the
 close that immediately follows a `lr-mention-select` commit, and never for markup that simply
@@ -102,29 +113,42 @@ available space. See `lr-tour` for the shared-clamp note.
 <script type="module">
   const textarea = document.getElementById('composer');
   const popover = document.getElementById('mentions');
+  let suggestionGeneration = 0;
 
   textarea.addEventListener('keydown', (e) => {
     if (popover.open && popover.handleKeyDown(e)) {
       if (!popover.syncActiveDescendant(textarea) && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-        void popover.focusActiveOption();
+        const generation = suggestionGeneration;
+        void popover.focusActiveOption({
+          ownsFocus: () =>
+            generation === suggestionGeneration &&
+            (document.activeElement === textarea || document.activeElement === popover),
+        });
       }
       return;
     }
   });
   textarea.addEventListener('input', () => {
+    suggestionGeneration += 1;
     popover.anchor = textarea;
     popover.items = [
       {
-        id: 'ada',
+        suggestionId: 'ada',
         label: 'Ada Lovelace',
         description: 'Engineering',
         icon: '👩‍💻',
       },
-      { id: 'grace', label: 'Grace Hopper', description: 'Engineering' },
+      { suggestionId: 'grace', label: 'Grace Hopper', description: 'Engineering' },
     ];
     popover.query = 'a'; // detected since the trigger character
     popover.open = true;
     popover.updateComplete.then(() => popover.syncActiveDescendant(textarea));
+  });
+  textarea.addEventListener('blur', (event) => {
+    if (event.relatedTarget !== popover) {
+      suggestionGeneration += 1;
+      popover.open = false;
+    }
   });
 
   popover.addEventListener('lr-mention-select', (e) => {
@@ -134,10 +158,11 @@ available space. See `lr-tour` for the shared-clamp note.
 ```
 
 Integration is entirely the host's responsibility: detect a mention/command trigger in the host's
-own `input` handling, set `anchor`/`items`/`query` and flip `open = true`, forward every `keydown`
-through `handleKeyDown()` while open, and call `syncActiveDescendant()` after opening and after each
-consumed navigation key. If it returns `false`, call `focusActiveOption()` after the first consumed
-ArrowUp/ArrowDown so the fallback owns navigation from then on. Setting `open = false` whenever the
+own `input` handling, set `anchor`/`items`/`query` and flip `open = true`, and forward every
+`keydown` through `handleKeyDown()` while open. Anchor relationship and active-descendant syncing
+are automatic; if an explicit `syncActiveDescendant()` check returns `false`, call
+`focusActiveOption()` after the first consumed ArrowUp/ArrowDown so the fallback owns navigation
+from then on. Setting `open = false` whenever the
 query stops looking like an active mention context (a space typed, the trigger deleted, the input
 blurred, …) is also the host's job — `lr-mention-close` fires automatically from that.
 
@@ -172,7 +197,7 @@ fresh `query` is the proxy for "the caret may have moved").
   active option.
 - There's no persisted "selection" the way `<lr-combobox>`'s own listbox has one — a mention is
   either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
-  here marks whichever row is currently _active_ (what Enter/Tab would commit right now, per the
+  here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the
   WAI-ARIA combobox-with-list-autocomplete pattern), not a separate persisted value.
 
 ---

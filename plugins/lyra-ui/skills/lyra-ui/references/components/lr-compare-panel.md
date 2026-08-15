@@ -21,9 +21,12 @@ slotted panes, a vote bar, synchronized reading.
 **Properties:** `labelA: string = ''` (attribute `label-a`) and `labelB: string = ''` (attribute
 `label-b`) — pane headings. `vote: 'a' | 'b' | 'tie' | 'both-bad' | null = null` (reflected) — the
 recorded winner, host-writable to reflect a previously-recorded vote back. `itemId: string = ''`
-(attribute `item-id`) — an opaque id round-tripped through `lr-vote`. `hideTie: boolean = false`
-(attribute `hide-tie`) and `hideBothBad: boolean = false` (attribute `hide-both-bad`) hide the
-corresponding vote button. `syncScroll: boolean = false` (attribute `sync-scroll`) links both panes'
+(attribute `item-id`) — an opaque id round-tripped through `lr-vote`. Changing only `itemId` clears
+the prior vote; assigning both `itemId` and a controlled `vote` in one update preserves the explicit
+vote regardless of property assignment order. `allowedVotes: readonly CompareVote[] = ['a', 'b',
+'tie', 'both-bad']` (attribute: false) is the positive list of choices to render, always projected
+in that canonical order; repeated/foreign values do not create controls. `syncScroll: boolean =
+false` (attribute `sync-scroll`) links both panes'
 scroll position. `disabled: boolean = false` (reflected) disables every vote button and suppresses
 `lr-vote`.
 

@@ -36,18 +36,25 @@ into the shadow-root group. `startLabel` and `endLabel` continue to name the ind
   (not pixel-matched to `lr-input`'s row-height scale — this component's own dimensions aren't on
   that ladder); the drag hit-area never shrinks below 24px (WCAG 2.5.8)
 - `disabled: boolean = false` (reflected)
-- `startLabel: string = 'Range start'` (attribute `start-label`) — `aria-label` for the start handle
-- `endLabel: string = 'Range end'` (attribute `end-label`) — `aria-label` for the end handle
+- `startLabel?: string` (attribute `start-label`) — caller-owned `aria-label` override for the start
+  handle; absence resolves localized `rangeStart` (`"Range start"` in English), while every
+  supplied string — including `"Range start"` and `""` — remains literal
+- `endLabel?: string` (attribute `end-label`) — equivalent override for the end handle; absence
+  resolves localized `rangeEnd` (`"Range end"` in English)
 - `valueFormatter?: TimeRangeValueFormatter` (attribute: false) — maps each finite, clamped
   `aria-valuenow` to optional human-readable `aria-valuetext`; called as
   `(value, handle: TimeRangeHandle)`, where `TimeRangeHandle = 'start' | 'end'`. The formatter may
   return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
   Leaving the property unset preserves the numeric-only contract
-- `presets: TimeRangePreset[] = []` (attribute: false) — `TimeRangePreset { label: string; start:
-number; end: number }`; optional discrete presets (e.g. "Last 7 days") rendered as a
+- `presets: readonly TimeRangePreset[] = []` (attribute: false) — readonly `TimeRangePreset {
+label: string; start: number; end: number }`; a bounded frozen snapshot of optional discrete
+  presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
-  native/prefixed input and change sequences a committed drag or keyboard step would
+  native/prefixed input and change sequences a committed drag or keyboard step would. Preset
+  endpoints are clamped and ordered once, and that same normalized pair drives both application
+  and `aria-pressed`/`data-active` projection
+- `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
 **Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
 both fired continuously while dragging or on each arrow/Home/End/PageUp/PageDown key press; and a
@@ -56,7 +63,9 @@ on pointer release, keyboard keyup, handle blur while a changed keyboard gesture
 or when a preset button is clicked. A blur commit retires the gesture before the later physical
 keyup, so it cannot emit a duplicate change. The focused handle's native `focus` and `blur` are
 re-dispatched from the host as bubbling, composed events, each followed by its prefixed alias
-`lr-focus` / `lr-blur` (no detail).
+`lr-focus` / `lr-blur` (no detail). A failed native validity check emits one bubbling/composed,
+cancelable `lr-invalid` alias; cancelling it cancels the native `invalid` event and suppresses the
+browser's default validation UI.
 
 **Methods:** `focus(options?)` and `click()` forward to `[part="handle-start"]`. `blur()` releases
 whichever handle actually owns focus, falling back to the start handle when neither does. Without
@@ -70,6 +79,11 @@ clears it. The error survives handle moves, preset picks and a form reset, exact
 control — so a consumer re-validating a range on every `lr-input` calls this with the new message
 (or `''`) each time rather than expecting the movement itself to clear it. The message is
 caller-supplied and is used verbatim, never localized.
+
+Programmatic writes to `start` and `end` are event-silent. When a controlled caller writes both in
+one update, the pair is clamped and ordered atomically (for example `90/10` becomes `10/90` without
+losing either endpoint). A one-sided write retains moved-handle semantics: a start above the current
+end is pulled back to that end, while an end below the current start is pulled up to that start.
 
 **`form.reset()` — `formResetCallback()`.** The control has no submitted value, but it does take
 part in its owning form's reset, and a reset undoes everything the _user_ did to it:
@@ -152,10 +166,13 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
 ```html
 <lr-time-range id="months" min="0" max="2" start="0" end="2"></lr-time-range>
 <script>
-  const months = ['April 2023', 'May 2023', 'June 2023'];
-  const range = document.getElementById('months');
-  range.valueFormatter = (value, handle) => `${handle === 'start' ? 'From' : 'Through'} ${months[value]}`;
-  range.addEventListener('lr-change', (e) => console.log(e.detail.start, e.detail.end));
+  const months = ["April 2023", "May 2023", "June 2023"];
+  const range = document.getElementById("months");
+  range.valueFormatter = (value, handle) =>
+    `${handle === "start" ? "From" : "Through"} ${months[value]}`;
+  range.addEventListener("lr-change", (e) =>
+    console.log(e.detail.start, e.detail.end)
+  );
 </script>
 ```
 
@@ -188,7 +205,7 @@ rtl`).
   tracked per `pointerId` (not a single scalar), so a two-finger touch — one finger per handle —
   moves both independently instead of the second pointer hijacking which handle the first pointer's
   moves apply to; `pointercancel`/`lostpointercapture` (not just `pointerup`) both end a drag, same
-  fix as `lr-split`.
+  fix as `lr-multi-split`.
 - Non-finite domain/handle values use finite fallback geometry, and non-finite or negative steps are
   treated as unstepped; invalid values never become `NaN`/`Infinity` CSS or ARIA strings.
 - `startLabel`/`endLabel` only override each handle's `aria-label`; they don't affect

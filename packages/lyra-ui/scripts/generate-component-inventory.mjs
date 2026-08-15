@@ -144,9 +144,14 @@ export function optionalPeersForComponent(component, packageJson) {
       )
         found.add(peer);
     }
-    for (const match of source.matchAll(
-      /(?:from\s+|import\()\s*['"](\.[^'"]+)['"]/g
-    )) {
+    const runtimeSpecifiers = [
+      ...source.matchAll(
+        /\b(?:import|export)\s+(?!type\b)[^;]*?\bfrom\s*['"](\.[^'"]+)['"]/g
+      ),
+      ...source.matchAll(/\bimport\s*['"](\.[^'"]+)['"]/g),
+      ...source.matchAll(/\bimport\s*\(\s*['"](\.[^'"]+)['"]\s*\)/g),
+    ];
+    for (const match of runtimeSpecifiers) {
       const resolved = resolveTypeScriptImport(file, match[1]);
       if (resolved) queue.push(resolved);
     }
@@ -1764,6 +1769,184 @@ const CAROUSEL_EVENT_DETAIL_DRIFT = (member) => [
   },
 ];
 
+const WA_CAROUSEL_V9_DRIFT = [
+  { code: 'missing-attribute', section: 'attributes', member: 'slides' },
+  ...CAROUSEL_EVENT_DETAIL_DRIFT('wa-slide-change'),
+  {
+    code: 'readonly-mismatch',
+    section: 'properties',
+    member: 'slides',
+    expected: false,
+    actual: true,
+  },
+];
+
+const WA_RANDOM_CONTENT_V9_DRIFT = [
+  {
+    code: 'event-type-mismatch',
+    section: 'events',
+    member: 'wa-content-change',
+    expected: '{ items: Element[] }',
+    actual: 'CustomEvent<{ readonly items: readonly Element[] }>',
+  },
+  {
+    code: 'method-signature-mismatch',
+    section: 'methods',
+    member: 'randomize',
+    expected: [{ parameters: [], returnType: 'Element[]' }],
+    actual: [{ parameters: [], returnType: 'readonly Element[]' }],
+  },
+];
+
+const immutableTreeSelectionDrift = (member) => [
+  {
+    code: 'event-type-mismatch',
+    section: 'events',
+    member,
+    expected: '{ selection: LyraTreeItem[] }',
+    actual:
+      'CustomEvent<{ readonly selection: readonly LyraTreeItem[] }>',
+  },
+];
+
+const WA_DATA_GRID_V9_DRIFT = [
+  {
+    code: 'type-mismatch',
+    section: 'attributes',
+    member: 'child-rows',
+    expected: 'string | ((row: Row) => Row[] | undefined) | null',
+    actual: '| string | ((row: Row) => readonly Row[] | undefined) | null',
+  },
+  {
+    code: 'type-mismatch',
+    section: 'attributes',
+    member: 'group-by',
+    expected: 'string | string[] | null',
+    actual: 'string | readonly string[] | null',
+  },
+  {
+    code: 'event-type-mismatch',
+    section: 'events',
+    member: 'request',
+    expected: 'Event',
+    actual: 'CustomEvent<DataGridRequest>',
+  },
+  {
+    code: 'event-type-mismatch',
+    section: 'events',
+    member: 'wa-column-move',
+    expected: 'Event',
+    actual: 'CustomEvent<DataGridColumnMoveDetail>',
+  },
+  {
+    code: 'event-type-mismatch',
+    section: 'events',
+    member: 'wa-data-error',
+    expected: 'Event',
+    actual: 'CustomEvent<DataGridDataErrorDetail>',
+  },
+  {
+    code: 'missing-event',
+    section: 'events',
+    member: 'wa-data-request',
+  },
+  {
+    code: 'event-type-mismatch',
+    section: 'events',
+    member: 'wa-filter-change',
+    expected: 'Event',
+    actual:
+      'CustomEvent<Readonly<{ filters: readonly DataGridFilter[] }>>',
+  },
+  {
+    code: 'event-type-mismatch',
+    section: 'events',
+    member: 'wa-row-select',
+    expected: 'Event',
+    actual: 'CustomEvent<DataGridSelectionDetail<Row>>',
+  },
+  {
+    code: 'event-type-mismatch',
+    section: 'events',
+    member: 'wa-sort-change',
+    expected: 'Event',
+    actual: 'CustomEvent<Readonly<{ sort: DataGridSortingState }>>',
+  },
+  {
+    code: 'type-mismatch',
+    section: 'properties',
+    member: 'columnOrder',
+    expected: 'string[]',
+    actual: 'readonly string[]',
+  },
+  {
+    code: 'type-mismatch',
+    section: 'properties',
+    member: 'columns',
+    expected: 'DataGridColumn[]',
+    actual: 'readonly DataGridColumn<Row>[]',
+  },
+  {
+    code: 'type-mismatch',
+    section: 'properties',
+    member: 'data',
+    expected: 'Row[]',
+    actual: 'readonly Row[]',
+  },
+  {
+    code: 'type-mismatch',
+    section: 'properties',
+    member: 'expandedKeys',
+    expected: '(string | number)[]',
+    actual: 'readonly DataGridKey[]',
+  },
+  {
+    code: 'type-mismatch',
+    section: 'properties',
+    member: 'filters',
+    expected: '{ id: string; value: unknown }[]',
+    actual: 'readonly DataGridFilter[]',
+  },
+  {
+    code: 'type-mismatch',
+    section: 'properties',
+    member: 'pageSizeOptions',
+    expected: 'number[]',
+    actual: 'readonly number[]',
+  },
+  {
+    code: 'type-mismatch',
+    section: 'properties',
+    member: 'selectedKeys',
+    expected: '(string | number)[]',
+    actual: 'readonly DataGridKey[]',
+  },
+  {
+    code: 'type-mismatch',
+    section: 'properties',
+    member: 'selectedRows',
+    expected: 'Row[]',
+    actual: 'readonly Row[]',
+  },
+];
+
+const WA_FILE_INPUT_V9_DRIFT = [
+  {
+    code: 'readonly-mismatch',
+    section: 'properties',
+    member: 'dragging',
+    expected: false,
+    actual: true,
+  },
+  {
+    code: 'readonly-mismatch',
+    section: 'properties',
+    member: 'fileCount',
+    expected: false,
+    actual: true,
+  },
+];
+
 const shoelaceLifecycleCancelabilityDrift = (hideCancelable) => [
   {
     code: 'cancelability-mismatch',
@@ -1784,7 +1967,46 @@ const shoelaceLifecycleCancelabilityDrift = (hideCancelable) => [
 const SHOELACE_LIFECYCLE_CANCELABILITY_RATIONALE =
   'Pinned runtime evidence shows Shoelace emits non-cancelable state-change lifecycle notifications while Lyra provides synchronous pre-state veto events; automatic migration therefore requires review of listener timing and preventDefault() behavior.';
 
+const SL_SPLIT_PANEL_MODULE_EXPORT_DRIFT = [
+  {
+    code: 'module-export-signature-mismatch',
+    section: 'moduleExports',
+    member: 'SNAP_NONE',
+    module: 'components/split-panel/split-panel.js',
+    expected: [
+      {
+        parameters: [],
+        returnType: 'unspecified-public-documentation',
+      },
+    ],
+    actual: [
+      [
+        {
+          parameters: [
+            {
+              name: '{ pos }',
+              type: 'unknown',
+              optional: false,
+              hasDefault: false,
+            },
+          ],
+          returnType: 'unknown',
+        },
+      ],
+    ],
+  },
+];
+
 const DECISION_OVERRIDES = new Map([
+  [
+    'sl-split-panel',
+    {
+      classification: 'warning-required',
+      rationale:
+        'The published Shoelace manifest exports SNAP_NONE without documenting its callable signature; Lyra exports the same helper with an explicit typed parameter, so the tag rewrite remains available but consumers that call the helper require review.',
+      expectedDrift: SL_SPLIT_PANEL_MODULE_EXPORT_DRIFT,
+    },
+  ],
   ...[
     ['sl-alert', 'always'],
     ['sl-dialog', 'conditional'],
@@ -1822,8 +2044,8 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; migrated handlers that rely on item-specific members require review.',
-      expectedDrift: CAROUSEL_EVENT_DETAIL_DRIFT('wa-slide-change'),
+        'Lyra accepts arbitrary HTMLElement slides, so its slide-change detail is wider than the upstream carousel-item class; in v9 the slides member is a read-only live composition count rather than a writable reflected attribute. Migrated handlers that rely on item-specific members or write slides require review.',
+      expectedDrift: WA_CAROUSEL_V9_DRIFT,
     },
   ],
   [
@@ -1836,12 +2058,42 @@ const DECISION_OVERRIDES = new Map([
     },
   ],
   [
+    'wa-data-grid',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra snapshots collection inputs and event details synchronously into frozen readonly values, and removes the redundant wa-data-request alias in favor of the typed request event. Migrated code that mutates arrays or event details in place, assigns derived collections, or listens for the removed alias must be reviewed.',
+      expectedDrift: WA_DATA_GRID_V9_DRIFT,
+    },
+  ],
+  [
     'wa-random-content',
     {
-      classification: 'rewritten',
+      classification: 'warning-required',
       rationale:
-        'The public member rewrite is deterministic. The migrator separately reports only exercised behavior differences: host and multi-item layout, bounded unique selection, forwarded-slot candidates, and autoplay semantics.',
-      expectedDrift: [],
+        'Lyra returns frozen readonly selection snapshots instead of mutable arrays. The migrator also reports the exercised behavior differences: host and multi-item layout, bounded unique selection, forwarded-slot candidates, and autoplay semantics.',
+      expectedDrift: WA_RANDOM_CONTENT_V9_DRIFT,
+    },
+  ],
+  ...[
+    ['sl-tree', 'sl-selection-change'],
+    ['wa-tree', 'wa-selection-change'],
+  ].map(([tag, member]) => [
+    tag,
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra freezes each selection snapshot and exposes it as readonly so listeners cannot mutate component-owned selection state. Migrated handlers that modify the event array in place must create their own copy.',
+      expectedDrift: immutableTreeSelectionDrift(member),
+    },
+  ]),
+  [
+    'wa-file-input',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra exposes dragging and fileCount as getter-only derived state. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract.',
+      expectedDrift: WA_FILE_INPUT_V9_DRIFT,
     },
   ],
   [
@@ -1899,7 +2151,10 @@ const BEHAVIOR_PARITY_OVERRIDES = new Map([
   [
     'wa-carousel',
     {
-      behaviorReviewFlags: ['event-detail-slide-type-widening'],
+      behaviorReviewFlags: [
+        'event-detail-slide-type-widening',
+        'readonly-derived-slide-count',
+      ],
     },
   ],
   [
@@ -1913,15 +2168,40 @@ const BEHAVIOR_PARITY_OVERRIDES = new Map([
     },
   ],
   [
+    'wa-data-grid',
+    {
+      behaviorReviewFlags: [
+        'immutable-collection-snapshots',
+        'removed-data-request-event',
+      ],
+    },
+  ],
+  [
     'wa-random-content',
     {
       lightDom: 'warning-required',
       behaviorReviewFlags: [
+        'immutable-selection-snapshots',
         'host-layout',
         'multi-item-layout',
         'unique-retry-bound',
         'forwarded-slot-candidates',
         'autoplay-semantics',
+      ],
+    },
+  ],
+  ...['sl-tree', 'wa-tree'].map((tag) => [
+    tag,
+    {
+      behaviorReviewFlags: ['immutable-selection-snapshots'],
+    },
+  ]),
+  [
+    'wa-file-input',
+    {
+      behaviorReviewFlags: [
+        'readonly-derived-drag-state',
+        'readonly-derived-file-count',
       ],
     },
   ],
@@ -3349,12 +3629,12 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'sl-avatar',
     [
-      ['attribute', ['loading'], "'eager' | 'lazy'", 'AvatarLoading'],
+      ['attribute', ['loading'], "'eager' | 'lazy'", 'LyraAvatarLoading'],
       [
         'attribute',
         ['shape'],
         "'circle' | 'square' | 'rounded'",
-        'AvatarShape',
+        'LyraAvatarShape',
       ],
     ],
   ],
@@ -3680,12 +3960,12 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-avatar',
     [
-      ['attribute', ['loading'], "'eager' | 'lazy'", 'AvatarLoading'],
+      ['attribute', ['loading'], "'eager' | 'lazy'", 'LyraAvatarLoading'],
       [
         'attribute',
         ['shape'],
         "'circle' | 'square' | 'rounded'",
-        'AvatarShape',
+        'LyraAvatarShape',
       ],
     ],
   ],
@@ -3826,7 +4106,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['appearance'],
         "'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain'",
-        'CardAppearance',
+        'LyraAppearance',
       ],
     ],
   ],
@@ -3867,7 +4147,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['size'],
         "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'",
-        'LyraSize',
+        'LyraSize | undefined',
       ],
     ],
   ],
@@ -4181,6 +4461,7 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         "'s' | 'xs' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'",
         'LyraSize',
       ],
+      ['property', ['parts'], 'DateParts', 'LyraKnownDateParts'],
     ],
   ],
   [
@@ -4826,7 +5107,7 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['appearance'],
         "'filled' | 'outlined' | 'filled-outlined'",
-        'LyraComboboxAppearance',
+        'Extract< LyraAppearance, \"filled\" | \"outlined\" | \"filled-outlined\" >',
       ],
       [
         'property',
@@ -4852,24 +5133,11 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
         "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'",
         'DataGridSize',
       ],
-      ['property', ['columns'], 'DataGridColumn[]', 'DataGridColumn<Row>[]'],
       [
         'property',
         ['dataSource'],
         '((request: DataGridRequest) => Promise<DataGridResponse>) | null',
         '| ((request: DataGridRequest) => Promise<DataGridResponse<Row>>) | null',
-      ],
-      [
-        'property',
-        ['expandedKeys', 'selectedKeys'],
-        '(string | number)[]',
-        'DataGridKey[]',
-      ],
-      [
-        'property',
-        ['filters'],
-        '{ id: string; value: unknown }[]',
-        'DataGridFilter[]',
       ],
       [
         'property',
@@ -4886,7 +5154,7 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
         'attribute',
         ['appearance'],
         "'filled' | 'outlined' | 'filled-outlined'",
-        'LyraDateInputAppearance',
+        "Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>",
       ],
       ['attribute', ['mode'], 'WaDateInputMode', "'single' | 'range'"],
       [
@@ -5219,7 +5487,7 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         'event',
         ['sl-tab-hide', 'sl-tab-show'],
         '{ name: String }',
-        'CustomEvent<{ tabId: string; name: string }>',
+        'CustomEvent<{ name: string }>',
       ],
     ],
   ],
@@ -5230,7 +5498,7 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         'event',
         ['wa-after-hide', 'wa-after-show', 'wa-hide', 'wa-show'],
         'CustomEvent',
-        'CustomEvent<undefined>',
+        'CustomEvent<null>',
       ],
     ],
   ],
@@ -5248,19 +5516,13 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
           'wa-show',
         ],
         'Event',
-        'CustomEvent<undefined>',
+        'CustomEvent<null>',
       ],
     ],
   ],
   [
     'wa-data-grid',
     [
-      [
-        'event',
-        ['request', 'wa-data-request'],
-        'Event',
-        'CustomEvent<DataGridRequest>',
-      ],
       [
         'event',
         ['wa-cell-click'],
@@ -5272,12 +5534,6 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         ['wa-cell-contextmenu'],
         'CustomEvent',
         'CustomEvent<DataGridCellContextMenuDetail<Row>>',
-      ],
-      [
-        'event',
-        ['wa-column-move'],
-        'Event',
-        'CustomEvent<DataGridColumnMoveDetail>',
       ],
       [
         'event',
@@ -5297,36 +5553,12 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         'Event',
         'CustomEvent<DataGridColumnVisibilityDetail>',
       ],
-      [
-        'event',
-        ['wa-data-error'],
-        'Event',
-        'CustomEvent<DataGridDataErrorDetail>',
-      ],
-      [
-        'event',
-        ['wa-filter-change'],
-        'Event',
-        'CustomEvent<{ filters: DataGridFilter[] }>',
-      ],
       ['event', ['wa-page-change'], 'Event', 'CustomEvent<DataGridPageDetail>'],
       [
         'event',
         ['wa-row-collapse', 'wa-row-expand'],
         'Event',
         'CustomEvent<DataGridRowDetail<Row>>',
-      ],
-      [
-        'event',
-        ['wa-row-select'],
-        'Event',
-        'CustomEvent<DataGridSelectionDetail<Row>>',
-      ],
-      [
-        'event',
-        ['wa-sort-change'],
-        'Event',
-        'CustomEvent<{ sort: DataGridSortingState }>',
       ],
     ],
   ],
@@ -5337,7 +5569,13 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         'event',
         ['wa-after-hide', 'wa-after-show', 'wa-clear', 'wa-invalid'],
         'Event',
-        'CustomEvent<undefined>',
+        'CustomEvent<null>',
+      ],
+      [
+        'event',
+        ['wa-hide', 'wa-show'],
+        'CustomEvent<void>',
+        'CustomEvent<null>',
       ],
     ],
   ],
@@ -5365,7 +5603,7 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
   ],
   [
     'wa-file-input',
-    [['event', ['wa-invalid'], 'Event', 'CustomEvent<undefined>']],
+    [['event', ['wa-invalid'], 'Event', 'CustomEvent<null>']],
   ],
   [
     'wa-include',
@@ -5407,17 +5645,6 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
     ],
   ],
   [
-    'wa-random-content',
-    [
-      [
-        'event',
-        ['wa-content-change'],
-        '{ items: Element[] }',
-        'CustomEvent<{ items: HTMLElement[] }>',
-      ],
-    ],
-  ],
-  [
     'wa-rating',
     [
       [
@@ -5435,7 +5662,7 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         'event',
         ['wa-tab-hide', 'wa-tab-show'],
         '{ name: String }',
-        'CustomEvent<{ tabId: string; name: string }>',
+        'CustomEvent<{ name: string }>',
       ],
     ],
   ],
@@ -5451,18 +5678,6 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
     ],
   ],
 ]);
-
-const FORM_OWNER_ATTRIBUTE_TYPE_EQUIVALENCE_TAGS = [
-  'sl-button',
-  'sl-checkbox',
-  'sl-color-picker',
-  'sl-input',
-  'sl-radio-group',
-  'sl-range',
-  'sl-select',
-  'sl-switch',
-  'sl-textarea',
-];
 
 // Web Awesome publishes nullable write types for string-backed form attributes. Lyra accepts the
 // same null writes as attribute removal while preserving a canonical string read type, so record
@@ -5512,19 +5727,19 @@ const STATIC_VALIDATOR_TYPE_EQUIVALENCE_TARGETS = new Map([
 ]);
 
 // Chart.js 4.5.1's `ChartType = keyof ChartTypeRegistry` is the same eight built-in controller
-// names exposed by `LyraChartType`. Every mirrored wrapper retains that writable full union; its
-// tag-specific spelling is only the initial default. Keep every mirrored tag explicit so a new
-// chart family or dependency type never inherits this review accidentally.
+// names exposed by `LyraChartType` on the generic chart. Each typed wrapper deliberately locks its
+// public type to the controller named by its tag, preventing configuration and renderer identity
+// from diverging. Keep every mirrored tag explicit so new chart families never inherit this review.
 const CHART_TYPE_EQUIVALENCE_TARGETS = new Map([
-  ['wa-bar-chart', 'LyraChartType'],
-  ['wa-bubble-chart', 'LyraChartType'],
+  ['wa-bar-chart', "'bar'"],
+  ['wa-bubble-chart', "'bubble'"],
   ['wa-chart', 'LyraChartType'],
-  ['wa-doughnut-chart', 'LyraChartType'],
-  ['wa-line-chart', 'LyraChartType'],
-  ['wa-pie-chart', 'LyraChartType'],
-  ['wa-polar-area-chart', 'LyraChartType'],
-  ['wa-radar-chart', 'LyraChartType'],
-  ['wa-scatter-chart', 'LyraChartType'],
+  ['wa-doughnut-chart', "'doughnut'"],
+  ['wa-line-chart', "'line'"],
+  ['wa-pie-chart', "'pie'"],
+  ['wa-polar-area-chart', "'polarArea'"],
+  ['wa-radar-chart', "'radar'"],
+  ['wa-scatter-chart', "'scatter'"],
 ]);
 
 function reviewedTypeEquivalences(upstreamTag) {
@@ -5533,9 +5748,6 @@ function reviewedTypeEquivalences(upstreamTag) {
     ...(REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS.get(upstreamTag) ?? []),
     ...(REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS.get(upstreamTag) ?? []),
   ];
-  if (FORM_OWNER_ATTRIBUTE_TYPE_EQUIVALENCE_TAGS.includes(upstreamTag)) {
-    groups.push(['attribute', ['form'], 'string', 'HTMLFormElement | null']);
-  }
   const nullableStringMembers =
     NULLABLE_STRING_ATTRIBUTE_TYPE_EQUIVALENCE_MEMBERS.get(upstreamTag);
   if (nullableStringMembers) {
@@ -5615,7 +5827,14 @@ const REVIEWED_ATTRIBUTE_PROPERTY_EQUIVALENCE_GROUPS = new Map([
 // These entries are the exact reviewed compatibility set; popup, rating-max, and Shoelace
 // skeleton-effect mismatches were fixed at runtime and therefore do not appear.
 const REVIEWED_REFLECTION_EQUIVALENCE_GROUPS = new Map([
-  ['sl-button', [['attribute', ['href', 'name', 'value'], false, true]]],
+  [
+    'sl-button',
+    [
+      ['attribute', ['href', 'name', 'value'], false, true],
+      ['attribute', ['form'], false, true],
+      ['property', ['form'], false, true],
+    ],
+  ],
   [
     'sl-checkbox',
     [
@@ -5708,7 +5927,7 @@ const REVIEWED_REFLECTION_EQUIVALENCE_GROUPS = new Map([
     'wa-button',
     [
       ['attribute', ['disabled'], false, true],
-      ['property', ['required'], false, true],
+      ['property', ['form', 'required'], false, true],
     ],
   ],
   [
@@ -5725,7 +5944,13 @@ const REVIEWED_REFLECTION_EQUIVALENCE_GROUPS = new Map([
       ['property', ['form'], false, true],
     ],
   ],
-  ['wa-combobox', [['attribute', ['disabled'], false, true]]],
+  [
+    'wa-combobox',
+    [
+      ['attribute', ['disabled'], false, true],
+      ['property', ['form'], false, true],
+    ],
+  ],
   [
     'wa-date-input',
     [
@@ -5740,7 +5965,7 @@ const REVIEWED_REFLECTION_EQUIVALENCE_GROUPS = new Map([
     'wa-file-input',
     [
       ['attribute', ['disabled'], false, true],
-      ['property', ['dragging'], false, true],
+      ['property', ['form'], false, true],
     ],
   ],
   ['wa-include', [['attribute', ['mode', 'src'], false, true]]],
@@ -5789,11 +6014,17 @@ const REVIEWED_REFLECTION_EQUIVALENCE_GROUPS = new Map([
     'wa-radio',
     [
       ['attribute', ['disabled'], false, true],
-      ['property', ['required'], false, true],
+      ['property', ['form', 'required'], false, true],
     ],
   ],
   ['wa-radio-group', [['property', ['form'], false, true]]],
-  ['wa-rating', [['attribute', ['disabled'], false, true]]],
+  [
+    'wa-rating',
+    [
+      ['attribute', ['disabled'], false, true],
+      ['property', ['form'], false, true],
+    ],
+  ],
   [
     'wa-select',
     [
@@ -5880,17 +6111,9 @@ const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
     'wa-accordion-item',
     [
       ['--easing', 'var(--wa-transition-easing)', null],
-      [
-        '--hide-duration',
-        'var(--wa-transition-normal)',
-        'var(--lr-duration-base)',
-      ],
-      [
-        '--show-duration',
-        'var(--wa-transition-normal)',
-        'var(--lr-duration-base)',
-      ],
       ['--spacing', 'var(--wa-space-m)', null],
+      ['--hide-duration', 'var(--wa-transition-normal)', null],
+      ['--show-duration', 'var(--wa-transition-normal)', null],
     ],
   ],
   ['wa-card', [['--spacing', 'var(--wa-space-l)', 'var(--lr-space-m)']]],
@@ -6371,7 +6594,7 @@ const REVIEWED_TARGET_CSS_DEFAULT_ADDITION_GROUPS = [
     ['wa-video'],
     [
       ['--controls-background', 'var(--lr-color-overlay-strong)'],
-      ['--controls-color', 'var(--lr-color-text)'],
+      ['--controls-color', 'var(--lr-color-on-strong-overlay)'],
       ['--poster-play-button-background', 'var(--lr-color-surface-overlay)'],
     ],
   ],
@@ -6407,7 +6630,6 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
   ],
   ['wa-qr-code', [['parts', ['base'], true, null, true, 'qr-code']]],
   ...[
-    'wa-accordion-item',
     'wa-badge',
     'wa-breadcrumb',
     'wa-button',
@@ -6434,6 +6656,7 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
     'wa-tree',
     'wa-tree-item',
   ].map((tag) => [tag, [['parts', ['base'], true, null, false, null]]]),
+  ['wa-accordion-item', [['parts', ['base'], true, null, true, 'accordion-item']]],
   ...['wa-input', 'wa-number-input', 'wa-textarea', 'wa-time-input'].map(
     (tag) => [
       tag,
@@ -6643,6 +6866,14 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   [
     'wa-combobox',
     {
+      methodParameterTypeEquivalences: [
+        reviewedMethodParameterTypeEquivalence(
+          'formStateRestoreCallback',
+          'reason',
+          "'autocomplete' | 'restore'",
+          '"autocomplete" | "restore"',
+        ),
+      ],
       // `wa-invalid` is `preventDefault()`-able on `<lr-combobox>` because vetoing it also cancels
       // the native `invalid` event behind it, which is what suppresses the browser's own validation
       // bubble. `lr-show` is cancelable on every path. `lr-hide` is cancelable while connected, but

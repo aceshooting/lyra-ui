@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,24 +20,28 @@ landing surface for `region`-anchored citations. Distinct from `<lr-svg-viewer>`
 documents) and `<lr-image-comparer>` (before/after slotted surfaces). Adopts `DocumentAnchorTarget`
 with `anchorKinds: ['region']` only — no text selection is bound.
 
-**Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`, `fit: 'contain' | 'width' |
-'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
+**Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
+`fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
+`contain`), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
 `min-zoom`), `maxZoom: number = 4` (attribute `max-zoom`), `zoomStep: number = 0.25` (attribute
 `zoom-step`) — `minZoom`/`maxZoom`/`zoomStep` are pure pass-throughs to the embedded
 `<lr-pan-zoom>` as its own `.minZoom`/`.maxZoom`/`.zoomStep`, which does the actual
 clamping/normalizing; same names/defaults as `<lr-lightbox>`'s identical trio, both wrapping the
-same pan/zoom surface — `rotation: 0 | 90 | 180 | 270 = 0`
-(reflected), and `annotatable: boolean = false` (reflected). The inherited anchor-target surface is
-`highlights: LyraHighlight[] = []` (property only; reassign after mutation),
+same pan/zoom surface — `rotation: LyraImageRotation = 0 | 90 | 180 | 270` (reflected; finite
+writes round to the nearest right angle and wrap), and `annotatable: boolean = false` (reflected).
+`LyraImageRegionRect` is the public `{ x, y, width, height }` percentage-coordinate shape. The
+inherited anchor-target surface is
+`highlights: readonly LyraHighlight[] = []` (property only; assign a new collection to update),
 `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
 `anchorKinds: readonly LyraAnchorKind[] = ['region']`.
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
 the embedded pan-zoom surface's zoom. `scrollToAnchor(target: LyraAnchor | string):
-Promise<boolean>` resolves a `region` anchor (or a highlight id) after the image loads, reports
-whether it resolved, and makes an id-addressed match active; the complete image is already inside
-the pan/zoom viewport, so no additional page scroll is needed.
+Promise<boolean>` resolves a canonical finite, positive, in-bounds `region` anchor (or unique
+highlight id) after the image loads, scrolls its rendered target into the pan/zoom viewport, and
+reports true only when the target visibly intersects that viewport. Malformed/out-of-range regions
+report false.
 
 **Events:** `lr-load` (`detail: { naturalWidth, naturalHeight }`), `lr-zoom-change` (`detail: {
 zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detail: { fit }`),
@@ -49,18 +53,32 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 text.
 
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
-embedded `lr-pan-zoom`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
-`data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
+embedded `lr-pan-zoom`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
+`rotation-frame` (the axis-swapped 90°/270° layout footprint), `image-wrapper`, `image`,
+`highlight-layer`, `highlight` (carries `data-tone`/`data-active`), `highlight-label`,
+`annotation-box`, and `error`.
 
 `error` is ordinary localized visible text, not a shadow live region. A fresh post-mount image
 failure or transition to an unsafe source appends the localized message to the document's
 pre-mounted `[data-lr-live-region="assertive"]` sink. An already-unsafe initial `src` remains
 visible but does not interrupt on mount; identical later failures append distinct children.
 
-While `annotatable`, `image-wrapper` is a named `role="group"` with the localized annotation hint.
-Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`height` and
-nonnegative dimensions are rendered; malformed rectangles are omitted rather than reaching inline
-styles or anchor hit testing.
+Fit, rotate and annotate controls remain disabled until the current source reaches its own loaded
+terminal. Requested annotation mode resumes after a successful replacement load, but is not
+exposed as pressed/operable during idle, loading, or error state.
+
+While effectively annotatable, `image-wrapper` is a named `role="group"` with the localized
+annotation hint. Only `region` highlights whose rectangle is finite, positive and wholly within
+the 0–100 image coordinate space are rendered. IDs use first-wins uniqueness. At most
+`IMAGE_VIEWER_HIGHLIGHT_LIMIT` (200) region buttons are projected at once; one roving `tabindex=0`
+is maintained, Arrow keys/Home/End move within the projection, and an active item beyond the
+leading window replaces its final entry so identity stays reachable. `data-truncated` and
+`data-total` on `highlight-layer` expose the bounded state. Highlight tones retain distinct border
+styles as well as colors, including forced-colors mode.
+
+At 90°/270°, `rotation-frame` swaps the untransformed wrapper's layout axes and centers the painted
+transform inside that footprint, keeping every fit mode reachable in the scroll geometry in LTR
+and RTL.
 
 **RTL behavior:** the raster and annotation geometry use physical image coordinates. In annotation
 mode, ArrowLeft/ArrowRight decrease/increase a draft's `x` coordinate and their Shift variants

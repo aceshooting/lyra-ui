@@ -25,7 +25,8 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 
 - `open: boolean = false` (reflected) — no separate `show()`/`hide()`; set this or call
   `start()`/`end()`
-- `steps: TourStep[] = []` (attribute: false) — empty renders nothing
+- `steps: readonly Readonly<LyraTourStep>[] = []` (attribute: false) — assignment takes a shallow
+  frozen snapshot; empty renders nothing
 - `activeIndex: number = 0` (attribute `active-index`, reflected) — clamped to
   `[0, steps.length - 1]` as a finite integer, including for a direct property/attribute write that
   bypasses `goToStep()`; fractions floor and non-finite values fall back to `0`
@@ -42,25 +43,32 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,
   overriding each step's own `heading` as the `aria-labelledby` source
 
-**Exported types:** `TourStep { id: string; target: TourTarget; heading: string; content?: string;
+**Exported types:** `LyraTourStep { stepId: string; target: LyraTourTarget; heading: string; content?: string;
 placement?: Placement; spotlightPadding?: number; interactiveTarget?: boolean; hidePrevious?: boolean }`;
-`TourTarget = string | HTMLElement | (() => HTMLElement | null)` — a string resolves via
+`LyraTourTarget = string | HTMLElement | (() => HTMLElement | null)` — a string resolves via
 `ownerDocument.querySelector` (top-level light DOM only). Every form resolves exactly once when the
 step becomes active and is kept as one connected snapshot for that activation, then resolves again
 on a later activation/reconnect. Invalid selectors, throwing resolvers, non-`HTMLElement` results,
-and detached elements use the normal missing-target path instead of throwing. `heading` is required
-and becomes the panel's accessible name; `content` renders as plain text (no HTML/markdown parsing).
-`TourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | (string & {})`.
+and detached elements use the normal missing-target path instead of throwing. `heading` normally
+becomes the panel's accessible name; a defensive blank/whitespace heading uses the localized
+"Step X of Y" string instead, including when progress is visually hidden or the target is missing.
+`content` renders as plain text (no HTML/markdown parsing).
+Assigning `steps` clone-normalizes at most 256 own-data plain records into an immutable snapshot;
+accessor/inherited/malformed rows and invalid optional fields are omitted while later valid siblings
+remain usable. Step ids and headings are bounded to 256 and 4,096 characters, target selector
+strings to 8,192, and body content to 65,536. Per-step spotlight padding is finite, non-negative,
+and capped at 10,000px. Provider mutation after assignment cannot change rendering or event detail.
+`LyraTourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | (string & {})`.
 
 **Methods:** `start(index = 0)` (clamps, opens, emits `lr-tour-start`), `next()` (on the last step
 ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(index)` (clamped),
-`skip()` (sugar for `end('skip')`), `end(reason: TourEndReason = 'api')`.
+`skip()` (sugar for `end('skip')`), `end(reason: LyraTourEndReason = 'api')`.
 
 **Events:** `lr-tour-start` (`detail: { index }`, not cancelable); `lr-tour-step-change`
 (`detail: { index, previousIndex, step, via: 'next'|'back'|'goto' }`, **cancelable** — fires before
 `activeIndex` changes, so `preventDefault()` gates advancement on a real action; a deliberate
 departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end`
-(`detail: TourEndReason`, cancelable except in practice for `'unmount'`, which is emitted when the
+(`detail: LyraTourEndReason`, cancelable except in practice for `'unmount'`, which is emitted when the
 element is removed while still open by something other than its own `end()`);
 `lr-tour-target-missing` (`detail: { index, step }`, informational — the tour does **not** auto-end,
 it renders that step viewport-centered with no spotlight).
@@ -101,10 +109,15 @@ rather than per component.
   `inert`, not `aria-hidden`) but every pointer event over the viewport is captured by the backdrop.
   A default step uses a modal overlay and traps focus in the panel. Set `step.interactiveTarget` to
   clip the backdrop around the target, switch the panel to nonmodal semantics, and install an
-  explicit two-way Tab route between the panel and the live target, so both pointer and keyboard
-  interaction remain reachable.
-- Each step transition mounts a genuinely new popover node (keyed on `step.id`) so focus reliably
-  re-enters the panel — don't cache a reference to `[part="popover"]` across steps.
+  explicit bounded Tab scope over the panel and the live composed target descendants, so nested,
+  forwarded, dynamically disabled, and inert controls cannot leak focus to unrelated page content.
+- A live transition between modal and interactive-target steps preserves the trigger captured when
+  the tour opened. Intermediate overlay ownership changes never restore focus; a genuine end returns
+  to that original trigger when it is still connected.
+- Each step transition mounts a genuinely new popover node keyed on occurrence index plus
+  `step.stepId`, so repeated business ids cannot collapse distinct occurrences. Every step-related
+  event exposes the occurrence index, which is the authoritative collection identity; focus
+  reliably re-enters the panel — don't cache a reference to `[part="popover"]` across steps.
 - No `Home`/`End` shortcut and no click-to-jump progress dots (unlike `lr-stepper`): later steps may
   depend on an earlier step's side effect having run. `goToStep()` is available for a caller that
   knows better. ArrowRight/ArrowLeft do move between steps (swapped under RTL), except while focus

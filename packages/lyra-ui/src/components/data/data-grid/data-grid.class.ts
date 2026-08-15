@@ -98,6 +98,23 @@ interface DataDisplayGroup<Row> {
 
 type DisplayItem<Row> = DataDisplayRow<Row> | DataDisplayGroup<Row>;
 
+function snapshotColumns<Row>(
+  value: readonly DataGridColumn<Row>[]
+): readonly DataGridColumn<Row>[] {
+  if (!Array.isArray(value)) return Object.freeze([]);
+  const output: DataGridColumn<Row>[] = [];
+  for (const column of value) {
+    try {
+      if (column === null || typeof column !== "object" || Array.isArray(column))
+        continue;
+      output.push(Object.freeze({ ...column }));
+    } catch {
+      // Keep later valid definitions when a hostile record/getter fails.
+    }
+  }
+  return Object.freeze(output);
+}
+
 interface ResizeSession {
   columnId: string;
   startClientX: number;
@@ -252,16 +269,18 @@ function normalizePinSide(side: DataGridPinSide): "left" | "right" | false {
   return side;
 }
 
-function normalizedGroupBy(value: string | string[] | null): string[] {
-  if (Array.isArray(value))
-    return value.map((entry) => entry.trim()).filter(Boolean).slice(0, DATA_GRID_TREE_DEPTH_LIMIT);
-  return (
-    value
-      ?.split(/[\s,]+/u)
+function normalizedGroupBy(value: string | readonly string[] | null): readonly string[] {
+  if (typeof value !== "string") {
+    return (value ?? [])
       .map((entry) => entry.trim())
       .filter(Boolean)
-      .slice(0, DATA_GRID_TREE_DEPTH_LIMIT) ?? []
-  );
+      .slice(0, DATA_GRID_TREE_DEPTH_LIMIT);
+  }
+  return value
+    .split(/[\s,]+/u)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .slice(0, DATA_GRID_TREE_DEPTH_LIMIT);
 }
 
 /**
@@ -436,17 +455,19 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private _columns: readonly DataGridColumn<Row>[] = Object.freeze([]);
-  /** Clone-owned readonly column-definition sequence. Reassign to update. */
+  /** Clone-owned readonly column-definition sequence. Reassign to update.
+   * @default [] */
   @property({ attribute: false })
   get columns(): readonly DataGridColumn<Row>[] { return this._columns; }
   set columns(value: readonly DataGridColumn<Row>[]) {
     const previous = this._columns;
-    this._columns = frozenArray(Array.isArray(value) ? value : []);
+    this._columns = snapshotColumns(value);
     this.requestUpdate("columns", previous);
   }
 
   private _data: readonly Row[] = Object.freeze([]);
-  /** Clone-owned readonly client rows or current server page. Row identities are preserved. */
+  /** Clone-owned readonly client rows or current server page. Row identities are preserved.
+   * @default [] */
   @property({ attribute: false })
   get data(): readonly Row[] { return this._data; }
   set data(value: readonly Row[]) {
@@ -502,8 +523,20 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this._filters = Object.freeze(next);
     this.requestUpdate("filters", previous);
   }
-  /** One or more field/column identifiers used to group client rows. */
-  @property({ attribute: "group-by" }) groupBy: string | string[] | null = null;
+  private _groupBy: string | readonly string[] | null = null;
+  /** One or more field/column identifiers used to group client rows.
+   * @default null */
+  @property({ attribute: "group-by" })
+  get groupBy(): string | readonly string[] | null { return this._groupBy; }
+  set groupBy(value: string | readonly string[] | null) {
+    const previous = this._groupBy;
+    this._groupBy = typeof value === "string"
+      ? value
+      : Array.isArray(value)
+        ? frozenArray(value.filter((item): item is string => typeof item === "string"))
+        : null;
+    this.requestUpdate("groupBy", previous);
+  }
   /** Accessible name used when host `aria-label` is absent. */
   @property() label: string | null = null;
   /** Shows the loading overlay. */
@@ -527,7 +560,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   @property({ type: Number, attribute: "page-size" }) pageSize = 20;
   /** Choices rendered by the page-size selector. */
   private _pageSizeOptions: readonly number[] = Object.freeze([10, 20, 50, 100]);
-  /** Clone-owned choices rendered by the page-size selector. */
+  /** Clone-owned choices rendered by the page-size selector.
+   * @default [10, 20, 50, 100] */
   @property({ attribute: false })
   get pageSizeOptions(): readonly number[] { return this._pageSizeOptions; }
   set pageSizeOptions(value: readonly number[]) {

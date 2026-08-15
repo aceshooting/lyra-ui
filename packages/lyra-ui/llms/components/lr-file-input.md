@@ -24,9 +24,9 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
-- `fileCount: number = 0` and `dragging: boolean = false` — writable public state. Assigning
-  `files` resynchronizes `fileCount` to the selected-file count; the next real drag event resumes
-  ownership of `dragging` and its accept/reject state.
+- `readonly fileCount: number` and `readonly dragging: boolean` — derived state. Assigning `files`
+  updates the selected-file count; real drag events alone own the drag session and its
+  accept/reject state.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`
@@ -37,9 +37,11 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
   comma-separated mix); now enforced on **both** the native picker dialog and the drag-drop path, see
   gotchas
 - `capture: '' | 'user' | 'environment' = ''` — forwarded to the native file picker
-- `allowedMimeTypes: string[] = []` (attribute: false) — exact MIME-string allowlist
-- `forbiddenMimeTypes: string[] = []` (attribute: false) — exact MIME-string denylist, checked
-  **before** (and takes precedence over) `allowedMimeTypes`
+- `allowedMimeTypes: readonly string[] = []` (attribute: false) — exact MIME-string allowlist
+- `forbiddenMimeTypes: readonly string[] = []` (attribute: false) — exact MIME-string denylist,
+  checked **before** (and taking precedence over) `allowedMimeTypes`. Both properties take frozen
+  snapshots, retain valid string entries, and inspect at most 10,000 candidates per assignment;
+  update them by assigning a new collection.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
 - `directory: boolean = false` (reflected) — enables native directory selection where supported
 - `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
@@ -73,10 +75,15 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
     result's own `message` to the validator's static or function `message`, then to the localized
     default. Attributes listed in `observedAttributes` are watched on the host and revalidate live.
   Validators run in order and the first failure wins. A validator that throws fails closed with the
-  localized generic message rather than escaping into the caller. `checkValidity()` and
-  `reportValidity()` recompute at call time, so a validator that starts failing without any host
-  property changing is still seen. Own or fieldset-cascaded `disabled` bars configured validators
-  exactly as it bars the intrinsic constraint. Exported types:
+  localized generic message rather than escaping into the caller. Unreadable proxy-backed
+  validator collections/results are contained too: a collection or result trap fails closed,
+  returned validity flags are copied through the native flag vocabulary, and an unreadable
+  `observedAttributes` list is skipped without rejecting the component's update. The public array
+  remains the live mutable mirrored contract; each validation/observer pass takes only a transient
+  iteration snapshot. `checkValidity()` and `reportValidity()` recompute at call time, so a
+  validator that starts failing without any host property changing is still seen. Own or
+  fieldset-cascaded `disabled` bars configured validators exactly as it bars the intrinsic
+  constraint. Exported types:
   `LyraFileInputValidator`, `LyraFileInputValidatorResult`, `LyraFileInputObjectValidator`,
   `LyraFileInputObjectValidatorResult`.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
@@ -84,10 +91,14 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
   is anchored; assign `undefined` to restore the default focusable base
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
   dropzone/button accessible name without changing visible copy
-- `acceptedMessage: string = '{count} file(s) added.'` (attribute `accepted-message`) — live-region
-  message after an accepted selection; `{count}` is replaced with the accepted count
-- `rejectedMessage: string = '{count} file(s) rejected.'` (attribute `rejected-message`) — live-region
-  message after rejected files; `{count}` is replaced with the rejected count
+- `acceptedMessage?: string` (attribute `accepted-message`) — live-region message after an
+  accepted selection; `{count}` is replaced with the accepted count. Absence uses the localized
+  singular/plural `fileInputAcceptedOne`/`fileInputAcceptedMany` default. Every explicit string,
+  including empty and the former `'{count} file(s) added.'` English default, wins verbatim.
+- `rejectedMessage?: string` (attribute `rejected-message`) — live-region message after rejected
+  files; `{count}` is replaced with the rejected count. Absence uses the localized singular/plural
+  `fileInputRejectedOne`/`fileInputRejectedMany` default. Every explicit string, including empty
+  and the former `'{count} file(s) rejected.'` English default, wins verbatim.
 
 **Methods:** `openPicker()` programmatically opens the native file dialog; `focus(options?)`,
 `blur()`, and `click()` forward to the interactive dropzone. Standard FACE methods are
@@ -96,23 +107,31 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
 `required` validity.
 
 **Events:** a user selection or removal emits native bubbling/composed `input`, then `change`;
-programmatic `files` writes are silent. `lr-files` (`detail: { files: File[], rejected: RejectedFile[] }`, fired on both drop
-and manual file-picker selection) — `RejectedFile = { file: File; reason: 'type' | 'count' | 'size' | 'directory'
+programmatic `files` writes are silent. The hidden native picker's own `change` is contained inside
+the shadow root, so a picker selection exposes exactly one post-commit host `change`, not the
+implementation event plus a duplicate. `lr-files` (`detail: LyraFileInputFilesDetail`, with fresh
+readonly `files` and `rejected` arrays, fired on both drop and manual file-picker selection) —
+`LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
 }`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
 input (`multiple` unset) receives more than one file (in which case *all* files are rejected, none
-accepted), `'size'` from `maxFileSize`, or `'directory'` for a dropped folder. `focus`/`blur` fire
-when the semantic dropzone (the actual keyboard-focusable element, not the hidden native `<input>`)
-gains/loses focus.
+accepted), `'size'` from `maxFileSize`, `'directory'` for a dropped folder in single-file mode,
+`'read'` when a file/directory reader fails, or `'limit'` when folder traversal exceeds its bounded
+entry budget. Read/limit failures reject the complete selection atomically; lifecycle cancellation
+and supersession stay silent. `focus`/`blur` fire when the semantic dropzone (the actual
+keyboard-focusable element, not the hidden native `<input>`) gains/loses focus.
 `lr-invalid` is the bubbling/composed alias of native invalidity.
 
 Each rejected file also renders as its own line in the visible `[part="rejection"]` region, naming
-the file and the reason via one of four locale keys: `fileInputRejectedType` (default
+the file and the reason via one of six locale keys: `fileInputRejectedType` (default
 `'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
 `'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
 file can be selected at a time.'`), and — for `'directory'` — the pre-existing
 `fileInputFolderRejected` (default `'Folders are not accepted here.'`, reused verbatim, so it has no
-`{filename}` placeholder). The filename is interpolated as caller-supplied data, never localized
-itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
+`{filename}` placeholder). Terminal traversal failures use `fileInputRejectedRead` (default
+`'{filename}: the file could not be read.'`) and `fileInputRejectedLimit` (default
+`'{filename}: the folder contains too many entries.'`). The filename is interpolated as
+caller-supplied data, never localized itself. The same per-reason text is announced assertively;
+the region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
 content; `label`, `hint`, and `error` supply form chrome. The semantic button's accessible name comes from
@@ -230,10 +249,12 @@ an extension-only `accept` list.
 - Paste-from-clipboard **is** supported and on by default: a `paste` event on the dropzone reads
   `e.clipboardData.files` and routes it through the same accept/reject classification as a drop.
   Set `paste="false"` (or `.paste = false`) to opt out.
-- Dragged folders are traversed recursively in `multiple` mode with a 10,000-entry budget. An
-  over-budget, cancelled, or superseded traversal rejects the complete drop and emits no partial
-  `lr-files` result. In single-file mode a folder is reported as `rejected[].reason === 'directory'`
-  (paired with a synthetic zero-byte `File` carrying the folder name).
+- Dragged folders are traversed recursively in `multiple` mode with a 10,000-entry budget. A read
+  failure or over-budget traversal rejects the complete drop atomically and emits one `lr-files`
+  result with `rejected[].reason === 'read'` or `'limit'`, plus dedicated visible and assertive
+  localized feedback. Lifecycle cancellation and supersession remain silent and emit no partial
+  result. In single-file mode a folder is reported as `rejected[].reason === 'directory'` (paired
+  with a synthetic zero-byte `File` carrying the folder name).
 - `maxFileSize` fails safe rather than open: `0` (the default) or `Infinity` mean "no limit", but a
   `NaN`/negative value — an unparsable `max-file-size` attribute, or a config that hasn't loaded
   yet — falls back to a 25 MB cap (exported as `DEFAULT_MAX_FILE_SIZE_BYTES`) instead of disabling

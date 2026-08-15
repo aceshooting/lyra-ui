@@ -313,6 +313,36 @@ it('renders WA details and Shoelace prefix/suffix compatibility slots through na
     .to.exist;
 });
 
+it('contains long details and suffix content in narrow LTR and RTL rows', async () => {
+  const long = 'UnbrokenTrailingMenuMetadataThatMustStayInsideTheAllocatedRow'.repeat(8);
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 319px; max-inline-size: 319px">
+        <lr-menu label="Actions">
+          <lr-menu-item>
+            Rename
+            <span slot="details" style="display:block;white-space:nowrap">${long}</span>
+            <span slot="suffix" style="display:block;white-space:nowrap">${long}</span>
+          </lr-menu-item>
+        </lr-menu>
+      </div>
+    `);
+    const item = wrapper.querySelector('lr-menu-item') as LyraMenuItem;
+    const row = item.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const details = item.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!;
+    const suffix = item.shadowRoot!.querySelector<HTMLElement>('[part="suffix"]')!;
+    const rowRect = row.getBoundingClientRect();
+
+    for (const trailing of [details, suffix]) {
+      const rect = trailing.getBoundingClientRect();
+      expect(rect.left, `${direction} trailing start`).to.be.at.least(rowRect.left - 1);
+      expect(rect.right, `${direction} trailing end`).to.be.at.most(rowRect.right + 1);
+      expect(getComputedStyle(trailing).overflow).to.equal('hidden');
+    }
+    expect(row.scrollWidth, `${direction} row scroll width`).to.be.at.most(row.clientWidth + 1);
+  }
+});
+
 it('keeps every display slot decorative while the host retains the sole menuitem action', async () => {
   const wrapper = (await fixture(html`
     <lr-menu label="Actions">

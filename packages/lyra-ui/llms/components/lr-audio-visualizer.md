@@ -26,14 +26,18 @@ exists. A real signal (`stream` or `level`) always drives amplitude regardless o
 wired to a WebAudio `AnalyserNode`; `level: number | null = null` — a pre-computed 0–1 amplitude for
 hosts that already have one (e.g. `lr-push-to-talk`'s `lr-level` detail); `state: 'idle' |
 'listening' | 'thinking' | 'speaking' = 'idle'` (reflected) — drives the signal-less ambient
-animation and per-state coloring; `variant: 'bars' | 'waveform' = 'bars'` (reflected); `barCount:
-number = 5` (attribute `bar-count`); `gain: number = 1` — multiplier applied to the resolved
-amplitude; `label: string = ''` — the host's accessible name.
+animation and per-state coloring; `mode: AudioVisualizerMode = 'bars'` (`'bars' | 'waveform'`,
+reflected); `barCount: number = 5` (attribute `bar-count`); `gain: number = 1` — multiplier applied
+to the resolved amplitude; `label: string =
+''` — accessible-name override. Invalid `state` or `mode` attribute/property writes normalize to
+`idle` and `bars` respectively.
 
 **Methods:** `refreshTheme()` re-reads themeable custom properties after a runtime theme change (the
 canvas resolves token values at paint time and cannot inherit `var()` directly). Canvas-bound
 colors are materialized through a live DOM probe, so `currentColor` and inherited expressions
-resolve in the component's theme scope while invalid values fall back safely.
+resolve in the component's theme scope while invalid values fall back safely. Assigning a detached
+or empty `MediaStream` tears down the prior analyser transaction immediately and draws from
+`level`/ambient state; late setup from an older stream cannot replace the current source.
 
 **Events:** none — purely presentational.
 

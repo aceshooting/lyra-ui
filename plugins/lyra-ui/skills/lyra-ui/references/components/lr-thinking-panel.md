@@ -22,7 +22,10 @@ slot is entirely free-form (a consumer-composed `<lr-streaming-text>`, `<lr-mark
 plain text) — this component has no dependency on either.
 
 **Properties:**
-- `label: string = 'Thinking'`
+
+- `label?: string` — omitted localizes `thinkingPanelLabel` (`'Thinking'` in the built-in English
+  catalog). Any supplied string is an explicit override and renders verbatim, including
+  `label="Thinking"` under a non-English `.strings` catalog and `label=""`.
 - `compact: boolean = false` (reflected) — tightens the header/body padding and the header's
   internal gap for dense transcript rows. This is only a density control: its card border and
   surface remain, so use `frame="plain"` when surrounding message chrome already supplies them.
@@ -43,8 +46,11 @@ plain text) — this component has no dependency on either.
 (no smooth-scroll animation). Safe to call directly, e.g. from a host that wants to force a
 jump-to-latest action of its own.
 
-**Events:** `lr-toggle` (`detail: { expanded: boolean }`, same event name and shape as
-`<lr-source-list>`'s own `lr-toggle`) — fired whenever the header button is activated.
+**Events:** cancelable `lr-toggle-request` (`detail: { expanded: boolean }`) fires before a header
+activation changes state. Prevent it to retain the current `expanded` value. An accepted request
+then updates `expanded` and emits the non-cancelable committed `lr-toggle` with the same detail;
+vetoed requests never emit the committed event. `lr-follow-change` (`detail: { following: boolean }`)
+reports user scroll release or re-engagement; direct `follow` assignments do not echo it.
 
 **Slots:** default (the reasoning/thinking content; entirely free-form)
 
@@ -78,7 +84,10 @@ padding while `compact`. Plus shared
 
 ```html
 <lr-thinking-panel label="Reasoning" mode="live" expanded>
-  <lr-streaming-text content="Considering the user's constraints…" streaming></lr-streaming-text>
+  <lr-streaming-text
+    content="Considering the user's constraints…"
+    streaming
+  ></lr-streaming-text>
 </lr-thinking-panel>
 
 <lr-thinking-panel label="Reasoning" mode="post-hoc" duration-ms="4200">
@@ -111,13 +120,14 @@ token; scroll-to-bottom calls are coalesced to at most one per animation frame u
 stream.
 
 **Known gotchas:**
+
 - The `MutationObserver` only watches this element's own light-DOM subtree — it cannot see a
   mutation that happens entirely inside a slotted custom element's own shadow root (e.g. a
   `<lr-markdown>` re-rendering its shadow tree after a `content` change). A slotted element whose
   own internal updates should drive auto-scroll needs to append/mutate visible light-DOM text
   itself (as `<lr-streaming-text>` does), or the host can call `scrollToBottom()` directly.
 - Either half of the pair can trigger the jump-to-bottom/reset-stickiness behavior, as long as the
-  *other* half already holds: an `expanded` transition to `true` while `mode` is already `'live'`,
+  _other_ half already holds: an `expanded` transition to `true` while `mode` is already `'live'`,
   **or** a `mode` transition to `'live'` while the panel is already `expanded`, both jump to the
   bottom and reset stickiness. Only a change that leaves the panel in some other combination
   (collapsed, or `mode !== 'live'`) skips it.

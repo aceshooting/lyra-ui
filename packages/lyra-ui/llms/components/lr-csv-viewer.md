@@ -39,10 +39,12 @@ behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step ba
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing reports an error.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing reports an error. Up to
+100 recoverable PapaParse diagnostics may accompany the rendered grid; exceeding that budget is a
+resource-limit error instead.
 `lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
-`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
+`scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
@@ -67,8 +69,10 @@ inherits across that boundary instead.
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
 
-Remote resources are capped at 25 MB, and the parsed table at 10,000 rows and 1,000 columns;
-exceeding any of these surfaces the localized `documentPreviewResourceTooLarge` message instead of
-the table.
+Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 raw rows
+(the first row consumes the same budget whether or not `has-header-row` displays it as a header),
+1,000 columns in any row, 1,000,000 aggregate cells, or more than 100 parser diagnostics; streaming
+row callbacks enforce the same ceilings again. Exceeding any ceiling surfaces the localized
+`documentPreviewResourceTooLarge` message instead of a partial grid.
 
 ---

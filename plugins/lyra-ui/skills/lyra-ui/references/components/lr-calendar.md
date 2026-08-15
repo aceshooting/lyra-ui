@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,17 +19,21 @@ Responsive month calendar with event markers and an agenda view.
 
 **Properties:**
 
-- `events: CalendarEvent[] = []` (attribute: false) — `{ id?, date, title, start?, end?, color?,
-data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is sanitized before being used as the
-  marker background
+- `events: CalendarEvent[] = []` (attribute: false) — `{ readonly id?, readonly date, readonly
+  title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is
+  sanitized before being used as the marker background. The former ignored `start`/`end` fields
+  are not part of the contract; use one event per displayed date
 - `value: string = ''` — the selected ISO date
 - `viewDate: string` (attribute `view-date`, defaults to the 1st of the current month) — the visible
   month; an unparseable value falls back to the current month
-- `view: 'month' | 'agenda' = 'month'` (reflected) — agenda lists this month's events, date-sorted
+- `view: CalendarView = 'month'`, where `CalendarView = 'month' | 'agenda'` (reflected) — agenda
+  lists the effective visible month's events, date-sorted. Foreign tokens normalize and reflect to
+  `month`
 - `firstDayOfWeek: number = 1` (attribute `first-day-of-week`) — sanitized to a finite integer
   (fallback `1`) and wrapped into `0`–`6`, so a malformed value can't drop days
-- `accessibleLabel: string = ''` (attribute `aria-label`) — names the calendar `<section>`; falls back
-  to the localized `calendarLabel`
+- `accessibleLabel: string = ''` (attribute `aria-label`) — names the host. The nested calendar
+  section retains the localized purpose name rather than duplicating an authored host name; when
+  set programmatically without a host attribute, this value names the section
 
 **Keyboard:** the month grid is a fixed 6×7 matrix (leading/trailing days of adjacent months fill it
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
@@ -41,13 +45,14 @@ Arrows move by 1 day (Left/Right swapped under RTL) or 7; stepping past the rend
 
 **Slots:** none.
 
-**CSS parts:** `header`, `nav` (carried both by the previous button itself and by the wrapper around
-the next button), `nav-glyph` (the chevron, `scaleX(-1)`-mirrored under RTL), `title`, `weekdays`,
-`weekday`, `grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker),
-`agenda`, `agenda-event`.
+**CSS parts:** `header` and `navigation` are aliases on the header wrapper; `nav` is shared by both
+month-navigation buttons; `previous-button` and `next-button` identify each direct button;
+`nav-glyph` is the chevron (`scaleX(-1)`-mirrored under RTL); `title`, `weekdays`, `weekday`,
+`grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `agenda`, and
+`agenda-event`.
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
-and `--lr-calendar-day-min-block-size-narrow` (default `4rem`, applied at container inline-size
+and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, applied at container inline-size
 ≤ 28rem); `--lr-calendar-day-selected-bg` (default `var(--lr-color-brand-quiet)`) for a selected
 day's background; `--lr-calendar-day-outside-color` (default `var(--lr-color-text-quiet)`) and
 `--lr-calendar-day-outside-bg` (default `var(--lr-color-surface)`) for adjacent-month days; and

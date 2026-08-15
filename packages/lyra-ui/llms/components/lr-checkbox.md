@@ -22,9 +22,8 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 **Properties:**
 
 - `checked: boolean = false` — the live, non-reflecting state
-- `defaultChecked: boolean = false` (WA attribute `checked`, reflected; Shoelace alias
-  `default-checked`) — the current reset default; changing it updates `checked` only while the live
-  state is pristine
+- `defaultChecked: boolean = false` (canonical attribute `checked`, reflected) — the current reset
+  default; changing it updates `checked` only while the live state is pristine
 - `indeterminate: boolean = false` (reflected) — visual-only mixed state; does not affect `checked`,
   and is cleared back to `false` by any user interaction (click or keyboard), matching native
   `<input type="checkbox">`
@@ -59,9 +58,10 @@ superseded"): a non-empty message raises `customError` and blocks submission, `'
 control's own computed validity so a required-and-unchecked box goes back to `valueMissing`. It
 survives every toggle and a form reset; `setCustomValidity('')` or `resetValidity()` clears it.
 
-**Slots:** default — label text, rendered next to the box. Clicking it toggles the checkbox, the
-same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
-host so the control still has an accessible name. `hint` is the WA supporting-text slot;
+**Slots:** default — rich label content rendered beside the semantic checkbox owner. Clicking
+plain label content toggles like a native associated label; activating a nested link or button does
+not toggle. If left empty, set `aria-label` on the host so the control still has an accessible
+name. `hint` is the WA supporting-text slot;
 `help-text` is the Shoelace spelling for the same described-by surface.
 `error` supplies custom error markup on the same owned error surface as `errorText`.
 
@@ -72,7 +72,7 @@ The default slot deliberately remains the checkbox's one visible, clickable labe
 separate top-of-field label property or slot. `form-control` wraps that checkbox plus its error and
 hint, matching `lr-switch` without duplicating the label idiom.
 
-The whole `checkbox`/`base` role target retains `--lr-icon-button-size` as its minimum inline and
+The `checkbox`/`base` semantic role owner retains `--lr-icon-button-size` as its minimum inline and
 block size at every tier. The visible `box` remains tied to `size`, so a label-less `2xs` checkbox
 centres a compact square inside a 40px clickable target instead of inflating the glyph itself.
 
@@ -81,6 +81,10 @@ visual: an element-only icon or intentionally visible `aria-hidden` decoration k
 independently of whether that node contributes to the accessible name. A host `aria-label` wins by
 presence and is forwarded verbatim, including `aria-label=""`.
 
+The internal `role="checkbox"` exposes explicit stateful `aria-invalid`. Visible property/slotted
+error chrome makes it `"true"` immediately; otherwise it becomes true only after interaction while
+intrinsic/custom validity fails, and explicitly returns to `"false"` when neither condition holds.
+
 Host `aria-describedby` targets in the host's own root are resolved onto the internal
 `role="checkbox"` through `ariaDescribedByElements`, so an externally-owned description remains
 valid across the shadow boundary. In supporting browsers the explicit element list intentionally
@@ -88,8 +92,9 @@ leaves the internal role's serialized attribute empty; browsers without the refl
 API keep the string fallback. The relationship tracks host attribute changes and clears when
 unset.
 
-**CSS parts:** `form-control` (outer checkbox/error/hint frame), `base` (compatibility name for the interactive control; use `checkbox`),
-`checkbox` (the whole interactive control, `role="checkbox"`; it is the same node as `base`),
+**CSS parts:** `form-control` (outer checkbox/error/hint frame), `base` (compatibility name for the
+semantic owner; use `checkbox`), `checkbox` (the interactive `role="checkbox"` owner; it is the
+same node as `base`, while the rich default label is its sibling),
 `box` / `control` (the small square showing the checkmark/indeterminate dash; while active it also
 carries Shoelace's `control--checked` or `control--indeterminate` state token), `checkmark` plus
 `checked-icon` or `indeterminate-icon` on the visible glyph, `label` (wrapper around the default
@@ -127,7 +132,10 @@ substitute the one you actually use:
 ```css
 .checkbox-hint {
   padding-inline-start: calc(
-    min(var(--lr-theme-icon-button-size, 2.5rem), calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)) + var(--lr-theme-space-s, 0.5rem)
+    min(
+        var(--lr-theme-icon-button-size, 2.5rem),
+        calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)
+      ) + var(--lr-theme-space-s, 0.5rem)
   );
 }
 ```
@@ -147,7 +155,9 @@ checkmark/dash color and scale.
 ```html
 <lr-checkbox name="terms" required>Accept the terms and conditions</lr-checkbox>
 <script type="module">
-  document.querySelector('lr-checkbox').addEventListener('lr-change', (e) => console.log(e.detail.checked));
+  document
+    .querySelector("lr-checkbox")
+    .addEventListener("lr-change", (e) => console.log(e.detail.checked));
 </script>
 ```
 

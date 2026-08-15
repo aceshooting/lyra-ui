@@ -6,22 +6,24 @@
 - **Class** `LyraChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated property** `accessibleDescription` / `accessible-description` since `8.2.3`; use property `description="…"`; removal not before `10.0.0` — description follows the mirrored chart vocabulary while accessibleDescription remains a compatibility alias.
+- **Deprecated property** `accessibleLabel` / `accessible-label` since `8.2.3`; use property `label="…"`; removal not before `10.0.0` — label follows the mirrored chart vocabulary while accessibleLabel remains a compatibility alias.
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 15 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-chart` (core)
 
-Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simplified
-`Series`-based attribute surface and a raw Chart.js `config` passthrough (mirrors Web Awesome's
-`wa-chart` `config` property).
+Chart.js wrapper used directly and by the eight typed Chart.js tags plus `lr-histogram`;
+`lr-lite-chart` and `lr-box-plot` are independent implementations. It supports both a simplified
+series surface and a raw Chart.js `config` passthrough (mirrors Web Awesome's `wa-chart` `config`
+property).
 
 **Properties:**
 - `type: LyraChartType = 'bar'` — `LyraChartType = 'line' | 'bar' | 'scatter' | 'pie' | 'doughnut' |
-  'radar' | 'polarArea' | 'bubble'` — every type string the typed `lr-*-chart` subclasses lock `type` to is
+  'radar' | 'polarArea' | 'bubble'` — every named default used by a typed `lr-*-chart` is
   already a first-class member, so `<lr-chart type="pie">` needs no subclass or cast to work;
   unknown runtime attribute/property values fall back to `bar` before reaching Chart.js
 - `description: string | null = null` — accessible chart description; the additive
@@ -31,8 +33,9 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. `'y'` is Chart.js's own
   mechanism for horizontal bars (it also flips `line`/`area` types onto a horizontal category axis).
   The `horizontal` boolean that used to alias `'y'` was removed in 9.0.0 — use `index-axis="y"`
-- `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence;
-  additive `accessibleLabel` remains the fallback alias
+- `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence
+  by presence, including an explicit empty string; additive `accessibleLabel: string | null = null`
+  remains the fallback alias with the same explicit-empty behavior
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
@@ -40,13 +43,16 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   combined without duplicates with Lyra's
   on-demand data-label plugin and any `config.plugins` entries
 - `labels: string[] = []` (attribute: false)
-- `datasets: Series[] = []` (attribute: false) — `Series { label: string; data?: (number|null)[];
-  points?: ChartPoint[]; color?: string|string[]; fill?: boolean; width?: number; dash?: boolean;
-  noTooltip?: boolean; axis?: 'y'|'y2'; pointColors?: string[]; pointRadius?: number|number[];
-  segmentColors?: string[]; type?: 'line'|'bar' }`. Both the package root and granular chart entry
-  export `ChartPoint { x: number; y: number; r?: number; label?: string }`: `r` is the bubble
+- `datasets: readonly LyraChartSeries[] = []` (attribute: false) — `LyraChartSeries { readonly
+  label: string; readonly data?: readonly (number|null)[]; readonly points?: readonly
+  LyraChartPoint[]; readonly color?: string|readonly string[]; ... }`. The deprecated `Series` and
+  `ChartPoint` names remain aliases for migration. `LyraChartPoint { readonly x: number; readonly
+  y: number; readonly r?: number; readonly label?: string }`: `r` is the bubble
   radius, and the optional per-point `label` is retained by events, CSV export, keyboard
-  announcements, generated summaries, and the accessible table.
+  announcements, generated summaries, and the accessible table. Point wording is localized as
+  whole messages: `chartPointCoordinates`, `chartBubblePointCoordinates`, and
+  `chartLabeledPoint` own coordinate names, order, separators, and the label wrapper. A caller's
+  point label is interpolated verbatim rather than translated or parsed.
   - `pointRadius` takes a single number (applied to every point) **or** an array matching `data`'s
     length that sizes each point independently — passed straight through to Chart.js, which
     supports both natively. Useful for emphasizing a single outlier or the latest reading without
@@ -81,6 +87,10 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   and `'tick'`, `'tooltip'`, `'legend'`, or `'table'` context. Never runs against the categorical
   x-axis's own labels (line/bar's `labels` strings) — Chart.js's category scale passes the tick
   index to `ticks.callback`, not the label text
+- `formatter?: LyraChartFormatter` (attribute: false) — the family-wide context-object formatter:
+  `({ value, surface, datasetIndex?, index?, label?, seriesLabel?, statistic? }) => string`.
+  `surface` identifies `visual`, `spoken`, `export`, `tick`, `tooltip`, `legend`, or `table`.
+  It takes precedence over the legacy positional `valueFormatter` where both are supplied.
 - `area: boolean = false` — chart-wide default for whether line-type series fill the region under
   their line; a series's own `fill` overrides it, rendered with a translucent version of its color
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
@@ -129,15 +139,15 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — canvas name override; a host
-  `aria-label` has highest precedence
-- `accessibleDescription: string = ''` (attribute `accessible-description`) — overrides the
-  localized data/trend summary
+- `accessibleLabel` / `accessibleDescription` — deprecated compatibility aliases for `label` /
+  `description`; a host `aria-label` remains highest precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
+- `chart: LyraChartInstance | undefined` (readonly-by-convention) — peer-neutral structural view of
+  the live Chart.js instance; absent before load and after disconnect
 - `appendData(label, values, maxPoints?)` — appends one aligned numeric category and optionally
   keeps only the newest `maxPoints`. Each labels/datasets member is written back to the surface
   that owns it: an explicitly overridden `config.data` member stays in `config`, while an omitted
@@ -145,7 +155,8 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   Point-based scatter/bubble series are left unchanged because appending their x/y/r coordinates
   needs a richer caller-defined contract.
 
-**Methods:** `resetZoom()` resets any active zoom/pan to the original view. `refreshTheme()` forces
+**Methods:** `renderChart()` requests a connected/visibility-gated render or incremental update.
+`resetZoom()` resets any active zoom/pan to the original view. `refreshTheme()` forces
 a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style. A
 built-in `ThemeWatcher` now calls this automatically when `prefers-color-scheme` flips or an
 ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates — the most common
@@ -223,7 +234,9 @@ const series = [
 point/segment, when a generated-table value is activated, or when Enter/Space activates the
 keyboard-current canvas datum; `detail: { datasetIndex: number, index: number, label: string |
 undefined, value: unknown }`). For scatter/bubble points, `label` prefers the per-point label and
-`value` is the complete `ChartPoint`, including optional `r` and `label`),
+`value` is the complete `LyraChartPoint`, including optional `r` and `label`.
+`lr-datum-activate` emits the same activation with `kind: 'bar'|'point'|'segment'|'slice'` for
+family-wide handling; `lr-point-click` remains as a compatibility event. Also
 `lr-before-legend-visibility-change` (cancelable proposal), and
 `lr-legend-visibility-change` (accepted commit). Both legend events carry
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
@@ -235,13 +248,15 @@ then no property change or commit event occurs.
 alternative; `center` —
 optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
 
-**Bounded data alternative:** the generated table, keyboard-operable datum model, generated
-point-details in the summary, and automatic canvas name render at most 1,000 category×series
-records. When sampling is necessary, the selected category and series indexes are distributed
+**Bounded rendering and data alternative:** simplified `labels`/`datasets` canvas rendering, the
+DOM legend, generated table, keyboard-operable datum model, generated point-details in the summary,
+and automatic canvas name process at most 1,000 category×series records. When sampling is necessary,
+the selected category and series indexes are distributed
 deterministically and retain their first and last endpoints; a localized `data-truncation` notice
 is shown and announced. Supplying `slot="data-table"` suppresses the generated detailed sample and
 notice, so use that escape hatch when the complete data set needs pagination, virtualization, or
-another application-owned presentation.
+another application-owned presentation. Explicit `config.data` is the deliberate full-fidelity
+Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
 wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-item-hidden` (added to
@@ -272,6 +287,9 @@ legend text, and tooltip background/text respectively; plus
 background hooks for each DOM control's hover and pressed states. Hover defaults to
 `--lr-color-brand-quiet`; pressed defaults to its standard active color mix. Override one pair
 without repainting the other controls;
+`--lr-chart-legend-side-max` (default `var(--lr-size-15rem)`) caps the side-positioned legend track;
+the responsive grid also limits it to one third of the chart allocation and stacks it below the
+plot in narrow containers;
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) — the width of
 `[part="canvas"]`'s own `:hover` outline. Unlike the tokens above, this one is a real CSS
 declaration on a DOM element (the outline is painted by the stylesheet, not by Chart.js), so it is
@@ -319,7 +337,7 @@ resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live
 regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
 later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
 has a hard dependency on `hammerjs`), and `chartjs-plugin-datalabels` only when `data-labels` or
-`stack-totals` is enabled. Each load is memoized once per page via `chart-loader.ts`, registering
+`stack-totals` is enabled. Each capability load is memoized once per page, registering
 only the tree-shaken controller/element/scale subset actually used. A failed zoom or data-label
 peer is not a failed chart: the canvas, legend, and accessible alternative remain usable; the
 requested enhancement is disabled and a localized static `feature-warning` is visibly rendered and
@@ -336,9 +354,8 @@ announced. In particular, unavailable data labels do not remove generated table 
 
 **Known gotchas:**
 - supported `type` values are normalized before reaching Chart.js; unknown runtime attribute or
-  property values fall back to `bar`. Each typed `lr-*-chart` subclass (e.g.
-  `llms/components/lr-bar-chart.md`) locks its *own* `type` via a real prototype accessor — a
-  genuine runtime lock, not just a compile-time default.
+  property values fall back to `bar`. Each typed `lr-*-chart` tag supplies its named chart type as
+  a default while retaining the mirrored writable `type` surface.
 - a built-in `ThemeWatcher` automatically rethemes an already-drawn chart when
   `prefers-color-scheme` flips or an ancestor's `class`/`style`/`data-theme`/`data-color-scheme`
   attribute mutates (coalesced to one redraw). `refreshTheme()` stays public for out-of-band theme
@@ -357,7 +374,7 @@ announced. In particular, unavailable data labels do not remove generated table 
   only via raw `config`.
 - No `chartjs-plugin-annotation` is registered by default — reachable only by importing it
   separately and using the raw `config` passthrough (Chart.js's registry is a global singleton).
-- while the `chart.js` peer is resolving, `render()` swaps in a `<lr-skeleton variant="rect">` for
+- while the `chart.js` peer is resolving, `render()` swaps in a `<lr-skeleton shape="rect">` for
   the canvas, and the **host element itself** (not the skeleton) carries `aria-busy="true"` — set/
   cleared in `updated()` off the private `loading` state (same lazy-load pattern as
   `lr-graph`/`lr-map`/`lr-flag`). Chart.js's own ~1000ms draw-in animation only ever fires on
@@ -373,7 +390,7 @@ announced. In particular, unavailable data labels do not remove generated table 
   single redraw fires once it re-enters the viewport). Independently, `updated()` only reaches
   Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `indexAxis`,
   `label`, `hiddenDatasets`, `legend`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
-  position, `valueFormatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
+  position, `valueFormatter`, `formatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
   `stacked`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
   slotted config, `zoom`, `locale`, `strings`, or the internal loading state actually changed in
   that update (so an

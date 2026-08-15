@@ -20,12 +20,13 @@ selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cy
 parents remain renderable instead of recursing forever.
 
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
-`selectedRunId: string = ''` (attribute `selected-run-id`); `label: string = ''`.
+`selectedRunId: string | null = null` (attribute `selected-run-id`); `label: string = ''`.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
 string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
 Record<string, unknown> }`.
 
-**Events:** `lr-run-select` (`{ run }`), `lr-cancel`/`lr-retry` (`{ runId }`).
+**Events:** `lr-run-activate` (`{ runId, run }`), `lr-cancel` (`{ runId }`), and
+`lr-run-retry` (`{ runId }`).
 
 **CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
@@ -34,13 +35,13 @@ At most 500 runs render, and visual indentation is capped at 12 levels while ARI
 the logical depth. The visible `limit` text is ordinary and non-live; newly reaching or changing the
 run ceiling after the initial baseline appends the localized message to the shared polite light-DOM
 announcement sink, while initial and reconnect renders stay silent. The roving treeitem accepts
-Enter/Space as well as pointer activation for `lr-run-select`; cancel/retry action names include the
+Enter/Space as well as pointer activation for `lr-run-activate`; cancel/retry action names include the
 run label so repeated row actions remain distinguishable to assistive technology. Progress is finite
 and clamped. **Slots:** none.
 **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';
+import "@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js";
 ```
 
 **Additional API surface:**

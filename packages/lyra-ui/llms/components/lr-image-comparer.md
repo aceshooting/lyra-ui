@@ -24,9 +24,16 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
   and its range handle
 - `beforeLabel`/`afterLabel` — fallback text for empty named slots
 
-**Events:** `lr-position-change` (`detail: { position }`) on every native range input update;
-`lr-change` and native bubbling/composed `change` when that range gesture commits; plus composed
-`focus` and `blur` events from the internal range input.
+**Events:** exactly one owner-realm, bubbling/composed native `input` (`Event`) after every live
+range update, and exactly one owner-realm native `change` (`Event`) after a gesture commits.
+`focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s preserving
+`relatedTarget`; a dirty keyboard edit commits its `change` before `blur`.
+
+Arrow handling is explicit so browser engines cannot disagree: in horizontal orientation,
+Left/Right follows the mirrored inline axis (and Up/Down increases/decreases); in vertical
+orientation, Up/Left decreases toward the physical top and Down/Right increases toward the
+physical bottom, independent of document direction. Home/End select 0/100 and PageUp/PageDown
+move by 10. Only a primary left-button pointer may begin a drag.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
 

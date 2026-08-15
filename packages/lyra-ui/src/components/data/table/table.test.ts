@@ -4,6 +4,7 @@ import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
 import { styles } from './table.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 class TableOpaqueControlElement extends HTMLElement {
@@ -729,6 +730,53 @@ it('inherits resize theme hooks from an ancestor while direct host values still 
   el.style.setProperty('--lr-table-resize-min-width', '91px');
   el.style.setProperty('--lr-table-resize-handle-opacity', '0.21');
   expect(getComputedStyle(handle).getPropertyValue('--lr-table-resize-handle-opacity').trim()).to.equal('0.21');
+});
+
+it('renders inherited resize-handle hover/pressed hooks while direct host values still win', async () => {
+  const wrapper = await fixture(html`
+    <div
+      style="--lr-table-resize-handle-hover-bg: rgb(1, 2, 3); --lr-table-resize-handle-hover-opacity: 0.31; --lr-table-resize-handle-active-bg: rgb(4, 5, 6); --lr-table-resize-handle-active-opacity: 0.72"
+    >
+      <lr-table></lr-table>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '120px',
+      resizable: true,
+      cell: (row) => row.name,
+    },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  const rect = handle.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+
+  try {
+    await sendMouse({ type: 'move', position });
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(1, 2, 3)');
+    expect(getComputedStyle(handle).opacity).to.equal('0.31');
+
+    el.style.setProperty('--lr-table-resize-handle-hover-bg', 'rgb(7, 8, 9)');
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(7, 8, 9)');
+
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(4, 5, 6)');
+    expect(getComputedStyle(handle).opacity).to.equal('0.72');
+
+    el.style.setProperty('--lr-table-resize-handle-active-bg', 'rgb(10, 11, 12)');
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(10, 11, 12)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 });
 
 it('resolves a rem-unit themed minimum width against the root font size', async () => {
@@ -3375,6 +3423,113 @@ describe('localization', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="more-button"]')!.textContent).to.contain('Charger plus');
   });
+
+  async function affectedOverrideTexts(overrides: {
+    filterLabel: string;
+    filterPlaceholder: string;
+    loadingLabel: string;
+    moreLabel: string;
+    emptyHeading: string;
+    noColumnsHeading: string;
+    revealColumnsLabel: string;
+    hideColumnsLabel: string;
+  }): Promise<string[]> {
+    const strings = {
+      tableFilterLabel: 'Filtrer',
+      tableFilterPlaceholder: 'Rechercher…',
+      tableLoading: 'Chargement',
+      loadMore: 'Charger plus',
+      noData: 'Aucune donnée',
+      noColumns: 'Aucune colonne',
+      showAllColumns: 'Tout afficher',
+      showFewerColumns: 'Afficher moins',
+    };
+    const main = (await fixture(
+      html`<lr-table
+        filterable
+        has-more
+        style="display: block; width: 300px;"
+        .strings=${strings}
+      ></lr-table>`
+    )) as LyraTable<Row>;
+    Object.assign(main, overrides);
+    main.columns = priorityColumns;
+    main.rows = rows;
+    await main.updateComplete;
+    await waitUntil(() => main.hasHiddenPriorityColumns === true);
+    const reveal = main.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLButtonElement;
+    const revealText = reveal.textContent!.trim();
+    reveal.click();
+    await main.updateComplete;
+    const hideText = reveal.textContent!.trim();
+
+    const loading = (await fixture(
+      html`<lr-table loading .strings=${strings}></lr-table>`
+    )) as LyraTable<Row>;
+    Object.assign(loading, overrides);
+    loading.columns = columns;
+    await loading.updateComplete;
+
+    const empty = (await fixture(html`<lr-table .strings=${strings}></lr-table>`)) as LyraTable<Row>;
+    Object.assign(empty, overrides);
+    empty.columns = columns;
+    await empty.updateComplete;
+
+    const noColumns = (await fixture(html`<lr-table .strings=${strings}></lr-table>`)) as LyraTable<Row>;
+    Object.assign(noColumns, overrides);
+    await noColumns.updateComplete;
+
+    const filter = main.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+    return [
+      main.shadowRoot!.querySelector('[part="filter-label"]')!.textContent!.trim(),
+      filter.getAttribute('placeholder') ?? 'missing',
+      loading.shadowRoot!.querySelector('[part="loading"] lr-spinner')!.getAttribute('aria-label') ?? 'missing',
+      main.shadowRoot!.querySelector('[part="more-button"]')!.textContent!.trim(),
+      empty.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading') ?? 'missing',
+      noColumns.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading') ?? 'missing',
+      revealText,
+      hideText,
+    ];
+  }
+
+  it('keeps explicit built-in table label values ahead of .strings overrides', async () => {
+    expect(
+      await affectedOverrideTexts({
+        filterLabel: 'Filter rows',
+        filterPlaceholder: 'Filter rows',
+        loadingLabel: 'Loading rows',
+        moreLabel: 'Load more',
+        emptyHeading: 'No data',
+        noColumnsHeading: 'No columns configured',
+        revealColumnsLabel: 'Show all columns',
+        hideColumnsLabel: 'Show fewer columns',
+      })
+    ).to.deep.equal([
+      'Filter rows',
+      'Filter rows',
+      'Loading rows',
+      'Load more',
+      'No data',
+      'No columns configured',
+      'Show all columns',
+      'Show fewer columns',
+    ]);
+  });
+
+  it('keeps explicit empty table label values empty', async () => {
+    expect(
+      await affectedOverrideTexts({
+        filterLabel: '',
+        filterPlaceholder: '',
+        loadingLabel: '',
+        moreLabel: '',
+        emptyHeading: '',
+        noColumnsHeading: '',
+        revealColumnsLabel: '',
+        hideColumnsLabel: '',
+      })
+    ).to.deep.equal(['', '', '', '', '', '', '', '']);
+  });
 });
 
 describe('heat-tint mode', () => {
@@ -4208,6 +4363,33 @@ describe('--lr-table-row-selected-bg', () => {
       expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
     } finally {
       await resetMouse();
+    }
+  });
+
+  it('keeps selected, ordinary, and hovered rows distinguishable in forced-colors mode', async () => {
+    await setForcedColors('active');
+    try {
+      const el = await selectionFixture();
+      const rowEls = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+      const selected = rowEls[0]!;
+      const ordinary = rowEls[1]!;
+      expect(getComputedStyle(selected).outlineStyle).to.equal('solid');
+      expect(getComputedStyle(ordinary).outlineStyle).to.equal('none');
+
+      const rect = ordinary.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(() => getComputedStyle(ordinary).outlineStyle === 'dashed');
+        expect(getComputedStyle(selected).outlineStyle).to.equal('solid');
+        expect(getComputedStyle(selected).outlineWidth).to.not.equal(getComputedStyle(ordinary).outlineWidth);
+      } finally {
+        await resetMouse();
+      }
+    } finally {
+      await setForcedColors('none');
     }
   });
 });

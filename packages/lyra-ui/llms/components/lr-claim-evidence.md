@@ -19,11 +19,14 @@ Controlled claim-by-claim grounding audit relating `GroundedClaim[]` to complete
 records. Dangling citation ids are ignored rather than rendered as invented evidence.
 
 **Properties:** `claims: GroundedClaim[] = []` and `citations: Citation[] = []` (attribute: false);
-`selectedClaimId: string = ''` (attribute `selected-claim-id`); `label: string = ''`.
+`selectedClaimId: string = ''` (attribute `selected-claim-id`); `label: string = ''` (fallback name
+for the overall claim region; a non-empty host `aria-label` makes the host the sole overall owner,
+while an explicitly empty host label stays empty on the region).
 `GroundedClaim = { id, text, status, citationIds, answerRange?, confidence?, explanation? }`, with
 `status: 'supported' | 'partially-supported' | 'unsupported' | 'contradicted'`. Claim confidence
 is clamped to 0–1 for localized percent display. `Citation` is the shared AI citation record
 (`id`, source/chunk ids, label, locator/ranges, quote, metadata).
+
 - `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
   evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
   density knob: each claim's border and background stay. `false` (the default) keeps the full
@@ -50,5 +53,5 @@ Selection is controlled: activation emits the complete claim but does not assign
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js';
+import "@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js";
 ```

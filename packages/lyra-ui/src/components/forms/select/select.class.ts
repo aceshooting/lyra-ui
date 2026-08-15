@@ -14,7 +14,7 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './select.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import type { LyraOption } from '../combobox/option.class.js';
 import '../combobox/option.class.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -49,18 +49,9 @@ import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWith
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** Alias of the canonical six-step size ladder. The `size` property itself accepts
- *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
-export type LyraSelectSize = LyraSizeStep;
-
 function isLyraOptionElement(value: unknown): value is LyraOption {
   return isHtmlElement(value) && value.localName === tag('option');
 }
-
-/** Visual treatment of the trigger surface. `outlined` (the default) is a bordered surface;
- *  `filled` swaps the border for a raised fill; `filled-outlined` keeps both; `accent` paints the
- *  loud brand fill; `plain` drops border and fill entirely. */
-export type LyraSelectAppearance = LyraAppearance;
 
 /** Renders one selected option's chip in `multiple` mode. Whatever it returns replaces the
  *  built-in `[part='tag']` chip for that option, so a caller that wants the default styling
@@ -69,20 +60,20 @@ export type LyraSelectAppearance = LyraAppearance;
 export type LyraSelectTagRenderer = (option: LyraOption, index: number) => unknown;
 
 export interface LyraSelectEventMap {
-  'lr-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
-  'lr-after-hide': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
-  'lr-clear': CustomEvent<undefined>;
+  'lr-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
+  'lr-clear': CustomEvent<null>;
   input: InputEvent;
   change: Event;
   'lr-input': CustomEvent<{ value: string | string[] }>;
   'lr-change': CustomEvent<{ value: string | string[] }>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
 }
 /**
  * `<lr-select>` — a plain closed-list dropdown: a direct `<lr-*>`
@@ -510,7 +501,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   constructor() {
     super();
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
@@ -626,7 +617,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       this.emit('lr-hide');
       return;
     }
-    if (!this.emit(name, undefined, { cancelable: true }).defaultPrevented) return;
+    if (!this.emit(name, null, { cancelable: true }).defaultPrevented) return;
     this.openVetoed = true;
     this.open = !this.open;
     // `show()`/`hide()` already registered a waiter for the transition this veto just cancelled;

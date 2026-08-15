@@ -32,7 +32,7 @@ void hideCompletion;
 void toastCompletion;
 
 alert.addEventListener('lr-after-hide', (event) => {
-  const detail: undefined = event.detail;
+  const detail: null = event.detail;
   void detail;
 });
 

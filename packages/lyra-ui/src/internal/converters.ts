@@ -4,6 +4,12 @@ import type { ComplexAttributeConverter } from 'lit';
 export interface LiteralSetConverter<T extends string> extends ComplexAttributeConverter<T> {
   /** Returns `value` when it belongs to the declared set, otherwise the configured fallback. */
   readonly normalize: (value: unknown) => T;
+  /** Normalizes a reflected write and immediately repairs a foreign raw attribute value. */
+  readonly normalizeReflected: (
+    host: Element,
+    attribute: string,
+    value: unknown
+  ) => T;
 }
 
 /**
@@ -25,10 +31,26 @@ export function literalSetConverter<const T extends string>(
   const normalize = (value: unknown): T =>
     typeof value === 'string' && allowed.has(value as T) ? (value as T) : fallback;
 
+  const normalizeReflected = (
+    host: Element,
+    attribute: string,
+    value: unknown
+  ): T => {
+    const normalized = normalize(value);
+    if (
+      host.hasAttribute(attribute) &&
+      host.getAttribute(attribute) !== normalized
+    ) {
+      host.setAttribute(attribute, normalized);
+    }
+    return normalized;
+  };
+
   return Object.freeze({
     fromAttribute: normalize,
     toAttribute: normalize,
     normalize,
+    normalizeReflected,
   });
 }
 
@@ -39,6 +61,23 @@ export const omittedEmptyStringConverter: ComplexAttributeConverter<string> = {
   fromAttribute: (value) => value ?? '',
   toAttribute: (value) => value || null,
 };
+
+/**
+ * Restores a declared string/number default when an attribute is removed while preserving the
+ * component's established initial reflection. Lit's `useDefault` restores removal too, but it
+ * intentionally omits the initial reflected attribute and therefore changes that DOM contract.
+ */
+export function declaredDefaultConverter<T extends string | number>(
+  declaredDefault: T
+): ComplexAttributeConverter<T> {
+  return Object.freeze({
+    fromAttribute: (value: string | null): T => {
+      if (value === null) return declaredDefault;
+      return (typeof declaredDefault === "number" ? Number(value) : value) as T;
+    },
+    toAttribute: (value: T): string | number => value,
+  });
+}
 
 /**
  * Converter for a reflected boolean whose default is `true`.

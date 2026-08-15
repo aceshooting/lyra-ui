@@ -217,14 +217,26 @@ describe('lr-docx-viewer', () => {
     }
   });
 
-  it('forwards a host aria-label to the role="document" content region, winning over the localized default', async () => {
+  it('makes a nonempty host aria-label the sole semantic owner and restores shadow semantics dynamically', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer aria-label="Q3 report"></lr-docx-viewer>`);
     useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Text</p>', messages: [] }) }, DOMPurify: { sanitize: (value: string) => value } });
     const restore = stubFetch(BUFFER);
     try {
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('aria-label')).to.equal('Q3 report');
+      const content = el.shadowRoot!.querySelector('[part="content"]')!;
+      expect(el.getAttribute('aria-label')).to.equal('Q3 report');
+      expect(content.hasAttribute('role')).to.be.false;
+      expect(content.hasAttribute('aria-label')).to.be.false;
+
+      el.setAttribute('aria-label', '');
+      await el.updateComplete;
+      expect(content.getAttribute('role')).to.equal('document');
+      expect(content.getAttribute('aria-label')).to.equal('');
+      el.removeAttribute('aria-label');
+      await el.updateComplete;
+      expect(content.getAttribute('role')).to.equal('document');
+      expect(content.getAttribute('aria-label')).to.equal('Word document');
     } finally {
       restore();
     }
@@ -237,7 +249,9 @@ describe('lr-docx-viewer', () => {
     try {
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('aria-label')).to.equal('Q3 report');
+      const content = el.shadowRoot!.querySelector('[part="content"]')!;
+      expect(content.hasAttribute('role')).to.be.false;
+      expect(content.hasAttribute('aria-label')).to.be.false;
     } finally {
       restore();
     }
@@ -251,6 +265,7 @@ describe('lr-docx-viewer', () => {
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
       const content = el.shadowRoot!.querySelector('[part="content"]')!;
+      expect(content.getAttribute('role')).to.equal('document');
       expect(content.hasAttribute('aria-label')).to.be.true;
       expect(content.getAttribute('aria-label')).to.equal('');
     } finally {
@@ -1062,6 +1077,29 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  it('bounds active-id inspection and retains an active quote inside the candidate cap', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      let idReads = 0;
+      el.highlights = Array.from({ length: 50_000 }, (_, index) => ({
+        get id() {
+          idReads++;
+          return index === 999 ? 'active-at-cap' : `ordinary-${index}`;
+        },
+        anchor: { kind: 'text-quote' as const, quote: index === 999 ? 'world' : 'Hello' },
+      }));
+      el.activeHighlightId = 'active-at-cap';
+      await el.updateComplete;
+
+      const resolved = (el as unknown as { resolvedHighlightRanges: unknown[] }).resolvedHighlightRanges;
+      expect(resolved).to.have.length(100);
+      expect(idReads).to.be.at.most(1_100);
+      expect(activeHighlightPainted(el)).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
   it('falls back to <mark>-wrapped highlights, stamping a highlight part, without the CSS Custom Highlight API', async () => {
     const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
     (globalThis as { Highlight?: unknown }).Highlight = undefined;
@@ -1330,7 +1368,7 @@ describe('search', () => {
       }) as typeof frameDocument.createRange;
 
       expect(await el.search('brown')).to.equal(1);
-      expect(walkerCalls).to.be.greaterThan(0);
+      expect(walkerCalls, 'bounded indexing uses its own all-node traversal').to.equal(0);
       expect(rangeCalls).to.be.greaterThan(0);
       const mark = el.shadowRoot!.querySelector<HTMLElement>('mark[part~="search-match"]');
       expect(mark !== null).to.equal(true);
@@ -1395,15 +1433,24 @@ describe('search', () => {
     } finally { restore(); }
   });
 
-  it('caps match objects and painted marks for adversarial repetitive content', async function () {
-    // Painting 1000 capped match marks is inherently more expensive than the framework's default
-    // budget assumes, especially under CI/full-suite contention -- give this one test a margined
-    // threshold (see document-library.test.ts's equivalent 1000-row case).
-    this.timeout(20_000);
+  it('caps retained matches and paints only a bounded active window for repetitive content', async () => {
     const { el, restore } = await loadWithMarkup(`<p>${'x '.repeat(1500)}</p>`);
     try {
+      let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
       expect(await el.search('x')).to.equal(1000);
-      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(1000);
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(200);
+      expect(detail).to.deep.include({ matchCount: 1000, matchCountExact: false });
+    } finally { restore(); }
+  });
+
+  it('rejects an oversized query without normalizing it and reports a lower bound', async () => {
+    const { el, restore } = await loadWithMarkup('<p>needle</p>');
+    try {
+      let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+      el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
+      expect(await el.search('x'.repeat(4_097))).to.equal(0);
+      expect(detail).to.deep.include({ matchCount: 0, matchCountExact: false });
     } finally { restore(); }
   });
 
@@ -1498,8 +1545,8 @@ describe('search', () => {
       await el.search('cat');
       const listener = oneEvent(el, 'lr-search-change');
       el.clearSearch();
-      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
-      expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }>;
+      expect(event.detail).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
       expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(0);
     } finally {
       restore();
@@ -1533,9 +1580,9 @@ describe('search', () => {
       expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.be.greaterThan(0);
       const listener = oneEvent(el, 'lr-search-change');
       const count = await el.search('   ');
-      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }>;
       expect(count).to.equal(0);
-      expect(event.detail).to.deep.equal({ query: '   ', matchCount: 0, activeIndex: -1 });
+      expect(event.detail).to.deep.equal({ query: '   ', matchCount: 0, matchCountExact: true, activeIndex: -1 });
       expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(0);
     } finally {
       restore();

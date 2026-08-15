@@ -71,6 +71,15 @@ Like `<lr-chip>`, a removable `lr-tag` is controlled: activation only announces 
 tag remains connected even if a listener calls `preventDefault()` (the event is not cancelable),
 and the consumer removes it by updating the collection that rendered it.
 
+If that controlled listener synchronously removes the focused tag, or a direct property write
+removes its action, focus moves to the nearest available composed action. Focus explicitly moved by
+the listener is preserved.
+
+For a removable tag, `focus(options?)`, `blur()`, and `click()` delegate to its native remove
+button. Setting `withRemove` / `removable` false revokes `focus()` and `click()` synchronously,
+before the outgoing button is rerendered. `blur()` remains available during that same-task window
+so it can release the stale focused button; after render there is no owner to blur.
+
 **Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
 (content after it) — both new in 8.0.0. Each wrapper collapses entirely (`display: none`, so no
 stray gap) while its slot is empty, and is seeded from the light-DOM children before the first
@@ -85,7 +94,9 @@ compact surface without being clipped), and `remove-button` (`lr-tag` only, rend
 either part name styles the same native button.
 
 **Themeable custom properties.** Three layers, so a consumer can retune one without restating the
-others. All of them are declared by `lr-badge` and reach `lr-tag` unchanged.
+others. Public hooks are consumed through private use-site defaults instead of being redeclared on
+the host, so values set directly or inherited from a theme ancestor both win. The same contract
+reaches `lr-tag` unchanged.
 
 *Overrides* — undeclared by default, so they still inherit from a consumer's own ancestor rule, and
 win over whatever `variant`/`appearance` resolved: `--lr-badge-background` (falls back to
@@ -134,15 +145,15 @@ the remove button's `:hover` fill).
 
 **Known gotchas:**
 - The remove button's hit target meets the shared `--lr-icon-button-size` minimum in both axes while
-  the visible glyph stays compact; the extra growth is pulled back with a matching negative margin
-  on every side, so the enlarged hit area overhangs the pill's padding instead of inflating the
-  row's layout box.
+  the visible glyph stays compact. Its full allocation participates in layout with no negative
+  margins, so adjacent compact tags retain disjoint targets.
 - Its accessible name is computed from the default slot's own text ("Remove {label}", localized;
   bare "Remove" for a label-less tag) and re-derived live when that text changes. Text inside the
   decorative `start`/`end` slots never leaks into it. Visible accessible text, forwarding-slot
   reassignment and external assigned-node mutations stay synchronized; hidden/inert/CSS-hidden/
-  `aria-hidden` branches are excluded. A host `aria-label` wins by presence, including an explicit
-  empty value.
+  `aria-hidden` branches are excluded. A host `aria-label`, including an explicit empty value,
+  names a single aggregate `role="group"`; it is not copied to the nested action. The remove button
+  retains its purpose-specific visible-label/localized-fallback name.
 - `appearance` and `variant` are orthogonal: `appearance="plain"` on `variant="danger"` still reads
   as danger, because the palette is chosen before the surface routing.
 

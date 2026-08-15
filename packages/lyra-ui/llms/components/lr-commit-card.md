@@ -23,7 +23,9 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 `CommitFileChange { path: string; additions: number; deletions: number; status?: GitStatus }`
 (exported here), where `GitStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked' |
 'conflicted' | 'ignored'` (shared with `lr-file-tree`); the diffstat is summed from `additions`/
-`deletions` across `files`. `filesCollapsed:
+`deletions` across `files`. Counts are normalized to finite non-negative integers before per-file
+display, total arithmetic, localization, and accessible summaries. `path` is the file identity;
+later duplicates are omitted before both diffstat arithmetic and row events. `filesCollapsed:
 boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
 `compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
 row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,
@@ -37,7 +39,10 @@ alias `CommitCardAppearance` is retained as a name for the same union.
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
 **Events:** `lr-file-select` (`detail: { path: string }`), `lr-toggle` (`detail: { collapsed: boolean
-}`), and `lr-copy` (`detail: { text: string }`, the full hash was copied).
+}`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
+resolves successfully). A failed or unavailable write emits the compatibility `lr-error` event
+(no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:
+'unsupported'|'denied'|'failed'; error: unknown }`) instead; failure never emits `lr-copy`.
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,

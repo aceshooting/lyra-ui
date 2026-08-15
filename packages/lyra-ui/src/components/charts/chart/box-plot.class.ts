@@ -347,7 +347,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   /** Accessible chart description. A generated five-number summary is used when unset. */
   @property() description: string | null = null;
   /** @deprecated Use `label`. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  @property({ attribute: 'accessible-label' }) accessibleLabel: string | null = null;
   /** @deprecated Use `description`. */
   @property({ attribute: 'accessible-description' }) accessibleDescription = '';
   /** Makes the generated data table visible; it remains screen-reader available when false. */
@@ -1043,7 +1043,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   private accessibleName(fallback: string): string {
-    return this.getAttribute('aria-label') || this.label || this.accessibleLabel || fallback;
+    return this.getAttribute('aria-label') ?? this.label ?? this.accessibleLabel ?? fallback;
   }
 
   private dataTableSample() {

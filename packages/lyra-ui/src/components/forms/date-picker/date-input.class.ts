@@ -28,7 +28,7 @@ import {
   type WeekdayFormat,
 } from './calendar-core.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { styles } from './date-input.styles.js';
 import {
   LyraDatePicker,
@@ -102,11 +102,15 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
   toAttribute: normalizeWeekdayFormat,
 };
 
-function normalizeDateInputAppearance(value: unknown): LyraDateInputAppearance {
+function normalizeDateInputAppearance(
+  value: unknown,
+): Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'> {
   return value === 'filled' || value === 'filled-outlined' ? value : 'outlined';
 }
 
-const appearanceConverter: ComplexAttributeConverter<LyraDateInputAppearance> = {
+const appearanceConverter: ComplexAttributeConverter<
+  Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>
+> = {
   fromAttribute: normalizeDateInputAppearance,
   toAttribute: normalizeDateInputAppearance,
 };
@@ -137,7 +141,6 @@ const pageByConverter: ComplexAttributeConverter<LyraDatePickerPageBy> = {
 };
 
 export type LyraDateInputSelectionDirection = 'forward' | 'backward' | 'none';
-export type LyraDateInputAppearance = Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'>;
 export type LyraDateInputPlacement =
   | 'top' | 'top-start' | 'top-end'
   | 'right' | 'right-start' | 'right-end'
@@ -184,17 +187,13 @@ export type LyraDateInputValidator =
   | ((value: string, input: LyraDateInput) => LyraDateInputValidatorResult)
   | { validate(value: string, input: LyraDateInput): LyraDateInputValidatorResult }
   | LyraDateInputObjectValidator;
-/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
- *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
-export type LyraDateInputSize = LyraSizeStep;
-
 export interface LyraDateInputEventMap {
-  'lr-invalid': CustomEvent<undefined>;
-  'lr-show': CustomEvent<undefined>;
-  'lr-after-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-after-hide': CustomEvent<undefined>;
-  'lr-clear': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
+  'lr-show': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
+  'lr-clear': CustomEvent<null>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
@@ -269,6 +268,12 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @cssprop [--lr-date-input-radius=var(--lr-radius)] - Input-row corner radius. The `pill`
  *   attribute swaps it for `--lr-radius-pill`.
  * @cssprop [--lr-date-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
+ * @cssprop [--lr-date-input-action-hover-color=var(--lr-color-text)] - Clear/calendar action color on hover.
+ * @cssprop [--lr-date-input-action-hover-bg=transparent] - Clear/calendar action background on hover.
+ * @cssprop [--lr-date-input-action-hover-radius=var(--lr-date-input-radius)] - Clear/calendar action corner radius on hover.
+ * @cssprop [--lr-date-input-action-active-color=var(--lr-date-input-action-hover-color,var(--lr-color-text))] - Clear/calendar action color while pressed.
+ * @cssprop [--lr-date-input-action-active-bg=color-mix(...)] - Clear/calendar action background while pressed.
+ * @cssprop [--lr-date-input-action-active-radius=var(--lr-date-input-radius)] - Clear/calendar action corner radius while pressed.
  * @cssprop [--lr-date-input-control-min-height=var(--lr-form-control-height)] - Minimum block size
  *   of the input row, read from the shared form-control height ladder so retuning
  *   `--lr-theme-form-control-height-*` moves this control and every sibling field together. Each
@@ -335,7 +340,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     disableFuture: { type: Boolean, attribute: 'disable-future', reflect: true, noAccessor: true },
   };
 
-  @property({ converter: appearanceConverter, reflect: true }) appearance: LyraDateInputAppearance = 'outlined';
+  @property({ converter: appearanceConverter, reflect: true })
+  appearance: Extract<LyraAppearance, 'filled' | 'outlined' | 'filled-outlined'> = 'outlined';
   /** Whether the calendar popup is open. Disabled or readonly controls reject direct reopen
    * attempts, including the synchronous fieldset cascade before its callback runs. */
   @property({ type: Boolean, reflect: true })
@@ -940,7 +946,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Open the calendar popover, unless the cancelable `lr-show` request is vetoed. */
   show(): Promise<void> {
     if (this.open || this.liveDisabled || this.readonly) return Promise.resolve();
-    const request = this.emit('lr-show', undefined, { cancelable: true });
+    const request = this.emit('lr-show', null, { cancelable: true });
     if (request.defaultPrevented) return Promise.resolve();
     this.resolveTransitionWaiters('lr-after-hide');
     const settled = this.waitForTransition('lr-after-show');
@@ -951,7 +957,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Close the calendar popover, unless the cancelable `lr-hide` request is vetoed. */
   hide(restoreFocus: boolean = false): Promise<void> {
     if (!this.open) return Promise.resolve();
-    const request = this.emit('lr-hide', undefined, { cancelable: true });
+    const request = this.emit('lr-hide', null, { cancelable: true });
     if (request.defaultPrevented) return Promise.resolve();
     this.resolveTransitionWaiters('lr-after-show');
     const settled = this.waitForTransition('lr-after-hide');

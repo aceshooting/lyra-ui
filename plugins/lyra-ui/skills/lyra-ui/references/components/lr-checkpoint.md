@@ -19,11 +19,12 @@ An inline conversation restore point: a labeled marker between messages whose Re
 confirms inline, then hands the host a `lr-restore` event. This component persists and restores
 nothing itself — host state in, events out. Not a handoff or plain rule
 (`lr-handoff-divider`/`lr-divider`); not branch navigation across regenerated variants
-(`lr-branch-picker`); not recorded-run playback (`lr-playback`).
+(`lr-branch-picker`); not recorded-run playback (`lr-sequence-playback`).
 
 **Properties:** `checkpointId: string = ''` (attribute `checkpoint-id`) — opaque id echoed in the
 `lr-restore` event detail. `label: string = ''` — checkpoint name; the localized `checkpointLabel`
-fallback renders while empty. `timestamp?: Date | string` (attribute: false) — optional creation
+fallback renders while empty. `timestamp?: LyraTimestamp` (`Date | string | number`, attribute:
+false) — optional creation
 time, rendered as `<time datetime>`, default `hour:minute` in `effectiveLocale`; invalid strings are
 treated as unset. `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the
 default rendering. `restorable: boolean = true` — when `false`, renders a plain marker with no
@@ -37,6 +38,11 @@ this point).
 
 **Events:** `lr-restore` — `detail: { checkpointId, label }`; fired on Restore activation, after
 the inline confirm when `confirmRestore` is on. Not cancelable.
+
+**Methods:** `click()` forwards to the current Restore action only when restoration is available.
+The confirm prompt names both Confirm and Cancel through `aria-describedby`; Escape/cancel restores
+focus transactionally, and a same-turn controlled change that removes confirmation never lets a
+stale focus continuation win.
 
 **CSS parts:** `base` (`role="group"`), `line` (each of the two flanking rules), `icon` (bookmark
 glyph), `label`, `timestamp`, `restore-button` (only while `restorable`), `confirm-group`,

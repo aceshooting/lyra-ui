@@ -711,7 +711,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter })
   beginAtZero = true;
   /** @deprecated Use the mirrored `label` property. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  @property({ attribute: 'accessible-label' }) accessibleLabel: string | null = null;
   /** @deprecated Use the mirrored `description` property. */
   @property({ attribute: 'accessible-description' }) accessibleDescription = '';
   /** Makes the generated data table visible; it remains screen-reader available when false. */
@@ -2769,7 +2769,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private accessibleName(fallback: string): string {
-    return this.getAttribute('aria-label') || this.label || this.accessibleLabel || fallback;
+    return this.getAttribute('aria-label') ?? this.label ?? this.accessibleLabel ?? fallback;
   }
 
   private chartDescription(): string {

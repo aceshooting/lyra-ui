@@ -17,28 +17,35 @@
 
 Sandbox host for executable MCP App-style resources. Inline documents run in a unique-origin iframe
 with a trusted CSP meta placed before every caller-controlled HTML token; comment and script-text
-head decoys therefore cannot bypass the policy. Remote documents are URL-validated. The frame can only request tool calls,
-messages, navigation, logs, and clamped resizing through typed events. Capabilities are denied
-unless explicitly enabled in `resource.permissions`.
+head decoys therefore cannot bypass the policy. Remote documents accept only relative or HTTP(S)
+URLs and use a fixed `no-referrer` policy; active-document `data:` and `blob:` URLs are rejected.
+The frame can only request tool calls, messages, navigation, logs, and clamped resizing through
+typed events. Capabilities are denied unless explicitly enabled in `resource.permissions`.
 
 **Properties:**
 
-- `resource: McpAppResource | null = null` (attribute: false) — either inline `html` or a safe
-  remote `src`, plus the required logical `uri`. `McpAppResource = { uri: string; title?: string;
-  html?: string; src?: string; csp?: McpAppCsp; permissions?: McpAppPermissions; metadata?:
-  Record<string, unknown> }`. CSP domain arrays accept HTTP(S) origins only. Permissions are
-  optional booleans for camera, microphone, geolocation, clipboard read, and clipboard write.
+- `resource: McpAppResource | null = null` (attribute: false) — a non-empty logical `uri` plus
+  exactly one executable source: `{ uri, html, src?: never, ... }` for inline content or
+  `{ uri, src, html?: never, ... }` for a relative/HTTP(S) document URL. Shared optional fields are
+  `title`, `csp`, `permissions`, and `metadata`. Runtime validation enforces the non-empty identity,
+  exact-one-source invariant, and remote URL scheme even for untyped JavaScript callers. CSP domain
+  arrays accept HTTP(S) origins only. Permissions are optional booleans for camera, microphone,
+  geolocation, clipboard read, and clipboard write.
 - `height: number = 320`, `maxHeight: number = 800` (attribute `max-height`) — requested and maximum
   frame heights in pixels; runtime values and resize requests clamp to 120–10,000.
-- `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`) — frame
-  title precedence is host `aria-label`, `label`, resource title, then the localized fallback.
+- `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`). A present
+  host `aria-label` stays on the custom-element host as its overall name instead of being cloned
+  inward. The iframe title uses `label`, then resource title, then the localized fallback; an
+  explicitly empty host label is preserved as an empty iframe title for this primary frame owner,
+  while a direct `accessibleLabel` property value can name it when no host attribute is present.
 
 **Methods:** `postHostContext(context: unknown): void` posts host state into the active frame;
-`postToolResult(requestId: string, result?: unknown, error?: string, frameGeneration?: number): void`
-resolves a prior tool request. Both are no-ops before a frame exists.
+`postToolResult(requestId: string, options: McpAppToolResultOptions): void` resolves a prior tool
+request with exactly one of `{ frameGeneration, result }` or `{ frameGeneration, error }`. Missing,
+stale, or ambiguous correlation fails closed. Both methods are no-ops before a frame exists.
 
 **Exported types:** `McpAppResource`, `McpAppCsp`, `McpAppPermissions`,
-`McpAppToolCallDetail`, and `LyraMcpAppEventMap`.
+`McpAppToolCallDetail`, `McpAppToolResultOptions`, and `LyraMcpAppEventMap`.
 
 **Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call`
 (`{ requestId?, name, args, frameGeneration }`), `lr-mcp-send-message` (`{ message }`),
@@ -46,26 +53,26 @@ resolves a prior tool request. Both are no-ops before a frame exists.
 (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
 component does not execute tools, send messages, or navigate itself.
 
-Changing `resource` mounts a fresh iframe/window generation; messages from the prior
-`contentWindow` are ignored even when two opaque-origin inline documents otherwise look alike.
+Changing `resource`, adopting the host into another document, or reconnecting it mounts a fresh
+iframe/window generation; messages from the prior `contentWindow` are ignored even when two
+opaque-origin inline documents otherwise look alike.
 
 The host-to-frame direction is correlated the same way. `lr-mcp-tool-call`'s
 `detail.frameGeneration` is an opaque id for the frame generation that raised the request; passing
-it back as `postToolResult()`'s fourth argument makes the component drop a reply whose generation no
+it in `postToolResult()`'s required options makes the component drop a reply whose generation no
 longer matches the mounted frame. That matters because a tool call is inherently asynchronous — the
-host does real work (an API call, a filesystem read) before replying, and a conversation UI can swap
-`resource` on the same element meanwhile, so an uncorrelated reply would otherwise be delivered into
-a completely unrelated app. The argument is optional and additive: omitting it means "no correlation
-available" and posts to whichever frame is currently mounted, exactly as before.
+host does real work before replying, and a conversation UI can replace or reconnect `resource` on
+the same element meanwhile. An uncorrelated reply would otherwise reach a completely unrelated app.
 
 ```ts
-element.addEventListener('lr-mcp-tool-call', async (event) => {
+element.addEventListener("lr-mcp-tool-call", async (event) => {
   const { requestId, name, args, frameGeneration } = event.detail;
   if (!requestId) return;
   const result = await runTool(name, args);
-  element.postToolResult(requestId, result, undefined, frameGeneration);
+  element.postToolResult(requestId, { frameGeneration, result });
 });
 ```
+
 Changing only `height`/`maxHeight` updates frame geometry without returning an already-ready frame
 to its loading state. The initial host context reports `effectiveLocale`, so inherited/document
 locale and per-element locale overrides follow the same precedence as the rest of Lyra UI.
@@ -80,5 +87,5 @@ the shared assertive sink. Initial and reconnect renders stay silent.
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
-import '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js';
+import "@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js";
 ```

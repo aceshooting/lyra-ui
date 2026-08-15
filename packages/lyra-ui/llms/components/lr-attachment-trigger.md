@@ -19,14 +19,15 @@ A compact attach affordance designed for a chat composer's leading slot (see `lr
 own `leading` slot, which this drops straight into, though it has no code dependency on it). First-
 party invention (no Web Awesome equivalent). Its shape adapts to how many attachment `capabilities`
 are configured: exactly one renders a single plain icon button; more than one renders a small
-anchored menu (composed from the already-landed `lr-menu`/`lr-menu-item`) listing each
+anchored menu (composed from `lr-dropdown`/`lr-menu`/`lr-menu-item`) listing each
 capability as a row.
 
 **Properties:**
-- `capabilities: AttachmentCapability[] = ['files']` (property only, no attribute) — which
-  capabilities to offer, in display order. `AttachmentCapability = 'files' | 'image' | 'camera' |
-  'audio'`; `FileBackedCapability = 'files' | 'image'` (the two that actually open the file
-  picker).
+- `capabilities: readonly LyraAttachmentCapability[] = ['files']` (property only, no attribute) —
+  which capabilities to offer, in display order. `LyraAttachmentCapability = 'files' | 'image' |
+  'camera' | 'audio'`; `LyraFileBackedCapability = 'files' | 'image'` (the two that actually open
+  the file picker). Writes are normalized to a frozen, deduplicated, at-most-four entry snapshot;
+  hostile/invalid collections fail closed to the default.
 - `accept: string = ''` — a native-file-input-style accept string (e.g. `'image/*'` or
   `'.pdf,.docx'`), forwarded to the hidden file input for the `files`/`image` capabilities. `image`
   defaults it to `'image/*'` unless this prop overrides it; `files` always uses it as-is (empty
@@ -34,31 +35,31 @@ capability as a row.
 - `multiple: boolean = true` (reflected) — forwarded to the hidden file input's own `multiple`
   attribute.
 - `disabled: boolean = false` (reflected)
-- `triggerLabel?: string` (attribute `trigger-label`) — overrides the single-capability trigger
-  button's accessible-name fallback, which otherwise comes from the localized capability metadata
-  (e.g. `'Attach files'`); only affects the single-capability button (`[part='trigger']`). The
-  multi-capability trigger uses its localized `'Add attachment'` fallback. A host `aria-label`
-  takes precedence on either trigger shape.
+- `accessibleLabel?: string` (attribute `accessible-label`) — overrides either trigger shape's
+  localized accessible-name fallback. A host `aria-label`, including explicit empty, wins.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
 
-**Events:** `lr-pick` (`detail: { capability: 'files' | 'image'; files: FileList }`) — fired once a
-file-backed capability's hidden input produces a real selection. The `FileList` is an independent
-snapshot (rehomed into a fresh `DataTransfer`), not a live reference to the input's own `.files` —
-see the gotcha below for why that distinction matters. `lr-camera-request` and `lr-audio-request`
+**Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files: readonly File[] }`) — fired
+once a file-backed capability's hidden input produces a real selection. `files` is a fresh frozen
+owner-realm array snapshot, not a live reference to the input's own `.files`. `lr-camera-request`
+and `lr-audio-request`
 (both no detail — `detail` is `null`, not `undefined`, per the DOM spec's `CustomEventInit`
 default) — fired when the `camera` / `audio` capability is activated; this component implements no
 capture UI of its own, the host owns everything from here (there's no single right answer for
 `getUserMedia` vs. `<input capture>` vs. a native wrapper's own camera API; for `audio` the
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
 blob to `<lr-attachment-chip>`). `focus`/`blur` from the active single- or multi-capability trigger
-are re-emitted as bubbling, composed host events; the hidden file input is not the focus owner.
+are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
+`relatedTarget`), followed by `lr-focus`/`lr-blur`; the hidden file input is not the focus owner.
+The composed dropdown/menu implementation lifecycle, item-state, and selection events are
+contained inside the trigger. Only the attachment events listed above cross the host boundary.
 
 **Slots:** none — capabilities are configured entirely via the `capabilities` prop.
 
 **CSS parts:** `trigger` (the single-capability button, only rendered when
-`capabilities.length === 1`), `menu` (the `lr-menu` wrapper, only rendered when
-`capabilities.length > 1`), `menu-trigger` (the multi-capability button slotted into `lr-menu`'s own
+`capabilities.length === 1`), `menu` (the `lr-dropdown` shell, only rendered when
+`capabilities.length > 1`), `menu-trigger` (the multi-capability button slotted into `lr-dropdown`'s
 `trigger` slot, only rendered when `capabilities.length > 1`), `expand-icon` (the disclosure chevron
 inside the multi-capability trigger button, only rendered when `capabilities.length > 1`),
 `hidden-input` (the internal native `<input type="file">` that actually opens the OS file picker;
@@ -73,7 +74,7 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 
 ```html
 <lr-attachment-trigger .capabilities=${['files', 'image', 'camera']} accept=".pdf,.docx"
-  @lr-pick=${(e) => queueFiles(e.detail.capability, e.detail.files)}
+  @lr-files=${(e) => queueFiles(e.detail.capability, e.detail.files)}
   @lr-camera-request=${openCameraFlow}
 ></lr-attachment-trigger>
 ```
@@ -82,10 +83,8 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 - `HTMLInputElement.files` is a *live* view in most browsers — clearing `input.value` after reading
   `.files` (needed so re-picking the exact same file still fires another `change` event next time)
   mutates that exact `FileList` object back to empty in place, not just detaches a stale reference.
-  A consumer reading `lr-pick`'s `detail.files` even one microtask later (an `async` handler, a
-  queued upload) would otherwise observe an empty list — this component avoids that by rehoming the
-  selection into a fresh `DataTransfer` before emitting, but any other file-input-adjacent code
-  emitting `input.files` directly without that rehoming step has the same latent bug.
+  A consumer reading `lr-files` later would otherwise observe an empty list — this component
+  copies into a fresh frozen `File[]` before clearing the native input.
 - The `camera`/`audio` capabilities never touch the hidden `<input type="file">` at all — both are
   scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
   hidden input is only rendered when `capabilities` contains `files` or `image`.

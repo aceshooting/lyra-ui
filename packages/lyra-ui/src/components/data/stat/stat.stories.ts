@@ -168,6 +168,29 @@ export const LinkedKpi: Story = {
   `,
 };
 
+export const ThemedLinkedKpi: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Linked-card hover and press paint use inherited component hooks. Hover and press this tile to see the independent border, shadow, and background values.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="--lr-stat-link-hover-border-color: var(--lr-color-warning); --lr-stat-link-hover-shadow: var(--lr-shadow-m); --lr-stat-link-active-border-color: var(--lr-color-danger); --lr-stat-link-active-bg: var(--lr-color-danger-quiet)"
+    >
+      <lr-stat
+        label="Memories"
+        value="128"
+        caption="Hover or press this themed link"
+        href="?path=/story/stat--themed-linked-kpi"
+      ></lr-stat>
+    </div>
+  `,
+};
+
 export const LinkedKpiWithAction: Story = {
   render: () => html`
     <lr-stat

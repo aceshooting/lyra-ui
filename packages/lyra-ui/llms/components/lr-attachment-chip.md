@@ -21,14 +21,18 @@ to populate it: set `file` to a real `File` (fresh from a picker/drop), from whi
 `mime-type` and the image thumbnail are all auto-derived; or set the plain `name`/`bytes`/
 `mime-type`/`thumbnail-src` props instead, for reconstructing a chip from server-persisted
 attachment metadata after a page reload, when no real `File` object exists any more. `file` always
-wins when both are present. When a real `File` or `preview-src` is available, the chip also offers
-a localized preview action that opens `<lr-document-viewer>` using the same effective MIME type.
+wins when both are present. When a real `File` or `preview-src` is available, the chip offers a
+localized action that emits a cancelable `lr-preview-request`; it never registers or owns a viewer
+or overlay, so the host composes the desired preview surface.
 
 **Properties:**
 - `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType`/the
   image thumbnail are all derived from it, taking precedence over the independent props below
 - `name: string = ''` — filename, used only while `file` is unset
-- `bytes: number = 0` — file size in bytes, used only while `file` is unset
+- `bytes?: number` — file size in bytes, used only while `file` is unset. `0` is a known empty file
+  and renders `0 B`; omission means unknown. Negative/non-finite writes normalize to omission.
+- `attachmentId: string = ''` (attribute `attachment-id`) — stable domain identity carried by
+  attachment action events. The platform `id` remains available for DOM identity/idrefs only.
 - `mimeType: string = ''` (attribute `mime-type`) — used only while `file` is unset
 - `thumbnailSrc: string = ''` (attribute `thumbnail-src`) — thumbnail image URL, used only while
   `file` is unset; rendered whenever present regardless of `mimeType` (no `file`-derived equivalent
@@ -37,8 +41,9 @@ a localized preview action that opens `<lr-document-viewer>` using the same effe
   `file` is unset; a real `File` takes precedence and uses a temporary blob URL
 - `previewable: boolean = true` (reflected) — shows the preview action whenever a `file` or
   `preview-src` is available
-- `status: AttachmentChipStatus = 'pending'` (reflected) — `'pending' | 'uploading' | 'error' |
-  'done'`; drives the accent tint and which of `progress`/`spinner`/`retry-button` renders
+- `status: LyraAttachmentUploadStatus = 'pending'` (reflected) — `'pending' | 'uploading' |
+  'error' | 'success'`; invalid values normalize to `pending`. Drives the accent tint and which of
+  `progress`/`spinner`/`retry-button` renders.
 - `progress: number = 0` — upload completion, 0-100; only meaningful while `status="uploading"`, a
   value of `0` or `NaN` falls back to the indeterminate spinner
 - `removable: boolean = true` (reflected) — shows the remove (×) button
@@ -64,18 +69,19 @@ a localized preview action that opens `<lr-document-viewer>` using the same effe
 **Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size` (same rename as
 `lr-file-icon`'s). Everywhere else in this library `size` names a tier on the shared size ladder,
 and a numeric byte count answering to the same property name is a collision a consumer only
-discovers at runtime. A leftover `size="245000"` is an unknown attribute now: `bytes` stays `0` and
-the `size` part renders nothing.
+discovers at runtime. A leftover `size="245000"` is an unknown attribute now: `bytes` stays omitted
+and the `size` part renders nothing.
 
-The component identifies *which* attachment a `lr-remove`/`lr-retry` event is about via the
-platform's own `id` attribute/property rather than a second, differently-named prop. Set `id="..."`
-when you have a stable server-side attachment id; when unset and `file` is set, a stable id is
+The component identifies *which* attachment an action event is about through `attachmentId`. Set
+`attachment-id="..."` when you have a stable server-side identity; when unset and `file` is set, a
+stable attachment id is
 derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
 generated internal id is used as a last resort.
 
-**Events:** `lr-remove` (`detail: { id }`, only rendered while `removable`), `lr-retry`
-(`detail: { id }`, only rendered while `status="error"`), `lr-preview` (`detail: { id, name,
-mimeType, src }`, emitted when the preview action opens the document viewer)
+**Events:** `lr-remove` (`detail: { attachmentId }`, only rendered while `removable`), `lr-retry`
+(`detail: { attachmentId }`, only rendered while `status="error"`), and cancelable
+`lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`). Preventing the preview
+request is a host veto point; the chip itself has no preview default action.
 
 **Slots:** none.
 
@@ -83,7 +89,7 @@ mimeType, src }`, emitted when the preview action opens the document viewer)
 keeps its pre-rename name — it is the rendered size *text*, and renaming a part would break shipped
 `::part()` rules for no gain), `status-text` (the visible text twin of
 the status accent color, so the state is carried in words and not only in color; empty and hidden
-for `pending`/`done`), `progress`, `progress-fill`, `spinner` (decorative/`aria-hidden` while the
+for `pending`/`success`), `progress`, `progress-fill`, `spinner` (decorative/`aria-hidden` while the
 adjacent `status-text` supplies the wording), `retry-button`, `preview-button`,
 `remove-button`
 
@@ -107,7 +113,7 @@ already focused on the chip still hears an upload failure — goes to the librar
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
 `--lr-attachment-chip-border` (default `var(--lr-color-border)`) — this trio is swapped per
 `status` (`uploading` → brand/brand-quiet/transparent, `error` → danger/danger-quiet/transparent,
-`done` → success/success-quiet/transparent); `--lr-attachment-chip-compact-thumbnail-size` (default
+`success` → success/success-quiet/transparent); `--lr-attachment-chip-compact-thumbnail-size` (default
 `1.75rem`), `--lr-attachment-chip-compact-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
 size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-duration` (default
@@ -118,14 +124,18 @@ size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-dur
 
 **Optional peer deps:** none.
 
-Also exported from the package root: `formatFileSize(bytes: number): string` — `512` → `"512 B"`
-(whole bytes never get a decimal), `2415919` → `"2.3 MB"` (every unit past bytes gets exactly one
-decimal place), and a negative or non-finite input (`NaN`, `Infinity`) returns `""` so an unknown
-size renders nothing instead of `"NaN B"`.
+Also exported from the package root:
+`formatFileSize(bytes: number, unitLabel?: (unit: 'B' | 'KB' | 'MB' | 'GB' | 'TB') => string,
+numberLabel?: (value: number, fractionDigits: number) => string): string`. `unitLabel` localizes each
+selected unit abbreviation; `numberLabel` formats the scaled value and receives `fractionDigits`
+as `0` for bytes or `1` for larger units. Their defaults preserve the built-in output: `512` →
+`"512 B"` (whole bytes never get a decimal), `2415919` → `"2.3 MB"` (every unit past bytes gets
+exactly one decimal place), and a negative or non-finite input (`NaN`, `Infinity`) returns `""` so
+an unknown size renders nothing instead of `"NaN B"`.
 
 ```html
-<lr-attachment-chip name="report.pdf" bytes="245000" mime-type="application/pdf" status="done"></lr-attachment-chip>
-<lr-attachment-chip id="att-2" status="uploading" progress="42"></lr-attachment-chip>
+<lr-attachment-chip name="report.pdf" bytes="245000" mime-type="application/pdf" status="success"></lr-attachment-chip>
+<lr-attachment-chip attachment-id="att-2" status="uploading" progress="42"></lr-attachment-chip>
 <script type="module">
   import { formatFileSize } from '@aceshooting/lyra-ui/components/media/attachment-chip/file-size.js';
 
@@ -133,7 +143,7 @@ size renders nothing instead of `"NaN B"`.
   chip.file = pickedFile; // name/bytes/mime-type/thumbnail all derived from the File
   chip.addEventListener('lr-remove', (e) => removeAttachment(e.detail.id));
   chip.addEventListener('lr-retry', (e) => retryUpload(e.detail.id));
-  chip.addEventListener('lr-preview', (e) => console.log(e.detail));
+  chip.addEventListener('lr-preview-request', (e) => openPreview(e.detail));
   console.log(formatFileSize(pickedFile.size));
 </script>
 ```

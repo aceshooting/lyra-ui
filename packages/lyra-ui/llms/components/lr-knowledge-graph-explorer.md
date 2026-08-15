@@ -21,21 +21,23 @@ overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-
 `lr-path-strip`, and `lr-popover.showAt()`.
 
 **Properties:** (host-supplied data, rendered as given)
-- `nodes: GraphNode[] = []`, `links: GraphLink[] = []`, `nodeTypes: GraphNodeType[] = []`,
+
+- `nodes: LyraGraphNode[] = []`, `links: LyraGraphLink[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,
   `communities: GraphCommunity[] = []` (all attribute: false) — exactly `lr-graph`'s own types,
   forwarded verbatim; see the `lr-graph` section above for each shape
 - `entityDetails: Record<string, LyraKnowledgeGraphEntityDetails> = {}` (attribute: false) —
   `LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>`, i.e.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
-  node id. Merged onto the matching `GraphNode` to build the entity shown in the details popover and
+  node id. Merged onto the matching `LyraGraphNode` to build the entity shown in the details popover and
   neighbor rows. A node with no entry still renders: `degree` falls back to a live count derived from
   `links`, `description`/`properties` are omitted
-- `path: LyraPathElement[] = []` (attribute: false) — host-supplied path-finding *result*, rendered
+- `path: LyraPathElement[] = []` (attribute: false) — host-supplied path-finding _result_, rendered
   via `lr-path-strip` (`{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string;
-  directed?: boolean; reverse?: boolean }`). Empty renders no strip
+directed?: boolean; reverse?: boolean }`). Empty renders no strip
 
 (self-managed but presettable/observable — this component toggles its own copy on interaction, the
 same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature works with zero host wiring)
+
 - `hiddenTypes: string[] = []` (attribute: false) — forwarded to both `lr-graph.hiddenTypes` and
   `lr-graph-legend.hiddenTypes`; hidden nodes are also excluded from explorer search results,
   neighbor rows, and activation
@@ -49,6 +51,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   it up to date afterwards
 
 (presentation)
+
 - `renderer: 'svg' | 'canvas' = 'svg'` — forwarded to `lr-graph.renderer`
 - `width: number = 800`, `height: number = 600`
 - `highlight: 'selection' | 'hover' | 'none' = 'selection'` — what drives the dimming forwarded to
@@ -56,10 +59,12 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
   the pointer-hovered node (falling back to selection while nothing is hovered); `'none'` forwards
   empty arrays regardless of search/selection state, for a host driving dimming its own way
-- `label: string = ''` — accessible name for the root landmark; falls back to the localized
-  `graphExplorerLabel`
+- `label: string = ''` — fallback name for the root group; defaults to localized
+  `graphExplorerLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
+  explicitly empty host label stays empty on the group
 
 **Events:**
+
 - `lr-selection-change` (`detail: { selectedNodeId: string | null }`) — emitted after the explorer
   changes its own selection through search, graph, keyboard/neighborhood/path activation, or
   closing/invalidating the details selection. Clearing reports `null`. Direct host assignments to
@@ -82,7 +87,8 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
 nested `lr-neighbor-list` and a pin toggle). Receives no data; an overriding consumer reads the
 selected entity from `selectedNodeId`/`nodes` itself.
 
-**CSS parts:** `base` (`role="group"`), `toolbar`, `search` (the search `lr-input`), `legend` (the
+**CSS parts:** `base` (`role="group"` unless a non-empty host label owns the component), `toolbar`,
+`search` (the search `lr-input`), `legend` (the
 composed `lr-graph-legend`), `search-results` (only while `searchQuery` is non-empty),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
@@ -94,16 +100,17 @@ tokens (see above).
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.
 
 **Known gotchas:**
+
 - An explicit height on the host bounds the whole explorer: `[part="base"]` fills it and
   `[part="graph"]` takes whatever the toolbar, search results, pinned row and path strip leave over,
   rather than the graph sizing itself from its own intrinsic aspect ratio. With no height on the
   host the column still sizes itself from its content, unchanged.
-- `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-*local* drawing
+- `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-_local_ drawing
   coordinates, never viewport pixels. For `renderer="svg"` this component resolves the real viewport
   rect from `event.composedPath()`'s `[part="node"]` element; for `renderer="canvas"` (no per-node
   DOM) it uses the click's `clientX`/`clientY`. While an svg-click popover stays open it re-anchors
   on every `lr-viewport-change` from the graph — no `requestAnimationFrame` polling loop.
-- Selecting a node any *other* way (search result, neighbor row, path element, keyboard Enter/Space
+- Selecting a node any _other_ way (search result, neighbor row, path element, keyboard Enter/Space
   on a graph node — which dispatches no native `click`) has no rect to read, so it calls
   `lr-graph.focusNode(id)` and anchors at the graph element's own bounding-box center instead; no
   continuous tracking applies on that path.

@@ -28,9 +28,9 @@ export interface LyraCodeEditorEventMap {
   focus: FocusEvent;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 export type LyraCodeEditorResize = 'none' | 'both' | 'horizontal' | 'vertical' | 'auto';
 export type LyraCodeEditorWrap = 'off' | 'soft' | 'hard';

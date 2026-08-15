@@ -38,16 +38,17 @@ make stale seed rows reappear.
 inert-child indexes are no-ops. Calling it for the current index still emits `lr-video-change`, matching
 the mirrored contract. `next()` and `previous()` select the next or previous enabled child when one
 exists. `focus(options?)`, `blur()`, and `click()` forward to the playlist row that currently owns
-the roving tab stop (falling back to the first enabled row), which is otherwise unreachable from
-outside the shadow root.
+the optional-arrow navigation cursor (falling back to the first enabled row). This forwarding is a
+convenience; every enabled row is independently reachable through ordinary sequential Tab order.
 
-**Events:** internal `focus`/`blur` from a playlist row are bridged as bubbling, composed host
-events. `lr-video-change` is bubbling and composed but non-cancelable, with exact detail
-`{ previousIndex, currentIndex, video }`. `video` is a fresh frozen plain-data snapshot with exact
-shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains frozen
-`{ src, type, media }` records for the child's direct `src` and `<source>` declarations; `tracks`
-contains frozen `{ src, kind, srclang, label, default }` records. Consumer mutation cannot alter a
-child or a later event snapshot.
+**Events:** internal `focus`/`blur` from a playlist row are relayed exactly once as owner-realm
+native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
+`lr-focus`/`lr-blur`. `lr-video-change` is bubbling and composed but non-cancelable, with exact
+detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, mutable plain-data snapshot with
+exact shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains
+fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;
+`tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener may annotate or
+reshape its own event payload, but that mutation cannot alter a child or any later event snapshot.
 
 **Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
 are not playlist items.
@@ -63,25 +64,35 @@ Only the active child is visible and loaded. Before another child is activated, 
 player is synchronously paused, stripped of its private source/track clones, and reloaded into an
 empty selection state. The incoming child then safely re-clones its own light-DOM declarations.
 Valid user volume, mute, playback-rate, and selected-caption preferences carry across that boundary;
-current time does not. Events and rejected play promises from a superseded activation cannot affect
-the current child. Removing or reordering duplicate-metadata children is identity-safe, and
-disconnecting pauses/unloads every child before a later reconnect creates one fresh listener
-generation.
+selected caption tracks use `hidden`, not `showing`, so the active child's custom overlay is the only
+caption paint. Current time does not carry. Events and rejected play promises from a superseded
+activation cannot affect the current child. The playlist snapshots each child's authored
+`controls`, `iconLibrary`, and `hidden` values before projecting effective state, and restores those
+values plus resource selection when that exact child is removed or reparented. Removing or
+reordering duplicate-metadata children is identity-safe; disconnecting pauses/unloads every child
+while preserving ownership for a later reconnect in a new realm.
 
-The playlist buttons use one roving tab stop, skip inert children, support Up/Down, Home/End, and
-mirrored Left/Right navigation, and expose the selected item with `aria-current`. At narrow
+Every enabled playlist button has `tabindex="0"`; disabled rows for inert children use `-1`.
+Up/Down, Home/End, and mirrored Left/Right remain optional shortcuts, and the selected item exposes
+`aria-current`. Each visible known duration is associated with its row using `aria-describedby`;
+missing duration creates no empty description, and metadata updates replace the localized value.
+At narrow
 allocations the sidebar moves below the video through a container query; long titles ellipsize
 without widening the host.
 
 **A child marked `inert` is unavailable:** it never becomes the active video,
 `next()`/`previous()`/`goTo()` and auto-advance step past it, and its playlist row renders `disabled`
-so the roving `tabindex` can never strand focus on it — an inert element refuses focus, which would
-leave `focus()` a silent no-op and kill the next arrow press. `<lr-video>` has no `disabled`
+and `tabindex="-1"` so neither sequential nor optional-arrow focus can land on it — an inert element
+refuses focus, which would leave `focus()` a silent no-op and kill the next arrow press. `<lr-video>`
+has no `disabled`
 property; use the platform `inert` state exclusively. Only the child's **own** `inert` counts: a
 playlist inerted wholesale by an open modal keeps playing. The attribute is watched live, so
 marking the *current* video inert moves the selection to the nearest enabled child (emitting
-`lr-video-change`) and hands the roving focus to the row that replaced it, instead of leaving a
-stale tab stop on a row that can no longer take focus.
+`lr-video-change`) and hands optional-arrow focus to the row that replaced it, instead of leaving a
+stale arrow-navigation cursor on a row that can no longer take focus.
+
+Only the native `ended` notification drives `autoAdvance`/repeat completion. A native `error`
+records the stopped state but never changes selection; recovery and retry remain consumer-owned.
 
 ```html
 <lr-video-playlist controls="full" repeat="all">

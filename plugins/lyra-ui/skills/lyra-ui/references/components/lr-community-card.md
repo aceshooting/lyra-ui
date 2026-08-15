@@ -20,9 +20,11 @@ count, member chips with overflow, and a drill-in action. Doesn't own community 
 graph or membership fetching — `lr-drill` asks the host to load members/subgraph.
 
 **Properties:**
+
 - `community: LyraCommunity | null = null` (attribute: false) — `LyraCommunity { id: string; label:
-  string; summary?: string; memberCount?: number }`; `memberCount` is authoritative when it exceeds
-  `members.length`; `null` renders the empty state
+string; summary?: string; memberCount?: number }`; `memberCount` is a non-negative safe-integer
+  total for paged data and is authoritative only when it is at least `members.length`; a smaller or
+  invalid total cannot contradict the known rendered records; `null` renders the empty state
 - `members: LyraEntity[] = []` (attribute: false) — rendered as chips, up to `maxMembers`
 - `maxMembers: number = 8` (attribute `max-members`) — remaining members collapse into a "+N"
   overflow chip
@@ -52,11 +54,17 @@ activated).
 ```html
 <lr-community-card></lr-community-card>
 <script>
-  document.querySelector('lr-community-card').community = { id: 'c1', label: 'Early computing pioneers', summary: 'A cluster of 19th-century mathematicians and engineers.', memberCount: 12 };
+  document.querySelector("lr-community-card").community = {
+    id: "c1",
+    label: "Early computing pioneers",
+    summary: "A cluster of 19th-century mathematicians and engineers.",
+    memberCount: 12,
+  };
 </script>
 ```
 
 **Known gotchas:**
+
 - `memberCount` (not `members.length`) is the authoritative displayed count whenever it's larger —
   useful when the host sends only a preview slice of members alongside the real total.
 

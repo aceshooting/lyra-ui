@@ -11,7 +11,10 @@ import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import type { LyraVirtualList, VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './activity-feed.styles.js';
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import {
+  literalSetConverter,
+  presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter,
+} from '../../../internal/converters.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -34,6 +37,11 @@ export interface ActivityEntry {
 /** Whether the feed is streaming a run live or replaying a finished one -- the library's shared
  *  transcript-mode vocabulary, identical to `<lr-thinking-panel>`'s `ThinkingPanelMode`. */
 export type ActivityFeedMode = LyraTranscriptMode;
+
+const ACTIVITY_FEED_MODE = literalSetConverter<ActivityFeedMode>(
+  ['live', 'post-hoc'],
+  'live',
+);
 
 export interface ActivityFeedToggleDetail {
   expanded: boolean;
@@ -162,7 +170,19 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   /** `'live'` follows the tail (per `follow`) and pulses; `'post-hoc'` shows the completed-count
    *  summary and never scrolls. */
-  @property({ reflect: true }) mode: ActivityFeedMode = 'live';
+  private _mode: ActivityFeedMode = 'live';
+
+  @property({ reflect: true, converter: ACTIVITY_FEED_MODE })
+  get mode(): ActivityFeedMode {
+    return this._mode;
+  }
+  set mode(next: ActivityFeedMode) {
+    const normalized = ACTIVITY_FEED_MODE.normalizeReflected(this, 'mode', next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate('mode', old);
+  }
 
   /** Component-managed, host-assignable stick-to-bottom flag — released on user scroll-up,
    *  re-engaged at the bottom. Only drives scrolling in `'live'` mode. */
@@ -172,8 +192,9 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
    *  collapsed sets `mode="post-hoc"` and `expanded=false` together. */
   @property({ type: Boolean, reflect: true }) expanded = false;
 
-  /** Header text. Localized (`activityFeedLabel`) while at its default `'Activity'`. */
-  @property() label = 'Activity';
+  /** Optional header-text override. Omission localizes `activityFeedLabel`; any supplied string,
+   *  including `'Activity'` or `''`, is rendered verbatim. */
+  @property() label?: string;
 
   /** Trailing `<time datetime>` per entry, default `hour:minute` in `effectiveLocale`. */
   @property({ type: Boolean, attribute: 'show-timestamps' }) showTimestamps = false;
@@ -475,7 +496,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   override render(): TemplateResult {
     const entries = this.normalizedEntries;
-    const label = this.label === 'Activity' ? this.localize('activityFeedLabel') : this.label;
+    const label = this.label == null ? this.localize('activityFeedLabel') : this.label;
     const ariaLabel = label;
     const headerText = this.mode === 'live' ? (entries[entries.length - 1]?.text ?? '') : this.completedStepsSummary();
     const virtualized = this.isVirtualized;

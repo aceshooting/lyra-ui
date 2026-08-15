@@ -24,8 +24,8 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 
 **Properties:**
 
-- `language: string = ''` — reflected onto the `editor` part as `data-language`; purely a styling/
-  metadata hook, nothing tokenizes the text
+- `language: string = ''` — reflected on the host and projected onto the `editor` part as
+  `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `lineNumbers: boolean = true` (attribute `line-numbers`, reflected) — renders the `gutter` part,
   one row per `\n`-separated line
 - `tabSize: number = 2` (attribute `tab-size`) — spaces inserted per Tab press, and the textarea's
@@ -34,17 +34,26 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`),
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
-- `resize: 'none' | 'both' | 'horizontal' | 'vertical' = 'both'` — written as the textarea's inline
-  `resize`; an invalid runtime value falls back to `'both'`
+- `rows: number = 4`, `cols: number = 20`, `minlength?: number`, `maxlength?: number` — native
+  textarea geometry and code-unit length constraints. Programmatic/restored values receive the
+  same supplemental length validity as user edits.
+- `resize: 'none' | 'both' | 'horizontal' | 'vertical' | 'auto' = 'both'` — written as the
+  textarea's inline `resize`; `auto` grows the owned surface to its content without a manual drag
+  handle, and an invalid runtime value falls back to `'both'`
 - `size: LyraSize = 'm'` (reflected) — visual size on the shared control ladder, the same scale as
   `lr-textarea`/`lr-input`/`lr-select`, accepting both spellings of every tier (`2xs`/`xs`/`s`/`m`/
   `l`/`xl` and `small`/`medium`/`large`). Governs the gutter's and textarea's padding and font size,
   plus the editor frame's minimum block size.
 - `wrap: 'off' | 'soft' | 'hard' = 'off'` — native textarea wrapping; `'off'` (the default) makes
-  the `editor` part the single horizontal scroll viewport
+  the `editor` part the single horizontal scroll viewport. `hard` uses the owner realm's native
+  textarea serializer, so FormData receives platform-equivalent `cols` wrapping while the live
+  `value` remains unwrapped.
 - `spellcheck: boolean = false` — off by default for code, and parsed with a string-aware converter
   so `spellcheck="false"` really is `false`
-- `autocapitalize: string = 'off'`, `autoCorrect: string = 'off'` (attribute `autocorrect`)
+- `autofocus: boolean = false`, `title: string = ''`, `autocomplete: string = ''`,
+  `inputMode`/`inputmode: string = ''`, `enterKeyHint`/`enterkeyhint: string = ''`,
+  `autocapitalize: string = 'off'`, and `autocorrect: boolean = false` (attribute vocabulary
+  `on`/`off`; boolean and string writes normalize through the shared native converter)
 - `accessibleLabel: string = ''` (attribute `aria-label`) — wins over `label`/the localized
   `codeEditorLabel` fallback on the internal textarea
 - The shared form surface adds `value`, `defaultValue`, `customError` (`custom-error`), `name`,
@@ -55,12 +64,18 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange(start, end, direction?)`,
 `setRangeText(replacement, start?, end?, selectMode?)` (writes the result back into `value` without
-emitting an event), plus the `selectionStart`/`selectionEnd` getters (both `0` before first render).
+emitting an event), and `scrollPosition()` / `scrollPosition({top?,left?})`. The `input` getter
+returns the owned native textarea after render. `selectionStart`, `selectionEnd`, and
+`selectionDirection` use native nullable sentinels before that surface exists.
+The native textarea receives the actual `required` state. Its `aria-invalid` is true whenever
+visible property/slotted error chrome exists, or after interaction while native validity fails;
+showing error chrome alone does not mutate `ElementInternals` validity.
 
-**Events:** `input` and `change` — Lyra-emitted, bubbling/composed, each with `detail: { value }`
-(so they carry a detail a native `input`/`change` would not); also `focus`/`blur`, re-dispatched
-bubbling and composed from the internal textarea, and `lr-invalid` (no detail) once when native
-validity fails.
+**Events:** exactly one realm-correct native `input`, `change`, `focus`, and `blur` is relayed from
+the internal textarea; native payload such as `InputEvent.inputType` and
+`FocusEvent.relatedTarget` is preserved. Typed `lr-input`/`lr-change` aliases carry
+`detail: { value }`, and `lr-focus`/`lr-blur` are the prefixed lifecycle aliases. `lr-invalid`
+(no detail) fires once when validity fails.
 
 **Slots:** `label`, `hint`, `error`.
 
@@ -103,8 +118,7 @@ without changing brand/danger paint in sibling components.
   editor) re-arms Tab indentation.
 - The host gets a `data-invalid` attribute once the field has been blurred at least once and
   validity fails; the styles hang the danger border off it.
+- Public/default/restored CR and CRLF sequences normalize once to LF, matching the native
+  textarea's value, gutter line count, selection offsets and ordinary FormData state.
 
-**Additional API surface:**
-
-- `selectionDirection` — The current selection direction of the internal editing surface. Type: `'forward' | 'backward' | 'none'`.
-- `click()` — Activates the internal editing surface.
+**Additional API surface:** `click()` activates the internal editing surface.

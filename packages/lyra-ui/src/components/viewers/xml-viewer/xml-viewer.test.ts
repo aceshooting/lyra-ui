@@ -507,10 +507,11 @@ describe('search', () => {
     const event = await eventPromise as CustomEvent<{
       query: string;
       matchCount: number;
+      matchCountExact: boolean;
       activeIndex: number;
     }>;
     await el.updateComplete;
-    expect(event.detail).to.deep.equal({ query: 'item', matchCount: 1, activeIndex: 0 });
+    expect(event.detail).to.deep.equal({ query: 'item', matchCount: 1, matchCountExact: true, activeIndex: 0 });
     expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(1);
   });
 
@@ -522,6 +523,24 @@ describe('search', () => {
     el.searchPrevious();
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[data-active-match]')) == null).to.be.true;
+  });
+
+  it('reports a retained lower bound when more than 10,000 nodes match', async function () {
+    this.timeout(20_000);
+    const xml = `<root>${'<hit/>'.repeat(10_001)}</root>`;
+    const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const state = el as unknown as {
+      xmlState: { kind: 'loaded'; doc: Document };
+      scrollActiveMatchIntoView(): Promise<void>;
+    };
+    state.xmlState = { kind: 'loaded', doc };
+    state.scrollActiveMatchIntoView = () => Promise.resolve();
+    let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+    el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
+
+    expect(await el.search('hit')).to.equal(10_000);
+    expect(detail).to.deep.include({ matchCount: 10_000, matchCountExact: false });
   });
 
   // Regression: this viewer moved `data-active-match` but never scrolled, so on a document taller
@@ -1177,6 +1196,23 @@ describe('host-supplied highlights', () => {
     expect(active.length).to.equal(1);
     expect(active[0]!.querySelector('[part="tag"]')!.textContent).to.equal('beta');
     expect(getComputedStyle(active[0]!).outlineStyle).to.equal('solid');
+  });
+
+  it('bounds painted highlights while retaining an active entry beyond the candidate cap', async () => {
+    const xml = `<root>${Array.from({ length: 1_001 }, (_, index) => `<item-${index}/>`).join('')}</root>`;
+    const el = (await fixture(html`<lr-xml-viewer .xml=${xml}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    el.highlights = Array.from({ length: 1_001 }, (_, index) => ({
+      id: `h${index}`,
+      anchor: { kind: 'node-path' as const, path: [index] },
+    }));
+    el.activeHighlightId = 'h1000';
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(100);
+    const active = nodeRows(el).filter((row) => row.hasAttribute('data-active-highlight'));
+    expect(active).to.have.length(1);
+    expect(active[0]!.querySelector('[part="tag"]')!.textContent).to.equal('item-1000');
   });
 
   it('ignores highlights whose anchor kind or path this viewer cannot resolve', async () => {

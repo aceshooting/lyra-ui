@@ -1,6 +1,6 @@
 import type {
   LyraWidgetDocument,
-  WidgetNode,
+  LyraWidgetNode,
 } from '../../components/conversation/widget-renderer/resolve.js';
 import {
   createProviderSnapshotBudget,
@@ -136,7 +136,7 @@ export function adaptA2UiSurface(
     return true;
   };
 
-  const visit = (id: string, depth: number, ancestors: ReadonlySet<string>): WidgetNode | null => {
+  const visit = (id: string, depth: number, ancestors: ReadonlySet<string>): LyraWidgetNode | null => {
     if (depth > resolved.maxDepth || ancestors.has(id) || outputLimitExceeded) return null;
     const component = byId.get(id);
     if (!component) return null;
@@ -144,7 +144,7 @@ export function adaptA2UiSurface(
     if (typeof mappedType !== 'string' || !mappedType || !reserveOutputNode()) return null;
     const nextAncestors = new Set(ancestors);
     nextAncestors.add(id);
-    const children: WidgetNode[] = [];
+    const children: LyraWidgetNode[] = [];
     for (const childId of component.children ?? []) {
       if (outputLimitExceeded) break;
       const child = visit(childId, depth + 1, nextAncestors);

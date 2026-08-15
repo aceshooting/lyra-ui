@@ -377,8 +377,18 @@ describe('lr-graph-query-builder', () => {
       expect(
         (events[index] as CustomEvent).detail === (events[index + 1] as CustomEvent).detail,
         names[index]
-      ).to.equal(true);
-    }
+      ).to.equal(false);
+      const before = (events[index] as CustomEvent).detail;
+      const accepted = (events[index + 1] as CustomEvent).detail;
+      if ("query" in before) {
+        expect(
+          before.query === accepted.query,
+          `${names[index]} nested query`
+        ).to.equal(false);
+        expect(Object.isFrozen(before.query)).to.equal(true);
+        expect(Object.isFrozen(accepted.query)).to.equal(true);
+      }
+  }
   });
 
   it('lets every before-query phase veto its action without an accepted event or local mutation', async () => {

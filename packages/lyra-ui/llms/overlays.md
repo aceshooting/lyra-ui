@@ -438,6 +438,9 @@ the slide animation are its own.
   `lightDismiss: boolean = false` (attribute `light-dismiss`) — inherited dialog naming, chrome and
   dismissal options. A plain `aria-label` attribute on the host is honored too, with the same
   wins-over-everything semantics documented under `lr-dialog` below.
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — semantic level of
+  the generated title, from `1` through `6`, or `none` for visual-only title text. A direct slotted
+  heading retains its own native level.
 
 **Methods:** `show(): Promise<void>`, `hide(): Promise<void>`,
 `close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
@@ -819,13 +822,15 @@ relied on `<lr-chip selected>` to create an action.
 
 **Properties:**
 - `size: '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — standard visual-density
-  scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions
+  scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions.
+  Unsupported attributes and untyped property writes normalize to reflected `m`
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
   **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
   `<lr-toast-item>` all already spelled it `variant`. It tints the whole surface using the
   loud-color-on-quiet-tint convention: background is the
   variant's quiet fill, text/icon its loud fill, both read from the shared semantic grid. `neutral`
-  deliberately opts out of that grid and falls back to a plain bordered-surface look.
+  deliberately opts out of that grid and falls back to a plain bordered-surface look. Unsupported
+  attributes and untyped property writes normalize to reflected `neutral`.
 - `removable: boolean = false` (reflected — shows the remove (×) button)
 - `disabled: boolean = false` (reflected) — disables the active native toggle/remove control,
   blocks focus and activation, and suppresses selection/removal requests without mutating state
@@ -1896,12 +1901,14 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
   below.
 - `closable: boolean = false` (reflected) — renders a localized close action.
 - `variant: 'primary' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
-  `primary` resolves through Lyra's shared brand semantic tokens.
+  `primary` resolves through Lyra's shared brand semantic tokens. Unsupported attributes and
+  untyped property writes normalize to reflected `primary`.
 - `duration: number = Infinity` — milliseconds before automatic dismissal. `Infinity` stays open;
   hover or focus pauses the timer, and leaving interaction restarts the full duration.
 - `countdown: 'rtl' | 'ltr' | undefined` (reflected, unset by default) — adds a decorative visual
   bar that empties in the requested physical direction. Its motion is removed under
-  `prefers-reduced-motion: reduce`.
+  `prefers-reduced-motion: reduce`. Unsupported attributes and untyped property writes normalize
+  to the omitted state and remove the attribute.
 - `role: string | null = 'alert'` (reflected) — the light-DOM semantic owner. The default is a
   reactive initial value, so SSR/no-JS output serializes it before `connectedCallback`; an authored
   alternate role such as `status` remains authoritative.
@@ -1994,6 +2001,10 @@ property and rich-slot heading wrapper at that semantic level, invalid untyped v
 semantic content and hides the host surface), and `accessibleLabel: string = ''`
 (`accessible-label`; used only when the host has no `aria-label` attribute). A host `aria-label`
 has highest precedence by presence, including an explicitly empty value.
+
+Every reflected closed set normalizes identically from markup and untyped JavaScript writes:
+unsupported `variant`, `size`, and `heading-level` values become reflected `brand`, `m`, and `3`,
+while an unsupported `appearance` becomes the omitted state.
 
 **Events:** cancelable `lr-close` (no detail); the callout sets `open = false` after the event
 unless a listener calls `preventDefault()`.
@@ -2222,3 +2233,77 @@ host beyond its container.
   rating.addEventListener('lr-change', (event) => console.log('committed', event.detail.value));
 </script>
 ```
+
+## Exported TypeScript contracts
+
+These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`components-overlays-chip-chip-group-contracts`** — Supporting data types and helpers for this component family.
+  `ChipGroupOverflowToggleDetail {
+    expanded: unknown;
+  }`
+
+- **`components-overlays-chip-chip-contracts`** — Supporting data types and helpers for this component family.
+  `ChipRemoveDetail {
+    value: unknown;
+  }`
+  `ChipSelectDetail {
+    value: unknown;
+    selected: unknown;
+  }`
+
+- **`components-overlays-dialog-confirm-contracts`** — Supporting data types and helpers for this component family.
+  `confirm(/* public names: options */): unknown`
+  `ConfirmOptions {
+    title: unknown;
+    description: unknown;
+    confirmLabel: unknown;
+    cancelLabel: unknown;
+    tone: unknown;
+  }`
+
+- **`components-overlays-dialog-dialog-contracts`** — Supporting data types and helpers for this component family.
+  `LyraDialogHideDetail {
+    source: unknown;
+  }`
+  `LyraDialogModalController {
+    activateExternal: unknown;
+    deactivateExternal: unknown;
+  }`
+  `LyraDialogRequestCloseDetail {
+    source: unknown;
+  }`
+
+- **`components-overlays-kbd-kbd-contracts`** — Supporting data types and helpers for this component family.
+  `KbdKeyLabel {
+    visual: unknown;
+    word: unknown;
+  }`
+  `parseShortcut(/* public names: keys, isMac, localize */): unknown`
+  `shortcutTokenLabel(/* public names: rawToken, isMac, localize */): unknown`
+
+- **`components-overlays-toast-toast-contracts`** — Supporting data types and helpers for this component family.
+  `LyraToastOptions {
+    message: unknown;
+    placement: unknown;
+    ownerDocument: unknown;
+    variant: unknown;
+    duration: unknown;
+    size: unknown;
+    withIcon: unknown;
+    icon: unknown;
+    action: unknown;
+    label: unknown;
+    onClick: unknown;
+    item: unknown;
+  }`
+  `ToastOverflowDetail {
+    count: unknown;
+  }`
+
+- **`components-overlays-toast-toaster-contracts`** — Supporting data types and helpers for this component family.
+  `toast(/* public names: input */): unknown`
+  `ToastHandle {
+    item: unknown;
+    dismiss: unknown;
+  }`

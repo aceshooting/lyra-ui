@@ -24,13 +24,9 @@ AudioVisualizerState = 'idle'` (attribute `voice-state`); `level: number | null 
 clamped by the composed visualizer); `stream: MediaStream | null = null` and `entries:
 LyraTranscriptEntry[] = []` (attribute: false); `muted: boolean = false` (reflected);
 `showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
-converter); `errorCode: string = ''` (attribute `error-code`); `label: string = ''`.
-
-`errorCode` is host-readable provider diagnostic metadata, not a presentation switch. Assigning a
-different code does not change the localized generic error text, assertive announcement, CSS
-parts, emitted events, or `state`; use it in host logging or provider-specific UI outside the
-shell. This avoids rendering opaque provider codes or maintaining a misleading universal taxonomy
-for transport SDKs the component does not own.
+converter); `label: string = ''`. Invalid attribute or direct-property values for `state` and
+`voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same
+closed-set converter.
 
 When a state transition removes a focused session action, focus moves to the replacement
 connect/disconnect action. Setting `showCapture` to `false` applies that handoff only when the
@@ -42,11 +38,9 @@ moved.
 is also included in `LyraRealtimeSessionEventMap`: `lr-record-start` (`{ stream }`),
 `lr-record-chunk` (`{ blob }`), `lr-record-stop` (`{ blob, durationMs }`), `lr-record-cancel` (no
 detail), `lr-record-error` (`{ error }`), `lr-level` (`{ level }`), and
-`lr-state-change` (`{ state }`). These are the child's original bubbling/composed events rather than
+`lr-record-state-change` (`{ state }`). These are the child's original bubbling/composed events rather than
 parent re-emissions;
 normal Shadow DOM retargeting means a listener outside the session observes the session as `target`.
-
-**Slots:** `controls` adds provider-specific actions beside the built-in session controls.
 
 **CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
 `interrupt`, `capture`, `transcript`, `error`.

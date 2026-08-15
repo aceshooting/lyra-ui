@@ -232,6 +232,22 @@ export const styles = css`
     pointer-events: none;
   }
   @media (forced-colors: active) {
+    [part='fit-control']:hover:not(:disabled),
+    [part="rotate-button"]:hover:not(:disabled),
+    [part="annotate-toggle"]:hover:not(:disabled) {
+      outline: var(--lr-border-width-thin) dashed Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-thin));
+    }
+    [part="fit-control"]:active:not(:disabled),
+    [part="rotate-button"]:active:not(:disabled),
+    [part="annotate-toggle"]:active:not(:disabled) {
+      outline-style: double;
+      outline-width: var(--lr-border-width-medium);
+    }
+    [part="annotate-toggle"][aria-pressed="true"] {
+      border-color: Highlight;
+      border-style: double;
+    }
     [part='highlight'] {
       background: transparent;
       border-color: CanvasText;

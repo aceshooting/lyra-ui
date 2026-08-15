@@ -20,10 +20,12 @@ reasoning paths) as a compact, horizontally scrollable strip. One-dimensional an
 path finding, no branching, no per-element popovers.
 
 **Properties:**
+
 - `path: LyraPathElement[] = []` (attribute: false) — a flat alternating sequence:
   `{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string; directed?: boolean;
-  reverse?: boolean }`
-- `label: string = ''`
+reverse?: boolean }`
+- `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
+  the host the sole overall owner; an explicitly empty host label stays empty on the group
 
 **Events:** `lr-entity-activate` (`detail: { id }`, a node element activated),
 `lr-relation-activate` (`detail: { relation, sourceId?, targetId? }`, an edge element activated —
@@ -43,15 +45,19 @@ that position).
 ```html
 <lr-path-strip></lr-path-strip>
 <script>
-  document.querySelector('lr-path-strip').path = [
-    { kind: 'node', node: { id: 'a', label: 'Ada Lovelace' } },
-    { kind: 'edge', relation: 'wrote', directed: true },
-    { kind: 'node', node: { id: 'b', label: 'Notes on the Analytical Engine' } },
+  document.querySelector("lr-path-strip").path = [
+    { kind: "node", node: { id: "a", label: "Ada Lovelace" } },
+    { kind: "edge", relation: "wrote", directed: true },
+    {
+      kind: "node",
+      node: { id: "b", label: "Notes on the Analytical Engine" },
+    },
   ];
 </script>
 ```
 
 **Known gotchas:**
+
 - Purely presentational rendering of a caller-supplied path — it never computes shortest paths or
   fetches relationship data itself, and never branches (one linear chain per instance).
 

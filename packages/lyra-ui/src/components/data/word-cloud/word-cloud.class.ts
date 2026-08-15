@@ -96,7 +96,8 @@ function normalizeWords(value: unknown): NormalizedCollection<WordCloudWord> {
   let characters = 0;
   for (let index = 0; index < scanCount; index++) {
     try {
-      const candidate = input[index] as { text?: unknown; weight?: unknown; color?: unknown; group?: unknown } | null;
+      const candidate = input[index] as { text?: unknown; weight?: unknown; color?: unknown; group?: unknown;
+      } | null;
       if (typeof candidate !== 'object' || candidate === null) {
         dropped++;
         continue;
@@ -233,7 +234,7 @@ function normalizePalette(value: unknown): readonly string[] | undefined {
  * Instead, like `lr-heatmap`'s cells, the whole `[part="svg"]` is one tab
  * stop with roving arrow-key focus (Home/End jump to the first/last word,
  * Enter/Space activates the focused one), a drawn `[part="focus-ring"]`, and
- * a shared light-DOM polite status announcement. The host carries the group
+ * a shared light-DOM polite status announcement. The generated application
  * role and aggregate accessible name live on that same focusable SVG; authored
  * host semantics stay on the host and are never copied onto a second owner.
  * `[part="live-region"]` is an aria-hidden mirror of the most recent announcement. Mount is silent, and identical edge
@@ -431,7 +432,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private fontFamily(): string {
-    return getComputedStyle(this).getPropertyValue('--lr-font').trim() || 'sans-serif';
+    return (
+      getComputedStyle(this).getPropertyValue('--lr-font').trim() || 'sans-serif'
+    );
   }
 
   /** Reads the actual `--lr-font-weight-semibold` value the same way
@@ -440,7 +443,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
    *  that token can't silently desync canvas text measurement (used for the
    *  spiral layout's collision boxes) from the actually rendered glyph width. */
   private fontWeight(): string {
-    return getComputedStyle(this).getPropertyValue('--lr-font-weight-semibold').trim() || DEFAULT_WORD_FONT_WEIGHT;
+    return (
+      getComputedStyle(this).getPropertyValue('--lr-font-weight-semibold').trim() || DEFAULT_WORD_FONT_WEIGHT
+    );
   }
 
   private paletteColors(): string[] {
@@ -732,7 +737,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   /** Axis-aligned focus-ring rect for `w`, already accounting for its rotation. */
-  private focusRingRect(w: PlacedWord): { x: number; y: number; width: number; height: number } {
+  private focusRingRect(w: PlacedWord): { x: number; y: number; width: number; height: number;
+  } {
     const boxW = w.rotated ? w.height : w.width;
     const boxH = w.rotated ? w.width : w.height;
     return {

@@ -30,7 +30,7 @@
     "markers": [
       "constructor.name",
       "composed",
-      "['input', 'change']"
+      "[\"input\", \"change\"]"
     ]
   },
   {

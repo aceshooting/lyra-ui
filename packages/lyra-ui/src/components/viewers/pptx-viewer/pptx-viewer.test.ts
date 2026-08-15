@@ -285,7 +285,7 @@ describe('lr-pptx-viewer', () => {
 
       const changed = oneEvent(el, 'lr-search-change');
       expect(await el.search('needle')).to.equal(1);
-      expect((await changed).detail).to.deep.equal({ query: 'needle', matchCount: 1, activeIndex: 0 });
+      expect((await changed).detail).to.deep.equal({ query: 'needle', matchCount: 1, matchCountExact: true, activeIndex: 0 });
       expect(fake.calls.searchText).to.equal(1);
       expect(fake.calls.goToSlide).to.equal(1);
       expect(fake.viewer.currentSlideIndex).to.equal(89);
@@ -313,7 +313,9 @@ describe('lr-pptx-viewer', () => {
       el.loadRenderer = async () => fake.module;
       el.src = 'https://example.test/deck.pptx';
       await oneEvent(el, 'lr-load');
+      const changed = oneEvent(el, 'lr-search-change');
       expect(await el.search('x')).to.equal(10_000);
+      expect((await changed).detail).to.deep.include({ matchCount: 10_000, matchCountExact: false });
     } finally {
       restore();
     }

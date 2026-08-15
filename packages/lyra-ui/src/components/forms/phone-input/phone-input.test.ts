@@ -51,6 +51,36 @@ it('inherits public row geometry from an ancestor across size and pill fallbacks
   expect(getComputedStyle(el.shadowRoot!.querySelector('[part="expand-icon"]') as HTMLElement).fontSize).to.equal('20px');
 });
 
+it("restores its nonempty native and validation defaults after attribute removal", async () => {
+  const el = (await fixture(html`
+    <lr-phone-input
+      size="xl"
+      country-label="Country"
+      incomplete-text="Incomplete"
+      invalid-text="Invalid"
+      autocomplete="off"
+      inputmode="numeric"
+    ></lr-phone-input>
+  `)) as LyraPhoneInput;
+  for (const name of [
+    "size",
+    "country-label",
+    "incomplete-text",
+    "invalid-text",
+    "autocomplete",
+    "inputmode",
+  ]) {
+    el.removeAttribute(name);
+  }
+  await el.updateComplete;
+  expect(el.size).to.equal("m");
+  expect(el.countryLabel).to.equal("Select");
+  expect(el.incompleteText).to.equal("This phone number is incomplete.");
+  expect(el.invalidText).to.equal("The value is invalid.");
+  expect(el.autocomplete).to.equal("tel");
+  expect(el.inputmode).to.equal("tel");
+});
+
 it('normalizes live user input to an E.164 form value through an injected adapter', async () => {
   const form = (await fixture(html`
     <form>
@@ -605,6 +635,8 @@ it('loads a libphonenumber-compatible module only when explicitly requested', as
 
   expect(loads).to.equal(1);
   expect(loaded.countries).to.deep.equal([{ code: 'LU', callingCode: '352' }]);
+  expect(Object.isFrozen(loaded.countries)).to.be.true;
+  expect(Object.isFrozen(loaded.countries?.[0])).to.be.true;
   expect(loaded.parse('621123456', 'LU')).to.deep.include({
     status: 'valid',
     e164: '+352621123456',
@@ -617,6 +649,8 @@ it('adapts the real libphonenumber-js package, not just a hand-written fake shap
 
   expect(loaded.countries.length).to.be.greaterThan(100);
   expect(loaded.countries).to.deep.include({ code: 'LU', callingCode: '352' });
+  expect(Object.isFrozen(loaded.countries)).to.be.true;
+  expect(Object.isFrozen(loaded.countries?.[0])).to.be.true;
   expect(loaded.parse('621123456', 'LU')).to.deep.include({
     status: 'valid',
     e164: '+352621123456',
@@ -851,7 +885,8 @@ it('treats an empty string as empty and infers a missing phone from length or di
     getCountries: () => ['LU'],
     getCountryCallingCode: () => '352',
     parsePhoneNumberFromString: () => undefined,
-    validatePhoneNumberLength: (input: string) => (input === '619' ? 'TOO_SHORT' : undefined),
+    validatePhoneNumberLength: (input: string) =>
+      input === '619' ? 'TOO_SHORT' : undefined,
   }));
 
   expect(loaded.parse('')).to.deep.equal({ status: 'empty' });
@@ -866,7 +901,8 @@ it('treats an empty string as empty and infers a missing phone from length or di
 it('formats a "+"-prefixed match internationally, falls back to the passed-in country when libphonenumber omits one, and separates TOO_SHORT/impossible/plain-invalid outcomes', async () => {
   const phones: Record<
     string,
-    { number: string; country?: string; valid: boolean; possible: boolean; national: string; international: string }
+    { number: string; country?: string; valid: boolean; possible: boolean; national: string; international: string;
+    }
   > = {
     '+352621123456': {
       number: '+352621123456',
@@ -1023,7 +1059,7 @@ it('keeps an empty automatic catalog empty when no adapter metadata is available
   expect(el.country).to.equal('');
   expect(select.disabled).to.be.true;
   expect([...select.options].map((option) => option.value)).to.deep.equal(['']);
-  expect((el.shadowRoot!.querySelector('[part="calling-code"]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="calling-code"]') == null).to.be.true;
 });
 
 it('rejects malformed catalog rows and hostile getters without aborting the remaining catalog', async () => {
@@ -1319,7 +1355,7 @@ it('exposes focus() and blur() methods that delegate to the internal telephone i
   const focusPromise = oneEvent(el, 'focus');
   el.focus();
   await focusPromise;
-  expect((el.shadowRoot!.activeElement) === (el.input)).to.equal(true);
+  expect(el.shadowRoot!.activeElement === el.input).to.equal(true);
 
   const blurPromise = oneEvent(el, 'blur');
   el.blur();
@@ -1437,7 +1473,7 @@ it('renders no flag markup while flags stays off', async () => {
     <lr-phone-input label="Mobile" default-country="LU" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[part="flag"]')) === (null)).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="flag"]') === null).to.equal(true);
 });
 
 it('flags renders a decorative compact lr-flag for the selection and keeps it in sync with country changes', async () => {
@@ -1448,7 +1484,7 @@ it('flags renders a decorative compact lr-flag for the selection and keeps it in
   const flag = el.shadowRoot!.querySelector('[part="flag"]')!;
   expect(flag.tagName.toLowerCase()).to.equal('lr-flag');
   expect(flag.getAttribute('country')).to.equal('LU');
-  expect(flag.getAttribute('variant')).to.equal('compact');
+  expect(flag.getAttribute('fidelity')).to.equal('compact');
   // Decorative: the country name is already announced by the native select.
   expect(flag.getAttribute('aria-label')).to.equal('');
   // Enabling flags lazily registers the element definition itself.
@@ -1462,7 +1498,7 @@ it('flags renders a decorative compact lr-flag for the selection and keeps it in
 it('flags without any selectable country renders no flag element', async () => {
   const el = (await fixture(html`<lr-phone-input label="Mobile" flags></lr-phone-input>`)) as LyraPhoneInput;
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[part="flag"]')) === (null)).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="flag"]') === null).to.equal(true);
 });
 
 it('is accessible with flags enabled', async () => {
@@ -1589,7 +1625,7 @@ describe('lr-phone-input implicit form submission', () => {
     expect(submitterName, 'the lr-button was the submitter').to.equal('action');
   });
 
-  it('runs the form\'s constraint validation, so an unparseable number blocks submission', async () => {
+  it("runs the form's constraint validation, so an unparseable number blocks submission", async () => {
     const form = (await fixture(html`
       <form><lr-phone-input name="tel" value="not a number" label="Phone"></lr-phone-input></form>
     `)) as HTMLFormElement;

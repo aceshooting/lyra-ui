@@ -17,29 +17,35 @@
 
 Thumbs up/down for one assistant message, with an optional inline detail step (categorical reason
 chips + a free-text comment) that opens as a disclosure directly below the thumbs. Emits; never
-persists — a host reflects a previously-recorded rating back via `value` (+ `disabled` for a
-read-only display). Activating the pressed thumb again toggles it off to `null` unless its own detail
-panel is currently open, in which case that click re-opens the panel instead.
+persists — a host reflects a previously-recorded rating back via `rating` (+ `disabled` for a
+read-only display). Activating the pressed thumb while its detail panel is open toggles it off to
+`null`. If an applicable panel was closed without changing the rating (for example with Escape),
+activating the still-pressed thumb reopens it with the surviving draft. A thumbs-only control always
+uses the ordinary re-activate-to-clear toggle.
 
-**Properties:** `value: 'up' | 'down' | null = null` (reflected), `reasons: MessageFeedbackReason[] =
-[]` (attribute: false, each `{ id, label }`), `commentable: boolean = false` (reflected) adds a
-free-text comment field, `detailFor: 'down' | 'both' = 'down'` (attribute `detail-for`) — which
-rating opens the detail panel, `disabled: boolean = false` (reflected) for a read-only display, and
+**Properties:** `rating: MessageFeedbackValue = null` (`'up' | 'down' | null`, reflected),
+`detail?: MessageFeedbackDetailConfiguration` (attribute: false) — one configuration with optional
+`reasons?: readonly { id, label }[]` and `commentable?: boolean`; omit it for thumbs-only feedback.
+`detailFor: 'none' | 'up' | 'down' | 'both' = 'down'` (attribute `detail-for`) selects which rating
+owns that one detail panel. `disabled: boolean = false` (reflected) makes a recorded rating read-only, and
 `pending: boolean = false` (reflected) — set automatically when a submit listener prevents the
 submission while host persistence is unresolved; all feedback controls are disabled and the panel
 reports busy until that state is resolved.
 
-**Methods:** `focus()` focuses the thumb matching the current `value` (the up thumb when `null`);
+**Methods:** `focus()` focuses the thumb matching the current `rating` (the up thumb when `null`);
 `blur()` blurs both thumbs; `click()` activates that same thumb when enabled.
+`getToolbarActions()` returns the ordered logical thumb actions used by an enclosing toolbar.
 `finalizePendingSubmit()` completes a prevented submit after persistence succeeds, closing the
 panel, announcing success, and returning focus to the active thumb. `revertPendingSubmit()` releases
 the pending state after failure without clearing the draft or announcing success, leaving the panel
 open for retry. Both are no-ops when no submit is pending.
 
-**Events:** `lr-change` — `detail: { value: 'up' | 'down' | null }`, fired when a thumb's rating
-changes or clears. `lr-submit` — `detail: { value: 'up' | 'down'; reasonIds: string[]; comment:
-string }`, fired by the panel's submit button (`value` is never `null` here — the panel only exists
-for a set rating). It is cancelable: `preventDefault()` holds the panel open in `pending` and delays
+**Events:** `lr-feedback-change` — `detail: { rating: 'up' | 'down' | null }`, fired when a thumb's
+provisional rating changes or clears. `lr-feedback-submit` — cancelable
+`detail: { rating: 'up' | 'down' | null; reasonIds: string[]; comment: string }`, fired for every
+terminal thumbs-only choice/clear and by the detail panel's submit button. The pending transaction
+is installed before dispatch, so even a synchronous listener may finalize/revert it safely.
+`preventDefault()` holds the panel/control in `pending` and delays
 success announcement/focus until `finalizePendingSubmit()`; call `revertPendingSubmit()` on failure.
 When uncanceled it retains the synchronous close/announce/focus behavior. The optional comment
 `<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.

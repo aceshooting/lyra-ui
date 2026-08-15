@@ -17,7 +17,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
 import {
   attachInternalsSafely,
@@ -36,20 +36,16 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext, LYRA_DEFAUL
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
- *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
-export type LyraTokenInputSize = LyraSizeStep;
-
 export interface LyraTokenInputEventMap {
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-invalid': CustomEvent<null>;
   input: InputEvent;
   change: Event;
   focus: FocusEvent;
   blur: FocusEvent;
   'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
   'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
   'lr-add': CustomEvent<Readonly<{ value: string; values: readonly string[] }>>;
   'lr-remove': CustomEvent<{ value: string; index: number }>;
   'lr-token-edit': CustomEvent<{ value: string; previousValue: string; index: number }>;
@@ -396,7 +392,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
   }
   override connectedCallback(): void { super.connectedCallback(); this.syncValidity(); }
   override disconnectedCallback(): void {

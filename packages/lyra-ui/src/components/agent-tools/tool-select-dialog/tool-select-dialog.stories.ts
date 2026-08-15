@@ -15,7 +15,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A category-grouped, filterable dialog for picking which agent tools are enabled for a conversation. `useDefaults` is a single top-level switch — while on, every per-tool checkbox renders disabled (reflecting whatever `selected` holds); turning it off is the "customize" action that unlocks per-tool editing. Large result sets mount in 200-row batches, reserving matching selected identities before ordinary rows, with an explicit localized limit notice and Load more continuation.',
+          'A category-grouped, filterable dialog for picking which agent tools are enabled for a conversation. Each checkbox keeps the tool name as its concise name and receives description/disabled-reason text through its supporting-description bridge. Omitted heading/search labels localize; every supplied string stays literal. `useDefaults` is a single top-level switch — while on, every per-tool checkbox renders disabled (reflecting whatever `selected` holds); turning it off is the "customize" action that unlocks per-tool editing. Large result sets mount in 200-row batches, reserving matching selected identities before ordinary rows, with an explicit localized limit notice and Load more continuation.',
       },
     },
   },

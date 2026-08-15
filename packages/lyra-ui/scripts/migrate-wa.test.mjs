@@ -1184,11 +1184,16 @@ test('imported factory aliases and re-exports preserve the same proof across spl
   }
 });
 
-test('shipped Page and Video mappings are exact and cannot retain stale no-counterpart exemptions', () => {
+test('shipped Page and Video mappings retain reviewed parity classifications', () => {
+  const page = checkedInventory.mappings.find((entry) => entry.upstreamTag === 'wa-page');
+  assert.equal(page?.classification, 'warning-required');
+  assert.deepEqual(page?.drift, []);
+
+  const video = checkedInventory.mappings.find((entry) => entry.upstreamTag === 'wa-video');
+  assert.equal(video?.classification, 'exact');
+  assert.deepEqual(video?.drift, []);
+
   for (const upstreamTag of ['wa-page', 'wa-video']) {
-    const mapping = checkedInventory.mappings.find((entry) => entry.upstreamTag === upstreamTag);
-    assert.equal(mapping?.classification, 'exact');
-    assert.deepEqual(mapping?.drift, []);
     assert.ok(!Object.hasOwn(checkedUpstreamTags.noCounterpart, upstreamTag));
   }
 });
@@ -1803,7 +1808,7 @@ test('the checked-in inventory rewrites free-tier icon imports from both ecosyst
   );
 });
 
-test('the checked-in inventory rewrites the free-tier icon-button deep import with no peer requirement', () => {
+test('the checked-in inventory rewrites the free-tier icon-button deep import with its peer requirement', () => {
   const checkedContract = buildMigrationContract(checkedInventory);
   const input = [
     "import '@shoelace-style/shoelace/dist/components/icon-button/icon-button.js';",
@@ -1819,7 +1824,10 @@ test('the checked-in inventory rewrites the free-tier icon-button deep import wi
       '',
     ].join('\n'),
   );
-  assert.deepEqual(result.warnings, []);
+  assert.deepEqual(
+    result.warnings.map((entry) => [entry.warningCode, entry.target]),
+    [['OPTIONAL_PEER_REQUIRED', 'dompurify']],
+  );
 });
 
 test('the checked-in inventory rewrites the Pro-tier date-picker deep import with no peer requirement', () => {
@@ -1888,7 +1896,28 @@ test('random-content rewrites known-equivalent uses and aggregates only exercise
   const randomContent = conditionalInventory.mappings.find(
     (mapping) => mapping.upstreamTag === 'wa-random-content',
   );
+  const upstreamRandomContent = conditionalInventory.upstreams.webawesome.components.find(
+    (component) => component.tag === 'wa-random-content',
+  );
+  const targetRandomContent = conditionalInventory.components.find(
+    (component) => component.tag === 'lr-random-content',
+  );
+  const upstreamChangeEvent = upstreamRandomContent.surface.events.find(
+    (event) => event.name === 'wa-content-change',
+  );
+  const targetChangeEvent = targetRandomContent.surface.events.find(
+    (event) => event.name === 'lr-content-change',
+  );
+  targetChangeEvent.type = upstreamChangeEvent.type;
+  const upstreamRandomize = upstreamRandomContent.surface.methods.find(
+    (method) => method.name === 'randomize',
+  );
+  const targetRandomize = targetRandomContent.surface.methods.find(
+    (method) => method.name === 'randomize',
+  );
+  targetRandomize.overloads = structuredClone(upstreamRandomize.overloads);
   randomContent.classification = 'rewritten';
+  randomContent.drift = [];
   randomContent.rationale =
     'The member rewrite is deterministic and behavior-sensitive uses receive conditional review diagnostics.';
   randomContent.parity.lightDom = 'warning-required';
@@ -1971,19 +2000,25 @@ test('random-content rewrites known-equivalent uses and aggregates only exercise
   );
 });
 
-test('the checked-in inventory rewrites data-grid tags with named method option types', () => {
+test('the checked-in inventory warns before rewriting data-grid tags with named method option types', () => {
   const dataGrid = checkedInventory.mappings.find((mapping) => mapping.upstreamTag === 'wa-data-grid');
-  assert.equal(dataGrid?.classification, 'rewritten');
-  assert.deepEqual(dataGrid?.drift, []);
+  assert.equal(dataGrid?.classification, 'warning-required');
+  assert.ok((dataGrid?.drift.length ?? 0) > 0);
 
   const input = '<wa-data-grid></wa-data-grid>\n';
   const result = migrateText(input, buildMigrationContract(checkedInventory), {
     file: 'data-grid.html',
   });
 
-  assert.equal(result.content, '<lr-data-grid></lr-data-grid>\n');
-  assert.deepEqual(result.warnings, []);
-  assert.ok(result.changes.some((entry) => entry.action === 'rewrite-tag'));
+  assert.equal(result.content, input);
+  assert.deepEqual(result.changes, []);
+  assert.ok(
+    result.warnings.some(
+      (entry) => entry.warningCode === 'WARNING_REQUIRED'
+        && entry.upstreamTag === 'wa-data-grid'
+        && entry.target === 'lr-data-grid',
+    ),
+  );
 });
 
 test('the checked-in inventory leaves reflection-sensitive Shoelace checkbox usage unchanged with a warning', () => {

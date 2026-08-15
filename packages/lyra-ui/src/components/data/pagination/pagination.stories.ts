@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'Pagination',
   component: 'lr-pagination',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Omit the page/previous/next/first/last label overrides to use localized control names. Any supplied string, including the built-in English wording or an empty string, is used verbatim.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

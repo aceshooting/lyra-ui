@@ -944,7 +944,7 @@ describe("data mode", () => {
                 <lr-menu-item id="item-${thread.id}" value="rename"
                   >Rename</lr-menu-item
                 >
-                <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+                <lr-menu-item value="delete" variant="danger">Delete</lr-menu-item>
               </lr-menu>
             </lr-dropdown>
           `}

@@ -6,7 +6,8 @@
 - **Class** `LyraSwatchPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated property** `label` / `label` since `8.2.3`; use property `aria-label="…"`; removal not before `10.0.0` — accessibleLabel names the accessibility-only value explicitly while label remains a compatibility alias.
+- **Deprecated property** `options` since `8.2.3`; use property `.items = […]`; removal not before `10.0.0` — items follows the shared collection vocabulary while options remains a compatibility alias over the same immutable snapshot.
 - **Optional peers** none
 - **Themeable via** 4 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -21,18 +22,23 @@ activation (click or arrow-key move both select immediately, like a native radio
 Arrow/Home/End navigation. First-party invention (no Web Awesome equivalent). Distinct from
 `lr-color-picker`, which is a freeform picker over the whole colour space — this picks exactly one
 of N designer-chosen named colors, the shape apps otherwise hand-roll as a row of round
-accent-color buttons. Its `options` are the _only_ choices; a `lr-color-picker`'s `swatches` are a
+accent-color buttons. Its `items` are the _only_ choices; a `lr-color-picker`'s `swatches` are a
 shortcut list alongside a grid, a hue ramp and a text field that can still express any colour.
+Arrow/Home/End navigation starts from the swatch that actually received the keyboard event, even
+when a controlled `value` write changed the selected or remembered roving item first.
 
 **Properties:**
 
-- `options: SwatchOption[] = []` (attribute: false) — `SwatchOption { value: string; color: string;
-label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
+- `items: readonly SwatchPickerItem[] = []` (attribute: false) — `SwatchPickerItem { readonly value:
+string; readonly color: string; readonly label: string; readonly icon?: unknown; readonly
+gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   swatch fill, while invalid values, declaration-breaking input, and `url()` are ignored (and are
   never interpolated into a gemstone SVG). `label` is each swatch's accessible name and `title`.
-  `icon` is an optional custom shape rendered _instead of_ the plain filled circle; `gemstone`
-  selects the canonical faceted glyph when `mode="gemstone"`. An explicit `icon` wins over
-  `gemstone`.
+  `icon` is an optional custom shape rendered _instead of_ the plain filled circle. Its rendered
+  subtree stays visible but is inert and hidden from assistive technology, so the swatch button
+  remains the sole action. `gemstone` selects the canonical faceted glyph when
+  `mode="gemstone"`. An explicit `icon` wins over `gemstone`. Assignments are bounded and copied
+  into a frozen owned snapshot; mutate a new array/item and reassign it to update the palette.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
   leaves nothing selected while keeping the first swatch tabbable.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — scales the swatch hit-area and
@@ -41,8 +47,11 @@ label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is
 - `mode: 'swatch' | 'gemstone' = 'swatch'` (reflected) — `swatch` preserves the plain-circle
   default. `gemstone` renders the shared glyph for options carrying a `gemstone` key and enables
   the selected glow/shine defaults.
-- `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
-  host-level `aria-label` is used as a fallback.
+- `accessibleLabel: string = ''` (attribute `aria-label`) — accessible name copied to the internal
+  `role="radiogroup"`; attribute presence wins, including an explicitly empty name.
+- `options` and `SwatchOption` remain compatibility aliases for `items` and `SwatchPickerItem`;
+  new code uses the canonical sibling radiogroup vocabulary. The former invisible `label` IDL also
+  remains as a compatibility fallback after `aria-label`/`accessibleLabel`.
 - `disabled: boolean = false` (reflected) — locks the whole picker. Every swatch renders as a real
   `disabled` `<button>`, so it leaves the tab sequence and cannot be activated; arrow/Home/End
   navigation and host `click()` become no-ops; and the swatches dim to `--lr-opacity-disabled` with
@@ -63,8 +72,8 @@ swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — def
 `--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, also swapped per `size` tier —
 rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
 place when it has one, with its inherited `font-size` set to the same fill-size token so a `1em`
-glyph fills the wrapper). Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the
-two never coexist.
+glyph fills the wrapper; the wrapper is inert and aria-hidden across the flattened subtree).
+Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the two never coexist.
 
 **Themeable custom properties:** `--lr-swatch-picker-selected-color` (ring color around the
 selected swatch, defaults to `--lr-color-brand`, themeable independently of the focus ring),
@@ -87,16 +96,16 @@ and the per-tier `--lr-size-*` tokens.
 **Optional peer deps:** none.
 
 ```html
-<lr-swatch-picker label="Accent color"></lr-swatch-picker>
+<lr-swatch-picker aria-label="Accent color"></lr-swatch-picker>
 <script type="module">
-  const picker = document.querySelector('lr-swatch-picker');
-  picker.options = [
-    { value: 'blue', color: '#0969da', label: 'Blue' },
-    { value: 'green', color: '#1a7f37', label: 'Green' },
-    { value: 'purple', color: '#8250df', label: 'Purple' },
+  const picker = document.querySelector("lr-swatch-picker");
+  picker.items = [
+    { value: "blue", color: "#0969da", label: "Blue" },
+    { value: "green", color: "#1a7f37", label: "Green" },
+    { value: "purple", color: "#8250df", label: "Purple" },
   ];
-  picker.value = 'green';
-  picker.addEventListener('lr-change', (e) => console.log(e.detail.value));
+  picker.value = "green";
+  picker.addEventListener("lr-change", (e) => console.log(e.detail.value));
 </script>
 ```
 
@@ -106,18 +115,18 @@ do not need to load Lit. The consumer still owns localized labels, display order
 value:
 
 ```ts
-import '@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js';
-import { GEMSTONES } from '@aceshooting/lyra-ui/theme/gemstones-data.js';
+import "@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js";
+import { GEMSTONES } from "@aceshooting/lyra-ui/theme/gemstones-data.js";
 
-const order = ['emerald', 'ruby', 'sapphire', 'hematite'] as const;
-picker.mode = 'gemstone';
-picker.options = order.map((key) => ({
+const order = ["emerald", "ruby", "sapphire", "hematite"] as const;
+picker.mode = "gemstone";
+picker.items = order.map((key) => ({
   value: key,
   color: GEMSTONES[key].fill,
   label: translateGemstone(key),
   gemstone: key,
 }));
-picker.value = 'ruby';
+picker.value = "ruby";
 ```
 
 **Known gotchas:**
@@ -125,7 +134,7 @@ picker.value = 'ruby';
 - arrow-key navigation cycles (past the last swatch wraps to the first, and vice versa) rather than
   clamping, and self-selects on move — arrow-navigating to a swatch immediately updates `value` and
   fires `lr-change`, there's no separate commit step.
-- live `options` changes preserve a focused swatch by option-object identity across reorders.
+- live `items` changes preserve a focused swatch by item-object identity across reorders.
   Removing the focused option moves focus and the roving tab stop to the nearest surviving swatch
   (the next item at that position, or the previous item when the final option was removed) without
   changing the controlled `value` or emitting `lr-change`.
@@ -137,8 +146,8 @@ picker.value = 'ruby';
   `-shine-duration`, not through `::part(swatch)[aria-checked='true']` from outside: the CSS Shadow
   Parts spec only allows a fixed set of pseudo-classes after `::part()`, not arbitrary attribute
   selectors, so that combinator can silently fail to match depending on the engine.
-- the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
-  host `aria-label`; the component deliberately forwards the resulting name to that internal role.
+- the semantic `radiogroup` lives inside shadow DOM. Set `accessibleLabel` or a host `aria-label`;
+  the component deliberately forwards the resulting name to that internal role.
 
 **Additional API surface:**
 

@@ -32,21 +32,29 @@ boolean = false` (live/read-only in normal use), `poster: string = ''`, `preload
 browser controls stay disabled because the selected Lyra preset owns the control surface.
 `autoplayOnVisible` does not start a video merely because it is visible: it pauses a currently
 playing video when it leaves view and resumes only that visibility-owned pause when it returns.
+Turning the property off while such a pause is pending resumes immediately; observer rebuilds,
+temporary disconnects, reconnects, and same-origin adoption preserve the pending ownership. An
+explicit user/API pause or source reload/change revokes it so later visibility changes cannot
+restart user-stopped media.
 
 `controls="standard"` renders play/pause, timeline and elapsed/duration labels, volume/mute,
 available captions, and capability-gated fullscreen. `controls="full"` adds playback rate and
 capability-gated picture in picture. `controls="none"` removes the control bar but leaves the
 poster and active caption overlays available. Fullscreen/PiP/caption affordances are feature-gated
-instead of browser-name-gated.
+instead of browser-name-gated and are probed through the concrete native element's current owner
+realm. While the poster is visible, its button is the only exposed play action; the ordinary
+control-bar play toggle is hidden until the poster is dismissed.
 
 **Methods:** `getState(): VideoState` returns a fresh synchronous
-`{ playing, currentTime, duration, volume, muted, playbackRate }` snapshot;
-`LyraVideoState` remains an equivalent Lyra-prefixed type alias;
+`{ playing, currentTime, duration, volume, muted, playbackRate }` snapshot. `VideoState` is the
+canonical upstream-compatible authoring type; the redundant `LyraVideoState` alias is removed in
+v9;
 `getVideoElement(): HTMLVideoElement | undefined` returns the private native element after mount;
 `play(): Promise<void>` returns the exact native promise and preserves its rejection; `pause()`,
 `togglePlay()`, `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy
 finite, clamped media state; `requestFullscreen()` and `exitFullscreen()` preserve the platform
-promise/rejection and reject with `NotSupportedError` when the capability is absent. `load()` is a
+promise/rejection and reject with an owner-realm `DOMException` named `NotSupportedError` when the
+capability is absent. `load()` is a
 Lyra extension that re-clones current light-DOM sources/tracks and restarts native resource
 selection under a fresh event generation. `focus(options?)`, `blur()`, and `click()` forward to the
 play/pause control (absent, and therefore a no-op, under `controls="none"`).
@@ -55,7 +63,8 @@ play/pause control (absent, and therefore a no-op, under `controls="none"`).
 `volumechange`, relayed exactly once from the host as native `Event` instances. They remain
 non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
 immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
-play/pause control's `focus`/`blur` are additionally bridged as bubbling, composed host events.
+play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
+(bubbling and composed, preserving `relatedTarget`), followed by `lr-focus`/`lr-blur`.
 
 **Slots:** the default slot accepts direct `<source>` and `<track>` children;
 `controls-after-play`, `controls-start`, `exit-fullscreen-icon`, `fullscreen-icon`, `mute-icon`,
@@ -68,18 +77,27 @@ flat-tree descendants. An accidentally supplied link, button, or input therefore
 nested action or second keyboard stop. `controls-start` and `controls-after-play` remain ordinary
 composition slots and may intentionally contain interactive controls.
 
+A declarative host `aria-label` or `title` remains the component's overall name and is not copied to
+the private native video; that element receives the localized player-purpose name. An explicitly
+empty host `aria-label` is preserved exactly as an empty native-video name. Caption/subtitle tracks
+selected for Lyra's custom overlay use native `mode="hidden"`, keeping cue activity available
+without asking the browser to paint a duplicate native caption layer.
+
 **CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
 `caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
 `video`, and `video-title-overlay`.
 
-The `progress` range input carries `aria-valuetext` as well as `aria-label` — a localized
-`{current} of {duration}` (key `avPlayerPosition`, shared with `lr-av-player`) built from the same
-locale-formatted clock times the visible elapsed/duration labels show, so a screen reader announces
-"1:07 of 5:00" instead of raw seconds.
+The `progress` range carries `aria-label` and points through `aria-describedby` to a localized
+`{current} of {duration}` description (key `avPlayerPosition`, shared with `lr-av-player`) built
+from the same locale-formatted clock times as the visible labels. This deliberately avoids relying
+on `aria-valuetext`, which browsers ignore on native range semantics. Before duration is available,
+the same range remains in the DOM as a disabled `0..0` control with its description intact,
+avoiding a disappearing/reappearing semantic target.
 
 **Themeable custom properties:** `--controls-background` (default
-`var(--lr-color-overlay-strong)`), `--controls-color` (default `var(--lr-color-text)`), and
+`var(--lr-color-overlay-strong)`), `--controls-color` (default
+`var(--lr-color-on-strong-overlay)`), and
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
 kept for mechanical Web Awesome migration. Lyra also supplies
 `--lr-video-poster-play-button-hover-background` (default is the existing hover color mix) and
@@ -87,7 +105,9 @@ kept for mechanical Web Awesome migration. Lyra also supplies
 
 Caption and playback-rate selectors remain native `<select>` controls with decorative, pointer-inert
 chevrons; their option foreground and background inherit `--controls-color` and
-`--controls-background`.
+`--controls-background`. Controls, elapsed/title text, caption text, and selectors consistently use
+the semantic strong-overlay foreground. The fallback remains legible in light and dark themes;
+an explicit `--controls-color` still has final precedence, and forced-colors mode remains UA-owned.
 
 **RTL behavior:** surrounding controls follow the inherited direction, while the elapsed-media axis
 stays physical left-to-right. Native ArrowRight advances and ArrowLeft rewinds the timeline in both

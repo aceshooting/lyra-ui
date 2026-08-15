@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { literalSetConverter } from "../../../internal/converters.js";
 import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
@@ -35,7 +36,8 @@ type CopyStatus = 'rest' | 'success' | 'error';
  *  payload, and (with `white-space: pre-wrap`) renders a spurious blank line after each row -- and
  *  collapses a lone-CR (classic-Mac) document into a single giant line. Used at BOTH the diff and
  *  the shiki-tokenize call sites so their line counts stay in lockstep. */
-const splitLines = (text: string): string[] => (text === '' ? [] : text.split(/\r\n|\r|\n/));
+const splitLines = (text: string): string[] =>
+  text === '' ? [] : text.split(/\r\n|\r|\n/);
 
 // Line count alone does not bound Hirschberg's O(n*m) work or the strings handed to the
 // highlighter. These ceilings apply even when maxLines is explicitly relaxed.
@@ -44,7 +46,7 @@ const MAX_DIFF_COMPARISONS = 4_000_000;
 
 export interface LyraDiffViewEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
-  'lr-error': CustomEvent<undefined>;
+  'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
 }
 
@@ -52,8 +54,13 @@ export interface LyraDiffViewEventMap {
  *  `'split'` is two side-by-side columns derived from the same `LyraDiffOp[]`. */
 export type LyraDiffViewLayout = 'unified' | 'split';
 
+const DIFF_VIEW_LAYOUT = literalSetConverter<LyraDiffViewLayout>(
+  ["unified", "split"],
+  "unified"
+);
+
 /**
- * `<lr-diff-view>` — a real two-string line diff (Myers/LCS-style alignment), rendered as
+ * `<lr-diff-view>` — a real two-string line diff (Hirschberg LCS alignment), rendered as
  * interleaved unified-diff output -- not diff-flavored syntax highlighting over an
  * already-formatted string (`lr-code-block`'s `language="diff"` only lexically colors a string
  * the consumer already unified-diffed; it has no two-string-compare entry point). First-party
@@ -113,8 +120,25 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   @property({ type: Boolean }) copyable = false;
 
   /** `'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two
-   *  side-by-side columns derived from the same `LyraDiffOp[]` (see `pairOpsForSplit()`). */
-  @property({ reflect: true }) layout: LyraDiffViewLayout = 'unified';
+   *  side-by-side columns derived from the same `LyraDiffOp[]` (see `pairOpsForSplit()`).
+   *  Unsupported attributes and untyped writes normalize to reflected `unified`. */
+  private _layout: LyraDiffViewLayout = "unified";
+
+  @property({ reflect: true, converter: DIFF_VIEW_LAYOUT })
+  get layout(): LyraDiffViewLayout {
+    return this._layout;
+  }
+  set layout(next: LyraDiffViewLayout) {
+    const normalized = DIFF_VIEW_LAYOUT.normalizeReflected(
+      this,
+      "layout",
+      next
+    );
+    const old = this._layout;
+    if (old === normalized) return;
+    this._layout = normalized;
+    this.requestUpdate("layout", old);
+  }
 
   /** A shiki-recognized language id. Highlighting activates only when this has a matching entry in
    *  `languages` -- there is deliberately no default full-table `lr-code-block`-style fallback, so

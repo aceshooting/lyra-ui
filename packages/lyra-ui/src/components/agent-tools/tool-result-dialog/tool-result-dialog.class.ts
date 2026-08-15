@@ -43,7 +43,7 @@ export type ToolResultDialogCloseReason =
 
 export interface LyraToolResultDialogEventMap {
   'lr-close': CustomEvent<ToolResultDialogCloseReason>;
-  'lr-maximize-change': CustomEvent<boolean>;
+  'lr-maximize-change': CustomEvent<{ readonly maximized: boolean }>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -204,7 +204,7 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * @event lr-close - `detail: ToolResultDialogCloseReason`. Fired
  * exactly once per dismissal, via Escape, a backdrop click, the built-in
  * close button, or a `close()` call.
- * @event lr-maximize-change - `detail: boolean` (the new `maximized`
+ * @event lr-maximize-change - `detail: { maximized: boolean }` (the new `maximized`
  * state), fired when the header's maximize/restore toggle is clicked.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open).
@@ -388,7 +388,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   private toggleMaximized = (): void => {
     this.maximized = !this.maximized;
-    this.emit('lr-maximize-change', this.maximized);
+    this.emit('lr-maximize-change', Object.freeze({ maximized: this.maximized }));
   };
 
   private activateOverlay(): void {

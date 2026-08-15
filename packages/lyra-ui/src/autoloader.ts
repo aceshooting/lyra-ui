@@ -4,6 +4,7 @@ import { AUTOLOADER_TAG_SET, type AutoloadableTagName } from './internal/autoloa
 import { registryForRoot } from './internal/definition-registry.js';
 import {
   collectRenderedTree,
+  nativeElementLocalName,
   renderedTreeTraversalLimits,
   RenderedTreeTraversalError,
   type RenderedTreeTraversalLimit,
@@ -66,7 +67,7 @@ interface LoaderContext {
   active: boolean;
   readonly root: LyraDefinitionRoot;
   readonly options: NormalizedOptions;
-  readonly markedElements: Set<Element>;
+  readonly markerClaims: Set<PendingMarkerClaim>;
   readonly definitionLoads: WeakMap<CustomElementRegistry, Map<AutoloadableTagName, Promise<void>>>;
   readonly loadedTags: Set<AutoloadableTagName>;
   observer?: MutationObserver;
@@ -81,11 +82,21 @@ interface DiscoveryState extends RenderedTreeTraversalState {
   readonly roots: Set<LyraDefinitionRoot>;
 }
 
+interface DiscoveryRoot {
+  readonly root: LyraDefinitionRoot;
+  readonly depth: number;
+}
+
 interface UpdateCompleteElement extends Element {
   readonly updateComplete?: Promise<unknown>;
 }
 
-const markerOwners = new Map<Element, LoaderContext>();
+interface PendingMarkerClaim {
+  readonly context: LoaderContext;
+  readonly element: Element;
+}
+
+const markerOwners = new Map<Element, Set<PendingMarkerClaim>>();
 let activeContext: LoaderContext | undefined;
 
 function defaultRoot(): LyraDefinitionRoot | undefined {
@@ -133,8 +144,29 @@ function isEligible(entry: AutoloaderManifestEntry, options: NormalizedOptions):
   return entry.optionalPeers.every((peer) => allowedPeers.has(peer));
 }
 
+function nativeNodeType(node: Node): number | undefined {
+  try {
+    const NodeConstructor = typeof Node === 'undefined' ? undefined : Node;
+    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'nodeType')?.get;
+    return (getter?.call(node) as number | undefined) ?? node.nodeType;
+  } catch {
+    return undefined;
+  }
+}
+
+function ownerDocumentForNode(node: Node): Document | undefined {
+  if (nativeNodeType(node) === 9) return node as Document;
+  try {
+    const NodeConstructor = typeof Node === 'undefined' ? undefined : Node;
+    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'ownerDocument')?.get;
+    return (getter?.call(node) as Document | null | undefined) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function eventConstructor(root: LyraDefinitionRoot): typeof CustomEvent | undefined {
-  const ownerDocument = root.nodeType === 9 ? (root as Document) : root.ownerDocument;
+  const ownerDocument = ownerDocumentForNode(root);
   const fromWindow = ownerDocument?.defaultView?.CustomEvent;
   if (fromWindow) return fromWindow;
   return typeof CustomEvent === 'undefined' ? undefined : CustomEvent;
@@ -149,7 +181,7 @@ type AutoloaderEventDetailFor<Name extends keyof AutoloaderEventMap> = Autoloade
 function emit<Name extends keyof AutoloaderEventMap>(
   context: LoaderContext,
   name: Name,
-  detail: AutoloaderEventDetailFor<Name>
+  detail: AutoloaderEventDetailFor<Name>,
 ): void {
   if (!context.options.events || !context.active) return;
   const EventConstructor = eventConstructor(context.root);
@@ -159,33 +191,43 @@ function emit<Name extends keyof AutoloaderEventMap>(
       bubbles: true,
       composed: true,
       detail,
-    })
+    }),
   );
 }
 
-function markPending(context: LoaderContext, element: Element): void {
-  const owner = markerOwners.get(element);
-  if (owner === context) return;
-  if (owner || element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)) return;
-  element.setAttribute(AUTOLOADER_PENDING_ATTRIBUTE, '');
-  markerOwners.set(element, context);
-  context.markedElements.add(element);
+function markPending(context: LoaderContext, element: Element): PendingMarkerClaim | undefined {
+  let owners = markerOwners.get(element);
+  if (!owners) {
+    // An untracked marker belongs to the caller. Never claim or remove it.
+    if (element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)) return undefined;
+    owners = new Set();
+    markerOwners.set(element, owners);
+  }
+  const claim = { context, element } satisfies PendingMarkerClaim;
+  owners.add(claim);
+  context.markerClaims.add(claim);
+  if (!element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)) {
+    element.setAttribute(AUTOLOADER_PENDING_ATTRIBUTE, '');
+  }
+  return claim;
 }
 
-function clearPending(context: LoaderContext, element: Element): void {
-  if (markerOwners.get(element) !== context) return;
-  element.removeAttribute(AUTOLOADER_PENDING_ATTRIBUTE);
-  markerOwners.delete(element);
-  context.markedElements.delete(element);
+function clearPending(claim: PendingMarkerClaim): void {
+  if (!claim.context.markerClaims.delete(claim)) return;
+  const owners = markerOwners.get(claim.element);
+  if (!owners?.delete(claim)) return;
+  if (owners.size > 0) return;
+  claim.element.removeAttribute(AUTOLOADER_PENDING_ATTRIBUTE);
+  markerOwners.delete(claim.element);
 }
 
 function clearAllPending(context: LoaderContext): void {
-  for (const element of context.markedElements) clearPending(context, element);
+  for (const claim of [...context.markerClaims]) clearPending(claim);
 }
 
 function definitionMap(
   context: LoaderContext,
-  registry: CustomElementRegistry
+  registry: CustomElementRegistry,
 ): Map<AutoloadableTagName, Promise<void>> {
   let definitions = context.definitionLoads.get(registry);
   if (!definitions) {
@@ -196,14 +238,18 @@ function definitionMap(
 }
 
 async function waitForUpdate(element: Element): Promise<void> {
-  const updateComplete = (element as UpdateCompleteElement).updateComplete;
-  if (updateComplete && typeof updateComplete.then === 'function') await updateComplete;
+  try {
+    const updateComplete = (element as UpdateCompleteElement).updateComplete;
+    if (updateComplete && typeof updateComplete.then === 'function') await updateComplete;
+  } catch {
+    // A consumer-owned accessor or thenable must not prevent valid sibling elements from loading.
+  }
 }
 
 async function runBounded<Item>(
   items: readonly Item[],
   concurrency: number,
-  task: (item: Item) => Promise<void>
+  task: (item: Item) => Promise<void>,
 ): Promise<void> {
   let next = 0;
   let failed = false;
@@ -246,7 +292,7 @@ async function withWorkSlot<Result>(context: LoaderContext, task: () => Promise<
 async function defineTag(
   context: LoaderContext,
   registry: CustomElementRegistry,
-  tag: AutoloadableTagName
+  tag: AutoloadableTagName,
 ): Promise<void> {
   if (registry.get(tag)) return;
   const definitions = definitionMap(context, registry);
@@ -293,55 +339,132 @@ function newDiscoveryState(): DiscoveryState {
 
 function collectDiscoveryBatch(
   context: LoaderContext,
-  roots: readonly LyraDefinitionRoot[],
-  state: DiscoveryState
+  requestedRoots: readonly DiscoveryRoot[],
+  state: DiscoveryState,
 ): {
   readonly roots: readonly LyraDefinitionRoot[];
   readonly elements: readonly Element[];
+  readonly rootDepths: ReadonlyMap<LyraDefinitionRoot, number>;
+  readonly elementDepths: ReadonlyMap<Element, number>;
 } {
-  const batchRoots = new Set<LyraDefinitionRoot>();
-  const batchElements = new Set<Element>();
-  for (const root of roots) {
-    const result = collectRenderedTree(root, context.options.traversal, state, 'Autoloader discovery');
-    for (const discoveredRoot of result.roots) batchRoots.add(discoveredRoot);
-    for (const element of result.elements) batchElements.add(element);
+  const batchRoots: LyraDefinitionRoot[] = [];
+  const batchElements: Element[] = [];
+  const rootDepths = new Map<LyraDefinitionRoot, number>();
+  const elementDepths = new Map<Element, number>();
+  const seenRequests = new Set<LyraDefinitionRoot>();
+  for (const request of requestedRoots) {
+    if (seenRequests.has(request.root)) continue;
+    seenRequests.add(request.root);
+    const result = collectRenderedTree(
+      request.root,
+      context.options.traversal,
+      state,
+      'Autoloader discovery',
+      request.depth,
+    );
+    for (const discoveredRoot of result.roots) {
+      batchRoots.push(discoveredRoot);
+      rootDepths.set(discoveredRoot, result.rootDepths.get(discoveredRoot) ?? request.depth);
+    }
+    for (const element of result.elements) {
+      batchElements.push(element);
+      elementDepths.set(element, result.elementDepths.get(element) ?? request.depth);
+    }
   }
-
-  const newRoots = [...batchRoots].filter((root) => !state.roots.has(root));
-  if (state.roots.size + newRoots.length > context.options.traversal.maxRoots) {
-    throw new RenderedTreeTraversalError('Autoloader discovery', 'maxRoots', context.options.traversal.maxRoots);
-  }
-  const newElements = [...batchElements].filter((element) => !state.elements.has(element));
-  if (state.elements.size + newElements.length > context.options.traversal.maxElements) {
-    throw new RenderedTreeTraversalError('Autoloader discovery', 'maxElements', context.options.traversal.maxElements);
-  }
-  for (const root of newRoots) state.roots.add(root);
-  for (const element of newElements) state.elements.add(element);
-  return { roots: [...batchRoots], elements: [...batchElements] };
+  return {
+    roots: batchRoots,
+    elements: batchElements,
+    rootDepths,
+    elementDepths,
+  };
 }
 
 function isElement(node: Node): node is Element {
-  return node.nodeType === 1;
+  return nativeNodeType(node) === 1;
 }
 
 function observerConstructor(root: LyraDefinitionRoot): typeof MutationObserver | undefined {
-  const ownerDocument = root.nodeType === 9 ? (root as Document) : root.ownerDocument;
+  const ownerDocument = ownerDocumentForNode(root);
   const fromWindow = ownerDocument?.defaultView?.MutationObserver;
   if (fromWindow) return fromWindow;
   return typeof MutationObserver === 'undefined' ? undefined : MutationObserver;
 }
 
-function parentAcrossOpenShadowBoundary(node: Node): Node | null {
-  if (node.parentNode) return node.parentNode;
-  if (node.nodeType !== 11 || !('host' in node)) return null;
-  const host = (node as ShadowRoot).host;
-  return isElement(host) ? host : null;
+function nativeParentNode(node: Node): Node | null {
+  try {
+    const ownerWindow = ownerDocumentForNode(node)?.defaultView;
+    const NodeConstructor = ownerWindow?.Node ?? (typeof Node === 'undefined' ? undefined : Node);
+    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'parentNode')?.get;
+    return (getter?.call(node) as Node | null | undefined) ?? null;
+  } catch {
+    return null;
+  }
 }
 
-function isReachableFromRoot(root: LyraDefinitionRoot, node: Node): boolean {
+function parentAcrossOpenShadowBoundary(node: Node): Node | null {
+  const parent = nativeParentNode(node);
+  if (parent) return parent;
+  if (nativeNodeType(node) !== 11 || !('host' in node)) return null;
+  try {
+    const ownerWindow = ownerDocumentForNode(node)?.defaultView;
+    const ShadowRootConstructor =
+      ownerWindow?.ShadowRoot ?? (typeof ShadowRoot === 'undefined' ? undefined : ShadowRoot);
+    const getter =
+      ShadowRootConstructor && Object.getOwnPropertyDescriptor(ShadowRootConstructor.prototype, 'host')?.get;
+    const host = (getter?.call(node) as Element | undefined) ?? undefined;
+    return host && isElement(host) ? host : null;
+  } catch {
+    return null;
+  }
+}
+
+function spendAncestryWork(state: DiscoveryState, maximum: number): void {
+  if (state.work >= maximum) {
+    throw new RenderedTreeTraversalError('Autoloader discovery', 'maxWork', maximum);
+  }
+  state.work += 1;
+}
+
+function renderedDepthFromRoot(
+  root: LyraDefinitionRoot,
+  node: Node,
+  state: DiscoveryState,
+  maximumWork: number,
+): number | undefined {
   let current: Node | null = node;
-  while (current) {
+  let depth = 0;
+  const seen = new Set<Node>();
+  while (current && !seen.has(current)) {
+    spendAncestryWork(state, maximumWork);
+    if (current === root) return depth;
+    seen.add(current);
+    if (nativeNodeType(current) === 11 && 'host' in current) {
+      const host = parentAcrossOpenShadowBoundary(current);
+      if (!host) return undefined;
+      depth += 1;
+      current = host;
+      continue;
+    }
+    const parent = parentAcrossOpenShadowBoundary(current);
+    if (!parent) return undefined;
+    if (isElement(parent)) depth += 1;
+    current = parent;
+  }
+  return undefined;
+}
+
+function isReachableFromRoot(
+  root: LyraDefinitionRoot,
+  node: Node,
+  state: DiscoveryState,
+  maximumWork: number,
+): boolean {
+  let current: Node | null = node;
+  const seen = new Set<Node>();
+  while (current && !seen.has(current)) {
+    spendAncestryWork(state, maximumWork);
     if (current === root) return true;
+    seen.add(current);
     current = parentAcrossOpenShadowBoundary(current);
   }
   return false;
@@ -353,10 +476,12 @@ function observeRoot(context: LoaderContext, root: LyraDefinitionRoot): void {
   context.observedRoots.add(root);
 }
 
-function pruneDetachedObservedRoots(context: LoaderContext): void {
+function pruneDetachedObservedRoots(context: LoaderContext, state: DiscoveryState): void {
   const observer = context.observer;
   if (!observer) return;
-  const reachableRoots = [...context.observedRoots].filter((root) => isReachableFromRoot(context.root, root));
+  const reachableRoots = [...context.observedRoots].filter((root) =>
+    isReachableFromRoot(context.root, root, state, context.options.traversal.maxWork),
+  );
   if (reachableRoots.length === context.observedRoots.size) return;
 
   // MutationObserver has no per-target unobserve operation. Reconnect the shared observer to the
@@ -367,14 +492,22 @@ function pruneDetachedObservedRoots(context: LoaderContext): void {
   for (const root of reachableRoots) observeRoot(context, root);
 }
 
-async function finishDiscoveredElement(context: LoaderContext, element: Element): Promise<ShadowRoot | undefined> {
+function openShadowRootFor(element: Element): ShadowRoot | undefined {
   try {
-    await waitForUpdate(element);
-    if (!context.active) return undefined;
-    return element.shadowRoot ?? undefined;
-  } finally {
-    clearPending(context, element);
+    const ownerWindow = element.ownerDocument?.defaultView;
+    const ElementConstructor = ownerWindow?.Element ?? (typeof Element === 'undefined' ? undefined : Element);
+    const getter =
+      ElementConstructor && Object.getOwnPropertyDescriptor(ElementConstructor.prototype, 'shadowRoot')?.get;
+    return (getter?.call(element) as ShadowRoot | null | undefined) ?? undefined;
+  } catch {
+    return undefined;
   }
+}
+
+async function finishDiscoveredElement(context: LoaderContext, element: Element): Promise<ShadowRoot | undefined> {
+  await waitForUpdate(element);
+  if (!context.active) return undefined;
+  return openShadowRootFor(element);
 }
 
 interface DefinitionWork {
@@ -382,25 +515,34 @@ interface DefinitionWork {
   readonly tag: AutoloadableTagName;
 }
 
+interface ElementFinishWork {
+  readonly element: Element;
+  readonly depth: number;
+  readonly markerClaim?: PendingMarkerClaim;
+  readonly definition?: DefinitionWork;
+}
+
 interface PreparedDiscoveryBatch {
   readonly definitions: readonly DefinitionWork[];
-  readonly elementsToFinish: readonly Element[];
+  readonly elementsToFinish: readonly ElementFinishWork[];
   readonly state: DiscoveryState;
 }
 
 function prepareDiscoveryBatch(
   context: LoaderContext,
-  requestedRoots: readonly LyraDefinitionRoot[],
-  state: DiscoveryState
+  requestedRoots: readonly DiscoveryRoot[],
+  state: DiscoveryState,
 ): PreparedDiscoveryBatch | undefined {
   if (!context.active || requestedRoots.length === 0) return undefined;
-  const { roots, elements } = collectDiscoveryBatch(context, requestedRoots, state);
+  const { roots, elements, elementDepths } = collectDiscoveryBatch(context, requestedRoots, state);
   for (const discoveredRoot of roots) observeRoot(context, discoveredRoot);
 
   const grouped = new Map<CustomElementRegistry, Map<AutoloadableTagName, Element[]>>();
-  const definedElements: Element[] = [];
+  const definedElements: ElementFinishWork[] = [];
+  const markerClaims = new Map<Element, PendingMarkerClaim | undefined>();
   for (const element of elements) {
-    const tag = element.localName;
+    const tag = nativeElementLocalName(element);
+    if (!tag) continue;
     if (!AUTOLOADER_TAG_SET.has(tag)) continue;
     const typedTag = tag as AutoloadableTagName;
     const entry = AUTOLOADER_MANIFEST[typedTag];
@@ -408,13 +550,19 @@ function prepareDiscoveryBatch(
     if (!registry) {
       continue;
     }
-    if (registry.get(typedTag)) {
-      markPending(context, element);
-      definedElements.push(element);
+    let alreadyDefined = false;
+    try {
+      alreadyDefined = typeof registry.get === 'function' && registry.get(typedTag) !== undefined;
+    } catch {
+      continue;
+    }
+    if (alreadyDefined) {
+      const markerClaim = markPending(context, element);
+      definedElements.push({ element, depth: elementDepths.get(element) ?? 0, markerClaim });
       continue;
     }
     if (!isEligible(entry, context.options)) continue;
-    markPending(context, element);
+    markerClaims.set(element, markPending(context, element));
     let tags = grouped.get(registry);
     if (!tags) {
       tags = new Map();
@@ -429,8 +577,16 @@ function prepareDiscoveryBatch(
   const elementsToFinish = [...definedElements];
   for (const [registry, tags] of grouped) {
     for (const [tag, matches] of tags) {
-      definitions.push({ registry, tag });
-      elementsToFinish.push(...matches);
+      const definition = { registry, tag } satisfies DefinitionWork;
+      definitions.push(definition);
+      elementsToFinish.push(
+        ...matches.map((element) => ({
+          element,
+          depth: elementDepths.get(element) ?? 0,
+          markerClaim: markerClaims.get(element),
+          definition,
+        })),
+      );
     }
   }
 
@@ -440,53 +596,105 @@ function prepareDiscoveryBatch(
 async function executeDiscoveryBatch(context: LoaderContext, prepared: PreparedDiscoveryBatch): Promise<void> {
   const { definitions, elementsToFinish, state } = prepared;
   try {
-    await runBounded(definitions, context.options.maxConcurrency, async ({ registry, tag }) => {
-      await withWorkSlot(context, () => defineTag(context, registry, tag));
+    let hasDefinitionFailure = false;
+    let firstDefinitionFailure: unknown;
+    const failedDefinitions = new Set<DefinitionWork>();
+    await runBounded(definitions, context.options.maxConcurrency, async (definition) => {
+      try {
+        await withWorkSlot(context, () => defineTag(context, definition.registry, definition.tag));
+      } catch (error) {
+        failedDefinitions.add(definition);
+        if (!hasDefinitionFailure) {
+          hasDefinitionFailure = true;
+          firstDefinitionFailure = error;
+        }
+      }
     });
     if (!context.active) return;
 
-    const postUpdateRoots = new Set<ShadowRoot>();
-    await runBounded(elementsToFinish, context.options.maxConcurrency, async (element) => {
-      const shadowRoot = await withWorkSlot(context, () => finishDiscoveredElement(context, element));
-      if (shadowRoot) postUpdateRoots.add(shadowRoot);
+    const postUpdateRoots = new Map<ShadowRoot, number>();
+    await runBounded(elementsToFinish, context.options.maxConcurrency, async (work) => {
+      try {
+        if (work.definition && failedDefinitions.has(work.definition)) return;
+        const shadowRoot = await withWorkSlot(context, () => finishDiscoveredElement(context, work.element));
+        if (shadowRoot) postUpdateRoots.set(shadowRoot, work.depth + 1);
+      } finally {
+        if (work.markerClaim) clearPending(work.markerClaim);
+      }
     });
     if (context.active && postUpdateRoots.size > 0) {
-      await processDiscoveryBatch(context, [...postUpdateRoots], state);
+      await processDiscoveryBatch(
+        context,
+        [...postUpdateRoots].map(([root, depth]) => ({ root, depth })),
+        state,
+      );
     }
+    if (hasDefinitionFailure) throw firstDefinitionFailure;
   } finally {
     // Definition/update failures and stop() paths still clear every loader-owned marker.
-    for (const element of elementsToFinish) clearPending(context, element);
+    for (const { markerClaim } of elementsToFinish) {
+      if (markerClaim) clearPending(markerClaim);
+    }
   }
 }
 
 async function processDiscoveryBatch(
   context: LoaderContext,
-  requestedRoots: readonly LyraDefinitionRoot[],
-  state: DiscoveryState
+  requestedRoots: readonly DiscoveryRoot[],
+  state: DiscoveryState,
+  queuedClaims: readonly PendingMarkerClaim[] = [],
 ): Promise<void> {
   const prepared = prepareDiscoveryBatch(context, requestedRoots, state);
+  // Batch claims are established before queued claims are released, so the marker never flickers
+  // between a serialized insertion and its actual definition/first-update work.
+  for (const claim of queuedClaims) clearPending(claim);
   if (prepared) await executeDiscoveryBatch(context, prepared);
 }
 
 async function discoverRootsWithContext(
   context: LoaderContext,
-  roots: readonly LyraDefinitionRoot[]
+  roots: readonly LyraDefinitionRoot[],
 ): Promise<readonly AutoloadableTagName[]> {
   if (!context.active) return [];
   const before = new Set(context.loadedTags);
-  await processDiscoveryBatch(context, roots, newDiscoveryState());
+  await processDiscoveryBatch(
+    context,
+    roots.map((root) => ({ root, depth: 0 })),
+    newDiscoveryState(),
+  );
   return [...context.loadedTags].filter((tag) => !before.has(tag));
 }
 
-function queueObservedDiscovery(context: LoaderContext, roots: readonly LyraDefinitionRoot[]): Promise<void> {
-  const state = newDiscoveryState();
-  const prepared = context.discoveryTail.then(() => prepareDiscoveryBatch(context, roots, state));
-  context.discoveryTail = prepared.then(
+function queueObservedDiscovery(
+  context: LoaderContext,
+  roots: readonly DiscoveryRoot[],
+  state: DiscoveryState,
+): Promise<void> {
+  const queuedClaims: PendingMarkerClaim[] = [];
+  for (const { root } of roots) {
+    if (!isElement(root)) continue;
+    const localName = nativeElementLocalName(root);
+    if (!localName || !AUTOLOADER_TAG_SET.has(localName)) continue;
+    const tag = localName as AutoloadableTagName;
+    const registry = registryForRoot(root);
+    if (!registry) continue;
+    let alreadyDefined = false;
+    try {
+      alreadyDefined = typeof registry.get === 'function' && registry.get(tag) !== undefined;
+    } catch {
+      continue;
+    }
+    if (!alreadyDefined && !isEligible(AUTOLOADER_MANIFEST[tag], context.options)) continue;
+    const claim = markPending(context, root);
+    if (claim) queuedClaims.push(claim);
+  }
+  const queued = context.discoveryTail.then(() => processDiscoveryBatch(context, roots, state, queuedClaims));
+  context.discoveryTail = queued.then(
     () => undefined,
-    () => undefined
+    () => undefined,
   );
-  return prepared.then(async (batch) => {
-    if (batch) await executeDiscoveryBatch(context, batch);
+  return queued.finally(() => {
+    for (const claim of queuedClaims) clearPending(claim);
   });
 }
 
@@ -495,7 +703,7 @@ function createContext(root: LyraDefinitionRoot, options: AutoloaderOptions | un
     active: true,
     root,
     options: normalizeOptions(options),
-    markedElements: new Set(),
+    markerClaims: new Set(),
     definitionLoads: new WeakMap(),
     loadedTags: new Set(),
     observedRoots: new Set(),
@@ -508,7 +716,7 @@ function createContext(root: LyraDefinitionRoot, options: AutoloaderOptions | un
 /** Loads and defines the known Lyra tags currently rendered below `root`. */
 export async function discover(
   root: LyraDefinitionRoot | undefined = defaultRoot(),
-  options?: AutoloaderOptions
+  options?: AutoloaderOptions,
 ): Promise<readonly AutoloadableTagName[]> {
   if (!root || typeof root.querySelectorAll !== 'function') return [];
   const context = createContext(root, options);
@@ -526,7 +734,7 @@ export async function discover(
  */
 export async function start(
   root: LyraDefinitionRoot | undefined = defaultRoot(),
-  options?: AutoloaderOptions
+  options?: AutoloaderOptions,
 ): Promise<readonly AutoloadableTagName[]> {
   stop();
   if (!root || typeof root.querySelectorAll !== 'function') return [];
@@ -536,20 +744,40 @@ export async function start(
   if (Observer) {
     context.observer = new Observer((records) => {
       if (!context.active) return;
-      if (records.some((record) => record.removedNodes.length > 0)) {
-        pruneDetachedObservedRoots(context);
-      }
-      const addedRoots = new Set<LyraDefinitionRoot>();
-      for (const record of records) {
-        if (!isReachableFromRoot(context.root, record.target)) continue;
-        for (const node of record.addedNodes) {
-          if (node.nodeType !== 1 && node.nodeType !== 11) continue;
-          if (!isReachableFromRoot(context.root, node)) continue;
-          addedRoots.add(node as LyraDefinitionRoot);
+      const state = newDiscoveryState();
+      const addedRoots = new Map<LyraDefinitionRoot, number>();
+      try {
+        if (records.some((record) => record.removedNodes.length > 0)) {
+          pruneDetachedObservedRoots(context, state);
         }
+        for (const record of records) {
+          if (!isReachableFromRoot(context.root, record.target, state, context.options.traversal.maxWork)) continue;
+          for (const node of record.addedNodes) {
+            const nodeType = nativeNodeType(node);
+            if (nodeType !== 1 && nodeType !== 11) continue;
+            const depth = renderedDepthFromRoot(context.root, node, state, context.options.traversal.maxWork);
+            if (depth !== undefined) addedRoots.set(node as LyraDefinitionRoot, depth);
+          }
+        }
+      } catch (error) {
+        if (error instanceof RenderedTreeTraversalError) {
+          emit(context, 'lr-autoload-traversal-error', {
+            limit: error.limit,
+            maximum: error.maximum,
+            error,
+          });
+        }
+        return;
       }
       if (addedRoots.size === 0) return;
-      void queueObservedDiscovery(context, [...addedRoots]).catch((error: unknown) => {
+      void queueObservedDiscovery(
+        context,
+        [...addedRoots].map(([discoveredRoot, depth]) => ({
+          root: discoveredRoot,
+          depth,
+        })),
+        state,
+      ).catch((error: unknown) => {
         if (error instanceof RenderedTreeTraversalError) {
           emit(context, 'lr-autoload-traversal-error', {
             limit: error.limit,
@@ -563,7 +791,12 @@ export async function start(
     });
   }
   try {
-    return await discoverRootsWithContext(context, [root]);
+    const initialDiscovery = discoverRootsWithContext(context, [root]);
+    context.discoveryTail = initialDiscovery.then(
+      () => undefined,
+      () => undefined,
+    );
+    return await initialDiscovery;
   } catch (error) {
     if (activeContext === context) stop();
     throw error;

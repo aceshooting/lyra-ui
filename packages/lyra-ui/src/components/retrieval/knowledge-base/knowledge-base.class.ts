@@ -42,7 +42,7 @@ export interface KnowledgeSource {
   indexingHealth?: KnowledgeSourceIndexingHealth;
   permission?: KnowledgeSourcePermission;
   documentCount?: number;
-  /** Epoch milliseconds or an ISO-8601 string, matching `ChatThread`/`ChatMessage`'s own
+  /** Epoch milliseconds or an ISO-8601 string, matching `LyraChatThread`/`ChatMessage`'s own
    *  `Date | string` timestamp convention elsewhere in this library. Omitted/unparseable renders as
    *  "never synced". */
   lastSyncedAt?: Date | string;
@@ -54,7 +54,7 @@ export interface KnowledgeSource {
 export interface LyraKnowledgeBaseEventMap {
   /** The toolbar's "Add source" affordance was activated. No `sourceId` -- there is nothing yet to
    *  reference; the host owns the actual creation flow (naming, connector picking, ...). */
-  'lr-source-create': CustomEvent<undefined>;
+  'lr-source-create': CustomEvent<null>;
   /** A row's "Sync now" action was activated. */
   'lr-source-sync': CustomEvent<{ sourceId: string }>;
   /** A row's "Pause sync" action was activated. */
@@ -350,7 +350,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
             <span slot="icon">${pauseIcon()}</span>
             ${this.localize('knowledgeBasePauseAction')}
           </lr-menu-item>
-          <lr-menu-item value="delete" destructive>
+          <lr-menu-item value="delete" variant="danger">
             <span slot="icon">${trashIcon()}</span>
             ${this.localize('knowledgeBaseDeleteAction')}
           </lr-menu-item>

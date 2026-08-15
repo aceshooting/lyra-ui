@@ -432,7 +432,9 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
       <lr-dropdown
         part="menu"
         @lr-show=${this.stopInternalEvent}
+        @lr-after-show=${this.stopInternalEvent}
         @lr-hide=${this.stopInternalEvent}
+        @lr-after-hide=${this.stopInternalEvent}
       >
         <button
           slot="trigger"

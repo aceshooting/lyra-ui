@@ -14,10 +14,11 @@ const items: TaskItem[] = [
   { id: 'step-3', label: 'Write summary', status: 'pending' },
 ];
 
-it('defaults to items=[], label="Tasks", expanded=true, collapsible=true', async () => {
+it('defaults to items=[], a localized Tasks label, expanded=true, collapsible=true', async () => {
   const el = (await fixture(html`<lr-task-list></lr-task-list>`)) as LyraTaskList;
   expect(el.items).to.deep.equal([]);
-  expect(el.label).to.equal('Tasks');
+  expect(el.label).to.be.undefined;
+  expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Tasks');
   expect(el.expanded).to.be.true;
   expect(el.hasAttribute('expanded')).to.be.true;
   expect(el.collapsible).to.be.true;
@@ -232,7 +233,7 @@ it('normalizes foreign runtime task statuses to pending instead of throwing', as
   `);
   const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')];
   expect(rows.map((row) => row.dataset.status)).to.deep.equal(['pending', 'pending']);
-  expect(rows.map((row) => row.querySelector('[part="status-label"]')!.textContent!.trim()))
+  expect(rows.map((row) => row.querySelector('.sr-only')!.textContent!.trim()))
     .to.deep.equal(['Pending', 'Pending']);
 });
 
@@ -297,6 +298,16 @@ it('localizes the default "Tasks" label via .strings while a customized label re
     ></lr-task-list>`,
   )) as LyraTaskList;
   expect(custom.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Plan');
+
+  const explicitEnglish = (await fixture(
+    html`<lr-task-list label="Tasks" .strings=${{ taskListLabel: 'Étapes' }}></lr-task-list>`,
+  )) as LyraTaskList;
+  expect(explicitEnglish.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Tasks');
+
+  const empty = (await fixture(
+    html`<lr-task-list label="" .strings=${{ taskListLabel: 'Étapes' }}></lr-task-list>`,
+  )) as LyraTaskList;
+  expect(empty.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('');
 });
 
 describe('compact / frame escape hatches', () => {

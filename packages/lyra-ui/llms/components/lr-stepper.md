@@ -8,28 +8,35 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-stepper`
 
-Ordered multi-step wizard/form navigation: an index/label per step, `current`/`completed`/`disabled`/
-`error` state, and click-to-jump. First-party invention (no `wa-*`/`sl-*` counterpart). Fully
+Ordered multi-step wizard/form navigation: an index/label per step, independent
+`pending`/`current`/`completed`/`error` progress plus disabled availability, and click-to-jump.
+First-party invention (no `wa-*`/`sl-*` counterpart). Fully
 data-driven and controlled, like `lr-table`'s `columns`/`rows` — it never mutates `steps` itself; a
 click, or Enter/Space on a non-disabled step, fires a non-cancelable `lr-step-select`, and the host
 decides whether/how `steps` changes in response.
 
 **Properties:**
-- `steps: StepItem[] = []` (attribute: false) — `StepItem { id: string; label: string; state:
-  'pending' | 'current' | 'completed' | 'disabled' | 'error'; title?: string; icon?: unknown }`;
+
+- `steps: readonly LyraStepItem[] = []` (attribute: false) — `LyraStepItem { id: string; label:
+string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown }`, where
+  `LyraStepState` is `'pending' | 'current' | 'completed' | 'error'`. `disabled` independently gates
+  activation and roving focus, so locking a current/completed/error step does not erase its progress.
   `title` is an optional native tooltip for the step's button (e.g. explaining why a `disabled` step
   is locked) — omit it for no `title` attribute at all, not an empty string. `icon` is an optional
   leading topic glyph (a `TemplateResult`, an emoji string, etc. — not restricted to a square icon)
   rendered as inert, `aria-hidden` decoration in the `step-icon` part, additionally to — never
   instead of — the state-driven `step-index`/`step-check` glyph. It provides no independent action
-  or accessible name. Never mutated by this component. Empty (the default) renders nothing.
+  or accessible name. Input is read through a realm-neutral bounded schema snapshot (at most 256
+  positions); malformed/hostile entries are skipped while valid neighbors survive, and the frozen
+  returned array/records never alias caller-owned objects. Duplicate ids are supported as ordered
+  occurrences because selection detail always includes `index`. Empty (the default) renders nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
@@ -46,7 +53,7 @@ decides whether/how `steps` changes in response.
   behaves exactly as unset (no observation, no `data-effective-orientation`): `''`, `'auto'`,
   garbage, a non-finite number, and deliberately `%`, `vw`/`vh` and `calc()` — a viewport-relative
   threshold would mix reference boxes against a measurement of the element's own allocation. Mirrors
-  `<lr-split>`'s identically-named contract, unit handling included.
+  `<lr-multi-split>`'s identically-named contract, unit handling included.
 - `orientationBreakpointBasis: 'container'|'viewport' = 'container'` (reflected, attribute
   `orientation-breakpoint-basis`) — which box `orientationBreakpoint` is compared against. Unset,
   behavior is identical to before this property existed. `'container'` measures the stepper's own
@@ -55,8 +62,8 @@ decides whether/how `steps` changes in response.
   (`<=`) per native `max-width` semantics. **A stepper given a fixed width in a row layout cannot
   react to that row stacking by measuring itself — its own width never changes — so that case
   requires `'viewport'`.** Relative units also differ by basis: inside a media query they resolve
-  against the browser's *initial* font size, ignoring `html { font-size }`, which is precisely why
-  `'viewport'` matches a CSS `@media` rule authored with the same length. Mirrors `<lr-split>`'s
+  against the browser's _initial_ font size, ignoring `html { font-size }`, which is precisely why
+  `'viewport'` matches a CSS `@media` rule authored with the same length. Mirrors `<lr-multi-split>`'s
   identically-named contract.
 - `narrowOrientation: 'horizontal' | 'vertical' = 'vertical'` (reflected, attribute
   `narrow-orientation`)
@@ -70,7 +77,8 @@ decides whether/how `steps` changes in response.
   `orientationBreakpoint` resolves to a usable length).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="list"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the list
-  renders without an `aria-label` (there is no localized default name).
+  renders without an `aria-label` (there is no localized default name); an explicitly empty
+  attribute remains empty rather than being treated as absent.
 
 **Events:** `lr-step-select` (`detail: { index, id }`) — fired on click, or Enter/Space while
 focused, on a non-`disabled` step. It is non-cancelable because the component takes no default
@@ -108,7 +116,9 @@ scoped to its own `data-state`, so recoloring the current step leaves `pending`/
 steps alone. The hooks exist because `::part(step)[data-state='current']` is invalid CSS — Shadow
 Parts forbids an attribute selector after `::part()` — so state-specific theming previously meant
 overriding a library-wide `--lr-color-*` token and repainting everything else that read it. Unset,
-each falls back to the token its rule used before. Otherwise shared tokens —
+each falls back to the token its rule used before.
+`--lr-scroll-fade-size` (default `2rem`) controls the decorative horizontal overflow fade, which is
+disabled under forced-colors while the native scroll owner remains available. Otherwise shared tokens —
 `--lr-space-m`/`-xs`/`-2xs`,
 `--lr-color-text-quiet`/`-text`/`-danger`/`-brand`/`-on-brand`, `--lr-radius`/`-pill`,
 `--lr-font-size-xs`, `--lr-font-weight-semibold`, `--lr-opacity-disabled`,
@@ -119,24 +129,27 @@ each falls back to the token its rule used before. Otherwise shared tokens —
 ```html
 <lr-stepper></lr-stepper>
 <script type="module">
-  const stepper = document.querySelector('lr-stepper');
+  const stepper = document.querySelector("lr-stepper");
   stepper.steps = [
-    { id: 'account', label: 'Account', state: 'completed' },
-    { id: 'billing', label: 'Billing', state: 'current' },
-    { id: 'review', label: 'Review', state: 'pending' },
+    { id: "account", label: "Account", state: "completed" },
+    { id: "billing", label: "Billing", state: "current" },
+    { id: "review", label: "Review", state: "pending" },
   ];
-  stepper.addEventListener('lr-step-select', (e) => console.log(e.detail.index, e.detail.id));
+  stepper.addEventListener("lr-step-select", (e) =>
+    console.log(e.detail.index, e.detail.id)
+  );
 </script>
 ```
 
 **Known gotchas:**
+
 - `orientationBreakpointBasis='container'` (the default) observes **the stepper's own allocated
   inline size**, so it fits a stepper that is the sole flex/grid item in its measured container. In
   a row where the stepper is a fixed-width sidebar beside another element, its own width never
   changes with the viewport at all, so no container breakpoint can react to that row stacking via a
   CSS `@media` rule. Use `orientationBreakpointBasis='viewport'` for that layout — give the stepper
   and its sibling the same `orientation-breakpoint` and both flip in lockstep with the CSS rule. See
-  `<lr-split>`'s own note above for the full explanation of why a shared row can't be inferred from
+  `<lr-multi-split>`'s own note above for the full explanation of why a shared row can't be inferred from
   one element's measurement, and for a worked example.
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
@@ -146,7 +159,5 @@ each falls back to the token its rule used before. Otherwise shared tokens —
   navigation remain available independently of those semantics.
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
-
-
 
 ---

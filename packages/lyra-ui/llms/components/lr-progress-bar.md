@@ -20,8 +20,9 @@ formatted percentage.
 
 **Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
 `label` (mapped accessible-name property), plus `accessibleLabel` (`accessible-label`) — the
-library-wide explicit-accessible-name convention carried by every Lyra component that names a
-shadow-owned role, not an alias retained for one upstream. Host `aria-label` has highest precedence.
+retained Lyra compatibility spelling for this component. It is not a library-wide attribute:
+spinner, rating, and tooltip expose their explicit host name through `aria-label`. Host
+`aria-label` has highest precedence here too.
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
 determinate. Slotted label content is always visible and names the progressbar unless an explicit
 label overrides it; `show-value` controls only whether the locale-formatted percentage is appended.

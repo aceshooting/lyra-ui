@@ -31,7 +31,7 @@ export type ConfirmBarVariant = Extract<LyraVariant, 'neutral' | 'danger'>;
 
 export interface LyraConfirmBarEventMap {
   'lr-approve': CustomEvent<{ args: unknown }>;
-  'lr-deny': CustomEvent<undefined>;
+  'lr-deny': CustomEvent<null>;
 }
 
 const ICON_VIEW_BOX = '0 0 24 24';

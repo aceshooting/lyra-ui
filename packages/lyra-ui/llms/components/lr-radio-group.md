@@ -3,6 +3,7 @@
 # `lr-radio-group`
 
 - **Import** `import '@aceshooting/lyra-ui/components/lr-radio-group.js';` (stable tag alias; registers the tag)
+- **Compound usage registrations** `import '@aceshooting/lyra-ui/components/lr-radio.js';`, `import '@aceshooting/lyra-ui/components/lr-radio-button.js';` — required by the consumer-supplied child tags in this reference; usage-only, not registration dependencies of `lr-radio-group`
 - **Class** `LyraRadioGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
@@ -28,9 +29,11 @@ horizontal. Horizontal direction mirrors under RTL, and disabled options are ski
 visible-label `aria-labelledby` fallback), and `size: LyraSize = 'm'` (reflected) — the size of the
 group's **own** chrome, on the shared ladder and accepting both `2xs`/`xs`/`s`/`m`/`l`/`xl` and
 `small`/`medium`/`large`. It scales the group's label type size and the gaps around and between its
-options off the same values the controls themselves use, and propagates the selected tier to every
-owned `<lr-radio>`/`<lr-radio-button>` child (including children added later). Group size is the
-authoritative aggregate setting.
+options off the same values the controls themselves use, and projects that tier to every owned
+`<lr-radio>`/`<lr-radio-button>` child (including children added later). Group size and name are
+authoritative through each option's `effectiveSize`/`effectiveName`, but never rewrite the child's
+authored public properties or attributes; late child writes are restored immediately on removal or
+reparenting.
 
 The group is the sole aggregate form-associated owner. A non-empty selected value contributes one
 `name=value` entry; owned radios suppress their own entries and validity while a standalone radio
@@ -73,5 +76,6 @@ options and its messages, scaled by `size` through the shared control ladder.
 non-empty message raises `customError` and blocks submission; `setCustomValidity('')` and
 `resetValidity()` restore the group's computed validity, including `valueMissing` when a required
 group has no selected radio. `focus()` moves focus to the selected (or first enabled) radio;
-`click()` mirrors it by activating that same radio, so the group behaves like a single control
-under both APIs rather than leaving `click()` a no-op.
+`blur()` releases whichever owned radio currently contains deep focus, and `click()` mirrors
+`focus()` by activating the selected/first enabled radio. All three are inert under direct or
+fieldset disablement, so the group behaves like one native control.

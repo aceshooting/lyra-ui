@@ -28,6 +28,7 @@ all of it on every load). The host always carries explicit `aria-busy="true"|"fa
 the source is loading and being sanitized. Build error UI from `lr-include-error`.
 
 **Properties:**
+
 - `src: string = ''` (reflected) — source of the fragment. `#id` clones the matching same-page
   template content or element children without fetching or moving the source nodes.
   `/partial.html#id` fetches `/partial.html` without its hash, sanitizes the complete response, then
@@ -56,6 +57,7 @@ operate on the included text. A successful replacement explicitly recomputes any
 against the new fragment rather than leaving results from the previous content.
 
 **Events:**
+
 - `lr-load` — `detail: { src }` — the fragment was sanitized and written into the light DOM.
 - `lr-include-error` — `detail: { status, reason, error? }`. `reason` is a `LyraIncludeErrorReason`:
   `'blocked-url'` (`src` failed the allowlist; `fetch()` never ran), `'network'` (`fetch()` rejected),
@@ -71,12 +73,12 @@ against the new fragment rather than leaving results from the previous content.
   also the name every other Lyra component uses for a load failure, so a generic page-level
   listener catches this one too. Listening to both names on the same element runs your handler
   twice for one failure.
-- `lr-search-change` — `detail: { query: string; matchCount: number; activeIndex: number }` — fired
+- `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever included-content search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
-  DOMRect[] }`) — fired after a selection ends inside the included content.
+DOMRect[] }`) — fired after a selection ends inside the included content.
 
 `lr-highlight-activate` is not part of this component's event contract: included-text highlights
 are passive and cannot be activated.
@@ -104,10 +106,10 @@ retried; a stale response never paints over a newer `src`.
   Loading navigation…
 </lr-include>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/viewers/include/include.js';
+  import "@aceshooting/lyra-ui/components/viewers/include/include.js";
 
-  const include = document.querySelector('#navigation');
-  include.addEventListener('lr-include-error', (event) => {
+  const include = document.querySelector("#navigation");
+  include.addEventListener("lr-include-error", (event) => {
     console.error(event.detail.reason, event.detail.status);
   });
   await include.reload();

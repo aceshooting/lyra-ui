@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraDatePickerSize } from './date-picker.js';
+import type { LyraSizeStep } from '../../../internal/variants.js';
 
 const meta: Meta = {
   title: 'DatePicker/Inline',
@@ -83,7 +83,7 @@ export const Localized: Story = {
  * density itself (fewer/more days per visual unit); neither label nor nav buttons rescale. */
 export const Sizes: Story = {
   render: () => {
-    const sizes: LyraDatePickerSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    const sizes: LyraSizeStep[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
     return html`
       <div style="display: flex; flex-direction: column; gap: 1rem">
         ${sizes.map((size) => html`<lr-date-picker size=${size} value="2026-07-15"></lr-date-picker>`)}
@@ -213,7 +213,7 @@ export const ScopedStateTheme: Story = {
       <lr-date-picker
         value="2026-07-15"
         today="2026-07-10"
-        style="--lr-date-picker-day-hover-bg: var(--lr-color-warning-quiet); --lr-date-picker-selected-bg: var(--lr-color-success); --lr-date-picker-selected-color: var(--lr-color-on-success); --lr-date-picker-today-outline: var(--lr-color-warning)"
+        style="--lr-date-picker-title-hover-color: var(--lr-color-warning); --lr-date-picker-title-active-color: var(--lr-color-danger); --lr-date-picker-title-active-bg: var(--lr-color-danger-quiet); --lr-date-picker-title-active-radius: var(--lr-radius-pill); --lr-date-picker-day-hover-bg: var(--lr-color-warning-quiet); --lr-date-picker-selected-bg: var(--lr-color-success); --lr-date-picker-selected-color: var(--lr-color-on-success); --lr-date-picker-today-outline: var(--lr-color-warning)"
       ></lr-date-picker>
       <lr-date-picker
         view="months"

@@ -6,6 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../attachment-chip/file-size.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import {
   defaultFileTypeMetadataRegistry,
   type LyraFileTypeIcon,
@@ -35,6 +36,8 @@ const ICON_LABELS: Record<LyraFileTypeIcon, LyraMessageKey> = {
 
 /** How much of the badge is rendered: glyph only, or glyph plus file metadata. */
 export type LyraFileIconMode = 'icon' | 'label';
+
+const FILE_ICON_MODE = literalSetConverter<LyraFileIconMode>(['icon', 'label'], 'icon');
 
 /**
  * Displays a localized, tokenized file-type badge from a MIME type.
@@ -95,7 +98,19 @@ export class LyraFileIcon extends LyraElement {
   /** Whether the badge is decorative and hidden from assistive technology. */
   @property({ type: Boolean, reflect: true }) decorative = false;
   /** Shows only the icon or the icon together with its label and optional description. */
-  @property({ reflect: true }) mode: LyraFileIconMode = 'icon';
+  private _mode: LyraFileIconMode = 'icon';
+
+  @property({ reflect: true, converter: FILE_ICON_MODE })
+  get mode(): LyraFileIconMode {
+    return this._mode;
+  }
+  set mode(next: LyraFileIconMode) {
+    const normalized = FILE_ICON_MODE.normalizeReflected(this, 'mode', next);
+    const old = this._mode;
+    if (old === normalized) return;
+    this._mode = normalized;
+    this.requestUpdate('mode', old);
+  }
   /** Optional visible/accessibility label override. Explicit empty text is preserved. */
   @property() label?: string;
   /** Immutable metadata authority for this instance. */
@@ -103,7 +118,6 @@ export class LyraFileIcon extends LyraElement {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (changed.has('mode') && this.mode !== 'icon' && this.mode !== 'label') this.mode = 'icon';
   }
 
   private resolveMetadata(): LyraResolvedFileTypeMetadata {

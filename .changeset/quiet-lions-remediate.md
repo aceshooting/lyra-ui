@@ -58,6 +58,9 @@ New opt-in surface:
 - `lr-data-grid` accepts `'start'`/`'end'` as spelling aliases for the existing RTL-relative
   `'left'`/`'right'` pin sides, and renders its pager glyphs as mirroring icons;
 - `lr-time-range` gains click-to-seek; `lr-filter-bar` options accept an icon;
+- `lr-document-viewer` gains an immutable discriminated renderer payload and typed registry
+  adapters, letting the AV renderer receive bounded cues/tracks and advertise search only when its
+  retained transcript is searchable without widening legacy `DocumentFile` callbacks;
 - host `focus()`/`blur()`/`click()` forwarding and re-emitted focus/blur on `lr-av-player`,
   `lr-pan-zoom`, `lr-video`, `lr-video-playlist`, and `lr-zoomable-frame`.
 

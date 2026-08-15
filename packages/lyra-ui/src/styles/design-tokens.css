@@ -50,6 +50,7 @@
     --lr-theme-color-neutral-on-normal: #000001;
     --lr-theme-color-neutral-on-quiet: #000001;
     --lr-theme-color-no-data: rgb(128 128 128 / 25%);
+    --lr-theme-color-on-strong-overlay: #ffffff;
     --lr-theme-color-overlay: rgb(0 0 0 / 0.5);
     --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.92);
     --lr-theme-color-shadow: #000;
@@ -316,6 +317,7 @@
     --lr-theme-color-neutral-on-normal: #edeef1;
     --lr-theme-color-neutral-on-quiet: #edeef1;
     --lr-theme-color-no-data: rgb(180 180 180 / 30%);
+    --lr-theme-color-on-strong-overlay: #ffffff;
     --lr-theme-color-overlay: rgb(0 0 0 / 0.72);
     --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.95);
     --lr-theme-color-shadow: #000;

@@ -43,12 +43,16 @@ unsafe/unparseable `href` falls back to the native `<button>`.
   `aria-disabled="true"`), so a disabled link button cannot navigate. An unsafe/unparseable value
   falls back to the native `<button>`
 - `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
-  (e.g. `'_blank'`) automatically derives `rel="noopener noreferrer"` on the anchor. The public
-  `rel` getter and compatibility attribute expose that mapped surface, but an author value never
-  controls the rendered anchor: `target` alone derives the safe value (reverse-tabnabbing). Ignored
-  in `<button>` mode
+  (e.g. `'_blank'`) automatically force-adds `noopener noreferrer` to the rendered anchor's
+  relationship tokens. Ignored in `<button>` mode
+- `rel?: string` — independently settable native relationship tokens with no default. Author tokens
+  such as `nofollow`, `me`, `license`, `external`, and `tag` are preserved on same-tab and targeted
+  links. `opener` is always stripped, and whenever `target` is set the non-removable
+  `noopener noreferrer` floor is merged in. When neither `target` nor author tokens are present the
+  anchor omits `rel`
 - `download?: string` — native anchor `download` attribute, used only while `href` resolves to a
-  link. Ignored in `<button>` mode
+  link. Presence remains meaningful when the value is empty: `download=""` derives a filename and
+  still selects the stricter downloadable-URL policy. Ignored in `<button>` mode
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected). Reads
   stay in Lyra's shared vocabulary; migrated Shoelace inputs normalize `default` → `neutral`,
   `primary` → `brand`, and `text` → neutral `appearance="plain"`. The Lyra/Web Awesome default is
@@ -108,16 +112,16 @@ unsafe/unparseable `href` falls back to the native `<button>`.
   mount updates the actual focused control
 - `required: boolean = false` (reflected), `validity`, `validationMessage`, and `willValidate` —
   Web Awesome's form-validity surface. A required button needs a non-empty submitter `value`; this
-  validation never makes the button a persistent form-data entry
+  validation never makes the button a persistent form-data entry. Disabled, loading, and actual
+  anchor modes clear effective validity while retaining intrinsic/custom state for restoration
 - `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
 **Submitter overrides (`type="submit"` in `<button>` mode).** `name`/`value` plus the five native
 `form*` overrides describe the submission this button triggers, not the button itself:
 
-- `formAction?: string` (attribute `formaction`) — overrides the form owner's `action`. Unset by
-  default, leaving the form's own `action` in place; an empty string is deliberately _not_
-  forwarded, since an empty `formaction` resolves against the document URL and would silently
-  redirect the submission
+- `formAction?: string` (attribute `formaction`) — overrides the form owner's `action`. Unset leaves
+  the form's own action in place; an explicitly present empty string is forwarded and follows
+  native resolution against the current document
 - `formEnctype?: 'application/x-www-form-urlencoded' | 'multipart/form-data' | 'text/plain'`
   (attribute `formenctype`) — overrides the form owner's `enctype`
 - `formMethod?: 'get' | 'post' | 'dialog'` (attribute `formmethod`) — overrides the form owner's
@@ -128,10 +132,6 @@ unsafe/unparseable `href` falls back to the native `<button>`.
 - `formTarget?: string` (attribute `formtarget`) — overrides the form owner's `target`. Distinct
   from `target`, which is the anchor target used in link mode
 
-The compatibility spellings — `form-action`, `form-enctype`, `form-method`,
-`form-no-validate`, and `form-target` — delegate to the same five properties. When both spellings
-are used, the most recent attribute change wins.
-
 All five are `undefined`/`false` by default. When any of them — or `name`/`value` — is set, the
 submission runs through a **transient native `<button type="submit">`** inserted directly after the
 host, used as `requestSubmit()`'s submitter and removed again in the same synchronous step (in a
@@ -141,6 +141,10 @@ the name/value pair reach the submitted `FormData` and the overrides reach the r
 one. While that stand-in exists it _is_ the form's submitter, so **`SubmitEvent.submitter` is the
 transient native button, not this host**. With none of those properties set, submission stays a
 plain `requestSubmit()` with a `null` submitter, and all of it is inert in link mode.
+For each string override, presence rather than truthiness chooses the transient path and its raw
+attribute is copied, so explicit empty values remain distinguishable from absence. Only the
+canonical native/upstream spellings are supported; the former hyphenated Lyra aliases were
+removed.
 
 Each size tier's `min-block-size` floor is exposed as its own token (see below).
 
@@ -279,16 +283,35 @@ box no matter what tier or override is in play.
 <lr-button variant="brand">Save</lr-button>
 <!-- "filled" is the quiet tint of the same tone, for a secondary action beside it. -->
 <lr-button variant="brand" appearance="filled">Save a copy</lr-button>
-<lr-button appearance="plain" aria-label="Close dialog"><svg slot="start">...</svg></lr-button>
-<p>The message failed. <lr-button appearance="link" variant="brand">Retry</lr-button></p>
+<lr-button appearance="plain" aria-label="Close dialog"
+  ><svg slot="start">...</svg></lr-button
+>
+<p>
+  The message failed.
+  <lr-button appearance="link" variant="brand">Retry</lr-button>
+</p>
 
-<lr-button pill with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>
-<lr-button variant="primary" outline caret><span slot="prefix">★</span>Migrated</lr-button>
-<lr-button circle aria-label="Settings"><svg aria-hidden="true">...</svg></lr-button>
+<lr-button pill with-caret aria-haspopup="menu" aria-expanded="false"
+  >Actions</lr-button
+>
+<lr-button variant="primary" outline caret
+  ><span slot="prefix">★</span>Migrated</lr-button
+>
+<lr-button circle aria-label="Settings"
+  ><svg aria-hidden="true">...</svg></lr-button
+>
 
 <form action="/save" method="post">
   <lr-input name="title" label="Title" required></lr-input>
-  <lr-button type="submit" name="intent" value="draft" formnovalidate formaction="/save-draft"> Save draft </lr-button>
+  <lr-button
+    type="submit"
+    name="intent"
+    value="draft"
+    formnovalidate
+    formaction="/save-draft"
+  >
+    Save draft
+  </lr-button>
   <lr-button type="submit" name="intent" value="publish">Publish</lr-button>
 </form>
 ```

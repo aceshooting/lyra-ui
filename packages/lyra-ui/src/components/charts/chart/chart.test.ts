@@ -928,6 +928,15 @@ it('forwards a host aria-label to the canvas and keeps the chart role on that se
   expect(el.getAttribute('role')).to.equal(null);
   expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(2);
   expect(el.shadowRoot!.querySelectorAll('[part="legend"][role="group"]')).to.have.length(1);
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(canvas.getAttribute('aria-label')).to.equal('');
+
+  el.removeAttribute('aria-label');
+  el.label = '';
+  await el.updateComplete;
+  expect(canvas.getAttribute('aria-label')).to.equal('');
 });
 
 it('formats generated summary values with the effective locale', async () => {

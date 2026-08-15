@@ -47,10 +47,10 @@ export type ToolApprovalDialogPending = ApprovalAction | null;
 
 export interface LyraToolApprovalDialogEventMap {
   'lr-approve': CustomEvent<{ args: unknown }>;
-  'lr-deny': CustomEvent<undefined>;
+  'lr-deny': CustomEvent<null>;
   'lr-close': CustomEvent<ToolApprovalDialogCloseReason>;
-  blur: CustomEvent<undefined>;
-  focus: CustomEvent<undefined>;
+  blur: CustomEvent<null>;
+  focus: CustomEvent<null>;
 }
 /**
  * `<lr-tool-approval-dialog>` — a human-in-the-loop gate: presents one
@@ -466,7 +466,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   private onDeny = (): void => {
     if (this.pending != null) return;
-    const event = this.emit('lr-deny', undefined, { cancelable: true });
+    const event = this.emit('lr-deny', null, { cancelable: true });
     if (event.defaultPrevented) {
       this.pending = 'deny';
       return;

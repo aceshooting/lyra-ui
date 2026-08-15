@@ -19,7 +19,7 @@ import {
   dispatchNativeEvent,
   dispatchNativeInputEvent,
 } from '../../../internal/native-event-relay.js';
-import type { LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './date-picker.styles.js';
 import {
   monthMatrix,
@@ -46,10 +46,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_nextMonth, LYRA_DEFAULT_previousMonth } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-/** Alias of the library-wide {@linkcode LyraSizeStep}; kept as a named export so existing imports
- *  and the generated manifest keep resolving while there is exactly one definition of the ladder. */
-export type LyraDatePickerSize = LyraSizeStep;
 
 export interface DateRange {
   from: Date | null;
@@ -188,6 +184,7 @@ export interface LyraDatePickerEventMap {
  * @cssprop [--lr-date-picker-title-hover-color=var(--lr-color-brand)] - Hovered title color.
  * @cssprop [--lr-date-picker-title-active-color=var(--lr-color-brand)] - Pressed title color.
  * @cssprop [--lr-date-picker-title-active-bg=var(--lr-color-brand-quiet)] - Pressed title background.
+ * @cssprop [--lr-date-picker-title-active-radius=var(--lr-date-picker-radius)] - Pressed title corner radius.
  * @cssprop [--lr-date-picker-day-hover-bg=var(--lr-color-brand-quiet)] - Day hover background.
  * @cssprop [--lr-date-picker-day-active-bg=color-mix(in oklab, var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Day pressed background.
  * @cssprop [--lr-date-picker-day-outside-color=var(--lr-color-text-quiet)] - Adjacent-month day color.

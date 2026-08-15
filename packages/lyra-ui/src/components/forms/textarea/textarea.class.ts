@@ -9,7 +9,7 @@ import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize, LyraSizeStep } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import {
   autocorrectConverter,
   normalizeAutocorrect,
@@ -30,12 +30,6 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_textareaCharacterCount, LYRA_D
 export type TextareaResize = 'none' | 'vertical' | 'horizontal' | 'both' | 'auto';
 export type TextareaWrap = 'hard' | 'soft' | 'off';
 export type TextareaSelectionDirection = 'forward' | 'backward' | 'none';
-/** Alias of the canonical six-step size ladder. The `size` property itself accepts
- *  {@linkcode LyraSize}, i.e. these steps *and* the `small`/`medium`/`large` spellings. */
-export type TextareaSize = LyraSizeStep;
-/** Alias of the library's one `appearance` (fill-treatment) vocabulary. */
-export type TextareaAppearance = LyraAppearance;
-
 /** Scroll offsets read from, or written to, the internal native `<textarea>`. */
 export interface TextareaScrollPosition {
   top: number;
@@ -61,9 +55,9 @@ export interface LyraTextareaEventMap {
   'lr-change': CustomEvent<{ value: string }>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
 

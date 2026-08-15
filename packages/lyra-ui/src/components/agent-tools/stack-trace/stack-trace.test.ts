@@ -205,7 +205,7 @@ describe('lr-stack-trace', () => {
       const detailedError = oneEvent(el, 'lr-copy-error');
       button.click();
       const [, detailedEvent] = await Promise.all([genericError, detailedError]) as [
-        CustomEvent<undefined>,
+        CustomEvent<null>,
         CustomEvent<{ ok: false; text: string; reason: string; error: unknown }>,
       ];
       await el.updateComplete;

@@ -44,10 +44,10 @@ function warnDuplicateValue(group: LyraCheckboxGroup, value: string): void {
 }
 
 export interface LyraCheckboxGroupEventMap {
-  'lr-invalid': CustomEvent<undefined>;
-  input: CustomEvent<{ value: readonly string[] }>;
-  change: CustomEvent<{ value: readonly string[] }>;
-  'lr-change': CustomEvent<{ value: readonly string[] }>;
+  'lr-invalid': CustomEvent<null>;
+  input: CustomEvent<Readonly<{ value: readonly string[] }>>;
+  change: CustomEvent<Readonly<{ value: readonly string[] }>>;
+  'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
 }
 
 export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
@@ -208,7 +208,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   /** Readonly defensive snapshot of checked child values, in DOM order. Selection is controlled
    * through each child's `checked` state. */
-  get value(): readonly string[] { return [...this._value]; }
+  get value(): readonly string[] { return Object.freeze([...this._value]); }
 
   get required(): boolean { return this._required; }
   set required(next: boolean) {
@@ -237,7 +237,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
   }
 
   private checkboxGroupOwner(element: Element): Element | null {
@@ -253,7 +253,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   private ownsCheckbox(element: Element): element is LyraCheckbox {
-    return element.localName === 'lr-checkbox' && this.checkboxGroupOwner(element) === this;
+    return (
+      element.localName === 'lr-checkbox' && this.checkboxGroupOwner(element) === this
+    );
   }
 
   private get boxes(): LyraCheckbox[] {
@@ -378,9 +380,11 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     if (event.type !== 'change' || this.effectiveDisabled) return;
     this.hasInteracted = true;
     this.sync();
-    this.emit('input', { value: [...this.value] });
-    this.emit('change', { value: [...this.value] });
-    this.emit('lr-change', { value: [...this.value] });
+    const detail = (): Readonly<{ value: readonly string[] }> =>
+      Object.freeze({ value: this.value });
+    this.emit("input", detail());
+    this.emit("change", detail());
+    this.emit('lr-change', detail());
   };
 
   private reconcileChildControllers(): void {

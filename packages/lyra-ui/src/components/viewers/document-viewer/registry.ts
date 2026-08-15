@@ -159,14 +159,14 @@ export type LyraResolvedDocumentRendererDefinition =
 export interface LazyDocumentRendererDefinition extends DocumentRendererDefinitionBase {
   render?: never;
   adapter?: never;
-  /** Capability declaration available before the direct renderer is loaded. */
+  /** Capability declaration available before the legacy direct renderer is loaded. */
   capabilities?: AnchorTargetCapabilities;
   load: () => Promise<
-    LyraResolvedDocumentRendererDefinition | { default: LyraResolvedDocumentRendererDefinition }
+    DirectDocumentRendererDefinition | { default: DirectDocumentRendererDefinition }
   >;
 }
 
-/** A validated direct or lazy renderer definition. Exactly one of `render` and `load` is present. */
+/** A validated renderer definition. Exactly one of `render`, `adapter`, and `load` is present. */
 export type DocumentRendererDefinition =
   | DirectDocumentRendererDefinition
   | LyraAdaptedDocumentRendererDefinition
@@ -225,6 +225,17 @@ export function createDocumentRendererAdapter<K extends LyraDocumentRendererPayl
   definition: LyraDocumentRendererAdapterDefinition<K>,
 ): LyraDocumentRendererAdapter {
   const kind = definition.kind;
+  const adapt = definition.adapt;
+  const capabilities = definition.capabilities;
+  const render = definition.render;
+  if (
+    (kind !== 'document' && kind !== 'av')
+    || typeof adapt !== 'function'
+    || typeof capabilities !== 'function'
+    || typeof render !== 'function'
+  ) {
+    throw new TypeError('A document renderer adapter definition is invalid.');
+  }
   const assertKind = (
     payload: LyraDocumentRendererPayload,
   ): LyraDocumentRendererPayloadFor<K> => {
@@ -237,13 +248,13 @@ export function createDocumentRendererAdapter<K extends LyraDocumentRendererPayl
     [DOCUMENT_RENDERER_ADAPTER]: true as const,
     kind,
     adapt(file: DocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload {
-      return assertKind(snapshotLyraDocumentRendererPayload(definition.adapt(file, supplied)));
+      return assertKind(snapshotLyraDocumentRendererPayload(adapt(file, supplied)));
     },
     capabilities(payload: LyraDocumentRendererPayload): AnchorTargetCapabilities | undefined {
-      return freezeCapabilities(definition.capabilities(assertKind(payload)));
+      return freezeCapabilities(capabilities(assertKind(payload)));
     },
     render(payload: LyraDocumentRendererPayload): unknown {
-      return definition.render(assertKind(payload));
+      return render(assertKind(payload));
     },
   });
 }
@@ -289,7 +300,6 @@ function validateDefinition(value: unknown): DocumentRendererDefinition {
   const capabilities = freezeCapabilities(candidate.capabilities);
   const base = {
     ...(candidate.matches ? { matches: candidate.matches as (file: DocumentFile) => boolean } : {}),
-    ...(capabilities ? { capabilities } : {}),
   };
   const validated = hasAdapter
     ? Object.freeze({
@@ -299,10 +309,12 @@ function validateDefinition(value: unknown): DocumentRendererDefinition {
     : hasRender
       ? Object.freeze({
         ...base,
+        ...(capabilities ? { capabilities } : {}),
         render: candidate.render as (file: DocumentFile) => unknown,
       })
       : Object.freeze({
         ...base,
+        ...(capabilities ? { capabilities } : {}),
         load: candidate.load as LazyDocumentRendererDefinition['load'],
       });
   validatedDefinitionCache.set(value, validated);
@@ -462,7 +474,7 @@ export function loadDocumentRenderer(
 
   const promise = definition.load().then((value) => {
     const resolved = validateDefinition(unwrapLoadedDefinition(value));
-    if ('load' in resolved && resolved.load) {
+    if (!('render' in resolved) || typeof resolved.render !== 'function') {
       throw new TypeError('A lazy document renderer must resolve to a direct renderer.');
     }
     return resolved;

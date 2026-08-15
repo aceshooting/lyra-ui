@@ -20,8 +20,10 @@ to Research Agent"), with an optional agent avatar. Purely presentational: no ev
 interactivity, no restore semantics. The computed label is announced once, on first connect,
 through an internal `<lr-live-region>`.
 
-**Properties:** `agent: string = ''`, `fromAgent: string = ''` (attribute `from-agent`), and `label:
-string = ''`.
+**Properties:** `toAgent: string = ''` (attribute `to-agent`), `fromAgent: string = ''` (attribute
+`from-agent`), and `label: string = ''`. With both agent names the localized text is “Transferred
+from {from} to {to}”; `label` overrides it. An explicit host `aria-label`, including an empty one,
+wins for the separator and mount-time announcement.
 
 **Slots:** `avatar` — the incoming agent's `<lr-avatar>` (or icon), hidden entirely while empty.
 

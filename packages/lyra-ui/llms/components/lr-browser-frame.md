@@ -18,24 +18,28 @@
 Presentational "agent computer" viewport: a screenshot/frame stream (or slotted live media), a
 read-only URL display, action-ping overlays, and take-over/stop affordances. No automation transport
 (no CDP/WebRTC/WebSocket) and no input relay — take-over is an event; the host swaps in its own
-interactive element (e.g. an iframe). No replay scrubber (compose `lr-playback` driving `frame-src`
-from a screenshot array); no console/network drawers (compose `lr-terminal`/`lr-json-viewer`); no
+interactive element (e.g. an iframe). No replay scrubber (compose `lr-sequence-playback` with
+`itemCount` set to the screenshot count, then drive `frameSrc` from `currentIndex` whenever
+`lr-sequence-step` emits `detail: { currentIndex }`); no console/network drawers (compose
+`lr-terminal`/`lr-json-viewer`); no
 pan/zoom of the frame content (slot the image/video inside a `lr-zoomable-frame` instead, though
 the pings overlay assumes the unzoomed content box in that composition).
 
 **Properties:** `frameSrc: string = ''` (attribute `frame-src`) — image/MJPEG stream URL rendered as
 an `<img>` (safe-URL-gated via `safeMediaSrc`); ignored once the default slot has content. `url:
 string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating, full value in
-`title`). `status: 'idle' | 'connecting' | 'streaming' | 'stalled' = 'idle'` (reflected). `controller:
+`title`). `phase: LyraStreamPhase = 'idle'` (reflected; `'idle' | 'connecting' | 'streaming' |
+'stalled'`). `controller:
 'agent' | 'user' = 'agent'` (reflected) — who is driving; switches the take-over button's label.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
-letterboxing-aware). `controls: boolean = true` — render the built-in take-over/stop buttons.
+letterboxing-aware). Later duplicate ping ids are omitted before overlay rendering. `controls:
+boolean = true` — render the built-in take-over/stop buttons.
 
 **Slots:** default — host-owned live element (e.g. `<video>` or an interactive `<iframe>`), replacing
 the `frame-src` image. `actions` — extra toolbar controls.
 
-**Events:** `lr-take-over` — `detail: { controller }`, the *requested* controller (`'user'` when
+**Events:** `lr-take-over` — `detail: { controller }`, the _requested_ controller (`'user'` when
 "Take over" is pressed, `'agent'` when "Hand back" is). `lr-stop` — stop the agent's browser
 session, no detail.
 
@@ -44,15 +48,15 @@ session, no detail.
 `frame-src` `<img>`, absent once the default slot is populated), `ping` (one action-ping marker,
 carries `data-kind`).
 
-After mount, each `status` transition is appended to the shared polite light-DOM announcement sink.
-The status already shown on initial mount or reconnect establishes a silent baseline, including a
-status write queued while detached.
+After mount, each `phase` transition is appended to the shared polite light-DOM announcement sink.
+The phase already shown on initial mount or reconnect establishes a silent baseline, including a
+phase write queued while detached.
 
 **Themeable custom properties:** `--lr-browser-frame-aspect-ratio` (default `16 / 9`) — the
 viewport's aspect ratio.
 
 ```html
-<lr-browser-frame status="streaming" url="https://example.com" .pings=${pings}
+<lr-browser-frame phase="streaming" url="https://example.com" .pings=${pings}
   @lr-take-over=${(e) => setController(e.detail.controller)} @lr-stop=${() => stopSession()}
 ></lr-browser-frame>
 ```

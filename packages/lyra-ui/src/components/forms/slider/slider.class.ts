@@ -101,9 +101,9 @@ export interface LyraSliderEventMap {
   'lr-change': CustomEvent<LyraSliderChangeDetail>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<undefined>;
-  'lr-blur': CustomEvent<undefined>;
-  'lr-invalid': CustomEvent<undefined>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 
 interface SliderDragState {
@@ -356,7 +356,7 @@ export class LyraSlider extends LyraSliderBase {
     );
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', undefined, init));
+      this.emit('lr-invalid', null, init));
     this.internals.setFormValue('0', '0');
     this.addEventListener('input', this.markInteracted);
     this.addEventListener('change', this.markInteracted);

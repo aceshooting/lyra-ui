@@ -227,9 +227,9 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    *  with no row tab stops or `lr-reorder` requests. */
   @property({ type: Boolean, reflect: true }) reorderable = false;
 
-  /** Header text. Localized (`taskListLabel`) while at its default `'Tasks'`; any other value is
-   *  shown as-is. */
-  @property() label = 'Tasks';
+  /** Optional header-text override. Omission localizes `taskListLabel`; any supplied string,
+   *  including `'Tasks'` or `''`, is rendered verbatim. */
+  @property() label?: string;
 
   /** Semantic level of the visible header. Use `none` to keep the visual header without exposing
    *  it to heading navigation. Invalid untyped values use level 3. */
@@ -505,7 +505,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.label === 'Tasks' ? this.localize('taskListLabel') : this.label;
+    const label = this.label == null ? this.localize('taskListLabel') : this.label;
     const ariaLabel = label;
     const total = this.items.length;
     const completed = this.items.filter((item) => normalizeTaskStatus(item.status) === 'success').length;

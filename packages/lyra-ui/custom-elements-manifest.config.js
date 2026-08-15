@@ -24,12 +24,25 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     },
   ],
   [
+    'lr-alert',
+    {
+      variant: { default: "'primary'", attribute: 'variant' },
+    },
+  ],
+  [
     'lr-button',
     {
       disabled: { default: 'false', attribute: 'disabled' },
       href: { default: 'undefined', attribute: 'href' },
       name: { default: "''", attribute: 'name' },
       variant: { default: "'neutral'", attribute: 'variant' },
+    },
+  ],
+  [
+    'lr-callout',
+    {
+      size: { default: "'m'", attribute: 'size' },
+      variant: { default: "'brand'", attribute: 'variant' },
     },
   ],
   [
@@ -82,6 +95,7 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
       maxOptionsVisible: { default: '3', attribute: 'max-options-visible' },
       multiple: { default: 'false', attribute: 'multiple' },
       name: { default: "''", attribute: 'name' },
+      open: { default: 'false', attribute: 'open' },
       required: { default: 'false', attribute: 'required' },
     },
   ],
@@ -99,6 +113,7 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
       max: { default: "''", attribute: 'max' },
       min: { default: "''", attribute: 'min' },
       mode: { default: "'single'", attribute: 'mode' },
+      open: { default: 'false', attribute: 'open' },
       readonly: { default: 'false', attribute: 'readonly' },
     },
   ],
@@ -133,13 +148,7 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     'lr-file-input',
     {
       disabled: { default: 'false', attribute: 'disabled' },
-      dragging: {
-        default: 'false',
-        attribute: 'dragging',
-        reflects: true,
-        readonly: false,
-        createAttribute: true,
-      },
+      dragging: { default: 'false' },
       files: { default: '[]' },
       name: { default: 'null', attribute: 'name' },
       required: { default: 'false', attribute: 'required' },
@@ -153,6 +162,12 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     },
   ],
   [
+    'lr-include',
+    {
+      mode: { default: "'same-origin'", attribute: 'mode' },
+    },
+  ],
+  [
     'lr-icon-button',
     {
       disabled: { default: 'false', attribute: 'disabled' },
@@ -160,9 +175,16 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     },
   ],
   [
+    'lr-image-comparer',
+    {
+      position: { default: '50', attribute: 'position' },
+    },
+  ],
+  [
     'lr-input',
     {
       autocorrect: { default: 'true', attribute: 'autocorrect' },
+      type: { default: "'text'", attribute: 'type' },
     },
   ],
   [
@@ -189,6 +211,12 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     },
   ],
   [
+    'lr-pagination',
+    {
+      format: { default: "'standard'", attribute: 'format' },
+    },
+  ],
+  [
     'lr-popover',
     {
       for: { default: "''", attribute: 'for' },
@@ -200,6 +228,12 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
       errorCorrection: { default: "'H'", attribute: 'error-correction' },
       radius: { default: '0', attribute: 'radius' },
       size: { default: '128', attribute: 'size' },
+    },
+  ],
+  [
+    'lr-random-content',
+    {
+      mode: { default: "'unique'", attribute: 'mode' },
     },
   ],
   [
@@ -249,6 +283,7 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
     'lr-select',
     {
       form: { default: 'null', attribute: 'form', reflects: true },
+      open: { default: 'false', attribute: 'open' },
       selectedOptions: { default: '[]', readonly: false },
       value: { default: "''", attribute: 'value' },
     },
@@ -400,9 +435,18 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
 
 // CEM's inheritance pass omits a small class-field edge case: a public readonly field initialized
 // on the base class is not copied to a subclass even though the runtime instance inherits the
-// field normally. Keep the compatibility projection explicit and source-linked so a rename fails closed.
+// field normally. Its compact form can likewise prune an event that a permanent registration
+// alias inherits at runtime. Keep each compatibility projection explicit and source-linked so a
+// rename fails closed.
 export const INHERITED_PUBLIC_MEMBER_CONTRACTS = new Map([
   ['lr-drawer', { sourceTag: 'lr-dialog', members: ['modal'] }],
+  [
+    'lr-geojson-view',
+    {
+      sourceTag: 'lr-geojson-viewer',
+      events: ['lr-anchor-result'],
+    },
+  ],
   [
     'lr-tag',
     {
@@ -554,8 +598,8 @@ export const EVENT_RUNTIME_CONTRACTS = new Map([
     {
       change: 'Event',
       input: 'InputEvent',
-      'lr-hide': 'CustomEvent<undefined>',
-      'lr-show': 'CustomEvent<undefined>',
+      'lr-hide': 'CustomEvent<null>',
+      'lr-show': 'CustomEvent<null>',
     },
   ],
   ['lr-drawer', { 'lr-hide': 'CustomEvent<LyraDialogHideDetail>' }],
@@ -1278,7 +1322,7 @@ export default {
             );
           }
           target.declaration.members ??= [];
-          for (const name of contract.members) {
+          for (const name of contract.members ?? []) {
             const sourceMember = source.declaration.members?.find(
               (member) => member.name === name
             );
@@ -1334,6 +1378,30 @@ export default {
               if (!projectedAttribute.inheritedFrom)
                 delete existingAttribute.inheritedFrom;
             } else target.declaration.attributes.push(projectedAttribute);
+          }
+
+          if (contract.events?.length) target.declaration.events ??= [];
+          for (const name of contract.events ?? []) {
+            const sourceEvent = source.declaration.events?.find(
+              (event) => event.name === name
+            );
+            if (!sourceEvent) {
+              throw new Error(
+                `${targetTag}: inherited-member projection requires ${contract.sourceTag}#${name}`
+              );
+            }
+            const projectedEvent = structuredClone(sourceEvent);
+            // This is the permanent tag alias's own effective manifest contract. Retaining an
+            // inheritance marker would make compactManifest remove the event even though the
+            // alias dispatches it through the same inherited runtime path.
+            delete projectedEvent.inheritedFrom;
+            const existingEvent = target.declaration.events.find(
+              (event) => event.name === name
+            );
+            if (existingEvent) {
+              Object.assign(existingEvent, projectedEvent);
+              delete existingEvent.inheritedFrom;
+            } else target.declaration.events.push(projectedEvent);
           }
         }
 
@@ -1413,9 +1481,8 @@ export default {
       name: 'lr-accessor-runtime-contracts',
       // CEM cannot infer the initial value of a hand-written accessor from its private backing
       // field. Project only the declared accessors whose runtime defaults are covered by component
-      // tests. File Input's read-only `dragging` state is also reflected synchronously by
-      // `publishCustomStates()`, so expose the real attribute without adding a writable reactive
-      // field that would misrepresent its API.
+      // tests. Derived custom states remain getter-only properties: state publication may mirror
+      // an implementation attribute, but that does not make the attribute author-configurable.
       packageLinkPhase({ customElementsManifest }) {
         for (const module of customElementsManifest.modules ?? []) {
           for (const declaration of module.declarations ?? []) {

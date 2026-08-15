@@ -89,6 +89,21 @@ describe('DocumentAnchorTarget mixin', () => {
     expect(el.anchorKinds).to.deep.equal([]);
   });
 
+  it('takes a frozen highlight snapshot synchronously while preserving anchor identity', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    const anchor: LyraAnchor = { kind: 'page', page: 1 };
+    const source = [{ id: 'cite-1', label: 'Original', anchor }];
+
+    el.highlights = source;
+    source[0]!.label = 'Mutated';
+    source.push({ id: 'later', label: 'Later', anchor });
+
+    expect(el.highlights).to.deep.equal([{ id: 'cite-1', label: 'Original', anchor }]);
+    expect(el.highlights[0]!.anchor).to.equal(anchor);
+    expect(Object.isFrozen(el.highlights)).to.be.true;
+    expect(Object.isFrozen(el.highlights[0])).to.be.true;
+  });
+
   it('scrollToAnchor retries until applyAnchor succeeds, then resolves true', async () => {
     const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub apply-succeeds-after="2"></lr-anchor-target-test-stub>`);
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;

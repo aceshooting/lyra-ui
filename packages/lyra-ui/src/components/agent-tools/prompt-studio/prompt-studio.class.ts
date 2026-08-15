@@ -48,8 +48,8 @@ export interface PromptStudioMessageReorderDetail {
   toIndex: number;
 }
 export interface LyraPromptStudioEventMap {
-  focus: CustomEvent<undefined>;
-  blur: CustomEvent<undefined>;
+  focus: CustomEvent<null>;
+  blur: CustomEvent<null>;
   'lr-change': CustomEvent<PromptStudioState>;
   'lr-message-reorder': CustomEvent<PromptStudioMessageReorderDetail>;
   'lr-run': CustomEvent<PromptStudioState>;

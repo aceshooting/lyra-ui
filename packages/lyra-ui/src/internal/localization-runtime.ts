@@ -1,4 +1,4 @@
-import { getPluralRules } from './intl-cache.js';
+import { getPluralRules } from "./intl-cache.js";
 import type {
   LyraLocaleDirection,
   LyraLocaleMeta,
@@ -6,7 +6,7 @@ import type {
   LyraMessage,
   LyraPluralCategory,
   LyraPluralMessage,
-} from './localization-types.js';
+} from "./localization-types.js";
 
 type LocaleCatalog = Readonly<LyraLocaleStrings>;
 
@@ -23,9 +23,12 @@ interface LocaleIdentity {
   readonly storable: boolean;
 }
 
+interface HostLocaleTarget extends Element {
+  requestUpdate(): unknown;
+}
+
 interface HostLocaleSubscription {
-  readonly host: Element;
-  readonly listener: () => void;
+  readonly host: WeakRef<HostLocaleTarget>;
 }
 
 const MAX_LOCALE_CANDIDATES = 64;
@@ -43,10 +46,18 @@ const wellFormedLocales = new Set<string>();
 // reverse regional fallbacks for the ordinary base language merely because their module was
 // imported into a development bundle.
 const exactOnlyLocales = new Set<string>();
+const localeCatalogRevisions = new Map<string, number>();
 const listeners = new Set<() => void>();
 const hostLocaleListeners = new Set<HostLocaleSubscription>();
+const hostLocaleFinalizer = new FinalizationRegistry<HostLocaleSubscription>(
+  (subscription) => {
+    hostLocaleListeners.delete(subscription);
+  }
+);
+const ownerDocumentsWithBrowsingContext = new WeakSet<Document>();
 const registryListeners = new Set<() => void>();
-let activeLocale = '';
+let activeLocale = "";
+let catalogRevision = 0;
 
 const localeIdentityCache = new Map<string, LocaleIdentity>();
 const localeCandidateCache = new Map<string, readonly string[]>();
@@ -60,7 +71,8 @@ function subtagCountWithinBounds(tag: string): boolean {
   if (tag.length > MAX_LOCALE_TAG_LENGTH) return false;
   let count = tag ? 1 : 0;
   for (let index = 0; index < tag.length; index += 1) {
-    if (tag.charCodeAt(index) === 45 && ++count > MAX_LOCALE_SUBTAGS) return false;
+    if (tag.charCodeAt(index) === 45 && ++count > MAX_LOCALE_SUBTAGS)
+      return false;
   }
   return true;
 }
@@ -75,19 +87,21 @@ function subtagCountWithinBounds(tag: string): boolean {
  * resolve to English and are never retained by registration/active-locale storage APIs.
  */
 function localeIdentity(locale: string): LocaleIdentity {
-  const normalized = typeof locale === 'string' ? locale.trim().replace(/_/g, '-') : '';
+  const normalized =
+    typeof locale === "string" ? locale.trim().replace(/_/g, "-") : "";
   if (!normalized) {
     return {
-      publicTag: '',
-      lookupKey: '',
+      publicTag: "",
+      lookupKey: "",
       wellFormed: false,
       candidateBounded: true,
       storable: false,
     };
   }
-  const cached = normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
-    ? localeIdentityCache.get(normalized)
-    : undefined;
+  const cached =
+    normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
+      ? localeIdentityCache.get(normalized)
+      : undefined;
   if (cached) return cached;
 
   let publicTag = normalized.toLowerCase();
@@ -108,7 +122,8 @@ function localeIdentity(locale: string): LocaleIdentity {
     lookupKey,
     wellFormed,
     candidateBounded,
-    storable: wellFormed || (candidateBounded && LEGACY_LOCALE_PATTERN.test(lookupKey)),
+    storable:
+      wellFormed || (candidateBounded && LEGACY_LOCALE_PATTERN.test(lookupKey)),
   };
   if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
     cacheBounded(localeIdentityCache, normalized, identity);
@@ -116,15 +131,21 @@ function localeIdentity(locale: string): LocaleIdentity {
   return identity;
 }
 
-function storedLocaleIdentity(locale: string, required: boolean): LocaleIdentity {
-  if (typeof locale !== 'string') throw new TypeError('A locale must be a string.');
+function storedLocaleIdentity(
+  locale: string,
+  required: boolean
+): LocaleIdentity {
+  if (typeof locale !== "string")
+    throw new TypeError("A locale must be a string.");
   const identity = localeIdentity(locale);
   if (!identity.publicTag) {
     if (!required) return identity;
-    throw new TypeError('A locale is required.');
+    throw new TypeError("A locale is required.");
   }
   if (!identity.storable) {
-    throw new TypeError('The locale must be BCP-47 or a bounded alphanumeric custom tag.');
+    throw new TypeError(
+      "The locale must be BCP-47 or a bounded alphanumeric custom tag."
+    );
   }
   return identity;
 }
@@ -138,7 +159,7 @@ function storedLocaleIdentity(locale: string, required: boolean): LocaleIdentity
  */
 export function canonicalizeLyraLocale(locale: string): string {
   const identity = localeIdentity(locale);
-  return identity.storable ? identity.publicTag : 'en';
+  return identity.storable ? identity.publicTag : "en";
 }
 
 /**
@@ -157,19 +178,27 @@ export function canonicalizeLyraLocale(locale: string): string {
  *      claim that Simplified is the better default — an application that cares registers the
  *      regional tag it means, or offers `zh` itself.
  */
-function regionalFallbacks(requestedKey: string, limit: number, wellFormed: boolean): string[] {
+function regionalFallbacks(
+  requestedKey: string,
+  limit: number,
+  wellFormed: boolean
+): string[] {
   if (limit <= 0 || !wellFormed) return [];
-  const separator = requestedKey.indexOf('-');
-  const language = separator === -1 ? requestedKey : requestedKey.slice(0, separator);
+  const separator = requestedKey.indexOf("-");
+  const language =
+    separator === -1 ? requestedKey : requestedKey.slice(0, separator);
   if (!language) return [];
-  const requested = new Set(requestedKey.split('-'));
-  const score = (key: string): number => key.split('-').filter((subtag) => requested.has(subtag)).length;
+  const requested = new Set(requestedKey.split("-"));
+  const score = (key: string): number =>
+    key.split("-").filter((subtag) => requested.has(subtag)).length;
   return [...locales.keys()]
-    .filter((key) =>
-      wellFormedLocales.has(key) &&
-      !exactOnlyLocales.has(key) &&
-      (key === language || key.startsWith(`${language}-`)) &&
-      !isPrefixOf(key, requestedKey))
+    .filter(
+      (key) =>
+        wellFormedLocales.has(key) &&
+        !exactOnlyLocales.has(key) &&
+        (key === language || key.startsWith(`${language}-`)) &&
+        !isPrefixOf(key, requestedKey)
+    )
     .sort((a, b) => score(b) - score(a) || (a < b ? -1 : a > b ? 1 : 0))
     .slice(0, limit);
 }
@@ -195,31 +224,39 @@ function isPrefixOf(key: string, requestedKey: string): boolean {
 function localeCandidates(locale: string): string[] {
   const identity = localeIdentity(locale);
   const normalized = identity.lookupKey;
-  if (!normalized) return ['en'];
-  const cached = normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
-    ? localeCandidateCache.get(normalized)
-    : undefined;
+  if (!normalized) return ["en"];
+  const cached =
+    normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
+      ? localeCandidateCache.get(normalized)
+      : undefined;
   if (cached) return [...cached];
 
   const candidates: string[] = [];
-  if (identity.wellFormed || identity.candidateBounded) candidates.push(normalized);
+  if (identity.wellFormed || identity.candidateBounded)
+    candidates.push(normalized);
   if (identity.candidateBounded) {
     // Boundary indexes avoid rebuilding each prefix through `slice(...).join('-')`. The number and
     // aggregate size of retained prefixes are bounded before this walk begins.
     for (let index = normalized.length - 1; index >= 0; index -= 1) {
-      if (normalized.charCodeAt(index) === 45 && index > 0) candidates.push(normalized.slice(0, index));
+      if (normalized.charCodeAt(index) === 45 && index > 0)
+        candidates.push(normalized.slice(0, index));
     }
-    const regionalBudget = Math.max(0, MAX_LOCALE_CANDIDATES - candidates.length - 1);
-    candidates.push(...regionalFallbacks(normalized, regionalBudget, identity.wellFormed));
+    const regionalBudget = Math.max(
+      0,
+      MAX_LOCALE_CANDIDATES - candidates.length - 1
+    );
+    candidates.push(
+      ...regionalFallbacks(normalized, regionalBudget, identity.wellFormed)
+    );
   } else if (identity.wellFormed) {
     // Valid tags are never rejected for exceeding the defensive malformed-input ceiling. Retain
     // their exact identity and base-language fallback without materializing an unbounded ladder.
-    const separator = normalized.indexOf('-');
+    const separator = normalized.indexOf("-");
     if (separator > 0) candidates.push(normalized.slice(0, separator));
   }
-  if (!candidates.includes('en')) candidates.push('en');
+  if (!candidates.includes("en")) candidates.push("en");
   if (candidates.length > MAX_LOCALE_CANDIDATES) {
-    candidates.splice(MAX_LOCALE_CANDIDATES - 1, candidates.length, 'en');
+    candidates.splice(MAX_LOCALE_CANDIDATES - 1, candidates.length, "en");
   }
   const frozen = Object.freeze([...candidates]);
   if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
@@ -228,12 +265,25 @@ function localeCandidates(locale: string): string[] {
   return candidates;
 }
 
+/**
+ * A bounded signature of every catalog currently reachable from `locale`. Registration revisions
+ * are globally unique, so the signature also detects candidate insertion, removal, and reordering
+ * without making an unrelated locale registration dirty every localized host.
+ *
+ * @internal
+ */
+export function lyraLocaleCatalogVersion(locale: string): string {
+  return localeCandidates(locale)
+    .map((candidate) => localeCatalogRevisions.get(candidate) ?? 0)
+    .join(",");
+}
+
 /** Every locale with registered strings, plus 'en' (always available via DEFAULT_STRINGS even
  *  with no explicit registerLyraLocale('en', ...) call), in canonical public BCP-47 spelling,
  *  sorted and deduped by case-insensitive lookup identity. */
-export function getRegisteredLyraLocales(): string[] {
-  const keys = new Set(['en', ...localePublicTags.values()]);
-  return [...keys].sort();
+export function getRegisteredLyraLocales(): readonly string[] {
+  const keys = new Set(["en", ...localePublicTags.values()]);
+  return Object.freeze([...keys].sort());
 }
 
 /** Subscribe to locale *registry membership* changes (a new locale registered) — distinct from
@@ -254,11 +304,19 @@ export function subscribeLyraLocaleRegistry(listener: () => void): () => void {
 
 const MAX_CATALOG_MESSAGES = 4_096;
 const MAX_MESSAGE_KEY_LENGTH = 256;
-const PLURAL_CATEGORIES = new Set<string>(['zero', 'one', 'two', 'few', 'many', 'other']);
+const PLURAL_CATEGORIES = new Set<string>([
+  "zero",
+  "one",
+  "two",
+  "few",
+  "many",
+  "other",
+]);
 const trustedMessageRecords = new WeakSet<object>();
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
   try {
     const prototype = Object.getPrototypeOf(value);
     return prototype === Object.prototype || prototype === null;
@@ -267,10 +325,13 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   }
 }
 
-function ownDataValue(record: Record<string, unknown>, key: string): { found: boolean; value?: unknown } {
+function ownDataValue(
+  record: Record<string, unknown>,
+  key: string
+): { found: boolean; value?: unknown } {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    if (!descriptor || !('value' in descriptor)) return { found: false };
+    if (!descriptor || !("value" in descriptor)) return { found: false };
     return { found: true, value: descriptor.value };
   } catch {
     return { found: false };
@@ -283,23 +344,24 @@ function snapshotPluralMessage(value: unknown): LyraPluralMessage | undefined {
   let count = 0;
   try {
     for (const key in value) {
-      if (++count > PLURAL_CATEGORIES.size || !PLURAL_CATEGORIES.has(key)) return undefined;
+      if (++count > PLURAL_CATEGORIES.size || !PLURAL_CATEGORIES.has(key))
+        return undefined;
       if (!Object.prototype.hasOwnProperty.call(value, key)) return undefined;
       const entry = ownDataValue(value, key);
-      if (!entry.found || typeof entry.value !== 'string') return undefined;
+      if (!entry.found || typeof entry.value !== "string") return undefined;
       snapshot[key] = entry.value;
     }
   } catch {
     return undefined;
   }
-  if (typeof snapshot['other'] !== 'string') return undefined;
+  if (typeof snapshot["other"] !== "string") return undefined;
   const frozen = Object.freeze(snapshot) as LyraPluralMessage;
   trustedMessageRecords.add(frozen);
   return frozen;
 }
 
 function snapshotMessage(value: unknown): LyraMessage | undefined {
-  return typeof value === 'string' ? value : snapshotPluralMessage(value);
+  return typeof value === "string" ? value : snapshotPluralMessage(value);
 }
 
 function snapshotCatalog(strings: unknown): LocaleCatalog {
@@ -330,21 +392,31 @@ function snapshotCatalog(strings: unknown): LocaleCatalog {
   return frozen;
 }
 
-function mergeCatalogs(current: LocaleCatalog | undefined, incoming: LocaleCatalog): LocaleCatalog {
-  const merged = Object.assign(Object.create(null), current ?? {}, incoming) as LocaleCatalog;
+function mergeCatalogs(
+  current: LocaleCatalog | undefined,
+  incoming: LocaleCatalog
+): LocaleCatalog {
+  const merged = Object.assign(
+    Object.create(null),
+    current ?? {},
+    incoming
+  ) as LocaleCatalog;
   Object.freeze(merged);
   trustedMessageRecords.add(merged);
   return merged;
 }
 
-function snapshotLocaleMeta(meta: unknown): Readonly<LyraLocaleMeta> | undefined {
+function snapshotLocaleMeta(
+  meta: unknown
+): Readonly<LyraLocaleMeta> | undefined {
   if (meta === undefined) return undefined;
   if (!isPlainRecord(meta)) return Object.freeze({});
   const snapshot: LyraLocaleMeta = {};
-  const dir = ownDataValue(meta, 'dir');
-  if (dir.found && (dir.value === 'ltr' || dir.value === 'rtl')) snapshot.dir = dir.value;
-  const name = ownDataValue(meta, 'name');
-  if (name.found && typeof name.value === 'string') snapshot.name = name.value;
+  const dir = ownDataValue(meta, "dir");
+  if (dir.found && (dir.value === "ltr" || dir.value === "rtl"))
+    snapshot.dir = dir.value;
+  const name = ownDataValue(meta, "name");
+  if (name.found && typeof name.value === "string") snapshot.name = name.value;
   return Object.freeze(snapshot);
 }
 
@@ -367,7 +439,10 @@ function safeMessageAt(source: unknown, key: string): LyraMessage | undefined {
   return entry.found ? snapshotMessage(entry.value) : undefined;
 }
 
-function deliverLocaleListeners(groups: readonly (readonly (() => void)[])[], operation: string): void {
+function deliverLocaleListeners(
+  groups: readonly (readonly (() => void)[])[],
+  operation: string
+): void {
   const errors: unknown[] = [];
   for (const group of groups) {
     // Each group arrives as a starting snapshot. Unsubscribing or subscribing during delivery does
@@ -383,13 +458,62 @@ function deliverLocaleListeners(groups: readonly (readonly (() => void)[])[], op
   if (errors.length > 0) {
     throw new AggregateError(
       errors,
-      `${operation} committed, but ${errors.length} locale subscriber${errors.length === 1 ? '' : 's'} failed.`,
+      `${operation} committed, but ${errors.length} locale subscriber${
+        errors.length === 1 ? "" : "s"
+      } failed.`
     );
   }
 }
 
 function localeUsesCatalog(locale: string, lookupKey: string): boolean {
   return localeCandidates(locale).includes(lookupKey);
+}
+
+function ownerView(
+  host: Element
+): (Window & typeof globalThis) | null | undefined {
+  try {
+    return host.ownerDocument.defaultView;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Remembers that a connected Lyra host's owner was once backed by a browsing context. */
+export function recordLyraOwnerDocumentConnection(host: Element): void {
+  if (ownerView(host))
+    ownerDocumentsWithBrowsingContext.add(host.ownerDocument);
+}
+
+function forgetHostLocaleSubscription(
+  subscription: HostLocaleSubscription
+): void {
+  hostLocaleListeners.delete(subscription);
+  hostLocaleFinalizer.unregister(subscription);
+}
+
+function liveHostLocaleSubscriptions(): Array<{
+  readonly host: HostLocaleTarget;
+}> {
+  const live: Array<{ readonly host: HostLocaleTarget }> = [];
+  for (const subscription of [...hostLocaleListeners]) {
+    const host = subscription.host.deref();
+    // Removing an iframe does not disconnect descendants in its content document in every engine:
+    // they can retain `isConnected === true` while the document has lost its window. Prune that
+    // owner explicitly, as well as ordinary disconnected/dead hosts, before taking the delivery
+    // snapshot.
+    if (
+      !host ||
+      !host.isConnected ||
+      (ownerDocumentsWithBrowsingContext.has(host.ownerDocument) &&
+        ownerView(host) === null)
+    ) {
+      forgetHostLocaleSubscription(subscription);
+      continue;
+    }
+    live.push({ host });
+  }
+  return live;
 }
 
 /**
@@ -414,14 +538,15 @@ function registerLocale(
   locale: string,
   strings: LyraLocaleStrings,
   meta: LyraLocaleMeta | undefined,
-  exactOnly: boolean,
+  exactOnly: boolean
 ): void {
   const identity = storedLocaleIdentity(locale, true);
   const key = identity.lookupKey;
   const incomingStrings = snapshotCatalog(strings);
   const incomingMeta = snapshotLocaleMeta(meta);
   const isNewLocale = !locales.has(key);
-  const candidateTopologyChanged = isNewLocale ||
+  const candidateTopologyChanged =
+    isNewLocale ||
     (exactOnly && !exactOnlyLocales.has(key)) ||
     (identity.wellFormed && !wellFormedLocales.has(key));
   // Exact-only is an identity of the registered locale tag, not of one catalog write. A later
@@ -432,8 +557,12 @@ function registerLocale(
   locales.set(key, mergeCatalogs(locales.get(key), incomingStrings));
   localePublicTags.set(key, identity.publicTag);
   if (incomingMeta) {
-    localeMeta.set(key, Object.freeze({ ...(localeMeta.get(key) ?? {}), ...incomingMeta }));
+    localeMeta.set(
+      key,
+      Object.freeze({ ...(localeMeta.get(key) ?? {}), ...incomingMeta })
+    );
   }
+  localeCatalogRevisions.set(key, ++catalogRevision);
   // New membership or a changed exact-only identity can alter a regional fallback chain. Extending
   // an existing catalog changes messages/metadata but not candidate topology, so keep those hot
   // memoized chains intact.
@@ -442,23 +571,26 @@ function registerLocale(
     localeCandidateCache.clear();
   }
 
-  const activeSnapshot = activeLocale && localeUsesCatalog(activeLocale, key)
-    ? [...listeners]
-    : [];
-  const hostSnapshot = [...hostLocaleListeners]
-    .filter((subscription) => localeUsesCatalog(inheritedLocale(subscription.host), key))
-    .map((subscription) => subscription.listener);
+  const activeSnapshot =
+    activeLocale && localeUsesCatalog(activeLocale, key) ? [...listeners] : [];
+  const hostSnapshot = liveHostLocaleSubscriptions()
+    .filter(({ host }) => localeUsesCatalog(inheritedLocale(host), key))
+    .map(
+      ({ host }) =>
+        () =>
+          host.requestUpdate()
+    );
   const registrySnapshot = isNewLocale ? [...registryListeners] : [];
   deliverLocaleListeners(
     [activeSnapshot, hostSnapshot, registrySnapshot],
-    `registerLyraLocale(${JSON.stringify(identity.publicTag)})`,
+    `registerLyraLocale(${JSON.stringify(identity.publicTag)})`
   );
 }
 
 export function registerLyraLocale(
   locale: string,
   strings: LyraLocaleStrings,
-  meta?: LyraLocaleMeta,
+  meta?: LyraLocaleMeta
 ): void {
   registerLocale(locale, strings, meta, false);
 }
@@ -472,7 +604,7 @@ export function registerLyraLocale(
 export function registerLyraExactLocale(
   locale: string,
   strings: LyraLocaleStrings,
-  meta?: LyraLocaleMeta,
+  meta?: LyraLocaleMeta
 ): void {
   registerLocale(locale, strings, meta, true);
 }
@@ -494,17 +626,18 @@ export function registerLyraExactLocale(
  */
 export function getLyraLocaleDirection(locale: string): LyraLocaleDirection {
   const identity = localeIdentity(locale);
-  if (!identity.publicTag) return 'ltr';
+  if (!identity.publicTag) return "ltr";
   for (const candidate of localeCandidates(identity.publicTag)) {
     const declared = localeMeta.get(candidate)?.dir;
     if (declared) return declared;
   }
   try {
     const resolved = new Intl.Locale(identity.publicTag) as LocaleWithTextInfo;
-    const direction = resolved.textInfo?.direction ?? resolved.getTextInfo?.().direction;
-    return direction === 'rtl' ? 'rtl' : 'ltr';
+    const direction =
+      resolved.textInfo?.direction ?? resolved.getTextInfo?.().direction;
+    return direction === "rtl" ? "rtl" : "ltr";
   } catch {
-    return 'ltr';
+    return "ltr";
   }
 }
 
@@ -535,15 +668,23 @@ type LocaleWithTextInfo = Intl.Locale & {
 export function setLyraLocale(locale: string): void {
   const next = storedLocaleIdentity(locale, false).publicTag;
   if (activeLocale === next) return;
-  const hostSnapshot = [...hostLocaleListeners];
-  const previousHostLocales = hostSnapshot.map((subscription) => inheritedLocale(subscription.host));
+  const hostSnapshot = liveHostLocaleSubscriptions();
+  const previousHostLocales = hostSnapshot.map(({ host }) =>
+    inheritedLocale(host)
+  );
   activeLocale = next;
   const affectedHostListeners = hostSnapshot
-    .filter((subscription, index) => inheritedLocale(subscription.host) !== previousHostLocales[index])
-    .map((subscription) => subscription.listener);
+    .filter(
+      ({ host }, index) => inheritedLocale(host) !== previousHostLocales[index]
+    )
+    .map(
+      ({ host }) =>
+        () =>
+          host.requestUpdate()
+    );
   deliverLocaleListeners(
     [[...listeners], affectedHostListeners],
-    `setLyraLocale(${JSON.stringify(next)})`,
+    `setLyraLocale(${JSON.stringify(next)})`
   );
 }
 
@@ -571,10 +712,40 @@ export function subscribeLyraLocale(listener: () => void): () => void {
  *
  * @internal
  */
-export function subscribeLyraLocaleForHost(host: Element, listener: () => void): () => void {
-  const subscription: HostLocaleSubscription = { host, listener };
+export function subscribeLyraLocaleForHost(host: HostLocaleTarget): () => void {
+  recordLyraOwnerDocumentConnection(host);
+  const subscription: HostLocaleSubscription = {
+    host: new WeakRef(host),
+  };
   hostLocaleListeners.add(subscription);
-  return () => hostLocaleListeners.delete(subscription);
+  hostLocaleFinalizer.register(host, subscription, subscription);
+  return () => forgetHostLocaleSubscription(subscription);
+}
+
+function composedParentElement(element: Element): Element | null {
+  if (element.parentElement) return element.parentElement;
+  const root = element.getRootNode();
+  // `instanceof ShadowRoot` is realm-bound: a target adopted into an iframe has a shadow root
+  // whose constructor is not the outer window's constructor. The host-bearing document-fragment
+  // shape is the cross-realm platform contract we actually need.
+  const candidate = (root as { nodeType?: number; host?: unknown }).host;
+  return root.nodeType === 11 &&
+    candidate !== null &&
+    typeof candidate === "object" &&
+    typeof (candidate as Element).getAttribute === "function"
+    ? (candidate as Element)
+    : null;
+}
+
+function flattenedParentElement(element: Element): Element | null {
+  const slot = (element as { assignedSlot?: unknown }).assignedSlot;
+  if (
+    slot !== null &&
+    typeof slot === "object" &&
+    typeof (slot as Element).getAttribute === "function"
+  )
+    return slot as Element;
+  return composedParentElement(element);
 }
 
 /**
@@ -595,32 +766,21 @@ export function subscribeLyraLocaleForHost(host: Element, listener: () => void):
  * same attribute one step earlier.
  */
 function inheritedLocale(host: Element): string {
-  const explicit = host.getAttribute('locale') || host.getAttribute('lang');
+  const explicit = host.getAttribute("locale") || host.getAttribute("lang");
   if (explicit) return canonicalizeLyraLocale(explicit);
   const documentElement = host.ownerDocument?.documentElement;
-  const composedParent = (element: Element): Element | null => {
-    if (element.parentElement) return element.parentElement;
-    const root = element.getRootNode();
-    // `instanceof ShadowRoot` is realm-bound: a target adopted into an iframe has a shadow root
-    // whose constructor is not the outer window's constructor. The host-bearing document-
-    // fragment shape is the cross-realm platform contract we actually need.
-    const candidate = (root as { nodeType?: number; host?: unknown }).host;
-    return root.nodeType === 11 && candidate !== null && typeof candidate === 'object' &&
-      typeof (candidate as Element).getAttribute === 'function'
-      ? candidate as Element
-      : null;
-  };
-  let parent = composedParent(host);
+  let parent = composedParentElement(host);
   while (parent) {
-    const locale = parent === documentElement
-      ? parent.getAttribute('locale')
-      : parent.getAttribute('locale') || parent.getAttribute('lang');
+    const locale =
+      parent === documentElement
+        ? parent.getAttribute("locale")
+        : parent.getAttribute("locale") || parent.getAttribute("lang");
     if (locale) return canonicalizeLyraLocale(locale);
-    parent = composedParent(parent);
+    parent = composedParentElement(parent);
   }
   if (activeLocale) return activeLocale;
-  const documentLocale = documentElement?.getAttribute('lang');
-  return documentLocale ? canonicalizeLyraLocale(documentLocale) : 'en';
+  const documentLocale = documentElement?.getAttribute("lang");
+  return documentLocale ? canonicalizeLyraLocale(documentLocale) : "en";
 }
 
 /**
@@ -633,7 +793,7 @@ function inheritedLocale(host: Element): string {
  */
 const cacheableLocaleHosts = new WeakSet<Element>();
 const resolvedLocaleCache = new WeakMap<Element, string>();
-const resolvedDirectionCache = new WeakMap<Element, 'ltr' | 'rtl'>();
+const resolvedDirectionCache = new WeakMap<Element, "ltr" | "rtl">();
 
 /**
  * Opts a host into memoized locale/direction resolution. The host must call
@@ -664,16 +824,32 @@ export function resolveLyraLocale(host: Element): string {
   return locale;
 }
 
-function inheritedDirection(host: Element): 'ltr' | 'rtl' {
-  const explicit = host.getAttribute('dir');
-  if (explicit === 'rtl' || explicit === 'ltr') return explicit;
-  const view = host.ownerDocument?.defaultView;
-  if (view) return view.getComputedStyle(host).direction === 'rtl' ? 'rtl' : 'ltr';
-  return 'ltr';
+function inheritedDirection(host: Element): "ltr" | "rtl" {
+  const explicit = host.getAttribute("dir")?.toLowerCase();
+  if (explicit === "rtl" || explicit === "ltr") return explicit;
+  const view = ownerView(host);
+  if (view) {
+    try {
+      const getComputedStyle = view.getComputedStyle;
+      if (typeof getComputedStyle === "function") {
+        const computed = getComputedStyle.call(view, host).direction;
+        if (computed === "rtl" || computed === "ltr") return computed;
+      }
+    } catch {
+      // An incomplete/hostile owner realm still gets the explicit-attribute fallback below.
+    }
+  }
+  let parent = flattenedParentElement(host);
+  while (parent) {
+    const inherited = parent.getAttribute("dir")?.toLowerCase();
+    if (inherited === "rtl" || inherited === "ltr") return inherited;
+    parent = flattenedParentElement(parent);
+  }
+  return "ltr";
 }
 
 /** Resolve the direction inherited by a component host. */
-export function resolveLyraDirection(host: Element): 'ltr' | 'rtl' {
+export function resolveLyraDirection(host: Element): "ltr" | "rtl" {
   if (!cacheableLocaleHosts.has(host)) return inheritedDirection(host);
   let direction = resolvedDirectionCache.get(host);
   if (direction === undefined) {
@@ -698,7 +874,7 @@ export function peekLyraLocale(host: Element): string | undefined {
 }
 
 /** @see peekLyraLocale */
-export function peekLyraDirection(host: Element): 'ltr' | 'rtl' | undefined {
+export function peekLyraDirection(host: Element): "ltr" | "rtl" | undefined {
   return resolvedDirectionCache.get(host);
 }
 
@@ -713,13 +889,16 @@ export function peekLyraDirection(host: Element): 'ltr' | 'rtl' | undefined {
  * that authors only `few` therefore reads better for `many` than the fully
  * generic `other` (which in Russian is reserved for fractional counts).
  */
-const PLURAL_CATEGORY_FALLBACKS: Record<LyraPluralCategory, readonly LyraPluralCategory[]> = {
-  zero: ['zero', 'other'],
-  one: ['one', 'other'],
-  two: ['two', 'few', 'many', 'other'],
-  few: ['few', 'many', 'other'],
-  many: ['many', 'few', 'other'],
-  other: ['other'],
+const PLURAL_CATEGORY_FALLBACKS: Record<
+  LyraPluralCategory,
+  readonly LyraPluralCategory[]
+> = {
+  zero: ["zero", "other"],
+  one: ["one", "other"],
+  two: ["two", "few", "many", "other"],
+  few: ["few", "many", "other"],
+  many: ["many", "few", "other"],
+  other: ["other"],
 };
 
 /**
@@ -729,14 +908,16 @@ const PLURAL_CATEGORY_FALLBACKS: Record<LyraPluralCategory, readonly LyraPluralC
  * (`Intl.NumberFormat` output is a string, and `'1,024'` cannot select a
  * category). A non-finite or absent value selects `other`.
  */
-function pluralSelector(values: Record<string, string | number>): number | undefined {
+function pluralSelector(
+  values: Record<string, string | number>
+): number | undefined {
   let raw: unknown;
   try {
-    raw = values['pluralCount'] ?? values['count'];
+    raw = values["pluralCount"] ?? values["count"];
   } catch {
     return undefined;
   }
-  return typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined;
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : undefined;
 }
 
 /**
@@ -769,7 +950,8 @@ function pluralLocale(locale: string): string | undefined {
       // Structurally invalid tag — try the next, less specific candidate.
     }
   }
-  if (pluralLocaleCache.size >= MAX_PLURAL_LOCALE_ENTRIES) pluralLocaleCache.clear();
+  if (pluralLocaleCache.size >= MAX_PLURAL_LOCALE_ENTRIES)
+    pluralLocaleCache.clear();
   pluralLocaleCache.set(locale, resolved);
   return resolved;
 }
@@ -780,12 +962,17 @@ function pluralLocale(locale: string): string | undefined {
  * built-in English defaults — an unregistered locale then widens through
  * {@link PLURAL_CATEGORY_FALLBACKS} to a category English does author.
  */
-function selectPluralMessage(message: LyraPluralMessage, locale: string, count: number | undefined): string {
+function selectPluralMessage(
+  message: LyraPluralMessage,
+  locale: string,
+  count: number | undefined
+): string {
   if (count === undefined) return message.other;
   const tag = pluralLocale(locale);
   if (tag === undefined) return message.other;
   const category = getPluralRules(tag).select(count) as LyraPluralCategory;
-  for (const candidate of PLURAL_CATEGORY_FALLBACKS[category] ?? PLURAL_CATEGORY_FALLBACKS.other) {
+  for (const candidate of PLURAL_CATEGORY_FALLBACKS[category] ??
+    PLURAL_CATEGORY_FALLBACKS.other) {
     const text = message[candidate];
     if (text !== undefined) return text;
   }
@@ -808,10 +995,10 @@ export function resolveLyraString(
   overrides?: LyraLocaleStrings,
   fallback?: string,
   values?: Record<string, string | number>,
-  defaults?: Readonly<LyraLocaleStrings>,
+  defaults?: Readonly<LyraLocaleStrings>
 ): string {
   let message = safeMessageAt(overrides, key);
-  if (message === undefined && typeof fallback === 'string') message = fallback;
+  if (message === undefined && typeof fallback === "string") message = fallback;
   let locale: string | undefined;
   if (message === undefined) {
     locale = resolveLyraLocale(host);
@@ -825,9 +1012,13 @@ export function resolveLyraString(
   }
   message ??= safeMessageAt(defaults, key) ?? key;
   let text: string;
-  if (typeof message !== 'string') {
+  if (typeof message !== "string") {
     locale ??= resolveLyraLocale(host);
-    text = selectPluralMessage(message, locale, values ? pluralSelector(values) : undefined);
+    text = selectPluralMessage(
+      message,
+      locale,
+      values ? pluralSelector(values) : undefined
+    );
   } else {
     text = message;
   }
@@ -835,7 +1026,9 @@ export function resolveLyraString(
   return text.replace(/\{(\w+)\}/g, (match, name: string) => {
     try {
       const value = values[name];
-      return typeof value === 'string' || typeof value === 'number' ? String(value) : match;
+      return typeof value === "string" || typeof value === "number"
+        ? String(value)
+        : match;
     } catch {
       return match;
     }
@@ -852,14 +1045,14 @@ export function resolveLyraString(
  */
 export function resolveLocalizedParts(
   template: string,
-  interpolate: (marker: string) => string,
+  interpolate: (marker: string) => string
 ): string[] {
   const privateUse = new Set<number>();
   for (let index = 0; index < template.length; index += 1) {
     const code = template.charCodeAt(index);
     if (code >= 0xe000 && code <= 0xf8ff) privateUse.add(code);
   }
-  let marker = '';
+  let marker = "";
   for (let code = 0xe000; code <= 0xf8ff; code += 1) {
     if (!privateUse.has(code)) {
       marker = String.fromCharCode(code);
@@ -897,9 +1090,13 @@ export function resolveLocalizedParts(
         }
       }
       let follower = 0;
-      while (follower < followers.length && followers[follower] !== 0) follower += 1;
+      while (follower < followers.length && followers[follower] !== 0)
+        follower += 1;
       // A JavaScript string cannot contain all 2^32 ordered UTF-16 pairs in supported engines.
-      marker = String.fromCharCode(leastCode, follower < followers.length ? follower : leastCode);
+      marker = String.fromCharCode(
+        leastCode,
+        follower < followers.length ? follower : leastCode
+      );
     }
   }
   return interpolate(marker).split(marker);

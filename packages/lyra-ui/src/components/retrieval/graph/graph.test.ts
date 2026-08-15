@@ -4421,6 +4421,37 @@ it("normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent 
   expect(Number.isFinite(Number(match![1]))).to.be.true;
 });
 
+it("orders inverted zoom bounds before configuring d3 and imperative camera operations", async () => {
+  const el = (await fixture(
+    html`<lr-graph min-zoom="10" max-zoom="2"></lr-graph>`
+  )) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(
+    () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+    undefined,
+    {
+      timeout: NODE_COUNT_TIMEOUT,
+    }
+  );
+
+  const zoomBehavior = (el as any).zoomBehavior as {
+    scaleExtent: () => [number, number];
+  };
+  expect(zoomBehavior.scaleExtent()).to.deep.equal([2, 10]);
+
+  expect(await el.focusNode("a", { zoom: Number.NaN })).to.equal(true);
+  el.fit({ padding: Number.POSITIVE_INFINITY });
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  const transform = el
+    .shadowRoot!.querySelector("g")!
+    .getAttribute("transform")!;
+  const scale = Number(transform.match(/scale\(([-\d.]+)\)/)?.[1]);
+  expect(Number.isFinite(scale)).to.equal(true);
+  expect(scale).to.be.within(2, 10);
+});
+
 it("normalizes non-finite charge-strength and non-finite/negative link-distance so the live d3-force objects never receive NaN", async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;

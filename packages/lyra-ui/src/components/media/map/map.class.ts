@@ -289,7 +289,7 @@ function dataLayerColor(host: Element, tone: LyraMapGeoJsonDataLayer['tone']): s
 }
 
 export interface LyraMapEventMap {
-  'lr-map-load': CustomEvent<undefined>;
+  'lr-map-load': CustomEvent<null>;
   'lr-map-click': CustomEvent<{
     lngLat: [number, number];
     feature: Feature | undefined;
@@ -330,7 +330,8 @@ export interface LyraMapEventMap {
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch.
  * @csspart legend-limit - Visible localized summary when legend input is bounded or shortened.
- * @csspart marker - A MapLibre-generated marker.
+ * @csspart marker - A MapLibre-generated marker, with a 24px minimum target in both axes even
+ *   when a peer/custom marker has no intrinsic content size.
  * @csspart popup - A MapLibre-generated marker popup.
  * @csspart popup-content - The content container inside a MapLibre-generated marker popup.
  * @csspart popup-close-button - The MapLibre-generated button that closes an open marker popup.
