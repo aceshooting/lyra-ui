@@ -1495,6 +1495,7 @@ export type { LyraMarkedParser } from './components/conversation/markdown/markdo
 export type { KatexApi } from './components/conversation/markdown/katex-loader.js';
 export type {
   MarkdownHighlightAttempt,
+  MarkdownRuntimeEventMap,
   MarkdownVariantContext,
 } from './components/conversation/markdown/markdown-base.class.js';
 export type {
