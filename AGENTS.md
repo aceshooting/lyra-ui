@@ -152,6 +152,11 @@ Full rules, incidents, and patterns:
 - Closed string sets (`variant`, `placement`, `tone`, ...) are colocated exported literal union
   types, never a real TS `enum` — `enum` is nominal (breaks `el.prop = 'value'`) and ships a
   runtime object against the tree-shaking budget; extract a repeated inline union to a named type.
+- Single-quoted string literals only (outside template literals) — `check:source-policy`'s
+  `double-quoted-literal` rule enforces this. Not just style: a public member's printed
+  type/default text is compared verbatim against the pinned upstream manifest by
+  `check:pinned-upstream-manifests`, so a stray double quote silently reclassifies an
+  otherwise-identical mapping as a release-blocking `unsupported` surface drift.
 - Interactive elements carrying `part=` get a `--lr-icon-button-size` min hit-area floor.
 - `rel` is settable, but the `target`-derived guard is not removable: merge author tokens, always
   strip `opener`, and force-add `noopener noreferrer` whenever `target` is set (reverse-tabnabbing

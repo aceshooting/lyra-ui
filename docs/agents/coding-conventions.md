@@ -50,6 +50,29 @@
   literal set reappears elsewhere in the component (a switch/lookup object, `includes()` guard, a
   test) rather than leaving two hand-kept copies to drift. Use `as const` arrays/objects (56
   already do) when the set needs runtime iteration; never `Object.values(SomeEnum)`.
+- **Single-quoted string literals, enforced by `check:source-policy`'s `double-quoted-literal`
+  rule.** A double-quoted literal outside a template literal, whose content has no single quote to
+  escape, fails `pnpm lint`. This is not just house style: a component's `.class.ts` string-literal
+  and default-value types are printed verbatim into `custom-elements.json`, and
+  `check:pinned-upstream-manifests` compares that printed text byte-for-byte against the pinned
+  upstream Web Awesome/Shoelace manifest. A file mechanically reformatted to double quotes by a
+  different tool's defaults is therefore not a cosmetic regression — every mapped member whose type
+  or default changed quote style stops matching upstream's single-quoted text, silently
+  reclassifying an otherwise-identical mapping from `rewritten` to the strict-blocking `unsupported`
+  (a real incident: one pass of this reformatting reached ~300 files across the tree and
+  reclassified `wa-button`/`wa-rating`/`wa-select`/`wa-input`/`wa-textarea`/`sl-input`/
+  `sl-textarea`/`wa-date-input` before the rule existed). The rule's tokenizer mirrors
+  `check-source-policy.mjs`'s own comment/string/template state machine, so it resumes scanning
+  inside a Lit `${...}` interpolation — a `part=${cond ? "a" : "b"}` binding is still checked —
+  rather than treating everything inside `` html`...` `` as opaque. A double-quoted literal whose
+  content contains an apostrophe is correctly left alone (converting it would require adding an
+  escape, which is a net style regression, not an improvement).
+  A related pitfall: reflowing a public member's type across multiple lines (e.g. breaking
+  `Extract<LyraAppearance, 'filled' | 'outlined'>` onto three lines) changes its *printed* text —
+  the manifest text-extraction step folds the intervening newlines into literal spaces
+  (`Extract< LyraAppearance, 'filled' | 'outlined' >`), which desyncs the same
+  `check:pinned-upstream-manifests` comparison (and any recorded `normalizations` entry that
+  expected the single-line spelling) even though nothing semantic changed.
 - **Icon-sized hit targets.** Any `<button>`/`role="button"`/`tabindex="0"` element carrying a
   `part=` resolves its clickable box to at least `--lr-icon-button-size` via
   `min-inline-size`/`min-block-size` — a floor, not a fixed size, so larger slotted content still
