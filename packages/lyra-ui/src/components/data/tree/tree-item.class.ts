@@ -202,6 +202,23 @@ export interface LyraTreeItemEventMap {
  * @since 8.0.0
  */
 export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-expand',
+    'lr-after-expand',
+    'lr-collapse',
+    'lr-after-collapse',
+    'lr-lazy-change',
+    'lr-lazy-load',
+  ]);
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-expand': Object.freeze(['item']),
+    'lr-after-expand': Object.freeze(['item']),
+    'lr-collapse': Object.freeze(['item']),
+    'lr-after-collapse': Object.freeze(['item']),
+    'lr-lazy-change': Object.freeze(['item']),
+    'lr-lazy-load': Object.freeze(['item']),
+  });
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

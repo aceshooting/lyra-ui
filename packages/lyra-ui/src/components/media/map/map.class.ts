@@ -389,6 +389,10 @@ export interface LyraMapEventMap {
  * @since 4.0.0
  */
 export class LyraMap extends LyraElement<LyraMapEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-map-click',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

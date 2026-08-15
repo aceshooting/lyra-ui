@@ -298,6 +298,11 @@ export interface LyraSelectEventMap {
  * @since 4.0.0
  */
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-input',
+    'lr-change',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

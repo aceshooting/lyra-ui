@@ -227,6 +227,11 @@ export interface LyraDashboardGridEventMap {
  * @since 4.1.0
  */
 export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-collision',
+    'lr-layout-change',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

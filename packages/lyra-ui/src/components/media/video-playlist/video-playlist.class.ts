@@ -201,6 +201,10 @@ function trackSnapshot(
  * @since 8.0.0
  */
 export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-video-change',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

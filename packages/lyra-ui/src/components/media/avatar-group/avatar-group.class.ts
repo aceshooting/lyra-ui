@@ -89,6 +89,13 @@ export interface LyraAvatarGroupEventMap {
  * @since 4.0.0
  */
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-overflow-click',
+  ]);
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-overflow-click': Object.freeze(['hiddenAvatars']),
+  });
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

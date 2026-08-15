@@ -9531,7 +9531,7 @@
           }
         },
         {
-          "name": "selected-id",
+          "name": "selected-point-id",
           "description": {
             "kind": "markdown",
             "value": "The selected point id. Controlled by the host.\n\nType: `string`  \nDefault: `''`"
@@ -11605,7 +11605,15 @@
           "description": {
             "kind": "markdown",
             "value": "`'force'` (default) runs the existing d3-force simulation, untouched. `'layered'` computes a\ndeterministic Sugiyama-lite layout (`src/internal/layered-layout.ts`, a shared,\ndependency-free util suitable for any future layered-diagram consumer) instead -- no settle\nanimation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a\ndocumented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions\nwithout a tween.\n\nType: `LyraGraphLayout`"
-          }
+          },
+          "values": [
+            {
+              "name": "force"
+            },
+            {
+              "name": "layered"
+            }
+          ]
         },
         {
           "name": "link-distance",
@@ -11640,7 +11648,15 @@
           "description": {
             "kind": "markdown",
             "value": "`'svg'` (default, unchanged) renders the existing per-node/per-link DOM. `'canvas'` swaps to\na single `<canvas part=\"canvas\">` -- the scale path (an honest ceiling for `'svg'`: dozens to\nlow hundreds of nodes; `'canvas'` targets roughly 5,000 nodes / 10,000 links). Feature-reduced\nby design: no `::part(node)`/`::part(link)` styling (pixels, not elements -- theme via\ncssprops), no SVG `<title>`, a drawn focus ring instead of a CSS one. All events/methods/\nprops otherwise behave identically across renderers. Runtime changes tear down and rebuild\nthe surface; positions survive via `prevById`/`lastPositionById`.\n\nType: `LyraGraphRenderer`  \nDefault: `'svg'`"
-          }
+          },
+          "values": [
+            {
+              "name": "svg"
+            },
+            {
+              "name": "canvas"
+            }
+          ]
         },
         {
           "name": "seed",
@@ -11654,7 +11670,18 @@
           "description": {
             "kind": "markdown",
             "value": "`'none'` (default) preserves today's behavior exactly -- no `aria-pressed`/`data-selected`,\nno `lr-selection-change`. Controlled, mirroring `lr-heatmap.selectedCell`: the component\nnever mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns\nthem back.\n\nType: `LyraGraphSelectionMode`  \nDefault: `'none'`"
-          }
+          },
+          "values": [
+            {
+              "name": "none"
+            },
+            {
+              "name": "single"
+            },
+            {
+              "name": "multiple"
+            }
+          ]
         },
         {
           "name": "show-edge-labels",
@@ -13567,7 +13594,15 @@
           "description": {
             "kind": "markdown",
             "value": "Forwarded to `lr-graph.renderer`. `renderer=\"canvas\"` has no per-node DOM element, which\nnarrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the\nclass doc's anchoring note.\n\nType: `LyraGraphRenderer`  \nDefault: `'svg'`"
-          }
+          },
+          "values": [
+            {
+              "name": "svg"
+            },
+            {
+              "name": "canvas"
+            }
+          ]
         },
         {
           "name": "search-query",
@@ -18932,6 +18967,30 @@
             "kind": "markdown",
             "value": "Type: `number`  \nDefault: `0`"
           }
+        },
+        {
+          "name": "variant",
+          "description": {
+            "kind": "markdown",
+            "value": "Selects the indicator's semantic palette from the shared semantic grid, matching sibling\n`<lr-progress-bar>`'s `variant`.\n\nType: `LyraProgressVariant`  \nDefault: `'brand'`"
+          },
+          "values": [
+            {
+              "name": "neutral"
+            },
+            {
+              "name": "brand"
+            },
+            {
+              "name": "success"
+            },
+            {
+              "name": "warning"
+            },
+            {
+              "name": "danger"
+            }
+          ]
         }
       ]
     },
@@ -22764,7 +22823,7 @@
           "name": "label-placement",
           "description": {
             "kind": "markdown",
-            "value": "Type: `SpinnerLabelPlacement`  \nDefault: `'none'`"
+            "value": "Type: `LyraSpinnerLabelPlacement`  \nDefault: `'none'`"
           },
           "values": [
             {
@@ -25610,14 +25669,60 @@
           "description": {
             "kind": "markdown",
             "value": "Visual size. Valid upstream `small`/`medium`/`large` values round-trip verbatim while the CSS\nmaps both spellings onto the same rendered ladder.\n\nType: `LyraToastSize`  \nDefault: `'m'`"
-          }
+          },
+          "values": [
+            {
+              "name": "2xs"
+            },
+            {
+              "name": "xs"
+            },
+            {
+              "name": "s"
+            },
+            {
+              "name": "m"
+            },
+            {
+              "name": "l"
+            },
+            {
+              "name": "xl"
+            },
+            {
+              "name": "small"
+            },
+            {
+              "name": "medium"
+            },
+            {
+              "name": "large"
+            }
+          ]
         },
         {
           "name": "variant",
           "description": {
             "kind": "markdown",
             "value": "Severity/variant.\n\nType: `LyraToastVariant`  \nDefault: `'neutral'`"
-          }
+          },
+          "values": [
+            {
+              "name": "neutral"
+            },
+            {
+              "name": "brand"
+            },
+            {
+              "name": "success"
+            },
+            {
+              "name": "warning"
+            },
+            {
+              "name": "danger"
+            }
+          ]
         },
         {
           "name": "with-icon",

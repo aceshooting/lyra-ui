@@ -20,6 +20,14 @@ const checker = project.checker;
 const FORWARDED_EVENT_EXEMPTIONS = new Set([
   'src/components/retrieval/entity-dossier/entity-dossier.class.ts#LyraEntityDossier#lr-chunk-open',
   'src/components/retrieval/provenance-panel/provenance-panel.class.ts#LyraProvenancePanel#lr-chunk-open',
+  'src/components/conversation/message-parts/message-parts.class.ts#LyraMessageParts#lr-text-select',
+  'src/components/conversation/agent-workspace/agent-workspace.class.ts#LyraAgentWorkspace#lr-citation-select',
+  'src/components/data/tree/tree.class.ts#LyraTree#lr-expand',
+  'src/components/data/tree/tree.class.ts#LyraTree#lr-after-expand',
+  'src/components/data/tree/tree.class.ts#LyraTree#lr-collapse',
+  'src/components/data/tree/tree.class.ts#LyraTree#lr-after-collapse',
+  'src/components/data/tree/tree.class.ts#LyraTree#lr-lazy-change',
+  'src/components/data/tree/tree.class.ts#LyraTree#lr-lazy-load',
 ]);
 
 function hasStatic(modifiers) {

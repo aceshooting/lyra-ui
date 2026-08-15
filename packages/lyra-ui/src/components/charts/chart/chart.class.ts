@@ -587,6 +587,11 @@ function labelText(value: unknown): string {
  * @since 4.0.0
  */
 export class LyraChart extends LyraElement<LyraChartEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-before-legend-visibility-change',
+    'lr-legend-visibility-change',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

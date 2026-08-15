@@ -226,6 +226,10 @@ export interface LyraTerminalEventMap {
  * @since 4.0.0
  */
 export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-text-select',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

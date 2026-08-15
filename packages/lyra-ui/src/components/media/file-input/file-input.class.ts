@@ -259,6 +259,10 @@ export interface LyraFileInputEventMap {
  * @since 4.0.0
  */
 export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-files',
+  ]);
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

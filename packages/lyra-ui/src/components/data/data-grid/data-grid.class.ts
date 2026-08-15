@@ -469,6 +469,11 @@ function normalizedGroupBy(
 export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   LyraDataGridEventMap<Row>
 > {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'request',
+    'lr-column-move',
+    'lr-data-error',
+  ]);
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

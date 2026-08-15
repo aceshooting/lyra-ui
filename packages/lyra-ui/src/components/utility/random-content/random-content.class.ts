@@ -92,6 +92,13 @@ export interface LyraRandomContentEventMap {
  * @since 4.0.0
  */
 export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-content-change',
+  ]);
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-content-change': Object.freeze(['items']),
+  });
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
