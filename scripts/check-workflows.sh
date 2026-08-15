@@ -26,5 +26,7 @@ curl --fail --location --proto '=https' --tlsv1.2 \
   cd "$actionlint_tmp_dir"
   printf '%s  %s\n' "$ACTIONLINT_SHA256" "$actionlint_archive" | sha256sum --check
   tar --extract --gzip --file "$actionlint_archive" actionlint
-  ./actionlint -color
 )
+# Run from the original directory (not the extraction tmpdir) so actionlint's project-root
+# detection finds .github/workflows/ relative to the repo, not to /tmp.
+"$actionlint_tmp_dir/actionlint" -color
