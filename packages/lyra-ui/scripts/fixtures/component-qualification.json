@@ -12421,7 +12421,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 1709,
+              "line": 1736,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21673,7 +21673,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 1574,
+              "line": 1587,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24567,7 +24567,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.class.ts",
-              "line": 415,
+              "line": 424,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45325,7 +45325,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 518,
+              "line": 524,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45502,7 +45502,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 518,
+              "line": 524,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
