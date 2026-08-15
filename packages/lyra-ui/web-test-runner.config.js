@@ -228,14 +228,34 @@ const testRunnerHtml = (testRunnerImport) => `
   <head></head>
   <body>
     <script>
-      globalThis.litIssuedWarnings = new Set(['dev-mode']);
+      // 'no-override-get-property-descriptor': LyraElement intentionally overrides
+      // ReactiveElement.getPropertyDescriptor() (see src/internal/lyra-element.ts); every
+      // component built on it trips this Lit dev-mode deprecation notice once per page load.
+      // Under WTR_STRICT_CONSOLE the resulting console.warn throw was observed to cascade into
+      // a multi-GB-per-minute WebKit (WPEWebProcess) memory leak and OOM-kill the browser --
+      // console.error is itself wrapped below, so an error-reporting path that logs the caught
+      // exception via console.error re-throws into the same handler, recursing without bound.
+      // Suppressing the expected, benign warning at the source avoids ever triggering it.
+      globalThis.litIssuedWarnings = new Set(['dev-mode', 'no-override-get-property-descriptor']);
       ${strictConsole ? `
+      // Trip once, then fall back to the real console methods for the rest of this page's life.
+      // WTR's own client-side error reporting re-logs a caught exception via console.error; with
+      // no guard that hits this same wrapper and throws again, and so on without bound -- observed
+      // to run away into a multi-GB-per-minute WebKit memory leak before it OOM-kills the browser.
+      // One violation already fails the test; nothing is gained by keeping later calls armed.
+      let strictConsoleTripped = false;
       const originalWarn = console.warn;
+      const originalError = console.error;
       console.warn = (...args) => {
         originalWarn(...args);
+        if (strictConsoleTripped) return;
+        strictConsoleTripped = true;
         throw new Error('Unexpected browser console.warn: ' + args.map(String).join(' '));
       };
       console.error = (...args) => {
+        originalError(...args);
+        if (strictConsoleTripped) return;
+        strictConsoleTripped = true;
         throw new Error('Unexpected browser console.error: ' + args.map(String).join(' '));
       };
       ` : ''}
