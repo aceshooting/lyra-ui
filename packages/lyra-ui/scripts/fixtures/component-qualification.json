@@ -49228,7 +49228,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 825,
+              "line": 847,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
