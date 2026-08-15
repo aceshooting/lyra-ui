@@ -116,7 +116,7 @@ const statefulProbeMarkup = new Map([
     await collectResult(
       render(
         html`<lr-chip data-ssr-probe="lr-chip" removable
-          ><span slot="icon" data-ssr-light="lr-chip">●</span>Research<span
+          ><span slot="start" data-ssr-light="lr-chip">●</span>Research<span
             slot="end"
             >✓</span
           ></lr-chip
@@ -374,7 +374,7 @@ const statefulProbeMarkup = new Map([
         html`<lr-dashboard-grid
           data-ssr-probe="lr-dashboard-grid"
           .layout=${[
-            { id: 'summary', x: 0, y: 0, w: 3, h: 1, label: 'Summary' },
+            { cellId: 'summary', x: 0, y: 0, w: 3, h: 1, label: 'Summary' },
           ]}
           ><span hidden data-ssr-light="lr-dashboard-grid"></span
         ></lr-dashboard-grid>`,
@@ -420,6 +420,7 @@ const statefulProbeMarkup = new Map([
           data-ssr-probe="lr-emoji-picker"
           .groups=${[
             {
+              key: 'faces',
               label: 'Faces',
               emojis: Array.from({ length: 200 }, (_value, index) => ({
                 emoji: '😀',
@@ -541,7 +542,7 @@ const progressiveSlotParts = {
   'lr-alert': ['icon'],
   'lr-callout': ['icon', 'heading'],
   'lr-empty': ['icon', 'heading', 'description', 'actions'],
-  'lr-chip': ['icon', 'end'],
+  'lr-chip': ['start', 'end'],
   'lr-tag': ['start', 'end'],
   'lr-lightbox': ['actions'],
   'lr-model-select': ['form-control-label', 'error', 'hint'],
@@ -665,7 +666,7 @@ const documentHtml = `<!doctype html>
             host.edges = [{ id: 'fetch-answer', source: 'fetch', target: 'answer' }];
             break;
           case 'lr-dashboard-grid':
-            host.layout = [{ id: 'summary', x: 0, y: 0, w: 3, h: 1, label: 'Summary' }];
+            host.layout = [{ cellId: 'summary', x: 0, y: 0, w: 3, h: 1, label: 'Summary' }];
             break;
           case 'lr-table':
             host.columns = [{ key: 'name', label: 'Name', cell: (row) => row.name }];
@@ -676,6 +677,7 @@ const documentHtml = `<!doctype html>
             break;
           case 'lr-emoji-picker':
             host.groups = [{
+              key: 'faces',
               label: 'Faces',
               emojis: Array.from(
                 { length: 200 },
@@ -754,8 +756,8 @@ const documentHtml = `<!doctype html>
             return host.shadowRoot?.querySelector('[role="separator"]');
           case 'lr-badge':
           case 'lr-tag':
-            return host.shadowRoot?.querySelector('[part~="start"]');
           case 'lr-chip':
+            return host.shadowRoot?.querySelector('[part~="start"]');
           case 'lr-alert':
           case 'lr-callout':
           case 'lr-empty':
@@ -790,13 +792,13 @@ const documentHtml = `<!doctype html>
               : [],
             semantics: globalThis.__lyraSemanticSnapshot(host),
             chipIcon: host.localName === 'lr-chip'
-              ? host.shadowRoot?.querySelector('[part~="icon"]')
+              ? host.shadowRoot?.querySelector('[part~="start"]')
               : undefined,
             chipRemoveButton: host.localName === 'lr-chip'
               ? host.shadowRoot?.querySelector('[part~="remove-button"]')
               : undefined,
             chipIconHidden: host.localName === 'lr-chip'
-              ? host.shadowRoot?.querySelector('[part~="icon"]')?.hasAttribute('hidden')
+              ? host.shadowRoot?.querySelector('[part~="start"]')?.hasAttribute('hidden')
               : undefined,
             chipRemoveLabel: host.localName === 'lr-chip'
               ? host.shadowRoot?.querySelector('[part~="remove-button"]')?.getAttribute('aria-label')
@@ -805,7 +807,7 @@ const documentHtml = `<!doctype html>
               ? host.shadowRoot?.querySelector('[part~="card"]')?.hasAttribute('data-pulse')
               : undefined,
             flowHasBuiltInHeader: host.localName === 'lr-flow-node'
-              ? host.shadowRoot?.querySelector('[part="header"]') !== null
+              ? host.shadowRoot?.querySelector('[part="header"]')?.hasAttribute('hidden') === false
               : undefined,
             tagRemoveButton: host.localName === 'lr-tag'
               ? host.shadowRoot?.querySelector('[part~="remove-button"]')
@@ -875,7 +877,7 @@ const documentHtml = `<!doctype html>
             chipIconReused:
               before.chipIcon ===
               (host.localName === 'lr-chip'
-                ? host.shadowRoot?.querySelector('[part~="icon"]')
+                ? host.shadowRoot?.querySelector('[part~="start"]')
                 : undefined),
             chipRemoveButtonReused:
               before.chipRemoveButton ===
@@ -885,7 +887,7 @@ const documentHtml = `<!doctype html>
             chipIconHiddenPreserved:
               before.chipIconHidden ===
               (host.localName === 'lr-chip'
-                ? host.shadowRoot?.querySelector('[part~="icon"]')?.hasAttribute('hidden')
+                ? host.shadowRoot?.querySelector('[part~="start"]')?.hasAttribute('hidden')
                 : undefined),
             chipRemoveLabelPreserved:
               before.chipRemoveLabel ===
@@ -900,7 +902,7 @@ const documentHtml = `<!doctype html>
             flowHeaderPreserved:
               before.flowHasBuiltInHeader ===
               (host.localName === 'lr-flow-node'
-                ? host.shadowRoot?.querySelector('[part="header"]') !== null
+                ? host.shadowRoot?.querySelector('[part="header"]')?.hasAttribute('hidden') === false
                 : undefined),
             tagRemoveButtonReused:
               before.tagRemoveButton ===
@@ -1014,14 +1016,14 @@ const documentHtml = `<!doctype html>
               lightNodeReused: before.lightNode === host.querySelector('[data-ssr-light]'),
               probeAttribute: host.getAttribute('data-ssr-probe'),
               chipIconReused: tag === 'lr-chip'
-                ? before.chipIcon === host.shadowRoot?.querySelector('[part~="icon"]')
+                ? before.chipIcon === host.shadowRoot?.querySelector('[part~="start"]')
                 : undefined,
               chipRemoveButtonReused: tag === 'lr-chip'
                 ? before.chipRemoveButton ===
                   host.shadowRoot?.querySelector('[part~="remove-button"]')
                 : undefined,
               chipIconHidden: tag === 'lr-chip'
-                ? host.shadowRoot?.querySelector('[part~="icon"]')?.hasAttribute('hidden')
+                ? host.shadowRoot?.querySelector('[part~="start"]')?.hasAttribute('hidden')
                 : undefined,
               chipRemoveLabel: tag === 'lr-chip'
                 ? host.shadowRoot?.querySelector('[part~="remove-button"]')?.getAttribute('aria-label')
@@ -1030,7 +1032,7 @@ const documentHtml = `<!doctype html>
                 ? host.shadowRoot?.querySelector('[part~="card"]')?.hasAttribute('data-pulse')
                 : undefined,
               flowHasBuiltInHeader: tag === 'lr-flow-node'
-                ? host.shadowRoot?.querySelector('[part="header"]') !== null
+                ? host.shadowRoot?.querySelector('[part="header"]')?.hasAttribute('hidden') === false
                 : undefined,
               menuAriaDisabled: tag === 'lr-menu-item'
                 ? host.getAttribute('aria-disabled')

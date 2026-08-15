@@ -44,14 +44,16 @@ label, level }`), cached on every successful load. `search(query)` resolves the 
 case-insensitive substring search over the rendered content's text (empty/whitespace query behaves
 like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
-painted marks.
+painted marks. It indexes at most 1,000,000 code units/20,000 text nodes per content generation,
+accepts at most 4,096 query code units, scans at most 4,000,000 code units, retains 1,000 matches,
+and paints a 200-range search window.
 
 **Events:** `lr-render-error` with `detail.error` only when fetching, conversion, or sanitization
 fails terminally. Non-fatal Mammoth conversion messages emit `lr-viewer-diagnostic` instead;
 `detail.diagnostic` is readonly `{ code: 'docx-conversion-message', severity: 'warning', fatal:
 false, source: 'mammoth', cause }`. `lr-search-change` (`detail: { query, matchCount,
 matchCountExact, activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
-`lr-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked or its
+`lr-highlight-activate` (`detail: { highlightId }`) — a painted `text-quote` highlight was clicked or its
 resolved keyboard action was activated.
 `lr-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered
 content. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a

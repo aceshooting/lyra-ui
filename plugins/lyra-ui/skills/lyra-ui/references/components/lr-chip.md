@@ -39,6 +39,7 @@ relied on `<lr-chip selected>` to create an action.
 ### `lr-chip`
 
 **Properties:**
+
 - `size: '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — standard visual-density
   scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions.
   Unsupported attributes and untyped property writes normalize to reflected `m`
@@ -116,8 +117,9 @@ fallback the remove button makes to `remove`. A host name, when supplied, remain
 group as described above.
 
 **Themeable custom properties:** `--lr-chip-accent`, `--lr-chip-bg`, `--lr-chip-border`
-(component-local trio swapped per `variant` rather than repeating background/color/border per part
-per variant; default `var(--lr-color-text)` / `var(--lr-color-surface)` / `var(--lr-color-border)` —
+(component-local trio whose private defaults change per `variant` rather than repeating
+background/color/border per part per variant; default `var(--lr-color-text)` /
+`var(--lr-color-surface)` / `var(--lr-color-border)` —
 mirrors the same accent/bg/border vocabulary `<lr-tool-call-chip>`/`<lr-attachment-chip>` use. One
 rule covers all four non-neutral variants, because the shared variants sheet has already re-pointed
 `--lr-color-fill-loud`/`--lr-color-fill-quiet` at the active variant's row of the semantic grid —
@@ -125,11 +127,12 @@ the chip reads those generic slots and never names a variant, and sets its borde
 `--lr-chip-pressed-border` (border color while pressed/selected — falls back to
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
 back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
-`--lr-chip-padding-inline`, `--lr-chip-gap`, `--lr-chip-icon-size` (all five are rewritten by each
-`:host([size])` rule, so setting one on the element or a theme ancestor overrides that step of the scale; the
+`--lr-chip-padding-inline`, `--lr-chip-gap`, `--lr-chip-icon-size` (all five have private defaults
+that follow each `size`, so setting one on the element or a theme ancestor remains authoritative; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /
 `--lr-font-size-sm`), the height pair `--lr-chip-min-height` / `--lr-chip-height` (below),
-`--lr-chip-radius` (default `var(--lr-radius)`; `pill` raises it to `var(--lr-radius-pill)`) — the
+`--lr-chip-radius` (default `var(--lr-radius)`; `pill` changes its private default to
+`var(--lr-radius-pill)`) — the
 corner radius of both `[part='base']` and `[part='remove-button']`, kept in sync so retuning one
 retunes both, retunable without a `::part()` rule, and unlike the density quintet above it does not
 vary by `size`; the same `--lr-button-radius` pattern —
@@ -176,6 +179,7 @@ children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source
 no `.items` array prop).
 
 **Properties:**
+
 - `maxVisible?: number` (attribute `max-visible`) — maximum number of assigned children shown before
   the rest collapse behind a "+N" indicator; flattened slot-forwarded children count the same as
   direct children. Author-hidden or inert children do not consume capacity or inflate the hidden
@@ -204,7 +208,7 @@ shared minimum hit area in both axes)
 that same expanded indicator's border style; its resting border deliberately remains dashed, so a
 theme can retune the open affordance without losing the collapsed treatment. Both are state hooks:
 inline `var()` fallbacks at the point of use, never `:host` declarations, so they can be set on the
-element *or on any ancestor*. They exist because
+element _or on any ancestor_. They exist because
 `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS — Shadow Parts forbids an attribute
 selector after `::part()` — so retinting or reshaping only the expanded state otherwise meant
 re-pointing shared tokens. Left unset, rendering is unchanged. Otherwise shared tokens
@@ -223,9 +227,15 @@ re-pointing shared tokens. Left unset, rendering is unchanged. Otherwise shared 
   <lr-chip variant="danger" pill>Blocked</lr-chip>
 </lr-chip-group>
 <script type="module">
-  const group = document.querySelector('lr-chip-group');
-  group.addEventListener('lr-overflow-toggle', (e) => console.log(e.detail.expanded));
-  group.querySelectorAll('lr-chip').forEach((chip) => chip.addEventListener('lr-remove', (e) => console.log(e.detail.value)));
+  const group = document.querySelector("lr-chip-group");
+  group.addEventListener("lr-overflow-toggle", (e) =>
+    console.log(e.detail.expanded)
+  );
+  group
+    .querySelectorAll("lr-chip")
+    .forEach((chip) =>
+      chip.addEventListener("lr-remove", (e) => console.log(e.detail.value))
+    );
 </script>
 ```
 
@@ -239,6 +249,7 @@ current collapsed state. Forwarded-slot reconciliation is deferred without sched
 write from `firstUpdated()`.
 
 **Known gotchas:**
+
 - `<lr-chip>`'s accessible remove-button label ("Remove {text}") is computed only from the default
   slot's own text content — text living inside the (decorative) `start` slot doesn't leak into it.
 - `<lr-chip-group>` silently un-expands (`expanded` resets to `false`, with no event firing) if a

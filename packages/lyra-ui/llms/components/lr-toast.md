@@ -24,8 +24,9 @@ A placement-specific region. The imperative helper maintains one region for each
 `ownerDocument` + `placement` pair; manually authored regions remain independent.
 
 **Properties:**
+
 - `placement: ToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
-  'bottom-start'|'bottom-center'|'bottom-end'`. Every placement resolves inside one logical usable
+'bottom-start'|'bottom-center'|'bottom-end'`. Every placement resolves inside one logical usable
   rectangle whose four edges are the greater of `--lr-space-l` and the matching safe-area token.
   Start/end follow direction, center placements use that rectangle's midpoint even when the inline
   safe-area insets are asymmetric, and an oversized stack is capped to its usable inline size.
@@ -79,6 +80,7 @@ inherit into the items slotted inside it: one declaration on `<lr-toast>` retune
 A single notification.
 
 **Properties:**
+
 - `duration: number = 5000` (ms; `Infinity` or `<= 0` disables auto-dismiss)
 - `size: '2xs'|'xs'|'s'|'m'|'l'|'xl'|'small'|'medium'|'large' = 'm'` (reflected — drives both `--lr-toast-padding` and the
   toast's own font-size through a private effective-size mapping, from a compact `2xs` up to a roomier `xl`;
@@ -112,9 +114,10 @@ auto-dismiss timer on hover or focus.
 `--lr-toast-show-duration`/`--lr-toast-hide-duration`
 (`var(--lr-transition-base, 180ms ease-out)` — the show/hide lifecycle reads the resolved computed
 transition duration and uses it for its completion fallback), `--lr-toast-padding`
-(`var(--lr-space-m)`), `--lr-toast-font-size` (`var(--lr-font-size-m)`) — both are auto-swapped per
-`size`, from a compact `2xs` up to a roomier `xl` — `--lr-toast-accent-color` (default
-`var(--lr-color-border)`, auto-swapped per `variant` to that variant's loud fill).
+(`var(--lr-space-m)`) and `--lr-toast-font-size` (`var(--lr-font-size-m)`) — their private defaults
+follow `size`, from a compact `2xs` up to a roomier `xl` — and `--lr-toast-accent-color` (default
+`var(--lr-color-border)`, with a private default that follows `variant` to that variant's loud
+fill). Inherited or direct public values remain authoritative across every size and variant.
 
 `--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
 message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`) controls the item
@@ -141,7 +144,7 @@ item and stack themselves remain ordinary content, so an icon, action, and close
 part of an atomic live announcement. Auto-dismiss timer **pauses** on `pointerenter`/`focusin`, **resumes**
 on `pointerleave`/`focusout`, with real elapsed-time bookkeeping (WCAG 2.2.1 timing-adjustable) —
 hover and focus are tracked as independent pause reasons, so releasing only one (e.g. the pointer
-leaves while focus remains, or vice versa) keeps the timer paused until *neither* holds it anymore.
+leaves while focus remains, or vice versa) keeps the timer paused until _neither_ holds it anymore.
 A `duration` change while the timer is actively counting down reschedules it immediately against
 the new value instead of waiting for the next pause/resume cycle. A vetoed timer expiry restarts
 that full normalized value; if hover/focus or a disconnect begins during the veto event, the retry
@@ -159,14 +162,19 @@ From the `toaster` controller — the ergonomic entry point, no manual `<lr-toas
 needed:
 
 ```ts
-import { toast } from '@aceshooting/lyra-ui/components/overlays/toast/toaster.js';
+import { toast } from "@aceshooting/lyra-ui/components/overlays/toast/toaster.js";
 
-toast('Saved');
+toast("Saved");
 toast({
-  message: 'Deleted',
-  variant: 'danger',
-  icon: (ownerDocument) => ownerDocument.createTextNode('!'),
-  action: { label: 'Undo', onClick: (item) => {/*...*/} },
+  message: "Deleted",
+  variant: "danger",
+  icon: (ownerDocument) => ownerDocument.createTextNode("!"),
+  action: {
+    label: "Undo",
+    onClick: (item) => {
+      /*...*/
+    },
+  },
 });
 ```
 
@@ -182,12 +190,15 @@ its own custom-element registry; otherwise the returned `item` promise rejects e
 
 ```html
 <script type="module">
-  import { toast } from '@aceshooting/lyra-ui/components/overlays/toast/toaster.js';
-  document.getElementById('save-btn').addEventListener('click', () => toast('Saved!'));
+  import { toast } from "@aceshooting/lyra-ui/components/overlays/toast/toaster.js";
+  document
+    .getElementById("save-btn")
+    .addEventListener("click", () => toast("Saved!"));
 </script>
 ```
 
 **Known gotchas:**
+
 - the stack and each visible item have no live-region role. Their normalized message is appended as
   one child of a shared non-atomic light-DOM sink at the variant's urgency; icon, action, and close
   controls remain outside that sink. Later meaningful message changes add only the changed normalized

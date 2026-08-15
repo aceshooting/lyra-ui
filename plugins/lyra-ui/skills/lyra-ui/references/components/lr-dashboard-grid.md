@@ -26,25 +26,26 @@ move, resize, collision, and layout-change requests; the host owns persistence a
 false` (reflected — disables every gesture grid-wide), `accessibleLabel: string | null = null`
 (attribute `aria-label`, falls back to a localized grid name).
 
-**Events:** `lr-cell-move` (`detail: { id, position, previous }`), `lr-cell-resize`
-(`detail: { id, size, previous }`), `lr-collision` (`detail: { id, collidedWith, policy, accepted }`),
+**Events:** `lr-cell-move` (`detail: { cellId, position, previous }`), `lr-cell-resize`
+(`detail: { cellId, size, previous }`), `lr-collision`
+(`detail: { cellId, collidedCellIds, policy, accepted }`),
 `lr-layout-change` (`detail: { layout }`, the full proposed layout after an accepted change).
 Move, resize, and collision feedback is appended to the shared light-DOM polite announcement
 sink only while the grid and its composed ancestors remain exposed to the accessibility tree.
-**Slots:** `cell-{id}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
+**Slots:** `cell-{cellId}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
 
 `layout` is normalized into an immutable snapshot before rendering. Reads are bounded to the first
 1,000 positions; foreign-realm arrays are accepted; malformed records, hostile accessors, and later
-duplicate ids are skipped without discarding valid neighbors. Geometry and min/max constraints are
-finite and consistent, and neither the returned array nor its cells alias caller-owned objects.
+duplicate cell IDs are skipped without discarding valid neighbors. Geometry and min/max constraints
+are finite and consistent, and neither the returned array nor its cells alias caller-owned objects.
 Each admitted `cell.widget` is also copied immediately through the canonical bounded widget-document
 factory: its node records, child arrays, and prop records are frozen without cloning opaque prop or
 payload leaves. A hostile or malformed widget is omitted while its otherwise-valid cell remains.
 Direct light-DOM children with `cell-id` remain the authored source of truth across insertion,
-removal, id retargeting, reconnect, and document adoption. The first authored child for an id wins;
-when it disappears, the default cell is restored without mistaking a forged marker attribute for a
-library-owned node.
+removal, cell-ID retargeting, reconnect, and document adoption. The first authored child for a cell
+ID wins; when it disappears, the default cell is restored without mistaking a forged marker
+attribute for a library-owned node.
 
 The default content assigns a version-two document created from `cell.widget` to
 `<lr-widget-renderer>.document`; it never uses the legacy `tree` input. Pointer gestures admit only
@@ -74,7 +75,7 @@ draggable/resizable target; set it to `transparent` to opt out of the hover trea
 
 - `LyraDashboardCell`, `LyraDashboardCollisionPolicy`, and
   `LyraDashboardPlacementResult` — readonly public authoring/result types.
-- `resolveLyraDashboardPlacement(layout, candidateId, requested, columns, policy)` — the only public
+- `resolveLyraDashboardPlacement(layout, candidateCellId, requested, columns, policy)` — the only public
   runtime layout utility. It returns an immutable normalized result; collision indexing,
   clamping, sorting, and push-cascade helpers are intentionally implementation-private.
 - `LyraDashboardCellMoveDetail`, `LyraDashboardCellResizeDetail`,

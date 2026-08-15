@@ -7,6 +7,14 @@ const meta: Meta = {
   title: 'Claim Evidence',
   component: 'lr-claim-evidence',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A controlled grounding audit that canonicalizes claims and citations independently by nonblank id, keeping the first valid occurrence before selection, evidence lookup, rendering, and events.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

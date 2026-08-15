@@ -47,10 +47,11 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
 
 - `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below.
 - `tools: ToolSelectDialogTool[] = []` (attribute: false) — the full set of tools a consumer offers,
-  across all categories. `id` is the public identity: when provider data repeats one, the first
-  occurrence wins consistently for grouping, filtering, counts, selection, and emitted ids.
-- `selected: string[] = []` (attribute: false) — the currently-enabled tool ids. Repeated ids are
-  treated as one selection.
+  across all categories. `id` is the public identity: empty/blank ids are omitted and when provider
+  data repeats one, the first occurrence wins consistently for grouping, filtering, counts,
+  selection, and emitted ids.
+- `selected: string[] = []` (attribute: false) — the currently-enabled tool ids. Empty/blank ids
+  are omitted and repeated ids are treated as one selection.
 - `useDefaults: boolean = false` (attribute `use-defaults`, reflected) — whether the conversation is
   using the default tool set (`true`) or a custom selection (`false`).
 - `label?: string` — the dialog's visible heading and accessible name. Omission uses localized

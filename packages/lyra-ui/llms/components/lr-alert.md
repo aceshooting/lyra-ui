@@ -87,16 +87,24 @@ and `aria-hidden`; the close action remains independently accessible through Lyr
 reuses the existing Lyra toast layer instead of creating a second placement system.
 
 ```html
-<lr-alert id="session-alert" closable duration="10000" countdown="rtl" variant="warning">
+<lr-alert
+  id="session-alert"
+  closable
+  duration="10000"
+  countdown="rtl"
+  variant="warning"
+>
   <svg slot="icon" aria-hidden="true"><!-- warning icon --></svg>
   Your session will expire soon.
 </lr-alert>
-<button type="button" onclick="document.querySelector('#session-alert').show()">Show alert</button>
+<button type="button" onclick="document.querySelector('#session-alert').show()">
+  Show alert
+</button>
 
 <script type="module">
-  import '@aceshooting/lyra-ui/components/overlays/alert/alert.js';
+  import "@aceshooting/lyra-ui/components/overlays/alert/alert.js";
 
-  const alert = document.querySelector('#session-alert');
-  alert.addEventListener('lr-after-hide', () => console.log('Alert is hidden'));
+  const alert = document.querySelector("#session-alert");
+  alert.addEventListener("lr-after-hide", () => console.log("Alert is hidden"));
 </script>
 ```

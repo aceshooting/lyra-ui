@@ -24,6 +24,7 @@ to an absolute, nonmodal panel inside the nearest containing block; only that mo
 the slide animation are its own.
 
 **Properties:**
+
 - `open: boolean = false` (attribute `open`, reflected) — assigning it runs the same lifecycle as
   `show()`/`hide()`, so the property, the reflected attribute and the two methods can never disagree
 - `placement: 'start'|'end'|'top'|'bottom' = 'end'` (attribute `placement`, reflected). **Changed in
@@ -84,7 +85,7 @@ the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-
 `--lr-dialog-backdrop-filter`, `--lr-dialog-width`, `--lr-dialog-max-width`, `--lr-dialog-spacing`,
 `--lr-dialog-spacing-block`, `--lr-dialog-panel-duration` and `--lr-dialog-backdrop-duration` —
 since `LyraDrawer` extends `LyraDialog`. The drawer's own size/width/height tokens take precedence
-for its panel, and only the animation *name* is overridden, so `--lr-dialog-panel-duration` retunes the
+for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.
 
 ```html

@@ -25,7 +25,7 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 'conflicted' | 'ignored'` (shared with `lr-file-tree`); the diffstat is summed from `additions`/
 `deletions` across `files`. Counts are normalized to finite non-negative integers before per-file
 display, total arithmetic, localization, and accessible summaries. `path` is the file identity;
-later duplicates are omitted before both diffstat arithmetic and row events. `filesCollapsed:
+empty/blank paths and later duplicates are omitted before both diffstat arithmetic and row events. `filesCollapsed:
 boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
 `compact: boolean = false` (reflected) — tighter `[part="base"]` padding for a commit rendered as a
 row in a list or PR timeline, same convention as `<lr-agent-run>`'s own `compact`; the border stays,

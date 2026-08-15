@@ -109,49 +109,61 @@ available space. See `lr-tour` for the shared-clamp note.
 
 ```html
 <textarea id="composer"></textarea>
-<lr-mention-popover id="mentions" label="People" empty-text="No matches"></lr-mention-popover>
+<lr-mention-popover
+  id="mentions"
+  label="People"
+  empty-text="No matches"
+></lr-mention-popover>
 <script type="module">
-  const textarea = document.getElementById('composer');
-  const popover = document.getElementById('mentions');
+  const textarea = document.getElementById("composer");
+  const popover = document.getElementById("mentions");
   let suggestionGeneration = 0;
 
-  textarea.addEventListener('keydown', (e) => {
+  textarea.addEventListener("keydown", (e) => {
     if (popover.open && popover.handleKeyDown(e)) {
-      if (!popover.syncActiveDescendant(textarea) && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      if (
+        !popover.syncActiveDescendant(textarea) &&
+        (e.key === "ArrowDown" || e.key === "ArrowUp")
+      ) {
         const generation = suggestionGeneration;
         void popover.focusActiveOption({
           ownsFocus: () =>
             generation === suggestionGeneration &&
-            (document.activeElement === textarea || document.activeElement === popover),
+            (document.activeElement === textarea ||
+              document.activeElement === popover),
         });
       }
       return;
     }
   });
-  textarea.addEventListener('input', () => {
+  textarea.addEventListener("input", () => {
     suggestionGeneration += 1;
     popover.anchor = textarea;
     popover.items = [
       {
-        suggestionId: 'ada',
-        label: 'Ada Lovelace',
-        description: 'Engineering',
-        icon: '👩‍💻',
+        suggestionId: "ada",
+        label: "Ada Lovelace",
+        description: "Engineering",
+        icon: "👩‍💻",
       },
-      { suggestionId: 'grace', label: 'Grace Hopper', description: 'Engineering' },
+      {
+        suggestionId: "grace",
+        label: "Grace Hopper",
+        description: "Engineering",
+      },
     ];
-    popover.query = 'a'; // detected since the trigger character
+    popover.query = "a"; // detected since the trigger character
     popover.open = true;
     popover.updateComplete.then(() => popover.syncActiveDescendant(textarea));
   });
-  textarea.addEventListener('blur', (event) => {
+  textarea.addEventListener("blur", (event) => {
     if (event.relatedTarget !== popover) {
       suggestionGeneration += 1;
       popover.open = false;
     }
   });
 
-  popover.addEventListener('lr-mention-select', (e) => {
+  popover.addEventListener("lr-mention-select", (e) => {
     // splice `${e.detail.label}` into the textarea at the trigger offset
   });
 </script>
@@ -197,7 +209,7 @@ fresh `query` is the proxy for "the caret may have moved").
   active option.
 - There's no persisted "selection" the way `<lr-combobox>`'s own listbox has one — a mention is
   either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
-  here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the
+  here marks whichever row is currently _active_ (what Enter/Tab would commit right now, per the
   WAI-ARIA combobox-with-list-autocomplete pattern), not a separate persisted value.
 
 ---

@@ -20,6 +20,7 @@ and additive plain-GeoJSON `dataLayers`, plus a peer-neutral `map` getter for co
 operations. Its runtime value is the underlying MapLibre map.
 
 **Properties:**
+
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2`
 - `mapStyle?: LyraMapStyleSpecification | string` (attribute: false) — required before a map is
@@ -31,21 +32,23 @@ operations. Its runtime value is the underlying MapLibre map.
   geometry.
 - `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
   of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
-  LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
-  'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
+LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
+'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
   rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
   bounded before validation. The overlay scrolls within the map allocation.
 - readonly `legendProjection: LyraMapLegendProjection` — frozen `{ inputCount, renderedCount,
-  omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
+omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
   projection renders a localized visible `1–N of M items` summary rather than silently claiming
   the bounded rows are complete.
 - `choropleth?: LyraMapChoroplethLayer` (attribute: false) — `LyraMapChoroplethLayer { sourceId:
-  string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
+string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
   fill-color expression from `field`'s value against `stops`; `stops` must contain at least one
   `[value, color]` pair — an empty array is ignored, leaving whatever fill layer already exists, if
   any, untouched, rather than being applied)
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
-  [number, number]; color?: string; label?: string; unsafeHtml?: string }`; reconciled by `id` (falling back
+[number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
+  trimmed and must be nonempty, and the first marker for an explicit ID wins. Markers are reconciled
+  by that explicit ID (falling back
   to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
   when `id` is omitted) so an unchanged marker isn't torn down and recreated on every `markers`
   reassignment — its `lngLat` **and** its popup content (`unsafeHtml`/`label`, in that precedence)
@@ -62,8 +65,10 @@ operations. Its runtime value is the underlying MapLibre map.
   declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
 - `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
   `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
-  GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
-  'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three geometry-filtered layers
+GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
+'danger' | 'neutral' }`. `sourceId` is trimmed and must be nonempty; the first layer for a
+  `sourceId` wins and blank or later duplicate records are ignored. Each retained entry adds one
+  GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
   matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`). The component
   assigns collision-free private MapLibre ids for those resources: `sourceId` is the stable
@@ -116,6 +121,7 @@ appended to the document's pre-mounted `[data-lr-live-region="assertive"]` sink 
 shadow chrome live; raw caught errors are never exposed.
 
 **Themeable custom properties:**
+
 - `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
   `choropleth` layer and polygon fills in every `dataLayers` entry. It intentionally inherits from
   an ancestor, so one scoped declaration rethemes every nested map without setting each host.
@@ -123,7 +129,7 @@ shadow chrome live; raw caught errors are never exposed.
   `--lr-map-popup-close-button-hover-color` (default `var(--lr-color-brand)`) — hover background
   and foreground of `popup-close-button`.
 - `--lr-map-popup-close-button-active-bg` (default `color-mix(in oklab,
-  var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
+var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
   `--lr-map-popup-close-button-active-color` (default `var(--lr-color-brand)`) — pressed
   background and foreground of `popup-close-button`.
 - Shared tokens — `--lr-space-xs/-s`, `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`,
@@ -139,24 +145,29 @@ Vite with v6:
 ```html
 <lr-map center="[2.35, 48.85]" zoom="10"></lr-map>
 <script type="module">
-  import { setWorkerUrl } from 'maplibre-gl';
-  import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+  import { setWorkerUrl } from "maplibre-gl";
+  import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
   setWorkerUrl(workerUrl);
 
-  const m = document.querySelector('lr-map');
+  const m = document.querySelector("lr-map");
   m.mapStyle = { version: 8, sources: {}, layers: [] }; // explicit, network-silent baseline
   m.choropleth = {
-    sourceId: 'regions',
+    sourceId: "regions",
     geojson: myGeoJson,
-    field: 'value',
-    stops: [[0, '#cde2fb'], [100, '#0969da']],
+    field: "value",
+    stops: [
+      [0, "#cde2fb"],
+      [100, "#0969da"],
+    ],
   };
   m.legend = [
-    { color: '#cde2fb', label: 'Low', pattern: 'solid' },
-    { color: '#0969da', label: 'High', pattern: 'diagonal' },
+    { color: "#cde2fb", label: "Low", pattern: "solid" },
+    { color: "#0969da", label: "High", pattern: "diagonal" },
   ];
-  m.markers = [{ lngLat: [2.29, 48.86], label: 'Eiffel Tower' }];
-  m.addEventListener('lr-map-click', (e) => console.log(e.detail.feature?.properties));
+  m.markers = [{ lngLat: [2.29, 48.86], label: "Eiffel Tower" }];
+  m.addEventListener("lr-map-click", (e) =>
+    console.log(e.detail.feature?.properties)
+  );
 </script>
 ```
 
@@ -165,6 +176,7 @@ installation guide for the matching setup:
 https://maplibre.org/maplibre-gl-js/docs/#esm.
 
 **Known gotchas:**
+
 - Construction is transactional. A constructor/setup/get-canvas failure removes any partially
   created peer instance, renders only the localized initialization failure, and can retry after a
   new style or reconnect without an unhandled promise rejection. Capability probes and error
@@ -172,7 +184,7 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
 - A marker with a popup handles Space at its focus boundary: one activation toggles the peer popup
   and suppresses the page-scroll default. Markers without a popup do not consume Space.
 - clearing or swapping the choropleth no longer leaks the old layer: setting `choropleth =
-  undefined`, or changing `choropleth.sourceId` to a different value, now calls `removeLayer`/
+undefined`, or changing `choropleth.sourceId` to a different value, now calls `removeLayer`/
   `removeSource` on whatever was previously applied before adding the new one (or nothing, if
   cleared).
 - `mapStyle` changes after construction now call `setStyle()` (in addition to `center`/`zoom`

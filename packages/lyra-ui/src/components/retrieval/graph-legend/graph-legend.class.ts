@@ -17,6 +17,10 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+import {
+  canonicalIdentityList,
+  firstByRetrievalIdentity,
+} from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphLegendLabel, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown } from '../../../internal/default-strings.generated.js';
@@ -147,15 +151,16 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   }
 
   private isVisible(id: string): boolean {
-    return !this.hiddenTypes.includes(id);
+    return !canonicalIdentityList(this.hiddenTypes).includes(id);
   }
 
   private toggle(type: LyraNodeTypeStyle): void {
     if (!this.interactive) return;
+    const hiddenTypes = canonicalIdentityList(this.hiddenTypes);
     const wasVisible = this.isVisible(type.id);
     const next = wasVisible
-      ? [...this.hiddenTypes, type.id]
-      : this.hiddenTypes.filter((id) => id !== type.id);
+      ? [...hiddenTypes, type.id]
+      : hiddenTypes.filter((id) => id !== type.id);
     this.hiddenTypes = next;
     this.liveText = this.localize(
       wasVisible ? 'legendTypeHidden' : 'legendTypeShown',
@@ -180,6 +185,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   }
 
   override render(): TemplateResult {
+    const types = firstByRetrievalIdentity(this.types, (type) => type?.id);
     const groupLabel = retrievalSemanticLabel(
       this,
       this.label || this.localize('graphLegendLabel')
@@ -191,7 +197,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
         role=${groupRole ?? nothing}
         aria-label=${groupLabel ?? nothing}
       >
-        ${this.types.map((type, index) => {
+        ${types.map((type, index) => {
           const visible = this.isVisible(type.id);
           const color = this.swatchColor(type, index);
           const count = this.counts?.[type.id];

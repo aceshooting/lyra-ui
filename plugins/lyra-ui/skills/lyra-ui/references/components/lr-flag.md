@@ -19,6 +19,7 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 (`@aceshooting/lyra-flags`) — importing `lyra-ui` core never pulls in flag image weight.
 
 **Properties:**
+
 - `country?: string` (ISO 3166-1 alpha-2, e.g. `"fr"` — takes precedence over `language`)
 - `language?: string` (BCP-47-ish tag, e.g. `"en"`/`"en-US"`, resolved to a representative country
   via `languageToCountry()`)
@@ -28,7 +29,7 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
   `import frUrl from '@aceshooting/lyra-flags/flags/fr.svg?url'`. `label` is effectively required
   alongside `src` since there's no `country`/`language` to derive a fallback `alt` from.)
 - `label?: string` (accessible name / `alt` text — **defaults to a localized, human-readable region
-  name derived from the *resolved country* code via `Intl.DisplayNames` if omitted**, see gotchas)
+  name derived from the _resolved country_ code via `Intl.DisplayNames` if omitted**, see gotchas)
 - host `aria-label` takes precedence over `label` and the derived region name; an explicit empty
   value marks the image decorative
 - `shape: LyraFlagShape = 'rect'` (reflected, `'rect' | 'circle'`)
@@ -100,11 +101,14 @@ pronounces the endonym in its own language, and use `fidelity="compact"` at icon
 ```
 
 ```js
-import { localeNativeName, languageToCountry } from '@aceshooting/lyra-ui/components/media/flag/language-map.js';
+import {
+  localeNativeName,
+  languageToCountry,
+} from "@aceshooting/lyra-ui/components/media/flag/language-map.js";
 
-const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
+const rows = ["en", "fr", "de", "pt-BR", "ja", "ar"].map((tag) => ({
   tag,
-  name: localeNativeName(tag),   // endonym, e.g. "português (Brasil)"
+  name: localeNativeName(tag), // endonym, e.g. "português (Brasil)"
   country: languageToCountry(tag), // flag code for the same row
 }));
 ```
@@ -112,8 +116,10 @@ const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
 ```html
 <lr-flag country="fr" label="France"></lr-flag>
 <lr-flag language="en-US" shape="circle"></lr-flag>
-<lr-flag country="es" fidelity="compact"></lr-flag>  <!-- tiny WebP raster, icon-scale -->
-<lr-flag country="es" fidelity="detailed"></lr-flag> <!-- pristine full-fidelity vector -->
+<lr-flag country="es" fidelity="compact"></lr-flag>
+<!-- tiny WebP raster, icon-scale -->
+<lr-flag country="es" fidelity="detailed"></lr-flag>
+<!-- pristine full-fidelity vector -->
 ```
 
 ```bash
@@ -121,10 +127,11 @@ pnpm add @aceshooting/lyra-flags   # required for country/language lookup; failu
 ```
 
 ```js
-import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
+import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 ```
 
 **Known gotchas:**
+
 - `country`/`language` resolution is opt-in through
   `@aceshooting/lyra-ui/components/media/flag/flag-peer.js`; `all.js`
   registers the component without importing the optional flag asset graph. Requires the optional
@@ -137,10 +144,10 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
   retries remain separate additions. The failure also produces a one-time `console.warn`
   once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
-  page even with many `<lr-flag>` instances). An *empty* template is a different, non-error outcome:
+  page even with many `<lr-flag>` instances). An _empty_ template is a different, non-error outcome:
   the peer resolved fine but returned no URL for that code (e.g. `country="zz"`) — no `[part="error"]`,
   no `<img>`, no warning.
-- Rendering is async even when the peer *is* installed: `src` resolves after an `import()` +
+- Rendering is async even when the peer _is_ installed: `src` resolves after an `import()` +
   resolver call, so there's a brief loading-skeleton window on first paint/attribute change — don't
   assume the `<img>` exists synchronously right after setting `country`/`language`.
 - if both `aria-label` and `label` are omitted, the accessible name (`alt`) falls back to a localized

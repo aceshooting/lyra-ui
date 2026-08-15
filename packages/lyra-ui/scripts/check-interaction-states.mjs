@@ -112,12 +112,13 @@ if (process.argv[1] && process.argv[1].endsWith('check-interaction-states.mjs'))
       const pressed = normalise(pressedForm(rule.selector));
       // Either the exact :active twin, or any :active rule mentioning the same part -- a component
       // is free to express the pressed state on a different, simpler selector.
-      const partNames = [...rule.selector.matchAll(/part[~*^$|]?='([^']+)'/g)].map((m) => m[1]);
+      const partNames = [...rule.selector.matchAll(/part[~*^$|]?=["']([^"']+)["']/g)].map((m) => m[1]);
       const hasTwin =
         allSelectors.has(pressed) ||
         [...allSelectors].some(
           (candidate) =>
-            candidate.includes(':active') && partNames.some((part) => candidate.includes(`'${part}'`)),
+            candidate.includes(':active') &&
+            partNames.some((part) => candidate.includes(`'${part}'`) || candidate.includes(`"${part}"`)),
         );
       if (!hasTwin) {
         findings.push(`${where}:${rule.line}: \`${rule.selector}\` has no :active counterpart`);

@@ -8,6 +8,7 @@ import { styles } from './knowledge-base.styles.js';
 import type { TableColumn } from '../../data/table/table.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
+import { firstByIdentity } from '../../agent-tools/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_knowledgeBaseActionsColumn, LYRA_DEFAULT_knowledgeBaseCreateSource, LYRA_DEFAULT_knowledgeBaseDeleteAction, LYRA_DEFAULT_knowledgeBaseDocumentCount, LYRA_DEFAULT_knowledgeBaseEmptyDescription, LYRA_DEFAULT_knowledgeBaseEmptyHeading, LYRA_DEFAULT_knowledgeBaseHeading, LYRA_DEFAULT_knowledgeBaseHealthColumn, LYRA_DEFAULT_knowledgeBaseHealthDegraded, LYRA_DEFAULT_knowledgeBaseHealthFailed, LYRA_DEFAULT_knowledgeBaseHealthHealthy, LYRA_DEFAULT_knowledgeBaseHealthUnknown, LYRA_DEFAULT_knowledgeBaseNameColumn, LYRA_DEFAULT_knowledgeBaseNeedsAttention, LYRA_DEFAULT_knowledgeBaseNeverSynced, LYRA_DEFAULT_knowledgeBasePauseAction, LYRA_DEFAULT_knowledgeBasePermissionColumn, LYRA_DEFAULT_knowledgeBasePermissionEditor, LYRA_DEFAULT_knowledgeBasePermissionOwner, LYRA_DEFAULT_knowledgeBasePermissionRestricted, LYRA_DEFAULT_knowledgeBasePermissionViewer, LYRA_DEFAULT_knowledgeBaseRowActionsLabel, LYRA_DEFAULT_knowledgeBaseSyncAction, LYRA_DEFAULT_knowledgeBaseSyncColumn, LYRA_DEFAULT_knowledgeBaseSyncError, LYRA_DEFAULT_knowledgeBaseSyncIdle, LYRA_DEFAULT_knowledgeBaseSyncPaused, LYRA_DEFAULT_knowledgeBaseSyncSynced, LYRA_DEFAULT_knowledgeBaseSyncSyncing, LYRA_DEFAULT_knowledgeBaseSyncedSources, LYRA_DEFAULT_knowledgeBaseSyncingSources, LYRA_DEFAULT_knowledgeBaseTotalSources } from '../../../internal/default-strings.generated.js';
@@ -149,6 +150,8 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Blank source ids and later duplicates are ignored before summary counts, rendering, or actions.
+ * The first source for an id wins.
  *
  * @customElement lr-knowledge-base
  * @event lr-source-create - The toolbar "Add source" affordance was activated. No detail.
@@ -234,6 +237,13 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   /** Hides the toolbar's "Add source" affordance, e.g. for a read-only or permission-gated view. */
   @property({ type: Boolean, attribute: 'hide-create', reflect: true }) hideCreate = false;
+
+  private get normalizedSources(): KnowledgeSource[] {
+    return firstByIdentity(
+      Array.isArray(this.sources) ? this.sources : [],
+      (source) => source.id
+    );
+  }
 
   private syncStatusLabel(status: KnowledgeSourceSyncStatus): string {
     switch (status) {
@@ -397,11 +407,11 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     ];
   }
 
-  private renderSummary(): TemplateResult {
-    const total = this.sources.length;
-    const synced = this.sources.filter((s) => s.syncStatus === 'synced').length;
-    const syncing = this.sources.filter((s) => s.syncStatus === 'syncing').length;
-    const attention = this.sources.filter(
+  private renderSummary(sources: readonly KnowledgeSource[]): TemplateResult {
+    const total = sources.length;
+    const synced = sources.filter((s) => s.syncStatus === 'synced').length;
+    const syncing = sources.filter((s) => s.syncStatus === 'syncing').length;
+    const attention = sources.filter(
       (s) => s.syncStatus === 'error' || s.indexingHealth === 'failed' || s.indexingHealth === 'degraded',
     ).length;
     const numberFormat = getNumberFormat(this.effectiveLocale);
@@ -433,6 +443,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   }
 
   override render(): TemplateResult {
+    const sources = this.normalizedSources;
     const heading = this.label || this.localize('knowledgeBaseHeading');
     return html`
       <div part="base">
@@ -449,11 +460,13 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
               </lr-button>`
             : nothing}
         </div>
-        ${!this.hideSummary && this.sources.length > 0 ? this.renderSummary() : nothing}
+        ${!this.hideSummary && sources.length > 0
+          ? this.renderSummary(sources)
+          : nothing}
         <lr-table
           part="table"
           .columns=${this.tableColumns()}
-          .rows=${this.sources}
+          .rows=${sources}
           .rowKey=${(row: KnowledgeSource) => row.id}
           .accessibleLabel=${heading}
           empty-heading=${this.localize('knowledgeBaseEmptyHeading')}

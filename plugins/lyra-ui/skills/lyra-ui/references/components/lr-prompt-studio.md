@@ -20,11 +20,11 @@ versions, resolved preview, and save/run intents. Message and variable edits emi
 `lr-change` proposal carrying their complete next state before updating the component's current
 arrays; persistence and execution remain host-owned.
 
-**Properties:** `messages: PromptStudioMessage[] = []` and
-`variables: PromptStudioVariable[] = []` are property-only editor state: user edits emit a
+**Properties:** `messages: readonly PromptStudioMessage[] = []` and
+`variables: readonly PromptStudioVariable[] = []` are property-only editor state: user edits emit a
 cancelable `lr-change` before updating the current arrays, while the host remains responsible for
 persistence.
-`versions: PromptStudioVersion[] = []` is a property-only host-controlled input;
+`versions: readonly PromptStudioVersion[] = []` is a property-only host-controlled input;
 `selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
 `heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
 label when unset;
@@ -40,7 +40,7 @@ to message textareas only.
 `ChatMessageRole` is `'system' | 'user' | 'assistant'`;
 `PromptStudioMessage = { id, role, content, name? }`; `PromptStudioVariable = { name, value,
 description? }`; `PromptStudioVersion = { id: string; label: string; messages:
-PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`; and
+readonly PromptStudioMessage[]; variables?: readonly PromptStudioVariable[]; createdAt?: string }`; and
 `PromptStudioState = { messages, variables }`; `PromptStudioWrap = 'hard' | 'soft' | 'off'`; and
 `PromptStudioMessageReorderDetail = { messages, messageId, fromIndex, toIndex }`.
 

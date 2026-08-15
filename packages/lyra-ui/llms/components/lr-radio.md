@@ -82,8 +82,9 @@ calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge leng
   capped at half the circle so it can never outgrow its ring, whatever is done to either the ladder
   or the `--lr-icon-button-size` cap.
 - `--lr-radio-radius` (default `--lr-radius-pill`) — the corner radius of the control's own chrome.
-  A circular indicator is fully round at every setting; `<lr-radio-button>` re-points this knob at
-  the shared control radius and `pill` swaps it back to a pill.
+  A circular indicator is fully round at every setting; `<lr-radio-button>` changes the private
+  default to the shared control radius and `pill` changes it back to a pill. An inherited or direct
+  public value wins throughout.
 - `--lr-radio-label-indent` (default `calc(var(--lr-radio-circle-size) + var(--lr-space-s))`) — the
   inline distance from the control's start edge to the start of the label text, i.e. the circle plus
   the gap beside it. The rendered gap is derived from it, so the advertised value and the real offset

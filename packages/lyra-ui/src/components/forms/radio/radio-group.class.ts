@@ -304,7 +304,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   private armRunResizeObserver(): void {
     this.runResizeObserver?.disconnect();
-    const ResizeObserverCtor = this.ownerDocument.defaultView?.ResizeObserver;
+    const ResizeObserverCtor = this.ownerDocument?.defaultView?.ResizeObserver;
     if (!ResizeObserverCtor || !this.isConnected) return;
     this.runResizeObserver = new ResizeObserverCtor(() => this.scheduleRunProjection());
     this.runResizeObserver.observe(this);
@@ -312,7 +312,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
 
   private scheduleRunProjection(): void {
-    const ownerWindow = this.ownerDocument.defaultView;
+    const ownerWindow = this.ownerDocument?.defaultView;
     if (!ownerWindow || !this.isConnected || this.runProjectionFrame !== undefined) return;
     this.runProjectionFrame = ownerWindow.requestAnimationFrame(() => {
       this.runProjectionFrame = undefined;
@@ -371,7 +371,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     if (!this.isConnected) return;
     if (this.membershipObserver && this.membershipObserverDocument === ownerDocument) return;
     this.resetMembershipObserver();
-    const ownerWindow = ownerDocument.defaultView;
+    const ownerWindow = ownerDocument?.defaultView;
     const MutationObserverCtor = ownerWindow?.MutationObserver;
     if (!ownerWindow || !MutationObserverCtor) return;
     const generation = this.membershipObserverGeneration;
@@ -424,7 +424,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     this.resetMembershipObserver();
     this.runResizeObserver?.disconnect();
     this.runResizeObserver = undefined;
-    const ownerWindow = this.ownerDocument.defaultView;
+    const ownerWindow = this.ownerDocument?.defaultView;
     if (ownerWindow && this.runProjectionFrame !== undefined) {
       ownerWindow.cancelAnimationFrame(this.runProjectionFrame);
     }
@@ -671,7 +671,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     this.syncRadios();
     const ownerDocument = this.ownerDocument;
     const generation = this.membershipObserverGeneration;
-    const ownerWindow = ownerDocument.defaultView;
+    const ownerWindow = ownerDocument?.defaultView;
     if (!ownerWindow) return;
     ownerWindow.queueMicrotask(() => {
       if (

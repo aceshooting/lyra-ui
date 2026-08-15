@@ -20,8 +20,9 @@ positioned content and owns their activation, active/flash styling, and keyboard
 order is the caller's own reading order; the layer does not re-sort geometrically. Fills its nearest
 positioned ancestor.
 
-**Properties:** `items: HighlightLayerItem[] = []` (attribute: false), `activeId: string | null =
-null` (attribute `active-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
+**Properties:** `items: HighlightLayerItem[] = []` (attribute: false), with IDs trimmed and required
+to be nonempty and the first item retained when IDs repeat; `activeHighlightId: string | null = null`
+(attribute `active-highlight-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
 activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
 dimensions are nonnegative; invalid rectangles are omitted from paint, focus, and activation. When
 `interactive=false`, the base is `aria-hidden` pure paint with no group role, accessible name, or
@@ -31,7 +32,7 @@ controls. If every rectangle is invalid, no shadow subtree is rendered.
 re-click of the same source citation).
 
 **Events:** `lr-highlight-activate` — a rect was activated (click, or Enter/Space while focused).
-`detail: { id }`.
+`detail: { highlightId }`.
 
 **CSS parts:** `base` (the absolutely-positioned overlay, inset 0), `rect` (one visual highlight
 rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and `rect-target`

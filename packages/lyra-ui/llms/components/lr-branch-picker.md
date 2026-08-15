@@ -30,7 +30,8 @@ rendered chevron), `blur()` blurs both chevrons, `click()` activates that same e
 
 **Events:** `lr-branch-change` — a branch navigation was requested. `detail: { index }`, always a
 valid target (never past either bound); the consumer applies `index` after switching the displayed
-branch content.
+branch content. `lr-toolbar-actions-change` is the no-detail coordination event emitted when the
+provider's logical toolbar actions change availability or order.
 
 **CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`,
 `previous-glyph` and `next-glyph` (the chevron inside each button — target these to swap the

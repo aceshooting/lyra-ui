@@ -26,6 +26,33 @@ it('sorts descending by score by default', async () => {
   expect(titles[0]).to.include('curie-bio.pdf');
 });
 
+it('omits blank and later-duplicate chunk ids before sorting, current state, and actions', async () => {
+  const el = (await fixture(
+    html`<lr-chunk-inspector active-chunk-id="duplicate"></lr-chunk-inspector>`,
+  )) as LyraChunkInspector;
+  el.chunks = [
+    { id: '', text: 'empty', score: 1, sourceId: 's0', title: 'Empty id' },
+    { id: 'duplicate', text: 'first', score: 0.2, sourceId: 's1', title: 'First owner' },
+    { id: 'middle', text: 'middle', score: 0.5, sourceId: 's2', title: 'Middle score' },
+    { id: '   ', text: 'blank', score: 1, sourceId: 's3', title: 'Blank id' },
+    { id: 'duplicate', text: 'later', score: 0.9, sourceId: 's4', title: 'Later duplicate' },
+  ];
+  await el.updateComplete;
+
+  const rows = [...el.shadowRoot!.querySelectorAll('[part~="chunk"]')];
+  expect(rows.length).to.equal(2);
+  expect(
+    rows.map((row) => row.querySelector('[part="title"]')!.textContent),
+  ).to.deep.equal(['Middle score', 'First owner']);
+  expect(
+    rows.filter((row) => row.getAttribute('aria-current') === 'true').length,
+  ).to.equal(1);
+
+  const openPending = oneEvent(el, 'lr-chunk-open');
+  (rows[1]!.querySelector('[part="open-button"]') as HTMLButtonElement).click();
+  expect((await openPending).detail.chunkId).to.equal('duplicate');
+});
+
 it('preserves given order when sort="none"', async () => {
   const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = [chunks[2]!, chunks[0]!];
@@ -73,14 +100,14 @@ it('maps score tiers per thresholds: high >= 0.75 success, medium >= 0.5 warning
   expect(fills.map((f) => f.getAttribute('data-tone'))).to.deep.equal(['success', 'warning', 'danger']);
 });
 
-it('emits lr-chunk-open with id/sourceId/anchor when a chunk title is activated', async () => {
+it('emits lr-chunk-open with chunkId/sourceId/anchor when a chunk title is activated', async () => {
   const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = [{ ...chunks[0]!, anchor: { kind: 'page', page: 3 } }];
   await el.updateComplete;
   const listener = oneEvent(el, 'lr-chunk-open');
   (el.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement).click();
   const event = await listener;
-  expect(event.detail).to.deep.equal({ id: 'c1', sourceId: 's1', anchor: { kind: 'page', page: 3 } });
+  expect(event.detail).to.deep.equal({ chunkId: 'c1', sourceId: 's1', anchor: { kind: 'page', page: 3 } });
 });
 
 it('toggles per-chunk text expand state, keyed by id, surviving a chunks reassignment', async () => {
@@ -91,7 +118,7 @@ it('toggles per-chunk text expand state, keyed by id, surviving a chunks reassig
   const listener = oneEvent(el, 'lr-expand');
   toggle.click();
   const event = await listener;
-  expect(event.detail).to.deep.equal({ id: chunks[0]!.id, expanded: true });
+  expect(event.detail).to.deep.equal({ chunkId: chunks[0]!.id, expanded: true });
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-expanded')).to.equal('true');
 
@@ -130,7 +157,7 @@ it('hands the virtual list a stable items array and key function across unrelate
 
   // An update that touches neither `chunks` nor `sort` must not force the list to rebuild its
   // O(n) offsets/identities, which it keys on the reference identity of both of these.
-  el.activeId = 'c2';
+  el.activeChunkId = 'c2';
   await el.updateComplete;
   expect(list.items === firstItems, 'the sorted items array keeps its identity').to.equal(true);
   expect(list.keyFunction === firstKeyFunction, 'the key function keeps its identity').to.equal(true);
@@ -245,7 +272,7 @@ it('is accessible with mixed-tier chunks', async () => {
 
 it('renders explicit true and false aria-current values for the stateful chunk set', async () => {
   const el = (await fixture(
-    html`<lr-chunk-inspector active-id="c2" .chunks=${chunks}></lr-chunk-inspector>`,
+    html`<lr-chunk-inspector active-chunk-id="c2" .chunks=${chunks}></lr-chunk-inspector>`,
   )) as LyraChunkInspector;
   const rows = [...el.shadowRoot!.querySelectorAll('[part~="chunk"]')];
   expect(rows.map((row) => row.getAttribute('aria-current'))).to.deep.equal([
@@ -267,7 +294,7 @@ describe('current-chunk cssprop escape hatch', () => {
 
   async function current(style = ''): Promise<{ el: LyraChunkInspector; chunk: HTMLElement }> {
     const wrapper = (await fixture(
-      html`<div style=${style}><lr-chunk-inspector active-id="c1"></lr-chunk-inspector></div>`,
+      html`<div style=${style}><lr-chunk-inspector active-chunk-id="c1"></lr-chunk-inspector></div>`,
     )) as HTMLElement;
     const el = wrapper.querySelector('lr-chunk-inspector') as LyraChunkInspector;
     el.chunks = chunks;
@@ -351,7 +378,7 @@ describe('row styling across both rendering paths', () => {
       html`<lr-chunk-inspector
         virtualize-at=${path === 'virtualized' ? '2' : '500'}
         sort="none"
-        active-id="v0"
+        active-chunk-id="v0"
       ></lr-chunk-inspector>`,
     )) as LyraChunkInspector;
     el.chunks = manyChunks(5);

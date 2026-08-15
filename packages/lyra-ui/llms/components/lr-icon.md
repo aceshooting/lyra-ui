@@ -62,7 +62,7 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
   `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
   `prefers-reduced-motion: reduce`.
-- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon *box* to
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon _box_ to
   `--lr-icon-fixed-width` while the glyph keeps `--lr-icon-size` and centres inside it, so a column
   of differently-shaped icons lines its labels up.
 
@@ -134,33 +134,40 @@ fetch allowlist, the response is still byte-capped, and the markup is still sani
 cannot widen what an icon is allowed to render.
 
 ```ts
-import '@aceshooting/lyra-ui/components/utility/icon/icon.js'; // registers <lr-icon>
+import "@aceshooting/lyra-ui/components/utility/icon/icon.js"; // registers <lr-icon>
 import {
   registerIconLibrary,
   unregisterIconLibrary,
   getIconLibrary,
-} from '@aceshooting/lyra-ui/components/utility/icon/icon-library.js';
+} from "@aceshooting/lyra-ui/components/utility/icon/icon-library.js";
 
-registerIconLibrary('material', {
+registerIconLibrary("material", {
   // May return a URL directly or resolve one asynchronously. All three reflected lookup fields
   // are provided, so a library decides their vocabulary and URL layout.
-  resolver: async (name, family, variant) => `https://cdn.example.com/material/${family}/${variant}/${name}.svg`,
+  resolver: async (name, family, variant) =>
+    `https://cdn.example.com/material/${family}/${variant}/${name}.svg`,
   // Optional. Runs on the already-sanitized, component-owned <svg> before it is rendered —
   // recolouring, adding a viewBox, stripping a hardcoded width/height. It must not reintroduce
   // markup from an untrusted source, and a throwing mutator fails the load.
   mutator: (svg) => {
-    svg.setAttribute('fill', 'currentColor');
-    svg.removeAttribute('width');
-    svg.removeAttribute('height');
+    svg.setAttribute("fill", "currentColor");
+    svg.removeAttribute("width");
+    svg.removeAttribute("height");
   },
 });
 
-await getIconLibrary('material')?.resolver('star', 'classic', 'solid');
-unregisterIconLibrary('material'); // icons using it revert to the built-in glyph set
+await getIconLibrary("material")?.resolver("star", "classic", "solid");
+unregisterIconLibrary("material"); // icons using it revert to the built-in glyph set
 ```
 
 ```html
-<lr-icon library="material" family="classic" variant="solid" name="star" label="Favourite"></lr-icon>
+<lr-icon
+  library="material"
+  family="classic"
+  variant="solid"
+  name="star"
+  label="Favourite"
+></lr-icon>
 <lr-icon library="material" name="delete" fixed-width></lr-icon>
 <lr-icon name="search" canvas="square" animation="beat"></lr-icon>
 ```

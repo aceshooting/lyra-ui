@@ -21,7 +21,7 @@ Box-and-whisker chart from a precomputed five-number summary (no raw sample data
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 
 **Properties:**
-- `labels: string[] = []` (attribute: false)
+- `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly
   `LyraBoxPlotSummary { min, q1, median, q3, max }` values. `boxes`, `BoxPlotSeries`, and
   `BoxPlotPoint` remain deprecated migration aliases. Summaries must be finite and ordered
@@ -32,6 +32,9 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
   every series visible, while a defined canonical list of zero-based indexes hides those series.
   Duplicate, non-integer, negative, and out-of-range indexes are discarded. Accepted user toggles
   write their complete next snapshot back to this property; programmatic writes reconcile silently.
+- `labels`, `datasets`, and `hiddenDatasets` are clone-owned, bounded, frozen snapshots. Mutating a
+  previously assigned array or nested series data has no effect; create and reassign a new
+  collection.
 - `legend: boolean = false` — renders a wrapping DOM legend whose buttons toggle box-series
   visibility without clipping long labels.
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical,

@@ -35,8 +35,9 @@ metadata?: Record<string, unknown> }`. Each entry renders as an `lr-chat-message
   `role`/`status`/`timestamp` come straight across. A nonempty `parts` array renders in order through
   `lr-message-parts` and takes precedence over the legacy `text` shortcut; otherwise `text` renders
   as sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
-  richer bodies. The latest 500 authored entries are considered; within that window the first
-  occurrence of each id wins. Host owns ordering, updates, and persistence
+  richer bodies. Empty ids and later duplicates are omitted first-wins before the latest 500 valid
+  identities are chosen, so malformed tail rows cannot evict earlier valid messages. Host owns
+  ordering, updates, and persistence
 - `follow: boolean = true` (reflected) — forwarded to the internal `lr-chat-viewport`
 - `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — forwarded to the viewport
 

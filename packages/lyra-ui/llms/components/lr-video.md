@@ -122,8 +122,14 @@ failed, or empty thumbnail files fail closed to no preview; no caught remote err
 
 ```html
 <lr-video controls="full" poster="/posters/demo.jpg" title="Product demo">
-  <source src="/video/demo.webm" type="video/webm">
-  <source src="/video/demo.mp4" type="video/mp4">
-  <track src="/captions/demo-en.vtt" kind="captions" srclang="en" label="English" default>
+  <source src="/video/demo.webm" type="video/webm" />
+  <source src="/video/demo.mp4" type="video/mp4" />
+  <track
+    src="/captions/demo-en.vtt"
+    kind="captions"
+    srclang="en"
+    label="English"
+    default
+  />
 </lr-video>
 ```

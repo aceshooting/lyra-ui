@@ -95,9 +95,9 @@ exactly like the multi-option case, until the trigger is actually activated.
   expand icon, adornments and chips all ride that on-brand color rather than the quiet-text
   tokens). Every value keeps the same box, border width and radius, and each restates its own
   `:hover` feedback. `lr-input` and `lr-textarea` use the same mapped `outlined` default.
-- `pill: boolean = false` (reflected) — fully-rounded trigger corners. It only re-assigns
-  `--lr-select-radius` to `--lr-radius-pill`, so a consumer's own `--lr-select-radius` (inline or
-  from an outer-tree rule) still wins over it
+- `pill: boolean = false` (reflected) — fully-rounded trigger corners. It changes the private
+  radius default to `--lr-radius-pill`, so an inherited or direct `--lr-select-radius` remains
+  authoritative
 - `placement: Placement = 'bottom'` (reflected) — preferred listbox placement, from the
   Floating UI vocabulary (`'top'`, `'bottom-end'`, …). `flip`/`shift` may still move the popup to
   keep it in view, and the `left`/`right` component is swapped under RTL. Assignment while open
@@ -211,17 +211,18 @@ following option rows; options with an empty `group` get no heading or group wra
 With no label text the part is hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
-`--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
+`--lr-select-font-size`, `--lr-select-expand-size` — all four have private defaults that follow
+`size` (`xs`…`xl`), while inherited or direct public values remain authoritative; the same pattern
 `lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-gap` (default
 `--lr-space-xs`, the gap inside `[part='trigger']`) is retunable without a `::part(trigger)` rule
 and does not vary by `size` — the adornment gap a field wants is looser than the icon-beside-label
 gap the ladder is tuned for. `--lr-select-radius` (default `--lr-form-control-radius`, the corner
 radius) is retunable the same way but _does_ follow the tier: the two tightest tiers take a smaller
-radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` re-assigns it to
-`--lr-radius-pill`. `--lr-select-tag-padding`
+radius, since a 6px corner on a 20px-tall control reads as a lozenge. `pill` changes its private
+default to `--lr-radius-pill`. `--lr-select-tag-padding`
 (default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
-`var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius they are declared once on
-`:host` and do **not** vary by `size` tier.
+`var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius their private defaults do
+**not** vary by `size` tier, and inherited or direct public values win.
 Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration`, and
 `--hide-duration` cap one tag and independently retime the two popup directions.
 

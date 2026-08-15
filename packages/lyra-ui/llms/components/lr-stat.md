@@ -46,7 +46,8 @@ attribute now, so a stat left on `appearance="plain"` silently renders full card
   as "good"; inverts arrow/color polarity for cost/latency/error-rate-style metrics where a
   _decrease_ is the win.
 - `rows: readonly StatRow[] = []` (attribute: false) — `StatRow { readonly label: string; readonly
-value: string; readonly exactValue?: string }`; snapshotted at assignment and rendered as a simple
+value: string; readonly exactValue?: string }`; at most the first 10,000 rows are snapshotted and
+  frozen at assignment. Reassign `rows` after changing it. The snapshot renders as a simple
   label/value breakdown list (`[part="rows"]`/`[part="row"]`/
   `[part="row-label"]`/`[part="row-value"]`) beneath the caption, hidden entirely when empty. A row's
   optional `exactValue` mirrors the headline `exactValue`/`exact-value` pattern: rendered as a `title`
@@ -123,7 +124,12 @@ are point-of-use fallbacks, so values inherit from a theme ancestor and a value 
 **Optional peer deps:** none.
 
 ```html
-<lr-stat label="Active users" value="1,204" delta-percent="4.2" variant="success">
+<lr-stat
+  label="Active users"
+  value="1,204"
+  delta-percent="4.2"
+  variant="success"
+>
   <svg slot="start">...</svg>
 </lr-stat>
 <lr-stat label="Memories" value="128" href="/memories"></lr-stat>

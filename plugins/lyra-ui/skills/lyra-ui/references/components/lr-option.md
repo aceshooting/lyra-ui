@@ -34,8 +34,8 @@ therefore cannot widen a 320px LTR or RTL picker.
   decorative expand icon; `size="s"` shares its outer control height with `lr-input`, `lr-select`,
   and `lr-segmented` without part overrides)
 - `pill: boolean = false` (reflected) — rounds the trigger row's corners to a full pill, mirroring
-  `lr-input`'s own `pill`. It only re-assigns `--lr-combobox-radius` to `--lr-radius-pill`, so a
-  consumer setting that property directly still wins for a bespoke shape
+  `lr-input`'s own `pill`. It changes the private radius default to `--lr-radius-pill`, so an
+  inherited or direct `--lr-combobox-radius` remains authoritative
 - `placeholder: string = ''`
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
@@ -91,7 +91,7 @@ therefore cannot widen a 320px LTR or RTL picker.
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
   show before collapsing to `+N`)
 - `emptyText?: string` (attribute `empty-text`) — omission displays localized `noMatches` (`"No
-  matches"` in the built-in English locale); any supplied string, including `''`, renders verbatim
+matches"` in the built-in English locale); any supplied string, including `''`, renders verbatim
 - `loadingText?: string` (attribute `loading-text`) — shown while a `source` fetch is in flight;
   omission displays localized `loading` (`"Loading…"` in English), while any supplied string,
   including `''`, renders verbatim

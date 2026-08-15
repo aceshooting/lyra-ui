@@ -192,12 +192,13 @@ here exactly as they do on `lr-input`. With no label text the part is hidden and
 painted.
 
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
-not the button's minimum target. It is auto-swapped per `size` tier (default `'m'` reads `2.5rem`,
+not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.5rem`,
 `'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
 inline and block sizes are each
 `max(var(--lr-color-picker-swatch-size), var(--lr-icon-button-size))`: compact tiers center a smaller
 swatch inside the shared hit-area floor, while a larger swatch expands the target with it. The
-panel's geometry has its own set, all declared on `:host`:
+panel's geometry has its own public hook set; each hook inherits from an ancestor, and a direct host
+value wins:
 
 - `--lr-color-picker-grid-inline-size` (default `var(--lr-size-15rem)`) and
   `--lr-color-picker-grid-block-size` (default `var(--lr-size-8rem)`) — the saturation/brightness

@@ -17,6 +17,7 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import { isNonBlankIdentity } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_selectAllSources, LYRA_DEFAULT_sourceListDefaultLabel, LYRA_DEFAULT_sourcePickerSelection, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -34,7 +35,7 @@ export interface LyraSourceEntry {
 }
 
 export interface LyraSourcePickerEventMap {
-  'lr-sources-change': CustomEvent<LyraEventDetailSnapshot<{ selectedIds: string[] }>>;
+  'lr-sources-change': CustomEvent<LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>>;
 }
 
 interface SourceRow {
@@ -71,7 +72,7 @@ const MAX_SOURCE_DEPTH = 64;
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-source-picker
- * @event lr-sources-change - `detail: { selectedIds }` — the complete updated leaf-id array,
+ * @event lr-sources-change - `detail: { selectedSourceIds }` — the complete updated leaf-id array,
  * fired after every toggle including select-all.
  * @csspart base - The root wrapper.
  * @csspart search - The built-in filter `lr-input`, only rendered when `searchable`.
@@ -109,7 +110,7 @@ const MAX_SOURCE_DEPTH = 64;
  * @since 4.0.0
  */
 export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(['sources', 'selectedIds']);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['sources', 'selectedSourceIds']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -145,11 +146,12 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     'lr-sources-change',
   ]);
 
-  /** Flat (no `children`) or a tree. */
+  /** Flat (no `children`) or a tree. Entries need nonblank ids; later duplicate ids are omitted
+   *  first-wins before rendering, selection state, or events. */
   @property({ attribute: false }) sources: readonly LyraSourceEntry[] = [];
-  /** Leaf ids only. Duplicates and ids absent from `sources` are discarded. The picker updates
-   * its own copy on toggle *then* emits; reassign to control. */
-  @property({ attribute: false }) selectedIds: readonly string[] = [];
+  /** Leaf ids only. Blank, duplicate, and ids absent from `sources` are discarded. The picker
+   * updates its own copy on toggle *then* emits; reassign to control. */
+  @property({ attribute: false }) selectedSourceIds: readonly string[] = [];
   /** Whether the header exposes one control for selecting or clearing every visible leaf source. */
   @property({
     type: Boolean,
@@ -193,7 +195,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     super.disconnectedCallback();
   }
 
-  /** Builds a bounded, acyclic, first-id-wins tree once per controlled `sources` identity. */
+  /** Builds a bounded, acyclic, nonblank first-id-wins tree once per `sources` identity. */
   private get sourceModel(): NormalizedSourceModel {
     if (this.normalizedInput === this.sources && this.normalizedModel)
       return this.normalizedModel;
@@ -227,6 +229,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         !source ||
         typeof source !== 'object' ||
         seenObjects.has(source) ||
+        !isNonBlankIdentity(source.id) ||
         seenIds.has(source.id)
       ) {
         limited = true;
@@ -292,10 +295,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     return this.sourceModel.byEntry.get(entry)?.leafIds ?? [];
   }
 
-  private normalizedSelectedIds(): string[] {
+  private normalizedSelectedSourceIds(): string[] {
     const valid = new Set(this.allLeafIds());
     const seen = new Set<string>();
-    return this.selectedIds.filter((id) => {
+    return this.selectedSourceIds.filter((id) => {
       if (!valid.has(id) || seen.has(id)) return false;
       seen.add(id);
       return true;
@@ -304,7 +307,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   private checkedState(entry: LyraSourceEntry): 'true' | 'false' | 'mixed' {
     const leaves = this.descendantLeafIds(entry);
-    const selected = leaves.filter((id) => this.selectedIds.includes(id));
+    const selected = leaves.filter((id) => this.selectedSourceIds.includes(id));
     if (selected.length === 0) return 'false';
     if (selected.length === leaves.length) return 'true';
     return 'mixed';
@@ -350,13 +353,13 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('sources') || changed.has('selectedIds')) {
-      const normalized = this.normalizedSelectedIds();
+    if (changed.has('sources') || changed.has('selectedSourceIds')) {
+      const normalized = this.normalizedSelectedSourceIds();
       if (
-        normalized.length !== this.selectedIds.length ||
-        normalized.some((id, index) => id !== this.selectedIds[index])
+        normalized.length !== this.selectedSourceIds.length ||
+        normalized.some((id, index) => id !== this.selectedSourceIds[index])
       ) {
-        this.selectedIds = normalized;
+        this.selectedSourceIds = normalized;
       }
     }
     if (
@@ -433,14 +436,14 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   }
 
   private commitSelection(next: string[]): void {
-    this.selectedIds = next;
-    this.emit('lr-sources-change', { selectedIds: next });
+    this.selectedSourceIds = next;
+    this.emit('lr-sources-change', { selectedSourceIds: next });
   }
 
   private toggleEntry(entry: LyraSourceEntry): void {
     const leaves = this.descendantLeafIds(entry);
     const willSelect = this.checkedState(entry) !== 'true';
-    const set = new Set(this.selectedIds);
+    const set = new Set(this.selectedSourceIds);
     for (const id of leaves) {
       if (willSelect) set.add(id);
       else set.delete(id);
@@ -451,7 +454,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   private toggleSelectAll(): void {
     const all = this.allLeafIds();
     const allSelected =
-      all.length > 0 && all.every((id) => this.selectedIds.includes(id));
+      all.length > 0 && all.every((id) => this.selectedSourceIds.includes(id));
     this.commitSelection(allSelected ? [] : all);
   }
 
@@ -607,10 +610,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     const allLeaves = this.allLeafIds();
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const selectAllState: 'true' | 'false' | 'mixed' =
-      this.selectedIds.length === 0
+      this.selectedSourceIds.length === 0
         ? 'false'
         : allLeaves.length > 0 &&
-          allLeaves.every((id) => this.selectedIds.includes(id))
+          allLeaves.every((id) => this.selectedSourceIds.includes(id))
         ? 'true'
         : 'mixed';
 
@@ -642,7 +645,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               >
               <span part="summary"
                 >${this.localize('sourcePickerSelection', undefined, {
-                  selected: numberFormat.format(this.selectedIds.length),
+                  selected: numberFormat.format(this.selectedSourceIds.length),
                   total: numberFormat.format(allLeaves.length),
                 })}</span
               >

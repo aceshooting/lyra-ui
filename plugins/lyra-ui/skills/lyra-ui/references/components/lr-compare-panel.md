@@ -25,7 +25,8 @@ recorded winner, host-writable to reflect a previously-recorded vote back. `item
 the prior vote; assigning both `itemId` and a controlled `vote` in one update preserves the explicit
 vote regardless of property assignment order. `allowedVotes: readonly CompareVote[] = ['a', 'b',
 'tie', 'both-bad']` (attribute: false) is the positive list of choices to render, always projected
-in that canonical order; repeated/foreign values do not create controls. `syncScroll: boolean =
+in that canonical order; repeated/foreign values do not create controls. The list is clone-owned,
+bounded, and frozen; reassign a new array after changing the allowed choices. `syncScroll: boolean =
 false` (attribute `sync-scroll`) links both panes'
 scroll position. `disabled: boolean = false` (reflected) disables every vote button and suppresses
 `lr-vote`.

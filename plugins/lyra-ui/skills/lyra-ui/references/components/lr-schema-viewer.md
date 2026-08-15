@@ -19,12 +19,13 @@ Recursive JSON Schema inspector with property/branch selection, required and con
 validation issues, `$ref` visibility, composition branches, cycle protection, and a depth ceiling.
 It intentionally does not fetch remote references or validate values.
 
-**Properties:** `schema: JsonSchemaNode | null = null` and `issues: SchemaValidationIssue[] = []`
-(attribute: false); `selectedPath: string = ''` (attribute `selected-path`);
+**Properties:** clone-owned, bounded, frozen `schema: JsonSchemaNode | null = null` and
+`issues: readonly SchemaValidationIssue[] = []` (attribute: false); reassign a new schema record or
+issue array after changes. `selectedPath: string = ''` (attribute `selected-path`);
 `maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''`.
 
 **Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,
-required/enum/const/default/examples, and oneOf/anyOf/allOf while preserving unknown schema
+readonly required/enum/examples and oneOf/anyOf/allOf collections, and const/default while preserving unknown schema
 keywords. `SchemaValidationIssue = { path: string; message: string; severity?: 'error' | 'warning'
 | 'info' }`.
 

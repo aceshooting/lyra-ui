@@ -26,7 +26,8 @@ truth.
 **Properties:** `viewer: PageThumbnailSource | null = null` (attribute: false) — the wired viewer.
 `for: string = ''` — an id selector alternative to setting `viewer` directly. `pageCount: number = 0`
 (attribute `page-count`) and `page: number = 1` (reflected) — mediated-mode page state.
-`highlights: readonly LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers.
+`highlights: readonly LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers;
+IDs are trimmed and required to be nonempty, with the first record retained when IDs repeat.
 `thumbWidth: number = 96` (attribute `thumb-width`) and `label: string = ''`. A wired
 `PageThumbnailSource` provides its one-based `page`, optionally exposes the atomic
 `pageViewerSnapshot`/`lr-page-viewer-state-change` protocol, and supplies at least one lazy preview

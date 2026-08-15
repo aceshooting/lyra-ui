@@ -51,7 +51,7 @@ resolving `false` when there are none); `clearSearch()` clears the query, matche
 PapaParse diagnostics also emit this event when the recoverable partial table remains rendered, so
 malformed or extra cells are never silently presented as a clean parse; exceeding that diagnostic
 budget is a resource-limit error instead.
-`lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
+`lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
@@ -73,10 +73,10 @@ stylesheet.
 **Themeable custom properties:** `--lr-dataset-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
 `--lr-dataset-viewer-highlight-color` (default `var(--lr-color-brand)`) — the outline color of a
-`cell-highlight` cell. The component writes it inline (as
-`var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching `activeHighlightId`, since a
-`[data-active]` selector can't be chained onto the `::part(cell-highlight)` the cell reaches this
-component's stylesheet through; a custom property inherits across that boundary instead.
+`cell-highlight` cell. The cell matching `activeHighlightId` receives a private warning-color
+default because a `[data-active]` selector can't be chained onto the `::part(cell-highlight)` the
+cell reaches this component's stylesheet through. An inherited or direct public value remains
+authoritative across that boundary.
 
 **Optional peer dependency:** `papaparse`.
 

@@ -57,10 +57,14 @@ export interface LyraEntityDossierConfidence {
 }
 
 export interface LyraEntityDossierEventMap
-  extends LyraNeighborListEventMap,
+  extends Omit<LyraNeighborListEventMap, 'lr-entity-activate'>,
     LyraChunkInspectorEventMap,
-    LyraProvenancePanelEventMap,
+    Omit<LyraProvenancePanelEventMap, 'lr-entity-activate'>,
     Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
+  'lr-entity-activate': CustomEvent<{
+    entityId: string;
+    occurrenceIndex?: number;
+  }>;
   'lr-tab-show': CustomEvent<{ tabId: LyraEntityDossierTab }>;
 }
 
@@ -98,21 +102,21 @@ export interface LyraEntityDossierEventMap
  *
  * @customElement lr-entity-dossier
  * @event lr-entity-activate - Surfaced unchanged from the embedded entity card or neighbor list.
- *   `detail: { id }`.
+ *   `detail: { entityId, occurrenceIndex? }`.
  * @event lr-node-expand - Surfaced unchanged from the embedded neighbor list.
- *   `detail: { id }`.
+ *   `detail: { nodeId }`.
  * @event lr-chunk-open - Surfaced unchanged from the embedded chunk inspector.
- *   `detail: { id, sourceId, anchor? }`.
+ *   `detail: { chunkId, sourceId, anchor? }`.
  * @event lr-expand - Surfaced unchanged from the embedded chunk inspector.
- *   `detail: { id, expanded }`.
+ *   `detail: { chunkId, expanded }`.
  * @event lr-toggle - Surfaced unchanged from the embedded provenance panel.
  *   `detail: { section, expanded }`.
  * @event lr-entity-open - Surfaced unchanged from an entity chip inside the embedded provenance
- *   panel. `detail: { id }`.
+ *   panel. `detail: { entityId }`.
  * @event lr-drill - Surfaced unchanged from a community card inside the embedded provenance panel.
- *   `detail: { id }`.
+ *   `detail: { communityId }`.
  * @event lr-relation-activate - Surfaced unchanged from a relationship path strip inside the
- *   embedded provenance panel. `detail: { relation, sourceId, targetId }`.
+ *   embedded provenance panel. `detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`.
  * @event lr-tab-show - Surfaced unchanged from the embedded tabs.
  *   `detail: { tabId }`.
  * @csspart base - The root wrapper, or the empty state's wrapper when `entity` is `null`.

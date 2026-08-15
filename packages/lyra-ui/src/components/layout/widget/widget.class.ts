@@ -306,7 +306,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       }
     }
     if (changed.has('views') || changed.has('activeViewId')) {
-      const focused = this.renderRoot.querySelector<HTMLElement>(
+      const focused = this.renderRoot?.querySelector<HTMLElement>(
         '[part="view-toggle"]:focus'
       );
       this.focusedViewIdBeforeUpdate = focused?.dataset['viewId'];

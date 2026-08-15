@@ -345,7 +345,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   /** Keeps an owning aggregate's value/FormData/validity coherent in the same task as a direct
    * child property write. User events remain the group's separate public notification boundary. */
   private notifyOwningGroup(): void {
-    const group = this.closest('lr-checkbox-group') as (HTMLElement & {
+    const group = this.closest?.('lr-checkbox-group') as (HTMLElement & {
       notifyCheckboxStateChange?: (checkbox: LyraCheckbox) => void;
     }) | null;
     group?.notifyCheckboxStateChange?.(this);

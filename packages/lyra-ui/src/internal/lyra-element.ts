@@ -900,8 +900,11 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // Read before `super`, which creates the render root: on the very first connect a shadow root
     // can only already exist because the parser built it from server-rendered declarative markup,
     // which is exactly when the first browser render has to reproduce that markup rather than
-    // whatever the browser alone can see.
-    this.hydratingServerShadow ??= !this.hasUpdated && this.shadowRoot !== null;
+    // whatever the browser alone can see. The SSR generation pass itself (no `Node` global at all)
+    // needs the same deferral for the same reason -- it can't see real light DOM/motion-preference
+    // answers either, and must produce markup a later browser update can reproduce unchanged.
+    this.hydratingServerShadow ??=
+      typeof Node === 'undefined' || (!this.hasUpdated && this.shadowRoot !== null);
     super.connectedCallback();
     recordLyraOwnerDocumentConnection(this);
     // A reconnected element may sit under a different `lang`/`dir` ancestor,
@@ -1099,7 +1102,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   protected beginAbortableLoad(): AbortSignal | undefined {
     this.pendingLoadController?.abort();
     this.pendingLoadController = undefined;
-    const AbortControllerCtor = this.ownerDocument.defaultView?.AbortController;
+    const AbortControllerCtor = this.ownerDocument?.defaultView?.AbortController;
     if (!AbortControllerCtor) return undefined;
     this.pendingLoadController = new AbortControllerCtor();
     return this.pendingLoadController.signal;

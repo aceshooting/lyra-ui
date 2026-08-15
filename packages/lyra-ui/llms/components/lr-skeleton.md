@@ -19,6 +19,7 @@ Loading placeholder mirroring the Web Awesome/Shoelace skeleton surface under th
 with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 
 **Properties:**
+
 - `shape: 'text'|'circle'|'rect' = 'text'` (reflected) — the canonical geometry vocabulary;
   exported as `LyraSkeletonShape`. The former `variant` property/attribute and `SkeletonVariant`
   type are removed in v9; use `shape` and `LyraSkeletonShape`.
@@ -51,11 +52,22 @@ timing.
 **Optional peer deps:** none.
 
 ```html
-<lr-skeleton shape="circle" effect="pulse" width="3rem" height="3rem"></lr-skeleton>
-<lr-skeleton announce shape="text" effect="sheen" label="Loading name"></lr-skeleton>
+<lr-skeleton
+  shape="circle"
+  effect="pulse"
+  width="3rem"
+  height="3rem"
+></lr-skeleton>
+<lr-skeleton
+  announce
+  shape="text"
+  effect="sheen"
+  label="Loading name"
+></lr-skeleton>
 ```
 
 **Known gotchas:**
+
 - Bare skeletons are decorative. In a repeated layout, set `announce` only on one meaningful
   placeholder or provide one parent status; leave every other child unannounced.
 - no `lines`/`count` shorthand for "N lines of skeleton text" — stamp out N elements

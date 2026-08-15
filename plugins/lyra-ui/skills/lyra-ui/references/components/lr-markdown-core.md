@@ -51,6 +51,10 @@ unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading
 `highlights: readonly LyraHighlight[] = []` (attribute: false), `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), `anchor: LyraAnchor | string | null = null` (attribute: false),
 and `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']`.
+The same 1,000,000-code-unit/20,000-node corpus ceiling, 4,096-code-unit quote-field ceiling,
+4,000,000-code-unit work ceiling, 10,000-record admission ceiling, 1,000-candidate window, and
+100-painted-highlight limit documented for `<lr-markdown>` apply here too, including active-first
+retention from anywhere in the admitted snapshot.
 
 **Methods:** `renderMarkdown(): void` — immediately reruns the current content through the parse,
 sanitize, highlight, and fallback pipeline after changing this instance's `marked` configuration;

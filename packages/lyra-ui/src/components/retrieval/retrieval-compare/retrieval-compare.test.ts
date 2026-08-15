@@ -94,7 +94,7 @@ it('uses instance-safe heading ids instead of caller set ids', async () => {
     ...second.shadowRoot!.querySelectorAll('[part="set-heading"]'),
   ];
   const ids = headings.map((heading) => heading.id);
-  expect(new Set(ids).size).to.equal(4);
+  expect(new Set(ids).size).to.equal(2);
   expect(ids.some((id) => id.includes('same id'))).to.be.false;
   for (const set of first.shadowRoot!.querySelectorAll('[part="set"]')) {
     expect(set.getAttribute('aria-labelledby')).to.equal(
@@ -153,6 +153,42 @@ it('scrolls the sets row only on the inline axis and never clips a taller compar
   expect(style.overflowY).to.equal('auto');
   expect(style.overflowY).not.to.equal('hidden');
   expect(style.overflowY).not.to.equal('clip');
+});
+
+it('omits blank and later duplicate set and nested chunk ids before overlap, rendering, and actions', async () => {
+  const firstChunk = chunk('chunk-1', 0.8);
+  const firstSet: RetrievalComparisonSet = {
+    id: 'set-1',
+    label: 'First set',
+    chunks: [
+      { ...firstChunk, id: '' },
+      firstChunk,
+      { ...firstChunk, text: 'Later duplicate' },
+    ],
+  };
+  const el = (await fixture(html`
+    <lr-retrieval-compare
+      .sets=${[
+        { ...firstSet, id: ' ' },
+        firstSet,
+        { ...firstSet, label: 'Later set' },
+      ]}
+    ></lr-retrieval-compare>
+  `)) as LyraRetrievalCompare;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="set"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part~="chunk"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="overlap"]')).to.equal(null);
+  expect(
+    el.shadowRoot!.querySelector('[part="set-heading"]')!.textContent
+  ).to.equal(firstSet.label);
+
+  const selected = oneEvent(el, 'lr-chunk-select');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="chunk"]')!.click();
+  expect((await selected).detail).to.deep.equal({
+    setId: firstSet.id,
+    chunk: firstChunk,
+  });
 });
 
 describe('chunk-selected cssprop escape hatch', () => {

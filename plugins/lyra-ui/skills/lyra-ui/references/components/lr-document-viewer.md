@@ -33,11 +33,12 @@ value, without suppressing the visible `name` heading.
   `payload.file` is authoritative for MIME dispatch, the dialog heading, renderer/fallback input,
   anchors/highlights, and download; the scalar `name`, `mimeType`, `src`, `anchor`, `highlights`,
   and `alt` properties resume their legacy behavior when `payload` is reset to `undefined`.
-- `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry override;
-  when unset, the instance owns an immutable snapshot of the built-ins registered when it was
-  constructed. A later module import/registration cannot mutate an existing viewer. A throwing
-  consumer matcher or renderer is contained as the localized error state rather than escaping the
-  update.
+- `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry
+  override. A native map assignment is copied behind a frozen readonly facade while renderer-
+  definition identity is retained; later source-map mutation is not observed. When unset, the
+  instance owns an immutable snapshot of the built-ins registered when it was constructed. A later
+  module import/registration cannot mutate an existing viewer. A throwing consumer matcher or
+  renderer is contained as the localized error state rather than escaping the update.
 - `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
@@ -45,7 +46,7 @@ value, without suppressing the visible `name` heading.
   `hasChanged: () => true`, so re-assigning the same value (e.g. re-clicking the same citation
   badge) still re-fires.
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — highlights forwarded to the resolved
-  renderer.
+  renderer after the shared trimmed, nonempty, first-wins identity normalization.
 
 **Events:**
 
@@ -75,8 +76,10 @@ size of `[part="body"]` before the dialog body scrolls internally.
 
 **Renderer registry exports:**
 
-- `DocumentFile` — the compatible mutable file object passed unchanged to legacy `render(file)` and
-  `matches(file)` callbacks: `{ name, mimeType, src, anchor?, highlights?, alt? }`.
+- `DocumentFile` — the compatible mutable lookup input passed to `matches(file)` callbacks:
+  `{ name, mimeType, src, anchor?, highlights?, alt? }`. Adapter and legacy-render boundaries
+  receive an immutable file snapshot whose highlights use the shared trimmed, nonempty,
+  first-wins identity projection.
 - `LyraDocumentFile` — the readonly file snapshot wrapped by every discriminated payload.
 - `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av'` discriminated input wrapping an
   immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at most 10,000
@@ -100,8 +103,9 @@ size of `[part="body"]` before the dialog body scrolls internally.
 - `createDocumentRendererAdapter(definition)` — preserves discriminator-specific callback types
   while producing the validated adapter accepted by a registry definition.
 - `adaptDocumentRenderer(definition, file, payload?)` — binds one resolved definition to an
-  immutable payload and derives its frozen capabilities. A legacy definition still receives the
-  original `DocumentFile` object by identity.
+  immutable payload and derives its frozen capabilities. It snapshots the file once and passes
+  that canonical object to either the adapter or legacy renderer; caller object identity is not
+  retained across this boundary.
 - `snapshotLyraDocumentRendererPayload(payload)` — returns the same validated, bounded, frozen
   assignment snapshot used by `<lr-document-viewer>`.
 - `createDocumentRendererRegistry(overrides?)` — returns a truly immutable built-in snapshot plus
@@ -145,8 +149,15 @@ import type { LyraDocumentRendererPayload } from "@aceshooting/lyra-ui/component
 const payload = {
   kind: "av",
   file: { name: "episode.mp4", mimeType: "video/mp4", src: "/episode.mp4" },
-  cues: [{ id: "intro", start: 0, text: "Welcome", speaker: "Host" }],
-  tracks: [{ src: "/episode-en.vtt", kind: "captions", srclang: "en", label: "English" }],
+  cues: [{ cueId: "intro", start: 0, text: "Welcome", speaker: "Host" }],
+  tracks: [
+    {
+      src: "/episode-en.vtt",
+      kind: "captions",
+      srclang: "en",
+      label: "English",
+    },
+  ],
 } satisfies LyraDocumentRendererPayload;
 
 html`<lr-document-viewer open .payload=${payload}></lr-document-viewer>`;

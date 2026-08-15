@@ -30,12 +30,12 @@ model?: string; promptVersion?: string; output: string; scores?: RubricValue; re
   (exported here). One entry per model or prompt version being compared for a single evaluation
   example. `scores`/`review` use the same `RubricValue` shape `lr-rubric-form` itself reads and
   writes, so a `TableColumn`'s `cell()` accessor and the rubric form's own `value` binding read a
-  run's fields with no conversion. Later duplicate run ids are omitted before selection, diff,
+  run's fields with no conversion. Empty/blank ids and later duplicate run ids are omitted before selection, diff,
   grid, and review-event lookup
 - `columns: TableColumn<EvalRunResult>[] = []` (attribute: false) — plain pass-through to
-  `lr-table.columns`, not re-derived here; later duplicate column keys are omitted
+  `lr-table.columns`, not re-derived here; empty/blank and later duplicate column keys are omitted
 - `rubricKeys: RubricKey[] = []` (attribute: false) — plain pass-through to `lr-rubric-form.keys`;
-  later duplicate rubric keys are omitted
+  empty/blank and later duplicate rubric keys are omitted
 - `selectedRunId: string | null = null` (attribute `selected-run-id`) — the run open for review and the diff's
   **new** side; falls back to `runs[0]?.id` when empty
 - `baselineRunId: string | null = null` (attribute `baseline-run-id`) — the run compared against and the

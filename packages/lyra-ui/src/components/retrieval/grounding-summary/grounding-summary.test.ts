@@ -320,11 +320,31 @@ it("uses real configurable headings and native lists for warnings and evidence",
     )
   ).to.equal(true);
 
-  (el as LyraGroundingSummary & { headingLevel: number }).headingLevel = 99;
+  el.headingLevel = "outside-range" as LyraGroundingSummary["headingLevel"];
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector('[part="warnings-heading"]')!.tagName
-  ).to.equal("H6");
+  ).to.equal("H3");
+});
+
+it("supports the shared 'none' heading-level opt-out, rendering no heading semantics", async () => {
+  const el = (await fixture(
+    html`<lr-grounding-summary heading-level="none"></lr-grounding-summary>`
+  )) as LyraGroundingSummary;
+  el.assessment = ASSESSMENT;
+  el.citations = CITATIONS;
+  await el.updateComplete;
+
+  const warningsHeading = el.shadowRoot!.querySelector(
+    '[part="warnings-heading"]'
+  )!;
+  const evidenceHeading = el.shadowRoot!.querySelector(
+    '[part="evidence-heading"]'
+  )!;
+  expect(warningsHeading.tagName).to.not.match(/^H[1-6]$/);
+  expect(evidenceHeading.tagName).to.not.match(/^H[1-6]$/);
+  expect(warningsHeading.getAttribute("role")).to.equal(null);
+  expect(evidenceHeading.getAttribute("role")).to.equal(null);
 });
 
 it("names the inner group from label or the localized default without duplicating a host name", async () => {
@@ -562,4 +582,64 @@ it("formats warning and evidence counts with the effective locale", async () => 
   expect(
     el.shadowRoot!.querySelector('[part="evidence-count"]')!.textContent
   ).to.equal("١٢");
+});
+
+it('omits blank and later duplicate claim and citation ids before composition, counts, and events', async () => {
+  const firstClaim = {
+    id: 'claim-1',
+    text: 'First claim',
+    status: 'supported' as const,
+    citationIds: ['citation-1'],
+  };
+  const firstCitation: Citation = {
+    id: 'citation-1',
+    sourceId: 'source-1',
+    label: 'First citation',
+  };
+  const el = (await fixture(
+    html`<lr-grounding-summary></lr-grounding-summary>`
+  )) as LyraGroundingSummary;
+  el.assessment = {
+    supportedClaims: 1,
+    unsupportedClaims: 0,
+    coverage: 1,
+    claims: [
+      { ...firstClaim, id: ' ' },
+      firstClaim,
+      { ...firstClaim, text: 'Later duplicate' },
+    ],
+  };
+  el.citations = [
+    { ...firstCitation, id: '' },
+    firstCitation,
+    { ...firstCitation, label: 'Later duplicate' },
+  ];
+  await el.updateComplete;
+
+  const claims = el.shadowRoot!.querySelector('lr-claim-evidence') as
+    | (HTMLElement & {
+        claims: readonly unknown[];
+        citations: readonly unknown[];
+        updateComplete: Promise<unknown>;
+      })
+    | null;
+  expect(claims).to.exist;
+  expect(claims!.claims).to.deep.equal([firstClaim]);
+  expect(claims!.citations).to.deep.equal([firstCitation]);
+  expect(
+    el.shadowRoot!.querySelector('[part="evidence-count"]')!.textContent
+  ).to.equal('1');
+  expect(
+    el.shadowRoot!.querySelectorAll('[part="evidence-item"]').length
+  ).to.equal(1);
+
+  const selected = oneEvent(el, 'lr-citation-select');
+  el.shadowRoot!.querySelector<HTMLElement>('lr-citation-badge')!.dispatchEvent(
+    new CustomEvent('lr-citation-activate', {
+      bubbles: true,
+      composed: true,
+      detail: { index: 1, sourceId: 'source-1' },
+    })
+  );
+  expect((await selected).detail).to.deep.equal({ citation: firstCitation });
 });

@@ -199,7 +199,7 @@ describe("lr-embedding-explorer", () => {
   it("exposes selectable points as listbox options with explicit selected state", async () => {
     const el = (await fixture(
       html`<lr-embedding-explorer
-        selected-id="b"
+        selected-point-id="b"
         .points=${points}
       ></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
@@ -451,5 +451,31 @@ describe("lr-embedding-explorer", () => {
       html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
     await expect(populated).to.be.accessible();
+  });
+
+  it('omits blank and later duplicate point ids after coordinate validation before selection and actions', async () => {
+    const first = { id: 'same', x: 1, y: 1, label: 'First valid' };
+    const el = (await fixture(html`
+      <lr-embedding-explorer
+        selected-point-id="same"
+        .points=${[
+          { id: '', x: 0, y: 0, label: 'Blank' },
+          { id: 'same', x: Number.NaN, y: 0, label: 'Invalid coordinates' },
+          first,
+          { ...first, x: 2, label: 'Later duplicate' },
+        ]}
+      ></lr-embedding-explorer>
+    `)) as LyraEmbeddingExplorer;
+
+    const rendered = el.shadowRoot!.querySelectorAll('[part="point"]');
+    expect(rendered.length).to.equal(1);
+    expect(rendered[0]!.getAttribute('data-selected')).to.equal('true');
+    expect(rendered[0]!.getAttribute('aria-label')).to.contain('First valid');
+
+    const selected = oneEvent(el, 'lr-point-select');
+    rendered[0]!.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, composed: true })
+    );
+    expect((await selected).detail).to.deep.equal({ point: first });
   });
 });

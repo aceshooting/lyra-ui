@@ -36,7 +36,8 @@ one-based, width-bounded DOM/SVG slide preview and resolves to a caller-owned di
 settle.
 `search(query)` searches the renderer's complete presentation model, not its windowed DOM, retains
 at most 10,000 validated results, navigates the matching slide, and paints a renderer-owned node
-overlay. `searchNext()`, `searchPrevious()`, and `clearSearch()` navigate/dispose those model
+overlay. Queries are capped at 4,096 code units and one result-validation pass at 4,000,000 code
+units; a truncated pass reports `matchCountExact: false`. `searchNext()`, `searchPrevious()`, and `clearSearch()` navigate/dispose those model
 results. `scrollToAnchor()` remains available for renderer output that exposes DOM text.
 
 **Events:**

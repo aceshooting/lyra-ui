@@ -76,10 +76,10 @@ deeply-nested node's own shadow root still reaches it).
   omitted. Collapsed branches do not instantiate descendants; disclosure projects only normalized
   children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
   `{ readonly id: string; readonly label: string; readonly children?: readonly LyraTreeNodeData[];
-  readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
-  badges?: readonly TreeBadge[]; readonly icon?: unknown; readonly description?: string; readonly
-  accessibleLabel?: string }`. `TreeBadge` is `{ readonly text: string; readonly tone?:
-  LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in order and each
+readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
+badges?: readonly TreeBadge[]; readonly icon?: unknown; readonly description?: string; readonly
+accessibleLabel?: string }`. `TreeBadge` is `{ readonly text: string; readonly tone?:
+LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in order and each
   chip's accessible name uses `label ?? text`.
   `icon` renders as a decorative leading visual, `description` as secondary visible row text, and
   `accessibleLabel` names the `role="treeitem"` host without changing its visible label. An

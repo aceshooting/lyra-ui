@@ -23,10 +23,11 @@ transcript sync is a separate concern.
 **Properties:** `entries: LyraTranscriptEntry[] = []` (attribute: false) — `LyraTranscriptEntry { id:
 string; speaker?: string; text: string; interim?: boolean; timestamp?: LyraTimestamp }` (exported by
 this module; `LyraTimestamp = Date | string | number`, normalized through Date/TimeClip). Reconciled
-keyed by nonempty, first-wins `id` via Lit's `repeat()`: a
+keyed by nonempty, nonblank, first-wins `id` via Lit's `repeat()`: a
 same-`id` entry with new `text` replaces in place, and a same-`id` entry whose `interim` flips from
 `true` to unset/`false` moves from the interim area into the `role="log"` region and announces
-exactly once. Interim entries render _after_ the log container — visible, but structurally outside
+exactly once. A collection with no valid entry renders the empty state. Interim entries render
+_after_ the log container — visible, but structurally outside
 it — so per-token mutations are never spoken by assistive tech. That announcement does **not** come
 from the shadow `role="log"` region, which is explicitly `aria-live="off"`: a live region inside a
 component's own shadow root is not reliably announced (JAWS with Firefox ignores one outright).

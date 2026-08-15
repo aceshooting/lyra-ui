@@ -42,7 +42,10 @@ selection direction exposed in free-text mode.
 **Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
 small leading badge. `catalog?: LyraCatalog<LyraVoiceCatalogEntry>` (attribute: false) — the full
 voice list; omit (or leave empty) to fall back to plain free-text entry; replacing it retires any
-internal preview before the rendered candidate changes. `allowCustom: boolean = false` (attribute
+internal preview before the rendered candidate changes. Ids use the shared unique, nonempty,
+first-wins catalog rule documented under `lr-model-select`, including preview lookup. Assignments
+become bounded clone-owned frozen snapshots; create and reassign a new array after row changes.
+`allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`. `preview:
 boolean = true` (reflected) — whether to render preview affordances at all. `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,

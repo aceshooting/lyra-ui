@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A controlled list of documents moving through an ingestion pipeline (upload, extract, chunk, embed, index), each row showing its stage, progress, chunk/embedding counts, and a retry or cancel affordance. Presentation only -- retrying or cancelling a row fires an lr-retry/lr-cancel request event for the host to act on.',
+          'A controlled ingestion list that omits malformed, blank-id, and later duplicate rows first-wins before counts, virtualization, failure announcements, rendering, and retry/cancel actions.',
       },
     },
   },

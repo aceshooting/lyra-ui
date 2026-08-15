@@ -36,6 +36,7 @@ const chunks: RetrievalChunk[] = [
 export const Default: Story = {
   render: () =>
     html`<lr-retrieval-results
+      active-chunk-id="c2"
       .chunks=${chunks}
       @lr-select=${(e: CustomEvent) => console.log('lr-select', e.detail)}
       @lr-chunk-open=${(e: CustomEvent) => console.log('lr-chunk-open', e.detail)}
@@ -53,7 +54,7 @@ export const GroupedBySource: Story = {
 /**
  * `grouping="custom"` buckets rows under whatever key `groupBy` returns — a relevance tier here —
  * with `groupLabel` rendering the header and `groupOrder` pinning the sequence. The built-in
- * dedup/sort/virtualization pipeline is unchanged; only the bucketing key is host-supplied.
+ * identity/sort/virtualization pipeline is unchanged; only the bucketing key is host-supplied.
  */
 export const GroupedByRelevanceTier: Story = {
   render: () => html`
@@ -102,7 +103,7 @@ export const Narrow: Story = {
     <div style="display:grid; gap:1rem; inline-size:320px; max-inline-size:100%;">
       <lr-retrieval-results
         has-more
-        .selectedIds=${['long-result']}
+        .selectedChunkIds=${['long-result']}
         .chunks=${[
           {
             id: 'long-result',
@@ -139,7 +140,7 @@ export const ThemedSelectedRow: Story = {
     <lr-retrieval-results
       style="--lr-retrieval-results-selected-border: ${storyColor('warning')};"
       .chunks=${chunks}
-      .selectedIds=${['c1']}
+      .selectedChunkIds=${['c1']}
     ></lr-retrieval-results>
   `,
 };

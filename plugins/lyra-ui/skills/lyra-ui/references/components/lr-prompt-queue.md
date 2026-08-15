@@ -22,10 +22,10 @@ When a focused row action requests removal and the host applies the proposed que
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
 receives focus. Removing an unfocused row does not move focus.
 
-**Properties:** `items: PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
+**Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
 (reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
-`PromptQueueItem = { id: string; value: string; attachments?: DocumentRef[]; createdAt?: number;
+`PromptQueueItem = { id: string; value: string; attachments?: readonly DocumentRef[]; createdAt?: number;
 metadata?: Record<string, unknown> }`.
 
 Item ids are occurrence identities. Empty ids and later duplicates are ignored before rendering or

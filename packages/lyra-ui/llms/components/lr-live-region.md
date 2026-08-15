@@ -24,7 +24,7 @@ semver-covered `utilities/` surface documented in `llms/shared.md`, not internal
 import {
   Announcer,
   acquireAnnouncementSink,
-} from '@aceshooting/lyra-ui/utilities/announcer.js';
+} from "@aceshooting/lyra-ui/utilities/announcer.js";
 ```
 
 The `.js` is required (`./utilities/*` maps straight onto `./dist/utilities/*`). Both symbols are
@@ -42,16 +42,16 @@ writes into — `acquireAnnouncementSink()`, documented after `Announcer` below.
 Streaming UIs (token-by-token chat responses, progress ticks, etc.) naturally produce far more
 candidate announcements than a screen-reader user can usefully absorb — reading every incremental
 chunk aloud is spam, not information. `Announcer` collapses a burst of `announce()` calls arriving
-within `throttleMs` of the *first* call in that burst down to a single trailing-edge flush of the
+within `throttleMs` of the _first_ call in that burst down to a single trailing-edge flush of the
 latest text: superseded intermediate text is dropped outright, never queued or concatenated.
 
 - `new Announcer(options: AnnouncerOptions)` where
   `AnnouncerOptions = { throttleMs?: number /* = 500 */; onFlush: (text: string) => void;
-  timerHost?: AnnouncerTimerHost }`. `AnnouncerTimerHost` is the minimal numeric-handle
+timerHost?: AnnouncerTimerHost }`. `AnnouncerTimerHost` is the minimal numeric-handle
   `setTimeout`/`clearTimeout` surface implemented by a browser `Window`; omit it to use ambient
   timers.
 - `announce(text: string, options?: AnnounceOptions)` where `AnnounceOptions = { force?: boolean }` —
-  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the *first*
+  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the _first_
   call of a burst schedules the flush timer, so the deadline stays anchored to that first call
   rather than being pushed back by every subsequent call. `{ force: true }` bypasses any
   in-progress window and flushes immediately, so a terminal message (e.g. "response complete") is
@@ -69,12 +69,12 @@ latest text: superseded intermediate text is dropped outright, never queued or c
 
 The shared live region announcements actually land in. A live region rendered **inside a shadow
 root is not reliably announced** — JAWS with Firefox ignores one entirely — so every announcement
-this library makes goes into a visually hidden element in the *host document's* light DOM instead.
+this library makes goes into a visually hidden element in the _host document's_ light DOM instead.
 
 - `acquireAnnouncementSink(politeness: AnnouncementPoliteness, options?: AnnouncementSinkOptions)`
   where `AnnouncementPoliteness = 'polite' | 'assertive'` and
   `AnnouncementSinkOptions = { document?: Document /* = the ambient document */; source?: Element;
-  messageTtlMs?: number /* = 5000 */ }`. Library components pass their host as `source`, which
+messageTtlMs?: number /* = 5000 */ }`. Library components pass their host as `source`, which
   prevents a document-level region from speaking while that source or a composed ancestor is
   `hidden`, `inert`, `aria-hidden`, CSS-hidden, or in a closed `<details>` content branch;
   standalone consumers can do the same. A box-generating source also stays silent while skipped by
@@ -88,7 +88,7 @@ this library makes goes into a visually hidden element in the *host document's* 
 - One region per `(document, politeness)` pair, shared by every consumer and **ref-counted**: it is
   mounted on the first `acquire()` and removed from the DOM when the last handle `release()`s.
   Mounting happens at acquire time, ahead of any text, because assistive tech has to have been
-  observing a region *before* content arrives for the change to be announced at all.
+  observing a region _before_ content arrives for the change to be announced at all.
 - `announce()` **appends a child node** (`aria-relevant="additions"`, `aria-atomic="false"`) rather
   than rewriting one text node. That is what makes an identical repeat announce a second time — no
   clear-then-restore-across-a-frame dance is needed — and each appended node is swept after
@@ -132,7 +132,7 @@ window and flushes immediately.
 
 **CSS parts:** `region` — the visually-hidden, `aria-hidden` mirror of the latest announced text.
 It carries no `role`/`aria-live` of its own: a second live region holding the same text would make
-browsers that *do* announce shadow live regions read every message twice.
+browsers that _do_ announce shadow live regions read every message twice.
 
 **Themeable custom properties:** none component-specific — the shadow mirror is hidden via the
 shared `.sr-only` helper class (`internal/a11y.ts`) and the light-DOM region via the same
@@ -145,11 +145,11 @@ neither of them tokenized CSS.
 <!-- once, near the root of a page/surface -->
 <lr-live-region id="live" mode="polite"></lr-live-region>
 <script type="module">
-  const live = document.getElementById('live');
+  const live = document.getElementById("live");
   // streaming tokens: fine to call on every chunk, only the trailing state lands
   live.announce(`${partialText} …`);
   // stream finished: always announced, even mid-throttle-window
-  live.announce('Response complete', { force: true });
+  live.announce("Response complete", { force: true });
 </script>
 ```
 

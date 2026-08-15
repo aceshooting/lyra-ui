@@ -31,8 +31,9 @@ lowercase IDL. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected �
 same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
 tiers, and both `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` are accepted; the remove
 button's hit area stays fixed at `40px` across all sizes), `pill` (reflected, default `false` —
-rounds the token row's corners to a full pill by re-assigning `--lr-token-input-radius` to
-`--lr-radius-pill`; the chips share that knob with the row, so they round with it),
+rounds the token row's corners by changing the private radius default to `--lr-radius-pill`; the
+chips share the public `--lr-token-input-radius` hook with the row, and an inherited or direct
+value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).

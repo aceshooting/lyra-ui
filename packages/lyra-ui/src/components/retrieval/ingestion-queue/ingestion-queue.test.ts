@@ -702,15 +702,16 @@ describe("virtualization", () => {
     )) as LyraIngestionQueue;
     const virtualList = el.shadowRoot!.querySelector(
       "lr-virtual-list"
-    ) as unknown as {
-      items: unknown[];
+    ) as (LyraVirtualList & {
       keyFunction: (item: unknown, index: number) => string | number;
       renderItem: (item: unknown, index: number) => unknown;
-    } | null;
+    }) | null;
     expect(virtualList).to.exist;
     expect(el.shadowRoot!.querySelector('[part="list"]') === virtualList).to.be.true;
-    expect(virtualList!.items).to.equal(items);
-    expect(virtualList!.keyFunction(items[1], 1)).to.equal("2");
+    expect(virtualList!.items).to.deep.equal(items);
+    expect(virtualList!.items).to.not.equal(items);
+    expect(Object.isFrozen(virtualList!.items)).to.equal(true);
+    expect(virtualList!.keyFunction(virtualList!.items[1], 1)).to.equal("2");
     await nextFrame();
   });
 
@@ -919,4 +920,29 @@ it("is accessible with a populated, mixed-stage queue", async () => {
   )) as LyraIngestionQueue;
   expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.length(5);
   await expect(el).to.be.accessible();
+});
+
+it('omits blank and later duplicate item ids before counts, virtualization, rendering, and actions', async () => {
+  const first = item({ id: 'same', stage: 'queued' });
+  const el = (await fixture(html`
+    <lr-ingestion-queue
+      virtualize-at="1"
+      .items=${[
+        item({ id: '', stage: 'queued' }),
+        first,
+        item({ id: 'same', stage: 'failed', error: 'Later duplicate' }),
+        item({ id: ' ', stage: 'queued' }),
+      ]}
+    ></lr-ingestion-queue>
+  `)) as LyraIngestionQueue;
+
+  expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.equal(null);
+  expect(el.shadowRoot!.querySelectorAll('[part="item"]').length).to.equal(1);
+  expect(
+    el.shadowRoot!.querySelector('[part="item-name"]')!.textContent!.trim()
+  ).to.equal(first.document.name);
+
+  const cancelled = oneEvent(el, 'lr-cancel');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cancel-button"]')!.click();
+  expect((await cancelled).detail).to.deep.equal({ itemId: 'same' });
 });

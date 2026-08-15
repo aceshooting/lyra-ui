@@ -45,7 +45,7 @@ report false.
 
 **Events:** `lr-load` (`detail: { naturalWidth, naturalHeight }`), `lr-zoom-change` (`detail: {
 zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detail: { fit }`),
-`lr-highlight-activate` (`detail: { id }`), `lr-annotation-create` (`detail: { anchor }`, kind
+`lr-highlight-activate` (`detail: { highlightId }`), `lr-annotation-create` (`detail: { anchor }`, kind
 `'region'`), `lr-anchor-result` (`detail: { found }`), and `lr-render-error` (`detail: { error
 }`).
 
@@ -107,8 +107,8 @@ properties. `--lr-image-viewer-highlight-fill` is the resting fill a `[part='hig
 renders, resolved per tone from the `-bg` knobs above; its hover and pressed states are color mixes
 taken from that value, so setting it directly retints all three states of one highlight at once —
 retint a whole tone through the matching `-bg` knob instead. These properties are declared as inline
-`var()` fallbacks at the point of use rather than on `:host`, so each can be set on the element *or
-on any ancestor*:
+`var()` fallbacks at the point of use rather than on `:host`, so each can be set on the element _or
+on any ancestor_:
 `::part(highlight)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — which previously left overriding the library-wide
 `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever, repainting every other

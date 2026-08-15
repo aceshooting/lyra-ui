@@ -19,12 +19,13 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import { firstByIdentity } from '../../agent-tools/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type RagAnswerState = 'idle' | 'loading' | 'answer' | 'error';
+export type LyraRagAnswerState = 'idle' | 'loading' | 'answer' | 'error';
 
 export interface LyraRagCitationSelectDetail extends CitationSelectEventDetail {
   /** The one presentation owner that produced the action. */
@@ -44,6 +45,8 @@ export interface LyraRagAnswerEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Blank citation/source/claim ids and later duplicates are ignored before lookup, counts,
+ * rendering, or activation. The first record for an id wins.
  *
  * @customElement lr-rag-answer
  * @slot answer - Replaces the data-driven Markdown answer body.
@@ -194,11 +197,38 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       (element) => element.getAttribute('slot') === name
     );
   }
+
+  private get normalizedCitations(): Citation[] {
+    return firstByIdentity(
+      Array.isArray(this.citations) ? this.citations : [],
+      (citation) => citation.id
+    );
+  }
+
+  private get normalizedSources(): DocumentRef[] {
+    return firstByIdentity(
+      Array.isArray(this.sources) ? this.sources : [],
+      (source) => source.id
+    );
+  }
+
+  private get normalizedAssessment(): Readonly<GroundingAssessment> | null {
+    const assessment = this.assessment;
+    if (!assessment) return null;
+    const claims = firstByIdentity(
+      Array.isArray(assessment.claims) ? assessment.claims : [],
+      (claim) => claim.id
+    );
+    return assessment.claims === undefined
+      ? assessment
+      : { ...assessment, claims };
+  }
+
   private onCitationActivate = (
     event: CustomEvent<{ index: number }>
   ): void => {
     event.stopPropagation();
-    const citation = this.citations[event.detail.index - 1];
+    const citation = this.normalizedCitations[event.detail.index - 1];
     if (citation)
       this.emit('lr-citation-select', { citation, section: 'answer' });
   };
@@ -209,7 +239,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     this.emit('lr-citation-select', { ...event.detail, section: 'grounding' });
   };
 
-  private presentationState(): RagAnswerState {
+  private presentationState(): LyraRagAnswerState {
     if (this.errorText) return 'error';
     if (this.loading) return 'loading';
     if (this.answer || this.hasSlot('answer')) return 'answer';
@@ -228,14 +258,19 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
         : nothing}
     </lr-source-card>`;
   }
-  private renderSourceItems(): TemplateResult | TemplateResult[] {
+  private renderSourceItems(
+    sources: readonly DocumentRef[]
+  ): TemplateResult | TemplateResult[] {
     if (this.hasSlot('sources')) return html`<slot name="sources"></slot>`;
     // Keep generated cards as direct light-DOM children. Putting them in the fallback of a nested
     // forwarding slot makes the child list first see one slot and later see N flattened cards,
     // forcing a redundant post-update reconciliation when N differs from one.
-    return this.sources.map((source) => this.renderSource(source));
+    return sources.map((source) => this.renderSource(source));
   }
   override render(): TemplateResult {
+    const citations = this.normalizedCitations;
+    const sources = this.normalizedSources;
+    const assessment = this.normalizedAssessment;
     const label = retrievalSemanticLabel(
       this,
       this.accessibleLabel ?? (this.label || this.localize('ragAnswerLabel'))
@@ -243,7 +278,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     const articleRole = retrievalSemanticRole(this, 'article');
     const state = this.presentationState();
     const busy = state === 'loading';
-    const groundingOwnsCitations = this.assessment !== null;
+    const groundingOwnsCitations = assessment !== null;
     return html`<article
       part="base"
       role=${articleRole ?? 'presentation'}
@@ -270,16 +305,16 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
             ></slot>
           </div>`
         : nothing}
-      ${this.assessment
+      ${assessment
         ? html`<lr-grounding-summary
             part="grounding"
-            .assessment=${this.assessment}
-            .citations=${this.citations}
+            .assessment=${assessment}
+            .citations=${citations}
             .showClaims=${this.showClaims}
             @lr-citation-select=${this.onGroundingCitationSelect}
           ></lr-grounding-summary>`
         : nothing}
-      ${this.citations.length && !groundingOwnsCitations
+      ${citations.length && !groundingOwnsCitations
         ? html`<section
             part="citations"
             aria-label=${this.localize('ragAnswerCitations')}
@@ -288,7 +323,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
               ${this.localize('ragAnswerCitations')}
             </h3>
             <div part="citation-list">
-              ${this.citations.map(
+              ${citations.map(
                 (citation, index) =>
                   html`<lr-citation-badge
                     .index=${index + 1}
@@ -300,7 +335,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
             </div>
           </section>`
         : nothing}
-      ${this.showSources && (this.sources.length > 0 || this.hasSlot('sources'))
+      ${this.showSources && (sources.length > 0 || this.hasSlot('sources'))
         ? html`<section
             part="sources"
             aria-label=${this.localize('ragAnswerSources')}
@@ -310,7 +345,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
               part="source-list"
               .label=${this.localize('ragAnswerSources')}
               expanded
-              >${this.renderSourceItems()}</lr-source-list
+              >${this.renderSourceItems(sources)}</lr-source-list
             >
           </section>`
         : nothing}

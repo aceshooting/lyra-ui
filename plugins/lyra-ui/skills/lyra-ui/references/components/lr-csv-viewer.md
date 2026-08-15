@@ -42,7 +42,7 @@ painted marks.
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing reports an error. Up to
 100 recoverable PapaParse diagnostics may accompany the rendered grid; exceeding that budget is a
 resource-limit error instead.
-`lr-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
+`lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `lr-text-select` is not part of this
@@ -60,11 +60,10 @@ highlighted cell; emits `lr-highlight-activate`; its complete accessible name us
 **Themeable custom properties:** `--lr-csv-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]` before it scrolls internally; also settable via the `maxHeight` property, which
 writes this token inline on `[part="base"]`. `--lr-csv-viewer-highlight-color` (default
-`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The component writes it
-inline (as `var(--lr-color-warning, var(--lr-color-brand))`) on the cell matching
-`activeHighlightId`, since a `[data-active]` selector can't be chained onto the
-`::part(cell-highlight)` the cell reaches this component's stylesheet through; a custom property
-inherits across that boundary instead.
+`var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The cell matching
+`activeHighlightId` receives a private warning-color default because a `[data-active]` selector
+can't be chained onto the `::part(cell-highlight)` the cell reaches this component's stylesheet
+through. An inherited or direct public value remains authoritative across that boundary.
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.

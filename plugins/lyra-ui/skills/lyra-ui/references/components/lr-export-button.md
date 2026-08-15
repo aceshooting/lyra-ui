@@ -33,8 +33,10 @@ immediately) or multi-format (click opens a small menu).
   snapshot), where
   `LyraExportFormatOption` is the built-in `LyraExportFormat = 'csv' | 'json'` or a
   `LyraExportFormatDescriptor = { formatId: string; label: string; description?: string;
-  extension?: string }`. Descriptor labels/descriptions are consumer-supplied, already-localized
-  copy. Custom format ids are event-only; no custom encoder is bundled
+extension?: string }`. Descriptor labels/descriptions are consumer-supplied, already-localized
+  copy. `formatId` must be nonempty and unique; malformed options and later duplicates are omitted
+  first-wins before menu state, focus reconciliation, or export events. Custom format ids are
+  event-only; no custom encoder is bundled
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
@@ -73,27 +75,29 @@ shared-clamp note.
 ```html
 <lr-export-button id="exp" filename="report" label="Export"></lr-export-button>
 <script type="module">
-  const exp = document.getElementById('exp');
-  exp.rows = [{ name: 'Alpha', value: 1 }];
+  const exp = document.getElementById("exp");
+  exp.rows = [{ name: "Alpha", value: 1 }];
   exp.columns = [
-    { key: 'name', label: 'Name' },
-    { key: 'value', label: 'Value' },
+    { key: "name", label: "Name" },
+    { key: "value", label: "Value" },
   ];
-  exp.formats = ['csv', 'json']; // shows a format-choice menu instead of exporting immediately
-  exp.addEventListener('lr-export', (e) => console.log('exporting', e.detail.format));
+  exp.formats = ["csv", "json"]; // shows a format-choice menu instead of exporting immediately
+  exp.addEventListener("lr-export", (e) =>
+    console.log("exporting", e.detail.format)
+  );
 
   // Custom formats supply menu copy but remain application-handled.
   exp.formats = [
-    'csv',
+    "csv",
     {
-      formatId: 'xlsx',
-      label: 'Excel workbook',
-      description: 'Preserves spreadsheet data types',
-      extension: 'xlsx',
+      formatId: "xlsx",
+      label: "Excel workbook",
+      description: "Preserves spreadsheet data types",
+      extension: "xlsx",
     },
   ];
-  exp.addEventListener('lr-export', async (e) => {
-    if (e.detail.format !== 'xlsx') return;
+  exp.addEventListener("lr-export", async (e) => {
+    if (e.detail.format !== "xlsx") return;
     e.preventDefault();
     exp.loading = true;
     try {

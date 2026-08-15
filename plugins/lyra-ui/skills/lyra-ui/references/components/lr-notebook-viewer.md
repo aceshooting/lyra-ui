@@ -30,8 +30,11 @@ index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, n
 ipywidgets.
 
 **Properties:** `src: string = ''` — URL to fetch and parse as a notebook; ignored while `notebook`
-is present. `notebook?: object | string` (property only) — an already-parsed notebook document, or
-its raw JSON text; presence wins over `src` (including an empty string) and is parsed synchronously.
+is present. `notebook?: Readonly<NotebookDoc> | string` (property only) — an already-parsed
+notebook document, or its raw JSON text; presence wins over `src` (including an empty string) and
+is parsed synchronously. Parsed document assignments are synchronously clone-owned and recursively
+frozen; mutate a copy and reassign it to update the viewer, because later source-object mutation is
+not observed.
 Assigning `undefined` clears inline authority and immediately reloads the already configured `src`,
 or exposes the idle state when no URL exists. `source: LyraNotebookViewerSource` is a readonly
 discriminated snapshot (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or `null`).
@@ -49,6 +52,8 @@ available for structural anchor-target compatibility, but this viewer does not p
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
+queries are capped at 4,096 code units and one pass at 4,000,000 source/output code units, with
+`matchCountExact: false` reporting a truncated lower bound;
 `searchNext()`/`searchPrevious()` advance/step back through matches, scrolling to and marking the
 target cell with the persistent active-cell paint, and each resolves `true` once the active match
 moved or `false` when there are none — the same `Promise<boolean>` every other searchable viewer

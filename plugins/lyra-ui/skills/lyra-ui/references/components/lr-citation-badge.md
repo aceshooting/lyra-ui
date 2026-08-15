@@ -55,17 +55,16 @@ which owns `role="tooltip"` whether currently shown or hidden.
 `index` (the citation number), `popover` (the floating preview panel, only meaningful while open).
 
 **Themeable custom properties:** `--lr-citation-badge-accent` / `--lr-citation-badge-bg` /
-`--lr-citation-badge-border` (internal per-status accent variables, not typically overridden
-directly — set instead by the `:host([status=...])` rules), plus shared tokens
+`--lr-citation-badge-border`. Their private defaults follow `status`, but an inherited or direct
+public value remains authoritative in every status. Shared tokens include
 `--lr-color-text-quiet`, `--lr-color-text`, `--lr-color-success` / `-success-quiet`,
 `--lr-color-warning` / `-warning-quiet`, `--lr-color-danger` / `-danger-quiet`, `--lr-radius`,
 `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`, `--lr-space-s`/`-m`,
 `--lr-transition-fast`, `--lr-focus-ring-*`.
 
-> Retheming a badge from outside `<lr-citation-badge>` (e.g. per-source or per-confidence colors)?
-> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
-> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
-> wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
+> Retheming a group of badges from outside `<lr-citation-badge>` (e.g. per-source or
+> per-confidence colors)? Set the component hooks above on their ancestor wrapper. Use
+> `--lr-theme-*` instead only when changing a shared semantic palette input for the entire subtree.
 
 **Optional peer deps:** none.
 

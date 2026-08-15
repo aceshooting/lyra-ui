@@ -60,22 +60,21 @@ the built-in glyph for the current `status` is used)
 **Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-transition-ambient)`,
 i.e. `1.8s ease-in-out` at the shipped token value and `0.001ms linear` under
 `prefers-reduced-motion` — running-icon animation duration/timing) and `--lr-transition-ambient`
-(default `1.8s ease-in-out` — pending-icon pulse duration/timing). `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and
-`--lr-tool-call-chip-border` are internal per-status variables reassigned by this component's own
-`:host([status="…"])` rules (e.g. `pending` → `--lr-color-text-quiet`/`--lr-color-surface`/
-`--lr-color-border`; `running` → brand; `success` → success; `error` → danger; `denied` → warning),
-so a page-level override loses to them for every non-default status — they are not a practical
-public theming hook. Shared tokens
+(default `1.8s ease-in-out` — pending-icon pulse duration/timing).
+`--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and `--lr-tool-call-chip-border` are public
+component hooks whose private defaults follow `status` (e.g. `pending` →
+`--lr-color-text-quiet`/`--lr-color-surface`/`--lr-color-border`; `running` → brand; `success` →
+success; `error` → danger; `denied` → warning). Set them on an ancestor to retheme a subtree or
+directly on one chip; either public value remains authoritative in every status. Shared tokens
 referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 `--lr-color-brand`/`-brand-quiet`, `--lr-color-success`/`-success-quiet`,
 `--lr-color-danger`/`-danger-quiet`, `--lr-color-warning`/`-warning-quiet`, `--lr-color-text`,
 `--lr-space-xs/-s/-m`, `--lr-radius`, `--lr-shadow`, `--lr-focus-ring-*`,
 `--lr-transition-fast`.
 
-> Retheming a chip from outside `<lr-tool-call-chip>` (e.g. per-tool or per-status colors)?
-> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
-> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
-> wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
+> Retheming a group of chips from outside `<lr-tool-call-chip>` (e.g. per-tool or per-status
+> colors)? Set the component hooks above on their ancestor wrapper. Use `--lr-theme-*` instead only
+> when changing a shared semantic palette input for the entire subtree.
 
 **Optional peer deps:** none.
 

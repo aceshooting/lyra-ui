@@ -83,11 +83,11 @@ the plain unhighlighted diff text untouched.
 ```html
 <lr-diff-view copyable></lr-diff-view>
 <script type="module">
-  const diff = document.querySelector('lr-diff-view');
-  diff.oldText = 'line one\nline two\nline three';
-  diff.newText = 'line one\nline TWO\nline three\nline four';
-  diff.addEventListener('lr-copy', (e) => console.log(e.detail.text));
-  diff.addEventListener('lr-copy-error', (e) => {
+  const diff = document.querySelector("lr-diff-view");
+  diff.oldText = "line one\nline two\nline three";
+  diff.newText = "line one\nline TWO\nline three\nline four";
+  diff.addEventListener("lr-copy", (e) => console.log(e.detail.text));
+  diff.addEventListener("lr-copy-error", (e) => {
     console.error(`Copy ${e.detail.reason}`, e.detail.error);
   });
 </script>

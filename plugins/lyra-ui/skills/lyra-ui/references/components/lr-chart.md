@@ -42,7 +42,7 @@ property).
 - `plugins: LyraChartPlugin[] = []` — peer-neutral per-instance Chart.js plugin structures,
   combined without duplicates with Lyra's
   on-demand data-label plugin and any `config.plugins` entries
-- `labels: string[] = []` (attribute: false)
+- `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraChartSeries[] = []` (attribute: false) — `LyraChartSeries { readonly
   label: string; readonly data?: readonly (number|null)[]; readonly points?: readonly
   LyraChartPoint[]; readonly color?: string|readonly string[]; ... }`. The deprecated `Series` and

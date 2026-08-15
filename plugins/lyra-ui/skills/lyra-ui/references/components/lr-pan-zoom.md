@@ -21,6 +21,7 @@ existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom
 import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
 
 **Properties:**
+
 - `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
   `zoomStep: number = 0.25` — bounded, finite zoom configuration
 - `src: string = ''` and `alt: string = ''` — optional safe image source. A rejected URL is treated
@@ -56,11 +57,15 @@ uses layout-participating CSS `zoom`, not a paint-only transform, so the viewpor
 range reaches the entire painted footprint at both logical edges in LTR and RTL.
 
 ```js
-import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
+import "@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js";
 ```
 
 ```html
-<lr-pan-zoom src="map-preview.png" alt="Map preview" aria-label="Map preview"></lr-pan-zoom>
+<lr-pan-zoom
+  src="map-preview.png"
+  alt="Map preview"
+  aria-label="Map preview"
+></lr-pan-zoom>
 ```
 
 ---

@@ -672,6 +672,7 @@ export type {
 } from './internal/announcer.js';
 export type { LyraEmitOptions } from './internal/lyra-element.js';
 export type { LyraEventMap } from './internal/lyra-element.js';
+export type { LyraEventDetailSnapshot } from './internal/lyra-element.js';
 export {
   getLyraLocale,
   getLyraLocaleDirection,
@@ -862,6 +863,7 @@ export type {
   ToolParamFormPropertyType,
   ToolParamFormPrimitive,
   ToolParamFormProperty,
+  ToolParamFormValue,
   FlatToolParamSchema,
 } from './components/agent-tools/tool-param-form/tool-param-form.class.js';
 export { LyraMenu } from './components/layout/menu/menu.class.js';

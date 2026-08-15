@@ -27,8 +27,9 @@ non-activatable text. Falls back to verbatim raw text when nothing parses. First
 - `trace: string = ''` — the raw stack trace text to parse and render.
 - `collapseInternal: boolean = true` (attribute: `collapse-internal`) — folds runs of internal
   frames behind a toggle.
-- `internalPatterns: (string | RegExp)[] = DEFAULT_INTERNAL_PATTERNS` (attribute: false) —
-  file-path substrings/`RegExp`s that mark a frame as internal.
+- `internalPatterns: readonly (string | RegExp)[] = DEFAULT_INTERNAL_PATTERNS` (attribute: false) —
+  clone-owned, bounded, frozen file-path substrings/`RegExp`s that mark a frame as internal.
+  Reassign a new array after changing the matcher sequence.
 - `copyable: boolean = true` — shows a copy-to-clipboard button for the raw trace text.
 - `maxHeight: string = ''` (attribute: `max-height`) — caps the rendered block size and enables an
   internal scrollbar once content exceeds it (any valid CSS length). Empty string (the default)

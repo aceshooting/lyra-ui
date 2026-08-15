@@ -529,4 +529,67 @@ describe("lr-rag-answer", () => {
       window.MutationObserver = OriginalMutationObserver;
     }
   });
+
+  it('omits blank and later duplicate citation, source, and nested claim ids before composition and actions', async () => {
+    const firstCitation = { id: 'citation-1', sourceId: 'source-1' };
+    const firstSource = { id: 'source-1', name: 'First source' };
+    const firstClaim = {
+      id: 'claim-1',
+      text: 'First claim',
+      status: 'supported' as const,
+      citationIds: ['citation-1'],
+    };
+    const el = (await fixture(
+      html`<lr-rag-answer answer="Answer"></lr-rag-answer>`
+    )) as LyraRagAnswer;
+    el.citations = [
+      { ...firstCitation, id: ' ' },
+      firstCitation,
+      { ...firstCitation, sourceId: 'later-source' },
+    ];
+    el.sources = [
+      { ...firstSource, id: '' },
+      firstSource,
+      { ...firstSource, name: 'Later source' },
+    ];
+    el.assessment = {
+      supportedClaims: 1,
+      unsupportedClaims: 0,
+      coverage: 1,
+      claims: [
+        { ...firstClaim, id: '' },
+        firstClaim,
+        { ...firstClaim, text: 'Later claim' },
+      ],
+    };
+    await el.updateComplete;
+
+    const summary = el.shadowRoot!.querySelector('lr-grounding-summary') as
+      | (HTMLElement & {
+          assessment: { claims?: readonly unknown[] };
+          citations: readonly unknown[];
+          updateComplete: Promise<unknown>;
+        })
+      | null;
+    expect(summary).to.exist;
+    expect(summary!.assessment.claims).to.deep.equal([firstClaim]);
+    expect(summary!.citations).to.deep.equal([firstCitation]);
+    expect(el.shadowRoot!.querySelectorAll('lr-source-card').length).to.equal(1);
+
+    el.assessment = null;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('lr-citation-badge').length).to.equal(1);
+    const selected = oneEvent(el, 'lr-citation-select');
+    el.shadowRoot!.querySelector<HTMLElement>('lr-citation-badge')!.dispatchEvent(
+      new CustomEvent('lr-citation-activate', {
+        bubbles: true,
+        composed: true,
+        detail: { index: 1 },
+      })
+    );
+    expect((await selected).detail).to.deep.equal({
+      citation: firstCitation,
+      section: 'answer',
+    });
+  });
 });

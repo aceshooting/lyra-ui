@@ -66,9 +66,9 @@ Each access returns a fresh `LyraFormValidator<LyraKnownDate>[]`; its entry obse
 element's current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
 
 ```ts
-import { LyraKnownDate } from '@aceshooting/lyra-ui/components/utility/known-date/known-date.js';
+import { LyraKnownDate } from "@aceshooting/lyra-ui/components/utility/known-date/known-date.js";
 
-const knownDate = document.querySelector('lr-known-date')!;
+const knownDate = document.querySelector("lr-known-date")!;
 const result = LyraKnownDate.validators[0].checkValidity(knownDate);
 ```
 
@@ -154,8 +154,9 @@ without repainting every other component that reads the same shared danger token
 The two height knobs work as a pair on `[part='field-input']`, the same way
 `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input` expose theirs:
 
-- `--lr-known-date-field-min-height` is a **floor**, re-pointed per `size` tier through the shared
-  ladder. At the small tiers it exceeds the field's own padding/font-driven height and is what
+- `--lr-known-date-field-min-height` is a **floor** whose private default follows each `size` tier
+  through the shared ladder; an inherited or direct public value remains authoritative. At the
+  small tiers the default exceeds the field's own padding/font-driven height and is what
   actually pins the rendered box — that is how `2xs`/`xs` keep a 24px pointer target; at `l`/`xl`
   the content height already clears it, so it is inert there and only raising it changes anything.
 - `--lr-known-date-field-height` pins an **exact** height (both floors and caps), so the three
@@ -168,7 +169,7 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 
 **Known gotchas:**
 
-- Field *order* is derived from the locale by formatting a probe date (Jan 2 2026) with
+- Field _order_ is derived from the locale by formatting a probe date (Jan 2 2026) with
   `Intl.DateTimeFormat` and reading back the part order — not from `Date.parse()`'s mm/dd/yyyy bias.
   It falls back to `month, day, year` only when that sampling fails.
 - Auto-advance (typing a field's last digit moves to the next) and backspace-into-the-previous-field
@@ -177,12 +178,12 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 - Each `<input>` keeps exactly the digits that were typed — never zero-padded, range-clamped, or
   reverted to a previous value; only the composite `value` is normalized to zero-padded ISO.
 - Non-digit characters are stripped in the `input` handler before they reach field state (the
-  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals *are*
+  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals _are_
   accepted and transliterated to ASCII, not rejected: Arabic-Indic (`٠`–`٩`) and Extended
   Arabic-Indic/Persian (`۰`–`۹`) digits are mapped unconditionally, and the digits of
   `effectiveLocale`'s own numbering system are added on top via `Intl.NumberFormat`, so typing
   `٢٠٢٦` into the year field commits `2026`.
-- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the *physical* key meaning
+- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the _physical_ key meaning
   "next field" flips under an inherited `dir="rtl"`; the locale-derived field order itself does not.
 - A blank composite is `valueMissing` only when **all three** fields are blank; a partially typed
   required date reports `badInput` instead.

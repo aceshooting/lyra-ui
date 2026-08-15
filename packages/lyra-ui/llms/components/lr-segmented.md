@@ -69,9 +69,9 @@ native horizontal scroll owner. `--lr-segmented-track-min-height` (default
 `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`), and
 `--lr-segmented-font-size` (default `var(--lr-form-control-font-size)`) are the three knobs the
 `size` tier moves — each points at the shared ladder rather than carrying a per-tier value of its
-own, so retuning one tier for this component alone is a one-line override instead of a fork. All
-three are declared on `:host`, so set them on the element itself for a density the ladder doesn't
-cover; an ancestor rule is shadowed.
+own, so retuning one tier for this component alone is a one-line override instead of a fork. Their
+private defaults follow the tier; a public value inherited from an ancestor or set directly on the
+element remains authoritative in every tier.
 
 `--lr-segmented-track-height` pins the `base` track's exact height at every `size` tier (it sets
 both `block-size` and `min-block-size`), for a row that has to sit flush beside a hard-sized toolbar

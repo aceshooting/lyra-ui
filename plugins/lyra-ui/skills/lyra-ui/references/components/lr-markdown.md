@@ -115,6 +115,13 @@ uses for its own `[part="body"]`.
 - `anchorKinds: readonly ('fragment' | 'text-quote')[] = ['fragment', 'text-quote']` — the anchor kinds this
   component resolves for the shared anchor-target contract.
 
+Text-quote resolution indexes at most 1,000,000 code units/20,000 text nodes per content
+generation, accepts quote fields up to 4,096 code units, and scans at most 4,000,000 code units per
+pass. It reuses that index across navigation and painting. Host-highlight admission retains at most
+10,000 unique nonempty records after inspecting at most 10,001 inputs; rendering selects at most
+1,000 candidates and paints at most 100, with an active entry anywhere in the admitted snapshot
+placed first and preserved inside both ceilings.
+
 **Methods:**
 
 - `renderMarkdown(): void` — immediately reruns the current content through the parse, selected
@@ -137,7 +144,7 @@ uses for its own `[part="body"]`.
   normally and never fire this
 - `lr-render-error` (`detail: { error: unknown }`) — rendering fell back to plain text (see the
   fallback matrix below), or `math` is set but the `katex` peer isn't installed
-- `lr-highlight-activate` (`detail: { id: string }`) — a painted `text-quote` highlight was clicked
+- `lr-highlight-activate` (`detail: { highlightId: string }`) — a painted `text-quote` highlight was clicked
 - `lr-text-select` (`detail: { text: string; anchor: LyraAnchor | null; rects: DOMRect[] }`) — a text
   selection inside the rendered content ended; `anchor` is a `text-quote` anchor scoped to the
   rendered content, or `null` when the selection couldn't be anchored

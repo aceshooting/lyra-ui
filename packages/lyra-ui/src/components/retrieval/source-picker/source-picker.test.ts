@@ -33,12 +33,12 @@ const sources: LyraSourceEntry[] = [
   { id: "doc3", label: "notes.txt", mimeType: "text/plain" },
 ];
 
-it("defaults to empty sources/selectedIds, showSelectAll=true, searchable=true, empty label", async () => {
+it("defaults to empty sources/selectedSourceIds, showSelectAll=true, searchable=true, empty label", async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
   expect(el.sources).to.deep.equal([]);
-  expect(el.selectedIds).to.deep.equal([]);
+  expect(el.selectedSourceIds).to.deep.equal([]);
   expect(el.showSelectAll).to.be.true;
   expect(el.searchable).to.be.true;
   expect(el.label).to.equal("");
@@ -64,13 +64,13 @@ it("uses aria-checked as the sole false, true, and mixed treeitem selection stat
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
   el.sources = sources;
-  el.selectedIds = ["doc1"];
+  el.selectedSourceIds = ["doc1"];
   await el.updateComplete;
   const folderRow = el.shadowRoot!.querySelector('[role="treeitem"]')!;
   expect(folderRow.getAttribute("aria-checked")).to.equal("mixed");
   expect(folderRow.getAttribute("aria-selected")).to.equal(null);
 
-  el.selectedIds = ["doc1", "doc2"];
+  el.selectedSourceIds = ["doc1", "doc2"];
   await el.updateComplete;
   expect(
     el
@@ -83,7 +83,7 @@ it("uses aria-checked as the sole false, true, and mixed treeitem selection stat
       .getAttribute("aria-selected")
   ).to.equal(null);
 
-  el.selectedIds = [];
+  el.selectedSourceIds = [];
   await el.updateComplete;
   expect(
     el
@@ -109,8 +109,8 @@ it("toggling a folder selects/deselects all of its descendant leaves and emits l
   const listener = oneEvent(el, "lr-sources-change");
   folderRow.click();
   const event = await listener;
-  expect(event.detail.selectedIds.sort()).to.deep.equal(["doc1", "doc2"]);
-  expect(el.selectedIds.sort()).to.deep.equal(["doc1", "doc2"]);
+  expect([...event.detail.selectedSourceIds].sort()).to.deep.equal(["doc1", "doc2"]);
+  expect([...el.selectedSourceIds].sort()).to.deep.equal(["doc1", "doc2"]);
 });
 
 it("toggling select-all selects/deselects every leaf", async () => {
@@ -123,7 +123,7 @@ it("toggling select-all selects/deselects every leaf", async () => {
   const listener = oneEvent(el, "lr-sources-change");
   selectAll.click();
   const event = await listener;
-  expect(event.detail.selectedIds.sort()).to.deep.equal([
+  expect([...event.detail.selectedSourceIds].sort()).to.deep.equal([
     "doc1",
     "doc2",
     "doc3",
@@ -202,7 +202,7 @@ it("keyboard: Space toggles the focused row, ArrowDown moves focus, ArrowRight e
     new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true })
   );
   const event = await listener;
-  expect(event.detail.selectedIds.sort()).to.deep.equal(["doc1", "doc2"]);
+  expect([...event.detail.selectedSourceIds].sort()).to.deep.equal(["doc1", "doc2"]);
 });
 
 it("keyboard: the shared select-all checkbox toggles with Space and leaves Enter to the form", async () => {
@@ -223,14 +223,14 @@ it("keyboard: the shared select-all checkbox toggles with Space and leaves Enter
   });
   control.dispatchEvent(space);
   const selected = await selectListener;
-  expect(selected.detail.selectedIds.sort()).to.deep.equal([
+  expect([...selected.detail.selectedSourceIds].sort()).to.deep.equal([
     "doc1",
     "doc2",
     "doc3",
   ]);
   expect(space.defaultPrevented).to.be.true; // Space must not scroll
 
-  el.selectedIds = ["doc1", "doc2", "doc3"];
+  el.selectedSourceIds = ["doc1", "doc2", "doc3"];
   await el.updateComplete;
   let enterChanges = 0;
   el.addEventListener("lr-sources-change", () => enterChanges++);
@@ -253,7 +253,7 @@ it("keyboard: the shared select-all checkbox toggles with Space and leaves Enter
     })
   );
   const deselected = await deselectListener;
-  expect(deselected.detail.selectedIds).to.deep.equal([]);
+  expect(deselected.detail.selectedSourceIds).to.deep.equal([]);
 });
 
 it('keeps explicit-empty and dynamic host naming distinct from the source tree', async () => {
@@ -330,7 +330,7 @@ it("delegates select-all interaction semantics to lr-checkbox and maps the compo
   const el = (await fixture(
     html`<lr-source-picker
       .sources=${sources}
-      .selectedIds=${["doc1"]}
+      .selectedSourceIds=${["doc1"]}
     ></lr-source-picker>`
   )) as LyraSourcePicker;
   const checkbox = selectAllCheckbox(el);
@@ -356,7 +356,7 @@ it("is accessible with a mixed-selection tree", async () => {
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
   el.sources = sources;
-  el.selectedIds = ["doc1"];
+  el.selectedSourceIds = ["doc1"];
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
@@ -366,7 +366,7 @@ it("toggling a fully-selected folder deselects all of its descendant leaves", as
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
   el.sources = sources;
-  el.selectedIds = ["doc1", "doc2"];
+  el.selectedSourceIds = ["doc1", "doc2"];
   await el.updateComplete;
   const folderRow = el.shadowRoot!.querySelector(
     '[role="treeitem"]'
@@ -375,8 +375,8 @@ it("toggling a fully-selected folder deselects all of its descendant leaves", as
   const listener = oneEvent(el, "lr-sources-change");
   folderRow.click();
   const event = await listener;
-  expect(event.detail.selectedIds).to.deep.equal([]);
-  expect(el.selectedIds).to.deep.equal([]);
+  expect(event.detail.selectedSourceIds).to.deep.equal([]);
+  expect(el.selectedSourceIds).to.deep.equal([]);
 });
 
 it("keyboard: ArrowDown/ArrowUp move the active row and DOM focus between top-level entries", async () => {
@@ -614,7 +614,7 @@ it("keyboard: Enter on the focused tree row toggles it, same as Space", async ()
     })
   );
   const event = await listener;
-  expect(event.detail.selectedIds.sort()).to.deep.equal(["doc1", "doc2"]);
+  expect([...event.detail.selectedSourceIds].sort()).to.deep.equal(["doc1", "doc2"]);
 });
 
 it('keyboard: under dir="rtl", ArrowLeft expands and ArrowRight collapses (expand/collapse keys swap)', async () => {
@@ -857,7 +857,7 @@ describe("checked-state cssprop escape hatch", () => {
   }
 
   async function picker(
-    selectedIds: string[],
+    selectedSourceIds: string[],
     style = ""
   ): Promise<LyraSourcePicker> {
     const wrapper = (await fixture(
@@ -865,7 +865,7 @@ describe("checked-state cssprop escape hatch", () => {
     )) as HTMLElement;
     const el = wrapper.querySelector("lr-source-picker") as LyraSourcePicker;
     el.sources = sources;
-    el.selectedIds = selectedIds;
+    el.selectedSourceIds = selectedSourceIds;
     await el.updateComplete;
     await selectAllCheckbox(el).updateComplete;
     return el;
@@ -1056,7 +1056,27 @@ it("renders and selects only the first source occurrence for duplicate ids", asy
   expect(rows[0]!.textContent).to.include("First occurrence");
   const pending = oneEvent(el, "lr-sources-change");
   (rows[0] as HTMLElement).click();
-  expect((await pending).detail.selectedIds).to.deep.equal(["duplicate"]);
+  expect((await pending).detail.selectedSourceIds).to.deep.equal(["duplicate"]);
+});
+
+it('rejects empty and whitespace-only source ids before rendering or selection', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker></lr-source-picker>`,
+  )) as LyraSourcePicker;
+  el.sources = [
+    { id: '', label: 'Empty source id' },
+    { id: '   ', label: 'Blank source id' },
+    { id: 'valid', label: 'Valid source' },
+  ];
+  await el.updateComplete;
+
+  const rows = el.shadowRoot!.querySelectorAll('[part~="item"]');
+  expect(rows.length).to.equal(1);
+  expect(rows[0]!.textContent).to.include('Valid source');
+
+  const pending = oneEvent(el, 'lr-sources-change');
+  (rows[0] as HTMLElement).click();
+  expect((await pending).detail.selectedSourceIds).to.deep.equal(['valid']);
 });
 
 it("normalizes cyclic and repeated-identity source trees without recursion or duplicate controls", async () => {
@@ -1083,7 +1103,7 @@ it("normalizes cyclic and repeated-identity source trees without recursion or du
   ).to.deep.equal(["Root", "Leaf"]);
   const pending = oneEvent(el, "lr-sources-change");
   rows[1]!.click();
-  expect((await pending).detail.selectedIds).to.deep.equal(["leaf"]);
+  expect((await pending).detail.selectedSourceIds).to.deep.equal(["leaf"]);
 });
 
 it("caps adversarial depth and breadth and exposes a localized visible limit state", async () => {
@@ -1095,11 +1115,11 @@ it("caps adversarial depth and breadth and exposes a localized visible limit sta
     id: `wide-${index}`,
     label: `Wide ${index}`,
   }));
-  let inspectedEntries = 0;
+  let sourceValueReads = 0;
   const wide = new Proxy(wideValues, {
     get(target, property, receiver) {
       if (typeof property === "string" && /^\d+$/.test(property))
-        inspectedEntries++;
+        sourceValueReads++;
       return Reflect.get(target, property, receiver);
     },
   });
@@ -1126,7 +1146,7 @@ it("caps adversarial depth and breadth and exposes a localized visible limit sta
   expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal(
     "Source tree limited"
   );
-  expect(inspectedEntries).to.equal(2_000);
+  expect(sourceValueReads).to.equal(0);
 });
 
 it("announces post-mount no-match transitions only through the light-DOM sink", async () => {
@@ -1167,29 +1187,29 @@ it("announces post-mount no-match transitions only through the light-DOM sink", 
   ).to.equal(0);
 });
 
-it("deduplicates and prunes controlled selected ids across source replacement and emitted toggles", async () => {
+it('canonicalizes and prunes controlled source ids across replacement and emitted toggles', async () => {
   const el = (await fixture(
     html`<lr-source-picker
       .sources=${[
         { id: "a", label: "Alpha" },
         { id: "b", label: "Beta" },
       ]}
-      .selectedIds=${["a", "a", "ghost"]}
+      .selectedSourceIds=${["a", "a", "ghost"]}
     ></lr-source-picker>`
   )) as LyraSourcePicker;
 
-  expect(el.selectedIds).to.deep.equal(["a"]);
+  expect(el.selectedSourceIds).to.deep.equal(["a"]);
   expect(
     el.shadowRoot!.querySelector('[part="summary"]')!.textContent
   ).to.include("1 of 2");
 
   const pending = oneEvent(el, "lr-sources-change");
   el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]')[1]!.click();
-  expect((await pending).detail.selectedIds).to.deep.equal(["a", "b"]);
+  expect((await pending).detail.selectedSourceIds).to.deep.equal(["a", "b"]);
 
   el.sources = [{ id: "b", label: "Beta" }];
   await el.updateComplete;
-  expect(el.selectedIds).to.deep.equal(["b"]);
+  expect(el.selectedSourceIds).to.deep.equal(["b"]);
   expect(
     el.shadowRoot!.querySelector('[part="summary"]')!.textContent
   ).to.include("1 of 1");

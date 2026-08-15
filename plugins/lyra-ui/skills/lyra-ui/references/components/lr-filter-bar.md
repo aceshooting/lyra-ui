@@ -20,9 +20,10 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 **Properties:**
 
 - `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in
-  render order. Invalid definitions and later duplicate ids are ignored deterministically. Writing
+  render order. Every definition carries a nonempty, whitespace-stable, unique `filterId`; invalid
+  definitions and later duplicate filter IDs are ignored deterministically. Writing
   `null` or `undefined` clears the schema; reads remain the canonical non-null empty array.
-- `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by filter id.
+- `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by `filterId`.
   Cleared fields are omitted. Reads, writes, event details, and string-array fields are immutable
   snapshots rather than references to caller-owned data. Writing `null` or `undefined` clears the
   value; reads remain the canonical non-null empty record.
@@ -122,9 +123,9 @@ markup and should bind the context's `value`, `disabled`, `required`, and `error
 `context.onValueChange` (or its `onInput`/`onChange` aliases) reads the event through
 `adapter.valueFromEvent` and commits it to the filter bar. `context.setValue(value)` is available for
 controls that expose a value without an event payload, and `context.onFocusout` marks the filter
-touched for required validation. Every context also carries a monotonic `generation` and an
-`AbortSignal`; replacement/removal of the schema, disconnection, and reconnect abort stale
-contexts, whose callbacks become inert.
+touched for required validation. Every context also carries its `filterId`, a monotonic
+`generation`, and an `AbortSignal`; replacement/removal of the schema, disconnection, and reconnect
+abort stale contexts, whose callbacks become inert.
 
 The adapter's required `clearValue` is used when the active chip is removed. Its optional
 `isEmpty(value)` defines domain emptiness; without one, the bar compares against `clearValue`
@@ -137,7 +138,7 @@ controlled value, active-chip, reset, disabled, and validation contract:
 ```ts
 const filters: LyraFilterBarFilterDefinition[] = [
   {
-    id: "archived",
+    filterId: "archived",
     label: "Include archived",
     type: "custom",
     custom: {

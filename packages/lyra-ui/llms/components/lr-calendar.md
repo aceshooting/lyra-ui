@@ -20,7 +20,7 @@ Responsive month calendar with event markers and an agenda view.
 **Properties:**
 
 - `events: CalendarEvent[] = []` (attribute: false) — `{ readonly id?, readonly date, readonly
-  title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is
+title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string and `color` is
   sanitized before being used as the marker background. The former ignored `start`/`end` fields
   are not part of the contract; use one event per displayed date
 - `value: string = ''` — the selected ISO date

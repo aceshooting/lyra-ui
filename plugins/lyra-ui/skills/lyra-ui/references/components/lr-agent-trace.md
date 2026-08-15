@@ -35,7 +35,7 @@ hierarchical trace tree from one shared `spans` array.
 - `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
   `show-cost`), `hideBars: boolean = false` (attribute `hide-bars`) — all forwarded verbatim
 
-**Events:** `lr-span-select` (`detail: { id: string }`), `lr-span-toggle` (`detail: { id: string;
+**Events:** `lr-span-select` (`detail: { spanId: string }`), `lr-span-toggle` (`detail: { spanId: string;
 expanded: boolean }`), and `lr-span-visibility-change` (`detail: { hiddenKinds:
 LyraSpan['kind'][] }`). The internal graph legend's generic `lr-visibility-change` event is
 contained; consumers receive this trace-domain event instead.

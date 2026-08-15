@@ -29,6 +29,7 @@ the app level.
 
 **Properties** (all are declared by `lr-badge` and inherited by `lr-tag`; `lr-tag` adds the
 `variant="text"` spelling plus `withRemove` / `removable`):
+
 - `variant: 'neutral' | 'brand' | 'primary' | 'success' | 'warning' | 'danger' = 'neutral'`
   (reflected) — the semantic palette. `primary` renders through the same brand palette while
   remaining `primary` on property reads, selectors, serialization and reflection. `lr-tag`
@@ -98,27 +99,29 @@ others. Public hooks are consumed through private use-site defaults instead of b
 the host, so values set directly or inherited from a theme ancestor both win. The same contract
 reaches `lr-tag` unchanged.
 
-*Overrides* — undeclared by default, so they still inherit from a consumer's own ancestor rule, and
+_Overrides_ — undeclared by default, so they still inherit from a consumer's own ancestor rule, and
 win over whatever `variant`/`appearance` resolved: `--lr-badge-background` (falls back to
 `--lr-badge-fill`), `--lr-badge-border` (falls back to `--lr-badge-stroke`), `--lr-badge-color`
 (falls back to `--lr-badge-text`).
 
-*Palette — what `variant` chooses* (new in 8.0.0): `--lr-badge-tint` (default
-`var(--lr-color-surface)`, the quiet fill; each non-neutral variant sets it to
+_Palette — what `variant` chooses_ (new in 8.0.0): `--lr-badge-tint` (private default
+`var(--lr-color-surface)`, the quiet fill; each non-neutral variant changes that private default to
 `var(--lr-color-fill-quiet)`, which the shared variants sheet has already re-pointed at that
-variant's row of the semantic grid), `--lr-badge-solid` (default `var(--lr-color-fill-loud)`, the
-loud fill used by `appearance="accent"`), `--lr-badge-edge` (default `var(--lr-color-border)`, the
-border color), `--lr-badge-ink` (default `var(--lr-color-text)`, the text color) and
+variant's row of the semantic grid), `--lr-badge-solid` (private default
+`var(--lr-color-fill-loud)`, the loud fill used by `appearance="accent"`), `--lr-badge-edge`
+(private default `var(--lr-color-border)`, the border color), `--lr-badge-ink` (private default
+`var(--lr-color-text)`, the text color) and
 `--lr-badge-on-solid` (default `var(--lr-color-on-loud)`, the text color that stays legible on
-`--lr-badge-solid`). Neutral is the only variant whose border and text colors differ, which is why
-`-edge` and `-ink` are separate slots rather than one loud color.
+`--lr-badge-solid`). An inherited or direct public palette value remains authoritative. Neutral is
+the only variant whose border and text colors differ, which is why `-edge` and `-ink` are separate
+slots rather than one loud color.
 
-*Surface — what `appearance` routes onto the box* (new in 8.0.0): `--lr-badge-fill` (default
+_Surface — what `appearance` routes onto the box_ (new in 8.0.0): `--lr-badge-fill` (default
 `var(--lr-badge-tint)`), `--lr-badge-stroke` (default `var(--lr-badge-edge)`) and `--lr-badge-text`
 (default `var(--lr-badge-ink)`). Set one of these to retune a single appearance without touching the
 palette.
 
-*Density and shape:* `--lr-badge-font-size` (default `var(--lr-font-size-sm)`),
+_Density and shape:_ `--lr-badge-font-size` (default `var(--lr-font-size-sm)`),
 `--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
 `var(--lr-size-1-25rem)`) — the trio each private effective-size rule rewrites to that step's font size,
 inline padding and minimum block size; the `m` defaults above exactly reproduce the pre-`size` fixed
@@ -129,7 +132,7 @@ because the empty wrapper is `display: none` rather than zero-width. `--lr-badge
 retunable without a `::part(base)` rule and, unlike the density trio, does not vary by `size` — the
 same `--lr-button-radius` pattern.
 
-*Attention* (all new in 8.0.0): `--lr-badge-attention-duration` (default
+_Attention_ (all new in 8.0.0): `--lr-badge-attention-duration` (default
 `var(--lr-duration-ambient)` — one cycle of the animation), `--lr-badge-attention-easing` (default
 `var(--lr-easing-emphasized)` — kept a separate token from the duration so the `animation` shorthand
 expands to exactly one timing function), `--lr-badge-pulse-color` (default
@@ -138,12 +141,13 @@ expands to exactly one timing function), `--lr-badge-pulse-color` (default
 `--lr-badge-pulse-spread` (default `var(--lr-size-0-25rem)` — how far the ring expands) and
 `--lr-badge-bounce-distance` (default `var(--lr-size-0-1875rem)` — the hop's peak travel).
 
-*`lr-tag`'s own two* (new in 8.0.0): `--lr-tag-remove-radius` (default `var(--lr-badge-radius)`, so
+_`lr-tag`'s own two_ (new in 8.0.0): `--lr-tag-remove-radius` (default `var(--lr-badge-radius)`, so
 retuning the tag's corner retunes the remove button's with it) and
 `--lr-tag-remove-hover-background` (default `color-mix(in srgb, currentColor 16%, transparent)` —
 the remove button's `:hover` fill).
 
 **Known gotchas:**
+
 - The remove button's hit target meets the shared `--lr-icon-button-size` minimum in both axes while
   the visible glyph stays compact. Its full allocation participates in layout with no negative
   margins, so adjacent compact tags retain disjoint targets.
@@ -159,16 +163,18 @@ the remove button's `:hover` fill).
 
 ```html
 <lr-badge variant="success" appearance="accent" pill size="s">
-  <svg slot="start" aria-hidden="true" width="12" height="12"><!-- icon --></svg>
+  <svg slot="start" aria-hidden="true" width="12" height="12">
+    <!-- icon -->
+  </svg>
   Live
 </lr-badge>
 
 <lr-tag variant="brand" appearance="outlined" with-remove>Design</lr-tag>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/overlays/badge/badge.js';
-  import '@aceshooting/lyra-ui/components/overlays/badge/tag.js';
+  import "@aceshooting/lyra-ui/components/overlays/badge/badge.js";
+  import "@aceshooting/lyra-ui/components/overlays/badge/tag.js";
 
-  document.querySelector('lr-tag').addEventListener('lr-remove', (e) => {
+  document.querySelector("lr-tag").addEventListener("lr-remove", (e) => {
     e.target.remove(); // in an app, update the backing collection instead
   });
 </script>

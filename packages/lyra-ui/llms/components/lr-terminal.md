@@ -28,8 +28,8 @@ codes. `replace(content: string): void` synchronously replaces the parsed buffer
 (reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: readonly LyraHighlight[] = []` (attribute:
-false), and `activeHighlightId: string | null = null` (attribute: false). Later duplicate highlight
-ids are omitted before painting, focus ownership, active lookup, and activation events. A host `aria-label` names
+false), and `activeHighlightId: string | null = null` (attribute: false). Empty/blank highlight ids
+and later duplicates are omitted before painting, focus ownership, active lookup, and activation events. A host `aria-label` names
 the host; the nested `role="log"` keeps the localized terminal-purpose name rather than cloning the
 same label, and an explicit empty host label never leaves the actionable log unnamed.
 `compact: boolean = false` (reflected) — tightens `[part="toolbar"]`'s padding and gap and each
@@ -61,7 +61,7 @@ default the component creates a plain-text `Blob`/object URL and activates a syn
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
 `lr-follow-change` (`detail: { following }`), `lr-search-change` (`detail: { query, matchCount,
-activeIndex }`), `lr-highlight-activate` (`detail: { id }`), and `lr-text-select` (`detail: {
+activeIndex }`), `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`).
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,

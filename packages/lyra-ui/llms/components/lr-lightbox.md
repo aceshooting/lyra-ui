@@ -21,6 +21,7 @@ but shares the same overlay infrastructure as `<lr-dialog>`/`<lr-command-palette
 trap, Escape/backdrop dismissal, scroll lock, and focus return.
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — post-render writes run the same cancelable lifecycle as
   `show()`/`hide()`/`close()`. Initial `open` markup is state and emits no lifecycle events.
 - `images: readonly LyraLightboxImage[] = []` (attribute: false) —
@@ -91,6 +92,7 @@ photo content.
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - keyboard navigation is RTL-aware on panel/chrome: Arrow forward/back (mirrored under `rtl`),
   `Home`, `End`. When the embedded pan/zoom viewport owns focus, those keys remain with its native
   scroll surface and never change gallery item; `+`/`-`/`0` remain its zoom shortcuts.

@@ -26,13 +26,15 @@ localized action that emits a cancelable `lr-preview-request`; it never register
 or overlay, so the host composes the desired preview surface.
 
 **Properties:**
+
 - `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType`/the
   image thumbnail are all derived from it, taking precedence over the independent props below
 - `name: string = ''` — filename, used only while `file` is unset
 - `bytes?: number` — file size in bytes, used only while `file` is unset. `0` is a known empty file
   and renders `0 B`; omission means unknown. Negative/non-finite writes normalize to omission.
 - `attachmentId: string = ''` (attribute `attachment-id`) — stable domain identity carried by
-  attachment action events. The platform `id` remains available for DOM identity/idrefs only.
+  attachment action events. Empty or whitespace-only values use the fallback identity below. The
+  platform `id` remains available for DOM identity/idrefs only.
 - `mimeType: string = ''` (attribute `mime-type`) — used only while `file` is unset
 - `thumbnailSrc: string = ''` (attribute `thumbnail-src`) — thumbnail image URL, used only while
   `file` is unset; rendered whenever present regardless of `mimeType` (no `file`-derived equivalent
@@ -42,7 +44,7 @@ or overlay, so the host composes the desired preview surface.
 - `previewable: boolean = true` (reflected) — shows the preview action whenever a `file` or
   `preview-src` is available
 - `status: LyraAttachmentUploadStatus = 'pending'` (reflected) — `'pending' | 'uploading' |
-  'error' | 'success'`; invalid values normalize to `pending`. Drives the accent tint and which of
+'error' | 'success'`; invalid values normalize to `pending`. Drives the accent tint and which of
   `progress`/`spinner`/`retry-button` renders.
 - `progress: number = 0` — upload completion, 0-100; only meaningful while `status="uploading"`, a
   value of `0` or `NaN` falls back to the indeterminate spinner
@@ -72,9 +74,9 @@ and a numeric byte count answering to the same property name is a collision a co
 discovers at runtime. A leftover `size="245000"` is an unknown attribute now: `bytes` stays omitted
 and the `size` part renders nothing.
 
-The component identifies *which* attachment an action event is about through `attachmentId`. Set
-`attachment-id="..."` when you have a stable server-side identity; when unset and `file` is set, a
-stable attachment id is
+The component identifies _which_ attachment an action event is about through `attachmentId`. Set
+`attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
+and `file` is set, a stable attachment id is
 derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
 generated internal id is used as a last resort.
 
@@ -86,7 +88,7 @@ request is a host veto point; the chip itself has no preview default action.
 **Slots:** none.
 
 **CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size` (the formatted `bytes` count; the part
-keeps its pre-rename name — it is the rendered size *text*, and renaming a part would break shipped
+keeps its pre-rename name — it is the rendered size _text_, and renaming a part would break shipped
 `::part()` rules for no gain), `status-text` (the visible text twin of
 the status accent color, so the state is carried in words and not only in color; empty and hidden
 for `pending`/`success`), `progress`, `progress-fill`, `spinner` (decorative/`aria-hidden` while the
@@ -95,13 +97,13 @@ adjacent `status-text` supplies the wording), `retry-button`, `preview-button`,
 
 **`status-text` carries no live-region role (public surface change).** It is plain visible text
 that stays in the accessibility tree and reads normally once a user reaches the chip. The
-interrupting announcement a transition *into* `status="error"` makes — so a screen-reader user not
+interrupting announcement a transition _into_ `status="error"` makes — so a screen-reader user not
 already focused on the chip still hears an upload failure — goes to the library's shared
 **light-DOM** assertive region instead, appended to the consumer's `<body>` and marked
 `data-lr-live-region="assertive"`: a live region inside a shadow root is not reliably announced
 (JAWS with Firefox ignores one outright). Two consequences worth knowing:
 
-- Only a *transition* into `error` announces. A chip that mounts already failed is history the user
+- Only a _transition_ into `error` announces. A chip that mounts already failed is history the user
   can read at their own pace, and a retry that fails the same way twice is announced twice rather
   than being a silent no-op. The ticking `uploading` readout announces nothing at all — a live
   region re-announcing every progress tick is noise, not information.
@@ -111,9 +113,10 @@ already focused on the chip still hears an upload failure — goes to the librar
 
 **Themeable custom properties:** `--lr-attachment-chip-accent` (default
 `var(--lr-color-text-quiet)`), `--lr-attachment-chip-bg` (default `var(--lr-color-surface)`),
-`--lr-attachment-chip-border` (default `var(--lr-color-border)`) — this trio is swapped per
-`status` (`uploading` → brand/brand-quiet/transparent, `error` → danger/danger-quiet/transparent,
-`success` → success/success-quiet/transparent); `--lr-attachment-chip-compact-thumbnail-size` (default
+`--lr-attachment-chip-border` (default `var(--lr-color-border)`) — the trio's private defaults
+change per `status` (`uploading` → brand/brand-quiet/transparent, `error` →
+danger/danger-quiet/transparent, `success` → success/success-quiet/transparent), while an inherited
+or direct public value remains authoritative; `--lr-attachment-chip-compact-thumbnail-size` (default
 `1.75rem`), `--lr-attachment-chip-compact-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
 size, and internal gap while `compact` is set; `--lr-attachment-chip-spinner-duration` (default
@@ -134,16 +137,27 @@ exactly one decimal place), and a negative or non-finite input (`NaN`, `Infinity
 an unknown size renders nothing instead of `"NaN B"`.
 
 ```html
-<lr-attachment-chip name="report.pdf" bytes="245000" mime-type="application/pdf" status="success"></lr-attachment-chip>
-<lr-attachment-chip attachment-id="att-2" status="uploading" progress="42"></lr-attachment-chip>
+<lr-attachment-chip
+  name="report.pdf"
+  bytes="245000"
+  mime-type="application/pdf"
+  status="success"
+></lr-attachment-chip>
+<lr-attachment-chip
+  attachment-id="att-2"
+  status="uploading"
+  progress="42"
+></lr-attachment-chip>
 <script type="module">
-  import { formatFileSize } from '@aceshooting/lyra-ui/components/media/attachment-chip/file-size.js';
+  import { formatFileSize } from "@aceshooting/lyra-ui/components/media/attachment-chip/file-size.js";
 
-  const chip = document.createElement('lr-attachment-chip');
+  const chip = document.createElement("lr-attachment-chip");
   chip.file = pickedFile; // name/bytes/mime-type/thumbnail all derived from the File
-  chip.addEventListener('lr-remove', (e) => removeAttachment(e.detail.id));
-  chip.addEventListener('lr-retry', (e) => retryUpload(e.detail.id));
-  chip.addEventListener('lr-preview-request', (e) => openPreview(e.detail));
+  chip.addEventListener("lr-remove", (e) =>
+    removeAttachment(e.detail.attachmentId)
+  );
+  chip.addEventListener("lr-retry", (e) => retryUpload(e.detail.attachmentId));
+  chip.addEventListener("lr-preview-request", (e) => openPreview(e.detail));
   console.log(formatFileSize(pickedFile.size));
 </script>
 ```
@@ -157,6 +171,7 @@ or to `undefined`, and again on disconnect. Because the same pass that allocates
 previous entry, reassigning `file` several times before the next paint leaks nothing.
 
 **Known gotchas:**
+
 - `file` always wins over `name`/`bytes`/`mimeType` when both are set — assigning those props while
   `file` is also set has no visible effect on the rendered chip.
 - A `0` `bytes` value and an unset `bytes` value are indistinguishable (there's no separate flag for

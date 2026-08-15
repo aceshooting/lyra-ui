@@ -22,12 +22,13 @@ several steps may be `running` at once. By default it is a status report; `reord
 controlled keyboard reorder requests without changing ownership of `items`. Status changes and
 confirmed moves are announced through an internal `<lr-live-region>`.
 
-**Properties:** `items: TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
-status: TaskStatus; detail?: string; children?: TaskItem[] }` with `TaskStatus = 'pending' |
+**Properties:** `items: readonly TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
+status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
 'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
-`console.warn`. While `reorderable`, every top-level task and direct child must have a globally unique
-`id`; duplicate data stays visible but fails closed, with no row keyboard stops or reorder requests.
+`console.warn`. While `reorderable`, every top-level task and direct child must have a globally
+unique, nonempty `id`; invalid or duplicate data stays visible but fails closed, with no row
+keyboard stops or reorder requests.
 `reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
 It emits a request only; the host must assign a new reordered `items` array before the task visibly
 moves or an announcement is made. `label?: string` omits into localized `taskListLabel` (`'Tasks'`
@@ -50,8 +51,9 @@ that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
 
 **Events:** `lr-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
 expanded }`. `lr-reorder` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused task within its
-own sibling list. `detail: { id, parentId, fromIndex, toIndex }`; `parentId` is `null` for a
-top-level task and indices are sibling-scoped. It fires only while `reorderable` with unique ids.
+own sibling list. `detail: { taskId, parentTaskId, fromIndex, toIndex }`; `parentTaskId` is `null`
+for a top-level task and indices are sibling-scoped. It fires only while `reorderable` with unique,
+nonempty ids.
 A boundary key is a silent no-op, so it never reparents a child; the component announces success only
 after the host's rendered array confirms the exact requested swap.
 

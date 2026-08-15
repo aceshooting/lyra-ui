@@ -36,7 +36,7 @@ SVG surface; the potentially tiny text glyphs are not independent hit targets.
 **Properties:**
 
 - `words: readonly WordCloudWord[] = []` (attribute: false) — readonly `{ text: string, weight:
-  number, color?: string, group?: string }` snapshots; malformed/hostile records are skipped while
+number, color?: string, group?: string }` snapshots; malformed/hostile records are skipped while
   later valid records survive. `weight` is normalized once to a finite nonnegative value used by
   font sizing, announcements, and `lr-word-activate` detail. A valid CSS `color` overrides the
   palette for that word (invalid values,
@@ -44,6 +44,7 @@ SVG surface; the potentially tiny text glyphs are not independent hit targets.
   color across every word with the same `group` value. The component scans at most 10,000 input
   records, bounds each string to 256 characters and all retained word strings to 16,384 characters,
   marking shortened strings with an ellipsis and disclosing omitted input through `[part="limit"]`.
+  The returned sequence and records are frozen; reassign `words` after changes.
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
   layout clamps positive finite values to at most 512px and uses 1px for invalid/non-positive values
 - `maxFontSize: number = 48` (attribute `max-font-size`) — px, applied to the highest-weight word;
@@ -55,13 +56,15 @@ SVG surface; the potentially tiny text glyphs are not independent hit targets.
 - `palette?: readonly string[]` (attribute: false) — clone-owned custom categorical colors (at
   most 64), cycled by word index (or by
   `group`); invalid CSS colors, declaration-breaking input, and `url()` entries are skipped, and an
-  all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens
+  all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens. The returned sequence is
+  frozen; reassign `palette` after changes
 - `legend: readonly WordCloudLegendItem[] = []` (attribute: false) — clone-owned, frozen named
   readonly `{ label, color }` entries for explaining explicit `words[].color`/group color
   overrides; when omitted, the component derives entries from grouped and explicitly colored
   words. Explicit legends retain at most 100 entries and 8,192 aggregate characters; malformed
   records are skipped, overlong strings end in an ellipsis, invalid colors render transparent, and
-  `[part="legend-limit"]` truthfully exposes the localized rendered/received count.
+  `[part="legend-limit"]` truthfully exposes the localized rendered/received count. The returned
+  sequence and records are frozen; reassign `legend` after changes.
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection

@@ -52,15 +52,16 @@ base when no cell exists. A newer external focus destination is never reclaimed.
 - `data: HeatmapData = { kind: 'matrix', rowLabels: [], colLabels: [], values: [] }` (attribute:
   false), where `HeatmapData` is the readonly discriminated union:
   - `HeatmapMatrixData { kind: 'matrix'; rowLabels: readonly string[]; colLabels: readonly
-    string[]; values: readonly (readonly number[])[] }`
+string[]; values: readonly (readonly number[])[] }`
   - `HeatmapCalendarData { kind: 'calendar'; days: readonly CalendarDay[]; firstDayOfWeek?:
-    number; columnX?: (index:number)=>number; rowY?: (weekday:number)=>number;
-    weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
-    (jsMonth:number,year:number)=>string|undefined }`
-  Matrix `-1` or non-finite values are no-data. Calendar identity is ISO date and duplicates use one
-  deterministic **last-wins** entry before count, scale, paint, selection, focus and event paths.
-  Collections are snapshotted into a bounded canonical projection; reassign `data` after changing
-  caller-owned input.
+number; columnX?: (index:number)=>number; rowY?: (weekday:number)=>number;
+weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
+(jsMonth:number,year:number)=>string|undefined }`
+    Matrix `-1` or non-finite values are no-data. Calendar identity is ISO date; invalid dates are
+    omitted and duplicates use one deterministic **first-valid-wins** entry before count, scale,
+    paint, selection, focus and event paths.
+    Collections are snapshotted into a bounded canonical projection; reassign `data` after changing
+    caller-owned input.
 - `cellSize: number = 22` (attribute `cell-size` — default `22` in matrix mode, `11` in calendar
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)
@@ -91,7 +92,8 @@ base when no cell exists. A newer external focus destination is never reclaimed.
 col?: number; date?: string; label?: string }`: matrix mode matches by `row`/`col`, calendar mode
   by `date` (whichever pair matches the active `mode`; the other fields are ignored). Draws a
   stroked ring over the matching cell; an annotation with a `label` also gets its own
-  `[part="legend-annotation"]` entry in the legend.
+  `[part="legend-annotation"]` entry in the legend. The collection is clone-owned, bounded, and
+  frozen; reassign a new array after changes.
 - `selectedCell: HeatmapSelectedCell | null = null` (attribute: false) — `HeatmapSelectedCell {
 row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
   persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."
@@ -155,13 +157,13 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   locale-derived output. Lets month labels track the same locale signal (e.g. an app's own i18n
   store) as `weekdayLabelText` and the component's other localizable strings, instead of always
   following the browser/OS-language default.
-- `colorSteps?: readonly string[]` (attribute: false) — a discrete array (≥2 entries) of CSS colors used as
+- `colorSteps?: readonly string[]` (attribute: false) — a clone-owned, bounded, frozen discrete array (≥2 entries) of CSS colors used as
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
   than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
   fallback color and prevent the custom legend gradient from being assigned.
-- `legendStops?: readonly HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
+- `legendStops?: readonly HeatmapLegendStop[]` (attribute: false) — clone-owned, bounded, frozen `HeatmapLegendStop { value: number;
 color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
@@ -205,8 +207,8 @@ closes the legend row, present in both the gradient and the `legendStops` branch
 `--lr-heatmap-scale-hi` (default `var(--lr-color-brand)`) — the sequential color-ramp endpoints
 (matrix mode) or quartile-bucket ramp endpoints (calendar mode), resolved via `getComputedStyle` each
 draw (any valid CSS color syntax — hex/rgb/hsl/oklch/named — works, resolved through a scratch
-canvas). These defaults are declared on `:host`, so they follow the theme (including dark mode)
-rather than being pinned to a literal color; the hard-coded `#cde2fb`/`#0969da` pair in the source is
+canvas). Private defaults follow the theme (including dark mode), while inherited or direct public
+values remain authoritative; the hard-coded `#cde2fb`/`#0969da` pair in the source is
 only a last-resort constant for the case where the custom property resolves to an empty string (no
 stylesheet applied at all), not the shipped default.
 `--lr-heatmap-no-data-fill` (default `var(--lr-color-no-data)` — the no-data cell fill, same
@@ -242,7 +244,11 @@ same color as `--lr-heatmap-focus-ring-color`).
     kind: "matrix",
     rowLabels: ["Mon", "Tue", "Wed"],
     colLabels: ["00h", "06h", "12h", "18h"],
-    values: [[3, 8, 12, 4], [1, 2, 9, 5], [0, 4, 6, 2]],
+    values: [
+      [3, 8, 12, 4],
+      [1, 2, 9, 5],
+      [0, 4, 6, 2],
+    ],
   };
 </script>
 ```
@@ -275,7 +281,7 @@ is now literal.
   records and 530 weeks, and the color-step/legend-stop/annotation projections are each capped at
   256 entries. `[part="projection-limit"]` and the generated accessible summary disclose every
   truncation. The semantic grid mounts at most 400 cell buttons while preserving full navigation.
-- Calendar duplicates use a last-wins ISO-date identity. Invalid dates are dropped. `data.columnX`
+- Calendar duplicates use a first-valid-wins ISO-date identity. Invalid dates are dropped. `data.columnX`
   and `data.rowY` results must be finite, nonnegative, monotonic and non-overlapping; an invalid,
   throwing or hostile result safely falls back to the normal coordinate for that position.
 - Annotation, controlled selection and keyboard focus use independent concentric canvas rings;

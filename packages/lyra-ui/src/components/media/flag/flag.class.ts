@@ -395,7 +395,11 @@ export class LyraFlag extends LyraElement {
       || changed.has('src')
       || changed.has('fidelity')
       || changed.has('resolverGeneration');
-    if (!this.isConnected) {
+    // `isConnected` has no meaningful answer during SSR generation (no live document to be
+    // connected to) -- skipping source resolution there, the way a real disconnected browser
+    // element does, would make the server-rendered idle/empty template permanently disagree with
+    // the connected browser's first hydration render, which does resolve a source immediately.
+    if (typeof Node !== 'undefined' && !this.isConnected) {
       if (sourceChanged) {
         this.resolveToken++;
         this.sourceRestartPending = true;
@@ -413,7 +417,7 @@ export class LyraFlag extends LyraElement {
     this.sourceRestartPending = false;
     const token = ++this.resolveToken;
     const request = ++this.activeSourceRequest;
-    const URLCtor = this.ownerDocument.defaultView?.URL ?? globalThis.URL;
+    const URLCtor = this.ownerDocument?.defaultView?.URL ?? globalThis.URL;
     const directValue = typeof this.src === 'string' ? this.src.trim() : '';
     if (directValue) {
       const identity = `direct:${directValue}`;

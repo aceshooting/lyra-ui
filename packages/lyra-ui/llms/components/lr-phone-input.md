@@ -98,8 +98,9 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   min-height; `size="s"` shares its outer control height with `lr-input`, `lr-select`, and
   `lr-combobox` without part overrides)
 - `pill: boolean = false` (reflected) — rounds the field's corners to a full pill, mirroring
-  `lr-input`'s own `pill`. It re-assigns `--lr-phone-input-radius` to `--lr-radius-pill`, and the
-  country trigger's leading corners follow, since both read that one knob
+  `lr-input`'s own `pill`. It changes the private radius default to `--lr-radius-pill`, and the
+  country trigger's leading corners follow; an inherited or direct `--lr-phone-input-radius`
+  remains authoritative
 - `country: string` — current uppercase ISO alpha-2 selection; falls back to `defaultCountry`, then
   the first explicit/adapter country. A requested or adapter-detected country absent from the
   effective catalog resolves to that same valid fallback before property, trigger, native select,

@@ -95,7 +95,8 @@ values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{
 `weeknumber`, and `weeknumbers`. Lyra additionally retains the existing `week` part.
 
 **Themeable custom properties:** `--lr-cell-size` (default `2.25rem`, controls day-cell/grid-column
-size; auto-scaled per `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` default).
+size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the
+default). An inherited or direct public value remains authoritative in every tier.
 
 **Optional peer deps:** none.
 
@@ -222,9 +223,10 @@ With no label text the part is hidden and no glyph is painted.
 `--lr-date-input-font-size` (default `inherit`) — the `input` part's font size;
 `--lr-date-input-control-min-height` (default `--lr-form-control-height`, i.e. `2.5rem` at the
 default `m` tier) — the `input-wrapper`'s block-size
-floor. All four are declared on `:host` and auto-swapped per `size`
-(`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` defaults), using the same per-`size` values
-`lr-input` uses. `pill` re-assigns `--lr-date-input-radius` to `--lr-radius-pill`. Plus shared
+floor. Their private defaults follow `size` (`2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the base defaults),
+using the same per-`size` values `lr-input` uses. Inherited or direct public values win in every
+tier. `pill` changes the private `--lr-date-input-radius` default to `--lr-radius-pill`; a public
+radius still wins. Plus shared
 tokens. The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's
 enter and exit transitions; both default to `var(--lr-transition-fast)`.
 The clear and calendar actions expose point-of-use state hooks:

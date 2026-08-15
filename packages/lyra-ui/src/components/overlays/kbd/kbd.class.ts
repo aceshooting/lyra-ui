@@ -278,7 +278,7 @@ export class LyraKbd extends LyraElement {
     super.willUpdate(changed);
     if (!this.hasUpdated && this.platform === 'auto') {
       const serialized = this.renderRoot
-        .querySelector<HTMLElement>('[data-effective-platform]')
+        ?.querySelector<HTMLElement>('[data-effective-platform]')
         ?.getAttribute('data-effective-platform') ?? null;
       if (isEffectivePlatform(serialized)) this.autoPlatform = serialized;
     }

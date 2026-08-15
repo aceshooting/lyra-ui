@@ -52,7 +52,7 @@ nonnegative dimensions.
 - `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
   `searchPrevious()`/`clearSearch()`. A `src` change resets search state _silently_ (no event), since
   match page/offset coordinates only mean anything for the document they were found in.
-- `lr-highlight-activate` — `detail: { id }` — a painted highlight was clicked or activated via
+- `lr-highlight-activate` — `detail: { highlightId }` — a painted highlight was clicked or activated via
   Enter/Space. On a pointer hit-test, the last entry of `highlights` covering the point wins.
 - `lr-text-select` — `detail: { text, anchor, rects }` — a selection ended inside a page's text
   layer. `anchor` is the computed anchor (`null` when none resolves), carrying the resolved `page`
@@ -74,7 +74,9 @@ of range. `goToPage(page)` scrolls the virtualized list to `page`, resolving `tr
 table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` when there is none;
 peer output is capped at 10,000 unique items and 100 levels, with cycles ignored.
 `search(query)` resolves the match count across all pages (empty/whitespace query behaves like
-`clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
+`clearSearch()`), accepting at most 4,096 query code units and scanning at most 1,000 pages,
+1,000,000 corpus code units, and 4,000,000 search code units while retaining 10,000 matches;
+`searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
 
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `toolbar`,

@@ -10,7 +10,7 @@ import {
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
-import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
+import type { LyraVirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
 import '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './neighbor-list.styles.js';
@@ -18,6 +18,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel } from '../../../internal/default-strings.generated.js';
@@ -31,10 +32,10 @@ export interface LyraNeighborRow {
 }
 
 export interface LyraNeighborListEventMap {
-  'lr-entity-activate': CustomEvent<{ id: string }>;
+  'lr-entity-activate': CustomEvent<{ entityId: string }>;
   /** Deliberately the *same name and detail* as the `lr-graph` event, so one host handler
    *  serves both ("expand this node's neighborhood"). */
-  'lr-node-expand': CustomEvent<{ id: string }>;
+  'lr-node-expand': CustomEvent<{ nodeId: string }>;
 }
 
 /**
@@ -46,9 +47,9 @@ export interface LyraNeighborListEventMap {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-neighbor-list
- * @event lr-entity-activate - A row's node button was activated. `detail: { id }`.
+ * @event lr-entity-activate - A row's node button was activated. `detail: { entityId }`.
  * @event lr-node-expand - A row's expand button was activated (only rendered when `expandable`).
- * `detail: { id }`.
+ * `detail: { nodeId }`.
  * @csspart base - The stable root wrapper across empty, populated and virtualized states. It owns
  *   `role="group"` and the fallback name unless a non-empty host `aria-label` owns the component;
  *   a nested list owns the row semantics in non-virtualized mode.
@@ -108,17 +109,18 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   }
 
   private sortedRows(): readonly LyraNeighborRow[] {
-    if (!this.groupByRelation) return this.rows;
+    const rows = firstByRetrievalIdentity(this.rows, (row) => row?.node?.id);
+    if (!this.groupByRelation) return rows;
     // Array.prototype.sort is spec-guaranteed stable (ES2019+) -- rows sharing a relation keep
     // their original relative order.
-    return [...this.rows].sort((a, b) =>
+    return rows.sort((a, b) =>
       getCollator(this.effectiveLocale).compare(a.relation, b.relation)
     );
   }
 
-  private groups(sorted: readonly LyraNeighborRow[]): VirtualListGroup[] | undefined {
+  private groups(sorted: readonly LyraNeighborRow[]): LyraVirtualListGroup[] | undefined {
     if (!this.groupByRelation) return undefined;
-    const groups: VirtualListGroup[] = [];
+    const groups: LyraVirtualListGroup[] = [];
     const counts = new Map<string, number>();
     for (const row of sorted)
       counts.set(row.relation, (counts.get(row.relation) ?? 0) + 1);
@@ -193,7 +195,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         type="button"
         aria-label=${accessibleName}
         aria-description=${metaText || nothing}
-        @click=${() => this.emit('lr-entity-activate', { id: row.node.id })}
+        @click=${() =>
+          this.emit('lr-entity-activate', { entityId: row.node.id })}
       >
         <span part="direction" aria-hidden="true"
           >${this.directionGlyph(row.direction)}</span
@@ -209,7 +212,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
             aria-label=${this.localize('neighborExpand', undefined, {
               label: nodeLabel,
             })}
-            @click=${() => this.emit('lr-node-expand', { id: row.node.id })}
+            @click=${() => this.emit('lr-node-expand', { nodeId: row.node.id })}
           >
             ${expandIcon()}
           </button>`

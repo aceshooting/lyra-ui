@@ -31,24 +31,29 @@ cancelable. Retry is available for `error` and `cancelled`.
 
 - `run: AgentRun | null = null` (attribute: false) — **`AgentRun`, imported from
   `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; status: AgentStatus; startedAt?:
-number; endedAt?: number; model?: string; costEstimate?: number; steps: AgentStep[] }`, where
+number; endedAt?: number; model?: string; costEstimate?: number; steps: readonly AgentStep[] }`, where
   `AgentStatus { kind: AgentStatusKind; message?: string }` and `AgentStep { id: string; kind:
 string; label: string; status: AgentStatus; startedAt?: number; endedAt?: number }`. All timestamps
   are epoch milliseconds; `AgentStep.kind` is deliberately free-form (an agent's own step taxonomy is
-  application-defined) — unlike `LyraSpan['kind']`'s closed union. Controlled and never mutated —
-  pass a new object to update it. `null` renders the shared `lr-empty` `noData` state
-- `metrics: AgentRunMetric[] = []` (attribute: false) — `AgentRunMetric { id: string; label: string;
+  application-defined) — unlike `LyraSpan['kind']`'s closed union. The record and its nested step
+  collection are clone-owned, bounded, and frozen; pass a new object to update it. `null` renders
+  the shared `lr-empty` `noData` state
+- `metrics: readonly AgentRunMetric[] = []` (attribute: false) — `AgentRunMetric { id: string; label: string;
 value: string | number; variant?: BadgeVariant }` (exported here), e.g. prompt/completion token
   counts; `variant` tones `[part="metric-value"]` via `data-variant`, including the full
-  `neutral`/`brand`/`success`/`warning`/`danger` badge vocabulary. Later duplicate ids are omitted
+  `neutral`/`brand`/`success`/`warning`/`danger` badge vocabulary. Empty/blank ids and later duplicates are omitted
   before metric rendering
 - `formatCost?: (cost: number) => string` (attribute: false) — overrides the default plain
   `Intl.NumberFormat` rendering of `run.costEstimate` fed to the composed `lr-usage-badge`'s
   `cost-text`; use it to add a currency symbol, which this library never assumes on a host's behalf
-- `statusLabels: Record<string, string> = {}` (attribute: false) — labels for _application-defined_
-  `AgentStatusKind` values; the nine built-in kinds stay localized by Lyra
-- `statusVariants: Record<string, BadgeVariant> = {}` (attribute: false) — badge variants for
-  application-defined kinds; unknown kinds default to `neutral`
+- `statusLabels: Readonly<Record<string, string>> = {}` (attribute: false) — clone-owned labels for
+  _application-defined_ `AgentStatusKind` values; the nine built-in kinds stay localized by Lyra
+- `statusVariants: Readonly<Record<string, BadgeVariant>> = {}` (attribute: false) — clone-owned
+  badge variants for application-defined kinds; unknown kinds default to `neutral`
+
+The collection and status-map properties above are bounded frozen snapshots. Mutating a previously
+assigned array or record has no effect; create and reassign a new value after changes.
+
 - `showCancel: boolean = true` (attribute `show-cancel`) / `showRetry: boolean = true` (attribute
   `show-retry`) — whether the built-in buttons may render at all, still gated by the run's own
   status. Both use a `true`-defaulting string converter, so plain-HTML `show-cancel="false"` works; a

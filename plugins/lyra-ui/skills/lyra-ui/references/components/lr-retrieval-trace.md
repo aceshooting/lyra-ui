@@ -43,8 +43,8 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
   An authored host `aria-label` independently names the trace and is not cloned onto the timeline;
   explicit-empty/dynamic host changes preserve that single-owner distinction
 
-**Events:** `lr-stage-select` (`detail: { id: string }`, a stage's bar was activated — click, Enter,
-Space), `lr-stage-toggle` (`detail: { id: string; expanded: boolean }`, an evidence panel was
+**Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
+Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, an evidence panel was
 toggled, either by its own button or implicitly by selecting that stage in the timeline for the
 first time), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
 discriminated `{ stageId, action: 'open', id, sourceId, anchor? } | { stageId, action: 'expand', id,

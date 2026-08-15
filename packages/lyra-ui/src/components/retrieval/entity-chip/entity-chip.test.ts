@@ -2,72 +2,99 @@ import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './entity-chip.js';
 import type { LyraEntityChip } from './entity-chip.js';
 
-it('defaults to empty entityId/label/type and no typeLabel', async () => {
-  const el = (await fixture(html`<lr-entity-chip></lr-entity-chip>`)) as LyraEntityChip;
+it('defaults to empty entityId/text/type and no typeLabel', async () => {
+  const el = (await fixture(
+    html`<lr-entity-chip></lr-entity-chip>`
+  )) as LyraEntityChip;
   expect(el.entityId).to.equal('');
-  expect(el.label).to.equal('');
+  expect(el.text).to.equal('');
   expect(el.type).to.equal('');
   expect(el.typeLabel).to.equal(undefined);
 });
 
-it('renders the label as its visible content, not entityId', async () => {
+it('renders the text as its visible content, not entityId', async () => {
   const el = (await fixture(
-    html`<lr-entity-chip entity-id="e17" label="Marie Curie"></lr-entity-chip>`,
+    html`<lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>`
   )) as LyraEntityChip;
-  expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Marie Curie');
+  expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal(
+    'Marie Curie'
+  );
 });
 
 it('emits lr-entity-activate on click with the entityId', async () => {
   const el = (await fixture(
-    html`<lr-entity-chip entity-id="e17" label="Marie Curie"></lr-entity-chip>`,
+    html`<lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>`
   )) as LyraEntityChip;
-  const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+  const button = el.shadowRoot!.querySelector(
+    '[part="base"]'
+  ) as HTMLButtonElement;
   const listener = oneEvent(el, 'lr-entity-activate');
   button.click();
   const event = await listener;
-  expect(event.detail).to.deep.equal({ id: 'e17' });
+  expect(event.detail).to.deep.equal({ entityId: 'e17' });
 });
 
 it('keeps the compact inline entity target at the live hit-area token override', async () => {
   const el = (await fixture(
-    html`<lr-entity-chip label="X" style="--lr-icon-button-size:52px"></lr-entity-chip>`,
+    html`<lr-entity-chip
+      text="X"
+      style="--lr-icon-button-size:52px"
+    ></lr-entity-chip>`
   )) as LyraEntityChip;
-  const bounds = (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getBoundingClientRect();
+  const bounds = (
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+  ).getBoundingClientRect();
   expect(bounds.width).to.be.at.least(52);
   expect(bounds.height).to.be.at.least(52);
 });
 
 it('emits lr-entity-open on dblclick, and on Space while focused', async () => {
   const el = (await fixture(
-    html`<lr-entity-chip entity-id="e17" label="Marie Curie"></lr-entity-chip>`,
+    html`<lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>`
   )) as LyraEntityChip;
-  const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+  const button = el.shadowRoot!.querySelector(
+    '[part="base"]'
+  ) as HTMLButtonElement;
   const listener = oneEvent(el, 'lr-entity-open');
   button.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
   const event = await listener;
-  expect(event.detail).to.deep.equal({ id: 'e17' });
+  expect(event.detail).to.deep.equal({ entityId: 'e17' });
 
   const listener2 = oneEvent(el, 'lr-entity-open');
-  button.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, composed: true }));
+  button.dispatchEvent(
+    new KeyboardEvent('keydown', { key: ' ', bubbles: true, composed: true })
+  );
   const event2 = await listener2;
-  expect(event2.detail).to.deep.equal({ id: 'e17' });
+  expect(event2.detail).to.deep.equal({ entityId: 'e17' });
 });
 
 it('computes an accessible name including the (typeLabel-preferred) type when set', async () => {
   const el = (await fixture(
-    html`<lr-entity-chip label="Marie Curie" type="person" type-label="Person"></lr-entity-chip>`,
+    html`<lr-entity-chip
+      text="Marie Curie"
+      type="person"
+      type-label="Person"
+    ></lr-entity-chip>`
   )) as LyraEntityChip;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Marie Curie, Person');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('Marie Curie, Person');
 
   el.typeLabel = undefined;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Marie Curie, person');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('Marie Curie, person');
 });
 
 it('keeps explicit-empty and dynamic host naming distinct from the entity button', async () => {
   const el = (await fixture(html`
-    <lr-entity-chip aria-label="Author entity" label="Marie Curie" type="person"></lr-entity-chip>
+    <lr-entity-chip
+      aria-label="Author entity"
+      text="Marie Curie"
+      type="person"
+    ></lr-entity-chip>
   `)) as LyraEntityChip;
   const button = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(el.getAttribute('aria-label')).to.equal('Author entity');
@@ -82,60 +109,97 @@ it('keeps explicit-empty and dynamic host naming distinct from the entity button
   expect(button.getAttribute('aria-label')).to.equal('Marie Curie, person');
 });
 
-it('falls back to the localized untitled-entity name when `label` is unset, so the button is never nameless', async () => {
-  const el = (await fixture(html`<lr-entity-chip entity-id="e1"></lr-entity-chip>`)) as LyraEntityChip;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Untitled entity');
+it('falls back to the localized untitled-entity name when `text` is unset, so the button is never nameless', async () => {
+  const el = (await fixture(
+    html`<lr-entity-chip entity-id="e1"></lr-entity-chip>`
+  )) as LyraEntityChip;
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('Untitled entity');
 });
 
 it('localizes the "{label}, {type}" accessible name via this.localize() when .strings overrides entityChipWithType', async () => {
   const el = (await fixture(html`
     <lr-entity-chip
-      label="Marie Curie"
+      text="Marie Curie"
       type="person"
       type-label="Personne"
       .strings=${{ entityChipWithType: '{label} ({type})' }}
     ></lr-entity-chip>
   `)) as LyraEntityChip;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Marie Curie (Personne)');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('Marie Curie (Personne)');
 });
 
 it('localizes the untitled-entity fallback via this.localize() when .strings overrides untitledEntity', async () => {
   const el = (await fixture(html`
-    <lr-entity-chip entity-id="e1" .strings=${{ untitledEntity: 'Entité sans titre' }}></lr-entity-chip>
+    <lr-entity-chip
+      entity-id="e1"
+      .strings=${{ untitledEntity: 'Entité sans titre' }}
+    ></lr-entity-chip>
   `)) as LyraEntityChip;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Entité sans titre');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('Entité sans titre');
 });
 
 it('reflects type as a host attribute for CSS theming', async () => {
-  const el = (await fixture(html`<lr-entity-chip type="person"></lr-entity-chip>`)) as LyraEntityChip;
+  const el = (await fixture(
+    html`<lr-entity-chip type="person"></lr-entity-chip>`
+  )) as LyraEntityChip;
   expect(el.getAttribute('type')).to.equal('person');
 });
 
 it('shows no popover/hover affordance when the default slot is empty', async () => {
-  const el = (await fixture(html`<lr-entity-chip label="Marie Curie"></lr-entity-chip>`)) as LyraEntityChip;
-  const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+  const el = (await fixture(
+    html`<lr-entity-chip text="Marie Curie"></lr-entity-chip>`
+  )) as LyraEntityChip;
+  const button = el.shadowRoot!.querySelector(
+    '[part="base"]'
+  ) as HTMLButtonElement;
   expect(button.hasAttribute('aria-describedby')).to.be.false;
-  el.dispatchEvent(new Event('pointerenter', { bubbles: true, composed: true }));
+  el.dispatchEvent(
+    new Event('pointerenter', { bubbles: true, composed: true })
+  );
   await aTimeout(10);
-  expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement
+    ).hasAttribute('hidden')
+  ).to.be.true;
 });
 
 it('shows the popover on hover when preview content is slotted, and hides it on Escape', async () => {
   const el = (await fixture(
-    html`<lr-entity-chip label="Marie Curie">Physicist, 1867-1934</lr-entity-chip>`,
+    html`<lr-entity-chip text="Marie Curie"
+      >Physicist, 1867-1934</lr-entity-chip
+    >`
   )) as LyraEntityChip;
   await el.updateComplete;
   const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
   wrapper.dispatchEvent(new Event('pointerenter', { bubbles: true }));
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
-  wrapper.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement
+    ).hasAttribute('hidden')
+  ).to.be.false;
+  wrapper.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+  );
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement
+    ).hasAttribute('hidden')
+  ).to.be.true;
 });
 
 it('is accessible with and without preview content', async () => {
-  const el = (await fixture(html`<lr-entity-chip label="Marie Curie" type="person"></lr-entity-chip>`)) as LyraEntityChip;
+  const el = (await fixture(
+    html`<lr-entity-chip text="Marie Curie" type="person"></lr-entity-chip>`
+  )) as LyraEntityChip;
   await expect(el).to.be.accessible();
   el.innerHTML = 'Physicist';
   await el.updateComplete;
@@ -171,19 +235,28 @@ function renderedClamp(el: HTMLElement, selector: string): string {
 }
 
 it('clamps its floating surface width through the shared popover-viewport-clamp token', async () => {
-  const el = (await fixture(html`<lr-entity-chip></lr-entity-chip>`)) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
+  const el = (await fixture(
+    html`<lr-entity-chip></lr-entity-chip>`
+  )) as HTMLElement;
+  await (el as HTMLElement & { updateComplete?: Promise<unknown> })
+    .updateComplete;
   expect(renderedClamp(el, "[part='popover']")).to.equal('10px');
 });
 
 it('resets the open preview popover on disconnect so a reparent reconnect never leaves it stuck open', async () => {
   const el = (await fixture(
-    html`<lr-entity-chip label="Marie Curie">Physicist, 1867-1934</lr-entity-chip>`,
+    html`<lr-entity-chip text="Marie Curie"
+      >Physicist, 1867-1934</lr-entity-chip
+    >`
   )) as LyraEntityChip;
   const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
   wrapper.dispatchEvent(new Event('pointerenter', { bubbles: true }));
   await el.updateComplete;
-  expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+  expect(
+    (
+      el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement
+    ).hasAttribute('hidden')
+  ).to.be.false;
 
   // Reparent: disconnect immediately followed by reconnect (e.g. drag-drop reparent,
   // virtualized list reordering).
@@ -192,15 +265,21 @@ it('resets the open preview popover on disconnect so a reparent reconnect never 
   parent.appendChild(el);
   await el.updateComplete;
 
-  const popoverAfterReconnect = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+  const popoverAfterReconnect = el.shadowRoot!.querySelector(
+    '[part="popover"]'
+  ) as HTMLElement;
   expect(popoverAfterReconnect.hasAttribute('hidden')).to.be.true;
 });
 
 it('keeps rich tooltip content non-interactive', async () => {
   const el = (await fixture(
-    html`<lr-entity-chip label="Marie"><button>Unexpected action</button></lr-entity-chip>`,
+    html`<lr-entity-chip text="Marie"
+      ><button>Unexpected action</button></lr-entity-chip
+    >`
   )) as LyraEntityChip;
-  expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).inert).to.be.true;
+  expect(
+    (el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).inert
+  ).to.be.true;
 });
 
 // -- Hover/focus preview lifecycle ------------------------------------------
@@ -210,11 +289,16 @@ it('keeps rich tooltip content non-interactive', async () => {
 describe('preview show/hide across pointer and focus', () => {
   const chip = (): Promise<LyraEntityChip> =>
     fixture(
-      html`<lr-entity-chip label="Marie Curie">Physicist, 1867-1934</lr-entity-chip>`,
+      html`<lr-entity-chip text="Marie Curie"
+        >Physicist, 1867-1934</lr-entity-chip
+      >`
     ) as Promise<LyraEntityChip>;
   const hidden = (el: LyraEntityChip): boolean =>
-    (el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).hasAttribute('hidden');
-  const wrapper = (el: LyraEntityChip): HTMLElement => el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+    (
+      el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement
+    ).hasAttribute('hidden');
+  const wrapper = (el: LyraEntityChip): HTMLElement =>
+    el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
 
   it('pointerleave schedules the hide rather than closing immediately', async () => {
     const el = await chip();
@@ -262,11 +346,14 @@ describe('preview show/hide across pointer and focus', () => {
     wrapper(el).dispatchEvent(new Event('pointerleave', { bubbles: true }));
     await aTimeout(320);
     await el.updateComplete;
-    expect(hidden(el), 'focus still holds it open past the hide delay').to.be.false;
+    expect(hidden(el), 'focus still holds it open past the hide delay').to.be
+      .false;
   });
 
   it('does nothing on pointerleave when there is no preview content at all', async () => {
-    const el = (await fixture(html`<lr-entity-chip label="Marie Curie"></lr-entity-chip>`)) as LyraEntityChip;
+    const el = (await fixture(
+      html`<lr-entity-chip text="Marie Curie"></lr-entity-chip>`
+    )) as LyraEntityChip;
     await el.updateComplete;
     wrapper(el).dispatchEvent(new Event('pointerenter', { bubbles: true }));
     wrapper(el).dispatchEvent(new Event('pointerleave', { bubbles: true }));

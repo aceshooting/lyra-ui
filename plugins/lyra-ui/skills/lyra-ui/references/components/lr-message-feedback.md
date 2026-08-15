@@ -26,6 +26,8 @@ uses the ordinary re-activate-to-clear toggle.
 **Properties:** `rating: MessageFeedbackValue = null` (`'up' | 'down' | null`, reflected),
 `detail?: MessageFeedbackDetailConfiguration` (attribute: false) — one configuration with optional
 `reasons?: readonly { id, label }[]` and `commentable?: boolean`; omit it for thumbs-only feedback.
+The record and nested reasons are a bounded clone-owned frozen snapshot; create and reassign a new
+detail record after changes.
 `detailFor: 'none' | 'up' | 'down' | 'both' = 'down'` (attribute `detail-for`) selects which rating
 owns that one detail panel. `disabled: boolean = false` (reflected) makes a recorded rating read-only, and
 `pending: boolean = false` (reflected) — set automatically when a submit listener prevents the
@@ -49,6 +51,8 @@ is installed before dispatch, so even a synchronous listener may finalize/revert
 success announcement/focus until `finalizePendingSubmit()`; call `revertPendingSubmit()` on failure.
 When uncanceled it retains the synchronous close/announce/focus behavior. The optional comment
 `<textarea>`'s native `focus` and `blur` are re-dispatched as bubbling, composed host events.
+`lr-toolbar-actions-change` is the no-detail coordination event emitted when the provider's logical
+toolbar actions change availability or order.
 
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or

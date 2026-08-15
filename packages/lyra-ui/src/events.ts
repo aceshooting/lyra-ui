@@ -3288,7 +3288,8 @@ export type LyraToolCallChipSelectEvent = LyraToolCallChipEventMap['lr-tool-call
 export type LyraToolRenderErrorEvent = LyraToolTimelineEventMap['lr-tool-render-error'];
 
 /**
- * `lr-toolbar-actions-change` — dispatched by `<lr-copy-button>`.
+ * `lr-toolbar-actions-change` — dispatched by 3 components: `<lr-branch-picker>`,
+ * `<lr-copy-button>`, `<lr-message-feedback>`.
  *
  * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.

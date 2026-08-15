@@ -56,15 +56,17 @@ repainting every other component that reuses the same shared success token. Plus
 ```html
 <lr-poll-status next-in-ms="30000"></lr-poll-status>
 <script type="module">
-  const status = document.querySelector('lr-poll-status');
-  status.addEventListener('lr-poll-due', () => refreshData());
-  status.addEventListener('lr-pause-change', (e) => console.log('paused:', e.detail.paused));
+  const status = document.querySelector("lr-poll-status");
+  status.addEventListener("lr-poll-due", () => refreshData());
+  status.addEventListener("lr-pause-change", (e) =>
+    console.log("paused:", e.detail.paused)
+  );
 </script>
 ```
 
 Internally, owner-window timeouts schedule both the exact deadline and the next displayed-second
 boundary from a captured target timestamp, so a zero/short delay does not wait for a one-second
-poll and the countdown stays accurate after background throttling. Assigning a *changed*
+poll and the countdown stays accurate after background throttling. Assigning a _changed_
 `nextInMs` value starts a fresh deadline; assigning the same value is a normal Lit no-op, so use
 `restart()` for a new cycle with the same delay. Entering `paused` captures the bounded remaining
 duration; every resume establishes a new deadline from that frozen value. Changing `nextInMs` or

@@ -37,8 +37,8 @@ import {
 export type { LyraTopic };
 
 export interface LyraMindMapEventMap {
-  'lr-topic-select': CustomEvent<{ id: string }>;
-  'lr-topic-toggle': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-topic-select': CustomEvent<{ topicId: string }>;
+  'lr-topic-toggle': CustomEvent<{ topicId: string; expanded: boolean }>;
 }
 
 const DEFAULT_RING_GAP_PX = 96; // 6rem at the default 16px root font size
@@ -68,9 +68,9 @@ const NAV_KEYS = new Set([
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-mind-map
- * @event lr-topic-select - A *leaf* topic was activated. `detail: { id }`.
+ * @event lr-topic-select - A *leaf* topic was activated. `detail: { topicId }`.
  * @event lr-topic-toggle - A parent topic was activated (or auto-expanded by keyboard descent).
- * `detail: { id, expanded }`.
+ * `detail: { topicId, expanded }`.
  * @csspart base - The wrapper.
  * @csspart svg - The single-tab-stop SVG focus target.
  * @csspart node - A topic node group.
@@ -340,7 +340,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     const next = new Map(this.expandedOverrides);
     next.set(node.id, expanded);
     this.expandedOverrides = next;
-    this.emit('lr-topic-toggle', { id: node.id, expanded });
+    this.emit('lr-topic-toggle', { topicId: node.id, expanded });
     if (announce) {
       this.setAnnouncement(
         this.localize(
@@ -354,7 +354,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   private activate(node: PlacedTopic): void {
     if (node.hasChildren) this.toggle(node);
-    else this.emit('lr-topic-select', { id: node.id });
+    else this.emit('lr-topic-select', { topicId: node.id });
   }
 
   private siblingsOf(node: PlacedTopic): PlacedTopic[] {

@@ -19,10 +19,12 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 `DocumentLocator` into ask, quote, cite, and copy actions.
 
 **Properties:** `open: boolean = false` (reflected); `text: string = ''`;
-`anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
-`actions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
+clone-owned `anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
+clone-owned `actions: readonly SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
-`SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`.
+`SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`. Duplicate built-in names are omitted
+first-wins before rendering, roving focus, and action events. The anchor (including any path) and
+actions are bounded frozen snapshots; reassign a new record or array after changes.
 
 When a controlled `actions` refresh replaces the focused action, focus follows the same action id
 through reordering, otherwise moves to the nearest surviving action, or to the stable toolbar when

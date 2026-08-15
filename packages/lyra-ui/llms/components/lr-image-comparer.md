@@ -18,6 +18,7 @@
 Before/after comparison surface with two named slots and a keyboard-accessible native range handle.
 
 **Properties:**
+
 - `position: number = 50` (attribute `position`, reflected) — divider position from 0 to 100
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (attribute `orientation`, reflected)
 - `accessibleLabel: string | null` (attribute `aria-label`) — accessible name for the comparison
@@ -57,8 +58,8 @@ cleared on pointer cancellation, blur, or disconnect.
 
 ```html
 <lr-image-comparer aria-label="Before and after">
-  <img slot="before" alt="Before" src="before.png">
-  <img slot="after" alt="After" src="after.png">
+  <img slot="before" alt="Before" src="before.png" />
+  <img slot="after" alt="After" src="after.png" />
   <span slot="handle" aria-hidden="true">↔</span>
 </lr-image-comparer>
 ```

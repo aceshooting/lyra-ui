@@ -20,15 +20,16 @@ primitives, with retry counts and sensitive-field redaction.
 
 **Properties:**
 
-- `entries: ToolTimelineEntry[] = []` (attribute: false) — `ToolTimelineEntry` **extends
+- `entries: readonly ToolTimelineEntry[] = []` (attribute: false) — `ToolTimelineEntry` **extends
   `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; args:
 Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
   `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied'`) with `{ startedAt?:
-number; endedAt?: number; retryCount?: number; redactedFields?: string[]; needsApproval?: boolean;
+number; endedAt?: number; retryCount?: number; redactedFields?: readonly string[]; needsApproval?: boolean;
 approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies the owning run or
   source generation when invocation ids can be reused; every expansion, activation, renderer error,
-  and approval draft is correlated by `(sourceKey, id)`. Duplicate occurrences of the same pair are
-  normalized before any lookup with a deterministic first-occurrence-wins policy. `icon` is a
+  and approval draft is correlated by `(sourceKey, id)`. Entries with empty/blank invocation ids
+  are omitted; a blank optional `sourceKey` is treated as absent. Duplicate occurrences of the same
+  pair are normalized before any lookup with a deterministic first-occurrence-wins policy. `icon` is a
   literal hint forwarded to the composed tool-call chip. A foreign runtime `status` normalizes once
   to `pending` before both the timeline row and its composed chip render.
   Timestamps are epoch milliseconds; entries sort ascending by `startedAt`,

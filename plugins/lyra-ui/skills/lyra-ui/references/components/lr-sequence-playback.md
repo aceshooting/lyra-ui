@@ -19,6 +19,7 @@ Steps a current index through `[0, itemCount)` on a fixed interval — explicit 
 playback for time-series scrubbing, without implying native audio/video playback.
 
 **Properties:**
+
 - `itemCount: number = 0` (attribute `item-count`)
 - `currentIndex: number = 0` (attribute `current-index`)
 - `intervalMs: number = 900` (attribute `interval-ms`)
@@ -68,14 +69,15 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 ```html
 <lr-sequence-playback item-count="24" interval-ms="500"></lr-sequence-playback>
 <script>
-  const playback = document.querySelector('lr-sequence-playback');
-  playback.addEventListener('lr-sequence-step', (event) => {
+  const playback = document.querySelector("lr-sequence-playback");
+  playback.addEventListener("lr-sequence-step", (event) => {
     renderFrame(event.detail.currentIndex);
   });
 </script>
 ```
 
 **Known gotchas:**
+
 - `currentIndex` is re-clamped into `[0, itemCount)` as soon as `itemCount` shrinks (in
   `willUpdate()`, not waiting for the next `tick()`/`goTo()`/`next()`/`previous()` call) — setting
   `el.itemCount = 2` while `el.currentIndex = 7` immediately pulls `currentIndex` back to `1`, and
@@ -95,7 +97,7 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 - Initial `playing` and `item-count` attributes are resolved together on the first update, so
   playback starts consistently regardless of their source order; an invalid final `itemCount <= 1`
   clears the reflected `playing` state.
-- No *visible* "N of M" position label beside the range input; the native one-based range still
+- No _visible_ "N of M" position label beside the range input; the native one-based range still
   exposes the current ordinal and total bounds, with localized `aria-valuetext` as a supplemental
   enhancement where the platform honors it.
 - Calling `play()`/`pause()` programmatically (not via the button) gives no `aria-live`

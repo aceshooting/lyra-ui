@@ -44,10 +44,12 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 **Properties:**
 
 - `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection,
-  column identities preserved) — `{ key, label, headerCell?, width?, minWidth?, maxWidth?,
-  resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
-  sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
-  cell: (row) => unknown }` —
+  bounded to 10,000 valid definitions; blank keys and later duplicates are omitted first-wins
+  before header, cell, sort, focus, and event paths; reassign to update) — `{ key, label,
+headerCell?, width?, minWidth?, maxWidth?,
+resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
+sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
+cell: (row) => unknown }` —
   `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
   client-mode sorting for that column: a finite number sorts numerically, a string sorts through an
   `Intl.Collator` built from the component's effective locale with `numeric: true` (so `item2`
@@ -126,8 +128,10 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
   `waitUntil()`) rather than assuming a single `updateComplete` covers it. Setting it directly has no
   lasting effect; it is recomputed on the next render or resize. The toggle remains available while
   a narrow table is revealed, even though this property truthfully reports false
-- `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection, row identities
-  preserved)
+- `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection bounded to the first
+  10,000 rows; reassign to update). Records are retained
+  here; one canonical `rowKey` projection omits blank and later-duplicate identities first-wins
+  before filtering, counts, pagination, focus, actions, and events
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
   column shares the available width evenly and long cell content is clipped/wrapped instead of
@@ -154,12 +158,14 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 - `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
-  sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong row
+  sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong
+  row. Empty string identities and later duplicates are omitted; the first valid occurrence wins
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
 - `selectedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
-  store in every mode. Single mode enforces at most one key; multiple mode toggles membership. Reads
-  return detached snapshots; reassign a new set to update
+  store in every mode, bounded to 10,000 keys. Single mode enforces at most one key; multiple mode
+  toggles membership. Reads return immutable detached `ReadonlySet` facades; reassign a new set to
+  update
 - `filterable: boolean = false` (attribute `filterable`, reflected) — renders a localized search
   field above the grid
 - `filterText: string = ''` (attribute `filter-text`) — controlled filter text
@@ -216,7 +222,8 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
   renders a full-width detail row beneath expanded records
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
 - `expandedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
-  expanded state; reads return detached snapshots, and consumers reassign it after
+  expanded state bounded to 10,000 keys; reads return immutable detached `ReadonlySet` facades,
+  and consumers reassign it after
   `lr-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
 - `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim

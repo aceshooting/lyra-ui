@@ -16,10 +16,10 @@
 ## `lr-thread-list`
 
 The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename
-affordances. _Data mode_ (non-empty `threads`, or empty `threads` with nothing slotted) renders every
-row as a `lr-conversation-item` inside an internal `lr-virtual-list` — virtualized by
+affordances. _Data mode_ (at least one valid `threads` record, or no valid records with nothing
+slotted) renders every row as a `lr-conversation-item` inside an internal `lr-virtual-list` — virtualized by
 construction, scroll position and per-row state survive a `threads` replacement; zero rows renders
-the built-in empty state. _Slotted mode_ (empty `threads` _and_ real slotted content) renders
+the built-in empty state. _Slotted mode_ (no valid `threads` records _and_ real slotted content) renders
 host-supplied `lr-conversation-item`s from the default slot as-is: no grouping, virtualization, or
 row actions in that mode. No thread CRUD or persistence — every mutation
 (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the _requested_ new
@@ -40,12 +40,12 @@ string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pi
 date?: Date }`. `LyraThreadList` and `LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
-Data-mode thread ids must be nonempty and unique; invalid rows and later duplicates are omitted with
-the first valid occurrence winning, so focus, actions, and emitted `conversationId` values remain
-unambiguous.
+Data-mode thread ids must be nonempty, nonblank, and unique; invalid rows and later duplicates are
+omitted with the first valid occurrence winning before the mode is selected, so focus, actions,
+slot ownership, and emitted `conversationId` values remain unambiguous.
 
-**Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeId: string = ''`
-(attribute `active-id`) — data mode:
+**Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
+(attribute `active-conversation-id`) — data mode:
 marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
 false` (reflected) — shows the built-in search field. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
@@ -61,7 +61,7 @@ array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute:
 controlled collapsed state for both date and custom groups. A collapsed group's header remains in
 the virtual list while its conversation rows are removed from the virtual-list item/measurement
 set; `lr-group-toggle` requests the matching state change. Group headers and threads use separate
-internal key namespaces, so every public `activeId` remains a raw thread id — even a value such as
+internal key namespaces, so every public `activeConversationId` remains a raw thread id — even a value such as
 `group:today` cannot collide with the `today` group header. `rowActions: ThreadRowAction[] = []`
 (attribute: false, each `'pin' | 'archive' | 'delete'`) —
 data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
@@ -118,7 +118,7 @@ With `wrapRow` unset, no wrapper element or `row-wrapper` part is rendered.
 built-in confirmation), `lr-thread-rename` (`detail: { conversationId, label }`, correlated and
 re-emitted from the owned row), `lr-filter-change` (`detail: { text, matchCount }`). Slotted mode
 instead emits `lr-query-change` (`detail: { text }`) and never claims a match count it cannot own.
-`lr-group-toggle` (`detail: { id, collapsed }` —
+`lr-group-toggle` (`detail: { groupId, collapsed }` —
 controlled intent; native group buttons provide Enter/Space activation and explicit
 `aria-expanded="true"|"false"`). `searchable` only: `blur`/`focus` (no detail) — re-dispatched from
 the internal search `<input>`'s own `blur`/`focus`, bubbling and composed unlike the native events,
@@ -196,11 +196,11 @@ style the pinned band with `lr-thread-list::part(group-sticky)`.
   searchable
   sticky-groups
   .threads=${threads}
-  active-id=${activeThreadId}
+  active-conversation-id=${activeThreadId}
   .rowActions=${['pin', 'archive', 'delete']}
   @lr-select=${(e) => openThread(e.detail.conversationId)}
 ></lr-thread-list>
 ```
 
 Composed with `lr-multi-split` (or `lr-app-rail` + `lr-responsive-panel`): thread-list in the start
-pane driving `activeId`, `lr-chat-viewport` + `lr-chat-composer` in the main pane.
+pane driving `activeConversationId`, `lr-chat-viewport` + `lr-chat-composer` in the main pane.

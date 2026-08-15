@@ -290,7 +290,7 @@ export class LyraFlowNode extends LyraElement {
       <div class="handles handles-input">${this.inputs.map((h) => this.handleTemplate('input', h))}</div>
       <div part="card" class="card" ?data-pulse=${this.pulsesRing}>
         <slot name="header" @slotchange=${this.onSlotChange}></slot>
-        <div part="header" ?hidden=${this.hasHeaderSlot || (!this.heading && !this.hasIconSlot)}>
+        <div part="header" ?hidden=${this.hasHeaderSlot || (!this.heading && !this.renderSlotPresence(this.hasIconSlot))}>
           <slot name="icon" part="icon" @slotchange=${this.onSlotChange}></slot>
           <span part="heading">${this.heading}</span>
         </div>

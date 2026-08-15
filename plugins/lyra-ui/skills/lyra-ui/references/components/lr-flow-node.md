@@ -37,7 +37,8 @@ owns none of that.
 - `compact: boolean = false` (reflected) — tighter card padding for dense canvases and palette
   previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
-  }]` (attribute: false) — detached, frozen snapshots of readonly `{ id, label? }` handles
+}]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
+  `{ id, label? }` handles; reassign a collection after changes
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`
 

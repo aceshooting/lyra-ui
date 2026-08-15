@@ -24,10 +24,12 @@ dismissal, ref-counted document scroll lock).
 - `open: boolean = false` (reflected) — after the initial silent render, property and attribute
   writes use the same synchronous cancelable transaction as `openPalette()`/`close()`; a veto
   restores reflection and prevents query/active-row opening side effects
-- `commands: LyraCommand[] = []` (attribute: false) — `{ commandId, label, description?, group?,
-shortcut?, keywords?, disabled?, icon?, onSelect? }`. `commandId` is a stable business identity and
-must be nonempty and unique; invalid rows are omitted and the first duplicate wins. Replacing or
-reordering the array preserves the active command by `commandId`. `icon` is an optional leading glyph (a `TemplateResult`,
+- `commands: readonly LyraCommand[] = []` (attribute: false) — `{ commandId, label, description?, group?,
+shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The sequence is copied,
+  bounded, and frozen while each command object's identity is retained for `onSelect`; create and
+  reassign a new command array after sequence or row changes. `commandId` is a stable business identity and
+  must be nonempty and unique; invalid rows are omitted and the first duplicate wins. Replacing or
+  reordering the array preserves the active command by `commandId`. `icon` is an optional leading glyph (a `TemplateResult`,
   an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
   label; a command with no `icon` renders no `icon` part at all. Filtering is case-insensitive
   substring matching over `label` + `description` + `group` + `keywords` joined together (not

@@ -24,7 +24,7 @@ decides whether/how `steps` changes in response.
 
 **Properties:**
 
-- `steps: readonly LyraStepItem[] = []` (attribute: false) — `LyraStepItem { id: string; label:
+- `steps: readonly LyraStepItem[] = []` (attribute: false) — `LyraStepItem { stepId: string; label:
 string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown }`, where
   `LyraStepState` is `'pending' | 'current' | 'completed' | 'error'`. `disabled` independently gates
   activation and roving focus, so locking a current/completed/error step does not erase its progress.
@@ -35,8 +35,10 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   instead of — the state-driven `step-index`/`step-check` glyph. It provides no independent action
   or accessible name. Input is read through a realm-neutral bounded schema snapshot (at most 256
   positions); malformed/hostile entries are skipped while valid neighbors survive, and the frozen
-  returned array/records never alias caller-owned objects. Duplicate ids are supported as ordered
-  occurrences because selection detail always includes `index`. Empty (the default) renders nothing.
+  returned array/records never alias caller-owned objects. Duplicate step IDs are supported as
+  ordered occurrences because selection detail always includes `index`; keyed rendering and focus
+  restoration correlate `{ stepId, index }` so a refresh retains the focused duplicate occurrence.
+  Empty (the default) renders nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
   navigate instead, no RTL swap needed). The axis used at/above `orientationBreakpoint` (or always,
@@ -80,7 +82,7 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
   renders without an `aria-label` (there is no localized default name); an explicitly empty
   attribute remains empty rather than being treated as absent.
 
-**Events:** `lr-step-select` (`detail: { index, id }`) — fired on click, or Enter/Space while
+**Events:** `lr-step-select` (`detail: { stepId, index }`) — fired on click, or Enter/Space while
 focused, on a non-`disabled` step. It is non-cancelable because the component takes no default
 action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
@@ -131,12 +133,12 @@ disabled under forced-colors while the native scroll owner remains available. Ot
 <script type="module">
   const stepper = document.querySelector("lr-stepper");
   stepper.steps = [
-    { id: "account", label: "Account", state: "completed" },
-    { id: "billing", label: "Billing", state: "current" },
-    { id: "review", label: "Review", state: "pending" },
+    { stepId: "account", label: "Account", state: "completed" },
+    { stepId: "billing", label: "Billing", state: "current" },
+    { stepId: "review", label: "Review", state: "pending" },
   ];
   stepper.addEventListener("lr-step-select", (e) =>
-    console.log(e.detail.index, e.detail.id)
+    console.log(e.detail.stepId, e.detail.index)
   );
 </script>
 ```

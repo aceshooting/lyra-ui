@@ -34,6 +34,7 @@ disconnected element or dangling id falls through to the next source. Id inserti
 replacement and transfer, plus direct and forwarded slot changes, are tracked live.
 
 **Properties:**
+
 - `active: boolean = false` (reflected) — requests positioning and paint. It remains the caller's
   intent when an anchor is temporarily unavailable; the popup and optional hover bridge stay
   hidden and non-interactive until the currently resolved anchor has completed placement.
@@ -54,7 +55,7 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   `flip-fallback-placements` — a
   space-delimited placement list `flip` tries in order instead of just the opposite side;
   unrecognized entries are dropped rather than forwarded), `flipFallbackStrategy: 'best-fit' |
-  'initial' | 'initial-placement' = 'best-fit'` (attribute `flip-fallback-strategy` — what `flip` settles on
+'initial' | 'initial-placement' = 'best-fit'` (attribute `flip-fallback-strategy` — what `flip` settles on
   when no candidate fits: the least-overflowing one, or `placement` as written),
   `flipBoundary: PlaceBoundary | null = null` (property only — element(s) to measure overflow
   against instead of the popup's clipping ancestors) and `flipPadding: number = 0` (attribute
@@ -68,7 +69,7 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   measurement
 - `autoSize: 'horizontal' | 'vertical' | 'both' | null = null` (attribute `auto-size`), with
   `autoSizeBoundary: PlaceBoundary | null = null` (property only) and
-  `autoSizePadding: number = 0` (attribute `auto-size-padding`). The popup is *always* capped by the
+  `autoSizePadding: number = 0` (attribute `auto-size-padding`). The popup is _always_ capped by the
   available space it publishes as `--lr-positioner-available-inline-size` /
   `--lr-positioner-available-block-size`; `auto-size` re-measures the named axes against
   `auto-size-boundary`/`auto-size-padding` instead of the shared `padding`, so it narrows or widens

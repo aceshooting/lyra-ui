@@ -38,29 +38,32 @@ refreshes do not move focus. A queued Arrow/Home/End focus is bound to the curre
 identity and connection generation, so a same-turn replacement or disconnect/reconnect cannot
 focus an unrelated cell that merely inherited the old numeric index.
 
-High-cardinality strips mount a bounded window of at most 200 cells around the roving stop rather
-than creating one DOM node per input item. `aria-posinset`/`aria-setsize` retain positions and the
-total count from the complete canonical model; Home/End and arrows shift the window before moving
-focus, so every item remains keyboard reachable. `[part="window-range"]` visibly discloses the
-currently projected numeric range and total. The optional legend likewise mounts at most 200
-categories and exposes `[part="legend-limit"]` as a rendered/total numeric disclosure.
+High-cardinality strips retain at most the first 10,000 assigned items and categories as detached,
+frozen canonical snapshots; reassign either collection after changing it. They mount a bounded
+window of at most 200 cells around the roving stop rather than creating one DOM node per retained
+item. `aria-posinset`/`aria-setsize` retain positions and the total count from that bounded model;
+Home/End and arrows shift the window before moving focus, so every retained item remains keyboard
+reachable. `[part="window-range"]` visibly discloses the currently projected numeric range and
+total. The optional legend likewise mounts at most 200 categories and exposes
+`[part="legend-limit"]` as a rendered/total numeric disclosure.
 
 **Properties:**
 
 - `items: readonly SequenceStripItem[] = []` (attribute: false) — `{ readonly id, readonly
-  categoryId, readonly marker?, readonly label? }`;
+categoryId, readonly marker?, readonly label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
   subagent-dispatched turn); `label` is per-item hover/focus tooltip text _and_ that cell's own
   `role="listitem"` accessible name, falling back to the matching category's own `label` (or its
   `id`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
 - `categories: readonly SequenceStripCategory[] = []` (attribute: false) — `{ readonly id,
-  readonly color, readonly label? }`; `color`
+readonly color, readonly label? }`; `color`
   is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,
   declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
   used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
-  back to `id` itself when unset. Both collection properties are cloned and frozen at assignment;
-  duplicate ids use the first valid entry, so identity is deterministic
+  back to `id` itself when unset. Both collection properties are cloned and frozen at assignment,
+  bounded to the first 10,000 source entries, and require reassignment after changes; duplicate ids
+  use the first valid entry, so identity is deterministic
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`; a standard host `aria-label` remains a distinct host name

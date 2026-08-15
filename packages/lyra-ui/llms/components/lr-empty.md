@@ -18,6 +18,7 @@
 First-party "no data" state (no Web Awesome equivalent).
 
 **Properties:**
+
 - `heading: string = ''`
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
   either the string heading or rich `heading` slot at that semantic level; invalid untyped values
@@ -48,15 +49,25 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 **Optional peer deps:** none.
 
 ```html
-<lr-empty heading="No results" heading-level="2" description="Try a different search.">
-  <svg slot="" ...></svg> <!-- default slot: any icon/illustration -->
+<lr-empty
+  heading="No results"
+  heading-level="2"
+  description="Try a different search."
+>
+  <svg slot="" ...></svg>
+  <!-- default slot: any icon/illustration -->
   <div slot="actions"><button>Clear filters</button></div>
 </lr-empty>
-<lr-empty compact heading="No results" description="Try a different search."
-  style="--lr-empty-compact-align: center"></lr-empty>
+<lr-empty
+  compact
+  heading="No results"
+  description="Try a different search."
+  style="--lr-empty-compact-align: center"
+></lr-empty>
 ```
 
 **Known gotchas:**
+
 - Initial content and reconnect state—including property changes made while detached—stay silent.
   Later meaningful heading and description changes are appended to Lyra's shared light-DOM polite
   announcement sink. Default-slot illustrations, action-slot controls, nested hidden/inert/

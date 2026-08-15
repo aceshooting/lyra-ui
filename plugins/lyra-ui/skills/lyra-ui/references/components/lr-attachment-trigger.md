@@ -23,9 +23,10 @@ anchored menu (composed from `lr-dropdown`/`lr-menu`/`lr-menu-item`) listing eac
 capability as a row.
 
 **Properties:**
+
 - `capabilities: readonly LyraAttachmentCapability[] = ['files']` (property only, no attribute) —
   which capabilities to offer, in display order. `LyraAttachmentCapability = 'files' | 'image' |
-  'camera' | 'audio'`; `LyraFileBackedCapability = 'files' | 'image'` (the two that actually open
+'camera' | 'audio'`; `LyraFileBackedCapability = 'files' | 'image'` (the two that actually open
   the file picker). Writes are normalized to a frozen, deduplicated, at-most-four entry snapshot;
   hostile/invalid collections fail closed to the default.
 - `accept: string = ''` — a native-file-input-style accept string (e.g. `'image/*'` or
@@ -80,7 +81,8 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 ```
 
 **Known gotchas:**
-- `HTMLInputElement.files` is a *live* view in most browsers — clearing `input.value` after reading
+
+- `HTMLInputElement.files` is a _live_ view in most browsers — clearing `input.value` after reading
   `.files` (needed so re-picking the exact same file still fires another `change` event next time)
   mutates that exact `FileList` object back to empty in place, not just detaches a stale reference.
   A consumer reading `lr-files` later would otherwise observe an empty list — this component

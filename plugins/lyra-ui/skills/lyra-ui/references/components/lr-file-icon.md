@@ -34,7 +34,7 @@ same property name is a collision a consumer only discovers at runtime. A leftov
 is an unknown attribute now: `bytes` stays `0` and the badge silently renders without a size.
 
 **CSS parts:** `base`, `icon`, `label`, `description` (consumer-authored registry metadata in label
-mode), and `size` (the part keeps its name — it is the rendered size *text*, and renaming a part
+mode), and `size` (the part keeps its name — it is the rendered size _text_, and renaming a part
 would break shipped `::part()` rules for no gain).
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
@@ -49,5 +49,9 @@ mappings per instance instead of mutating module-global state. Consumer labels/d
 verbatim; built-in labels route through localization.
 
 ```html
-<lr-file-icon mime-type="application/pdf" mode="label" bytes="245000"></lr-file-icon>
+<lr-file-icon
+  mime-type="application/pdf"
+  mode="label"
+  bytes="245000"
+></lr-file-icon>
 ```

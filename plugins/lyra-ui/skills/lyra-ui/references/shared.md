@@ -213,6 +213,32 @@ when `document` exists and reads `data-lyra-optional-peers="peer-a,peer-b"` plus
 an ESM CDN executes the package entry behind a wrapper URL. Neither entry imports the root barrel,
 and both are safe to import in plain Node.
 
+## Collection identity
+
+Every host-supplied collection has one explicit identity policy. An actionable or keyed collection
+uses a stable, nonempty business identity and ignores malformed identities plus later duplicates
+before rendering, counting, focus reconciliation, selection lookup, persistence, or event dispatch.
+The first valid occurrence wins and reordering the input does not turn its array position into its
+identity. When repeated values are intentionally meaningful, the component keeps them and exposes
+an occurrence index in every state or event that must address one occurrence; the relevant
+component section says so.
+
+Lyra-owned controlled properties and action details name the domain instead of overloading the
+platform's `HTMLElement.id`: for example `panelId`, `commandId`, `cellId`, `stepId`, `viewId`,
+`attachmentId`, `cueId`, `highlightId`, and `spanId`. Controlled active/persisted fields and event
+details use the same domain name. Compound identities retain every required scope field (for
+example `{ invocationId, sourceKey }`). Published input-record schemas may retain an established
+generic `id`/`key`/`path` spelling; the component still applies its documented uniqueness or
+occurrence policy and exposes domain-named controlled state and action details.
+
+Treat an empty or whitespace-only required identity as missing. Unless a component's contract
+explicitly documents and tests an input normalization such as trimming surrounding whitespace,
+Lyra does not rewrite a valid retained identity merely to validate it. When normalization is part
+of that contract, the normalized value is the identity used consistently for duplicate detection,
+selection, persistence, keyed DOM ownership, and event details. Assign a new collection when the
+data changes, and keep the business identity stable across object replacement so those consumers
+continue to follow the same logical record.
+
 ## Events
 
 Lyra-specific events are `lr-`-prefixed `CustomEvent`s (`lr-change`, `lr-input`, `lr-select`, …),
@@ -830,9 +856,11 @@ loads.
 
 ### Where an override actually reaches
 
-**A `--lr-*` token is declared on every `lr-*` element's `:host`.** So a `--lr-*` value you set on
-an ancestor is re-declared — and lost — at the first `lr-*` element between that ancestor and the
-component you meant to style. It never reaches anything nested inside another component.
+**Shared computed `--lr-*` design-token outputs are declared on every `lr-*` element's `:host`.**
+That includes palette, spacing, radius, typography, and motion outputs such as
+`--lr-color-brand`, `--lr-space-m`, and `--lr-radius`. A value for one of those shared outputs set
+on an ancestor is re-declared — and lost — at the first `lr-*` element between that ancestor and
+the component you meant to style. It never reaches anything nested inside another component.
 
 **`--lr-theme-*` inputs are never redeclared inside a component's shadow styles.** `theme.css`
 supplies them on its root and light/dark mode selectors, so an application override inherits normally
@@ -846,20 +874,33 @@ direct children.
   --lr-theme-color-brand-fill-loud: #7c3aed;
 }
 
-/* Reaches direct lr-* children only — shadowed at the first nested lr-* host. */
+/* A shared computed output reaches direct lr-* children only — shadowed at the first nested host. */
 .invoice-panel {
   --lr-color-brand: #7c3aed;
 }
 ```
 
-Layer 3 is the exception that proves the rule: a handful of `--lr-<component>-*` escape hatches are
-deliberately left **undeclared** by their component and read only through a `var()` fallback at the
-point of use, precisely so a value set on an ancestor is not shadowed. Each one says so in its own
-section; assume shadowing for anything that doesn't.
+Documented component hooks are different: `--lr-<component>-*` properties (plus an upstream
+mirror's documented unprefixed spellings) are public inputs. Components consume each public input
+through a use-site fallback backed by a private default; they do not redeclare the public name on
+`:host`. A component hook therefore inherits through wrappers and nested shadow hosts, while a
+value set directly on the component remains authoritative. This makes one wrapper declaration a
+reliable way to theme a group of matching components:
 
-**Diagnostic:** if a token override has no effect on a nested component, check which layer you set
-before assuming the component is at fault. A `--lr-*` override that works on a standalone control
-and stops working once you nest that control inside another component is this rule, not a bug.
+```css
+.invoice-actions {
+  --lr-button-radius: var(--lr-radius-pill);
+  --lr-button-fill: var(--lr-color-brand-quiet);
+}
+```
+
+State and size selectors change only the private fallback. An inherited or direct public value
+continues to win in every state and size tier.
+
+**Diagnostic:** if a shared design-token output has no effect on a nested component, check which
+layer you set before assuming the component is at fault. If a documented component-specific hook
+fails when inherited from a wrapper, that is a component bug; setting the same hook directly on
+every host should not be necessary.
 
 **There is no way to tell a live `--lr-*` declaration from a dead one without rendering.** A dead
 declaration is byte-identical to a working one in the stylesheet, and nothing in a build reports
@@ -1447,7 +1488,7 @@ preferred in production.
 
 ## Optional peer dependencies
 
-All 29 peers are optional, in two groups. The 26 component-facing peers remain outside the default
+All 28 peers are optional, in two groups. The 25 component-facing peers remain outside the default
 install; components load them on demand where applicable. React, Svelte, and Vue are
 compile-time-only peers for their matching
 opt-in declaration entries (`custom-elements-jsx`, `svelte`, and `vue`): those entries emit empty
@@ -1657,8 +1698,8 @@ feature-request API described in "When no component fits" so it can be promoted 
   voice, and future catalog-backed controls. Import it from
   `@aceshooting/lyra-ui/utilities/catalog.js`; both types are also available from the package root
   and the model-select/voice-picker granular entries. The exact contracts are `LyraCatalogEntry {
-  id: string; label: string }` and `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> =
-  readonly string[] | readonly T[]`. A catalog is homogeneous: use string shorthand (the same
+id: string; label: string }` and `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> =
+readonly string[] | readonly T[]`. A catalog is homogeneous: use string shorthand (the same
   string becomes both id and label) or typed object rows, never a mixed array. Readonly tuples and
   arrays are accepted, and object catalogs retain an extended row type such as
   `LyraModelCatalogEntry` or `LyraVoiceCatalogEntry`.
@@ -1670,12 +1711,12 @@ feature-request API described in "When no component fits" so it can be promoted 
   `lr-highlight-activate`, `lr-text-select`, and `lr-anchor-result` listener vocabulary; a concrete
   viewer can support only the events it actually emits, as documented on that component.
   The exact structural contract is `LyraAnchorTarget { highlights: readonly LyraHighlight[];
-  activeHighlightId: string | null; anchor: LyraAnchor | string | null; readonly anchorKinds:
-  readonly LyraAnchorKind[]; scrollToAnchor(target: LyraAnchor | string): Promise<boolean> }`.
+activeHighlightId: string | null; anchor: LyraAnchor | string | null; readonly anchorKinds:
+readonly LyraAnchorKind[]; scrollToAnchor(target: LyraAnchor | string): Promise<boolean> }`.
   Assigning `highlights` synchronously creates a frozen array of copied, frozen highlight records;
   each record's opaque `anchor` retains caller identity so reference-based anchor jumps still work.
 - **`positioner` → `place(anchor, popup, opts?): () => void`, `trackRect(target, onUpdate(rect)): () =>
-  void`, and `virtualAnchorFromRect()`** — thin wrapper over `@floating-ui/dom`'s
+void`, and `virtualAnchorFromRect()`** — thin wrapper over `@floating-ui/dom`'s
   `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (matching the
   popup's own `position: fixed` CSS — otherwise it lands offset by the page scroll), middleware
   `offset(opts.offset ?? 4)`, `flip()`, `shift({ padding: 8 })`, default `placement: 'bottom-start'`.
@@ -1685,23 +1726,23 @@ feature-request API described in "When no component fits" so it can be promoted 
   `virtualAnchorFromRect()` adapts a live rectangle provider to the exported `VirtualAnchor`
   contract; `PlaceOptions` and its closed-set placement/sizing types are exported for typed wrappers.
   The structural result is `PlacementResult { placement: Placement; arrow?: { x?: number;
-  y?: number } }`, where `arrow`
+y?: number } }`, where `arrow`
   contains its resolved coordinates when supplied. `VirtualAnchor` exposes
   `getBoundingClientRect()` and optional `contextElement`; `virtualAnchorFromRect({ x, y, width?,
-  height?, contextElement? })` builds one. `PlaceOptions` exposes `placement`, `strategy`, `offset`,
+height?, contextElement? })` builds one. `PlaceOptions` exposes `placement`, `strategy`, `offset`,
   `skidding`, `boundary`, `flip`, `flipFallbackPlacements`, `flipFallbackStrategy`, `flipBoundary`,
   `flipPadding`, `shift`, `shiftBoundary`, `shiftPadding`, `padding`, `autoSize`,
   `autoSizeBoundary`, `autoSizePadding`, `sync`, `arrow`, `arrowPadding`, `hoverBridge`, and
   `onPlaced(result)`.
   Exact authoring contracts are `VirtualAnchor { getBoundingClientRect(): DOMRect;
-  contextElement?: Element }`, `virtualAnchorFromRect(rect: { x: number; y: number; width?: number;
-  height?: number; contextElement?: Element }): VirtualAnchor`, and `PlaceOptions { placement?:
-  Placement; strategy?: PlaceStrategy; offset?: number; skidding?: number; boundary?:
-  PlaceBoundary; flip?: boolean; flipFallbackPlacements?: Placement[]; flipFallbackStrategy?:
-  PlaceFlipFallbackStrategy; flipBoundary?: PlaceBoundary; flipPadding?: number; shift?: boolean;
-  shiftBoundary?: PlaceBoundary; shiftPadding?: number; padding?: number; autoSize?: PlaceAutoSize;
-  autoSizeBoundary?: PlaceBoundary; autoSizePadding?: number; sync?: PlaceSync; arrow?: HTMLElement;
-  arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementResult) => void }`.
+contextElement?: Element }`, `virtualAnchorFromRect(rect: { x: number; y: number; width?: number;
+height?: number; contextElement?: Element }): VirtualAnchor`, and `PlaceOptions { placement?:
+Placement; strategy?: PlaceStrategy; offset?: number; skidding?: number; boundary?:
+PlaceBoundary; flip?: boolean; flipFallbackPlacements?: Placement[]; flipFallbackStrategy?:
+PlaceFlipFallbackStrategy; flipBoundary?: PlaceBoundary; flipPadding?: number; shift?: boolean;
+shiftBoundary?: PlaceBoundary; shiftPadding?: number; padding?: number; autoSize?: PlaceAutoSize;
+autoSizeBoundary?: PlaceBoundary; autoSizePadding?: number; sync?: PlaceSync; arrow?: HTMLElement;
+arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementResult) => void }`.
   `place()` and `virtualAnchorFromRect()` throw `RangeError` before registering observers, invoking
   callbacks, or writing styles when coordinates/options are non-finite, dimensions or padding are
   negative; finite signed `offset`/`skidding` stay valid. If a previously valid live anchor later
@@ -1753,27 +1794,27 @@ feature-request API described in "When no component fits" so it can be promoted 
   `formStateRestoreCallback(state, reason)`.
   The exact callable signatures are `attachInternalsSafely(host: HTMLElement): ElementInternals`,
   `createFallbackInternals(): ElementInternals`, `createStringArrayFormDataState(name: string,
-  values: readonly string[]): FormData`, `readStringArrayFormDataState(state: string | File |
-  FormData | null): string[]`, `isEmptyFormValue(value: unknown): boolean`, and
+values: readonly string[]): FormData`, `readStringArrayFormDataState(state: string | File |
+FormData | null): string[]`, `isEmptyFormValue(value: unknown): boolean`, and
   `FormAssociated<T, TValue = string>(Base: T, valueAdapter?:
-  FormValueAdapter<TValue>): T & Constructor<FormAssociatedInterface<TValue> &
-  FormAssociatedSubclassInterface<TValue>>`.
+FormValueAdapter<TValue>): T & Constructor<FormAssociatedInterface<TValue> &
+FormAssociatedSubclassInterface<TValue>>`.
   The exact adapter records are `FormValueAdapter<TValue> { readonly empty: TValue;
-  toFormValue(value: TValue): FormSubmissionValue; toFormState?(value: TValue):
-  FormSubmissionValue; isEmpty?(value: TValue): boolean; fromAttribute?(attribute: string): TValue;
-  toAttribute?(value: TValue): string | null; fromFormState?(state: FormSubmissionValue): TValue }`
+toFormValue(value: TValue): FormSubmissionValue; toFormState?(value: TValue):
+FormSubmissionValue; isEmpty?(value: TValue): boolean; fromAttribute?(attribute: string): TValue;
+toAttribute?(value: TValue): string | null; fromFormState?(state: FormSubmissionValue): TValue }`
   and `FormAssociatedInterface<TValue> { internals: ElementInternals; get name(): string; set
-  name(next: string | null); value: TValue; defaultValue: TValue; customError: string | null;
-  disabled: boolean; required: boolean; readonly effectiveDisabled: boolean; get form():
-  HTMLFormElement | null; set form(owner: FormOwnerValue); readonly labels: NodeList; readonly
-  validity: ValidityState; readonly validationMessage: string; readonly willValidate: boolean;
-  setFormValue(next: TValue): void; getForm(): HTMLFormElement | null; checkValidity(): boolean;
-  reportValidity(): boolean; setCustomValidity(message: string): void; resetValidity(): void;
-  formResetCallback(): void; formStateRestoreCallback(state: FormSubmissionValue, reason:
-  'autocomplete' | 'restore'): void }`. The exported subclass seam is
+name(next: string | null); value: TValue; defaultValue: TValue; customError: string | null;
+disabled: boolean; required: boolean; readonly effectiveDisabled: boolean; get form():
+HTMLFormElement | null; set form(owner: FormOwnerValue); readonly labels: NodeList; readonly
+validity: ValidityState; readonly validationMessage: string; readonly willValidate: boolean;
+setFormValue(next: TValue): void; getForm(): HTMLFormElement | null; checkValidity(): boolean;
+reportValidity(): boolean; setCustomValidity(message: string): void; resetValidity(): void;
+formResetCallback(): void; formStateRestoreCallback(state: FormSubmissionValue, reason:
+'autocomplete' | 'restore'): void }`. The exported subclass seam is
   `FormAssociatedSubclassInterface<TValue> { protected captureLiveValueCheckpoint(): { readonly
-  value: TValue; readonly dirty: boolean }; protected restoreLiveValueCheckpoint(checkpoint: {
-  readonly value: TValue; readonly dirty: boolean }): void }`.
+value: TValue; readonly dirty: boolean }; protected restoreLiveValueCheckpoint(checkpoint: {
+readonly value: TValue; readonly dirty: boolean }): void }`.
 - **`group-by-recency` → `groupByRecency(items, options?)`** — buckets dated items into
   Today / Yesterday / Previous 7 Days / Older, on **local calendar-day boundaries** ("yesterday" is
   the previous calendar date, not 24–48 hours ago). Plain data in, plain data out — no DOM.
@@ -1788,7 +1829,7 @@ feature-request API described in "When no component fits" so it can be promoted 
   `GroupByRecencyOptions<T> { getTimestamp?(item); now?; labels? }`, and
   `RecencyBucket<T> { label; items }`.
   The callable signature is `groupByRecency<T>(items: T[], options?:
-  GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
+GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
 - **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
   currently rendered, inventory-known Lyra tag below a `Document`, `DocumentFragment`/open
   `ShadowRoot`, or `Element` to be defined in its owning/scoped registry. It also waits for each
@@ -1803,8 +1844,8 @@ feature-request API described in "When no component fits" so it can be promoted 
   registration imports, `discover()`, or
   `start()` when bootstrap/tests need a readiness barrier.
   The exact options record is `AllDefinedOptions { readonly maxPasses?: number; readonly
-  maxElements?: number; readonly maxRoots?: number; readonly maxDepth?: number; readonly maxWork?:
-  number }`.
+maxElements?: number; readonly maxRoots?: number; readonly maxDepth?: number; readonly maxWork?:
+number }`.
 - **`css-length` → `resolveCssLength(value, options?)`** — resolves finite numbers and CSS
   `px`/`rem`/`em`/`%`/`vw`/`vh` lengths to pixels without allocating DOM. Supply `host` for live
   font and owner-realm context, `percentBase` for percentages, and an optional `viewportBasis` for
@@ -1812,9 +1853,9 @@ feature-request API described in "When no component fits" so it can be promoted 
   Unsupported expressions and unavailable context return `undefined`; range policy remains the
   caller's responsibility.
   Its exact signatures are `resolveCssLength(value: number | string | undefined, options?:
-  ResolveCssLengthOptions): number | undefined` and `ResolveCssLengthOptions { readonly host?:
-  Element; readonly percentBase?: number; readonly viewportBasis?: Window | Readonly<{
-  inlineSize: number; blockSize: number }> }`.
+ResolveCssLengthOptions): number | undefined` and `ResolveCssLengthOptions { readonly host?:
+Element; readonly percentBase?: number; readonly viewportBasis?: Window | Readonly<{
+inlineSize: number; blockSize: number }> }`.
 - **`layered-layout` → `layeredLayout()`** — the deterministic, dependency-free layered-DAG
   ("Sugiyama-lite") layout `lr-flow-canvas` draws with: cycle handling, longest-path layering,
   barycenter crossing reduction, and coordinates assigned along the block axis so the result is
@@ -1833,12 +1874,12 @@ feature-request API described in "When no component fits" so it can be promoted 
   canvas is yours.
   Its exact data contracts are `LayeredLayoutNode { id; width; height }`,
   `LayeredLayoutEdge { source; target }`, `LayeredLayoutOptions { fixedPositions?:
-  ReadonlyMap<string, Readonly<{ x: number; y: number }>>; gapX?: number; gapY?: number;
-  maxVirtualWaypoints?: number }`, and `LayeredLayoutResult { readonly positions:
-  ReadonlyMap<string, Readonly<{ x: number; y: number }>>; readonly truncated: boolean; readonly
-  virtualWaypointCount: number }`. The callable contract is `layeredLayout(input: { nodes: readonly
-  LayeredLayoutNode[]; edges: readonly LayeredLayoutEdge[]; options?: LayeredLayoutOptions }):
-  LayeredLayoutResult`. Call `layeredLayout(input)` with `input.nodes`, `input.edges`, and
+ReadonlyMap<string, Readonly<{ x: number; y: number }>>; gapX?: number; gapY?: number;
+maxVirtualWaypoints?: number }`, and `LayeredLayoutResult { readonly positions:
+ReadonlyMap<string, Readonly<{ x: number; y: number }>>; readonly truncated: boolean; readonly
+virtualWaypointCount: number }`. The callable contract is `layeredLayout(input: { nodes: readonly
+LayeredLayoutNode[]; edges: readonly LayeredLayoutEdge[]; options?: LayeredLayoutOptions }):
+LayeredLayoutResult`. Call `layeredLayout(input)` with `input.nodes`, `input.edges`, and
   optional `input.options`; the result's `positions` map contains readonly `{ x, y }` coordinates.
 - **`animation-registry` → `setDefaultAnimation(animationName, animation)`,
   `setAnimation(element, animationName, animation)`, and
@@ -1860,15 +1901,15 @@ feature-request API described in "When no component fits" so it can be promoted 
   flattening delay/duration/end-delay to zero and iterations to one while preserving the resolved
   end frame; only a caller with a stronger policy should pass `respectReducedMotion: false`.
   The exact records are `LyraElementAnimation { readonly keyframes: readonly Readonly<Keyframe>[];
-  readonly rtlKeyframes?: readonly Readonly<Keyframe>[]; readonly options?:
-  Readonly<KeyframeAnimationOptions> }`, `LyraResolvedElementAnimation { readonly keyframes:
-  readonly Readonly<Keyframe>[]; readonly options: Readonly<KeyframeAnimationOptions> }`, and
+readonly rtlKeyframes?: readonly Readonly<Keyframe>[]; readonly options?:
+Readonly<KeyframeAnimationOptions> }`, `LyraResolvedElementAnimation { readonly keyframes:
+readonly Readonly<Keyframe>[]; readonly options: Readonly<KeyframeAnimationOptions> }`, and
   `LyraGetAnimationOptions { readonly dir?: 'ltr' | 'rtl'; readonly fallback?:
-  LyraElementAnimation | null; readonly respectReducedMotion?: boolean }`. The callable contracts are
+LyraElementAnimation | null; readonly respectReducedMotion?: boolean }`. The callable contracts are
   `setDefaultAnimation(animationName: string, animation: LyraElementAnimation | null):
-  LyraAnimationCleanup`, `setAnimation(element: Element, animationName: string, animation:
-  LyraElementAnimation | null): LyraAnimationCleanup`, and `getAnimation(element: Element,
-  animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAnimation`.
+LyraAnimationCleanup`, `setAnimation(element: Element, animationName: string, animation:
+LyraElementAnimation | null): LyraAnimationCleanup`, and `getAnimation(element: Element,
+animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAnimation`.
 
   ```ts
   import {
@@ -1908,14 +1949,14 @@ feature-request API described in "When no component fits" so it can be promoted 
   `suspend()`, `resume()`, `isTopmost()`, `isActive()`, and `dismissBackdrop()`; the deactivate
   argument is the exported `OverlayDeactivateOptions` record.
   Exact records are `OverlayActivationOptions { host: HTMLElement; panel: () => HTMLElement |
-  null; modalRoot?: () => HTMLElement | null; onEscape: () => void; onBackdrop?: () => void;
-  preferredInitialFocus?: () => HTMLElement | null; beforeInitialFocus?: () => boolean;
-  restoreFocusTo?: OverlayRestoreFocusTarget; modal?: boolean; trapFocus?: boolean; onTab?: () =>
-  void; suspendWhenUnrendered?: boolean; lockScroll?: boolean }`, `OverlayDeactivateOptions {
-  restoreFocus?: boolean }`, and `OverlayHandle { focusInitial(): void; focusAutofocus(): boolean;
-  updateRestoreFocusTo(target: OverlayRestoreFocusTarget): void; deactivate(options?:
-  OverlayDeactivateOptions): void; suspend(): void; resume(): void; isTopmost(): boolean;
-  isActive(): boolean; dismissBackdrop(): boolean }`.
+null; modalRoot?: () => HTMLElement | null; onEscape: () => void; onBackdrop?: () => void;
+preferredInitialFocus?: () => HTMLElement | null; beforeInitialFocus?: () => boolean;
+restoreFocusTo?: OverlayRestoreFocusTarget; modal?: boolean; trapFocus?: boolean; onTab?: () =>
+void; suspendWhenUnrendered?: boolean; lockScroll?: boolean }`, `OverlayDeactivateOptions {
+restoreFocus?: boolean }`, and `OverlayHandle { focusInitial(): void; focusAutofocus(): boolean;
+updateRestoreFocusTo(target: OverlayRestoreFocusTarget): void; deactivate(options?:
+OverlayDeactivateOptions): void; suspend(): void; resume(): void; isTopmost(): boolean;
+isActive(): boolean; dismissBackdrop(): boolean }`.
   When a third-party modal must open above a Lyra modal, call the public helper after its root is
   connected, then release it when that modal closes:
 
@@ -1941,15 +1982,15 @@ feature-request API described in "When no component fits" so it can be promoted 
   `llms/components/lr-live-region.md`.
   The constructor accepts `AnnouncerOptions { throttleMs?; onFlush(text); timerHost? }`; each call
   accepts `AnnounceOptions { force? }`; and `AnnouncerTimerHost` provides `setTimeout(handler,
-  timeout)` plus `clearTimeout(handle)`. `AnnouncementSinkOptions` exposes `document`, `source`, and
+timeout)` plus `clearTimeout(handle)`. `AnnouncementSinkOptions` exposes `document`, `source`, and
   `messageTtlMs`; its `AnnouncementSink` handle exposes readonly `element` and `politeness`, mutable
   `messageTtlMs`, `announce(text)`, and `release()`.
   Exact sink contracts are `acquireAnnouncementSink(politeness: AnnouncementPoliteness, options?:
-  AnnouncementSinkOptions): AnnouncementSink`, `AnnouncementSinkOptions { document?: Document;
-  source?: Element; messageTtlMs?: number }`, `AnnouncementSink { readonly element: HTMLElement;
-  readonly politeness: AnnouncementPoliteness; messageTtlMs: number; announce(text: string): void;
-  release(): void }`, and `AnnouncerTimerHost { setTimeout(handler: () => void, timeout: number):
-  number; clearTimeout(handle: number): void }`.
+AnnouncementSinkOptions): AnnouncementSink`, `AnnouncementSinkOptions { document?: Document;
+source?: Element; messageTtlMs?: number }`, `AnnouncementSink { readonly element: HTMLElement;
+readonly politeness: AnnouncementPoliteness; messageTtlMs: number; announce(text: string): void;
+release(): void }`, and `AnnouncerTimerHost { setTimeout(handler: () => void, timeout: number):
+number; clearTimeout(handle: number): void }`.
 - **`localization` → `subscribeLyraLocale(listener): () => void` and
   `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime,
   which the side-effect-free `@aceshooting/lyra-ui/localization.js` entry does not carry (that one
@@ -2067,104 +2108,104 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`ai-adapters-a2ui-contracts`** — AI adapter and runtime contracts.
   `A2UiAdapterLimits {
-    maxComponents: unknown;
-    maxDepth: unknown;
-    maxOutputNodes: unknown;
-    maxChildrenPerComponent: unknown;
-    maxNodes: unknown;
-    maxBytes: unknown;
-    maxStringCharacters: unknown;
-  }`
+  maxComponents: unknown;
+  maxDepth: unknown;
+  maxOutputNodes: unknown;
+  maxChildrenPerComponent: unknown;
+  maxNodes: unknown;
+  maxBytes: unknown;
+  maxStringCharacters: unknown;
+}`
   `A2UiLikeAction {
-    id: unknown;
-    payload: unknown;
-  }`
+  id: unknown;
+  payload: unknown;
+}`
   `A2UiLikeComponent {
-    id: unknown;
-    type: unknown;
-    props: unknown;
-    text: unknown;
-    children: unknown;
-    action: unknown;
-  }`
+  id: unknown;
+  type: unknown;
+  props: unknown;
+  text: unknown;
+  children: unknown;
+  action: unknown;
+}`
   `A2UiLikeSurface {
-    surfaceId: unknown;
-    rootId: unknown;
-    components: unknown;
-    data: unknown;
-  }`
+  surfaceId: unknown;
+  rootId: unknown;
+  components: unknown;
+  data: unknown;
+}`
   `adaptA2UiSurface(/* public names: surface, typeMap, limits */): unknown`
 
 - **`ai-adapters-ag-ui-contracts`** — AI adapter and runtime contracts.
   `AgUiAdapterLimits {
-    maxBufferedTools: unknown;
-    maxToolArgumentBytes: unknown;
-    maxTextDeltaCharacters: unknown;
-    maxDepth: unknown;
-    maxNodes: unknown;
-    maxBytes: unknown;
-    maxStringCharacters: unknown;
-  }`
+  maxBufferedTools: unknown;
+  maxToolArgumentBytes: unknown;
+  maxTextDeltaCharacters: unknown;
+  maxDepth: unknown;
+  maxNodes: unknown;
+  maxBytes: unknown;
+  maxStringCharacters: unknown;
+}`
   `AgUiLikeEvent {
-    type: unknown;
-    eventId: unknown;
-    runId: unknown;
-    messageId: unknown;
-    role: unknown;
-    delta: unknown;
-    toolCallId: unknown;
-    toolCallName: unknown;
-    result: unknown;
-    message: unknown;
-    code: unknown;
-    snapshot: unknown;
-    messages: unknown;
-  }`
+  type: unknown;
+  eventId: unknown;
+  runId: unknown;
+  messageId: unknown;
+  role: unknown;
+  delta: unknown;
+  toolCallId: unknown;
+  toolCallName: unknown;
+  result: unknown;
+  message: unknown;
+  code: unknown;
+  snapshot: unknown;
+  messages: unknown;
+}`
 
 - **`ai-adapters-ai-sdk-contracts`** — AI adapter and runtime contracts.
   `adaptAiSdkMessage(/* public names: message, limits */): unknown`
   `AiSdkAdapterLimits {
-    maxParts: unknown;
-    maxDepth: unknown;
-    maxNodes: unknown;
-    maxBytes: unknown;
-    maxStringCharacters: unknown;
-  }`
+  maxParts: unknown;
+  maxDepth: unknown;
+  maxNodes: unknown;
+  maxBytes: unknown;
+  maxStringCharacters: unknown;
+}`
   `AiSdkLikeMessage {
-    id: unknown;
-    role: unknown;
-    parts: unknown;
-    metadata: unknown;
-  }`
+  id: unknown;
+  role: unknown;
+  parts: unknown;
+  metadata: unknown;
+}`
 
 - **`ai-runtime-contracts`** — AI adapter and runtime contracts.
   `AgentStreamLimits {
-    maxMessages: unknown;
-    maxPartsPerMessage: unknown;
-    maxTools: unknown;
-    maxDeltaCharacters: unknown;
-    maxTextCharactersPerPart: unknown;
-    maxIdentifierCharacters: unknown;
-    maxStatusMessageCharacters: unknown;
-    maxPatchOperations: unknown;
-    maxSnapshotDepth: unknown;
-    maxSnapshotNodes: unknown;
-    maxSnapshotBytes: unknown;
-    maxRetainedBytes: unknown;
-  }`
+  maxMessages: unknown;
+  maxPartsPerMessage: unknown;
+  maxTools: unknown;
+  maxDeltaCharacters: unknown;
+  maxTextCharactersPerPart: unknown;
+  maxIdentifierCharacters: unknown;
+  maxStatusMessageCharacters: unknown;
+  maxPatchOperations: unknown;
+  maxSnapshotDepth: unknown;
+  maxSnapshotNodes: unknown;
+  maxSnapshotBytes: unknown;
+  maxRetainedBytes: unknown;
+}`
   `AgentStreamState {
-    generation: unknown;
-    cursor: unknown;
-    limits: unknown;
-    runId: unknown;
-    status: unknown;
-    messages: unknown;
-    tools: unknown;
-    sharedState: unknown;
-    error: unknown;
-    message: unknown;
-    code: unknown;
-  }`
+  generation: unknown;
+  cursor: unknown;
+  limits: unknown;
+  runId: unknown;
+  status: unknown;
+  messages: unknown;
+  tools: unknown;
+  sharedState: unknown;
+  error: unknown;
+  message: unknown;
+  code: unknown;
+}`
   `applySharedStatePatch(/* public names: value, patch */): unknown`
   `createAgentStreamState(/* public names: limits */): unknown`
   `parseJsonPatch(/* public names: value, limits */): unknown`
@@ -2174,573 +2215,573 @@ These named interfaces and helper signatures are available to typed integrations
 - **`ai-snapshot-contracts`** — AI adapter and runtime contracts.
   `createProviderSnapshotBudget(/* public names: limits */): unknown`
   `ProviderSnapshotBudget {
-    limits: unknown;
-    bytes: unknown;
-    nodes: unknown;
-  }`
+  limits: unknown;
+  bytes: unknown;
+  nodes: unknown;
+}`
   `ProviderSnapshotLimits {
-    maxDepth: unknown;
-    maxNodes: unknown;
-    maxBytes: unknown;
-    maxStringCharacters: unknown;
-  }`
+  maxDepth: unknown;
+  maxNodes: unknown;
+  maxBytes: unknown;
+  maxStringCharacters: unknown;
+}`
   `resolveProviderSnapshotLimits(/* public names: limits */): unknown`
   `snapshotProviderValue(/* public names: value, budget */): unknown`
 
 - **`ai-types-contracts`** — AI adapter and runtime contracts.
   `AgentRun {
-    id: unknown;
-    status: unknown;
-    startedAt: unknown;
-    endedAt: unknown;
-    model: unknown;
-    costEstimate: unknown;
-    steps: unknown;
-  }`
+  id: unknown;
+  status: unknown;
+  startedAt: unknown;
+  endedAt: unknown;
+  model: unknown;
+  costEstimate: unknown;
+  steps: unknown;
+}`
   `AgentStatus {
-    kind: unknown;
-    message: unknown;
-  }`
+  kind: unknown;
+  message: unknown;
+}`
   `AgentStep {
-    id: unknown;
-    kind: unknown;
-    label: unknown;
-    status: unknown;
-    startedAt: unknown;
-    endedAt: unknown;
-  }`
+  id: unknown;
+  kind: unknown;
+  label: unknown;
+  status: unknown;
+  startedAt: unknown;
+  endedAt: unknown;
+}`
   `AttachmentMessagePart {
-    type: unknown;
-    document: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  type: unknown;
+  document: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `AudioMessagePart {
-    type: unknown;
-    src: unknown;
-    transcript: unknown;
-    mimeType: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  type: unknown;
+  src: unknown;
+  transcript: unknown;
+  mimeType: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `CancelEventDetail {
-    reason: unknown;
-  }`
+  reason: unknown;
+}`
   `ChatMessage {
-    id: unknown;
-    role: unknown;
-    status: unknown;
-    timestamp: unknown;
-    text: unknown;
-    attachments: unknown;
-    parts: unknown;
-    metadata: unknown;
-  }`
+  id: unknown;
+  role: unknown;
+  status: unknown;
+  timestamp: unknown;
+  text: unknown;
+  attachments: unknown;
+  parts: unknown;
+  metadata: unknown;
+}`
   `Citation {
-    id: unknown;
-    chunkId: unknown;
-    sourceId: unknown;
-    span: unknown;
-    start: unknown;
-    end: unknown;
-    label: unknown;
-    locator: unknown;
-    answerRange: unknown;
-    quote: unknown;
-    metadata: unknown;
-  }`
+  id: unknown;
+  chunkId: unknown;
+  sourceId: unknown;
+  span: unknown;
+  start: unknown;
+  end: unknown;
+  label: unknown;
+  locator: unknown;
+  answerRange: unknown;
+  quote: unknown;
+  metadata: unknown;
+}`
   `CitationMessagePart {
-    type: unknown;
-    citation: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  type: unknown;
+  citation: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `CitationSelectEventDetail {
-    citation: unknown;
-  }`
+  citation: unknown;
+}`
   `DataMessagePart {
-    type: unknown;
-    name: unknown;
-    data: unknown;
-    widget: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  type: unknown;
+  name: unknown;
+  data: unknown;
+  widget: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `DocumentRef {
-    id: unknown;
-    name: unknown;
-    mimeType: unknown;
-    uri: unknown;
-    version: unknown;
-  }`
+  id: unknown;
+  name: unknown;
+  mimeType: unknown;
+  uri: unknown;
+  version: unknown;
+}`
   `ErrorMessagePart {
-    type: unknown;
-    message: unknown;
-    code: unknown;
-    retryable: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  type: unknown;
+  message: unknown;
+  code: unknown;
+  retryable: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `ExportEventDetail {
-    format: unknown;
-  }`
+  format: unknown;
+}`
   `GroundedClaim {
-    id: unknown;
-    text: unknown;
-    status: unknown;
-    citationIds: unknown;
-    answerRange: unknown;
-    start: unknown;
-    end: unknown;
-    confidence: unknown;
-    explanation: unknown;
-  }`
+  id: unknown;
+  text: unknown;
+  status: unknown;
+  citationIds: unknown;
+  answerRange: unknown;
+  start: unknown;
+  end: unknown;
+  confidence: unknown;
+  explanation: unknown;
+}`
   `GroundingAssessment {
-    supportedClaims: unknown;
-    unsupportedClaims: unknown;
-    coverage: unknown;
-    confidence: unknown;
-    warnings: unknown;
-    claims: unknown;
-  }`
+  supportedClaims: unknown;
+  unsupportedClaims: unknown;
+  coverage: unknown;
+  confidence: unknown;
+  warnings: unknown;
+  claims: unknown;
+}`
   `MessagePartBase {
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `ReasoningMessagePart {
-    type: unknown;
-    text: unknown;
-    collapsed: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  type: unknown;
+  text: unknown;
+  collapsed: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `RetrievalChunk {
-    id: unknown;
-    text: unknown;
-    score: unknown;
-    source: unknown;
-    metadata: unknown;
-    rank: unknown;
-    locator: unknown;
-    queryId: unknown;
-    stage: unknown;
-    traceId: unknown;
-    scores: unknown;
-  }`
+  id: unknown;
+  text: unknown;
+  score: unknown;
+  source: unknown;
+  metadata: unknown;
+  rank: unknown;
+  locator: unknown;
+  queryId: unknown;
+  stage: unknown;
+  traceId: unknown;
+  scores: unknown;
+}`
   `RetrievalProgressEventDetail {
-    queryId: unknown;
-    stage: unknown;
-    progress: unknown;
-  }`
+  queryId: unknown;
+  stage: unknown;
+  progress: unknown;
+}`
   `RetrievalQuery {
-    text: unknown;
-    filters: unknown;
-    mode: unknown;
-    scope: unknown;
-  }`
+  text: unknown;
+  filters: unknown;
+  mode: unknown;
+  scope: unknown;
+}`
   `RetrievalScoreBreakdown {
-    dense: unknown;
-    sparse: unknown;
-    rerank: unknown;
-    final: unknown;
-  }`
+  dense: unknown;
+  sparse: unknown;
+  rerank: unknown;
+  final: unknown;
+}`
   `RetryEventDetail {
-    attempt: unknown;
-    messageId: unknown;
-  }`
+  attempt: unknown;
+  messageId: unknown;
+}`
   `RunLifecycleEventDetail {
-    runId: unknown;
-    status: unknown;
-  }`
+  runId: unknown;
+  status: unknown;
+}`
   `TextMessagePart {
-    type: unknown;
-    text: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  type: unknown;
+  text: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `ToolApprovalEventDetail {
-    invocationId: unknown;
-    approved: unknown;
-  }`
+  invocationId: unknown;
+  approved: unknown;
+}`
   `ToolCallMessagePart {
-    type: unknown;
-    invocation: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  type: unknown;
+  invocation: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `ToolInvocation {
-    id: unknown;
-    name: unknown;
-    args: unknown;
-    status: unknown;
-    result: unknown;
-    error: unknown;
-  }`
+  id: unknown;
+  name: unknown;
+  args: unknown;
+  status: unknown;
+  result: unknown;
+  error: unknown;
+}`
   `ToolResultErrorMessagePart {
-    error: unknown;
-    result: unknown;
-    type: unknown;
-    invocationId: unknown;
-    name: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  error: unknown;
+  result: unknown;
+  type: unknown;
+  invocationId: unknown;
+  name: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `ToolResultSuccessMessagePart {
-    result: unknown;
-    error: unknown;
-    type: unknown;
-    invocationId: unknown;
-    name: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  result: unknown;
+  error: unknown;
+  type: unknown;
+  invocationId: unknown;
+  name: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
   `WidgetMessagePart {
-    type: unknown;
-    name: unknown;
-    data: unknown;
-    widget: unknown;
-    id: unknown;
-    state: unknown;
-    metadata: unknown;
-  }`
+  type: unknown;
+  name: unknown;
+  data: unknown;
+  widget: unknown;
+  id: unknown;
+  state: unknown;
+  metadata: unknown;
+}`
 
 - **`autoloader-contracts`** — Shared utility contracts.
   `AutoloaderErrorEventDetail {
-    error: unknown;
-    tag: unknown;
-    optionalPeers: unknown;
-  }`
+  error: unknown;
+  tag: unknown;
+  optionalPeers: unknown;
+}`
   `AutoloaderEventDetail {
-    tag: unknown;
-    optionalPeers: unknown;
-  }`
+  tag: unknown;
+  optionalPeers: unknown;
+}`
   `AutoloaderOptions {
-    optionalPeers: unknown;
-    events: unknown;
-    maxConcurrency: unknown;
-    maxElements: unknown;
-    maxRoots: unknown;
-    maxDepth: unknown;
-    maxWork: unknown;
-  }`
+  optionalPeers: unknown;
+  events: unknown;
+  maxConcurrency: unknown;
+  maxElements: unknown;
+  maxRoots: unknown;
+  maxDepth: unknown;
+  maxWork: unknown;
+}`
   `AutoloaderTraversalErrorEventDetail {
-    limit: unknown;
-    maximum: unknown;
-    error: unknown;
-  }`
+  limit: unknown;
+  maximum: unknown;
+  error: unknown;
+}`
   `discover(root?: LyraDefinitionRoot, options?: AutoloaderOptions): Promise<readonly AutoloadableTagName[]>`
   `start(root?: LyraDefinitionRoot, options?: AutoloaderOptions): Promise<readonly AutoloadableTagName[]>`
   `stop(): unknown`
 
 - **`custom-elements-jsx-contracts`** — Framework integration type contracts.
   `LyraReactIntrinsicElements {
-    "lr-accordion": unknown;
-    "lr-accordion-item": unknown;
-    "lr-activity-feed": unknown;
-    "lr-agent-eval-dashboard": unknown;
-    "lr-agent-run": unknown;
-    "lr-agent-trace": unknown;
-    "lr-agent-workspace": unknown;
-    "lr-alert": unknown;
-    "lr-animated-image": unknown;
-    "lr-animation": unknown;
-    "lr-app-rail": unknown;
-    "lr-app-rail-item": unknown;
-    "lr-approval-queue": unknown;
-    "lr-archive-viewer": unknown;
-    "lr-artifact-panel": unknown;
-    "lr-attachment-chip": unknown;
-    "lr-attachment-trigger": unknown;
-    "lr-audio-visualizer": unknown;
-    "lr-av-player": unknown;
-    "lr-avatar": unknown;
-    "lr-avatar-group": unknown;
-    "lr-badge": unknown;
-    "lr-bar-chart": unknown;
-    "lr-box-plot": unknown;
-    "lr-branch-picker": unknown;
-    "lr-breadcrumb": unknown;
-    "lr-breadcrumb-item": unknown;
-    "lr-browser-frame": unknown;
-    "lr-bubble-chart": unknown;
-    "lr-button": unknown;
-    "lr-button-group": unknown;
-    "lr-calendar": unknown;
-    "lr-calendar-viewer": unknown;
-    "lr-callout": unknown;
-    "lr-card": unknown;
-    "lr-carousel": unknown;
-    "lr-carousel-item": unknown;
-    "lr-chart": unknown;
-    "lr-chat-composer": unknown;
-    "lr-chat-message": unknown;
-    "lr-chat-viewport": unknown;
-    "lr-checkbox": unknown;
-    "lr-checkbox-group": unknown;
-    "lr-checkpoint": unknown;
-    "lr-chip": unknown;
-    "lr-chip-group": unknown;
-    "lr-chunk-inspector": unknown;
-    "lr-citation-badge": unknown;
-    "lr-claim-evidence": unknown;
-    "lr-code-block": unknown;
-    "lr-code-block-core": unknown;
-    "lr-code-editor": unknown;
-    "lr-color-picker": unknown;
-    "lr-combobox": unknown;
-    "lr-command-palette": unknown;
-    "lr-commit-card": unknown;
-    "lr-community-card": unknown;
-    "lr-compare-panel": unknown;
-    "lr-condition-builder": unknown;
-    "lr-confirm-bar": unknown;
-    "lr-contact-viewer": unknown;
-    "lr-context-inspector": unknown;
-    "lr-context-meter": unknown;
-    "lr-control-group": unknown;
-    "lr-conversation-item": unknown;
-    "lr-copy-button": unknown;
-    "lr-csv-viewer": unknown;
-    "lr-dashboard-grid": unknown;
-    "lr-data-grid": unknown;
-    "lr-dataset-viewer": unknown;
-    "lr-date-input": unknown;
-    "lr-date-picker": unknown;
-    "lr-details": unknown;
-    "lr-dialog": unknown;
-    "lr-diff-view": unknown;
-    "lr-divider": unknown;
-    "lr-dock-panel": unknown;
-    "lr-document-compare": unknown;
-    "lr-document-library": unknown;
-    "lr-document-preview": unknown;
-    "lr-document-viewer": unknown;
-    "lr-docx-viewer": unknown;
-    "lr-doughnut-chart": unknown;
-    "lr-drawer": unknown;
-    "lr-drilldown-panel": unknown;
-    "lr-dropdown": unknown;
-    "lr-dropdown-item": unknown;
-    "lr-ebook-viewer": unknown;
-    "lr-email-viewer": unknown;
-    "lr-embedding-explorer": unknown;
-    "lr-emoji-picker": unknown;
-    "lr-empty": unknown;
-    "lr-entity-card": unknown;
-    "lr-entity-chip": unknown;
-    "lr-entity-dossier": unknown;
-    "lr-env-list": unknown;
-    "lr-eval-dataset": unknown;
-    "lr-eval-result": unknown;
-    "lr-evaluation-run": unknown;
-    "lr-export-button": unknown;
-    "lr-file-icon": unknown;
-    "lr-file-input": unknown;
-    "lr-file-tree": unknown;
-    "lr-filter-bar": unknown;
-    "lr-flag": unknown;
-    "lr-flow-canvas": unknown;
-    "lr-flow-controls": unknown;
-    "lr-flow-minimap": unknown;
-    "lr-flow-node": unknown;
-    "lr-flow-run-status": unknown;
-    "lr-format-bytes": unknown;
-    "lr-format-date": unknown;
-    "lr-format-number": unknown;
-    "lr-gauge": unknown;
-    "lr-generation-metrics": unknown;
-    "lr-geojson-view": unknown;
-    "lr-geojson-viewer": unknown;
-    "lr-graph": unknown;
-    "lr-graph-legend": unknown;
-    "lr-graph-query-builder": unknown;
-    "lr-grounding-summary": unknown;
-    "lr-handoff-divider": unknown;
-    "lr-heatmap": unknown;
-    "lr-highlight-layer": unknown;
-    "lr-histogram": unknown;
-    "lr-html-viewer": unknown;
-    "lr-icon": unknown;
-    "lr-icon-button": unknown;
-    "lr-image-comparer": unknown;
-    "lr-image-viewer": unknown;
-    "lr-include": unknown;
-    "lr-ingestion-queue": unknown;
-    "lr-input": unknown;
-    "lr-intersection-observer": unknown;
-    "lr-json-viewer": unknown;
-    "lr-kbd": unknown;
-    "lr-knowledge-base": unknown;
-    "lr-knowledge-base-admin": unknown;
-    "lr-knowledge-graph-explorer": unknown;
-    "lr-known-date": unknown;
-    "lr-lightbox": unknown;
-    "lr-line-chart": unknown;
-    "lr-lite-chart": unknown;
-    "lr-live-region": unknown;
-    "lr-locale-picker": unknown;
-    "lr-map": unknown;
-    "lr-markdown": unknown;
-    "lr-markdown-core": unknown;
-    "lr-mcp-app": unknown;
-    "lr-media-card": unknown;
-    "lr-memory-panel": unknown;
-    "lr-mention-popover": unknown;
-    "lr-menu": unknown;
-    "lr-menu-item": unknown;
-    "lr-menu-label": unknown;
-    "lr-message-actions": unknown;
-    "lr-message-feedback": unknown;
-    "lr-message-parts": unknown;
-    "lr-mind-map": unknown;
-    "lr-model-select": unknown;
-    "lr-model-settings-panel": unknown;
-    "lr-multi-split": unknown;
-    "lr-mutation-observer": unknown;
-    "lr-native-time-input": unknown;
-    "lr-neighbor-list": unknown;
-    "lr-node-palette": unknown;
-    "lr-notebook-viewer": unknown;
-    "lr-number-input": unknown;
-    "lr-option": unknown;
-    "lr-otp-input": unknown;
-    "lr-page": unknown;
-    "lr-page-rail": unknown;
-    "lr-pagination": unknown;
-    "lr-pan-zoom": unknown;
-    "lr-path-strip": unknown;
-    "lr-pdf-viewer": unknown;
-    "lr-phone-input": unknown;
-    "lr-pie-chart": unknown;
-    "lr-polar-area-chart": unknown;
-    "lr-policy-summary": unknown;
-    "lr-poll-status": unknown;
-    "lr-popover": unknown;
-    "lr-popup": unknown;
-    "lr-pptx-viewer": unknown;
-    "lr-progress-bar": unknown;
-    "lr-progress-ring": unknown;
-    "lr-prompt-input": unknown;
-    "lr-prompt-queue": unknown;
-    "lr-prompt-studio": unknown;
-    "lr-provenance-panel": unknown;
-    "lr-push-to-talk": unknown;
-    "lr-qr-code": unknown;
-    "lr-radar-chart": unknown;
-    "lr-radio": unknown;
-    "lr-radio-button": unknown;
-    "lr-radio-group": unknown;
-    "lr-rag-answer": unknown;
-    "lr-rag-eval-dashboard": unknown;
-    "lr-random-content": unknown;
-    "lr-rating": unknown;
-    "lr-realtime-session": unknown;
-    "lr-relative-time": unknown;
-    "lr-reorder-item": unknown;
-    "lr-reorder-list": unknown;
-    "lr-resize-observer": unknown;
-    "lr-responsive-panel": unknown;
-    "lr-result-card": unknown;
-    "lr-result-field": unknown;
-    "lr-retrieval-compare": unknown;
-    "lr-retrieval-results": unknown;
-    "lr-retrieval-search": unknown;
-    "lr-retrieval-trace": unknown;
-    "lr-rubric-form": unknown;
-    "lr-scatter-chart": unknown;
-    "lr-schema-viewer": unknown;
-    "lr-scroller": unknown;
-    "lr-segmented": unknown;
-    "lr-select": unknown;
-    "lr-selection-toolbar": unknown;
-    "lr-sequence-playback": unknown;
-    "lr-sequence-strip": unknown;
-    "lr-skeleton": unknown;
-    "lr-slider": unknown;
-    "lr-source-card": unknown;
-    "lr-source-list": unknown;
-    "lr-source-picker": unknown;
-    "lr-span-waterfall": unknown;
-    "lr-sparkline": unknown;
-    "lr-spinner": unknown;
-    "lr-split-panel": unknown;
-    "lr-spreadsheet-viewer": unknown;
-    "lr-stack-trace": unknown;
-    "lr-stat": unknown;
-    "lr-stepper": unknown;
-    "lr-stream-status": unknown;
-    "lr-streaming-text": unknown;
-    "lr-subagent-panel": unknown;
-    "lr-suggestion-chips": unknown;
-    "lr-svg-viewer": unknown;
-    "lr-swatch-picker": unknown;
-    "lr-switch": unknown;
-    "lr-tab": unknown;
-    "lr-tab-group": unknown;
-    "lr-tab-panel": unknown;
-    "lr-table": unknown;
-    "lr-tag": unknown;
-    "lr-task-list": unknown;
-    "lr-terminal": unknown;
-    "lr-test-results": unknown;
-    "lr-textarea": unknown;
-    "lr-thinking-panel": unknown;
-    "lr-thread-list": unknown;
-    "lr-time-input": unknown;
-    "lr-time-range": unknown;
-    "lr-timeline": unknown;
-    "lr-timeline-item": unknown;
-    "lr-toast": unknown;
-    "lr-toast-item": unknown;
-    "lr-token-input": unknown;
-    "lr-tool-approval-dialog": unknown;
-    "lr-tool-call-chip": unknown;
-    "lr-tool-param-form": unknown;
-    "lr-tool-result-dialog": unknown;
-    "lr-tool-result-view": unknown;
-    "lr-tool-select-dialog": unknown;
-    "lr-tool-timeline": unknown;
-    "lr-tooltip": unknown;
-    "lr-tour": unknown;
-    "lr-trace-tree": unknown;
-    "lr-transcript-feed": unknown;
-    "lr-tree": unknown;
-    "lr-tree-item": unknown;
-    "lr-typing-indicator": unknown;
-    "lr-usage-badge": unknown;
-    "lr-video": unknown;
-    "lr-video-playlist": unknown;
-    "lr-virtual-list": unknown;
-    "lr-visually-hidden": unknown;
-    "lr-voice-picker": unknown;
-    "lr-widget": unknown;
-    "lr-widget-renderer": unknown;
-    "lr-word-cloud": unknown;
-    "lr-xml-viewer": unknown;
-    "lr-zoomable-frame": unknown;
-  }`
+  "lr-accordion": unknown;
+  "lr-accordion-item": unknown;
+  "lr-activity-feed": unknown;
+  "lr-agent-eval-dashboard": unknown;
+  "lr-agent-run": unknown;
+  "lr-agent-trace": unknown;
+  "lr-agent-workspace": unknown;
+  "lr-alert": unknown;
+  "lr-animated-image": unknown;
+  "lr-animation": unknown;
+  "lr-app-rail": unknown;
+  "lr-app-rail-item": unknown;
+  "lr-approval-queue": unknown;
+  "lr-archive-viewer": unknown;
+  "lr-artifact-panel": unknown;
+  "lr-attachment-chip": unknown;
+  "lr-attachment-trigger": unknown;
+  "lr-audio-visualizer": unknown;
+  "lr-av-player": unknown;
+  "lr-avatar": unknown;
+  "lr-avatar-group": unknown;
+  "lr-badge": unknown;
+  "lr-bar-chart": unknown;
+  "lr-box-plot": unknown;
+  "lr-branch-picker": unknown;
+  "lr-breadcrumb": unknown;
+  "lr-breadcrumb-item": unknown;
+  "lr-browser-frame": unknown;
+  "lr-bubble-chart": unknown;
+  "lr-button": unknown;
+  "lr-button-group": unknown;
+  "lr-calendar": unknown;
+  "lr-calendar-viewer": unknown;
+  "lr-callout": unknown;
+  "lr-card": unknown;
+  "lr-carousel": unknown;
+  "lr-carousel-item": unknown;
+  "lr-chart": unknown;
+  "lr-chat-composer": unknown;
+  "lr-chat-message": unknown;
+  "lr-chat-viewport": unknown;
+  "lr-checkbox": unknown;
+  "lr-checkbox-group": unknown;
+  "lr-checkpoint": unknown;
+  "lr-chip": unknown;
+  "lr-chip-group": unknown;
+  "lr-chunk-inspector": unknown;
+  "lr-citation-badge": unknown;
+  "lr-claim-evidence": unknown;
+  "lr-code-block": unknown;
+  "lr-code-block-core": unknown;
+  "lr-code-editor": unknown;
+  "lr-color-picker": unknown;
+  "lr-combobox": unknown;
+  "lr-command-palette": unknown;
+  "lr-commit-card": unknown;
+  "lr-community-card": unknown;
+  "lr-compare-panel": unknown;
+  "lr-condition-builder": unknown;
+  "lr-confirm-bar": unknown;
+  "lr-contact-viewer": unknown;
+  "lr-context-inspector": unknown;
+  "lr-context-meter": unknown;
+  "lr-control-group": unknown;
+  "lr-conversation-item": unknown;
+  "lr-copy-button": unknown;
+  "lr-csv-viewer": unknown;
+  "lr-dashboard-grid": unknown;
+  "lr-data-grid": unknown;
+  "lr-dataset-viewer": unknown;
+  "lr-date-input": unknown;
+  "lr-date-picker": unknown;
+  "lr-details": unknown;
+  "lr-dialog": unknown;
+  "lr-diff-view": unknown;
+  "lr-divider": unknown;
+  "lr-dock-panel": unknown;
+  "lr-document-compare": unknown;
+  "lr-document-library": unknown;
+  "lr-document-preview": unknown;
+  "lr-document-viewer": unknown;
+  "lr-docx-viewer": unknown;
+  "lr-doughnut-chart": unknown;
+  "lr-drawer": unknown;
+  "lr-drilldown-panel": unknown;
+  "lr-dropdown": unknown;
+  "lr-dropdown-item": unknown;
+  "lr-ebook-viewer": unknown;
+  "lr-email-viewer": unknown;
+  "lr-embedding-explorer": unknown;
+  "lr-emoji-picker": unknown;
+  "lr-empty": unknown;
+  "lr-entity-card": unknown;
+  "lr-entity-chip": unknown;
+  "lr-entity-dossier": unknown;
+  "lr-env-list": unknown;
+  "lr-eval-dataset": unknown;
+  "lr-eval-result": unknown;
+  "lr-evaluation-run": unknown;
+  "lr-export-button": unknown;
+  "lr-file-icon": unknown;
+  "lr-file-input": unknown;
+  "lr-file-tree": unknown;
+  "lr-filter-bar": unknown;
+  "lr-flag": unknown;
+  "lr-flow-canvas": unknown;
+  "lr-flow-controls": unknown;
+  "lr-flow-minimap": unknown;
+  "lr-flow-node": unknown;
+  "lr-flow-run-status": unknown;
+  "lr-format-bytes": unknown;
+  "lr-format-date": unknown;
+  "lr-format-number": unknown;
+  "lr-gauge": unknown;
+  "lr-generation-metrics": unknown;
+  "lr-geojson-view": unknown;
+  "lr-geojson-viewer": unknown;
+  "lr-graph": unknown;
+  "lr-graph-legend": unknown;
+  "lr-graph-query-builder": unknown;
+  "lr-grounding-summary": unknown;
+  "lr-handoff-divider": unknown;
+  "lr-heatmap": unknown;
+  "lr-highlight-layer": unknown;
+  "lr-histogram": unknown;
+  "lr-html-viewer": unknown;
+  "lr-icon": unknown;
+  "lr-icon-button": unknown;
+  "lr-image-comparer": unknown;
+  "lr-image-viewer": unknown;
+  "lr-include": unknown;
+  "lr-ingestion-queue": unknown;
+  "lr-input": unknown;
+  "lr-intersection-observer": unknown;
+  "lr-json-viewer": unknown;
+  "lr-kbd": unknown;
+  "lr-knowledge-base": unknown;
+  "lr-knowledge-base-admin": unknown;
+  "lr-knowledge-graph-explorer": unknown;
+  "lr-known-date": unknown;
+  "lr-lightbox": unknown;
+  "lr-line-chart": unknown;
+  "lr-lite-chart": unknown;
+  "lr-live-region": unknown;
+  "lr-locale-picker": unknown;
+  "lr-map": unknown;
+  "lr-markdown": unknown;
+  "lr-markdown-core": unknown;
+  "lr-mcp-app": unknown;
+  "lr-media-card": unknown;
+  "lr-memory-panel": unknown;
+  "lr-mention-popover": unknown;
+  "lr-menu": unknown;
+  "lr-menu-item": unknown;
+  "lr-menu-label": unknown;
+  "lr-message-actions": unknown;
+  "lr-message-feedback": unknown;
+  "lr-message-parts": unknown;
+  "lr-mind-map": unknown;
+  "lr-model-select": unknown;
+  "lr-model-settings-panel": unknown;
+  "lr-multi-split": unknown;
+  "lr-mutation-observer": unknown;
+  "lr-native-time-input": unknown;
+  "lr-neighbor-list": unknown;
+  "lr-node-palette": unknown;
+  "lr-notebook-viewer": unknown;
+  "lr-number-input": unknown;
+  "lr-option": unknown;
+  "lr-otp-input": unknown;
+  "lr-page": unknown;
+  "lr-page-rail": unknown;
+  "lr-pagination": unknown;
+  "lr-pan-zoom": unknown;
+  "lr-path-strip": unknown;
+  "lr-pdf-viewer": unknown;
+  "lr-phone-input": unknown;
+  "lr-pie-chart": unknown;
+  "lr-polar-area-chart": unknown;
+  "lr-policy-summary": unknown;
+  "lr-poll-status": unknown;
+  "lr-popover": unknown;
+  "lr-popup": unknown;
+  "lr-pptx-viewer": unknown;
+  "lr-progress-bar": unknown;
+  "lr-progress-ring": unknown;
+  "lr-prompt-input": unknown;
+  "lr-prompt-queue": unknown;
+  "lr-prompt-studio": unknown;
+  "lr-provenance-panel": unknown;
+  "lr-push-to-talk": unknown;
+  "lr-qr-code": unknown;
+  "lr-radar-chart": unknown;
+  "lr-radio": unknown;
+  "lr-radio-button": unknown;
+  "lr-radio-group": unknown;
+  "lr-rag-answer": unknown;
+  "lr-rag-eval-dashboard": unknown;
+  "lr-random-content": unknown;
+  "lr-rating": unknown;
+  "lr-realtime-session": unknown;
+  "lr-relative-time": unknown;
+  "lr-reorder-item": unknown;
+  "lr-reorder-list": unknown;
+  "lr-resize-observer": unknown;
+  "lr-responsive-panel": unknown;
+  "lr-result-card": unknown;
+  "lr-result-field": unknown;
+  "lr-retrieval-compare": unknown;
+  "lr-retrieval-results": unknown;
+  "lr-retrieval-search": unknown;
+  "lr-retrieval-trace": unknown;
+  "lr-rubric-form": unknown;
+  "lr-scatter-chart": unknown;
+  "lr-schema-viewer": unknown;
+  "lr-scroller": unknown;
+  "lr-segmented": unknown;
+  "lr-select": unknown;
+  "lr-selection-toolbar": unknown;
+  "lr-sequence-playback": unknown;
+  "lr-sequence-strip": unknown;
+  "lr-skeleton": unknown;
+  "lr-slider": unknown;
+  "lr-source-card": unknown;
+  "lr-source-list": unknown;
+  "lr-source-picker": unknown;
+  "lr-span-waterfall": unknown;
+  "lr-sparkline": unknown;
+  "lr-spinner": unknown;
+  "lr-split-panel": unknown;
+  "lr-spreadsheet-viewer": unknown;
+  "lr-stack-trace": unknown;
+  "lr-stat": unknown;
+  "lr-stepper": unknown;
+  "lr-stream-status": unknown;
+  "lr-streaming-text": unknown;
+  "lr-subagent-panel": unknown;
+  "lr-suggestion-chips": unknown;
+  "lr-svg-viewer": unknown;
+  "lr-swatch-picker": unknown;
+  "lr-switch": unknown;
+  "lr-tab": unknown;
+  "lr-tab-group": unknown;
+  "lr-tab-panel": unknown;
+  "lr-table": unknown;
+  "lr-tag": unknown;
+  "lr-task-list": unknown;
+  "lr-terminal": unknown;
+  "lr-test-results": unknown;
+  "lr-textarea": unknown;
+  "lr-thinking-panel": unknown;
+  "lr-thread-list": unknown;
+  "lr-time-input": unknown;
+  "lr-time-range": unknown;
+  "lr-timeline": unknown;
+  "lr-timeline-item": unknown;
+  "lr-toast": unknown;
+  "lr-toast-item": unknown;
+  "lr-token-input": unknown;
+  "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-chip": unknown;
+  "lr-tool-param-form": unknown;
+  "lr-tool-result-dialog": unknown;
+  "lr-tool-result-view": unknown;
+  "lr-tool-select-dialog": unknown;
+  "lr-tool-timeline": unknown;
+  "lr-tooltip": unknown;
+  "lr-tour": unknown;
+  "lr-trace-tree": unknown;
+  "lr-transcript-feed": unknown;
+  "lr-tree": unknown;
+  "lr-tree-item": unknown;
+  "lr-typing-indicator": unknown;
+  "lr-usage-badge": unknown;
+  "lr-video": unknown;
+  "lr-video-playlist": unknown;
+  "lr-virtual-list": unknown;
+  "lr-visually-hidden": unknown;
+  "lr-voice-picker": unknown;
+  "lr-widget": unknown;
+  "lr-widget-renderer": unknown;
+  "lr-word-cloud": unknown;
+  "lr-xml-viewer": unknown;
+  "lr-zoomable-frame": unknown;
+}`
 
 - **`internal-ansi-contracts`** — Shared utility contracts.
   `AnsiStyles {
-    bold: unknown;
-    dim: unknown;
-    italic: unknown;
-    underline: unknown;
-    inverse: unknown;
-    fg: unknown;
-    bg: unknown;
-  }`
+  bold: unknown;
+  dim: unknown;
+  italic: unknown;
+  underline: unknown;
+  inverse: unknown;
+  fg: unknown;
+  bg: unknown;
+}`
 
 - **`internal-canvas-color-contracts`** — Shared utility contracts.
   `resolveCanvasColor(/* public names: scope, color, fallback */): unknown`
@@ -2757,649 +2798,649 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`internal-localization-types-contracts`** — Shared utility contracts.
   `LyraLocaleMeta {
-    dir: unknown;
-    name: unknown;
-  }`
+  dir: unknown;
+  name: unknown;
+}`
 
 - **`internal-localization-contracts`** — Shared utility contracts.
   `resolveLyraString(/* public names: host, key, overrides, fallback, values */): unknown`
 
 - **`internal-node-type-style-contracts`** — Shared utility contracts.
   `LyraNodeTypeStyle {
-    id: unknown;
-    label: unknown;
-    color: unknown;
-    shape: unknown;
-  }`
+  id: unknown;
+  label: unknown;
+  color: unknown;
+  shape: unknown;
+}`
 
 - **`internal-registered-animation-contracts`** — Shared utility contracts.
   `RegisteredAnimationSpec {
-    keyframes: unknown;
-    rtlKeyframes: unknown;
-    durationProperties: unknown;
-    easingProperties: unknown;
-    fallbackDuration: unknown;
-    fallbackEasing: unknown;
-    options: unknown;
-  }`
+  keyframes: unknown;
+  rtlKeyframes: unknown;
+  durationProperties: unknown;
+  easingProperties: unknown;
+  fallbackDuration: unknown;
+  fallbackEasing: unknown;
+  options: unknown;
+}`
 
 - **`internal-text-viewer-target-contracts`** — Shared utility contracts.
   `LyraSearchChangeDetail {
-    query: unknown;
-    matchCount: unknown;
-    matchCountExact: unknown;
-    activeIndex: unknown;
-  }`
+  query: unknown;
+  matchCount: unknown;
+  matchCountExact: unknown;
+  activeIndex: unknown;
+}`
   `LyraTextViewerTarget {
-    search: unknown;
-    query: unknown;
-    searchNext: unknown;
-    searchPrevious: unknown;
-    clearSearch: unknown;
-    highlights: unknown;
-    activeHighlightId: unknown;
-    anchor: unknown;
-    anchorKinds: unknown;
-    scrollToAnchor: unknown;
-    target: unknown;
-  }`
+  search: unknown;
+  query: unknown;
+  searchNext: unknown;
+  searchPrevious: unknown;
+  clearSearch: unknown;
+  highlights: unknown;
+  activeHighlightId: unknown;
+  anchor: unknown;
+  anchorKinds: unknown;
+  scrollToAnchor: unknown;
+  target: unknown;
+}`
 
 - **`ssr-contracts`** — Shared utility contracts.
   `diagnoseLyraHydration(/* public names: root */): unknown`
   `getLyraSsrMode(/* public names: tagName */): unknown`
   `LyraHydrationDiagnostic {
-    element: unknown;
-    tag: unknown;
-    mode: unknown;
-    status: unknown;
-    error: unknown;
-  }`
+  element: unknown;
+  tag: unknown;
+  mode: unknown;
+  status: unknown;
+  error: unknown;
+}`
   `LyraLitElementRendererConstructor {
-    prototype: unknown;
-    matchesClass: unknown;
-    constructor: unknown;
-    tagName: unknown;
-    attributes: unknown;
-  }`
+  prototype: unknown;
+  matchesClass: unknown;
+  constructor: unknown;
+  tagName: unknown;
+  attributes: unknown;
+}`
   `LyraSsrClientRenderReason {
-    code: unknown;
-    detail: unknown;
-  }`
+  code: unknown;
+  detail: unknown;
+}`
   `lyraSsrElementRenderers(/* public names: litElementRenderer */): unknown`
 
 - **`svelte-contracts`** — Framework integration type contracts.
   `LyraElementTagNameMap {
-    "lr-accordion": unknown;
-    "lr-accordion-item": unknown;
-    "lr-activity-feed": unknown;
-    "lr-agent-eval-dashboard": unknown;
-    "lr-agent-run": unknown;
-    "lr-agent-trace": unknown;
-    "lr-agent-workspace": unknown;
-    "lr-alert": unknown;
-    "lr-animated-image": unknown;
-    "lr-animation": unknown;
-    "lr-app-rail": unknown;
-    "lr-app-rail-item": unknown;
-    "lr-approval-queue": unknown;
-    "lr-archive-viewer": unknown;
-    "lr-artifact-panel": unknown;
-    "lr-attachment-chip": unknown;
-    "lr-attachment-trigger": unknown;
-    "lr-audio-visualizer": unknown;
-    "lr-av-player": unknown;
-    "lr-avatar": unknown;
-    "lr-avatar-group": unknown;
-    "lr-badge": unknown;
-    "lr-bar-chart": unknown;
-    "lr-box-plot": unknown;
-    "lr-branch-picker": unknown;
-    "lr-breadcrumb": unknown;
-    "lr-breadcrumb-item": unknown;
-    "lr-browser-frame": unknown;
-    "lr-bubble-chart": unknown;
-    "lr-button": unknown;
-    "lr-button-group": unknown;
-    "lr-calendar": unknown;
-    "lr-calendar-viewer": unknown;
-    "lr-callout": unknown;
-    "lr-card": unknown;
-    "lr-carousel": unknown;
-    "lr-carousel-item": unknown;
-    "lr-chart": unknown;
-    "lr-chat-composer": unknown;
-    "lr-chat-message": unknown;
-    "lr-chat-viewport": unknown;
-    "lr-checkbox": unknown;
-    "lr-checkbox-group": unknown;
-    "lr-checkpoint": unknown;
-    "lr-chip": unknown;
-    "lr-chip-group": unknown;
-    "lr-chunk-inspector": unknown;
-    "lr-citation-badge": unknown;
-    "lr-claim-evidence": unknown;
-    "lr-code-block": unknown;
-    "lr-code-block-core": unknown;
-    "lr-code-editor": unknown;
-    "lr-color-picker": unknown;
-    "lr-combobox": unknown;
-    "lr-command-palette": unknown;
-    "lr-commit-card": unknown;
-    "lr-community-card": unknown;
-    "lr-compare-panel": unknown;
-    "lr-condition-builder": unknown;
-    "lr-confirm-bar": unknown;
-    "lr-contact-viewer": unknown;
-    "lr-context-inspector": unknown;
-    "lr-context-meter": unknown;
-    "lr-control-group": unknown;
-    "lr-conversation-item": unknown;
-    "lr-copy-button": unknown;
-    "lr-csv-viewer": unknown;
-    "lr-dashboard-grid": unknown;
-    "lr-data-grid": unknown;
-    "lr-dataset-viewer": unknown;
-    "lr-date-input": unknown;
-    "lr-date-picker": unknown;
-    "lr-details": unknown;
-    "lr-dialog": unknown;
-    "lr-diff-view": unknown;
-    "lr-divider": unknown;
-    "lr-dock-panel": unknown;
-    "lr-document-compare": unknown;
-    "lr-document-library": unknown;
-    "lr-document-preview": unknown;
-    "lr-document-viewer": unknown;
-    "lr-docx-viewer": unknown;
-    "lr-doughnut-chart": unknown;
-    "lr-drawer": unknown;
-    "lr-drilldown-panel": unknown;
-    "lr-dropdown": unknown;
-    "lr-dropdown-item": unknown;
-    "lr-ebook-viewer": unknown;
-    "lr-email-viewer": unknown;
-    "lr-embedding-explorer": unknown;
-    "lr-emoji-picker": unknown;
-    "lr-empty": unknown;
-    "lr-entity-card": unknown;
-    "lr-entity-chip": unknown;
-    "lr-entity-dossier": unknown;
-    "lr-env-list": unknown;
-    "lr-eval-dataset": unknown;
-    "lr-eval-result": unknown;
-    "lr-evaluation-run": unknown;
-    "lr-export-button": unknown;
-    "lr-file-icon": unknown;
-    "lr-file-input": unknown;
-    "lr-file-tree": unknown;
-    "lr-filter-bar": unknown;
-    "lr-flag": unknown;
-    "lr-flow-canvas": unknown;
-    "lr-flow-controls": unknown;
-    "lr-flow-minimap": unknown;
-    "lr-flow-node": unknown;
-    "lr-flow-run-status": unknown;
-    "lr-format-bytes": unknown;
-    "lr-format-date": unknown;
-    "lr-format-number": unknown;
-    "lr-gauge": unknown;
-    "lr-generation-metrics": unknown;
-    "lr-geojson-view": unknown;
-    "lr-geojson-viewer": unknown;
-    "lr-graph": unknown;
-    "lr-graph-legend": unknown;
-    "lr-graph-query-builder": unknown;
-    "lr-grounding-summary": unknown;
-    "lr-handoff-divider": unknown;
-    "lr-heatmap": unknown;
-    "lr-highlight-layer": unknown;
-    "lr-histogram": unknown;
-    "lr-html-viewer": unknown;
-    "lr-icon": unknown;
-    "lr-icon-button": unknown;
-    "lr-image-comparer": unknown;
-    "lr-image-viewer": unknown;
-    "lr-include": unknown;
-    "lr-ingestion-queue": unknown;
-    "lr-input": unknown;
-    "lr-intersection-observer": unknown;
-    "lr-json-viewer": unknown;
-    "lr-kbd": unknown;
-    "lr-knowledge-base": unknown;
-    "lr-knowledge-base-admin": unknown;
-    "lr-knowledge-graph-explorer": unknown;
-    "lr-known-date": unknown;
-    "lr-lightbox": unknown;
-    "lr-line-chart": unknown;
-    "lr-lite-chart": unknown;
-    "lr-live-region": unknown;
-    "lr-locale-picker": unknown;
-    "lr-map": unknown;
-    "lr-markdown": unknown;
-    "lr-markdown-core": unknown;
-    "lr-mcp-app": unknown;
-    "lr-media-card": unknown;
-    "lr-memory-panel": unknown;
-    "lr-mention-popover": unknown;
-    "lr-menu": unknown;
-    "lr-menu-item": unknown;
-    "lr-menu-label": unknown;
-    "lr-message-actions": unknown;
-    "lr-message-feedback": unknown;
-    "lr-message-parts": unknown;
-    "lr-mind-map": unknown;
-    "lr-model-select": unknown;
-    "lr-model-settings-panel": unknown;
-    "lr-multi-split": unknown;
-    "lr-mutation-observer": unknown;
-    "lr-native-time-input": unknown;
-    "lr-neighbor-list": unknown;
-    "lr-node-palette": unknown;
-    "lr-notebook-viewer": unknown;
-    "lr-number-input": unknown;
-    "lr-option": unknown;
-    "lr-otp-input": unknown;
-    "lr-page": unknown;
-    "lr-page-rail": unknown;
-    "lr-pagination": unknown;
-    "lr-pan-zoom": unknown;
-    "lr-path-strip": unknown;
-    "lr-pdf-viewer": unknown;
-    "lr-phone-input": unknown;
-    "lr-pie-chart": unknown;
-    "lr-polar-area-chart": unknown;
-    "lr-policy-summary": unknown;
-    "lr-poll-status": unknown;
-    "lr-popover": unknown;
-    "lr-popup": unknown;
-    "lr-pptx-viewer": unknown;
-    "lr-progress-bar": unknown;
-    "lr-progress-ring": unknown;
-    "lr-prompt-input": unknown;
-    "lr-prompt-queue": unknown;
-    "lr-prompt-studio": unknown;
-    "lr-provenance-panel": unknown;
-    "lr-push-to-talk": unknown;
-    "lr-qr-code": unknown;
-    "lr-radar-chart": unknown;
-    "lr-radio": unknown;
-    "lr-radio-button": unknown;
-    "lr-radio-group": unknown;
-    "lr-rag-answer": unknown;
-    "lr-rag-eval-dashboard": unknown;
-    "lr-random-content": unknown;
-    "lr-rating": unknown;
-    "lr-realtime-session": unknown;
-    "lr-relative-time": unknown;
-    "lr-reorder-item": unknown;
-    "lr-reorder-list": unknown;
-    "lr-resize-observer": unknown;
-    "lr-responsive-panel": unknown;
-    "lr-result-card": unknown;
-    "lr-result-field": unknown;
-    "lr-retrieval-compare": unknown;
-    "lr-retrieval-results": unknown;
-    "lr-retrieval-search": unknown;
-    "lr-retrieval-trace": unknown;
-    "lr-rubric-form": unknown;
-    "lr-scatter-chart": unknown;
-    "lr-schema-viewer": unknown;
-    "lr-scroller": unknown;
-    "lr-segmented": unknown;
-    "lr-select": unknown;
-    "lr-selection-toolbar": unknown;
-    "lr-sequence-playback": unknown;
-    "lr-sequence-strip": unknown;
-    "lr-skeleton": unknown;
-    "lr-slider": unknown;
-    "lr-source-card": unknown;
-    "lr-source-list": unknown;
-    "lr-source-picker": unknown;
-    "lr-span-waterfall": unknown;
-    "lr-sparkline": unknown;
-    "lr-spinner": unknown;
-    "lr-split-panel": unknown;
-    "lr-spreadsheet-viewer": unknown;
-    "lr-stack-trace": unknown;
-    "lr-stat": unknown;
-    "lr-stepper": unknown;
-    "lr-stream-status": unknown;
-    "lr-streaming-text": unknown;
-    "lr-subagent-panel": unknown;
-    "lr-suggestion-chips": unknown;
-    "lr-svg-viewer": unknown;
-    "lr-swatch-picker": unknown;
-    "lr-switch": unknown;
-    "lr-tab": unknown;
-    "lr-tab-group": unknown;
-    "lr-tab-panel": unknown;
-    "lr-table": unknown;
-    "lr-tag": unknown;
-    "lr-task-list": unknown;
-    "lr-terminal": unknown;
-    "lr-test-results": unknown;
-    "lr-textarea": unknown;
-    "lr-thinking-panel": unknown;
-    "lr-thread-list": unknown;
-    "lr-time-input": unknown;
-    "lr-time-range": unknown;
-    "lr-timeline": unknown;
-    "lr-timeline-item": unknown;
-    "lr-toast": unknown;
-    "lr-toast-item": unknown;
-    "lr-token-input": unknown;
-    "lr-tool-approval-dialog": unknown;
-    "lr-tool-call-chip": unknown;
-    "lr-tool-param-form": unknown;
-    "lr-tool-result-dialog": unknown;
-    "lr-tool-result-view": unknown;
-    "lr-tool-select-dialog": unknown;
-    "lr-tool-timeline": unknown;
-    "lr-tooltip": unknown;
-    "lr-tour": unknown;
-    "lr-trace-tree": unknown;
-    "lr-transcript-feed": unknown;
-    "lr-tree": unknown;
-    "lr-tree-item": unknown;
-    "lr-typing-indicator": unknown;
-    "lr-usage-badge": unknown;
-    "lr-video": unknown;
-    "lr-video-playlist": unknown;
-    "lr-virtual-list": unknown;
-    "lr-visually-hidden": unknown;
-    "lr-voice-picker": unknown;
-    "lr-widget": unknown;
-    "lr-widget-renderer": unknown;
-    "lr-word-cloud": unknown;
-    "lr-xml-viewer": unknown;
-    "lr-zoomable-frame": unknown;
-  }`
+  "lr-accordion": unknown;
+  "lr-accordion-item": unknown;
+  "lr-activity-feed": unknown;
+  "lr-agent-eval-dashboard": unknown;
+  "lr-agent-run": unknown;
+  "lr-agent-trace": unknown;
+  "lr-agent-workspace": unknown;
+  "lr-alert": unknown;
+  "lr-animated-image": unknown;
+  "lr-animation": unknown;
+  "lr-app-rail": unknown;
+  "lr-app-rail-item": unknown;
+  "lr-approval-queue": unknown;
+  "lr-archive-viewer": unknown;
+  "lr-artifact-panel": unknown;
+  "lr-attachment-chip": unknown;
+  "lr-attachment-trigger": unknown;
+  "lr-audio-visualizer": unknown;
+  "lr-av-player": unknown;
+  "lr-avatar": unknown;
+  "lr-avatar-group": unknown;
+  "lr-badge": unknown;
+  "lr-bar-chart": unknown;
+  "lr-box-plot": unknown;
+  "lr-branch-picker": unknown;
+  "lr-breadcrumb": unknown;
+  "lr-breadcrumb-item": unknown;
+  "lr-browser-frame": unknown;
+  "lr-bubble-chart": unknown;
+  "lr-button": unknown;
+  "lr-button-group": unknown;
+  "lr-calendar": unknown;
+  "lr-calendar-viewer": unknown;
+  "lr-callout": unknown;
+  "lr-card": unknown;
+  "lr-carousel": unknown;
+  "lr-carousel-item": unknown;
+  "lr-chart": unknown;
+  "lr-chat-composer": unknown;
+  "lr-chat-message": unknown;
+  "lr-chat-viewport": unknown;
+  "lr-checkbox": unknown;
+  "lr-checkbox-group": unknown;
+  "lr-checkpoint": unknown;
+  "lr-chip": unknown;
+  "lr-chip-group": unknown;
+  "lr-chunk-inspector": unknown;
+  "lr-citation-badge": unknown;
+  "lr-claim-evidence": unknown;
+  "lr-code-block": unknown;
+  "lr-code-block-core": unknown;
+  "lr-code-editor": unknown;
+  "lr-color-picker": unknown;
+  "lr-combobox": unknown;
+  "lr-command-palette": unknown;
+  "lr-commit-card": unknown;
+  "lr-community-card": unknown;
+  "lr-compare-panel": unknown;
+  "lr-condition-builder": unknown;
+  "lr-confirm-bar": unknown;
+  "lr-contact-viewer": unknown;
+  "lr-context-inspector": unknown;
+  "lr-context-meter": unknown;
+  "lr-control-group": unknown;
+  "lr-conversation-item": unknown;
+  "lr-copy-button": unknown;
+  "lr-csv-viewer": unknown;
+  "lr-dashboard-grid": unknown;
+  "lr-data-grid": unknown;
+  "lr-dataset-viewer": unknown;
+  "lr-date-input": unknown;
+  "lr-date-picker": unknown;
+  "lr-details": unknown;
+  "lr-dialog": unknown;
+  "lr-diff-view": unknown;
+  "lr-divider": unknown;
+  "lr-dock-panel": unknown;
+  "lr-document-compare": unknown;
+  "lr-document-library": unknown;
+  "lr-document-preview": unknown;
+  "lr-document-viewer": unknown;
+  "lr-docx-viewer": unknown;
+  "lr-doughnut-chart": unknown;
+  "lr-drawer": unknown;
+  "lr-drilldown-panel": unknown;
+  "lr-dropdown": unknown;
+  "lr-dropdown-item": unknown;
+  "lr-ebook-viewer": unknown;
+  "lr-email-viewer": unknown;
+  "lr-embedding-explorer": unknown;
+  "lr-emoji-picker": unknown;
+  "lr-empty": unknown;
+  "lr-entity-card": unknown;
+  "lr-entity-chip": unknown;
+  "lr-entity-dossier": unknown;
+  "lr-env-list": unknown;
+  "lr-eval-dataset": unknown;
+  "lr-eval-result": unknown;
+  "lr-evaluation-run": unknown;
+  "lr-export-button": unknown;
+  "lr-file-icon": unknown;
+  "lr-file-input": unknown;
+  "lr-file-tree": unknown;
+  "lr-filter-bar": unknown;
+  "lr-flag": unknown;
+  "lr-flow-canvas": unknown;
+  "lr-flow-controls": unknown;
+  "lr-flow-minimap": unknown;
+  "lr-flow-node": unknown;
+  "lr-flow-run-status": unknown;
+  "lr-format-bytes": unknown;
+  "lr-format-date": unknown;
+  "lr-format-number": unknown;
+  "lr-gauge": unknown;
+  "lr-generation-metrics": unknown;
+  "lr-geojson-view": unknown;
+  "lr-geojson-viewer": unknown;
+  "lr-graph": unknown;
+  "lr-graph-legend": unknown;
+  "lr-graph-query-builder": unknown;
+  "lr-grounding-summary": unknown;
+  "lr-handoff-divider": unknown;
+  "lr-heatmap": unknown;
+  "lr-highlight-layer": unknown;
+  "lr-histogram": unknown;
+  "lr-html-viewer": unknown;
+  "lr-icon": unknown;
+  "lr-icon-button": unknown;
+  "lr-image-comparer": unknown;
+  "lr-image-viewer": unknown;
+  "lr-include": unknown;
+  "lr-ingestion-queue": unknown;
+  "lr-input": unknown;
+  "lr-intersection-observer": unknown;
+  "lr-json-viewer": unknown;
+  "lr-kbd": unknown;
+  "lr-knowledge-base": unknown;
+  "lr-knowledge-base-admin": unknown;
+  "lr-knowledge-graph-explorer": unknown;
+  "lr-known-date": unknown;
+  "lr-lightbox": unknown;
+  "lr-line-chart": unknown;
+  "lr-lite-chart": unknown;
+  "lr-live-region": unknown;
+  "lr-locale-picker": unknown;
+  "lr-map": unknown;
+  "lr-markdown": unknown;
+  "lr-markdown-core": unknown;
+  "lr-mcp-app": unknown;
+  "lr-media-card": unknown;
+  "lr-memory-panel": unknown;
+  "lr-mention-popover": unknown;
+  "lr-menu": unknown;
+  "lr-menu-item": unknown;
+  "lr-menu-label": unknown;
+  "lr-message-actions": unknown;
+  "lr-message-feedback": unknown;
+  "lr-message-parts": unknown;
+  "lr-mind-map": unknown;
+  "lr-model-select": unknown;
+  "lr-model-settings-panel": unknown;
+  "lr-multi-split": unknown;
+  "lr-mutation-observer": unknown;
+  "lr-native-time-input": unknown;
+  "lr-neighbor-list": unknown;
+  "lr-node-palette": unknown;
+  "lr-notebook-viewer": unknown;
+  "lr-number-input": unknown;
+  "lr-option": unknown;
+  "lr-otp-input": unknown;
+  "lr-page": unknown;
+  "lr-page-rail": unknown;
+  "lr-pagination": unknown;
+  "lr-pan-zoom": unknown;
+  "lr-path-strip": unknown;
+  "lr-pdf-viewer": unknown;
+  "lr-phone-input": unknown;
+  "lr-pie-chart": unknown;
+  "lr-polar-area-chart": unknown;
+  "lr-policy-summary": unknown;
+  "lr-poll-status": unknown;
+  "lr-popover": unknown;
+  "lr-popup": unknown;
+  "lr-pptx-viewer": unknown;
+  "lr-progress-bar": unknown;
+  "lr-progress-ring": unknown;
+  "lr-prompt-input": unknown;
+  "lr-prompt-queue": unknown;
+  "lr-prompt-studio": unknown;
+  "lr-provenance-panel": unknown;
+  "lr-push-to-talk": unknown;
+  "lr-qr-code": unknown;
+  "lr-radar-chart": unknown;
+  "lr-radio": unknown;
+  "lr-radio-button": unknown;
+  "lr-radio-group": unknown;
+  "lr-rag-answer": unknown;
+  "lr-rag-eval-dashboard": unknown;
+  "lr-random-content": unknown;
+  "lr-rating": unknown;
+  "lr-realtime-session": unknown;
+  "lr-relative-time": unknown;
+  "lr-reorder-item": unknown;
+  "lr-reorder-list": unknown;
+  "lr-resize-observer": unknown;
+  "lr-responsive-panel": unknown;
+  "lr-result-card": unknown;
+  "lr-result-field": unknown;
+  "lr-retrieval-compare": unknown;
+  "lr-retrieval-results": unknown;
+  "lr-retrieval-search": unknown;
+  "lr-retrieval-trace": unknown;
+  "lr-rubric-form": unknown;
+  "lr-scatter-chart": unknown;
+  "lr-schema-viewer": unknown;
+  "lr-scroller": unknown;
+  "lr-segmented": unknown;
+  "lr-select": unknown;
+  "lr-selection-toolbar": unknown;
+  "lr-sequence-playback": unknown;
+  "lr-sequence-strip": unknown;
+  "lr-skeleton": unknown;
+  "lr-slider": unknown;
+  "lr-source-card": unknown;
+  "lr-source-list": unknown;
+  "lr-source-picker": unknown;
+  "lr-span-waterfall": unknown;
+  "lr-sparkline": unknown;
+  "lr-spinner": unknown;
+  "lr-split-panel": unknown;
+  "lr-spreadsheet-viewer": unknown;
+  "lr-stack-trace": unknown;
+  "lr-stat": unknown;
+  "lr-stepper": unknown;
+  "lr-stream-status": unknown;
+  "lr-streaming-text": unknown;
+  "lr-subagent-panel": unknown;
+  "lr-suggestion-chips": unknown;
+  "lr-svg-viewer": unknown;
+  "lr-swatch-picker": unknown;
+  "lr-switch": unknown;
+  "lr-tab": unknown;
+  "lr-tab-group": unknown;
+  "lr-tab-panel": unknown;
+  "lr-table": unknown;
+  "lr-tag": unknown;
+  "lr-task-list": unknown;
+  "lr-terminal": unknown;
+  "lr-test-results": unknown;
+  "lr-textarea": unknown;
+  "lr-thinking-panel": unknown;
+  "lr-thread-list": unknown;
+  "lr-time-input": unknown;
+  "lr-time-range": unknown;
+  "lr-timeline": unknown;
+  "lr-timeline-item": unknown;
+  "lr-toast": unknown;
+  "lr-toast-item": unknown;
+  "lr-token-input": unknown;
+  "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-chip": unknown;
+  "lr-tool-param-form": unknown;
+  "lr-tool-result-dialog": unknown;
+  "lr-tool-result-view": unknown;
+  "lr-tool-select-dialog": unknown;
+  "lr-tool-timeline": unknown;
+  "lr-tooltip": unknown;
+  "lr-tour": unknown;
+  "lr-trace-tree": unknown;
+  "lr-transcript-feed": unknown;
+  "lr-tree": unknown;
+  "lr-tree-item": unknown;
+  "lr-typing-indicator": unknown;
+  "lr-usage-badge": unknown;
+  "lr-video": unknown;
+  "lr-video-playlist": unknown;
+  "lr-virtual-list": unknown;
+  "lr-visually-hidden": unknown;
+  "lr-voice-picker": unknown;
+  "lr-widget": unknown;
+  "lr-widget-renderer": unknown;
+  "lr-word-cloud": unknown;
+  "lr-xml-viewer": unknown;
+  "lr-zoomable-frame": unknown;
+}`
   `LyraSvelteElements {
-    "lr-accordion": unknown;
-    "lr-accordion-item": unknown;
-    "lr-activity-feed": unknown;
-    "lr-agent-eval-dashboard": unknown;
-    "lr-agent-run": unknown;
-    "lr-agent-trace": unknown;
-    "lr-agent-workspace": unknown;
-    "lr-alert": unknown;
-    "lr-animated-image": unknown;
-    "lr-animation": unknown;
-    "lr-app-rail": unknown;
-    "lr-app-rail-item": unknown;
-    "lr-approval-queue": unknown;
-    "lr-archive-viewer": unknown;
-    "lr-artifact-panel": unknown;
-    "lr-attachment-chip": unknown;
-    "lr-attachment-trigger": unknown;
-    "lr-audio-visualizer": unknown;
-    "lr-av-player": unknown;
-    "lr-avatar": unknown;
-    "lr-avatar-group": unknown;
-    "lr-badge": unknown;
-    "lr-bar-chart": unknown;
-    "lr-box-plot": unknown;
-    "lr-branch-picker": unknown;
-    "lr-breadcrumb": unknown;
-    "lr-breadcrumb-item": unknown;
-    "lr-browser-frame": unknown;
-    "lr-bubble-chart": unknown;
-    "lr-button": unknown;
-    "lr-button-group": unknown;
-    "lr-calendar": unknown;
-    "lr-calendar-viewer": unknown;
-    "lr-callout": unknown;
-    "lr-card": unknown;
-    "lr-carousel": unknown;
-    "lr-carousel-item": unknown;
-    "lr-chart": unknown;
-    "lr-chat-composer": unknown;
-    "lr-chat-message": unknown;
-    "lr-chat-viewport": unknown;
-    "lr-checkbox": unknown;
-    "lr-checkbox-group": unknown;
-    "lr-checkpoint": unknown;
-    "lr-chip": unknown;
-    "lr-chip-group": unknown;
-    "lr-chunk-inspector": unknown;
-    "lr-citation-badge": unknown;
-    "lr-claim-evidence": unknown;
-    "lr-code-block": unknown;
-    "lr-code-block-core": unknown;
-    "lr-code-editor": unknown;
-    "lr-color-picker": unknown;
-    "lr-combobox": unknown;
-    "lr-command-palette": unknown;
-    "lr-commit-card": unknown;
-    "lr-community-card": unknown;
-    "lr-compare-panel": unknown;
-    "lr-condition-builder": unknown;
-    "lr-confirm-bar": unknown;
-    "lr-contact-viewer": unknown;
-    "lr-context-inspector": unknown;
-    "lr-context-meter": unknown;
-    "lr-control-group": unknown;
-    "lr-conversation-item": unknown;
-    "lr-copy-button": unknown;
-    "lr-csv-viewer": unknown;
-    "lr-dashboard-grid": unknown;
-    "lr-data-grid": unknown;
-    "lr-dataset-viewer": unknown;
-    "lr-date-input": unknown;
-    "lr-date-picker": unknown;
-    "lr-details": unknown;
-    "lr-dialog": unknown;
-    "lr-diff-view": unknown;
-    "lr-divider": unknown;
-    "lr-dock-panel": unknown;
-    "lr-document-compare": unknown;
-    "lr-document-library": unknown;
-    "lr-document-preview": unknown;
-    "lr-document-viewer": unknown;
-    "lr-docx-viewer": unknown;
-    "lr-doughnut-chart": unknown;
-    "lr-drawer": unknown;
-    "lr-drilldown-panel": unknown;
-    "lr-dropdown": unknown;
-    "lr-dropdown-item": unknown;
-    "lr-ebook-viewer": unknown;
-    "lr-email-viewer": unknown;
-    "lr-embedding-explorer": unknown;
-    "lr-emoji-picker": unknown;
-    "lr-empty": unknown;
-    "lr-entity-card": unknown;
-    "lr-entity-chip": unknown;
-    "lr-entity-dossier": unknown;
-    "lr-env-list": unknown;
-    "lr-eval-dataset": unknown;
-    "lr-eval-result": unknown;
-    "lr-evaluation-run": unknown;
-    "lr-export-button": unknown;
-    "lr-file-icon": unknown;
-    "lr-file-input": unknown;
-    "lr-file-tree": unknown;
-    "lr-filter-bar": unknown;
-    "lr-flag": unknown;
-    "lr-flow-canvas": unknown;
-    "lr-flow-controls": unknown;
-    "lr-flow-minimap": unknown;
-    "lr-flow-node": unknown;
-    "lr-flow-run-status": unknown;
-    "lr-format-bytes": unknown;
-    "lr-format-date": unknown;
-    "lr-format-number": unknown;
-    "lr-gauge": unknown;
-    "lr-generation-metrics": unknown;
-    "lr-geojson-view": unknown;
-    "lr-geojson-viewer": unknown;
-    "lr-graph": unknown;
-    "lr-graph-legend": unknown;
-    "lr-graph-query-builder": unknown;
-    "lr-grounding-summary": unknown;
-    "lr-handoff-divider": unknown;
-    "lr-heatmap": unknown;
-    "lr-highlight-layer": unknown;
-    "lr-histogram": unknown;
-    "lr-html-viewer": unknown;
-    "lr-icon": unknown;
-    "lr-icon-button": unknown;
-    "lr-image-comparer": unknown;
-    "lr-image-viewer": unknown;
-    "lr-include": unknown;
-    "lr-ingestion-queue": unknown;
-    "lr-input": unknown;
-    "lr-intersection-observer": unknown;
-    "lr-json-viewer": unknown;
-    "lr-kbd": unknown;
-    "lr-knowledge-base": unknown;
-    "lr-knowledge-base-admin": unknown;
-    "lr-knowledge-graph-explorer": unknown;
-    "lr-known-date": unknown;
-    "lr-lightbox": unknown;
-    "lr-line-chart": unknown;
-    "lr-lite-chart": unknown;
-    "lr-live-region": unknown;
-    "lr-locale-picker": unknown;
-    "lr-map": unknown;
-    "lr-markdown": unknown;
-    "lr-markdown-core": unknown;
-    "lr-mcp-app": unknown;
-    "lr-media-card": unknown;
-    "lr-memory-panel": unknown;
-    "lr-mention-popover": unknown;
-    "lr-menu": unknown;
-    "lr-menu-item": unknown;
-    "lr-menu-label": unknown;
-    "lr-message-actions": unknown;
-    "lr-message-feedback": unknown;
-    "lr-message-parts": unknown;
-    "lr-mind-map": unknown;
-    "lr-model-select": unknown;
-    "lr-model-settings-panel": unknown;
-    "lr-multi-split": unknown;
-    "lr-mutation-observer": unknown;
-    "lr-native-time-input": unknown;
-    "lr-neighbor-list": unknown;
-    "lr-node-palette": unknown;
-    "lr-notebook-viewer": unknown;
-    "lr-number-input": unknown;
-    "lr-option": unknown;
-    "lr-otp-input": unknown;
-    "lr-page": unknown;
-    "lr-page-rail": unknown;
-    "lr-pagination": unknown;
-    "lr-pan-zoom": unknown;
-    "lr-path-strip": unknown;
-    "lr-pdf-viewer": unknown;
-    "lr-phone-input": unknown;
-    "lr-pie-chart": unknown;
-    "lr-polar-area-chart": unknown;
-    "lr-policy-summary": unknown;
-    "lr-poll-status": unknown;
-    "lr-popover": unknown;
-    "lr-popup": unknown;
-    "lr-pptx-viewer": unknown;
-    "lr-progress-bar": unknown;
-    "lr-progress-ring": unknown;
-    "lr-prompt-input": unknown;
-    "lr-prompt-queue": unknown;
-    "lr-prompt-studio": unknown;
-    "lr-provenance-panel": unknown;
-    "lr-push-to-talk": unknown;
-    "lr-qr-code": unknown;
-    "lr-radar-chart": unknown;
-    "lr-radio": unknown;
-    "lr-radio-button": unknown;
-    "lr-radio-group": unknown;
-    "lr-rag-answer": unknown;
-    "lr-rag-eval-dashboard": unknown;
-    "lr-random-content": unknown;
-    "lr-rating": unknown;
-    "lr-realtime-session": unknown;
-    "lr-relative-time": unknown;
-    "lr-reorder-item": unknown;
-    "lr-reorder-list": unknown;
-    "lr-resize-observer": unknown;
-    "lr-responsive-panel": unknown;
-    "lr-result-card": unknown;
-    "lr-result-field": unknown;
-    "lr-retrieval-compare": unknown;
-    "lr-retrieval-results": unknown;
-    "lr-retrieval-search": unknown;
-    "lr-retrieval-trace": unknown;
-    "lr-rubric-form": unknown;
-    "lr-scatter-chart": unknown;
-    "lr-schema-viewer": unknown;
-    "lr-scroller": unknown;
-    "lr-segmented": unknown;
-    "lr-select": unknown;
-    "lr-selection-toolbar": unknown;
-    "lr-sequence-playback": unknown;
-    "lr-sequence-strip": unknown;
-    "lr-skeleton": unknown;
-    "lr-slider": unknown;
-    "lr-source-card": unknown;
-    "lr-source-list": unknown;
-    "lr-source-picker": unknown;
-    "lr-span-waterfall": unknown;
-    "lr-sparkline": unknown;
-    "lr-spinner": unknown;
-    "lr-split-panel": unknown;
-    "lr-spreadsheet-viewer": unknown;
-    "lr-stack-trace": unknown;
-    "lr-stat": unknown;
-    "lr-stepper": unknown;
-    "lr-stream-status": unknown;
-    "lr-streaming-text": unknown;
-    "lr-subagent-panel": unknown;
-    "lr-suggestion-chips": unknown;
-    "lr-svg-viewer": unknown;
-    "lr-swatch-picker": unknown;
-    "lr-switch": unknown;
-    "lr-tab": unknown;
-    "lr-tab-group": unknown;
-    "lr-tab-panel": unknown;
-    "lr-table": unknown;
-    "lr-tag": unknown;
-    "lr-task-list": unknown;
-    "lr-terminal": unknown;
-    "lr-test-results": unknown;
-    "lr-textarea": unknown;
-    "lr-thinking-panel": unknown;
-    "lr-thread-list": unknown;
-    "lr-time-input": unknown;
-    "lr-time-range": unknown;
-    "lr-timeline": unknown;
-    "lr-timeline-item": unknown;
-    "lr-toast": unknown;
-    "lr-toast-item": unknown;
-    "lr-token-input": unknown;
-    "lr-tool-approval-dialog": unknown;
-    "lr-tool-call-chip": unknown;
-    "lr-tool-param-form": unknown;
-    "lr-tool-result-dialog": unknown;
-    "lr-tool-result-view": unknown;
-    "lr-tool-select-dialog": unknown;
-    "lr-tool-timeline": unknown;
-    "lr-tooltip": unknown;
-    "lr-tour": unknown;
-    "lr-trace-tree": unknown;
-    "lr-transcript-feed": unknown;
-    "lr-tree": unknown;
-    "lr-tree-item": unknown;
-    "lr-typing-indicator": unknown;
-    "lr-usage-badge": unknown;
-    "lr-video": unknown;
-    "lr-video-playlist": unknown;
-    "lr-virtual-list": unknown;
-    "lr-visually-hidden": unknown;
-    "lr-voice-picker": unknown;
-    "lr-widget": unknown;
-    "lr-widget-renderer": unknown;
-    "lr-word-cloud": unknown;
-    "lr-xml-viewer": unknown;
-    "lr-zoomable-frame": unknown;
-  }`
+  "lr-accordion": unknown;
+  "lr-accordion-item": unknown;
+  "lr-activity-feed": unknown;
+  "lr-agent-eval-dashboard": unknown;
+  "lr-agent-run": unknown;
+  "lr-agent-trace": unknown;
+  "lr-agent-workspace": unknown;
+  "lr-alert": unknown;
+  "lr-animated-image": unknown;
+  "lr-animation": unknown;
+  "lr-app-rail": unknown;
+  "lr-app-rail-item": unknown;
+  "lr-approval-queue": unknown;
+  "lr-archive-viewer": unknown;
+  "lr-artifact-panel": unknown;
+  "lr-attachment-chip": unknown;
+  "lr-attachment-trigger": unknown;
+  "lr-audio-visualizer": unknown;
+  "lr-av-player": unknown;
+  "lr-avatar": unknown;
+  "lr-avatar-group": unknown;
+  "lr-badge": unknown;
+  "lr-bar-chart": unknown;
+  "lr-box-plot": unknown;
+  "lr-branch-picker": unknown;
+  "lr-breadcrumb": unknown;
+  "lr-breadcrumb-item": unknown;
+  "lr-browser-frame": unknown;
+  "lr-bubble-chart": unknown;
+  "lr-button": unknown;
+  "lr-button-group": unknown;
+  "lr-calendar": unknown;
+  "lr-calendar-viewer": unknown;
+  "lr-callout": unknown;
+  "lr-card": unknown;
+  "lr-carousel": unknown;
+  "lr-carousel-item": unknown;
+  "lr-chart": unknown;
+  "lr-chat-composer": unknown;
+  "lr-chat-message": unknown;
+  "lr-chat-viewport": unknown;
+  "lr-checkbox": unknown;
+  "lr-checkbox-group": unknown;
+  "lr-checkpoint": unknown;
+  "lr-chip": unknown;
+  "lr-chip-group": unknown;
+  "lr-chunk-inspector": unknown;
+  "lr-citation-badge": unknown;
+  "lr-claim-evidence": unknown;
+  "lr-code-block": unknown;
+  "lr-code-block-core": unknown;
+  "lr-code-editor": unknown;
+  "lr-color-picker": unknown;
+  "lr-combobox": unknown;
+  "lr-command-palette": unknown;
+  "lr-commit-card": unknown;
+  "lr-community-card": unknown;
+  "lr-compare-panel": unknown;
+  "lr-condition-builder": unknown;
+  "lr-confirm-bar": unknown;
+  "lr-contact-viewer": unknown;
+  "lr-context-inspector": unknown;
+  "lr-context-meter": unknown;
+  "lr-control-group": unknown;
+  "lr-conversation-item": unknown;
+  "lr-copy-button": unknown;
+  "lr-csv-viewer": unknown;
+  "lr-dashboard-grid": unknown;
+  "lr-data-grid": unknown;
+  "lr-dataset-viewer": unknown;
+  "lr-date-input": unknown;
+  "lr-date-picker": unknown;
+  "lr-details": unknown;
+  "lr-dialog": unknown;
+  "lr-diff-view": unknown;
+  "lr-divider": unknown;
+  "lr-dock-panel": unknown;
+  "lr-document-compare": unknown;
+  "lr-document-library": unknown;
+  "lr-document-preview": unknown;
+  "lr-document-viewer": unknown;
+  "lr-docx-viewer": unknown;
+  "lr-doughnut-chart": unknown;
+  "lr-drawer": unknown;
+  "lr-drilldown-panel": unknown;
+  "lr-dropdown": unknown;
+  "lr-dropdown-item": unknown;
+  "lr-ebook-viewer": unknown;
+  "lr-email-viewer": unknown;
+  "lr-embedding-explorer": unknown;
+  "lr-emoji-picker": unknown;
+  "lr-empty": unknown;
+  "lr-entity-card": unknown;
+  "lr-entity-chip": unknown;
+  "lr-entity-dossier": unknown;
+  "lr-env-list": unknown;
+  "lr-eval-dataset": unknown;
+  "lr-eval-result": unknown;
+  "lr-evaluation-run": unknown;
+  "lr-export-button": unknown;
+  "lr-file-icon": unknown;
+  "lr-file-input": unknown;
+  "lr-file-tree": unknown;
+  "lr-filter-bar": unknown;
+  "lr-flag": unknown;
+  "lr-flow-canvas": unknown;
+  "lr-flow-controls": unknown;
+  "lr-flow-minimap": unknown;
+  "lr-flow-node": unknown;
+  "lr-flow-run-status": unknown;
+  "lr-format-bytes": unknown;
+  "lr-format-date": unknown;
+  "lr-format-number": unknown;
+  "lr-gauge": unknown;
+  "lr-generation-metrics": unknown;
+  "lr-geojson-view": unknown;
+  "lr-geojson-viewer": unknown;
+  "lr-graph": unknown;
+  "lr-graph-legend": unknown;
+  "lr-graph-query-builder": unknown;
+  "lr-grounding-summary": unknown;
+  "lr-handoff-divider": unknown;
+  "lr-heatmap": unknown;
+  "lr-highlight-layer": unknown;
+  "lr-histogram": unknown;
+  "lr-html-viewer": unknown;
+  "lr-icon": unknown;
+  "lr-icon-button": unknown;
+  "lr-image-comparer": unknown;
+  "lr-image-viewer": unknown;
+  "lr-include": unknown;
+  "lr-ingestion-queue": unknown;
+  "lr-input": unknown;
+  "lr-intersection-observer": unknown;
+  "lr-json-viewer": unknown;
+  "lr-kbd": unknown;
+  "lr-knowledge-base": unknown;
+  "lr-knowledge-base-admin": unknown;
+  "lr-knowledge-graph-explorer": unknown;
+  "lr-known-date": unknown;
+  "lr-lightbox": unknown;
+  "lr-line-chart": unknown;
+  "lr-lite-chart": unknown;
+  "lr-live-region": unknown;
+  "lr-locale-picker": unknown;
+  "lr-map": unknown;
+  "lr-markdown": unknown;
+  "lr-markdown-core": unknown;
+  "lr-mcp-app": unknown;
+  "lr-media-card": unknown;
+  "lr-memory-panel": unknown;
+  "lr-mention-popover": unknown;
+  "lr-menu": unknown;
+  "lr-menu-item": unknown;
+  "lr-menu-label": unknown;
+  "lr-message-actions": unknown;
+  "lr-message-feedback": unknown;
+  "lr-message-parts": unknown;
+  "lr-mind-map": unknown;
+  "lr-model-select": unknown;
+  "lr-model-settings-panel": unknown;
+  "lr-multi-split": unknown;
+  "lr-mutation-observer": unknown;
+  "lr-native-time-input": unknown;
+  "lr-neighbor-list": unknown;
+  "lr-node-palette": unknown;
+  "lr-notebook-viewer": unknown;
+  "lr-number-input": unknown;
+  "lr-option": unknown;
+  "lr-otp-input": unknown;
+  "lr-page": unknown;
+  "lr-page-rail": unknown;
+  "lr-pagination": unknown;
+  "lr-pan-zoom": unknown;
+  "lr-path-strip": unknown;
+  "lr-pdf-viewer": unknown;
+  "lr-phone-input": unknown;
+  "lr-pie-chart": unknown;
+  "lr-polar-area-chart": unknown;
+  "lr-policy-summary": unknown;
+  "lr-poll-status": unknown;
+  "lr-popover": unknown;
+  "lr-popup": unknown;
+  "lr-pptx-viewer": unknown;
+  "lr-progress-bar": unknown;
+  "lr-progress-ring": unknown;
+  "lr-prompt-input": unknown;
+  "lr-prompt-queue": unknown;
+  "lr-prompt-studio": unknown;
+  "lr-provenance-panel": unknown;
+  "lr-push-to-talk": unknown;
+  "lr-qr-code": unknown;
+  "lr-radar-chart": unknown;
+  "lr-radio": unknown;
+  "lr-radio-button": unknown;
+  "lr-radio-group": unknown;
+  "lr-rag-answer": unknown;
+  "lr-rag-eval-dashboard": unknown;
+  "lr-random-content": unknown;
+  "lr-rating": unknown;
+  "lr-realtime-session": unknown;
+  "lr-relative-time": unknown;
+  "lr-reorder-item": unknown;
+  "lr-reorder-list": unknown;
+  "lr-resize-observer": unknown;
+  "lr-responsive-panel": unknown;
+  "lr-result-card": unknown;
+  "lr-result-field": unknown;
+  "lr-retrieval-compare": unknown;
+  "lr-retrieval-results": unknown;
+  "lr-retrieval-search": unknown;
+  "lr-retrieval-trace": unknown;
+  "lr-rubric-form": unknown;
+  "lr-scatter-chart": unknown;
+  "lr-schema-viewer": unknown;
+  "lr-scroller": unknown;
+  "lr-segmented": unknown;
+  "lr-select": unknown;
+  "lr-selection-toolbar": unknown;
+  "lr-sequence-playback": unknown;
+  "lr-sequence-strip": unknown;
+  "lr-skeleton": unknown;
+  "lr-slider": unknown;
+  "lr-source-card": unknown;
+  "lr-source-list": unknown;
+  "lr-source-picker": unknown;
+  "lr-span-waterfall": unknown;
+  "lr-sparkline": unknown;
+  "lr-spinner": unknown;
+  "lr-split-panel": unknown;
+  "lr-spreadsheet-viewer": unknown;
+  "lr-stack-trace": unknown;
+  "lr-stat": unknown;
+  "lr-stepper": unknown;
+  "lr-stream-status": unknown;
+  "lr-streaming-text": unknown;
+  "lr-subagent-panel": unknown;
+  "lr-suggestion-chips": unknown;
+  "lr-svg-viewer": unknown;
+  "lr-swatch-picker": unknown;
+  "lr-switch": unknown;
+  "lr-tab": unknown;
+  "lr-tab-group": unknown;
+  "lr-tab-panel": unknown;
+  "lr-table": unknown;
+  "lr-tag": unknown;
+  "lr-task-list": unknown;
+  "lr-terminal": unknown;
+  "lr-test-results": unknown;
+  "lr-textarea": unknown;
+  "lr-thinking-panel": unknown;
+  "lr-thread-list": unknown;
+  "lr-time-input": unknown;
+  "lr-time-range": unknown;
+  "lr-timeline": unknown;
+  "lr-timeline-item": unknown;
+  "lr-toast": unknown;
+  "lr-toast-item": unknown;
+  "lr-token-input": unknown;
+  "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-chip": unknown;
+  "lr-tool-param-form": unknown;
+  "lr-tool-result-dialog": unknown;
+  "lr-tool-result-view": unknown;
+  "lr-tool-select-dialog": unknown;
+  "lr-tool-timeline": unknown;
+  "lr-tooltip": unknown;
+  "lr-tour": unknown;
+  "lr-trace-tree": unknown;
+  "lr-transcript-feed": unknown;
+  "lr-tree": unknown;
+  "lr-tree-item": unknown;
+  "lr-typing-indicator": unknown;
+  "lr-usage-badge": unknown;
+  "lr-video": unknown;
+  "lr-video-playlist": unknown;
+  "lr-virtual-list": unknown;
+  "lr-visually-hidden": unknown;
+  "lr-voice-picker": unknown;
+  "lr-widget": unknown;
+  "lr-widget-renderer": unknown;
+  "lr-word-cloud": unknown;
+  "lr-xml-viewer": unknown;
+  "lr-zoomable-frame": unknown;
+}`
 
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
   `installHappyDomFormAssociatedShims(): unknown`
@@ -3407,10 +3448,10 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`theme-gemstones-data-contracts`** — Shared utility contracts.
   `GemstoneAccent {
-    key: unknown;
-    fill: unknown;
-    deep: unknown;
-  }`
+  key: unknown;
+  fill: unknown;
+  deep: unknown;
+}`
 
 - **`theme-gemstones-contracts`** — Shared utility contracts.
   `gemstoneGlyph(/* public names: color */): unknown`
@@ -3419,310 +3460,310 @@ These named interfaces and helper signatures are available to typed integrations
   `applyLyraThemePreset(/* public names: presetOrName */): unknown`
   `defineLyraThemePreset(/* public names: preset */): unknown`
   `LyraThemePresetChangeDetail {
-    id: unknown;
-    theme: unknown;
-  }`
+  id: unknown;
+  theme: unknown;
+}`
   `LyraThemePreset {
-    id: unknown;
-    theme: unknown;
-  }`
+  id: unknown;
+  theme: unknown;
+}`
 
 - **`theme-theme-contracts`** — Shared utility contracts.
   `createLyraThemeBootstrap(/* public names: options */): unknown`
   `getLyraTheme(): unknown`
   `LyraThemeBootstrapOptions {
-    storageKey: unknown;
-  }`
+  storageKey: unknown;
+}`
   `LyraTheme {
-    mode: unknown;
-    accent: unknown;
-  }`
+  mode: unknown;
+  accent: unknown;
+}`
   `setLyraTheme(/* public names: theme */): unknown`
 
 - **`vue-contracts`** — Framework integration type contracts.
   `LyraVueGlobalComponents {
-    "lr-accordion": unknown;
-    "lr-accordion-item": unknown;
-    "lr-activity-feed": unknown;
-    "lr-agent-eval-dashboard": unknown;
-    "lr-agent-run": unknown;
-    "lr-agent-trace": unknown;
-    "lr-agent-workspace": unknown;
-    "lr-alert": unknown;
-    "lr-animated-image": unknown;
-    "lr-animation": unknown;
-    "lr-app-rail": unknown;
-    "lr-app-rail-item": unknown;
-    "lr-approval-queue": unknown;
-    "lr-archive-viewer": unknown;
-    "lr-artifact-panel": unknown;
-    "lr-attachment-chip": unknown;
-    "lr-attachment-trigger": unknown;
-    "lr-audio-visualizer": unknown;
-    "lr-av-player": unknown;
-    "lr-avatar": unknown;
-    "lr-avatar-group": unknown;
-    "lr-badge": unknown;
-    "lr-bar-chart": unknown;
-    "lr-box-plot": unknown;
-    "lr-branch-picker": unknown;
-    "lr-breadcrumb": unknown;
-    "lr-breadcrumb-item": unknown;
-    "lr-browser-frame": unknown;
-    "lr-bubble-chart": unknown;
-    "lr-button": unknown;
-    "lr-button-group": unknown;
-    "lr-calendar": unknown;
-    "lr-calendar-viewer": unknown;
-    "lr-callout": unknown;
-    "lr-card": unknown;
-    "lr-carousel": unknown;
-    "lr-carousel-item": unknown;
-    "lr-chart": unknown;
-    "lr-chat-composer": unknown;
-    "lr-chat-message": unknown;
-    "lr-chat-viewport": unknown;
-    "lr-checkbox": unknown;
-    "lr-checkbox-group": unknown;
-    "lr-checkpoint": unknown;
-    "lr-chip": unknown;
-    "lr-chip-group": unknown;
-    "lr-chunk-inspector": unknown;
-    "lr-citation-badge": unknown;
-    "lr-claim-evidence": unknown;
-    "lr-code-block": unknown;
-    "lr-code-block-core": unknown;
-    "lr-code-editor": unknown;
-    "lr-color-picker": unknown;
-    "lr-combobox": unknown;
-    "lr-command-palette": unknown;
-    "lr-commit-card": unknown;
-    "lr-community-card": unknown;
-    "lr-compare-panel": unknown;
-    "lr-condition-builder": unknown;
-    "lr-confirm-bar": unknown;
-    "lr-contact-viewer": unknown;
-    "lr-context-inspector": unknown;
-    "lr-context-meter": unknown;
-    "lr-control-group": unknown;
-    "lr-conversation-item": unknown;
-    "lr-copy-button": unknown;
-    "lr-csv-viewer": unknown;
-    "lr-dashboard-grid": unknown;
-    "lr-data-grid": unknown;
-    "lr-dataset-viewer": unknown;
-    "lr-date-input": unknown;
-    "lr-date-picker": unknown;
-    "lr-details": unknown;
-    "lr-dialog": unknown;
-    "lr-diff-view": unknown;
-    "lr-divider": unknown;
-    "lr-dock-panel": unknown;
-    "lr-document-compare": unknown;
-    "lr-document-library": unknown;
-    "lr-document-preview": unknown;
-    "lr-document-viewer": unknown;
-    "lr-docx-viewer": unknown;
-    "lr-doughnut-chart": unknown;
-    "lr-drawer": unknown;
-    "lr-drilldown-panel": unknown;
-    "lr-dropdown": unknown;
-    "lr-dropdown-item": unknown;
-    "lr-ebook-viewer": unknown;
-    "lr-email-viewer": unknown;
-    "lr-embedding-explorer": unknown;
-    "lr-emoji-picker": unknown;
-    "lr-empty": unknown;
-    "lr-entity-card": unknown;
-    "lr-entity-chip": unknown;
-    "lr-entity-dossier": unknown;
-    "lr-env-list": unknown;
-    "lr-eval-dataset": unknown;
-    "lr-eval-result": unknown;
-    "lr-evaluation-run": unknown;
-    "lr-export-button": unknown;
-    "lr-file-icon": unknown;
-    "lr-file-input": unknown;
-    "lr-file-tree": unknown;
-    "lr-filter-bar": unknown;
-    "lr-flag": unknown;
-    "lr-flow-canvas": unknown;
-    "lr-flow-controls": unknown;
-    "lr-flow-minimap": unknown;
-    "lr-flow-node": unknown;
-    "lr-flow-run-status": unknown;
-    "lr-format-bytes": unknown;
-    "lr-format-date": unknown;
-    "lr-format-number": unknown;
-    "lr-gauge": unknown;
-    "lr-generation-metrics": unknown;
-    "lr-geojson-view": unknown;
-    "lr-geojson-viewer": unknown;
-    "lr-graph": unknown;
-    "lr-graph-legend": unknown;
-    "lr-graph-query-builder": unknown;
-    "lr-grounding-summary": unknown;
-    "lr-handoff-divider": unknown;
-    "lr-heatmap": unknown;
-    "lr-highlight-layer": unknown;
-    "lr-histogram": unknown;
-    "lr-html-viewer": unknown;
-    "lr-icon": unknown;
-    "lr-icon-button": unknown;
-    "lr-image-comparer": unknown;
-    "lr-image-viewer": unknown;
-    "lr-include": unknown;
-    "lr-ingestion-queue": unknown;
-    "lr-input": unknown;
-    "lr-intersection-observer": unknown;
-    "lr-json-viewer": unknown;
-    "lr-kbd": unknown;
-    "lr-knowledge-base": unknown;
-    "lr-knowledge-base-admin": unknown;
-    "lr-knowledge-graph-explorer": unknown;
-    "lr-known-date": unknown;
-    "lr-lightbox": unknown;
-    "lr-line-chart": unknown;
-    "lr-lite-chart": unknown;
-    "lr-live-region": unknown;
-    "lr-locale-picker": unknown;
-    "lr-map": unknown;
-    "lr-markdown": unknown;
-    "lr-markdown-core": unknown;
-    "lr-mcp-app": unknown;
-    "lr-media-card": unknown;
-    "lr-memory-panel": unknown;
-    "lr-mention-popover": unknown;
-    "lr-menu": unknown;
-    "lr-menu-item": unknown;
-    "lr-menu-label": unknown;
-    "lr-message-actions": unknown;
-    "lr-message-feedback": unknown;
-    "lr-message-parts": unknown;
-    "lr-mind-map": unknown;
-    "lr-model-select": unknown;
-    "lr-model-settings-panel": unknown;
-    "lr-multi-split": unknown;
-    "lr-mutation-observer": unknown;
-    "lr-native-time-input": unknown;
-    "lr-neighbor-list": unknown;
-    "lr-node-palette": unknown;
-    "lr-notebook-viewer": unknown;
-    "lr-number-input": unknown;
-    "lr-option": unknown;
-    "lr-otp-input": unknown;
-    "lr-page": unknown;
-    "lr-page-rail": unknown;
-    "lr-pagination": unknown;
-    "lr-pan-zoom": unknown;
-    "lr-path-strip": unknown;
-    "lr-pdf-viewer": unknown;
-    "lr-phone-input": unknown;
-    "lr-pie-chart": unknown;
-    "lr-polar-area-chart": unknown;
-    "lr-policy-summary": unknown;
-    "lr-poll-status": unknown;
-    "lr-popover": unknown;
-    "lr-popup": unknown;
-    "lr-pptx-viewer": unknown;
-    "lr-progress-bar": unknown;
-    "lr-progress-ring": unknown;
-    "lr-prompt-input": unknown;
-    "lr-prompt-queue": unknown;
-    "lr-prompt-studio": unknown;
-    "lr-provenance-panel": unknown;
-    "lr-push-to-talk": unknown;
-    "lr-qr-code": unknown;
-    "lr-radar-chart": unknown;
-    "lr-radio": unknown;
-    "lr-radio-button": unknown;
-    "lr-radio-group": unknown;
-    "lr-rag-answer": unknown;
-    "lr-rag-eval-dashboard": unknown;
-    "lr-random-content": unknown;
-    "lr-rating": unknown;
-    "lr-realtime-session": unknown;
-    "lr-relative-time": unknown;
-    "lr-reorder-item": unknown;
-    "lr-reorder-list": unknown;
-    "lr-resize-observer": unknown;
-    "lr-responsive-panel": unknown;
-    "lr-result-card": unknown;
-    "lr-result-field": unknown;
-    "lr-retrieval-compare": unknown;
-    "lr-retrieval-results": unknown;
-    "lr-retrieval-search": unknown;
-    "lr-retrieval-trace": unknown;
-    "lr-rubric-form": unknown;
-    "lr-scatter-chart": unknown;
-    "lr-schema-viewer": unknown;
-    "lr-scroller": unknown;
-    "lr-segmented": unknown;
-    "lr-select": unknown;
-    "lr-selection-toolbar": unknown;
-    "lr-sequence-playback": unknown;
-    "lr-sequence-strip": unknown;
-    "lr-skeleton": unknown;
-    "lr-slider": unknown;
-    "lr-source-card": unknown;
-    "lr-source-list": unknown;
-    "lr-source-picker": unknown;
-    "lr-span-waterfall": unknown;
-    "lr-sparkline": unknown;
-    "lr-spinner": unknown;
-    "lr-split-panel": unknown;
-    "lr-spreadsheet-viewer": unknown;
-    "lr-stack-trace": unknown;
-    "lr-stat": unknown;
-    "lr-stepper": unknown;
-    "lr-stream-status": unknown;
-    "lr-streaming-text": unknown;
-    "lr-subagent-panel": unknown;
-    "lr-suggestion-chips": unknown;
-    "lr-svg-viewer": unknown;
-    "lr-swatch-picker": unknown;
-    "lr-switch": unknown;
-    "lr-tab": unknown;
-    "lr-tab-group": unknown;
-    "lr-tab-panel": unknown;
-    "lr-table": unknown;
-    "lr-tag": unknown;
-    "lr-task-list": unknown;
-    "lr-terminal": unknown;
-    "lr-test-results": unknown;
-    "lr-textarea": unknown;
-    "lr-thinking-panel": unknown;
-    "lr-thread-list": unknown;
-    "lr-time-input": unknown;
-    "lr-time-range": unknown;
-    "lr-timeline": unknown;
-    "lr-timeline-item": unknown;
-    "lr-toast": unknown;
-    "lr-toast-item": unknown;
-    "lr-token-input": unknown;
-    "lr-tool-approval-dialog": unknown;
-    "lr-tool-call-chip": unknown;
-    "lr-tool-param-form": unknown;
-    "lr-tool-result-dialog": unknown;
-    "lr-tool-result-view": unknown;
-    "lr-tool-select-dialog": unknown;
-    "lr-tool-timeline": unknown;
-    "lr-tooltip": unknown;
-    "lr-tour": unknown;
-    "lr-trace-tree": unknown;
-    "lr-transcript-feed": unknown;
-    "lr-tree": unknown;
-    "lr-tree-item": unknown;
-    "lr-typing-indicator": unknown;
-    "lr-usage-badge": unknown;
-    "lr-video": unknown;
-    "lr-video-playlist": unknown;
-    "lr-virtual-list": unknown;
-    "lr-visually-hidden": unknown;
-    "lr-voice-picker": unknown;
-    "lr-widget": unknown;
-    "lr-widget-renderer": unknown;
-    "lr-word-cloud": unknown;
-    "lr-xml-viewer": unknown;
-    "lr-zoomable-frame": unknown;
-  }`
+  "lr-accordion": unknown;
+  "lr-accordion-item": unknown;
+  "lr-activity-feed": unknown;
+  "lr-agent-eval-dashboard": unknown;
+  "lr-agent-run": unknown;
+  "lr-agent-trace": unknown;
+  "lr-agent-workspace": unknown;
+  "lr-alert": unknown;
+  "lr-animated-image": unknown;
+  "lr-animation": unknown;
+  "lr-app-rail": unknown;
+  "lr-app-rail-item": unknown;
+  "lr-approval-queue": unknown;
+  "lr-archive-viewer": unknown;
+  "lr-artifact-panel": unknown;
+  "lr-attachment-chip": unknown;
+  "lr-attachment-trigger": unknown;
+  "lr-audio-visualizer": unknown;
+  "lr-av-player": unknown;
+  "lr-avatar": unknown;
+  "lr-avatar-group": unknown;
+  "lr-badge": unknown;
+  "lr-bar-chart": unknown;
+  "lr-box-plot": unknown;
+  "lr-branch-picker": unknown;
+  "lr-breadcrumb": unknown;
+  "lr-breadcrumb-item": unknown;
+  "lr-browser-frame": unknown;
+  "lr-bubble-chart": unknown;
+  "lr-button": unknown;
+  "lr-button-group": unknown;
+  "lr-calendar": unknown;
+  "lr-calendar-viewer": unknown;
+  "lr-callout": unknown;
+  "lr-card": unknown;
+  "lr-carousel": unknown;
+  "lr-carousel-item": unknown;
+  "lr-chart": unknown;
+  "lr-chat-composer": unknown;
+  "lr-chat-message": unknown;
+  "lr-chat-viewport": unknown;
+  "lr-checkbox": unknown;
+  "lr-checkbox-group": unknown;
+  "lr-checkpoint": unknown;
+  "lr-chip": unknown;
+  "lr-chip-group": unknown;
+  "lr-chunk-inspector": unknown;
+  "lr-citation-badge": unknown;
+  "lr-claim-evidence": unknown;
+  "lr-code-block": unknown;
+  "lr-code-block-core": unknown;
+  "lr-code-editor": unknown;
+  "lr-color-picker": unknown;
+  "lr-combobox": unknown;
+  "lr-command-palette": unknown;
+  "lr-commit-card": unknown;
+  "lr-community-card": unknown;
+  "lr-compare-panel": unknown;
+  "lr-condition-builder": unknown;
+  "lr-confirm-bar": unknown;
+  "lr-contact-viewer": unknown;
+  "lr-context-inspector": unknown;
+  "lr-context-meter": unknown;
+  "lr-control-group": unknown;
+  "lr-conversation-item": unknown;
+  "lr-copy-button": unknown;
+  "lr-csv-viewer": unknown;
+  "lr-dashboard-grid": unknown;
+  "lr-data-grid": unknown;
+  "lr-dataset-viewer": unknown;
+  "lr-date-input": unknown;
+  "lr-date-picker": unknown;
+  "lr-details": unknown;
+  "lr-dialog": unknown;
+  "lr-diff-view": unknown;
+  "lr-divider": unknown;
+  "lr-dock-panel": unknown;
+  "lr-document-compare": unknown;
+  "lr-document-library": unknown;
+  "lr-document-preview": unknown;
+  "lr-document-viewer": unknown;
+  "lr-docx-viewer": unknown;
+  "lr-doughnut-chart": unknown;
+  "lr-drawer": unknown;
+  "lr-drilldown-panel": unknown;
+  "lr-dropdown": unknown;
+  "lr-dropdown-item": unknown;
+  "lr-ebook-viewer": unknown;
+  "lr-email-viewer": unknown;
+  "lr-embedding-explorer": unknown;
+  "lr-emoji-picker": unknown;
+  "lr-empty": unknown;
+  "lr-entity-card": unknown;
+  "lr-entity-chip": unknown;
+  "lr-entity-dossier": unknown;
+  "lr-env-list": unknown;
+  "lr-eval-dataset": unknown;
+  "lr-eval-result": unknown;
+  "lr-evaluation-run": unknown;
+  "lr-export-button": unknown;
+  "lr-file-icon": unknown;
+  "lr-file-input": unknown;
+  "lr-file-tree": unknown;
+  "lr-filter-bar": unknown;
+  "lr-flag": unknown;
+  "lr-flow-canvas": unknown;
+  "lr-flow-controls": unknown;
+  "lr-flow-minimap": unknown;
+  "lr-flow-node": unknown;
+  "lr-flow-run-status": unknown;
+  "lr-format-bytes": unknown;
+  "lr-format-date": unknown;
+  "lr-format-number": unknown;
+  "lr-gauge": unknown;
+  "lr-generation-metrics": unknown;
+  "lr-geojson-view": unknown;
+  "lr-geojson-viewer": unknown;
+  "lr-graph": unknown;
+  "lr-graph-legend": unknown;
+  "lr-graph-query-builder": unknown;
+  "lr-grounding-summary": unknown;
+  "lr-handoff-divider": unknown;
+  "lr-heatmap": unknown;
+  "lr-highlight-layer": unknown;
+  "lr-histogram": unknown;
+  "lr-html-viewer": unknown;
+  "lr-icon": unknown;
+  "lr-icon-button": unknown;
+  "lr-image-comparer": unknown;
+  "lr-image-viewer": unknown;
+  "lr-include": unknown;
+  "lr-ingestion-queue": unknown;
+  "lr-input": unknown;
+  "lr-intersection-observer": unknown;
+  "lr-json-viewer": unknown;
+  "lr-kbd": unknown;
+  "lr-knowledge-base": unknown;
+  "lr-knowledge-base-admin": unknown;
+  "lr-knowledge-graph-explorer": unknown;
+  "lr-known-date": unknown;
+  "lr-lightbox": unknown;
+  "lr-line-chart": unknown;
+  "lr-lite-chart": unknown;
+  "lr-live-region": unknown;
+  "lr-locale-picker": unknown;
+  "lr-map": unknown;
+  "lr-markdown": unknown;
+  "lr-markdown-core": unknown;
+  "lr-mcp-app": unknown;
+  "lr-media-card": unknown;
+  "lr-memory-panel": unknown;
+  "lr-mention-popover": unknown;
+  "lr-menu": unknown;
+  "lr-menu-item": unknown;
+  "lr-menu-label": unknown;
+  "lr-message-actions": unknown;
+  "lr-message-feedback": unknown;
+  "lr-message-parts": unknown;
+  "lr-mind-map": unknown;
+  "lr-model-select": unknown;
+  "lr-model-settings-panel": unknown;
+  "lr-multi-split": unknown;
+  "lr-mutation-observer": unknown;
+  "lr-native-time-input": unknown;
+  "lr-neighbor-list": unknown;
+  "lr-node-palette": unknown;
+  "lr-notebook-viewer": unknown;
+  "lr-number-input": unknown;
+  "lr-option": unknown;
+  "lr-otp-input": unknown;
+  "lr-page": unknown;
+  "lr-page-rail": unknown;
+  "lr-pagination": unknown;
+  "lr-pan-zoom": unknown;
+  "lr-path-strip": unknown;
+  "lr-pdf-viewer": unknown;
+  "lr-phone-input": unknown;
+  "lr-pie-chart": unknown;
+  "lr-polar-area-chart": unknown;
+  "lr-policy-summary": unknown;
+  "lr-poll-status": unknown;
+  "lr-popover": unknown;
+  "lr-popup": unknown;
+  "lr-pptx-viewer": unknown;
+  "lr-progress-bar": unknown;
+  "lr-progress-ring": unknown;
+  "lr-prompt-input": unknown;
+  "lr-prompt-queue": unknown;
+  "lr-prompt-studio": unknown;
+  "lr-provenance-panel": unknown;
+  "lr-push-to-talk": unknown;
+  "lr-qr-code": unknown;
+  "lr-radar-chart": unknown;
+  "lr-radio": unknown;
+  "lr-radio-button": unknown;
+  "lr-radio-group": unknown;
+  "lr-rag-answer": unknown;
+  "lr-rag-eval-dashboard": unknown;
+  "lr-random-content": unknown;
+  "lr-rating": unknown;
+  "lr-realtime-session": unknown;
+  "lr-relative-time": unknown;
+  "lr-reorder-item": unknown;
+  "lr-reorder-list": unknown;
+  "lr-resize-observer": unknown;
+  "lr-responsive-panel": unknown;
+  "lr-result-card": unknown;
+  "lr-result-field": unknown;
+  "lr-retrieval-compare": unknown;
+  "lr-retrieval-results": unknown;
+  "lr-retrieval-search": unknown;
+  "lr-retrieval-trace": unknown;
+  "lr-rubric-form": unknown;
+  "lr-scatter-chart": unknown;
+  "lr-schema-viewer": unknown;
+  "lr-scroller": unknown;
+  "lr-segmented": unknown;
+  "lr-select": unknown;
+  "lr-selection-toolbar": unknown;
+  "lr-sequence-playback": unknown;
+  "lr-sequence-strip": unknown;
+  "lr-skeleton": unknown;
+  "lr-slider": unknown;
+  "lr-source-card": unknown;
+  "lr-source-list": unknown;
+  "lr-source-picker": unknown;
+  "lr-span-waterfall": unknown;
+  "lr-sparkline": unknown;
+  "lr-spinner": unknown;
+  "lr-split-panel": unknown;
+  "lr-spreadsheet-viewer": unknown;
+  "lr-stack-trace": unknown;
+  "lr-stat": unknown;
+  "lr-stepper": unknown;
+  "lr-stream-status": unknown;
+  "lr-streaming-text": unknown;
+  "lr-subagent-panel": unknown;
+  "lr-suggestion-chips": unknown;
+  "lr-svg-viewer": unknown;
+  "lr-swatch-picker": unknown;
+  "lr-switch": unknown;
+  "lr-tab": unknown;
+  "lr-tab-group": unknown;
+  "lr-tab-panel": unknown;
+  "lr-table": unknown;
+  "lr-tag": unknown;
+  "lr-task-list": unknown;
+  "lr-terminal": unknown;
+  "lr-test-results": unknown;
+  "lr-textarea": unknown;
+  "lr-thinking-panel": unknown;
+  "lr-thread-list": unknown;
+  "lr-time-input": unknown;
+  "lr-time-range": unknown;
+  "lr-timeline": unknown;
+  "lr-timeline-item": unknown;
+  "lr-toast": unknown;
+  "lr-toast-item": unknown;
+  "lr-token-input": unknown;
+  "lr-tool-approval-dialog": unknown;
+  "lr-tool-call-chip": unknown;
+  "lr-tool-param-form": unknown;
+  "lr-tool-result-dialog": unknown;
+  "lr-tool-result-view": unknown;
+  "lr-tool-select-dialog": unknown;
+  "lr-tool-timeline": unknown;
+  "lr-tooltip": unknown;
+  "lr-tour": unknown;
+  "lr-trace-tree": unknown;
+  "lr-transcript-feed": unknown;
+  "lr-tree": unknown;
+  "lr-tree-item": unknown;
+  "lr-typing-indicator": unknown;
+  "lr-usage-badge": unknown;
+  "lr-video": unknown;
+  "lr-video-playlist": unknown;
+  "lr-virtual-list": unknown;
+  "lr-visually-hidden": unknown;
+  "lr-voice-picker": unknown;
+  "lr-widget": unknown;
+  "lr-widget-renderer": unknown;
+  "lr-word-cloud": unknown;
+  "lr-xml-viewer": unknown;
+  "lr-zoomable-frame": unknown;
+}`

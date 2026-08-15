@@ -32,8 +32,9 @@ content attribute and IDL property both control the live score. `defaultValue` a
 `defaultValue: number = 0` (attribute `default-value`, the current reset target); `customError: string |
 null` (attribute `custom-error`); `max: number = 5`; `precision: number = 1`;
 `readonly: boolean = false` (reflected), `disabled`, `required`, `name`,
-`size: '2xs'|'xs'|'s'|'m'|'l'|'xl'|'small'|'medium'|'large' = 'm'` (reflected — rewrites `--lr-rating-size` from a type ramp
-rather than the shared control ladder, since a rating has no control frame to size; the `m` default
+`size: '2xs'|'xs'|'s'|'m'|'l'|'xl'|'small'|'medium'|'large' = 'm'` (reflected — changes the private
+fallback behind `--lr-rating-size` from a type ramp rather than the shared control ladder, since a
+rating has no control frame to size; an inherited or direct public size wins; the `m` default
 reproduces the treatment this component had before `size` existed; valid long-form spellings
 round-trip unchanged), plus two separate naming knobs:
 `accessibleLabel: string = ''` (property) and `label: string = ''` (attribute
@@ -50,9 +51,9 @@ Each access returns a fresh `LyraFormValidator<LyraRating>[]`; its entry observe
 current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
 
 ```ts
-import { LyraRating } from '@aceshooting/lyra-ui/components/overlays/rating/rating.js';
+import { LyraRating } from "@aceshooting/lyra-ui/components/overlays/rating/rating.js";
 
-const rating = document.querySelector('lr-rating')!;
+const rating = document.querySelector("lr-rating")!;
 const result = LyraRating.validators[0].checkValidity(rating);
 ```
 
@@ -66,7 +67,7 @@ clears to the canonical `''` read value rather than creating a nullable state.
 
 `getSymbol?: (value: number, selected: boolean) => unknown` (property only, no attribute) — **new in
 8.0.0.** Renders a consumer-supplied symbol per position instead of the built-in star. It is called
-*twice per position*: once for the empty backdrop (`selected` false) and once for the overlay
+_twice per position_: once for the empty backdrop (`selected` false) and once for the overlay
 clipped to that position's filled fraction (`selected` true), which is what keeps a fractional
 `precision` rendering a partial fill. Return any Lit-renderable value; a plain string renders as
 text, never as markup. Renderer output is decorative, inert, and pointer-transparent, so it cannot
@@ -74,6 +75,7 @@ become a second focus or action target; pointer and keyboard selection stay on t
 Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
+
 - `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted
   when a user commits a genuinely new value. It fires immediately before `lr-change`; read the
   numeric score from `event.target.value`. Programmatic `value`/`defaultValue` writes, reset/state
@@ -82,7 +84,7 @@ Left unset, the built-in star outline/solid pair is unchanged.
   clamped value is unchanged, nor on a programmatic `value` write. It fires immediately after the
   native `change` event for the same user commit.
 - `lr-hover` — **new in 8.0.0.** `detail: { phase: 'start' | 'move' | 'end', value }`, where `value`
-  is the rating that committing the current pointer position *would* produce — enough to render a
+  is the rating that committing the current pointer position _would_ produce — enough to render a
   live description of what is being hovered without waiting for a click. Fires only while the rating
   is settable (neither `disabled`, fieldset-disabled, nor `readonly`). `start` also covers a pointer
   that reaches the symbols without a `pointerenter` the component saw; `end` fires on
@@ -107,7 +109,7 @@ rejection no client-side constraint can express ("you have already rated this it
 message raises `customError` and becomes `validationMessage`, so the control fails
 `checkValidity()`, blocks submission and matches `:state(invalid)`. It is caller-supplied content,
 so it is used verbatim and never localized. `setCustomValidity('')` clears it and restores the
-control's *computed* validity rather than forcing it valid — a `required` control that is still
+control's _computed_ validity rather than forcing it valid — a `required` control that is still
 unrated stays `valueMissing`. Like a native control, the custom error survives every intrinsic
 recomputation in between (each `value`/`max`/`required` change re-runs validation) and a
 `form.reset()`; `setCustomValidity('')` or `resetValidity()` clears it.
@@ -133,7 +135,8 @@ percentage under a fractional `precision`, or 100%).
 color), `--lr-rating-empty-color` (default `--lr-color-border` — unfilled-symbol color, also
 retained during hover preview), `--lr-rating-active-color` (default: the existing active mix of the
 empty-symbol color — pressed-symbol color only), `--lr-rating-size` (default `--lr-font-size-xl` —
-symbol size; each `size` step rewrites it), and `--lr-rating-gap` (default
+symbol size; its private default follows each `size` step while a public value wins), and
+`--lr-rating-gap` (default
 `--symbol-spacing`, then `--lr-space-xs` — gap between symbols). The mapped compatibility hooks
 are `--symbol-color` (inactive symbols), `--symbol-color-active` (filled symbols), `--symbol-size`
 (symbol size), and `--symbol-spacing` (the gap around symbols). The Lyra-prefixed color, size, and
@@ -160,16 +163,20 @@ host beyond its container.
 ></lr-rating>
 <p id="preview"></p>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/overlays/rating/rating.js';
+  import "@aceshooting/lyra-ui/components/overlays/rating/rating.js";
 
-  const rating = document.querySelector('lr-rating');
-  const preview = document.getElementById('preview');
-  rating.getSymbol = (value, selected) => (selected ? '♥' : '♡');
-  rating.addEventListener('lr-hover', (event) => {
+  const rating = document.querySelector("lr-rating");
+  const preview = document.getElementById("preview");
+  rating.getSymbol = (value, selected) => (selected ? "♥" : "♡");
+  rating.addEventListener("lr-hover", (event) => {
     const { phase, value } = event.detail;
-    preview.textContent = phase === 'end' ? '' : `Rate ${value}`;
+    preview.textContent = phase === "end" ? "" : `Rate ${value}`;
   });
-  rating.addEventListener('change', (event) => console.log('native commit', event.target.value));
-  rating.addEventListener('lr-change', (event) => console.log('committed', event.detail.value));
+  rating.addEventListener("change", (event) =>
+    console.log("native commit", event.target.value)
+  );
+  rating.addEventListener("lr-change", (event) =>
+    console.log("committed", event.detail.value)
+  );
 </script>
 ```

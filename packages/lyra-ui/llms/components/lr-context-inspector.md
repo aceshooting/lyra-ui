@@ -20,9 +20,9 @@ markers, and copy/export controls.
 
 **Properties:**
 
-- `segments: ContextInspectorSegment[] = []` (attribute: false) — `ContextInspectorSegment { id:
+- `segments: readonly ContextInspectorSegment[] = []` (attribute: false) — `ContextInspectorSegment { id:
 string; label: string; text: string; tokens: number; tone?: ContextMeterTone; citation?: Citation;
-truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedaction[] }` (exported
+truncated?: boolean; omittedTokens?: number; redactions?: readonly ContextInspectorRedaction[] }` (exported
   here). One entry per piece of the assembled final prompt (system prompt, retrieved chunk, one
   history turn, …). `text` is the segment's **final** text, exactly as sent to the model
   (post-redaction/post-truncation). `tokens` is the estimated count, fed straight to
@@ -32,13 +32,13 @@ truncated?: boolean; omittedTokens?: number; redactions?: ContextInspectorRedact
   truncation-boundary marker when `truncated` is set. `ContextInspectorRedaction { start: number;
 end: number; reason?: string }` marks character ranges within `text` that are redaction
   placeholders; `reason` becomes the marker's `title`/accessible reason, falling back to a localized
-  "Redacted". Segment `id` is the stable public identity; later duplicates are omitted before
+  "Redacted". Segment `id` is the stable public identity; empty/blank ids and later duplicates are omitted before
   meter values, rendering, copy/export serialization, and citation events are derived.
 - `total: number = 0` — the full token budget `segments` are measured against; passed straight to
   `lr-context-meter.total`
 - `label: string = ''` — accessible group name, and the embedded meter's visible caption (e.g.
   "128K context window")
-- `exportFormats: LyraExportFormatOption[] = ['json']` (attribute: false) — forwarded to the embedded
+- `exportFormats: readonly LyraExportFormatOption[] = ['json']` (attribute: false) — forwarded to the embedded
   `lr-export-button`; one id renders a plain button, more than one a format-choice menu
 - `exportFilename: string = 'context'` (attribute `export-filename`) — download filename (no
   extension) passed to `lr-export-button`

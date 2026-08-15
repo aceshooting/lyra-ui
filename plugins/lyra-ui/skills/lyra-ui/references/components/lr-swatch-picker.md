@@ -66,10 +66,11 @@ changes via click or keyboard (re-selecting the current swatch is a no-op).
 **Slots:** none.
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `swatch` (a single `role="radio"` color
-swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — defaults to
-`--lr-size-2-5rem`, swapped per `size` tier and floored at 24px; the selected one is
+swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — its private default
+follows `size` and is floored at 24px; the selected one is
 `[part='swatch'][aria-checked='true']`), `swatch-fill` (the filled circle inside it, sized via
-`--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, also swapped per `size` tier —
+`--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, with a private default that also
+follows `size` —
 rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
 place when it has one, with its inherited `font-size` set to the same fill-size token so a `1em`
 glyph fills the wrapper; the wrapper is inert and aria-hidden across the flattened subtree).
@@ -85,9 +86,10 @@ for a looping brighten-and-settle pulse on the selected swatch. It drives a sepa
 `filter: brightness()` keyframe rather than `box-shadow`, so it composes with the blur token and
 works identically for a fill and an icon; disabled outright under `prefers-reduced-motion: reduce`,
 which also drops the hover/selection scale transition), `--lr-swatch-picker-hit-size` (hit-area
-size, swapped per `size` tier), `--lr-swatch-picker-fill-size` (visible fill/icon diameter, swapped
-per `size` tier; set `--lr-theme-swatch-picker-fill-size` on an ancestor for a shared default
-across every tier), `--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
+size; its private default follows `size`), `--lr-swatch-picker-fill-size` (visible fill/icon
+diameter; its private default follows `size`; set this hook on an ancestor/direct host to override
+every tier, or `--lr-theme-swatch-picker-fill-size` on an ancestor for a shared default),
+`--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
 gemstone mode), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in gemstone mode);
 plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
 `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,

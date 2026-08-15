@@ -61,7 +61,9 @@ arrowing across tabs does not request expensive categories until Enter/Space com
   `lr-drilldown-document-download`, `lr-drilldown-document-render-error`,
   `lr-drilldown-document-highlight-activate`, and `lr-drilldown-entity-activate` — correlated
   wrapper events carrying the current `nodeId` and the relevant `evidenceId`, `documentId`, or
-  `entityId`. Raw events from owned source cards, previews, entity cards, and tabs are contained;
+  `entityId`. The document-highlight wrapper carries `{ nodeId, documentId, highlightId }`,
+  preserving the preview event's domain-specific highlight identity. Raw events from owned source
+  cards, previews, entity cards, and tabs are contained;
   events from consumer-owned `runs` slot content continue bubbling normally.
 
 **Slots:** `runs`. **CSS parts:** `base`, `breadcrumb`, `breadcrumb-item`, `breadcrumb-button`,

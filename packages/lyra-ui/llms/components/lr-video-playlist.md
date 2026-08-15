@@ -87,7 +87,7 @@ refuses focus, which would leave `focus()` a silent no-op and kill the next arro
 has no `disabled`
 property; use the platform `inert` state exclusively. Only the child's **own** `inert` counts: a
 playlist inerted wholesale by an open modal keeps playing. The attribute is watched live, so
-marking the *current* video inert moves the selection to the nearest enabled child (emitting
+marking the _current_ video inert moves the selection to the nearest enabled child (emitting
 `lr-video-change`) and hands optional-arrow focus to the row that replaced it, instead of leaving a
 stale arrow-navigation cursor on a row that can no longer take focus.
 
@@ -97,11 +97,17 @@ records the stopped state but never changes selection; recovery and retry remain
 ```html
 <lr-video-playlist controls="full" repeat="all">
   <lr-video title="Introduction" poster="/posters/introduction.jpg">
-    <source src="/video/introduction.mp4" type="video/mp4">
+    <source src="/video/introduction.mp4" type="video/mp4" />
   </lr-video>
   <lr-video title="Advanced workflow" poster="/posters/advanced.jpg">
-    <source src="/video/advanced.mp4" type="video/mp4">
-    <track src="/captions/advanced-en.vtt" kind="captions" srclang="en" label="English" default>
+    <source src="/video/advanced.mp4" type="video/mp4" />
+    <track
+      src="/captions/advanced-en.vtt"
+      kind="captions"
+      srclang="en"
+      label="English"
+      default
+    />
   </lr-video>
 </lr-video-playlist>
 ```

@@ -40,7 +40,8 @@ attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are 
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
-`clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
+`clearSearch()`), accepting at most 4,096 query code units and scanning at most 4,000,000 code
+units while retaining 10,000 matches; `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
 `clearSearch()` clears the query and matches. All three resolve only after the newly active match's
 row has been scrolled into view (`block: 'center'`, `behavior: 'auto'` under
 `prefers-reduced-motion`) — before 9.0.0 they moved `data-active-match` without ever scrolling, so
@@ -56,6 +57,8 @@ is the entry's own `label` when supplied, otherwise a localized "Highlight n of 
 adds `data-active-highlight` to the matching row. Entries are deduplicated by `id`; an entry whose
 anchor kind or path this document cannot resolve is dropped whole rather than painted at some
 coarser granularity, and an entry inside a collapsed subtree paints once that subtree is expanded.
+Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
+anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
 **Events:** `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
 `detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
@@ -65,7 +68,7 @@ show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-
 `lr-render-error` — `detail: { error }`, fetching or parsing failed, including a
 parse error or exceeding the node cap. `lr-anchor-result` — non-cancelable; `detail: { found:
 boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is applied.
-`lr-highlight-activate` — non-cancelable; `detail: { id }`, fired when a highlight's
+`lr-highlight-activate` — non-cancelable; `detail: { highlightId }`, fired when a highlight's
 `[part='highlight-action']` button is activated by click or Enter/Space. `lr-text-select` is not
 part of this structural tree viewer's event contract because it installs no selection binding.
 

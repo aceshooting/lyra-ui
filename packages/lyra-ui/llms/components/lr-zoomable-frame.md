@@ -20,6 +20,7 @@ Sandboxed iframe preview that mirrors Web Awesome's zoomable-frame contract. It 
 allocated inline size with a 16:9 aspect ratio by default (override `aspect-ratio` on the host).
 
 **Properties:**
+
 - `src: string = ''` — iframe URL. Relative, `http:`, `https:`, `blob:`, and exact `about:blank`
   values are accepted; active `data:`/`javascript:` and non-embeddable schemes are omitted.
 - `srcdoc: string = ''` — inline iframe document. A present `srcdoc` wins over `src`, including an
@@ -100,7 +101,7 @@ attributes, and inline properties Lyra changed, preserving any later iframe-owne
 a watched host-page theme attribute syncs again.
 
 ```js
-import '@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js';
+import "@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js";
 ```
 
 ```html

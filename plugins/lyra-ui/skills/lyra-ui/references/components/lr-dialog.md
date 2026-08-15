@@ -27,6 +27,7 @@ Shoelace's name and `without-header` is Web Awesome's. Both are current upstream
 read, and neither is deprecated.
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — **changed in 8.0.0:** `lr-dialog` now also has a
   `show()`/`hide()` pair, and assigning `open` runs exactly the same lifecycle as calling them, so
   the property, the reflected attribute and the two methods can never disagree. `el.open = false`
@@ -53,7 +54,7 @@ read, and neither is deprecated.
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click closing
   the dialog; Escape and explicit `close()`/`hide()` calls remain available. **Changed in 8.0.0:**
-  this was previously spelled `no-light-dismiss`, an opt-*out* whose default left backdrop dismissal
+  this was previously spelled `no-light-dismiss`, an opt-_out_ whose default left backdrop dismissal
   on. The polarity now matches `wa-dialog` exactly, so a mechanical rename no longer flips what the
   markup does.
 - `modal: LyraDialogModalController` (writable, property only) — `activateExternal()` temporarily
@@ -64,6 +65,7 @@ A plain host `aria-label` is the strongest naming override. It changes naming on
 chrome remains visible. The fallback order appears below.
 
 **Methods:**
+
 - `show(): Promise<void>` — opens the dialog and resolves after `lr-after-show`; no-op/veto returns
   an already-resolved promise
 - `hide(): Promise<void>` — identical to `close('api')`, resolving after `lr-after-hide`
@@ -97,8 +99,8 @@ The two `lr-after-*` events are never cancelable.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
 direct close sequence is `lr-hide` → `lr-dialog-close` → `lr-after-hide`. A built-in dismissal
-prepends `lr-request-close`. **Both state pre-events fire *before* the state changes**, so reading
-`el.open` inside an `lr-show`/`lr-hide` handler returns the *old* value — this is the polarity
+prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
+`el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value — this is the polarity
 `wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
 `lr-popover`/`lr-dropdown`. The `wa-*` → `lr-*` migration table treats the rename as mechanical, and
 as of 8.0.0 that is finally true for these four names: `wa-show`/`wa-after-show`/`wa-hide`/
@@ -133,7 +135,7 @@ the top one closes.
 **Slots:** default (the dialog body), `label` (rich header content — an element, markup, anything;
 rendered inside `[part="heading"]` and used as the panel's accessible name, winning over the
 plain-string `label` and legacy `heading` properties), `header-actions` (extra header controls,
-rendered in the header row *before*
+rendered in the header row _before_
 the built-in close button), `footer` (action buttons, rendered in a bottom row, hidden entirely when
 empty). The `label` and `header-actions` slots are new in 8.0.0.
 
@@ -154,7 +156,7 @@ with the panel edges, where an outset ring would be clipped or would collide wit
 Restyle it through `::part(body)` as usual; do not remove the outline without replacing it.
 
 It never steals initial focus from real content: an `[autofocus]` element wins, then the first
-focusable control *inside* the body, and the body itself is used only when there is nothing else to
+focusable control _inside_ the body, and the body itself is used only when there is nothing else to
 focus. So a dialog full of form controls behaves exactly as before, and a dialog full of text is now
 scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
 
@@ -172,8 +174,8 @@ the panel's max-inline-size cap, applied as
 `--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls back to
 the requested width itself — not the 32rem default — so an assertive width isn't silently clipped;
 the viewport is still a hard limit either way), `--lr-dialog-spacing` (default `var(--lr-space-l)` —
-the padding inside `[part="body"]` and the *inline* padding of the header and footer rows),
-`--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the *block* padding of the header and
+the padding inside `[part="body"]` and the _inline_ padding of the header and footer rows),
+`--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the _block_ padding of the header and
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default
 `var(--lr-duration-base)` — the panel's enter/exit animation duration) and
 `--lr-dialog-backdrop-duration` (default `var(--lr-duration-fast)` — the backdrop's fade duration).
@@ -193,15 +195,25 @@ Otherwise shared tokens include `--lr-space-l/-m/-s`, `--lr-color-surface/-borde
   </div>
 </lr-dialog>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/overlays/dialog/dialog.js';
+  import "@aceshooting/lyra-ui/components/overlays/dialog/dialog.js";
 
-  const dlg = document.getElementById('dlg');
+  const dlg = document.getElementById("dlg");
   // Listeners first: `lr-show` is emitted synchronously inside show().
-  dlg.addEventListener('lr-show', () => console.log('opening; el.open is still', dlg.open));
-  dlg.addEventListener('lr-after-show', () => console.log('enter animation done'));
-  dlg.addEventListener('lr-dialog-close', (e) => console.log('closed:', e.detail));
-  dlg.addEventListener('lr-after-hide', () => console.log('exit animation done'));
-  document.getElementById('cancel').addEventListener('click', () => dlg.close('cancel'));
+  dlg.addEventListener("lr-show", () =>
+    console.log("opening; el.open is still", dlg.open)
+  );
+  dlg.addEventListener("lr-after-show", () =>
+    console.log("enter animation done")
+  );
+  dlg.addEventListener("lr-dialog-close", (e) =>
+    console.log("closed:", e.detail)
+  );
+  dlg.addEventListener("lr-after-hide", () =>
+    console.log("exit animation done")
+  );
+  document
+    .getElementById("cancel")
+    .addEventListener("click", () => dlg.close("cancel"));
   await dlg.show(); // identical state change to dlg.open = true; settles after lr-after-show
 </script>
 ```
@@ -230,6 +242,7 @@ the same shadow root. `no-header`/`without-header` removes the mapped title, so 
 should provide a direct heading, `accessible-label`, or host `aria-label`.
 
 **Known gotchas:**
+
 - `role="dialog"`/`aria-modal="true"` are only present on `[part="panel"]` while `open` is `true` —
   inspecting closed markup won't show them.
 - An `[autofocus]` element anywhere in the slotted content takes initial focus instead of the first
@@ -246,7 +259,7 @@ should provide a direct heading, `accessible-label`, or host `aria-label`.
   component-owned bookkeeping — don't set or remove them.
 - Heading detection observes child, subtree, and character-data changes, so mutating an
   already-slotted direct heading's text updates the copied panel `aria-label` live.
-- Only *unslotted direct* children are scanned for a heading — one nested several layers deep,
+- Only _unslotted direct_ children are scanned for a heading — one nested several layers deep,
   inside a slotted custom element's own shadow root, or carrying a `slot` attribute, is left to the
   consumer to label explicitly via `label` or the `label` slot.
 - A reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
@@ -263,13 +276,13 @@ should provide a direct heading, `accessible-label`, or host `aria-label`.
 A drop-in async replacement for `window.confirm()`, built on `<lr-dialog>`.
 
 ```ts
-import { confirm } from '@aceshooting/lyra-ui/components/overlays/dialog/confirm.js';
+import { confirm } from "@aceshooting/lyra-ui/components/overlays/dialog/confirm.js";
 
 const ok = await confirm({
-  title: 'Delete conversation?',
-  description: 'This cannot be undone.',
-  confirmLabel: 'Delete',
-  tone: 'danger',
+  title: "Delete conversation?",
+  description: "This cannot be undone.",
+  confirmLabel: "Delete",
+  tone: "danger",
 });
 if (ok) deleteConversation();
 ```
@@ -297,6 +310,7 @@ element mounted inside the transient dialog (and removed with it), targeting the
 their `data-lr-confirm-action` attribute.
 
 **Known gotchas:**
+
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through
   `<lr-dialog>`'s own `close()`/`lr-dialog-close` event, so there is exactly one place that
   resolves the promise and tears the dialog down — a consumer never needs to (and shouldn't) call

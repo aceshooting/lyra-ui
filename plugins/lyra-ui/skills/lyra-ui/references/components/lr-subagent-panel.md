@@ -24,6 +24,8 @@ parents remain renderable instead of recursing forever.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
 string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
 Record<string, unknown> }`.
+Empty/blank run ids are omitted and later duplicate ids are ignored before hierarchy, focus,
+counts, selection, and events.
 
 **Events:** `lr-run-activate` (`{ runId, run }`), `lr-cancel` (`{ runId }`), and
 `lr-run-retry` (`{ runId }`).

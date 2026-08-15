@@ -21,8 +21,10 @@ Provider-neutral realtime voice shell composing connection state, `lr-audio-visu
 **Properties:** `state: RealtimeConnectionState = 'disconnected'` (reflected), where the closed set
 is `'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error'`; `voiceState:
 AudioVisualizerState = 'idle'` (attribute `voice-state`); `level: number | null = null` (finite,
-clamped by the composed visualizer); `stream: MediaStream | null = null` and `entries:
-LyraTranscriptEntry[] = []` (attribute: false); `muted: boolean = false` (reflected);
+clamped by the composed visualizer); `stream: MediaStream | null = null`; `sessionId: string = ''`
+(attribute `session-id`) — forwarded to the transcript feed so changing sessions resets finalized
+entry announcement identity; `entries: LyraTranscriptEntry[] = []` (attribute: false);
+`muted: boolean = false` (reflected);
 `showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
 converter); `label: string = ''`. Invalid attribute or direct-property values for `state` and
 `voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same

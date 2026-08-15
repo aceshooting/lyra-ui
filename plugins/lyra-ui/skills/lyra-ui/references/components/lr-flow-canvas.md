@@ -33,7 +33,7 @@ import type {
   FlowRunDecoration,
   FlowRunDecorations,
   FlowStructureSnapshot,
-} from '@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js';
+} from "@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js";
 ```
 
 **Properties:**
@@ -41,12 +41,19 @@ import type {
 - `nodes: readonly FlowNode[] = []` (attribute: false) — each record has readonly `id`, optional
   `type`, `position`, `data`, `accessibleLabel`, `inputs`, and `outputs`. A missing `position` opts
   into layered layout. String `data.label` and `data.description` feed the declarative fallback
-  card. Assignment takes a detached, deeply frozen snapshot of plain arrays/records. Replacing the
-  model cancels node-drag and connect gestures whose ids belonged to the old model and silently
-  prunes selected ids that no longer exist.
+  card. Assignment takes a detached, deeply frozen snapshot of plain arrays/records, omitting blank
+  ids and later duplicates first-wins before layout, focus, selection, gestures, companion
+  snapshots, and events. At most the first 10,000 source nodes are retained, with finite nested
+  depth/entry budgets; reassign `nodes` after changes. Replacing the model cancels node-drag and
+  connect gestures whose ids belonged to the old model and silently prunes selected ids that no
+  longer exist.
 - `edges: readonly FlowEdge[] = []` (attribute: false) — readonly `id`, `source`, `target`, optional
   handle ids, optional drawn `label`, and optional `tone: LyraVariant`. The canonical brand value is
-  `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract.
+  `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract. Blank
+  ids and later duplicates are omitted first-wins before render, focus, selection, gestures,
+  companion snapshots, and events. At most the first 10,000 source edges are retained, with finite
+  nested depth/entry budgets; reassign `edges` after changes. Dangling endpoint references remain
+  visible through the component's documented fail-closed edge-list/stub paths.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — downstream layout/handle axis
 - `nodesDraggable: boolean = false` (attribute `nodes-draggable`)
 - `connectable: boolean = false`
@@ -58,9 +65,11 @@ import type {
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
   window pointer listeners so a later release cannot commit.
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
-  false) — seed or replace selection. Activation and clear-selection gestures update frozen arrays
-  before emitting `lr-selection-change`; model shrinkage prunes stale ids without claiming a user
-  selection gesture occurred.
+  false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
+  omits blank/later duplicates first-wins, and prunes identities absent from the current canonical
+  node/edge model. Reassign after changes. Activation and clear-selection gestures update frozen
+  arrays before emitting `lr-selection-change`; model shrinkage prunes stale ids without claiming
+  a user selection gesture occurred.
 - `minZoom: number = 0.25` (attribute `min-zoom`), `maxZoom: number = 2` (attribute `max-zoom`)
 - `grid: number = 8` — snap step in content px for drags/nudges/drop positions (`0` disables
   snapping); also the dotted background's base spacing
@@ -69,8 +78,9 @@ import type {
   first pass; live changes to orientation, gaps, or card size trigger a new pass.
 - `decorations: FlowRunDecorations | null = null` (attribute: false) —
   `Record<nodeOrEdgeId, FlowRunDecoration>`, where `FlowRunDecoration` has `status` plus optional
-  `progress`, `durationMs`, and `detail`; assignment is detached and deeply frozen,
-  and invalid status entries are omitted. Usually supplied by `lr-flow-run-status`.
+  `progress`, `durationMs`, and `detail`; assignment is detached, deeply frozen, bounded to 10,000
+  keys plus finite nested depth/entry budgets, and invalid status entries are omitted. Reassign the
+  record after changes. Usually supplied by `lr-flow-run-status`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `viewport` (readonly getter) — a frozen `{ x, y, zoom }` snapshot
 
@@ -87,8 +97,8 @@ edge geometry/status arrays, viewport `{ x, y, zoom, width, height, minZoom, max
 effective `locked`, `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
 sorted even when public inputs are invalid or reversed.
 
-**Events:** `lr-node-activate` (`detail: { id }`), `lr-edge-activate` (`detail: { id, source, target
-}`), `lr-selection-change` (`detail: { nodeIds, edgeIds }`), `lr-node-move` (`detail: { id,
+**Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId, source, target
+}`), `lr-selection-change` (`detail: { nodeIds, edgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
 (`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),
@@ -164,7 +174,7 @@ four above. Set it to `transparent` to opt out of the hover treatment.
   canvas.edges = [{ id: "a-b", source: "a", target: "b" }];
   canvas.addEventListener("lr-node-move", (e) => {
     canvas.nodes = canvas.nodes.map((n) =>
-      n.id === e.detail.id ? { ...n, position: e.detail.position } : n
+      n.id === e.detail.nodeId ? { ...n, position: e.detail.position } : n
     );
   });
 </script>

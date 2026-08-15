@@ -18,13 +18,14 @@
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — assigning it runs the same `lr-show`/`lr-hide` lifecycle as
   `show()`/`hide()`, so the property, the reflected attribute and the two methods can never disagree
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored
   under RTL
 - `distance: number = 8` — anchor-offset distance in px (Floating UI's main-axis `offset()`). May
   legitimately be negative to overlap the trigger; a non-finite value falls back to the default.
-- `skidding: number = 0` — offset *along* the anchor's edge, in px (Floating UI's cross-axis
+- `skidding: number = 0` — offset _along_ the anchor's edge, in px (Floating UI's cross-axis
   offset). New in 8.0.0.
 - `for: string = ''` (reflected) — id of an element resolved in this element's own root. It is the
   positioning source behind a direct `.anchor`; when it resolves to a live HTML element and no
@@ -103,14 +104,14 @@ event. `lr-dropdown`, `showAt()` virtual surfaces, and popovers in separate docu
 remain independent. Re-entering the same `show()` or `hide()` request from its own before-event
 coalesces onto one transition promise and emits the lifecycle once.
 
-**Breaking in 8.0.0:** `lr-show`/`lr-hide` now fire *before* the state changes and are cancelable —
+**Breaking in 8.0.0:** `lr-show`/`lr-hide` now fire _before_ the state changes and are cancelable —
 `preventDefault()` on `lr-show` leaves the popover closed for the trigger click, `show()` and
 `open = true` alike, and on `lr-hide` keeps it open for every dismissal path (Escape, light dismiss,
-`hide()`, `open = false`). Reading `el.open` inside such a handler therefore returns the *old*
+`hide()`, `open = false`). Reading `el.open` inside such a handler therefore returns the _old_
 value; in 7.x these events fired after the fact and were purely informational. That is exactly the
 timing `wa-show`/`wa-hide` always had, so the `wa-*` → `lr-*` migration table's "mechanical rename"
 promise now holds for these names too — which also means 7.x Lyra code that read `el.open` in the
-handler was relying on the *opposite* polarity and must be re-read. `lr-after-show`/`lr-after-hide`
+handler was relying on the _opposite_ polarity and must be re-read. `lr-after-show`/`lr-after-hide`
 are new in 8.0.0 and settle after the public `popover.show` / `popover.hide` registry animation.
 Per-element overrides win over page defaults; keyframes-only overrides retain the popup's
 `--show-duration` / `--hide-duration` and shared easing. Reduced motion flattens timing to zero, and
@@ -132,19 +133,25 @@ fallbacks. Arrow size is half the square's width. Rendering the arrow switches `
 `overflow: visible` so it is not clipped, moving the scroll container onto `[part~="content"]`.
 
 ```html
-<lr-popover arrow arrow-placement="center" placement="bottom" distance="8" skidding="12">
+<lr-popover
+  arrow
+  arrow-placement="center"
+  placement="bottom"
+  distance="8"
+  skidding="12"
+>
   <button slot="trigger" type="button">Details</button>
   <p>Anchored content.</p>
 </lr-popover>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/overlays/overlay/popover.js';
+  import "@aceshooting/lyra-ui/components/overlays/overlay/popover.js";
 
-  const popover = document.querySelector('lr-popover');
+  const popover = document.querySelector("lr-popover");
   let ready = false;
-  popover.addEventListener('lr-show', (event) => {
+  popover.addEventListener("lr-show", (event) => {
     // vetoes the open; popover.open is still false inside this handler
     if (!ready) event.preventDefault();
   });
-  popover.addEventListener('lr-after-show', () => console.log('fully open'));
+  popover.addEventListener("lr-after-show", () => console.log("fully open"));
 </script>
 ```

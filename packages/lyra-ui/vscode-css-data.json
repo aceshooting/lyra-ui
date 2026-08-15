@@ -1468,7 +1468,7 @@
       "name": "--lr-badge-edge",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-border)`) — Palette slot: the variant's border color. Each non-neutral `variant` sets it to that variant's loud fill."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-border)`) — Palette slot: the variant's border color. Its private default follows each non-neutral `variant`'s loud fill; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -1496,7 +1496,7 @@
       "name": "--lr-badge-ink",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-text)`) — Palette slot: the variant's text color. Each non-neutral `variant` sets it to that variant's loud fill."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-text)`) — Palette slot: the variant's text color. Its private default follows each non-neutral `variant`'s loud fill; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -1566,7 +1566,7 @@
       "name": "--lr-badge-tint",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-surface)`) — Palette slot: the variant's quiet fill. Each non-neutral `variant` sets it to that variant's quiet fill from the shared semantic grid."
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-color-surface)`) — Palette slot: the variant's quiet fill. Its private default follows each non-neutral `variant`'s quiet fill from the shared semantic grid; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -1958,7 +1958,7 @@
       "name": "--lr-callout-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-font-size,var(--lr-font-size-m))`) — The callout's text size. Each `size` tier sets it from the library's shared size ladder."
+        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-font-size,var(--lr-font-size-m))`) — The callout's text size. Its private default follows the library's shared size ladder; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -1972,7 +1972,7 @@
       "name": "--lr-callout-padding",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-padding-inline,var(--lr-space-m))`) — Padding of the panel, on both axes. Each `size` tier sets it from the shared ladder's inline-padding knob: a panel's block rhythm is generous like a control's inline padding, not tight like its block padding (which exists to fit text inside a fixed control height). `inline` removes it entirely."
+        "value": "**`<lr-callout>`** (default: `var(--lr-form-control-padding-inline,var(--lr-space-m))`) — Padding of the panel, on both axes. Its private default follows the shared ladder's inline-padding knob: a panel's block rhythm is generous like a control's inline padding, not tight like its block padding (which exists to fit text inside a fixed control height). `inline` removes that private default entirely; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -2539,7 +2539,7 @@
       "name": "--lr-chip-icon-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-font-size-sm)`) — Font size of the `start` slot wrapper. Each `size` sets it to that step's icon size."
+        "value": "**`<lr-chip>`** (default: `var(--lr-font-size-sm)`) — Font size of the `start` slot wrapper. Its private default follows each `size` step's icon size; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -2553,14 +2553,14 @@
       "name": "--lr-chip-padding-block",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-size-0-25rem)`) — Block padding of the pill. Each `size` sets it to that step's block padding."
+        "value": "**`<lr-chip>`** (default: `var(--lr-size-0-25rem)`) — Block padding of the pill. Each `size` changes its private default to that step's block padding; an inherited or direct public value remains authoritative."
       }
     },
     {
       "name": "--lr-chip-padding-inline",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-space-s)`) — Inline padding of the pill. Each `size` sets it to that step's inline padding."
+        "value": "**`<lr-chip>`** (default: `var(--lr-space-s)`) — Inline padding of the pill. Each `size` changes its private default to that step's inline padding; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -3722,7 +3722,7 @@
       "name": "--lr-csv-viewer-highlight-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-csv-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`."
+        "value": "**`<lr-csv-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight changes a private warning-color default; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -3778,7 +3778,7 @@
       "name": "--lr-dataset-viewer-highlight-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-dataset-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`."
+        "value": "**`<lr-dataset-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight changes a private warning-color default; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -4107,7 +4107,7 @@
       "name": "--lr-details-font-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Each `size` tier sets it from the library's shared size ladder."
+        "value": "**`<lr-details>`** (default: `var(--lr-form-control-font-size)`) — Text size of the summary and the panel. Its private default follows the library's shared size ladder; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -4142,7 +4142,7 @@
       "name": "--lr-details-spacing",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row."
+        "value": "**`<lr-details>`** (default: `var(--lr-form-control-padding-inline)`) — Block rhythm: the summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads evenly. Its private default follows the shared ladder's inline-padding knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text inside a fixed control height and would collapse the summary row. An inherited or direct public value remains authoritative."
       }
     },
     {
@@ -9805,7 +9805,7 @@
       "name": "--lr-spreadsheet-viewer-highlight-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-spreadsheet-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight sets it inline to `var(--lr-color-warning, var(--lr-color-brand))`."
+        "value": "**`<lr-spreadsheet-viewer>`** (default: `var(--lr-color-brand)`) — Outline color of a highlighted cell. The active highlight changes a private warning-color default; an inherited or direct public value remains authoritative."
       }
     },
     {
@@ -10036,14 +10036,14 @@
       "name": "--lr-stream-status-dot-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-text-quiet)`) — `indicator` dot color. Its unset default is swapped by reflected `connection-state` and the component-owned `data-stalled` state: `var(--lr-color-brand)` for `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`. Set it on the element or any ancestor; an element value wins."
+        "value": "**`<lr-stream-status>`** (default: `var(--lr-color-text-quiet)`) — `indicator` dot color. Its private default changes with reflected `connection-state` and the component-owned `data-stalled` state: `var(--lr-color-brand)` for `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`. Set it on the element or any ancestor; an element value wins."
       }
     },
     {
       "name": "--lr-stream-status-dot-opacity",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stream-status>`** (default: `0.35`) — `indicator` dot opacity. Its unset default is swapped by those same host states: `0.6` for `connecting`, `1` for `streaming` and `stalled`. Set it on the element or any ancestor; an element value wins."
+        "value": "**`<lr-stream-status>`** (default: `0.35`) — `indicator` dot opacity. Its private default changes with those same host states: `0.6` for `connecting`, `1` for `streaming` and `stalled`. Set it on the element or any ancestor; an element value wins."
       }
     },
     {
@@ -13151,7 +13151,7 @@
       "name": "--lr-toast-accent-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-toast>`** (default: `var(--lr-color-border)`) — Accent bar / icon color of a slotted item. Its private default follows `variant`; an inherited or direct public value wins.\n\n**`<lr-toast-item>`** (default: `var(--lr-color-border)`) — Color of the accent bar and the icon. Each non-neutral `variant` sets it to that variant's loud fill from the shared semantic grid; `neutral` keeps the plain border color, so an informational toast reads as unaccented."
+        "value": "**`<lr-toast>`** (default: `var(--lr-color-border)`) — Accent bar / icon color of a slotted item. Its private default follows `variant`; an inherited or direct public value wins.\n\n**`<lr-toast-item>`** (default: `var(--lr-color-border)`) — Color of the accent bar and the icon. Its private default follows each non-neutral `variant`'s loud fill from the shared semantic grid; `neutral` keeps the plain border color, so an informational toast reads as unaccented. An inherited or direct public value remains authoritative."
       }
     },
     {

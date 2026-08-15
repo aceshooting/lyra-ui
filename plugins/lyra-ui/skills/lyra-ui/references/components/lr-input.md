@@ -188,8 +188,8 @@ above, and the reference implementation every other labelled control in the libr
 no glyph is painted.
 
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
-`--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
-(`2xs`…`xl`), the same pattern
+`--lr-input-font-size`, `--lr-input-control-min-height` — all four have private defaults that follow
+`size` (`2xs`…`xl`), while inherited or direct public values remain authoritative; the same pattern
 `lr-select`'s `--lr-select-trigger-padding`/`--lr-select-font-size` use.
 `--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
 for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
@@ -200,14 +200,15 @@ vary by `size` — the adornment gap a text field wants between an adornment and
 than the icon-beside-label gap the ladder is tuned for. `--lr-input-radius` (default
 `--lr-form-control-radius`, its corner radius) is retunable the same way but _does_ follow the tier:
 the two tightest tiers take a smaller radius, since a 6px corner on a 20px-tall control reads as a
-lozenge. `pill` re-assigns it to `--lr-radius-pill`. `lr-number-input`/`lr-time-input` inherit both
+lozenge. `pill` changes its private default to `--lr-radius-pill`; an inherited or direct public
+value still wins. `lr-number-input`/`lr-time-input` inherit both
 unchanged.
 
 `--lr-input-fill` (default `transparent`) is the control row's background and
-`--lr-input-border-color` (default `var(--lr-color-border)`) its border color. Both are swapped by
-`appearance` rather than by `size`, and the documented defaults are `appearance="outlined"`'s
-values. Private fallback roles preserve that default without declaring the public hooks on the
-host, so ancestor theme wrappers still win. Setting either directly retunes the surface
+`--lr-input-border-color` (default `var(--lr-color-border)`) its border color. `appearance` changes
+their private fallback roles rather than the public hooks, and the documented defaults are
+`appearance="outlined"`'s values. Ancestor theme wrappers therefore still win. Setting either
+directly retunes the surface
 without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
 `--lr-input-focus-border-color` independently retunes the focused row. Built-in clear/password
 actions and `lr-number-input` steppers share `--lr-input-action-color`,

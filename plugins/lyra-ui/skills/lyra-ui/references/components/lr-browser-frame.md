@@ -33,7 +33,7 @@ string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating
 'agent' | 'user' = 'agent'` (reflected) — who is driving; switches the take-over button's label.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
-letterboxing-aware). Later duplicate ping ids are omitted before overlay rendering. `controls:
+letterboxing-aware). Empty/blank ping ids and later duplicates are omitted before overlay rendering. `controls:
 boolean = true` — render the built-in take-over/stop buttons.
 
 **Slots:** default — host-owned live element (e.g. `<video>` or an interactive `<iframe>`), replacing

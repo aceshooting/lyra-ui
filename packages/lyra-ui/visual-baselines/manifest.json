@@ -141,7 +141,12 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The constrained-button sizing fix changes the current approval-dialog capture, which awaits human visual review."
     },
-    { "id": "menu--gear-menu", "profile": "standard" },
+    {
+      "id": "menu--standalone-mapped-menu",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "lr-menu's dedicated visual story (GearMenu) was removed from menu.stories.ts; this baseline is carried over from that deleted story under the new representative story id and awaits human visual review."
+    },
     {
       "id": "charts-litechart--default",
       "profile": "standard",
@@ -271,7 +276,12 @@
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
     },
     { "id": "tabs--default", "profile": "standard" },
-    { "id": "tabs--element-model", "profile": "standard" },
+    {
+      "id": "tabs--element-model-long-content-narrow",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "tab-group.stories.ts's ElementModel story was renamed to ElementModelLongContentNarrow; this baseline is carried over from the pre-rename capture under the new story id and awaits human visual review."
+    },
     { "id": "card--outlined", "profile": "standard" },
     {
       "id": "table--default",
@@ -326,7 +336,7 @@
     "lr-lite-chart": ["charts-litechart--default"],
     "lr-map": ["map--default"],
     "lr-markdown": ["markdown--default"],
-    "lr-menu": ["menu--gear-menu"],
+    "lr-menu": ["menu--standalone-mapped-menu"],
     "lr-menu-label": ["layout-menu-label--default"],
     "lr-native-time-input": ["input-native-time-input--default"],
     "lr-neighbor-list": ["neighbor-list--default"],
@@ -359,7 +369,7 @@
     "lr-multi-split": ["multi-split--default"],
     "lr-split-panel": ["layout-split-panel--default"],
     "lr-switch": ["switch--default"],
-    "lr-tab-group": ["tabs--default", "tabs--element-model"],
+    "lr-tab-group": ["tabs--default", "tabs--element-model-long-content-narrow"],
     "lr-table": ["table--default"],
     "lr-textarea": ["textarea--default"],
     "lr-thread-list": ["threadlist--default"],

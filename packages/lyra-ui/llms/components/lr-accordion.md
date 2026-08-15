@@ -160,8 +160,8 @@ Details exposes `--lr-details-font-size` (default
 `var(--lr-form-control-font-size)`) — the text size of both the summary and the panel.
 `--lr-details-spacing` (default `var(--lr-form-control-padding-inline)`) — the block rhythm: the
 summary's block padding and the panel's trailing padding, kept equal so a stack of disclosures reads
-evenly. Each `size` tier sets both from the shared ladder, and both are declared on `:host`, so an
-override has to target the element itself — an ancestor rule is shadowed. Note that the spacing knob
+evenly. Each `size` tier changes both private defaults from the shared ladder; a public value on an
+ancestor or the element remains authoritative. Note that the spacing knob
 deliberately reads the ladder's _inline_-padding value: a stacked panel wants generous block rhythm,
 whereas the ladder's own block padding exists to fit text inside a fixed control height and would
 collapse the summary row. `--spacing` aliases the Details rhythm, while `--show-duration` and

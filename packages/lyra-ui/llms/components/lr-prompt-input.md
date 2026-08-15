@@ -33,14 +33,20 @@ request. `label` names the prompt section; it is not generic field chrome.
 `autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
 `enterKeyHint: string = ''` (attribute `enterkeyhint`) forward unchanged to the composed native
 textarea; empty string hints preserve the browser default.
-`attachments: readonly LyraPromptInputAttachment[] = []`, `attachmentCapabilities: readonly
-LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: LyraPromptSuggestion[] =
-[]`, `commandItems: LyraPromptSuggestion[] = []`,
+`attachments: readonly LyraPromptInputAttachment[] = []` — `attachmentId` must be nonempty and
+unique; malformed rows and later duplicates are omitted first-wins before rendering and attachment
+events, and surviving chips reconcile by `attachmentId`. `attachmentCapabilities: readonly
+LyraAttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems: readonly LyraPromptSuggestion[] =
+[]`, `commandItems: readonly LyraPromptSuggestion[] = []`,
 `modelCatalog?: LyraCatalog<LyraModelCatalogEntry>`,
 `voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>`,
-`sources: LyraSourceEntry[] = []`, `selectedSourceIds: string[] = []`, and `queue:
-PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
+`sources: readonly LyraSourceEntry[] = []`, `selectedSourceIds: readonly string[] = []`, and `queue:
+readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
 `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+
+Every array-valued property above is a clone-owned, bounded, frozen readonly snapshot, including
+nested source children and queued attachments. Mutating a previously assigned collection has no
+effect; create and reassign a new array after changes.
 
 `LyraPromptSuggestion` extends `LyraMentionItem { suggestionId, label, description?, icon? }` with
 optional `insertText` (defaults to `label`). The selected occurrence's original, pre-filter `index`

@@ -22,6 +22,7 @@ named `icon` slot, label and image-load error event) and adds this library's sha
 `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
 **Properties:**
+
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no glyph and no
   image is set, or the image fails to load and no `icon` slot content is provided.
 - `image: string = ''` — image URL; takes priority over the `icon` slot and `initials` when set and
@@ -39,7 +40,7 @@ named `icon` slot, label and image-load error event) and adds this library's sha
   reaches the DOM while the image tier is the one rendering; the default matches the native default,
   so an avatar that never sets it behaves exactly as it did before the property existed.
 - `size: LyraSize = 'medium'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
-  'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
+'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
   (`xs`), 2.5rem (`s`/`small`), 3rem (`m`/`medium`, the mirrored default), 4rem (`l`/`large`,
   matching `--lr-icon-button-size`), and 5rem (`xl`). Invalid and removed `sm`/`md`/`lg` writes
   normalize to `medium`.
@@ -68,21 +69,22 @@ fallback slot while it is the winning tier), `image` (the `<img>`, only while a 
 `image` is usable), and `initials` (only once the image and icon tiers are unavailable).
 
 **Themeable custom properties:** `--size` is the upstream-compatible diameter and falls back to
-`--lr-avatar-size` (default `var(--lr-size-3rem)`, stepped across
-the ladder from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl` — every spelling of
-a tier selects the same declarations), `--lr-avatar-bg` (default `var(--lr-color-border)`, swapped
-per non-neutral `variant` to that variant's `-quiet` fill; there is no `--lr-color-surface-alt`
-token in this library, despite what older copies of this page claimed), `--lr-avatar-color`
-(default `var(--lr-color-text)`, swapped per non-neutral `variant` to that variant's loud color),
+`--lr-avatar-size` (default `var(--lr-size-3rem)`, with a private default stepped across the ladder
+from `var(--lr-size-1-5rem)` at `2xs` to `var(--lr-size-5rem)` at `xl`), `--lr-avatar-bg` (default
+`var(--lr-color-border)`, whose private default changes for a non-neutral `variant` to that
+variant's `-quiet` fill; there is no `--lr-color-surface-alt` token in this library, despite what
+older copies of this page claimed), `--lr-avatar-color` (default `var(--lr-color-text)`, whose
+private default changes for a non-neutral `variant` to that variant's loud color),
 `--lr-avatar-font-size` (default `var(--lr-font-size-sm)`) — the font size of the initials fallback,
-and of any `em`-sized slotted glyph. `size` steps it alongside the diameter (`--lr-font-size-2xs` at
-`2xs`/`xs`, `--lr-font-size-xs` at `s`, `--lr-font-size-m` at `l`, `--lr-font-size-lg` at `xl`), so
-the initials track the circle instead of staying one fixed size across every tier; override it on
-the element for a size the built-in scale doesn't cover. Plus shared tokens `--lr-radius`/`-pill`,
-`--lr-font-weight-semibold`.
+and of any `em`-sized slotted glyph. Its private default follows `size` alongside the diameter
+(`--lr-font-size-2xs` at `2xs`/`xs`, `--lr-font-size-xs` at `s`, `--lr-font-size-m` at `l`,
+`--lr-font-size-lg` at `xl`), so the initials track the circle instead of staying one fixed size
+across every tier. Every public value above can be inherited from an ancestor or set directly on
+the avatar and remains authoritative across size/variant states. Plus shared tokens
+`--lr-radius`/`-pill`, `--lr-font-weight-semibold`.
 
 The variant colors are deliberately **not** the library's generic quiet-fill/on-quiet-text pairing:
-an avatar's initials *are* the accent, so they read in the variant's own loud color on that
+an avatar's initials _are_ the accent, so they read in the variant's own loud color on that
 variant's quiet tint.
 
 **Optional peer deps:** none.
@@ -104,6 +106,7 @@ variant's quiet tint.
 ```
 
 **Known gotchas:**
+
 - additive `alt`, default glyph content and `sm`/`md`/`lg` aliases were removed for exact mirrored
   vocabulary: migrate `alt→label`, default glyph content to `slot="icon"`, and size aliases to
   `small`/`medium`/`large`. The older `src→image` and `tone→variant` migrations still apply.

@@ -71,9 +71,10 @@ because an attribute selector
 after `::part()` never matches.
 
 **Themeable custom properties:** `--lr-radio-radius` is the one inherited knob this element really
-uses. `lr-radio` points it at `--lr-radius-pill` for its circular indicator; this subclass re-points
-it at `--lr-form-control-radius` — the active `size` tier's shared corner radius — and `pill` swaps
-it back to `--lr-radius-pill`. Only the _outer_ corners of an actually contiguous run take it: an
+uses. `lr-radio` gives it a private `--lr-radius-pill` default for its circular indicator; this
+subclass changes that private default to `--lr-form-control-radius` — the active `size` tier's
+shared corner radius — and `pill` changes it back to `--lr-radius-pill`. An inherited or direct
+public value wins. Only the _outer_ corners of an actually contiguous run take it: an
 owning horizontal group measures same-line adjacency after layout, then collapses shared borders.
 The ordinary group gap, a plain-radio interruption, vertical layout, or a flex wrap starts a new
 fully rounded run, and live add/remove/reorder plus LTR/RTL changes are reconciled. Standalone

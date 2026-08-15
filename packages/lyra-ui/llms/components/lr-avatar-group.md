@@ -20,18 +20,20 @@ excess into a localized "+N" badge. Composed over `<lr-avatar>` via plain light-
 (no `.items` array); it does **not** import/register `<lr-avatar>` — the consumer does that.
 
 **Properties:**
+
 - `max?: number` — how many assigned children stay visible before the rest collapse behind the
   badge. Unset (the default) means no limit. Any assigned value is sanitized to a finite,
   non-negative integer. Flattened slot-forwarded children count the same as direct children.
 - `size: LyraSize = 'medium'` (reflected) — reused from `<lr-avatar>`'s canonical six-step ladder.
 - `shape: LyraAvatarShape = 'circle'` (reflected) — `'circle' | 'rounded' | 'square'`.
 - `variant: LyraVariant = 'neutral'` (reflected) — `'neutral' | 'brand' | 'success' | 'warning' |
-  'danger'`.
+'danger'`.
 
 `size`/`shape`/`variant` style the overflow badge and provide defaults only to assigned avatars
 that omit the corresponding attribute. Explicit child attributes remain authoritative; owned
 defaults are restored without overwriting later author writes across removal, reparenting,
 disconnect and reconnect.
+
 - `label: string = ''` — the group's `role="group"` accessible name. A host-level `aria-label` wins
   if both are set; with neither, no `aria-label` is rendered.
 
@@ -49,18 +51,20 @@ avatars are hidden through reversible component-owned state.
 overflowing), and `overflow-badge-visual` (the avatar-tier-sized painted disc inside it).
 
 **Themeable custom properties:** `--lr-avatar-group-avatar-size` (default `var(--lr-size-2rem)`,
-stepped across the same six tiers as `<lr-avatar>`'s `--lr-avatar-size`, from `var(--lr-size-1rem)`
-at `2xs` to `var(--lr-size-3rem)` at `xl`), `--lr-avatar-group-overlap` (default
-`var(--lr-size-neg-6px)`, swapped per `size`; a logical `margin-inline-start`, so it auto-mirrors
+with a private default stepped across the same six tiers as `<lr-avatar>`'s `--lr-avatar-size`,
+from `var(--lr-size-1rem)` at `2xs` to `var(--lr-size-3rem)` at `xl`),
+`--lr-avatar-group-overlap` (default `var(--lr-size-neg-6px)`, whose private default follows `size`;
+a logical `margin-inline-start`, so it auto-mirrors
 under `dir="rtl"` — setting `0` or a positive length turns the stack into normal spacing),
 `--lr-avatar-group-ring-color` (default `var(--lr-color-surface)`),
 `--lr-avatar-group-ring-width` (default `var(--lr-border-width-medium)`),
-`--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, swapped per `variant`),
-`--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, swapped per `variant`),
+`--lr-avatar-group-badge-bg` (default `var(--lr-color-border)`, with a private default that follows
+`variant`), `--lr-avatar-group-badge-color` (default `var(--lr-color-text)`, with a private default
+that follows `variant`),
 `--lr-avatar-group-badge-font-size` (default `var(--lr-font-size-sm)`) — the font size of the "+N"
-badge label. `size` steps it per tier alongside the badge diameter, matching `<lr-avatar>`'s own
-`--lr-avatar-font-size` scale so the badge and the avatars it caps read at the same optical weight;
-override it alongside `--lr-avatar-font-size` on the avatars themselves when tuning a custom tier.
+badge label. Its private default follows `size` alongside the badge diameter, matching
+`<lr-avatar>`'s own `--lr-avatar-font-size` scale so the badge and the avatars it caps read at the
+same optical weight. An inherited or direct public value remains authoritative for every hook.
 
 The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier while
 the nested visual disc stays exactly avatar-sized, so small tiers do not paint as oversized 40px
@@ -78,6 +82,7 @@ circles.
 ```
 
 **Known gotchas:**
+
 - group defaults only fill omitted child attributes; they deliberately do not overwrite explicit
   heterogeneous child presentation.
 - the row never wraps (`flex-wrap` stays `nowrap`) — wrapping an overlapping stack breaks the

@@ -178,6 +178,9 @@ properties, slots, parts, methods, checkbox/state events, roving focus, and cano
 `lr-select` behavior. Its host also exposes native, non-bubbling, composed `focus` and `blur`
 events.
 
+**Events:** native, non-bubbling, composed, non-cancelable `focus` and `blur` (`FocusEvent`) when
+the focusable host gains or loses focus, plus the shared menu-item events above.
+
 `submenuOpen` reflects to canonical `submenu-open`. HTML normalizes Web Awesome's documented
 mixed-case spelling to `submenuopen`, so that lowercase token is a permanent compatibility alias.
 Adding either spelling opens the submenu and synchronizes the other; removing either closes it and

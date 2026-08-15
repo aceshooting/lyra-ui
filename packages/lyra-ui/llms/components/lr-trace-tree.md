@@ -38,8 +38,8 @@ least their start, unknown kinds become `other`, and unknown statuses become `pe
 
 **Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.
 
-**Events:** `lr-span-select` (`detail: { id: string }`, a row was activated) and `lr-span-toggle`
-(`detail: { id: string; expanded: boolean }`, a row was expanded or collapsed).
+**Events:** `lr-span-select` (`detail: { spanId: string }`, a row was activated) and `lr-span-toggle`
+(`detail: { spanId: string; expanded: boolean }`, a row was expanded or collapsed).
 
 **CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
 `showTokens`/`showCost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,

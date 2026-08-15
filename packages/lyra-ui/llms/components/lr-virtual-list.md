@@ -30,9 +30,10 @@ contract.
 
 **Properties:**
 
-- `items: unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
+- `items: readonly unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
   a property/lit-html binding (`.items=`), not an HTML attribute. This remains the compatibility
-  source whenever `source` is unset.
+  source whenever `source` is unset. Its sequence is copied, bounded, and frozen while generic row
+  identities are retained; reassign a new array after sequence changes.
 - `source?: VirtualListSource` (attribute: false) — a readonly array or a count/index-backed
   `{ readonly count: number; itemAt(index): unknown; keyAt?(index): string | number;
 indexOfKey?(key): number }`. When set it takes precedence over `items`. The indexed form performs
@@ -40,7 +41,8 @@ indexOfKey?(key): number }`. When set it takes precedence over `items`. The inde
   normalize to zero. Prefer a stable object identity and stable `keyAt`/`indexOfKey` implementations
   for synthetic, paged, or remote collections. `indexOfKey` is required when `active-id` should
   target an indexed source: the list never performs a count-sized fallback scan; invalid or
-  out-of-range results mean no match.
+  out-of-range results mean no match. An array source receives the same clone-owned frozen sequence
+  and row-identity contract as `items`; an indexed-source object passes through by identity.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
   one row's content, typically returning a `lit-html` `TemplateResult`. JS-only.
 

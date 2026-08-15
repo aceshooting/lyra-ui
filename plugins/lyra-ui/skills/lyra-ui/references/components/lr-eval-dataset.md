@@ -19,13 +19,13 @@ Filterable and taggable evaluation-example list with add, remove, import, and ex
 
 **Properties:**
 
-- `examples: EvalExample[] = []` (attribute: false) — `EvalExample { id: string; input: string;
-expectedOutput?: string; tags?: string[]; metadata?: Record<string, unknown> }` (exported here).
+- `examples: readonly EvalExample[] = []` (attribute: false) — `EvalExample { id: string; input: string;
+expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unknown> }` (exported here).
   Deliberately its own small shape rather than reusing anything from `src/ai/types.ts` — none of that
   module's interfaces models "one row of a labeled eval dataset". `input`/`expectedOutput` are plain
   strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
   controlled: add/remove/import/export are all _requests_; the host mutates and passes the array
-  back. Later duplicate ids are omitted before selection, filtering, mutation requests, and the
+  back. Empty/blank ids and later duplicate ids are omitted before selection, filtering, mutation requests, and the
   nested grid are derived. Distinct tag chips are ordered with the component's effective-locale
   collation
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,

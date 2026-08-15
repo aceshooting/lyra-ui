@@ -302,7 +302,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
    * restoration state remain unwrapped, exactly like a native textarea's IDL value. */
   private submissionValue(): string {
     if (this.wrap !== 'hard') return this.value;
-    const view = this.ownerDocument.defaultView;
+    const view = this.ownerDocument?.defaultView;
     if (!view?.FormData) return this.value;
     const form = this.ownerDocument.createElement('form');
     const textarea = this.ownerDocument.createElement('textarea');

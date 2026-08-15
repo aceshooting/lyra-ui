@@ -19,9 +19,11 @@ Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-
 It never executes tools or persists decisions.
 
 **Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
-`{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`; `selectedId: string | null = null`;
+`{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`;
+`selectedInvocationId: string | null = null` (attribute `selected-invocation-id`);
 `open: boolean = false`; `editable: boolean = true`; `label: string = ''`. Later duplicate request
-ids are omitted before count, selection, dialog lookup, or decision events are derived.
+ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
+derived.
 
 **Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision` (`{ invocationId,
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
@@ -34,7 +36,8 @@ resolved while open closes the dialog, and reentrant host updates during selecti
 stale request.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
-`tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`
+`tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching
+`selectedInvocationId`
 carries both `data-selected="true"` (the styling hook) and `aria-current="true"` (the semantic
 state), so the selection is announced, not merely painted. Other request rows explicitly render
 `data-selected="false"` and `aria-current="false"`.

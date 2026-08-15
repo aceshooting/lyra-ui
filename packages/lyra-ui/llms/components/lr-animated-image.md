@@ -19,13 +19,14 @@ An animated GIF/APNG/WebP with a play/pause control, frozen to a captured still 
 automatically under `prefers-reduced-motion: reduce`.
 
 **Properties:**
+
 - `src: string = ''` — re-validated through `safeMediaSrc()` (same allowlist as `lr-media-card`)
   before reaching the real `<img src>`.
 - `alt?: string` — forwarded to the live image and frozen canvas. An absent or explicitly empty
   value keeps both visual owners decorative; a nonempty value names whichever one is exposed. The
   independent play/pause action still uses localized context when no nonempty `alt` is available.
-- `play: boolean = false` — the caller's *intent* (reflected).
-- `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the *effective*
+- `play: boolean = false` — the caller's _intent_ (reflected).
+- `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the _effective_
   state after reduced-motion arbitration: `play && !(respectReducedMotion && <OS prefers reduce>)`.
   It is a genuine getter-only property, so assigning to it from a strict JavaScript module throws a
   `TypeError`; drive playback via `play`.
@@ -34,7 +35,7 @@ automatically under `prefers-reduced-motion: reduce`.
   `[part="play-button"]` is `disabled` regardless of `play`.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present,
   including explicitly empty, it overrides `[part="play-button"]`'s computed Play/Pause label
-  verbatim in *both* states (it does not itself vary by state). Never
+  verbatim in _both_ states (it does not itself vary by state). Never
   touches the image's `alt`/the canvas's `aria-label`. For state-sensitive custom wording, override
   the `playWithContext`/`pauseWithContext`/`animatedImageDefaultAlt` strings instead.
 
@@ -67,6 +68,7 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - the freeze frame is captured once per successful `src` load, in the `<img>`'s own `load` handler
   (a DPR-aware `drawImage()`), not re-captured on each pause — pausing always reverts to that first
   frame, never to the frame that was on screen.

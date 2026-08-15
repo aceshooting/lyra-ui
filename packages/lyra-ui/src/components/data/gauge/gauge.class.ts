@@ -1,5 +1,5 @@
 import type { PropertyValues } from 'lit';
-import { html, svg, type TemplateResult } from 'lit';
+import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -179,8 +179,12 @@ export class LyraGauge extends LyraElement {
     // (whole sweep revealed) as ratio goes 0 -> 1 — the classic "draw an SVG
     // path" technique, which transitions smoothly via plain CSS.
     const dashoffset = RADIAL_ARC_LENGTH * (1 - this.ratio);
-    return html`<svg part="base" viewBox="0 0 100 100">
-      <title>${this.label && fullText ? `${this.label}: ${fullText}` : this.label || fullText}</title>
+    return html`<svg
+      part="base"
+      viewBox="0 0 100 100"
+      aria-hidden="true"
+      title=${this.label && fullText ? `${this.label}: ${fullText}` : this.label || fullText}
+    >
       <path part="track" stroke-width=${STROKE} d=${RADIAL_ARC_D}></path>
       <path
         part="fill"
@@ -202,7 +206,7 @@ export class LyraGauge extends LyraElement {
             y="68"
             aria-hidden="true"
           >${label}</text>`
-        : ''}
+        : nothing}
     </svg>`;
   }
 
@@ -219,8 +223,13 @@ export class LyraGauge extends LyraElement {
     const rtl = this.effectiveDirection === 'rtl';
     const startX = rtl ? LINEAR_LENGTH : 0;
     const endX = rtl ? 0 : LINEAR_LENGTH;
-    return html`<svg part="base" viewBox="0 0 100 20" preserveAspectRatio="none">
-      <title>${this.label && fullText ? `${this.label}: ${fullText}` : this.label || fullText}</title>
+    return html`<svg
+      part="base"
+      viewBox="0 0 100 20"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      title=${this.label && fullText ? `${this.label}: ${fullText}` : this.label || fullText}
+    >
       <line part="track" x1=${startX} y1=${LINEAR_BAR_Y} x2=${endX} y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
       <line
         part="fill"
@@ -239,7 +248,7 @@ export class LyraGauge extends LyraElement {
             y=${LINEAR_TEXT_Y}
             aria-hidden="true"
           >${label}</text>`
-        : ''}
+        : nothing}
       <text
         part="value"
         x=${endX}
@@ -254,8 +263,12 @@ export class LyraGauge extends LyraElement {
     const text = abbreviateSvgText(fullText, RADIAL_VALUE_CHARACTERS);
     const label = abbreviateSvgText(this.label, RADIAL_LABEL_CHARACTERS);
     const dashoffset = RING_CIRCUMFERENCE * (1 - this.ratio);
-    return html`<svg part="base" viewBox="0 0 100 100">
-      <title>${this.label && fullText ? `${this.label}: ${fullText}` : this.label || fullText}</title>
+    return html`<svg
+      part="base"
+      viewBox="0 0 100 100"
+      aria-hidden="true"
+      title=${this.label && fullText ? `${this.label}: ${fullText}` : this.label || fullText}
+    >
       <circle part="track" cx=${CENTER} cy=${CENTER} r=${RADIUS} stroke-width=${STROKE}></circle>
       <circle
         part="fill"
@@ -280,7 +293,7 @@ export class LyraGauge extends LyraElement {
             y="68"
             aria-hidden="true"
           >${label}</text>`
-        : ''}
+        : nothing}
     </svg>`;
   }
 

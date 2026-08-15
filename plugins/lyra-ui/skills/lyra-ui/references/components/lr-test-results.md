@@ -19,10 +19,10 @@ A pass/fail suite summary with per-status counts, status filter toggles, and per
 failures auto-expand by default and can host rich slotted detail (e.g. a diff or code block)
 alongside the plain failure message.
 
-**Properties:** `suites: TestSuiteResult[] = []` (attribute: false) — `TestSuiteResult { id: string;
-name: string; tests: TestCaseResult[] }` and `TestCaseResult { id: string; name: string; status:
+**Properties:** `suites: readonly TestSuiteResult[] = []` (attribute: false) — `TestSuiteResult { id: string;
+name: string; tests: readonly TestCaseResult[] }` and `TestCaseResult { id: string; name: string; status:
 TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed' | 'failed' |
-'skipped' | 'running'` (all three exported here). `statusFilter: TestStatus[] =
+'skipped' | 'running'` (all three exported here). `statusFilter: readonly TestStatus[] =
 []` (attribute: false) — empty shows every status. `runId: string | null = null` (attribute
 `run-id`) identifies the source run, and `runState: TestRunState = 'idle'` (attribute `run-state`,
 reflected) exposes its lifecycle. `autoExpandFailures: boolean = true`

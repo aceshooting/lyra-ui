@@ -55,7 +55,7 @@ carrying the same boolean. Called before the SVG has finished loading it retries
 timers) rather than failing immediately.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
-`lr-highlight-activate` (`detail: { id }`) — a region highlight was clicked or activated via
+`lr-highlight-activate` (`detail: { highlightId }`) — a region highlight was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
 or a `scrollToAnchor()` call is applied, whether or not a match was found. `lr-text-select` is not
 part of this viewer's event contract because sanitized SVG has no extractable text-selection

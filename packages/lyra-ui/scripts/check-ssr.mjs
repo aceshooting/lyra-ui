@@ -194,7 +194,7 @@ assert.match(
 const populatedDashboardHtml = await collectResult(
   render(
     html`<lr-dashboard-grid
-      .layout=${[{ id: 'summary', x: 0, y: 0, w: 3, h: 1, label: 'Summary' }]}
+      .layout=${[{ cellId: 'summary', x: 0, y: 0, w: 3, h: 1, label: 'Summary' }]}
     ></lr-dashboard-grid>`,
     { elementRenderers: animatedImageContext.elementRenderers }
   )
@@ -254,6 +254,7 @@ assert.doesNotMatch(
 
 const emojiGroups = (count) => [
   {
+    key: 'faces',
     label: 'Faces',
     emojis: Array.from({ length: count }, (_value, index) => ({
       emoji: '😀',
@@ -449,9 +450,9 @@ const progressiveSlotCases = [
   {
     tag: 'lr-chip',
     template: html`<lr-chip
-      ><span slot="icon">●</span>Alpha<span slot="end">✓</span></lr-chip
+      ><span slot="start">●</span>Alpha<span slot="end">✓</span></lr-chip
     >`,
-    parts: ['icon', 'end'],
+    parts: ['start', 'end'],
   },
   {
     tag: 'lr-alert',

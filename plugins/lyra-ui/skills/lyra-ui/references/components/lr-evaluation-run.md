@@ -20,10 +20,10 @@ outputs may render as Markdown or code, with optional grounding and tool-trace s
 
 **Properties:**
 
-- `examples: EvaluationExampleResult[] = []` (attribute: false) — `EvaluationExampleResult { id:
+- `examples: readonly EvaluationExampleResult[] = []` (attribute: false) — `EvaluationExampleResult { id:
 string; label?: string; status: AgentStatusPresentation; input: EvaluationContent; output:
-EvaluationContent; grounding?: GroundingAssessment; citations?: Citation[]; toolTrace?:
-ToolTimelineEntry[] }`
+EvaluationContent; grounding?: GroundingAssessment; citations?: readonly Citation[]; toolTrace?:
+readonly ToolTimelineEntry[] }`
   (exported here). `AgentStatusPresentation` extends the shared **`AgentStatus` from
   `@aceshooting/lyra-ui/ai`** with optional caller presentation `{ label?, variant?, terminal?,
 active? }`. `label` and `variant` customize application-defined lifecycle display, `message`
@@ -39,7 +39,7 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   `lr-tool-timeline.entries` — no adapters. `citations` is consulted only while `grounding` is also
   set; an omitted `grounding` or empty `toolTrace` renders no such section for that example. `label`
   falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated;
-  later duplicate example ids are omitted before progress, disclosure state, and correlated child
+  empty/blank ids and later duplicate example ids are omitted before progress, disclosure state, and correlated child
   events are derived
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is

@@ -46,15 +46,16 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 **Exported types:** `DocumentCompareVersion`; `LyraDocumentCompareView = 'diff' |
 'side-by-side'`; `DocumentComparePaneSide = 'old' | 'new'`.
 
-**Synchronized anchors:** activating a region highlight whose id exists in the opposite version
-scrolls that pane to its corresponding highlight, while the original `lr-highlight-activate`
+**Synchronized anchors:** activating a region highlight whose normalized id exists in the opposite
+preview's trimmed, nonempty, first-wins highlight projection scrolls that pane to its corresponding
+highlight, while the original `lr-highlight-activate`
 continues bubbling unchanged. The shared `anchor` property drives both panes. In diff mode, split
 columns already share one scroll container.
 
 **Events:** `lr-copy` fires only after clipboard fulfillment (`detail: { ok: true, text }`). A
 clipboard failure bubbles `lr-error` plus `lr-copy-error`
 (`detail: { ok: false, text, reason, error }`) unchanged from `lr-diff-view`. Also emits
-`lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { id }`), and
+`lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { highlightId }`), and
 `lr-render-error` (`detail: { error }`).
 
 **Slots:** none.

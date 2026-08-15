@@ -35,7 +35,8 @@ even after a controlled state write changed the remembered stop.
 
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins
-render, in that order. `copyText: string = ''`
+render, in that order. Duplicate names are omitted first-wins before rendering, roving focus, or
+intent events, so each built-in can occur at most once. `copyText: string = ''`
 (attribute `copy-text`) — required for the `copy` built-in to render at all. `feedbackRating:
 MessageFeedbackValue = null` (attribute `feedback-rating`) — forwarded to the embedded, thumbs-only
 `lr-message-feedback` (its `detail`/`detailFor` are never forwarded, so its detail panel never

@@ -41,7 +41,7 @@ outer wrapper (no `aria-valuenow` and no live-region semantics);
 
 **Themeable custom properties:** `--lr-spinner-size` (default `var(--lr-size-1-25rem)` — both
 dimensions), `--lr-spinner-track-width` (default `var(--lr-border-width-medium)` — ring thickness),
-`--lr-spinner-duration` (default `var(--lr-transition-ambient)` — the duration *and* easing of one
+`--lr-spinner-duration` (default `var(--lr-transition-ambient)` — the duration _and_ easing of one
 full rotation; the animation is dropped entirely under `prefers-reduced-motion: reduce`). The ring
 colors come from `--lr-color-brand`/`-brand-quiet`. Upstream aliases are `--track-width`,
 `--track-color`, `--indicator-color`, and `--speed`.

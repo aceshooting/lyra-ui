@@ -43,7 +43,7 @@ presence-based, so an explicitly empty value remains empty rather than invoking 
 
 `--lr-progress-indicator-variant-color` is the palette slot the active `variant` feeds: it resolves
 to that variant's loud fill from the shared semantic grid (`var(--lr-color-fill-loud)`), falling back
-to `var(--lr-color-brand)` on an element that has not updated yet. It sits *inside*
+to `var(--lr-color-brand)` on an element that has not updated yet. It sits _inside_
 `--lr-progress-indicator-color` and the upstream `--indicator-color` alias in the fallback chain, so
 setting either of those still wins outright and the indicator renders exactly as it did before
 `variant` support existed. Set the variant-color slot instead when you want to retheme one semantic

@@ -43,7 +43,7 @@ type-exports `LyraSpanKind` and `LyraSpanStatus`, and exports
 before assigning `spans`. These helpers are intentionally granular-only rather than root-barrel
 exports.
 
-**Events:** `lr-span-select` — `detail: { id: string }`, a bar/row was activated (click, Enter,
+**Events:** `lr-span-select` — `detail: { spanId: string }`, a bar/row was activated (click, Enter,
 Space).
 
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `hideAxis`), `tick`, `tick-label`,

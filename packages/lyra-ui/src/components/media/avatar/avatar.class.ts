@@ -133,7 +133,7 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
   }
 
   private safeImage(): string | null {
-    return safeMediaSrc(this.image, this.ownerDocument.defaultView?.URL ?? URL);
+    return safeMediaSrc(this.image, this.ownerDocument?.defaultView?.URL ?? URL);
   }
 
   private hasIconSlotContent(nodes: Iterable<Node>): boolean {

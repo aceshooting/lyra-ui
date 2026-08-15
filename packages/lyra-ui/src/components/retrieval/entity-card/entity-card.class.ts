@@ -14,6 +14,10 @@ import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+import {
+  firstByRetrievalIdentity,
+  isNonBlankIdentity,
+} from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_entityCommunity, LYRA_DEFAULT_entityDegree, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_focusInGraph, LYRA_DEFAULT_noData, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings.generated.js';
@@ -41,7 +45,7 @@ export interface LyraEntity {
 export type EntityCardAppearance = LyraFrame;
 
 export interface LyraEntityCardEventMap {
-  'lr-entity-activate': CustomEvent<{ id: string }>;
+  'lr-entity-activate': CustomEvent<{ entityId: string }>;
 }
 
 /** Derives themeable `--lr-badge-*` overrides from a data-driven type color -- the same "type
@@ -73,7 +77,7 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * @customElement lr-entity-card
  * @slot - Extra body content below the property rows (e.g. a `lr-neighbor-list`).
  * @slot actions - Extra header actions alongside the built-in focus button.
- * @event lr-entity-activate - The built-in focus button was activated. `detail: { id }`.
+ * @event lr-entity-activate - The built-in focus button was activated. `detail: { entityId }`.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row wrapping the type badge, title, and actions.
  * @csspart type-badge - The resolved entity-type badge.
@@ -140,15 +144,19 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private resolvedType(type: string): LyraNodeTypeStyle | undefined {
-    return this.types.find((t) => t.id === type);
+    return firstByRetrievalIdentity(this.types, (entry) => entry?.id).find(
+      (entry) => entry.id === type
+    );
   }
 
   private onFocusClick = (): void => {
-    if (this.entity) this.emit('lr-entity-activate', { id: this.entity.id });
+    if (this.entity && isNonBlankIdentity(this.entity.id)) {
+      this.emit('lr-entity-activate', { entityId: this.entity.id });
+    }
   };
 
   override render(): TemplateResult {
-    if (!this.entity) {
+    if (!this.entity || !isNonBlankIdentity(this.entity.id)) {
       return html`<div part="base">
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;

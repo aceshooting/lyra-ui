@@ -25,9 +25,12 @@ shell around it.
 
 **Properties:**
 
-- `registry?: ToolRendererRegistry` (property only, no attribute) — a custom `Map<string,
-ToolRendererDefinition>` to dispatch against instead of the module-level default registry (see
-  `registry.ts` below)
+- `registry?: ToolRendererRegistry` (property only, no attribute) — a custom
+  `ReadonlyMap<string, ToolRendererDefinition>` to dispatch against instead of the module-level
+  default registry (see `registry.ts` below). Assignment synchronously copies at most 10,000
+  entries behind a frozen readonly facade. Later mutation of the source map is not observed;
+  create and reassign a new map to update dispatch. Renderer-definition identity is retained so
+  lazy-load caching remains stable.
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name; the primary dispatch key
 - `result: unknown` (property only, no attribute) — the tool call's result payload, handed to the
   matched renderer's `render()` (and to `matches()` for shape-based dispatch, and to the
@@ -35,7 +38,7 @@ ToolRendererDefinition>` to dispatch against instead of the module-level default
 - `args: unknown` (property only, no attribute) — the tool call's original arguments, if available,
   handed to the matched renderer's `render()` alongside `result`
 - `fallback: ToolResultFallback = 'json'` (reflected), where exported `ToolResultFallback =
-  'json' | 'text'` — fallback-kind selector. `"json"` (the default) is
+'json' | 'text'` — fallback-kind selector. `"json"` (the default) is
   an unconditional `<lr-json-viewer>`. `"text"` renders a _string_ `result` as preformatted text
   instead — falling back to the `"json"` behavior when `result` isn't a string, so setting
   `fallback="text"` defensively against an unpredictable result shape never renders broken output.
@@ -89,7 +92,7 @@ A type-keyed dispatch registry — a tiny plugin system so a host app can teach
 `<lr-tool-result-view>` how to draw the result of e.g. a `get_weather` or `run_query` tool call
 without this library knowing anything about either. Every registered instance dispatches against
 this same module-level registry unless a given `<lr-tool-result-view>`'s `registry` property is
-set to a different `Map` instance.
+set to a different readonly map snapshot.
 
 **`ToolRendererDefinition`** — an exclusive
 `DirectToolRendererDefinition | LazyToolRendererDefinition` union. Runtime registration, custom
@@ -114,7 +117,7 @@ silently register `{}`, combine `render` with `load`, or cache an invalid loaded
   dispatch and also wants to lazy-load its `render` should register a lightweight synchronous
   `matches` up front alongside `load`
 - lazy: `load: () => Promise<DirectToolRendererDefinition | { default:
-  DirectToolRendererDefinition }>` and `render?: never` — lazy loader
+DirectToolRendererDefinition }>` and `render?: never` — lazy loader
   for a code-split renderer, so a host app can defer the cost of a rarely-used or heavy renderer
   (e.g. one pulling in a charting library) instead of paying for it on every page that merely
   registers it. Resolves to either a definition directly, or a `{ default }`-shaped module namespace

@@ -20,6 +20,7 @@ cross-platform modifier keys (⌘ on macOS, "Ctrl" elsewhere) from a single plat
 string. First-party invention (no Web Awesome equivalent).
 
 **Properties:**
+
 - `keys: string = ''` — a `+`-separated sequence of tokens, e.g. `"mod+k"` or `"mod+shift+p"`.
   Recognized modifier tokens: `mod` (platform-neutral primary modifier — ⌘/"Command" on macOS,
   "Ctrl"/"Control" elsewhere), `alt` (⌥/"Option" on macOS, "Alt" elsewhere), `shift` (⇧/"Shift"
@@ -50,7 +51,7 @@ resolves a full `keys` string with the same optional localization callback.
 
 **Slots:** default — an escape hatch for fully custom key-cap content (e.g. an icon instead of a
 text glyph). When it has any real (non-whitespace) content, it replaces the `keys`-driven rendering
-entirely and this component stops *computing* its own `aria-label` from `keys`, leaving the slotted
+entirely and this component stops _computing_ its own `aria-label` from `keys`, leaving the slotted
 content to carry its own accessible name. A host-supplied `aria-label` in custom mode is forwarded
 to `[part="base"]` together with `role="img"`; without one, the wrapper adds no image role and
 leaves the slotted content's own semantics exposed. A host `aria-label` wins by attribute presence,

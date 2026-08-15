@@ -22,6 +22,7 @@ upload progress). This component has neither concern; it only ever shows a `src`
 final.
 
 **Properties:**
+
 - `src: string = ''` — the media URL. Always re-validated against a safe-scheme allowlist before
   use (see below) — never trust it unsanitized even though it's typed as a plain string.
 - `kind?: LyraMediaCardKind` (`'image' | 'video' | 'file'`, reflected) — explicit format dispatch. Leave unset to
@@ -108,7 +109,7 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
 
 **Safe-URL checking.** `src` is validated by internal sink-specific helpers before it's
 ever assigned to an `<img>`/`<video>` `src` or an `<a href>` — only `http:`/`https:`/`blob:` (plus
-`data:` for a *media* `src` only) or a scheme-relative/relative URL with no scheme at all pass;
+`data:` for a _media_ `src` only) or a scheme-relative/relative URL with no scheme at all pass;
 anything else (`javascript:`, `vbscript:`, and similarly suspicious schemes) is rejected. `data:` is
 allowed for a media source (a browser never executes script from a media element's `src`) but
 rejected by the stricter link validator (a `data:text/html` URI navigated to via a clicked `<a
@@ -129,11 +130,12 @@ nesting interactive content inside a `<button>`/`<a>`; doing so anyway would als
 the video's own native controls bubble up and spuriously fire `lr-media-open`.
 
 **Known gotchas:**
+
 - Calling the real `.click()` (or dispatching a `click`/`MouseEvent`) on the file-chip's `<a href>`
   in a test genuinely triggers real browser navigation — always `preventDefault()` on a `click`
   listener registered before triggering it, the same precaution `lr-document-preview`'s own
   download-link tests already take. A synthetic `dispatchEvent(new MouseEvent('click', {cancelable:
-  true}))` still invokes the anchor's native activation behavior if nothing calls
+true}))` still invokes the anchor's native activation behavior if nothing calls
   `preventDefault()` during dispatch — it is not a safe no-op.
 - `kind` only reflects to the host attribute when explicitly set — CSS keying off the
   auto-detected resolved kind should target the rendered `[part]`/element (e.g. `video[part="media"]`),

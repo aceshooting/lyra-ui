@@ -24,29 +24,32 @@ collection stays reachable through pagination without mounting an unbounded grid
 `sortDir: 'asc'|'desc'`; document sorting now uses the same cancelable `lr-sort-request` followed
 by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary as `lr-table`.
 
-**Properties:** clone-owned frozen `documents: readonly LibraryDocument[] = []` (document records,
-nested tags, and dates are snapshotted on assignment; reads are detached so `Date` mutators cannot
-reach retained state), `filter`, `label`, `loading`, clone-owned
-frozen `selectedIds: readonly string[] = []`, public controlled `searchTerm: string = ''`
+**Properties:** clone-owned frozen `documents: readonly LibraryDocument[] = []` (at most the first
+10,000 source documents and 10,000 tags per document are retained; document records, nested tags,
+and dates are snapshotted on assignment; malformed records, blank ids, and later duplicate ids are
+omitted first-wins before filters, counts, selection, rows, and events; reads are detached so `Date`
+mutators cannot reach retained state; reassign after changes), `filter`, `label`, `loading`,
+clone-owned frozen `selectedDocumentIds: readonly string[] = []` (at most 10,000 unique ids; reassign after
+changes), public controlled `searchTerm: string = ''`
 (`search-term`), `sortKey: LibraryDocumentSortKey = 'name'` (`sort-key`), canonical
 `sortDir: 'asc'|'desc' = 'asc'` (`sort-dir`), and clone-owned frozen
-`tagFilter: readonly string[] = []`.
+`tagFilter: readonly string[] = []` (at most 10,000 unique tags; reassign after changes).
 
 **Events:** `lr-filter-change` emits a fresh frozen readonly
 `{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly
 `{ phase: 'request', sortKey, sortDir }`; accepted `lr-sort` commits the same canonical vocabulary
-with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ ids }`; and `lr-open`
-emits frozen readonly `{ id }`.
+with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ documentIds }`; and
+`lr-open` emits frozen readonly `{ documentId }`.
 
 **CSS parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
 `clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`.
 
 `selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
-selection stays silent; every post-mount `selectedIds` change appends the localized selected count
+selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count
 to the document's shared light-DOM polite sink, including zero and repeated equal counts.
 Internal search, tag-filter, and checkbox native `input`/`change` plus prefixed `lr-input`/
 `lr-change` aliases, table pagination, and the table's click-anywhere selection event stop at the
 component's translation boundary. The table is still in multiple-selection semantics so
-`selectedIds` reaches row `aria-selected`; document selection itself remains checkbox-owned, while
+`selectedDocumentIds` reaches row `aria-selected`; document selection itself remains checkbox-owned, while
 row activation opens the document. Listen for the document-library events above; one interaction
 emits one documented host contract without also leaking a composed child event.

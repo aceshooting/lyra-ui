@@ -42,7 +42,8 @@ when a navigation entry has none), `[]` before a book has loaded. `search(query)
 match count across every spine section, in document order, via epub.js's own `item.load()`/
 `item.find()`/`item.unload()` (empty/whitespace query behaves like `clearSearch()`; a newer
 `search()` call or a `src` change aborts an in-flight scan; peer output is capped at 10,000
-matches); `searchNext()`/`searchPrevious()`
+matches after at most 1,000 spine items and 4,000,000 result code units; queries are capped at 4,096
+code units); `searchNext()`/`searchPrevious()`
 advance/step back through matches (wrapping, resolving `false` when there are none); `clearSearch()`
 clears the query, matches, and painted search annotation.
 
@@ -50,8 +51,9 @@ clears the query, matches, and painted search annotation.
 `lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from `search()`/`searchNext()`/
 `searchPrevious()`/`clearSearch()`; `lr-anchor-result` (`detail: { found }`) after an anchor is
-applied; `lr-highlight-activate` (`detail: { id }`) when a painted CFI highlight is clicked; and
+applied; `lr-highlight-activate` (`detail: { highlightId }`) when a painted CFI highlight is clicked; and
 `lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
+Selection text is capped at 4,096 code units and selection rectangles at 1,000.
 
 **CSS parts:** `base` (explicit `aria-busy="true"|"false"`; visible loading text is ordinary
 non-live shadow content and later loading transitions use the shared document-level polite sink),

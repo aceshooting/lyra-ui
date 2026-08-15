@@ -26,7 +26,8 @@ external focus move.
 **Properties:** `suggestions: readonly LyraChatSuggestion[] = []` (attribute: false) —
 `LyraChatSuggestion { suggestionId: string; label: string; icon?: string; detail?: string }`
 (exported here). Identifiers must be nonempty and unique; invalid/later duplicates are omitted with
-the first valid occurrence winning. `icon` is an optional
+the first valid occurrence winning. The input is clone-owned, bounded, and frozen; reassign a new
+array after changing the sequence or a row. `icon` is an optional
 peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
 `detail` is an optional secondary line. Empty renders nothing at all. `wrap: boolean = false`
 (reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label:

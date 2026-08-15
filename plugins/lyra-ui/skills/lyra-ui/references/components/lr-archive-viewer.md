@@ -29,7 +29,8 @@ contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['tex
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide
 case-insensitive text search over every loaded entry path; next/previous wrap and scroll the active
-virtualized row into view. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
+virtualized row into view. Queries are capped at 4,096 code units and each pass at 4,000,000 path
+code units; `matchCountExact: false` reports a ceiling-truncated lower bound. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
 `lr-anchor-result`. A fragment id is the exact ZIP entry path. A text quote resolves within one
 complete entry path; both forms first mount the absolute virtualized row and only then perform the
 shared DOM-level anchor resolution. A jump whose archive is replaced by a concurrent `src`

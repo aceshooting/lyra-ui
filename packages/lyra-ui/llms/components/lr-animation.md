@@ -18,10 +18,11 @@
 Declaratively animates one slotted element through the native Web Animations API.
 
 **Properties:**
+
 - `name: string = 'none'` — accepts any animation registry name. The built-in names are `'none' |
-  'fade-in' | 'fade-out' | 'zoom-in' | 'zoom-out' | 'slide-in-start' | 'slide-in-end' |
-  'slide-out-start' | 'slide-out-end' | 'slide-in-up' | 'slide-in-down' | 'bounce' | 'pulse' |
-  'spin' | 'shake'`; `LyraAnimationPreset` remains the exported convenience type for that built-in
+'fade-in' | 'fade-out' | 'zoom-in' | 'zoom-out' | 'slide-in-start' | 'slide-in-end' |
+'slide-out-start' | 'slide-out-end' | 'slide-in-up' | 'slide-in-down' | 'bounce' | 'pulse' |
+'spin' | 'shake'`; `LyraAnimationPreset` remains the exported convenience type for that built-in
   subset. Other strings resolve through the registry key `animation.<name>`. The four built-in
   `-start`/`-end` slide presets are logical: "start" is physically left under `ltr`, right under
   `rtl`.
@@ -84,21 +85,21 @@ normal rebuild (a keyframe/timing/direction change or reconnect); the registry n
 native timeline that is already running.
 
 ```js
-import '@aceshooting/lyra-ui/components/media/animation/animation.js';
-import { setAnimation } from '@aceshooting/lyra-ui/utilities/animation-registry.js';
+import "@aceshooting/lyra-ui/components/media/animation/animation.js";
+import { setAnimation } from "@aceshooting/lyra-ui/utilities/animation-registry.js";
 
-const animation = document.createElement('lr-animation');
-animation.name = 'slide-in-start';
+const animation = document.createElement("lr-animation");
+animation.name = "slide-in-start";
 animation.iterations = 1;
-animation.innerHTML = '<span>Registry-controlled content</span>';
-const release = setAnimation(animation, 'animation.slide-in-start', {
+animation.innerHTML = "<span>Registry-controlled content</span>";
+const release = setAnimation(animation, "animation.slide-in-start", {
   keyframes: [
-    { transform: 'translateX(calc(-1 * var(--lr-size-2rem)))' },
-    { transform: 'translateX(0)' },
+    { transform: "translateX(calc(-1 * var(--lr-size-2rem)))" },
+    { transform: "translateX(0)" },
   ],
   rtlKeyframes: [
-    { transform: 'translateX(var(--lr-size-2rem))' },
-    { transform: 'translateX(0)' },
+    { transform: "translateX(var(--lr-size-2rem))" },
+    { transform: "translateX(0)" },
   ],
 });
 document.body.append(animation);
@@ -109,6 +110,7 @@ animation.start();
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - `iterations` defaults to `Infinity` (mirrors the upstream Web Awesome/Shoelace contract) — a named
   preset plays forever unless you set `iterations="1"`.
 - changing any timing/keyframe property rebuilds the animation from scratch; the rebuild's internal

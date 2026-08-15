@@ -45,7 +45,7 @@ it('visibly abbreviates pathological labels without compressing glyphs and retai
   expect(valuePart.textContent).to.equal(`${'B'.repeat(8)}…`);
   expect(labelPart.hasAttribute('textLength')).to.equal(false);
   expect(valuePart.hasAttribute('textLength')).to.equal(false);
-  expect(el.shadowRoot!.querySelector('title')!.textContent).to.equal(`${label}: ${valueText}`);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('title')).to.equal(`${label}: ${valueText}`);
   expect(el.getAttribute('aria-label')).to.equal(label);
   expect(el.getAttribute('aria-valuetext')).to.equal(valueText);
 });

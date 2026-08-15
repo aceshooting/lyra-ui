@@ -20,6 +20,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import { firstByIdentity } from '../../agent-tools/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -44,6 +45,8 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Blank claim/citation ids and later duplicates are ignored before lookup, rendering, counts, or
+ * activation. The first record for an id wins.
  *
  * @customElement lr-claim-evidence
  * @event lr-claim-select - A claim was activated. `detail: { claim }`.
@@ -118,6 +121,20 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
    *  (nothing left to tighten). */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
+  private get normalizedClaims(): GroundedClaim[] {
+    return firstByIdentity(
+      Array.isArray(this.claims) ? this.claims : [],
+      (claim) => claim.id
+    );
+  }
+
+  private get normalizedCitations(): Citation[] {
+    return firstByIdentity(
+      Array.isArray(this.citations) ? this.citations : [],
+      (citation) => citation.id
+    );
+  }
+
   private statusLabel(status: GroundedClaimStatus): string {
     switch (status) {
       case 'supported':
@@ -138,14 +155,20 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     return this.localize('claimEvidenceConfidence', undefined, { percent });
   }
 
-  private resolvedCitations(claim: GroundedClaim): Citation[] {
+  private resolvedCitations(
+    claim: GroundedClaim,
+    citations: readonly Citation[]
+  ): Citation[] {
     const ids = new Set(claim.citationIds);
-    return this.citations.filter((citation) => ids.has(citation.id));
+    return citations.filter((citation) => ids.has(citation.id));
   }
 
-  private renderClaim = (claim: GroundedClaim): TemplateResult => {
+  private renderClaim(
+    claim: GroundedClaim,
+    allCitations: readonly Citation[]
+  ): TemplateResult {
     const selected = claim.id === this.selectedClaimId;
-    const citations = this.resolvedCitations(claim);
+    const citations = this.resolvedCitations(claim, allCitations);
     const claimPart = selected ? 'claim claim-selected' : 'claim';
     return html`
       <li part=${claimPart} aria-current=${selected ? 'true' : 'false'}>
@@ -174,7 +197,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
                 ${citations.map(
                   (citation) => html`
                     <lr-citation-badge
-                      .index=${this.citations.indexOf(citation) + 1}
+                      .index=${allCitations.indexOf(citation) + 1}
                       .sourceId=${citation.sourceId ?? ''}
                       .label=${citation.label ?? ''}
                       @lr-citation-activate=${(event: Event) => {
@@ -190,9 +213,11 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
           : nothing}
       </li>
     `;
-  };
+  }
 
   override render(): TemplateResult {
+    const claims = this.normalizedClaims;
+    const citations = this.normalizedCitations;
     const label = retrievalSemanticLabel(
       this,
       this.label || this.localize('claimEvidenceLabel')
@@ -204,9 +229,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
         role=${role ?? nothing}
         aria-label=${label ?? nothing}
       >
-        ${this.claims.length
+        ${claims.length
           ? html`<ol part="list">
-              ${this.claims.map(this.renderClaim)}
+              ${claims.map((claim) => this.renderClaim(claim, citations))}
             </ol>`
           : html`<lr-empty
               part="empty"

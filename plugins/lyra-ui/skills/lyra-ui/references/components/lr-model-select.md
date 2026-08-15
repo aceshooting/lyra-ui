@@ -36,7 +36,9 @@ focus move.
 - `LyraCatalogEntry { id: string; label: string }` — the shared minimum row vocabulary.
 - `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
   — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
-  shorthand uses the same string for both id and label; readonly tuples/arrays are accepted.
+  shorthand uses the same string for both id and label; readonly tuples/arrays are accepted. Ids
+  must be nonempty and unique: malformed rows and later duplicates are omitted first-wins before
+  mode selection, rendering, focus reconciliation, selection, or preview lookup.
 - `LyraModelCatalogEntry extends LyraCatalogEntry { icon?: string }` — one model row. An
   optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
   change the option's accessible name.
@@ -45,7 +47,9 @@ focus move.
 
 - `provider: string = ''` — informational only (e.g. `'ollama'`); rendered as a small leading badge.
 - `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false) — the full model list. Omit (or
-  leave empty) to fall back to plain free-text entry.
+  leave empty) to fall back to plain free-text entry. Ids use the shared unique, nonempty,
+  first-wins catalog rule above. The array is clone-owned, bounded, and frozen; reassign a new
+  catalog array after changing its rows.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
 - `label: string = ''` — optional visible title above the control, rendered alongside the `label`

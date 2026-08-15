@@ -25,7 +25,7 @@ diffing (host state; diffs via `lr-diff-view`), no code editing (`lr-code-editor
 — a short kind label (e.g. `document`, `code`), shown as a badge next to `label`. `view: 'preview' |
 'code' = 'preview'` (reflected) — which slot is currently visible. `versions: ArtifactVersion[] = []`
 (attribute: false, each `{ id, label? }`) — the artifact's version history, oldest first; the last
-entry is the latest version. Later duplicate ids are omitted before navigation, active lookup,
+entry is the latest version. Empty/blank ids and later duplicate ids are omitted before navigation, active lookup,
 position counts, and restore events. The active entry's optional `label` renders beside its localized
 position. `activeVersionId: string | null = null` (attribute `active-version-id`) — the currently
 viewed version's id, or `null` for "the latest version." Removing the named version reconciles the

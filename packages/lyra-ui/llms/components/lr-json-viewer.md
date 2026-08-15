@@ -109,17 +109,22 @@ tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-succes
 **Optional peer deps:** none.
 
 ```ts
-import { html } from 'lit';
-import '@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.js';
+import { html } from "lit";
+import "@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.js";
 
-html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${query}></lr-json-viewer>`;
+html`<lr-json-viewer
+  .data=${apiResponse}
+  copyable
+  max-height="24rem"
+  search=${query}
+></lr-json-viewer>`;
 ```
 
 ```html
 <lr-json-viewer copyable max-height="24rem"></lr-json-viewer>
 <script type="module">
-  document.querySelector('lr-json-viewer').data = {
-    hello: 'world',
+  document.querySelector("lr-json-viewer").data = {
+    hello: "world",
     items: [1, 2, 3],
   };
 </script>
@@ -129,7 +134,7 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
 
 - `data` is property-only (`attribute: false`) — it must be set via `.data = ...` or a lit-html `.data=${...}`
   binding, never as a plain HTML attribute.
-- Search highlighting auto-expands only the *ancestors* of a match, not the whole tree — a
+- Search highlighting auto-expands only the _ancestors_ of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
 - An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
   `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative

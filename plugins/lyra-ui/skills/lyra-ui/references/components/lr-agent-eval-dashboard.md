@@ -29,8 +29,8 @@ variant?, terminal?, active? }`), preserving explicit caller labels/messages and
 `metricId: string | null = null`; `label: string = ''`; `showChart: boolean = true`; `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
 both the run list and the chart projection.
-Metric ids and run ids each use deterministic first-occurrence-wins normalization before cards,
-selectors, chart series, row lookup, and emitted events are derived.
+Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
+normalization before cards, selectors, chart series, row lookup, and emitted events are derived.
 
 **Events:** `lr-metric-change` (`{ metricId }`, emitted when a metric selector is activated) and
 `lr-run-activate` (`{ runId, run }`).

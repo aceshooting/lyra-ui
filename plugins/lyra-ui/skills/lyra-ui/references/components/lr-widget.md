@@ -39,14 +39,14 @@ position) survives the transition.
   CSS `inset`; when empty or invalid, the backdrop remains viewport-filling (`0`) independently of
   `fullscreenInset`
 - `views: readonly LyraWidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
-  chart/table toggle inside the same card chrome; `LyraWidgetView { id: string; label?: string; icon?:
+  chart/table toggle inside the same card chrome; `LyraWidgetView { viewId: string; label?: string; icon?:
 TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
-  (`[part='view-toggle']`) and a `<slot name="view-${id}">`. An icon-only view should set
-  `ariaLabel`; if both labels are omitted, the button uses `id` as a last-resort accessible name.
+  (`[part='view-toggle']`) and a `<slot name="view-${viewId}">`. An icon-only view should set
+  `ariaLabel`; if both labels are omitted, the button uses `viewId` as a last-resort accessible name.
   Empty (the default) renders today's single unnamed default slot as the sole view, unchanged.
   Up to 256 valid records are snapshotted; IDs must be unique, nonempty, and whitespace-stable.
   Malformed/hostile entries are ignored without rejecting the component update.
-- `activeView: string = ''` (attribute: false) — the currently active view's `id`; defaults to the
+- `activeViewId: string = ''` (attribute: false) — the currently active view's `viewId`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
@@ -68,9 +68,9 @@ fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backd
 accepted state — also fired when fullscreen is exited via Escape or a backdrop click, not just the
 toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-view-request`
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
-`preventDefault()` to leave `activeView` unchanged. Not emitted when a consumer assigns
-`activeView` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
-active view's `id`. Not emitted when a consumer sets `activeView` directly)
+`preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
+`activeViewId` directly), `lr-view-change` (non-cancelable; `detail: { viewId }`, the accepted
+active view's `viewId`. Not emitted when a consumer sets `activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
 icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,
@@ -83,7 +83,7 @@ collapsed/right-facing baseline for a directional override; only meaningful whil
 `fullscreen-icon` (replaces the built-in glyph in the fullscreen toggle — the override replaces
 _both_ the "expand" and "exit fullscreen" defaults, so the consumer owns that distinction, e.g. by
 reading the `fullscreen` attribute; its assigned content is decorative, inert, and aria-hidden so
-the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{id}`
+the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{viewId}`
 slot per `views` entry, used instead of the default slot
 
 **CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when

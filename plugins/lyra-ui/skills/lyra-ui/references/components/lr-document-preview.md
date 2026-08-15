@@ -79,7 +79,8 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   action when a composing shell already owns that action. This is property-only composition state;
   it does not suppress inline preview rendering.
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
-  over the image-format preview; ignored for the `text`/`generic` formats. A rectangle renders only
+  over the image-format preview; ignored for the `text`/`generic` formats. IDs are trimmed and
+  required to be nonempty, with the first record retained when IDs repeat. A rectangle renders only
   when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
@@ -99,7 +100,7 @@ matches, the anchor isn't `region`, or the format isn't currently `image`.
 - `lr-render-error` — `detail: { error }` — fired when this component's own `text/*`/
   `application/json` `fetch(src)` fails (network error or non-2xx response). Distinct from
   `status="error"`, which is entirely host-driven.
-- `lr-highlight-activate` — `detail: { id }` — a region highlight was clicked or activated via
+- `lr-highlight-activate` — `detail: { highlightId }` — a region highlight was clicked or activated via
   Enter/Space (image format only).
 
 **Slots:** `unsupported` — escape hatch: when populated, its content renders _instead of_ the generic

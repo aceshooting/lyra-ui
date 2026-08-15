@@ -63,7 +63,8 @@ scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border)`), `--lr-timeline-marker-color` (default
-`var(--lr-color-text-quiet)`, swapped per `variant`), and `--lr-timeline-active-ring-color`
+`var(--lr-color-text-quiet)`, with a private default that changes per `variant`), and
+`--lr-timeline-active-ring-color`
 (defaults to the effective marker color). All five item hooks inherit from theme
 ancestors; setting one directly on an item wins over both the inherited value and variant default.
 

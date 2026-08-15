@@ -24,8 +24,8 @@ entries, the body renders through an internal `<lr-virtual-list>` instead of a p
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
 text: string; icon?: string; timestamp?: Date | string; variant?: LyraVariant }` (exported here).
 `icon` is a literal glyph hint (e.g. an emoji), the same convention `lr-tool-call-chip.icon` uses; a
-small variant dot renders in its place when omitted. Later duplicate ids are omitted before the
-summary, keyed render, or virtualization path is chosen. `LyraVariant = 'neutral' | 'brand' | 'success'
+small variant dot renders in its place when omitted. Empty/blank ids and later duplicate ids are
+omitted before the summary, keyed render, or virtualization path is chosen. `LyraVariant = 'neutral' | 'brand' | 'success'
 | 'warning' | 'danger'` is the library-wide semantic vocabulary, so an entry is toned with the same
 five values as every other `variant` in the library. An invalid `timestamp` string is treated as
 unset. `mode: 'live' | 'post-hoc' =

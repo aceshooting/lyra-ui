@@ -26,7 +26,7 @@ passthrough). Not a subclass of `LyraChart`.
 
 **Properties:**
 - `type: LyraLiteChartType = 'bar'` — `'bar' | 'line'`
-- `labels: string[] = []` (attribute: false)
+- `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraLiteChartSeries[] = []` (attribute: false) —
   `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
   readonly color?: string }`; the deprecated `LiteSeries` name remains an alias for migration.
@@ -118,6 +118,9 @@ passthrough). Not a subclass of `LyraChart`.
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
   forbids an attribute selector after `::part()` — so they silently never match; the outline is
   painted inside the shadow root and exposed through that token instead.
+- `labels`, `datasets`, and `selectedIndices` are clone-owned, bounded, frozen snapshots. Mutating
+  a previously assigned array or nested series data has no effect; create and reassign a new
+  collection.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values; finite input is capped at 1,000,000px before derived SVG geometry is
   calculated

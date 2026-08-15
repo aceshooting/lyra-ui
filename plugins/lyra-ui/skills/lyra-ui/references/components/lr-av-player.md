@@ -43,10 +43,11 @@ anchor-target surface is `highlights: readonly LyraHighlight[] = []` (property o
 collection to update), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
 `anchorKinds: readonly LyraAnchorKind[] = ['time-range']`.
-`LyraAvCue = { readonly id, readonly start, readonly end?, readonly text, readonly speaker? }`;
+`LyraAvCue = { readonly cueId, readonly start, readonly end?, readonly text, readonly speaker? }`;
 `LyraAvTrack = { readonly src, readonly kind: 'subtitles' | 'captions' | 'descriptions', readonly
 srclang, readonly label, readonly default? }`. Their retained records are frozen as well as the
-outer arrays.
+outer arrays. Cue IDs are trimmed and must be nonempty; the first cue for a `cueId` is retained and
+blank or later duplicate records are ignored.
 
 Only exact `kind="audio"` and `kind="video"` values override MIME auto-detection. An unrecognized
 runtime or attribute value falls back to `mimeType` (`audio/*` renders audio; every other value
@@ -81,7 +82,7 @@ unsupported or unresolved targets report `false` through the return value and `l
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
 `lr-rate-change` (`detail: { rate }`), `lr-cue-change`
 (`detail: { readonly cueId, readonly index }`; `cueId` is `null` and `index` is `-1` when no cue is active),
-`lr-highlight-activate` (`detail: { id }`), `lr-anchor-result` (`detail: {
+`lr-highlight-activate` (`detail: { highlightId }`), `lr-anchor-result` (`detail: {
 found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
 `lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
 `play`, `timeupdate`, and `volumechange`
@@ -110,7 +111,7 @@ player does not lose its landmark or accessible name when its media is replaced 
 
 Every cue-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
 forwarded back out through `exportparts`, so `lr-av-player::part(cue)` and friends work from a
-consumer stylesheet. The three cue states are separate part *names* rather than attribute selectors,
+consumer stylesheet. The three cue states are separate part _names_ rather than attribute selectors,
 because Shadow Parts forbids an attribute selector after `::part()` —
 `::part(cue)[aria-current='true']` is invalid CSS, so use `::part(cue-current)`. The `aria-current`
 and `data-*` attributes remain on each row for semantics and scripting.

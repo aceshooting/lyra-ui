@@ -31,7 +31,9 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
   `lr-model-select`.
 - `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false, JS-only) — a readonly string
   catalog or readonly object-row catalog (every entry must be one shape or the other, never mixed);
-  passed straight through to the internal `lr-model-select`.
+  passed straight through to the internal `lr-model-select`, with the shared unique, nonempty,
+  first-wins catalog projection also used for this panel's `inCatalog` event field. The array is
+  clone-owned, bounded, and frozen; reassign a new catalog array after changing its rows.
 - `model: string = ''` — the current model id.
 - `allowCustom: boolean = false` (attribute `allow-custom`) — lets the model control accept a value
   outside `catalog`; passed straight through.

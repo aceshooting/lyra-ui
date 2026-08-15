@@ -28,7 +28,9 @@ visible the moment a keyboard user reaches it. That is what makes it usable for 
 **CSS parts:** none — the host itself is the box. **Themeable custom properties:** none.
 
 ```html
-<lr-visually-hidden><a href="#main">Skip to main content</a></lr-visually-hidden>
+<lr-visually-hidden
+  ><a href="#main">Skip to main content</a></lr-visually-hidden
+>
 ```
 
 Every declaration is `!important`, deliberately: the element's contract is that the content is

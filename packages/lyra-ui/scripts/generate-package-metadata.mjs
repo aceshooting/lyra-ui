@@ -10,6 +10,13 @@ function invariant(condition, message) {
   if (!condition) throw new Error(`Invalid package metadata: ${message}`);
 }
 
+// This codebase is single-quote by convention (enforced by check:source-policy's
+// double-quoted-literal rule); JSON.stringify always emits double quotes, so it can't be used
+// directly to render the string literals below.
+function singleQuote(value) {
+  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+}
+
 export function renderPackageMetadata(packageJson) {
   invariant(typeof packageJson?.name === 'string' && packageJson.name.length > 0, 'name is required');
   invariant(
@@ -21,8 +28,8 @@ export function renderPackageMetadata(packageJson) {
     ' * Generated from package.json by scripts/generate-package-metadata.mjs.',
     ' * Run `pnpm package-metadata` after changing package identity or version.',
     ' */',
-    `export const LYRA_PACKAGE_NAME = ${JSON.stringify(packageJson.name)} as const;`,
-    `export const LYRA_PACKAGE_VERSION = ${JSON.stringify(packageJson.version)} as const;`,
+    `export const LYRA_PACKAGE_NAME = ${singleQuote(packageJson.name)} as const;`,
+    `export const LYRA_PACKAGE_VERSION = ${singleQuote(packageJson.version)} as const;`,
     '',
   ].join('\n');
 }

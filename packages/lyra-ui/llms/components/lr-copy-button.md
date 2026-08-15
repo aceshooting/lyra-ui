@@ -116,16 +116,22 @@ Handling the failure path — the button already shows and announces it, so a li
 for an application-level fallback:
 
 ```html
-<lr-copy-button id="copy" value="npm install @aceshooting/lyra-ui"></lr-copy-button>
+<lr-copy-button
+  id="copy"
+  value="npm install @aceshooting/lyra-ui"
+></lr-copy-button>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js';
+  import "@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js";
 
-  const button = document.getElementById('copy');
-  button.addEventListener('lr-copy', (event) => trackCopySuccess(event.detail.text));
-  button.addEventListener('lr-error', () => showCopyFallback());
-  button.addEventListener('lr-copy-error', (event) => {
+  const button = document.getElementById("copy");
+  button.addEventListener("lr-copy", (event) =>
+    trackCopySuccess(event.detail.text)
+  );
+  button.addEventListener("lr-error", () => showCopyFallback());
+  button.addEventListener("lr-copy-error", (event) => {
     // event.detail.reason is 'unsupported' | 'denied' | 'failed'
-    if (event.detail.reason === 'unsupported') selectTextForManualCopy(event.detail.text);
+    if (event.detail.reason === "unsupported")
+      selectTextForManualCopy(event.detail.text);
   });
 </script>
 ```
@@ -140,7 +146,7 @@ import type {
   LyraCopyButtonTooltip,
   LyraCopyButtonTooltipPlacement,
   LyraCopyErrorReason,
-} from '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js';
+} from "@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js";
 ```
 
 **Known gotchas:**

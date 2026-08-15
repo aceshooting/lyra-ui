@@ -45,6 +45,7 @@ dropdown fallback. Its `header` and `footer` slots remain rendered outside the i
 their controls without putting arbitrary content inside the menu role.
 
 **Properties:**
+
 - `open: boolean = false` (reflected), `placement: Placement = 'bottom-start'`,
   `distance: number = 0`, `skidding: number = 0`, and `for: string = ''` — the same positioning
   vocabulary as `lr-popover`, except the mapped dropdown sits flush against its trigger by default.
@@ -104,7 +105,9 @@ popup, preserving the popover, Web Awesome and Shoelace wrapper names on the sam
 ```html
 <lr-dropdown aria-label="File actions" size="small">
   <button slot="trigger">Actions</button>
-  <lr-dropdown-item value="rename"><span slot="details">⌘R</span>Rename</lr-dropdown-item>
+  <lr-dropdown-item value="rename"
+    ><span slot="details">⌘R</span>Rename</lr-dropdown-item
+  >
   <lr-dropdown-item>
     Share
     <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
@@ -113,8 +116,10 @@ popup, preserving the popover, Web Awesome and Shoelace wrapper names on the sam
   <lr-dropdown-item value="delete" variant="danger">Delete</lr-dropdown-item>
 </lr-dropdown>
 <script type="module">
-  document.querySelector('lr-dropdown').addEventListener('lr-select', (event) => {
-    console.log(event.detail.item.value);
-  });
+  document
+    .querySelector("lr-dropdown")
+    .addEventListener("lr-select", (event) => {
+      console.log(event.detail.item.value);
+    });
 </script>
 ```

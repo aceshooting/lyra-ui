@@ -82,10 +82,10 @@ unsafe/unparseable `href` falls back to the native `<button>`.
   accepted — `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` — and the same ladder drives
   `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input`, so same-`size` controls share a height by
   construction rather than by two lists agreeing
-- `pill: boolean = false` (reflected) — fully rounded ends. It re-assigns `--lr-button-radius` to
-  `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so that property stays the
-  single corner-radius knob and a consumer override still wins. `appearance="link"` renders with
-  zero chrome, pill or not
+- `pill: boolean = false` (reflected) — fully rounded ends. It changes the private radius default
+  to `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so an inherited or
+  direct `--lr-button-radius` remains authoritative. `appearance="link"` renders with zero chrome,
+  pill or not
 - `circle: boolean = false` (reflected) — Shoelace-compatible circular icon-button treatment: a
   square control with the pill radius and compact inline padding. It is additive to, not a rename
   of, `pill`. Circle and automatically detected icon-only buttons retain the shared
@@ -245,9 +245,10 @@ Ordinary labelled buttons keep the exact shared form-control ladder heights abov
 `--lr-button-gap` (default `--lr-form-control-gap`, the gap between the icon/label and any slotted
 content) does not vary by tier. `--lr-button-radius` (default `--lr-form-control-radius`, the corner
 radius) _does_ follow the tier — the two tightest tiers take a smaller radius, since a 6px corner on
-a 20px-tall control reads as a lozenge. Both are retunable without a `::part(base)` rule;
-`appearance="link"` ignores the radius (it renders with zero), and `pill` re-assigns it to
-`--lr-radius-pill`. `--lr-button-caret-size` (default `var(--lr-size-0-75em)`) is the `with-caret`
+a 20px-tall control reads as a lozenge. Both are inheritable and retunable without a
+`::part(base)` rule; `appearance="link"` ignores the radius (it renders with zero), and `pill`
+changes its private default to `--lr-radius-pill`. `--lr-button-caret-size` (default
+`var(--lr-size-0-75em)`) is the `with-caret`
 chevron's font size — declared in `em`, so it tracks every `size` tier through the button's own font
 size instead of needing a per-tier value.
 `--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
@@ -255,9 +256,9 @@ byte-identical to before this property existed — set it to add a drop shadow (
 elevated/floating action button) without a `::part(base)` rule.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
-the active tier's geometry, and every `:host([size='…'])` rule does nothing but re-assign them — no
-per-tier rule ever declares a property on `[part='base']`. Overriding one therefore retunes
-whatever tier is active (e.g. pinning a `size="s"` button into a compact toolbar row), the same
+the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no
+per-tier rule redeclares a public hook or styles `[part='base']` directly. An inherited or direct
+public value therefore retunes whatever tier is active (e.g. pinning a `size="s"` button into a compact toolbar row), the same
 pattern `lr-input`/`lr-select`/`lr-combobox`/`lr-segmented`/`lr-date-input` follow. Each defaults to
 the shared ladder's value for the active tier, which at the default `m` tier resolves to the values
 in brackets:
@@ -266,7 +267,7 @@ in brackets:
 - `--lr-button-padding-inline` (default `--lr-form-control-padding-inline`; `--lr-space-m` at `m`)
 - `--lr-button-font-size` (default `--lr-form-control-font-size`; `--lr-font-size-m` at `m`)
 - `--lr-button-min-height` (default `--lr-form-control-height`) — the active tier's `min-block-size`
-  floor, re-assigned per tier to that tier's own `--lr-button-size-*` token, and used as the
+  floor. Its private default follows that tier's own `--lr-button-size-*` token, and it is used as the
   fallback when `--lr-button-height` is unset.
 - `--lr-button-height` — an **exact** height (both floor and cap), for pinning the button to a
   fixed toolbar row. **Undeclared by default**, so the button keeps the active tier's floor and an

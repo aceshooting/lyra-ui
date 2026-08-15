@@ -19,12 +19,13 @@ A tooltip for a consumer-owned trigger, positioned with the shared Floating UI p
 interactions open it is configurable as of 8.0.0; by default it is still hover and focus.
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — assigning it runs the same lifecycle as `show()`/`hide()`.
   Assigning `false` also cancels a delayed open that has not fired yet, even when the tooltip is
   already closed, so a pending timer can't reopen it behind the caller's back.
-- `trigger: string = 'hover focus'` — **new in 8.0.0.** A *space-separated* list of `hover`,
+- `trigger: string = 'hover focus'` — **new in 8.0.0.** A _space-separated_ list of `hover`,
   `focus`, `click` and `manual`. `manual` (or an empty list) leaves the tooltip entirely under
-  programmatic control. Note the name collision: this string property and the `trigger` *slot* are
+  programmatic control. Note the name collision: this string property and the `trigger` _slot_ are
   different things — the slot holds the element, this property says which of its interactions count.
 - `manual: boolean = false` — equivalent to including `manual` in `trigger`; kept because it reads
   better on a tooltip that is only ever driven from script
@@ -63,6 +64,7 @@ To preserve the previous Lyra-shaped visual defaults explicitly, use `distance="
 origin-aware migration emits those tokens.
 
 **Methods:**
+
 - `show(): Promise<void>` — open immediately, bypassing `show-delay` and interaction policy, then
   resolve after `lr-after-show`
 - `hide(): Promise<void>` — close immediately, bypassing `hide-delay`, then resolve after
@@ -101,7 +103,13 @@ scroll wrapper to move overflow onto, so its default arrow trades internal scrol
 arrow — use `<lr-popover>` when a floating surface needs both.
 
 ```html
-<lr-tooltip trigger="hover focus click" show-delay="0" hide-delay="400" arrow placement="right">
+<lr-tooltip
+  trigger="hover focus click"
+  show-delay="0"
+  hide-delay="400"
+  arrow
+  placement="right"
+>
   Copied to clipboard
   <button slot="trigger" type="button">Copy</button>
 </lr-tooltip>
@@ -156,19 +164,26 @@ or cross-document adoption cancels the old realm, and reconnect creates fresh ob
 
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
 `lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
-*local drawing space* (pre pan/zoom), not viewport pixels, so they can't be passed to `showAt()`
+_local drawing space_ (pre pan/zoom), not viewport pixels, so they can't be passed to `showAt()`
 directly. For `renderer="svg"` (the default), read the clicked node's own rendered element instead,
 whose `getBoundingClientRect()` is already viewport-relative; for `renderer="canvas"` (no per-node
 DOM element), use the click event's own `clientX`/`clientY`.
 
 ```js
-const graph = document.querySelector('lr-graph');
-const detail = document.querySelector('lr-popover'); // no slotted trigger needed for showAt()
+const graph = document.querySelector("lr-graph");
+const detail = document.querySelector("lr-popover"); // no slotted trigger needed for showAt()
 
-graph.addEventListener('click', (event) => {
-  const nodeEl = event.composedPath().find((el) => el instanceof Element && el.matches('[part="node"]'));
+graph.addEventListener("click", (event) => {
+  const nodeEl = event
+    .composedPath()
+    .find((el) => el instanceof Element && el.matches('[part="node"]'));
   if (!nodeEl) return; // clicked empty canvas/background, not a node
   const rect = nodeEl.getBoundingClientRect();
-  detail.showAt({ x: rect.left + rect.width / 2, y: rect.top, width: rect.width, height: rect.height });
+  detail.showAt({
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+    width: rect.width,
+    height: rect.height,
+  });
 });
 ```

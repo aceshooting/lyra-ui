@@ -20,6 +20,7 @@ A form-associated drag-drop + click-to-browse file dropzone. It stores and rende
 no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the host).
 
 **Properties:**
+
 - `multiple: boolean = false` (reflected)
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
@@ -74,18 +75,18 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
     are dropped, and an empty mapped set synthesizes `customError`. The message falls back from the
     result's own `message` to the validator's static or function `message`, then to the localized
     default. Attributes listed in `observedAttributes` are watched on the host and revalidate live.
-  Validators run in order and the first failure wins. A validator that throws fails closed with the
-  localized generic message rather than escaping into the caller. Unreadable proxy-backed
-  validator collections/results are contained too: a collection or result trap fails closed,
-  returned validity flags are copied through the native flag vocabulary, and an unreadable
-  `observedAttributes` list is skipped without rejecting the component's update. The public array
-  remains the live mutable mirrored contract; each validation/observer pass takes only a transient
-  iteration snapshot. `checkValidity()` and `reportValidity()` recompute at call time, so a
-  validator that starts failing without any host property changing is still seen. Own or
-  fieldset-cascaded `disabled` bars configured validators exactly as it bars the intrinsic
-  constraint. Exported types:
-  `LyraFileInputValidator`, `LyraFileInputValidatorResult`, `LyraFileInputObjectValidator`,
-  `LyraFileInputObjectValidatorResult`.
+    Validators run in order and the first failure wins. A validator that throws fails closed with the
+    localized generic message rather than escaping into the caller. Unreadable proxy-backed
+    validator collections/results are contained too: a collection or result trap fails closed,
+    returned validity flags are copied through the native flag vocabulary, and an unreadable
+    `observedAttributes` list is skipped without rejecting the component's update. The public array
+    remains the live mutable mirrored contract; each validation/observer pass takes only a transient
+    iteration snapshot. `checkValidity()` and `reportValidity()` recompute at call time, so a
+    validator that starts failing without any host property changing is still seen. Own or
+    fieldset-cascaded `disabled` bars configured validators exactly as it bars the intrinsic
+    constraint. Exported types:
+    `LyraFileInputValidator`, `LyraFileInputValidatorResult`, `LyraFileInputObjectValidator`,
+    `LyraFileInputObjectValidatorResult`.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
   is anchored; assign `undefined` to restore the default focusable base
@@ -113,7 +114,7 @@ implementation event plus a duplicate. `lr-files` (`detail: LyraFileInputFilesDe
 readonly `files` and `rejected` arrays, fired on both drop and manual file-picker selection) —
 `LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
 }`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
-input (`multiple` unset) receives more than one file (in which case *all* files are rejected, none
+input (`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
 accepted), `'size'` from `maxFileSize`, `'directory'` for a dropped folder in single-file mode,
 `'read'` when a file/directory reader fails, or `'limit'` when folder traversal exceeds its bounded
 entry budget. Read/limit failures reject the complete selection atomically; lifecycle cancellation
@@ -226,10 +227,10 @@ tokens — `--lr-space-xs`, `--lr-space-l`,
 ```html
 <lr-file-input id="dataset-files" multiple accept=".csv,.xlsx"></lr-file-input>
 <script>
-  const input = document.querySelector('#dataset-files');
-  input.allowedMimeTypes = ['text/csv'];
-  input.addEventListener('lr-files', (e) => {
-    console.log('accepted:', e.detail.files, 'rejected:', e.detail.rejected); // rejected[i].reason
+  const input = document.querySelector("#dataset-files");
+  input.allowedMimeTypes = ["text/csv"];
+  input.addEventListener("lr-files", (e) => {
+    console.log("accepted:", e.detail.files, "rejected:", e.detail.rejected); // rejected[i].reason
   });
 </script>
 ```
@@ -246,6 +247,7 @@ that as a possible match during preview so the drag-over UI doesn't flash a fals
 an extension-only `accept` list.
 
 **Known gotchas:**
+
 - Paste-from-clipboard **is** supported and on by default: a `paste` event on the dropzone reads
   `e.clipboardData.files` and routes it through the same accept/reject classification as a drop.
   Set `paste="false"` (or `.paste = false`) to opt out.

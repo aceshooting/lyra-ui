@@ -29,8 +29,9 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
   `{ uri, src, html?: never, ... }` for a relative/HTTP(S) document URL. Shared optional fields are
   `title`, `csp`, `permissions`, and `metadata`. Runtime validation enforces the non-empty identity,
   exact-one-source invariant, and remote URL scheme even for untyped JavaScript callers. CSP domain
-  arrays accept HTTP(S) origins only. Permissions are optional booleans for camera, microphone,
-  geolocation, clipboard read, and clipboard write.
+  arrays accept HTTP(S) origins only. The resource and nested CSP arrays are clone-owned, bounded,
+  and frozen; reassign a new resource record after changes. Permissions are optional booleans for
+  camera, microphone, geolocation, clipboard read, and clipboard write.
 - `height: number = 320`, `maxHeight: number = 800` (attribute `max-height`) — requested and maximum
   frame heights in pixels; runtime values and resize requests clamp to 120–10,000.
 - `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`). A present
