@@ -85,9 +85,14 @@ class LyraMarkdownRuntimeElement extends LyraElement<MarkdownRuntimeEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 }
 
+// Deliberately not tagged internal, and this note deliberately never spells that JSDoc tag out
+// literally either: this TypeScript toolchain's stripInternal pass matches the tag as bare text
+// anywhere in a comment block, not just in tag position, so writing it even to explain its
+// absence re-triggers stripping. The public createMarkdownVariantContext() below references this
+// type in its own signature; stripping this interface would leave that still-public signature
+// naming a type that no longer exists in the shipped .d.ts, breaking the package's own build.
 /** Shared per-tag state. The two concrete tags deliberately keep separate parser defaults,
- * connected-instance sets, and KaTeX resolution state while sharing one lifecycle implementation.
- * @internal */
+ * connected-instance sets, and KaTeX resolution state while sharing one lifecycle implementation. */
 export interface MarkdownVariantContext {
   readonly tag: 'lr-markdown' | 'lr-markdown-core';
   readonly connectedInstances: Set<MarkdownRuntimeBase>;
@@ -107,19 +112,21 @@ export function createMarkdownVariantContext(
   };
 }
 
+// Deliberately not tagged internal -- see MarkdownVariantContext's note above. MarkdownRuntimeBase's
+// own tokenizePendingHighlight abstract method returns Promise<MarkdownHighlightAttempt>.
 /** `undefined` means an async attempt became stale; `null` means the current attempt cannot be
- * highlighted; a string is cacheable highlighted HTML.
- * @internal */
+ * highlighted; a string is cacheable highlighted HTML. */
 export type MarkdownHighlightAttempt = string | null | undefined;
 
+// Deliberately not tagged internal -- see MarkdownVariantContext's note above. lr-markdown and
+// lr-markdown-core publicly extend this class, so stripping it would leave both concrete classes'
+// extends clauses naming a type absent from the shipped .d.ts, breaking the package's own build.
 /**
  * Peer-neutral implementation shared by the full and core Markdown tags. Public reactive fields
  * remain declared on each concrete class so their CEM/JSDoc surfaces stay explicit; all state,
  * parsing, streaming, highlighting, theme, anchor, selection, and render orchestration lives here.
  * The only injected axis is how a fenced block obtains a Shiki highlighter, keeping the full
  * language-table imports unreachable from the core route.
- *
- * @internal
  */
 export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   LyraMarkdownRuntimeElement

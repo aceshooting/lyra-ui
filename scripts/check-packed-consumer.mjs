@@ -630,7 +630,7 @@ import type {
   LyraGraphEventMap,
   LyraMarkedParser,
   LyraMapEventMap,
-  LyraModelSelectSize,
+  LyraSize,
   MarkdownHeadingItem,
   MessageFeedbackRating,
   MessageFeedbackValue,
@@ -649,7 +649,7 @@ const table = new LyraTable();
 const events: [LyraChartEventMap, LyraGraphEventMap, LyraMapEventMap] | undefined = undefined;
 const conversationTypes: [
   LyraMarkedParser,
-  LyraModelSelectSize,
+  LyraSize,
   MarkdownHeadingItem,
   MessageFeedbackRating,
   MessageFeedbackValue,
