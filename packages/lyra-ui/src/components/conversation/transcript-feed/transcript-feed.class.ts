@@ -33,9 +33,9 @@ export interface LyraTranscriptFeedEventMap {
  * entries, interim-vs-final styling with in-place upgrades keyed by `id`, and a stick-to-bottom
  * auto-scroll with release, the same `follow`/`lr-follow-change` contract `lr-terminal` uses.
  *
- * Rendering reconciles `entries` keyed by `id` via Lit's `repeat()`. Ids must be nonempty and
- * unique within a session; invalid and later duplicate rows are omitted with the first valid
- * occurrence winning. A same-`id` entry with new `text` replaces in place; a same-`id` entry whose
+ * Rendering reconciles `entries` keyed by `id` via Lit's `repeat()`. Ids must be nonempty,
+ * nonblank, and unique within a session; invalid and later duplicate rows are omitted with the
+ * first valid occurrence winning. A same-`id` entry with new `text` replaces in place; a same-`id` entry whose
  * `interim` flips from `true` to unset/`false`
  * moves from the interim area into the `role="log"` region and announces exactly once. Interim
  * entries render *after* the log container, visible but structurally outside it, so per-token
@@ -128,7 +128,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   private get normalizedEntries(): LyraTranscriptEntry[] {
     const seen = new Set<string>();
     return this.entries.filter((entry) => {
-      if (!entry.id || seen.has(entry.id)) return false;
+      if (typeof entry.id !== 'string' || entry.id.trim().length === 0 || seen.has(entry.id)) return false;
       seen.add(entry.id);
       return true;
     });
@@ -142,13 +142,6 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     }
     return entries;
   }
-  private get finalEntries(): LyraTranscriptEntry[] {
-    return this.renderedEntries.filter((e) => !e.interim);
-  }
-  private get interimEntries(): LyraTranscriptEntry[] {
-    return this.renderedEntries.filter((e) => e.interim);
-  }
-
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncAnnouncementSink();
@@ -281,9 +274,10 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   }
 
   override render(): TemplateResult {
-    const finals = this.finalEntries;
-    const interims = this.interimEntries;
-    const empty = this.entries.length === 0;
+    const entries = this.renderedEntries;
+    const finals = entries.filter((entry) => !entry.interim);
+    const interims = entries.filter((entry) => entry.interim);
+    const empty = entries.length === 0;
     return html`
       <div
         part="base"

@@ -15,7 +15,12 @@ const timelineItemVariantConverter = {
 };
 
 const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
-  value === 'brand' || value === 'success' || value === 'warning' || value === 'danger' ? value : 'neutral';
+  value === 'brand' ||
+  value === 'success' ||
+  value === 'warning' ||
+  value === 'danger'
+    ? value
+    : 'neutral';
 
 /**
  * `<lr-timeline-item>` — one marker + title + optional timestamp + optional description row inside
@@ -170,27 +175,39 @@ export class LyraTimelineItem extends LyraElement {
     if (changed.has('variant')) {
       const reflected = timelineItemVariantConverter.toAttribute(this.variant);
       if (reflected === null) this.removeAttribute('variant');
-      else if (this.getAttribute('variant') !== reflected) this.setAttribute('variant', reflected);
+      else if (this.getAttribute('variant') !== reflected)
+        this.setAttribute('variant', reflected);
     }
   }
 
   private get normalizedTimestamp(): Date | undefined {
     if (this.timestamp === undefined) return undefined;
-    const date = this.timestamp instanceof Date ? this.timestamp : new Date(this.timestamp);
+    const date =
+      this.timestamp instanceof Date
+        ? this.timestamp
+        : new Date(this.timestamp);
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
   private onIconSlotChange = (): void => {
-    const markerIconSlot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="marker-icon"]');
-    this.hasIconSlot = Boolean(markerIconSlot?.assignedElements({ flatten: true }).length);
+    const markerIconSlot = this.renderRoot.querySelector<HTMLSlotElement>(
+      'slot[name="marker-icon"]'
+    );
+    this.hasIconSlot = Boolean(
+      markerIconSlot?.assignedElements({ flatten: true }).length
+    );
   };
 
   private onTimestampSlotChange = (e: Event): void => {
-    this.hasTimestampSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasTimestampSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   private onDescriptionSlotChange = (e: Event): void => {
-    this.hasDescriptionSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasDescriptionSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   override render(): TemplateResult {
@@ -200,14 +217,24 @@ export class LyraTimelineItem extends LyraElement {
     // Intl-formatted absolute date/time -- caller/data formatting exempt from localize() routing per
     // AGENTS.md's i18n carve-out for Intl-formatted dates. Never hand-rolled.
     const absolute = ts
-      ? getDateTimeFormat(this.effectiveLocale || undefined, { dateStyle: 'long', timeStyle: 'short' }).format(ts)
+      ? getDateTimeFormat(this.effectiveLocale || undefined, {
+          dateStyle: 'long',
+          timeStyle: 'short',
+        }).format(ts)
       : '';
 
     return html`
       <div part="base">
         <div part="track">
-          <span part="marker" aria-hidden="true" ?data-has-icon=${this.hasIconSlot}>
-            <slot name="marker-icon" @slotchange=${this.onIconSlotChange}></slot>
+          <span
+            part="marker"
+            aria-hidden="true"
+            ?data-has-icon=${this.hasIconSlot}
+          >
+            <slot
+              name="marker-icon"
+              @slotchange=${this.onIconSlotChange}
+            ></slot>
           </span>
           <span part="rail"></span>
         </div>
@@ -215,16 +242,25 @@ export class LyraTimelineItem extends LyraElement {
           <div part="header">
             <span part="title"><slot></slot></span>
             <span part="timestamp" ?hidden=${!showTimestamp}>
-              <slot name="timestamp" @slotchange=${this.onTimestampSlotChange}></slot>
+              <slot
+                name="timestamp"
+                @slotchange=${this.onTimestampSlotChange}
+              ></slot>
               ${showTimestampFallback
                 ? html`<time datetime=${ts!.toISOString()} title=${absolute}>
-                    <lr-relative-time .date=${ts!} .sync=${this.sync}></lr-relative-time>
+                    <lr-relative-time
+                      .date=${ts!}
+                      .sync=${this.sync}
+                    ></lr-relative-time>
                   </time>`
                 : nothing}
             </span>
           </div>
           <span part="description" ?hidden=${!this.hasDescriptionSlot}>
-            <slot name="description" @slotchange=${this.onDescriptionSlotChange}></slot>
+            <slot
+              name="description"
+              @slotchange=${this.onDescriptionSlotChange}
+            ></slot>
           </span>
         </div>
       </div>

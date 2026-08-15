@@ -326,9 +326,8 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
    *  scrolls that pane to it too. */
   private onHighlightActivate(side: DocumentComparePaneSide, event: CustomEvent<HighlightActivateDetail>): void {
     const { highlightId } = event.detail;
-    const otherVersion = side === 'old' ? this.newVersion : this.oldVersion;
-    if (!otherVersion?.highlights?.some((h) => h.id === highlightId)) return;
     const otherPreview = side === 'old' ? this.previewNewEl : this.previewOldEl;
+    if (!otherPreview?.highlights.some((highlight) => highlight.id === highlightId)) return;
     void otherPreview?.scrollToAnchor(highlightId);
   }
 

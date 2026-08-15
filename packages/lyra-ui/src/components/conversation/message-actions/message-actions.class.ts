@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
   html,
   nothing,
@@ -6,47 +6,47 @@ import {
   type PropertyValues,
   type SVGTemplateResult,
   type TemplateResult,
-} from "lit";
-import { property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import "../../utility/copy-button/copy-button.class.js";
-import "../message-feedback/message-feedback.class.js";
+} from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import '../../utility/copy-button/copy-button.class.js';
+import '../message-feedback/message-feedback.class.js';
 
-import { styles } from "./message-actions.styles.js";
+import { styles } from './message-actions.styles.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
   isComposedFocusAvailable,
   isSemanticActionElement,
   type ComposedFocusRepairSnapshot,
-} from "../../../internal/focus-navigation.js";
-import { composedContains } from "../../../internal/overlay-manager.js";
+} from '../../../internal/focus-navigation.js';
+import { composedContains } from '../../../internal/overlay-manager.js';
 import type {
   LyraClipboardWriteFailure,
   LyraClipboardWriteSuccess,
-} from "../../../internal/clipboard.js";
+} from '../../../internal/clipboard.js';
 import {
   isLyraToolbarActionProvider,
   type LyraToolbarAction,
   type LyraToolbarActionProvider,
-} from "./toolbar-actions.js";
+} from './toolbar-actions.js';
 import type {
   MessageFeedbackSubmitDetail,
   MessageFeedbackValue,
-} from "../message-feedback/message-feedback.class.js";
+} from '../message-feedback/message-feedback.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_editMessage, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_messageActionsLabel, LYRA_DEFAULT_regenerateResponse } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type MessageActionControl = "copy" | "regenerate" | "edit" | "feedback";
+export type MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback';
 
 const MESSAGE_ACTION_CONTROLS: readonly MessageActionControl[] = [
-  "copy",
-  "regenerate",
-  "edit",
-  "feedback",
+  'copy',
+  'regenerate',
+  'edit',
+  'feedback',
 ];
 
 interface ManagedToolbarAction {
@@ -55,13 +55,13 @@ interface ManagedToolbarAction {
 }
 
 export interface LyraMessageActionsEventMap {
-  "lr-regenerate": CustomEvent<null>;
-  "lr-edit": CustomEvent<null>;
-  "lr-copy": CustomEvent<LyraClipboardWriteSuccess>;
-  "lr-error": CustomEvent<null>;
-  "lr-copy-error": CustomEvent<LyraClipboardWriteFailure>;
-  "lr-feedback-change": CustomEvent<{ rating: MessageFeedbackValue }>;
-  "lr-feedback-submit": CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
+  'lr-regenerate': CustomEvent<null>;
+  'lr-edit': CustomEvent<null>;
+  'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
+  'lr-error': CustomEvent<null>;
+  'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
+  'lr-feedback-change': CustomEvent<{ rating: MessageFeedbackValue }>;
+  'lr-feedback-submit': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts's
@@ -137,7 +137,7 @@ function editIcon(): SVGTemplateResult {
  * @since 4.0.0
  */
 export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["controls"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['controls']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -160,7 +160,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     const controls: MessageActionControl[] = [];
     for (const value of this.controls as readonly unknown[]) {
       if (
-        typeof value !== "string" ||
+        typeof value !== 'string' ||
         !MESSAGE_ACTION_CONTROLS.includes(value as MessageActionControl) ||
         seen.has(value as MessageActionControl)
       ) {
@@ -175,27 +175,27 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   /** What the `copy` built-in copies. Required for it to render at all -- this component never
    *  interprets the slotted message body itself. */
-  @property({ attribute: "copy-text" }) copyText = "";
+  @property({ attribute: 'copy-text' }) copyText = '';
 
   /** Forwarded to the embedded thumbs-only `lr-message-feedback` when enabled. */
-  @property({ attribute: "feedback-rating" })
+  @property({ attribute: 'feedback-rating' })
   feedbackRating: MessageFeedbackValue = null;
 
   /** Visually hides the bar until the enclosing message is hovered or any control inside has focus. */
   @property({
     type: Boolean,
     reflect: true,
-    attribute: "reveal-on-interaction",
+    attribute: 'reveal-on-interaction',
   })
   revealOnInteraction = false;
 
   /** Accessible name for the toolbar. Defaults to the localized `messageActionsLabel`. */
-  @property() label = "";
+  @property() label = '';
 
   /** Overrides the toolbar's computed accessible name. Wins over `label` and the localized
    *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets
    *  ARIA-name forwarding without setting a JS property. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private activeStopIndex = 0;
   /** Drives the `data-revealed` host attribute (toggled imperatively in `updated()`, not via a Lit
@@ -221,8 +221,8 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener("focusin", this.onFocusIn);
-    this.addEventListener("focusout", this.onFocusOut);
+    this.addEventListener('focusin', this.onFocusIn);
+    this.addEventListener('focusout', this.onFocusOut);
     if (this.revealOnInteraction) this.bindHoverTarget();
     if (this.hasUpdated) void this.reconcileStopsAfterChildren();
   }
@@ -233,8 +233,8 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     this.stopObserver = undefined;
     this.focusedStop = undefined;
     this.unbindHoverTarget();
-    this.removeEventListener("focusin", this.onFocusIn);
-    this.removeEventListener("focusout", this.onFocusOut);
+    this.removeEventListener('focusin', this.onFocusIn);
+    this.removeEventListener('focusout', this.onFocusOut);
     super.disconnectedCallback();
   }
 
@@ -247,7 +247,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has("revealOnInteraction")) {
+    if (changed.has('revealOnInteraction')) {
       if (this.revealOnInteraction) this.bindHoverTarget();
       else this.unbindHoverTarget();
     }
@@ -261,7 +261,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has("controls")) {
+    if (changed.has('controls')) {
       const stops = this.logicalActions();
       this.setActiveStop(
         stops,
@@ -269,32 +269,32 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       );
       void this.reconcileStopsAfterChildren();
     }
-    if (changed.has("revealed")) {
+    if (changed.has('revealed')) {
       // Toggled on the host itself (not a shadow-internal part) so the stylesheet's `:host(...)`
       // rules can key off it directly -- same imperative-attribute-toggle technique lr-graph's
       // `data-hovered` attribute already establishes for hover-driven presentation state.
-      this.toggleAttribute("data-revealed", this.revealed);
+      this.toggleAttribute('data-revealed', this.revealed);
     }
   }
 
   private bindHoverTarget(): void {
     this.unbindHoverTarget();
     const target =
-      (this.closest("lr-chat-message") as HTMLElement | null) ??
+      (this.closest('lr-chat-message') as HTMLElement | null) ??
       this.parentElement;
     if (!target) return;
     this.hoverTarget = target;
-    target.addEventListener("pointerenter", this.onHoverTargetEnter);
-    target.addEventListener("pointerleave", this.onHoverTargetLeave);
+    target.addEventListener('pointerenter', this.onHoverTargetEnter);
+    target.addEventListener('pointerleave', this.onHoverTargetLeave);
   }
 
   private unbindHoverTarget(): void {
     this.hoverTarget?.removeEventListener(
-      "pointerenter",
+      'pointerenter',
       this.onHoverTargetEnter
     );
     this.hoverTarget?.removeEventListener(
-      "pointerleave",
+      'pointerleave',
       this.onHoverTargetLeave
     );
     this.hoverTarget = null;
@@ -306,7 +306,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onHoverTargetLeave = (): void => {
-    if (!this.matches(":focus-within")) this.revealed = false;
+    if (!this.matches(':focus-within')) this.revealed = false;
   };
 
   private onFocusIn = (event: Event): void => {
@@ -331,7 +331,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onFocusOut = (event: Event): void => {
-    if (!this.hoverTarget?.matches(":hover")) this.revealed = false;
+    if (!this.hoverTarget?.matches(':hover')) this.revealed = false;
     const destination = (event as FocusEvent).relatedTarget;
     if (
       destination &&
@@ -347,9 +347,9 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     const base = this.renderRoot.querySelector('[part="base"]');
     if (!base) return [];
     const direct = [...base.children].filter(
-      (element) => element.localName !== "slot"
+      (element) => element.localName !== 'slot'
     );
-    const slot = base.querySelector<HTMLSlotElement>("slot");
+    const slot = base.querySelector<HTMLSlotElement>('slot');
     return [...direct, ...(slot?.assignedElements({ flatten: true }) ?? [])];
   }
 
@@ -372,7 +372,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     let action = this.directActions.get(element);
     if (action) return action;
     if (!this.authoredTabIndex.has(element)) {
-      this.authoredTabIndex.set(element, element.getAttribute("tabindex"));
+      this.authoredTabIndex.set(element, element.getAttribute('tabindex'));
     }
     const target = element as HTMLElement;
     const id = `direct-${++this.nextDirectActionId}`;
@@ -411,12 +411,12 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       for (const action of Array.from(provided).slice(0, 100)) {
         if (
           !action ||
-          typeof action.id !== "string" ||
+          typeof action.id !== 'string' ||
           action.id.length === 0 ||
           seen.has(action.id) ||
-          typeof action.focus !== "function" ||
-          typeof action.setTabIndex !== "function" ||
-          typeof action.matchesEventPath !== "function"
+          typeof action.focus !== 'function' ||
+          typeof action.setTabIndex !== 'function' ||
+          typeof action.matchesEventPath !== 'function'
         )
           continue;
         seen.add(action.id);
@@ -430,7 +430,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       }
       const authoredTabIndex = this.authoredTabIndex.has(element)
         ? this.authoredTabIndex.get(element)
-        : element.getAttribute("tabindex");
+        : element.getAttribute('tabindex');
       if (isSemanticActionElement(element) || authoredTabIndex !== null) {
         const action = this.directActionFor(element);
         if (this.isAvailable(action)) actions.push({ owner: element, action });
@@ -482,18 +482,18 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       attributes: true,
       attributeOldValue: true,
       attributeFilter: [
-        "aria-disabled",
-        "aria-hidden",
-        "contenteditable",
-        "controls",
-        "disabled",
-        "hidden",
-        "href",
-        "inert",
-        "open",
-        "role",
-        "tabindex",
-        "type",
+        'aria-disabled',
+        'aria-hidden',
+        'contenteditable',
+        'controls',
+        'disabled',
+        'hidden',
+        'href',
+        'inert',
+        'open',
+        'role',
+        'tabindex',
+        'type',
       ],
       childList: true,
       subtree: true,
@@ -504,10 +504,10 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   private onStopMutations = (records: MutationRecord[]): void => {
     for (const record of records) {
-      if (record.type !== "attributes" || record.attributeName !== "tabindex")
+      if (record.type !== 'attributes' || record.attributeName !== 'tabindex')
         continue;
       const target = record.target as Element;
-      this.authoredTabIndex.set(target, target.getAttribute("tabindex"));
+      this.authoredTabIndex.set(target, target.getAttribute('tabindex'));
     }
     void this.reconcileStopsAfterChildren();
   };
@@ -523,7 +523,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       .filter(
         (value): value is Promise<unknown> =>
           value !== undefined &&
-          typeof (value as PromiseLike<unknown>).then === "function"
+          typeof (value as PromiseLike<unknown>).then === 'function'
       );
     await Promise.all(pending);
     await Promise.resolve();
@@ -579,15 +579,15 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     );
     const currentIndex = originIndex >= 0 ? originIndex : this.activeStopIndex;
     const forwardKey =
-      this.effectiveDirection === "rtl" ? "ArrowLeft" : "ArrowRight";
+      this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey =
-      this.effectiveDirection === "rtl" ? "ArrowRight" : "ArrowLeft";
+      this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
     let target: number;
     if (e.key === forwardKey) target = (currentIndex + 1) % stops.length;
     else if (e.key === backwardKey)
       target = (currentIndex - 1 + stops.length) % stops.length;
-    else if (e.key === "Home") target = 0;
-    else if (e.key === "End") target = stops.length - 1;
+    else if (e.key === 'Home') target = 0;
+    else if (e.key === 'End') target = stops.length - 1;
     else return;
     e.preventDefault();
     this.setActiveStop(stops, target);
@@ -595,23 +595,23 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onRegenerateClick = (): void => {
-    this.emit("lr-regenerate", null);
+    this.emit('lr-regenerate', null);
   };
 
   private onEditClick = (): void => {
-    this.emit("lr-edit", null);
+    this.emit('lr-edit', null);
   };
 
   private renderControl(type: MessageActionControl) {
     switch (type) {
-      case "copy":
+      case 'copy':
         return this.copyText
           ? html`<lr-copy-button
               part="copy-button"
               .value=${this.copyText}
             ></lr-copy-button>`
           : nothing;
-      case "regenerate":
+      case 'regenerate':
         return html`<button
           part="regenerate-button"
           type="button"
@@ -620,7 +620,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         >
           ${regenerateIcon()}
         </button>`;
-      case "edit":
+      case 'edit':
         return html`<button
           part="edit-button"
           type="button"
@@ -629,7 +629,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         >
           ${editIcon()}
         </button>`;
-      case "feedback":
+      case 'feedback':
         return html`<lr-message-feedback
           part="feedback"
           .rating=${this.feedbackRating}
@@ -643,7 +643,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   override render(): TemplateResult {
     const label =
       this.accessibleLabel ??
-      (this.label || this.localize("messageActionsLabel"));
+      (this.label || this.localize('messageActionsLabel'));
     return html`
       <div
         part="base"
@@ -670,6 +670,6 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-message-actions": LyraMessageActions;
+    'lr-message-actions': LyraMessageActions;
   }
 }

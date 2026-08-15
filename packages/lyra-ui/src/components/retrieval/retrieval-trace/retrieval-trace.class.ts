@@ -1,17 +1,17 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { property, state } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { nextId } from "../../../internal/a11y.js";
-import { finiteNumber } from "../../../internal/numbers.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { chevronIcon } from "../../../internal/icons.js";
-import type { RetrievalChunk } from "../../../ai/types.js";
-import type { LyraChunk } from "../chunk-inspector/chunk-inspector.class.js";
-import type { LyraSpan } from "../../agent-tools/trace-tree/span.js";
-import "../../agent-tools/span-waterfall/span-waterfall.class.js";
-import "../chunk-inspector/chunk-inspector.class.js";
-import { styles } from "./retrieval-trace.styles.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { nextId } from '../../../internal/a11y.js';
+import { finiteNumber } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { chevronIcon } from '../../../internal/icons.js';
+import type { RetrievalChunk } from '../../../ai/types.js';
+import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
+import type { LyraSpan } from '../../agent-tools/trace-tree/span.js';
+import '../../agent-tools/span-waterfall/span-waterfall.class.js';
+import '../chunk-inspector/chunk-inspector.class.js';
+import { styles } from './retrieval-trace.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEvidenceToggle, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -19,11 +19,11 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_
 
 /** One of the five fixed stages a retrieval pipeline moves through, in order. */
 export type RetrievalStageKind =
-  | "query-rewrite"
-  | "embed"
-  | "retrieve"
-  | "rerank"
-  | "filter";
+  | 'query-rewrite'
+  | 'embed'
+  | 'retrieve'
+  | 'rerank'
+  | 'filter';
 
 /**
  * Evidence backing one `RetrievalStage`, rendered in that stage's expandable evidence panel.
@@ -58,27 +58,27 @@ export interface RetrievalStage {
   /** Milliseconds relative to the trace start. Absent while the stage is still running. */
   endMs?: number;
   /** Same vocabulary as `LyraSpan.status`. */
-  status: "pending" | "running" | "success" | "error" | "denied";
+  status: 'pending' | 'running' | 'success' | 'error' | 'denied';
   /** Secondary text under the stage name, e.g. "12 chunks, top score 0.87". */
   detail?: string;
   evidence?: RetrievalStageEvidence;
 }
 
-const STAGE_SPAN_KIND: Record<RetrievalStageKind, LyraSpan["kind"]> = {
-  "query-rewrite": "llm",
-  embed: "embedding",
-  retrieve: "retriever",
-  rerank: "tool",
-  filter: "tool",
+const STAGE_SPAN_KIND: Record<RetrievalStageKind, LyraSpan['kind']> = {
+  'query-rewrite': 'llm',
+  embed: 'embedding',
+  retrieve: 'retriever',
+  rerank: 'tool',
+  filter: 'tool',
 };
 
 /** `this.localize()` key per stage kind. */
 const STAGE_LABEL: Record<RetrievalStageKind, { key: string }> = {
-  "query-rewrite": { key: "retrievalStageQueryRewrite" },
-  embed: { key: "retrievalStageEmbed" },
-  retrieve: { key: "retrievalStageRetrieve" },
-  rerank: { key: "retrievalStageRerank" },
-  filter: { key: "retrievalStageFilter" },
+  'query-rewrite': { key: 'retrievalStageQueryRewrite' },
+  embed: { key: 'retrievalStageEmbed' },
+  retrieve: { key: 'retrievalStageRetrieve' },
+  rerank: { key: 'retrievalStageRerank' },
+  filter: { key: 'retrievalStageFilter' },
 };
 
 function hasEvidence(
@@ -100,26 +100,26 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
     sourceId: chunk.source.id,
     title: chunk.source.name,
     ...(chunk.locator ? { anchor: chunk.locator } : {}),
-    ...(chunk.locator?.kind === "page" ? { page: chunk.locator.page } : {}),
+    ...(chunk.locator?.kind === 'page' ? { page: chunk.locator.page } : {}),
   };
 }
 
 export interface LyraRetrievalTraceEventMap {
-  "lr-stage-select": CustomEvent<{ stageId: string }>;
-  "lr-stage-toggle": CustomEvent<{ stageId: string; expanded: boolean }>;
-  "lr-stage-chunk-action": CustomEvent<LyraEventDetailSnapshot<LyraRetrievalTraceChunkActionDetail>>;
+  'lr-stage-select': CustomEvent<{ stageId: string }>;
+  'lr-stage-toggle': CustomEvent<{ stageId: string; expanded: boolean }>;
+  'lr-stage-chunk-action': CustomEvent<LyraEventDetailSnapshot<LyraRetrievalTraceChunkActionDetail>>;
 }
 
 /** Stage-correlated replacement for nested chunk-inspector events. */
 export type LyraRetrievalTraceChunkActionDetail =
   | {
       stageId: string;
-      action: "open";
+      action: 'open';
       id: string;
       sourceId: string;
-      anchor?: NonNullable<LyraChunk["anchor"]>;
+      anchor?: NonNullable<LyraChunk['anchor']>;
     }
-  | { stageId: string; action: "expand"; id: string; expanded: boolean };
+  | { stageId: string; action: 'expand'; id: string; expanded: boolean };
 
 /**
  * `<lr-retrieval-trace>` — a retrieval pipeline's stage timeline (query rewriting, embedding,
@@ -157,7 +157,7 @@ export type LyraRetrievalTraceChunkActionDetail =
  * @since 4.1.0
  */
 export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> {
-  protected static override readonly ownedCollectionProperties = Object.freeze(["stages"]);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['stages']);
 
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
@@ -186,16 +186,16 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   /** The pipeline's stages, in any order -- the internal timeline sorts them by `startMs`. */
   @property({ attribute: false }) stages: readonly RetrievalStage[] = [];
   /** Controlled selection, forwarded verbatim to the internal `<lr-span-waterfall>`'s `activeSpanId`. */
-  @property({ attribute: "active-stage-id" }) activeStageId: string | null =
+  @property({ attribute: 'active-stage-id' }) activeStageId: string | null =
     null;
   /** Accessible name for the internal timeline. A host `aria-label` independently names the
    *  trace as a whole; an empty value falls back to the timeline's localized default. */
-  @property() label = "";
+  @property() label = '';
 
   /** Ids of stages whose evidence panel is open. Absence means collapsed -- every stage starts collapsed. */
   @state() private expandedStageIds = new Set<string>();
 
-  private readonly evidenceDomIdPrefix = nextId("retrieval-trace-evidence");
+  private readonly evidenceDomIdPrefix = nextId('retrieval-trace-evidence');
 
   private stageLabel(stage: RetrievalStage): string {
     if (stage.label) return stage.label;
@@ -222,13 +222,13 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     if (expanded) next.add(stageId);
     else next.delete(stageId);
     this.expandedStageIds = next;
-    this.emit("lr-stage-toggle", { stageId, expanded });
+    this.emit('lr-stage-toggle', { stageId, expanded });
   }
 
   private onStageSelect = (e: CustomEvent<{ spanId: string }>): void => {
     e.stopPropagation();
     const { spanId: stageId } = e.detail;
-    this.emit("lr-stage-select", { stageId });
+    this.emit('lr-stage-select', { stageId });
     // Selecting a stage in the timeline opens its evidence panel the first time (a "click a
     // stage, see what it did" flow), but never auto-collapses it again on a second click -- the
     // dedicated evidence-toggle button (with its own aria-expanded/aria-controls) is the only
@@ -242,13 +242,13 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
       const next = new Set(this.expandedStageIds);
       next.add(stageId);
       this.expandedStageIds = next;
-      this.emit("lr-stage-toggle", { stageId, expanded: true });
+      this.emit('lr-stage-toggle', { stageId, expanded: true });
     }
   };
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has("stages")) {
+    if (changed.has('stages')) {
       const ids = new Set(this.stages.map((s) => s.id));
       let pruned: Set<string> | null = null;
       for (const id of this.expandedStageIds) {
@@ -322,10 +322,10 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   }
 
   private formatMetadataValue(value: unknown): string {
-    if (value == null) return "";
-    if (typeof value === "string" || typeof value === "boolean")
+    if (value == null) return '';
+    if (typeof value === 'string' || typeof value === 'boolean')
       return String(value);
-    if (typeof value === "number") {
+    if (typeof value === 'number') {
       return getNumberFormat(this.effectiveLocale).format(
         finiteNumber(value, 0)
       );
@@ -406,6 +406,6 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-retrieval-trace": LyraRetrievalTrace;
+    'lr-retrieval-trace': LyraRetrievalTrace;
   }
 }

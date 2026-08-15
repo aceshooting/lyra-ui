@@ -2203,7 +2203,7 @@ it("renders the combobox-input's placeholder in the live quiet-text token color"
 
 it("gives the closed-dropdown trigger a :hover rule, matching its own :focus-visible affordance", () => {
   const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(/\[part='trigger'\]\)?:hover/);
+  expect(css).to.match(/\[part=["']trigger["']\]\)?:hover/);
 });
 
 describe("--lr-model-select-option-active-bg", () => {

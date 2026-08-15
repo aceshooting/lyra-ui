@@ -1,33 +1,33 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
-import { property, query, state } from "lit/decorators.js";
-import { styleMap } from "lit/directives/style-map.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   FormAssociated,
   isBarredFromValidation,
-} from "../../../internal/form-associated.js";
-import { SET_ANCHORED_VALIDITY } from "../../../internal/anchored-validity.js";
-import { finiteInteger, finiteNumber } from "../../../internal/numbers.js";
-import { styles } from "./code-editor.styles.js";
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from "../../../internal/converters.js";
-import { sanitizeCssResize } from "../../../internal/safe-css.js";
-import type { LyraSize } from "../../../internal/variants.js";
+} from '../../../internal/form-associated.js';
+import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
+import { styles } from './code-editor.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { sanitizeCssResize } from '../../../internal/safe-css.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import {
   autocorrectConverter,
   normalizeAutocorrect,
-} from "../../../internal/converters.js";
-import { lengthViolations } from "../../../internal/length-constraints.js";
+} from '../../../internal/converters.js';
+import { lengthViolations } from '../../../internal/length-constraints.js';
 import {
   dispatchNativeInputEvent,
   relayNativeEvent,
-} from "../../../internal/native-event-relay.js";
+} from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import {
   LYRA_DEFAULT_codeEditorLabel,
   LYRA_DEFAULT_fieldRequired,
   LYRA_DEFAULT_valueInvalid,
-} from "../../../internal/default-strings.generated.js";
+} from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraCodeEditorEventMap {
@@ -35,19 +35,19 @@ export interface LyraCodeEditorEventMap {
   change: Event;
   blur: FocusEvent;
   focus: FocusEvent;
-  "lr-input": CustomEvent<{ value: string }>;
-  "lr-change": CustomEvent<{ value: string }>;
-  "lr-blur": CustomEvent<null>;
-  "lr-focus": CustomEvent<null>;
-  "lr-invalid": CustomEvent<null>;
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
+  'lr-blur': CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 export type LyraCodeEditorResize =
-  | "none"
-  | "both"
-  | "horizontal"
-  | "vertical"
-  | "auto";
-export type LyraCodeEditorWrap = "off" | "soft" | "hard";
+  | 'none'
+  | 'both'
+  | 'horizontal'
+  | 'vertical'
+  | 'auto';
+export type LyraCodeEditorWrap = 'off' | 'soft' | 'hard';
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
@@ -129,11 +129,11 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
 
   static override styles = [LyraElement.styles, styles];
   /** Language identifier exposed as a reflected host styling hook. */
-  @property({ reflect: true, useDefault: true }) language = "";
+  @property({ reflect: true, useDefault: true }) language = '';
   @property({
     converter: trueDefaultBooleanConverter,
     reflect: true,
-    attribute: "line-numbers",
+    attribute: 'line-numbers',
   })
   lineNumbers = true;
 
@@ -148,7 +148,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
    *  to), and `Math.max(1, NaN)` is itself `NaN`, silently producing an empty, non-indenting insert
    *  for a NaN `tabSize`. Sanitized to a finite integer in `[1, 16]` at assignment time instead, so
    *  both the `repeat()` call and the emitted tab-width style always see a safe value. */
-  @property({ type: Number, attribute: "tab-size" })
+  @property({ type: Number, attribute: 'tab-size' })
   get tabSize(): number {
     return this._tabSize;
   }
@@ -158,7 +158,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     // to unset" so the token regains control rather than staying pinned to the sanitized fallback.
     this.tabSizeAssigned = (value as number | null) != null;
     this._tabSize = finiteInteger(value, 2, 1, 16);
-    this.requestUpdate("tabSize", old);
+    this.requestUpdate('tabSize', old);
   }
   /** Spaces a Tab press inserts, resolved with the documented precedence: an explicitly assigned
    *  `tabSize`, else the rendered `--lr-code-editor-tab-size` when it is a plain number, else the
@@ -171,10 +171,10 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     return finiteInteger(Number(resolved), this._tabSize, 1, 16);
   }
 
-  @property() label = "";
-  @property() hint = "";
-  @property({ attribute: "error-text" }) errorText = "";
-  @property() placeholder = "";
+  @property() label = '';
+  @property() hint = '';
+  @property({ attribute: 'error-text' }) errorText = '';
+  @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) readonly = false;
   /** Visible native row count. */
   private _rows = 4;
@@ -185,7 +185,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   set rows(next: number) {
     const previous = this._rows;
     this._rows = finiteInteger(next, 4, 1);
-    this.requestUpdate("rows", previous);
+    this.requestUpdate('rows', previous);
   }
   /** Visible native column count. It also supplies the platform's hard-wrap submission width. */
   @property({ type: Number, useDefault: true }) cols = 20;
@@ -201,7 +201,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       next !== undefined && Number.isFinite(next) && next >= 0
         ? finiteInteger(next, 0, 0)
         : undefined;
-    this.requestUpdate("minlength", previous);
+    this.requestUpdate('minlength', previous);
   }
   private _maxlength?: number;
   @property({ type: Number })
@@ -214,42 +214,42 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       next !== undefined && Number.isFinite(next) && next >= 0
         ? finiteInteger(next, 0, 0)
         : undefined;
-    this.requestUpdate("maxlength", previous);
+    this.requestUpdate('maxlength', previous);
   }
   /** Native CSS `resize` behavior. An invalid runtime value falls back to `'both'`. */
   @property({ reflect: true, useDefault: true }) resize: LyraCodeEditorResize =
-    "both";
+    'both';
   /** Visual size on the library's one control ladder, shared with `<lr-textarea>`/`<lr-input>`/
    *  `<lr-select>`. Accepts both the canonical `'2xs'`–`'xl'` steps and Web Awesome's/Shoelace's
    *  `'small'`/`'medium'`/`'large'` spellings of `s`/`m`/`l`; the two render identically. Governs
    *  the gutter's and textarea's padding and font size, plus the editor frame's minimum block
    *  size. */
-  @property({ reflect: true }) size: LyraSize = "m";
-  private wrapValue: LyraCodeEditorWrap = "off";
-  @property({ attribute: "wrap", useDefault: true })
+  @property({ reflect: true }) size: LyraSize = 'm';
+  private wrapValue: LyraCodeEditorWrap = 'off';
+  @property({ attribute: 'wrap', useDefault: true })
   get wrap(): LyraCodeEditorWrap {
     return this.wrapValue;
   }
   set wrap(next: LyraCodeEditorWrap | string | null) {
     const old = this.wrapValue;
-    this.wrapValue = next === "soft" || next === "hard" ? next : "off";
+    this.wrapValue = next === 'soft' || next === 'hard' ? next : 'off';
     this.syncSubmissionValue();
-    this.requestUpdate("wrap", old);
+    this.requestUpdate('wrap', old);
   }
   @property({
     converter: {
-      fromAttribute: (value: string | null) => value === "" || value === "true",
-      toAttribute: (value: boolean) => (value ? "true" : "false"),
+      fromAttribute: (value: string | null) => value === '' || value === 'true',
+      toAttribute: (value: boolean) => (value ? 'true' : 'false'),
     },
     useDefault: true,
   })
   override spellcheck = false;
   @property({ type: Boolean }) override autofocus = false;
-  @property() override title = "";
-  @property() override autocapitalize = "off";
-  @property() autocomplete = "";
-  @property({ attribute: "inputmode" }) override inputMode = "";
-  @property({ attribute: "enterkeyhint" }) override enterKeyHint = "";
+  @property() override title = '';
+  @property() override autocapitalize = 'off';
+  @property() autocomplete = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   private autocorrectValue = false;
   @property({ converter: autocorrectConverter, useDefault: true })
   override get autocorrect(): boolean {
@@ -263,20 +263,20 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     return this.inputMode;
   }
   set inputmode(next: string) {
-    this.inputMode = next ?? "";
+    this.inputMode = next ?? '';
   }
   get enterkeyhint(): string {
     return this.enterKeyHint;
   }
   set enterkeyhint(next: string) {
-    this.enterKeyHint = next ?? "";
+    this.enterKeyHint = next ?? '';
   }
-  @property({ attribute: "aria-label" }) accessibleLabel = "";
+  @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
-  @query("textarea") private textarea?: HTMLTextAreaElement;
+  @query('textarea') private textarea?: HTMLTextAreaElement;
   @query('[part="editor"]') private editor?: HTMLElement;
   @state() private gutterWindowStart = 0;
   /** The normalized live value. Native textarea line endings are always LF; the host, form state,
@@ -296,26 +296,26 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this.syncSubmissionValue();
   }
   private normalizeLineEndings(value: string | null | undefined): string {
-    return String(value ?? "").replace(/\r\n?/g, "\n");
+    return String(value ?? '').replace(/\r\n?/g, '\n');
   }
   /** Uses the owner realm's native textarea serializer for `wrap="hard"`; the live value and
    * restoration state remain unwrapped, exactly like a native textarea's IDL value. */
   private submissionValue(): string {
-    if (this.wrap !== "hard") return this.value;
+    if (this.wrap !== 'hard') return this.value;
     const view = this.ownerDocument.defaultView;
     if (!view?.FormData) return this.value;
-    const form = this.ownerDocument.createElement("form");
-    const textarea = this.ownerDocument.createElement("textarea");
-    textarea.name = "value";
-    textarea.wrap = "hard";
+    const form = this.ownerDocument.createElement('form');
+    const textarea = this.ownerDocument.createElement('textarea');
+    textarea.name = 'value';
+    textarea.wrap = 'hard';
     textarea.cols = finiteInteger(this.cols, 20, 1, 1_000_000);
     textarea.value = this.value;
     form.append(textarea);
     const mount = this.isConnected ? this.ownerDocument.body : null;
     mount?.append(form);
     try {
-      const serialized = new view.FormData(form).get("value");
-      return typeof serialized === "string" ? serialized : this.value;
+      const serialized = new view.FormData(form).get('value');
+      return typeof serialized === 'string' ? serialized : this.value;
     } catch {
       return this.value;
     } finally {
@@ -332,7 +332,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
   private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(":disabled");
+    return this.effectiveDisabled || this.matches(':disabled');
   }
   override click(): void {
     if (!this.liveDisabled) this.textarea?.click();
@@ -358,16 +358,16 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   set selectionEnd(value: number | null) {
     if (this.textarea) this.textarea.selectionEnd = value ?? 0;
   }
-  get selectionDirection(): "forward" | "backward" | "none" | null {
+  get selectionDirection(): 'forward' | 'backward' | 'none' | null {
     return this.textarea?.selectionDirection ?? null;
   }
-  set selectionDirection(value: "forward" | "backward" | "none" | null) {
-    if (this.textarea) this.textarea.selectionDirection = value ?? "none";
+  set selectionDirection(value: 'forward' | 'backward' | 'none' | null) {
+    if (this.textarea) this.textarea.selectionDirection = value ?? 'none';
   }
   setSelectionRange(
     start: number,
     end: number,
-    direction?: "forward" | "backward" | "none"
+    direction?: 'forward' | 'backward' | 'none'
   ): void {
     this.textarea?.setSelectionRange(start, end, direction);
   }
@@ -417,7 +417,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this.value = (event.target as HTMLTextAreaElement).value;
     this.fitToContent();
     relayNativeEvent(this, event);
-    this.emit("lr-input", { value: this.value });
+    this.emit('lr-input', { value: this.value });
   };
   private onChange = (event: Event): void => {
     if (this.liveDisabled) {
@@ -426,7 +426,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     }
     this.value = (event.target as HTMLTextAreaElement).value;
     relayNativeEvent(this, event);
-    this.emit("lr-change", { value: this.value });
+    this.emit('lr-change', { value: this.value });
   };
   private onFocus = (event: FocusEvent): void => {
     if (this.liveDisabled) {
@@ -434,7 +434,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit("lr-focus");
+    this.emit('lr-focus');
   };
   // Disabling a focused native control forces the browser to blur it --
   // plain native HTML behavior, not a real user interaction -- so that forced blur must not mark
@@ -444,16 +444,16 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     if (!this.liveDisabled) this.touched = true;
     this.tabBypassArmed = false;
     relayNativeEvent(this, event);
-    this.emit("lr-blur");
+    this.emit('lr-blur');
   };
   private tabBypassArmed = false;
   private onKeyDown = (event: KeyboardEvent): void => {
     if (this.liveDisabled) return;
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       this.tabBypassArmed = true;
       return;
     }
-    if (event.key === "Tab") {
+    if (event.key === 'Tab') {
       if (event.shiftKey) return;
       if (this.tabBypassArmed) {
         this.tabBypassArmed = false;
@@ -464,17 +464,17 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       const target = event.target as HTMLTextAreaElement;
       const start = target.selectionStart;
       target.setRangeText(
-        " ".repeat(this.indentWidth),
+        ' '.repeat(this.indentWidth),
         start,
         target.selectionEnd,
-        "end"
+        'end'
       );
       this.value = target.value;
       dispatchNativeInputEvent(this, {
-        data: " ".repeat(this.indentWidth),
-        inputType: "insertText",
+        data: ' '.repeat(this.indentWidth),
+        inputType: 'insertText',
       });
-      this.emit("lr-input", { value: this.value });
+      this.emit('lr-input', { value: this.value });
       return;
     }
     this.tabBypassArmed = false;
@@ -498,13 +498,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute("slot") === "label"
+        (el) => el.getAttribute('slot') === 'label'
       );
       this.hasHintSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute("slot") === "hint"
+        (el) => el.getAttribute('slot') === 'hint'
       );
       this.hasErrorSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute("slot") === "error"
+        (el) => el.getAttribute('slot') === 'error'
       );
     }
   }
@@ -513,25 +513,25 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     if (this.textarea && this.textarea.value !== this.value)
       this.textarea.value = this.value;
     if (
-      changed.has("touched") ||
-      changed.has("required") ||
-      changed.has("value") ||
-      changed.has("minlength") ||
-      changed.has("maxlength") ||
-      changed.has("readonly")
+      changed.has('touched') ||
+      changed.has('required') ||
+      changed.has('value') ||
+      changed.has('minlength') ||
+      changed.has('maxlength') ||
+      changed.has('readonly')
     ) {
       this.updateValidity();
       this.toggleAttribute(
-        "data-invalid",
+        'data-invalid',
         this.touched && !this.internals.validity.valid
       );
     }
-    if (changed.has("wrap") || changed.has("cols")) this.syncSubmissionValue();
+    if (changed.has('wrap') || changed.has('cols')) this.syncSubmissionValue();
     if (
-      changed.has("resize") ||
-      changed.has("value") ||
-      changed.has("rows") ||
-      changed.has("cols")
+      changed.has('resize') ||
+      changed.has('value') ||
+      changed.has('rows') ||
+      changed.has('cols')
     ) {
       this.fitToContent();
     }
@@ -541,10 +541,10 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       this[SET_ANCHORED_VALIDITY]({});
       return;
     }
-    if (this.required && this.value === "") {
+    if (this.required && this.value === '') {
       this[SET_ANCHORED_VALIDITY](
         { valueMissing: true },
-        this.localize("fieldRequired")
+        this.localize('fieldRequired')
       );
       return;
     }
@@ -556,8 +556,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this[SET_ANCHORED_VALIDITY](
       tooShort || tooLong ? { tooShort, tooLong } : {},
       tooShort || tooLong
-        ? native?.validationMessage || this.localize("valueInvalid")
-        : ""
+        ? native?.validationMessage || this.localize('valueInvalid')
+        : ''
     );
   }
   private countLines(): number {
@@ -607,8 +607,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
   private fitToContent(): void {
     const textarea = this.textarea;
-    if (!textarea || this.resize !== "auto") return;
-    textarea.style.blockSize = "auto";
+    if (!textarea || this.resize !== 'auto') return;
+    textarea.style.blockSize = 'auto';
     const computed = this.ownerDocument.defaultView?.getComputedStyle(textarea);
     if (!computed) return;
     const border =
@@ -617,7 +617,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const blockSize =
       textarea.scrollHeight + (Number.isFinite(border) ? border : 0);
     textarea.style.blockSize = `${blockSize}px`;
-    textarea.style.overflowY = "hidden";
+    textarea.style.overflowY = 'hidden';
   }
   override render(): TemplateResult {
     const lineCount = this.countLines();
@@ -626,26 +626,26 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     // charge instead of being overwritten by an inline declaration on every update.
     const textareaStyle = {
       resize:
-        this.resize === "auto"
-          ? "none"
-          : sanitizeCssResize(this.resize, "both"),
+        this.resize === 'auto'
+          ? 'none'
+          : sanitizeCssResize(this.resize, 'both'),
       ...(this.tabSizeAssigned
-        ? { "--lr-code-editor-tab-size": String(this._tabSize) }
+        ? { '--lr-code-editor-tab-size': String(this._tabSize) }
         : {}),
     };
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const describedBy = [
-      hasError ? "textarea-error" : "",
-      hasHint ? "textarea-hint" : "",
+      hasError ? 'textarea-error' : '',
+      hasHint ? 'textarea-hint' : '',
     ]
       .filter(Boolean)
-      .join(" ");
-    const label = this.hasAttribute("aria-label")
-      ? this.getAttribute("aria-label")!
+      .join(' ');
+    const label = this.hasAttribute('aria-label')
+      ? this.getAttribute('aria-label')!
       : this.accessibleLabel ||
-        (hasLabel ? nothing : this.localize("codeEditorLabel"));
+        (hasLabel ? nothing : this.localize('codeEditorLabel'));
     const invalid =
       hasError || (this.touched && !this.internals.validity.valid);
     return html`<div part="form-control">
@@ -714,6 +714,6 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
 }
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-code-editor": LyraCodeEditor;
+    'lr-code-editor': LyraCodeEditor;
   }
 }

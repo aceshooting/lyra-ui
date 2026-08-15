@@ -18,7 +18,7 @@ immediately) or multi-format (click opens a small menu).
   snapshot), where
   `LyraExportFormatOption` is the built-in `LyraExportFormat = 'csv' | 'json'` or a
   `LyraExportFormatDescriptor = { formatId: string; label: string; description?: string;
-  extension?: string }`. Descriptor labels/descriptions are consumer-supplied, already-localized
+extension?: string }`. Descriptor labels/descriptions are consumer-supplied, already-localized
   copy. `formatId` must be nonempty and unique; malformed options and later duplicates are omitted
   first-wins before menu state, focus reconciliation, or export events. Custom format ids are
   event-only; no custom encoder is bundled
@@ -60,27 +60,29 @@ shared-clamp note.
 ```html
 <lr-export-button id="exp" filename="report" label="Export"></lr-export-button>
 <script type="module">
-  const exp = document.getElementById('exp');
-  exp.rows = [{ name: 'Alpha', value: 1 }];
+  const exp = document.getElementById("exp");
+  exp.rows = [{ name: "Alpha", value: 1 }];
   exp.columns = [
-    { key: 'name', label: 'Name' },
-    { key: 'value', label: 'Value' },
+    { key: "name", label: "Name" },
+    { key: "value", label: "Value" },
   ];
-  exp.formats = ['csv', 'json']; // shows a format-choice menu instead of exporting immediately
-  exp.addEventListener('lr-export', (e) => console.log('exporting', e.detail.format));
+  exp.formats = ["csv", "json"]; // shows a format-choice menu instead of exporting immediately
+  exp.addEventListener("lr-export", (e) =>
+    console.log("exporting", e.detail.format)
+  );
 
   // Custom formats supply menu copy but remain application-handled.
   exp.formats = [
-    'csv',
+    "csv",
     {
-      formatId: 'xlsx',
-      label: 'Excel workbook',
-      description: 'Preserves spreadsheet data types',
-      extension: 'xlsx',
+      formatId: "xlsx",
+      label: "Excel workbook",
+      description: "Preserves spreadsheet data types",
+      extension: "xlsx",
     },
   ];
-  exp.addEventListener('lr-export', async (e) => {
-    if (e.detail.format !== 'xlsx') return;
+  exp.addEventListener("lr-export", async (e) => {
+    if (e.detail.format !== "xlsx") return;
     e.preventDefault();
     exp.loading = true;
     try {
@@ -231,16 +233,22 @@ Handling the failure path — the button already shows and announces it, so a li
 for an application-level fallback:
 
 ```html
-<lr-copy-button id="copy" value="npm install @aceshooting/lyra-ui"></lr-copy-button>
+<lr-copy-button
+  id="copy"
+  value="npm install @aceshooting/lyra-ui"
+></lr-copy-button>
 <script type="module">
-  import '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js';
+  import "@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js";
 
-  const button = document.getElementById('copy');
-  button.addEventListener('lr-copy', (event) => trackCopySuccess(event.detail.text));
-  button.addEventListener('lr-error', () => showCopyFallback());
-  button.addEventListener('lr-copy-error', (event) => {
+  const button = document.getElementById("copy");
+  button.addEventListener("lr-copy", (event) =>
+    trackCopySuccess(event.detail.text)
+  );
+  button.addEventListener("lr-error", () => showCopyFallback());
+  button.addEventListener("lr-copy-error", (event) => {
     // event.detail.reason is 'unsupported' | 'denied' | 'failed'
-    if (event.detail.reason === 'unsupported') selectTextForManualCopy(event.detail.text);
+    if (event.detail.reason === "unsupported")
+      selectTextForManualCopy(event.detail.text);
   });
 </script>
 ```
@@ -255,7 +263,7 @@ import type {
   LyraCopyButtonTooltip,
   LyraCopyButtonTooltipPlacement,
   LyraCopyErrorReason,
-} from '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js';
+} from "@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js";
 ```
 
 **Known gotchas:**
@@ -435,17 +443,22 @@ tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-succes
 **Optional peer deps:** none.
 
 ```ts
-import { html } from 'lit';
-import '@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.js';
+import { html } from "lit";
+import "@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.js";
 
-html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${query}></lr-json-viewer>`;
+html`<lr-json-viewer
+  .data=${apiResponse}
+  copyable
+  max-height="24rem"
+  search=${query}
+></lr-json-viewer>`;
 ```
 
 ```html
 <lr-json-viewer copyable max-height="24rem"></lr-json-viewer>
 <script type="module">
-  document.querySelector('lr-json-viewer').data = {
-    hello: 'world',
+  document.querySelector("lr-json-viewer").data = {
+    hello: "world",
     items: [1, 2, 3],
   };
 </script>
@@ -455,7 +468,7 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
 
 - `data` is property-only (`attribute: false`) — it must be set via `.data = ...` or a lit-html `.data=${...}`
   binding, never as a plain HTML attribute.
-- Search highlighting auto-expands only the *ancestors* of a match, not the whole tree — a
+- Search highlighting auto-expands only the _ancestors_ of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
 - An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
   `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative
@@ -480,7 +493,7 @@ semver-covered `utilities/` surface documented in `llms/shared.md`, not internal
 import {
   Announcer,
   acquireAnnouncementSink,
-} from '@aceshooting/lyra-ui/utilities/announcer.js';
+} from "@aceshooting/lyra-ui/utilities/announcer.js";
 ```
 
 The `.js` is required (`./utilities/*` maps straight onto `./dist/utilities/*`). Both symbols are
@@ -498,16 +511,16 @@ writes into — `acquireAnnouncementSink()`, documented after `Announcer` below.
 Streaming UIs (token-by-token chat responses, progress ticks, etc.) naturally produce far more
 candidate announcements than a screen-reader user can usefully absorb — reading every incremental
 chunk aloud is spam, not information. `Announcer` collapses a burst of `announce()` calls arriving
-within `throttleMs` of the *first* call in that burst down to a single trailing-edge flush of the
+within `throttleMs` of the _first_ call in that burst down to a single trailing-edge flush of the
 latest text: superseded intermediate text is dropped outright, never queued or concatenated.
 
 - `new Announcer(options: AnnouncerOptions)` where
   `AnnouncerOptions = { throttleMs?: number /* = 500 */; onFlush: (text: string) => void;
-  timerHost?: AnnouncerTimerHost }`. `AnnouncerTimerHost` is the minimal numeric-handle
+timerHost?: AnnouncerTimerHost }`. `AnnouncerTimerHost` is the minimal numeric-handle
   `setTimeout`/`clearTimeout` surface implemented by a browser `Window`; omit it to use ambient
   timers.
 - `announce(text: string, options?: AnnounceOptions)` where `AnnounceOptions = { force?: boolean }` —
-  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the *first*
+  queues `text`, overwriting whatever an earlier call in the same burst queued. Only the _first_
   call of a burst schedules the flush timer, so the deadline stays anchored to that first call
   rather than being pushed back by every subsequent call. `{ force: true }` bypasses any
   in-progress window and flushes immediately, so a terminal message (e.g. "response complete") is
@@ -525,12 +538,12 @@ latest text: superseded intermediate text is dropped outright, never queued or c
 
 The shared live region announcements actually land in. A live region rendered **inside a shadow
 root is not reliably announced** — JAWS with Firefox ignores one entirely — so every announcement
-this library makes goes into a visually hidden element in the *host document's* light DOM instead.
+this library makes goes into a visually hidden element in the _host document's_ light DOM instead.
 
 - `acquireAnnouncementSink(politeness: AnnouncementPoliteness, options?: AnnouncementSinkOptions)`
   where `AnnouncementPoliteness = 'polite' | 'assertive'` and
   `AnnouncementSinkOptions = { document?: Document /* = the ambient document */; source?: Element;
-  messageTtlMs?: number /* = 5000 */ }`. Library components pass their host as `source`, which
+messageTtlMs?: number /* = 5000 */ }`. Library components pass their host as `source`, which
   prevents a document-level region from speaking while that source or a composed ancestor is
   `hidden`, `inert`, `aria-hidden`, CSS-hidden, or in a closed `<details>` content branch;
   standalone consumers can do the same. A box-generating source also stays silent while skipped by
@@ -544,7 +557,7 @@ this library makes goes into a visually hidden element in the *host document's* 
 - One region per `(document, politeness)` pair, shared by every consumer and **ref-counted**: it is
   mounted on the first `acquire()` and removed from the DOM when the last handle `release()`s.
   Mounting happens at acquire time, ahead of any text, because assistive tech has to have been
-  observing a region *before* content arrives for the change to be announced at all.
+  observing a region _before_ content arrives for the change to be announced at all.
 - `announce()` **appends a child node** (`aria-relevant="additions"`, `aria-atomic="false"`) rather
   than rewriting one text node. That is what makes an identical repeat announce a second time — no
   clear-then-restore-across-a-frame dance is needed — and each appended node is swept after
@@ -588,7 +601,7 @@ window and flushes immediately.
 
 **CSS parts:** `region` — the visually-hidden, `aria-hidden` mirror of the latest announced text.
 It carries no `role`/`aria-live` of its own: a second live region holding the same text would make
-browsers that *do* announce shadow live regions read every message twice.
+browsers that _do_ announce shadow live regions read every message twice.
 
 **Themeable custom properties:** none component-specific — the shadow mirror is hidden via the
 shared `.sr-only` helper class (`internal/a11y.ts`) and the light-DOM region via the same
@@ -601,11 +614,11 @@ neither of them tokenized CSS.
 <!-- once, near the root of a page/surface -->
 <lr-live-region id="live" mode="polite"></lr-live-region>
 <script type="module">
-  const live = document.getElementById('live');
+  const live = document.getElementById("live");
   // streaming tokens: fine to call on every chunk, only the trailing state lands
   live.announce(`${partialText} …`);
   // stream finished: always announced, even mid-throttle-window
-  live.announce('Response complete', { force: true });
+  live.announce("Response complete", { force: true });
 </script>
 ```
 
@@ -674,15 +687,17 @@ repainting every other component that reuses the same shared success token. Plus
 ```html
 <lr-poll-status next-in-ms="30000"></lr-poll-status>
 <script type="module">
-  const status = document.querySelector('lr-poll-status');
-  status.addEventListener('lr-poll-due', () => refreshData());
-  status.addEventListener('lr-pause-change', (e) => console.log('paused:', e.detail.paused));
+  const status = document.querySelector("lr-poll-status");
+  status.addEventListener("lr-poll-due", () => refreshData());
+  status.addEventListener("lr-pause-change", (e) =>
+    console.log("paused:", e.detail.paused)
+  );
 </script>
 ```
 
 Internally, owner-window timeouts schedule both the exact deadline and the next displayed-second
 boundary from a captured target timestamp, so a zero/short delay does not wait for a one-second
-poll and the countdown stays accurate after background throttling. Assigning a *changed*
+poll and the countdown stays accurate after background throttling. Assigning a _changed_
 `nextInMs` value starts a fresh deadline; assigning the same value is a normal Lit no-op, so use
 `restart()` for a new cycle with the same delay. Entering `paused` captures the bounded remaining
 duration; every resume establishes a new deadline from that frozen value. Changing `nextInMs` or
@@ -801,49 +816,61 @@ available space. See `lr-tour` for the shared-clamp note.
 
 ```html
 <textarea id="composer"></textarea>
-<lr-mention-popover id="mentions" label="People" empty-text="No matches"></lr-mention-popover>
+<lr-mention-popover
+  id="mentions"
+  label="People"
+  empty-text="No matches"
+></lr-mention-popover>
 <script type="module">
-  const textarea = document.getElementById('composer');
-  const popover = document.getElementById('mentions');
+  const textarea = document.getElementById("composer");
+  const popover = document.getElementById("mentions");
   let suggestionGeneration = 0;
 
-  textarea.addEventListener('keydown', (e) => {
+  textarea.addEventListener("keydown", (e) => {
     if (popover.open && popover.handleKeyDown(e)) {
-      if (!popover.syncActiveDescendant(textarea) && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      if (
+        !popover.syncActiveDescendant(textarea) &&
+        (e.key === "ArrowDown" || e.key === "ArrowUp")
+      ) {
         const generation = suggestionGeneration;
         void popover.focusActiveOption({
           ownsFocus: () =>
             generation === suggestionGeneration &&
-            (document.activeElement === textarea || document.activeElement === popover),
+            (document.activeElement === textarea ||
+              document.activeElement === popover),
         });
       }
       return;
     }
   });
-  textarea.addEventListener('input', () => {
+  textarea.addEventListener("input", () => {
     suggestionGeneration += 1;
     popover.anchor = textarea;
     popover.items = [
       {
-        suggestionId: 'ada',
-        label: 'Ada Lovelace',
-        description: 'Engineering',
-        icon: '👩‍💻',
+        suggestionId: "ada",
+        label: "Ada Lovelace",
+        description: "Engineering",
+        icon: "👩‍💻",
       },
-      { suggestionId: 'grace', label: 'Grace Hopper', description: 'Engineering' },
+      {
+        suggestionId: "grace",
+        label: "Grace Hopper",
+        description: "Engineering",
+      },
     ];
-    popover.query = 'a'; // detected since the trigger character
+    popover.query = "a"; // detected since the trigger character
     popover.open = true;
     popover.updateComplete.then(() => popover.syncActiveDescendant(textarea));
   });
-  textarea.addEventListener('blur', (event) => {
+  textarea.addEventListener("blur", (event) => {
     if (event.relatedTarget !== popover) {
       suggestionGeneration += 1;
       popover.open = false;
     }
   });
 
-  popover.addEventListener('lr-mention-select', (e) => {
+  popover.addEventListener("lr-mention-select", (e) => {
     // splice `${e.detail.label}` into the textarea at the trigger offset
   });
 </script>
@@ -889,7 +916,7 @@ fresh `query` is the proxy for "the caret may have moved").
   active option.
 - There's no persisted "selection" the way `<lr-combobox>`'s own listbox has one — a mention is
   either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
-  here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the
+  here marks whichever row is currently _active_ (what Enter/Tab would commit right now, per the
   WAI-ARIA combobox-with-list-autocomplete pattern), not a separate persisted value.
 
 ---
@@ -964,11 +991,11 @@ the plain unhighlighted diff text untouched.
 ```html
 <lr-diff-view copyable></lr-diff-view>
 <script type="module">
-  const diff = document.querySelector('lr-diff-view');
-  diff.oldText = 'line one\nline two\nline three';
-  diff.newText = 'line one\nline TWO\nline three\nline four';
-  diff.addEventListener('lr-copy', (e) => console.log(e.detail.text));
-  diff.addEventListener('lr-copy-error', (e) => {
+  const diff = document.querySelector("lr-diff-view");
+  diff.oldText = "line one\nline two\nline three";
+  diff.newText = "line one\nline TWO\nline three\nline four";
+  diff.addEventListener("lr-copy", (e) => console.log(e.detail.text));
+  diff.addEventListener("lr-copy-error", (e) => {
     console.error(`Copy ${e.detail.reason}`, e.detail.error);
   });
 </script>
@@ -1052,7 +1079,7 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
   `flip`, `flip-360`, `shake`, `spin`, `spin-pulse`, `spin-reverse`, `spin-snap`, `spin-snap-4`,
   `spin-snap-8`, `buzz`, `wag`, `float`, `swing`, or `jello`. Every treatment stops under
   `prefers-reduced-motion: reduce`.
-- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon *box* to
+- `fixedWidth: boolean = false` (attribute `fixed-width`, reflected) — widens the icon _box_ to
   `--lr-icon-fixed-width` while the glyph keeps `--lr-icon-size` and centres inside it, so a column
   of differently-shaped icons lines its labels up.
 
@@ -1124,33 +1151,40 @@ fetch allowlist, the response is still byte-capped, and the markup is still sani
 cannot widen what an icon is allowed to render.
 
 ```ts
-import '@aceshooting/lyra-ui/components/utility/icon/icon.js'; // registers <lr-icon>
+import "@aceshooting/lyra-ui/components/utility/icon/icon.js"; // registers <lr-icon>
 import {
   registerIconLibrary,
   unregisterIconLibrary,
   getIconLibrary,
-} from '@aceshooting/lyra-ui/components/utility/icon/icon-library.js';
+} from "@aceshooting/lyra-ui/components/utility/icon/icon-library.js";
 
-registerIconLibrary('material', {
+registerIconLibrary("material", {
   // May return a URL directly or resolve one asynchronously. All three reflected lookup fields
   // are provided, so a library decides their vocabulary and URL layout.
-  resolver: async (name, family, variant) => `https://cdn.example.com/material/${family}/${variant}/${name}.svg`,
+  resolver: async (name, family, variant) =>
+    `https://cdn.example.com/material/${family}/${variant}/${name}.svg`,
   // Optional. Runs on the already-sanitized, component-owned <svg> before it is rendered —
   // recolouring, adding a viewBox, stripping a hardcoded width/height. It must not reintroduce
   // markup from an untrusted source, and a throwing mutator fails the load.
   mutator: (svg) => {
-    svg.setAttribute('fill', 'currentColor');
-    svg.removeAttribute('width');
-    svg.removeAttribute('height');
+    svg.setAttribute("fill", "currentColor");
+    svg.removeAttribute("width");
+    svg.removeAttribute("height");
   },
 });
 
-await getIconLibrary('material')?.resolver('star', 'classic', 'solid');
-unregisterIconLibrary('material'); // icons using it revert to the built-in glyph set
+await getIconLibrary("material")?.resolver("star", "classic", "solid");
+unregisterIconLibrary("material"); // icons using it revert to the built-in glyph set
 ```
 
 ```html
-<lr-icon library="material" family="classic" variant="solid" name="star" label="Favourite"></lr-icon>
+<lr-icon
+  library="material"
+  family="classic"
+  variant="solid"
+  name="star"
+  label="Favourite"
+></lr-icon>
 <lr-icon library="material" name="delete" fixed-width></lr-icon>
 <lr-icon name="search" canvas="square" animation="beat"></lr-icon>
 ```
@@ -1205,7 +1239,9 @@ visible the moment a keyboard user reaches it. That is what makes it usable for 
 **CSS parts:** none — the host itself is the box. **Themeable custom properties:** none.
 
 ```html
-<lr-visually-hidden><a href="#main">Skip to main content</a></lr-visually-hidden>
+<lr-visually-hidden
+  ><a href="#main">Skip to main content</a></lr-visually-hidden
+>
 ```
 
 Every declaration is `!important`, deliberately: the element's contract is that the content is
@@ -1401,9 +1437,9 @@ Each access returns a fresh `LyraFormValidator<LyraKnownDate>[]`; its entry obse
 element's current `ValidityState` into `{ isValid, message, invalidKeys }` without changing it.
 
 ```ts
-import { LyraKnownDate } from '@aceshooting/lyra-ui/components/utility/known-date/known-date.js';
+import { LyraKnownDate } from "@aceshooting/lyra-ui/components/utility/known-date/known-date.js";
 
-const knownDate = document.querySelector('lr-known-date')!;
+const knownDate = document.querySelector("lr-known-date")!;
 const result = LyraKnownDate.validators[0].checkValidity(knownDate);
 ```
 
@@ -1504,7 +1540,7 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 
 **Known gotchas:**
 
-- Field *order* is derived from the locale by formatting a probe date (Jan 2 2026) with
+- Field _order_ is derived from the locale by formatting a probe date (Jan 2 2026) with
   `Intl.DateTimeFormat` and reading back the part order — not from `Date.parse()`'s mm/dd/yyyy bias.
   It falls back to `month, day, year` only when that sampling fails.
 - Auto-advance (typing a field's last digit moves to the next) and backspace-into-the-previous-field
@@ -1513,12 +1549,12 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 - Each `<input>` keeps exactly the digits that were typed — never zero-padded, range-clamped, or
   reverted to a previous value; only the composite `value` is normalized to zero-padded ISO.
 - Non-digit characters are stripped in the `input` handler before they reach field state (the
-  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals *are*
+  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals _are_
   accepted and transliterated to ASCII, not rejected: Arabic-Indic (`٠`–`٩`) and Extended
   Arabic-Indic/Persian (`۰`–`۹`) digits are mapped unconditionally, and the digits of
   `effectiveLocale`'s own numbering system are added on top via `Intl.NumberFormat`, so typing
   `٢٠٢٦` into the year field commits `2026`.
-- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the *physical* key meaning
+- ArrowLeft/ArrowRight cross fields at a field's text boundary, and the _physical_ key meaning
   "next field" flips under an inherited `dir="rtl"`; the locale-derived field order itself does not.
 - A blank composite is `valueMissing` only when **all three** fields are blank; a partially typed
   required date reports `badInput` instead.
@@ -1742,91 +1778,91 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-utility-diff-view-diff-line-diff-contracts`** — Supporting data types and helpers for this component family.
   `computeLineDiff(/* public names: oldLines, newLines */): unknown`
   `LyraDiffOp {
-    type: unknown;
-    text: unknown;
-  }`
+  type: unknown;
+  text: unknown;
+}`
 
 - **`components-utility-export-button-csv-contracts`** — Supporting data types and helpers for this component family.
   `buildCsv(/* public names: rows, columns */): unknown`
   `downloadBlob(/* public names: content, filename, mime, ownerDocument */): unknown`
   `escapeCsvField(/* public names: value */): unknown`
   `LyraCsvColumn {
-    key: unknown;
-    label: unknown;
-  }`
+  key: unknown;
+  label: unknown;
+}`
 
 - **`components-utility-export-button-export-button-contracts`** — Supporting data types and helpers for this component family.
   `LyraExportFormatDescriptor {
-    formatId: unknown;
-    label: unknown;
-    description: unknown;
-    extension: unknown;
-  }`
+  formatId: unknown;
+  label: unknown;
+  description: unknown;
+  extension: unknown;
+}`
 
 - **`components-utility-icon-icon-library-contracts`** — Supporting data types and helpers for this component family.
   `getIconLibrary(/* public names: name */): unknown`
   `LyraIconLibrary {
-    name: unknown;
-    resolver: unknown;
-    mutator: unknown;
-  }`
+  name: unknown;
+  resolver: unknown;
+  mutator: unknown;
+}`
   `LyraIconLibraryOptions {
-    resolver: unknown;
-    mutator: unknown;
-  }`
+  resolver: unknown;
+  mutator: unknown;
+}`
   `registerIconLibrary(/* public names: name, options */): unknown`
   `unregisterIconLibrary(/* public names: name */): unknown`
 
 - **`components-utility-known-date-known-date-contracts`** — Supporting data types and helpers for this component family.
   `LyraKnownDateEventDetail {
-    value: unknown;
-    day: unknown;
-    month: unknown;
-    year: unknown;
-    field: unknown;
-  }`
+  value: unknown;
+  day: unknown;
+  month: unknown;
+  year: unknown;
+  field: unknown;
+}`
   `LyraKnownDateParts {
-    day: unknown;
-    month: unknown;
-    year: unknown;
-  }`
+  day: unknown;
+  month: unknown;
+  year: unknown;
+}`
 
 - **`components-utility-mention-popover-mention-popover-contracts`** — Supporting data types and helpers for this component family.
   `LyraMentionFocusOptions {
-    ownsFocus: unknown;
-  }`
+  ownsFocus: unknown;
+}`
   `LyraMentionItem {
-    suggestionId: unknown;
-    label: unknown;
-    description: unknown;
-    icon: unknown;
-  }`
+  suggestionId: unknown;
+  label: unknown;
+  description: unknown;
+  icon: unknown;
+}`
   `LyraMentionSelectDetail {
-    suggestionId: unknown;
-    index: unknown;
-    label: unknown;
-  }`
+  suggestionId: unknown;
+  index: unknown;
+  label: unknown;
+}`
 
 - **`components-utility-tour-tour-contracts`** — Supporting data types and helpers for this component family.
   `LyraTourStep {
-    stepId: unknown;
-    target: unknown;
-    heading: unknown;
-    content: unknown;
-    placement: unknown;
-    spotlightPadding: unknown;
-    interactiveTarget: unknown;
-    hidePrevious: unknown;
-  }`
+  stepId: unknown;
+  target: unknown;
+  heading: unknown;
+  content: unknown;
+  placement: unknown;
+  spotlightPadding: unknown;
+  interactiveTarget: unknown;
+  hidePrevious: unknown;
+}`
 
 - **`internal-clipboard-contracts`** — Shared utility contracts.
   `LyraClipboardWriteFailure {
-    ok: unknown;
-    text: unknown;
-    reason: unknown;
-    error: unknown;
-  }`
+  ok: unknown;
+  text: unknown;
+  reason: unknown;
+  error: unknown;
+}`
   `LyraClipboardWriteSuccess {
-    ok: unknown;
-    text: unknown;
-  }`
+  ok: unknown;
+  text: unknown;
+}`

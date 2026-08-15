@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'Flow Node',
   component: 'lr-flow-node',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Input and output handles are copied into frozen snapshots bounded to 10,000 entries. Reassign either collection after changing it.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

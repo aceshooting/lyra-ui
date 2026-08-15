@@ -231,10 +231,13 @@ example `{ invocationId, sourceKey }`). Published input-record schemas may retai
 generic `id`/`key`/`path` spelling; the component still applies its documented uniqueness or
 occurrence policy and exposes domain-named controlled state and action details.
 
-Treat an empty or whitespace-only required identity as missing. Lyra does not trim or otherwise
-rewrite a valid retained identity merely to validate it. Assign a new collection when the data
-changes, and keep the business identity stable across object replacement so focus, selection,
-persistence, and keyed DOM ownership follow the same logical record.
+Treat an empty or whitespace-only required identity as missing. Unless a component's contract
+explicitly documents and tests an input normalization such as trimming surrounding whitespace,
+Lyra does not rewrite a valid retained identity merely to validate it. When normalization is part
+of that contract, the normalized value is the identity used consistently for duplicate detection,
+selection, persistence, keyed DOM ownership, and event details. Assign a new collection when the
+data changes, and keep the business identity stable across object replacement so those consumers
+continue to follow the same logical record.
 
 ## Events
 

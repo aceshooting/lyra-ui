@@ -21,6 +21,7 @@ import {
   snapshotFlowDecorations,
   snapshotFlowEdges,
   snapshotFlowNodes,
+  MAX_FLOW_COLLECTION_ENTRIES,
 } from './flow-model.js';
 import {
   FLOW_PALETTE_MIME_TYPE,
@@ -256,9 +257,10 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   private _nodes: readonly FlowNode[] = Object.freeze([]);
-  /** Controlled node model, snapshotted at assignment. Blank ids and later duplicates are omitted
-   * first-wins. Replacing it cancels active node-drag and pointer/keyboard connect gestures and
-   * prunes selected ids that no longer exist. */
+  /** Controlled node model, deeply snapshotted and frozen at assignment, bounded to the first
+   * 10,000 source nodes and a finite nested-data budget. Blank ids and later duplicates are omitted
+   * first-wins. Reassign to update; replacing it cancels active node-drag and pointer/keyboard
+   * connect gestures and prunes selected ids that no longer exist. */
   @property({ attribute: false })
   get nodes(): readonly FlowNode[] {
     return this._nodes;
@@ -270,8 +272,10 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private _edges: readonly FlowEdge[] = Object.freeze([]);
-  /** Controlled edge model, snapshotted at assignment. Blank ids and later duplicates are omitted
-   * first-wins before every render, action, focus, selection, snapshot, and event path. */
+  /** Controlled edge model, deeply snapshotted and frozen at assignment, bounded to the first
+   * 10,000 source edges and a finite nested-data budget. Blank ids and later duplicates are omitted
+   * first-wins before every render, action, focus, selection, snapshot, and event path. Reassign
+   * the collection to update. */
   @property({ attribute: false })
   get edges(): readonly FlowEdge[] {
     return this._edges;
@@ -301,6 +305,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    * rolls back every active gesture before retiring its global listeners. */
   @property({ type: Boolean, reflect: true }) locked = false;
   private _selectedNodeIds: readonly string[] = Object.freeze([]);
+  /** Frozen snapshot of at most the first 10,000 selected node ids. Reassign to update. */
   @property({ attribute: false })
   get selectedNodeIds(): readonly string[] {
     return this._selectedNodeIds;
@@ -308,12 +313,15 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   set selectedNodeIds(value: readonly string[]) {
     const previous = this._selectedNodeIds;
     this._selectedNodeIds = Object.freeze(
-      Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [],
+      Array.isArray(value)
+        ? value.slice(0, MAX_FLOW_COLLECTION_ENTRIES).filter((id): id is string => typeof id === 'string')
+        : [],
     );
     this.requestUpdate('selectedNodeIds', previous);
   }
 
   private _selectedEdgeIds: readonly string[] = Object.freeze([]);
+  /** Frozen snapshot of at most the first 10,000 selected edge ids. Reassign to update. */
   @property({ attribute: false })
   get selectedEdgeIds(): readonly string[] {
     return this._selectedEdgeIds;
@@ -321,7 +329,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   set selectedEdgeIds(value: readonly string[]) {
     const previous = this._selectedEdgeIds;
     this._selectedEdgeIds = Object.freeze(
-      Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [],
+      Array.isArray(value)
+        ? value.slice(0, MAX_FLOW_COLLECTION_ENTRIES).filter((id): id is string => typeof id === 'string')
+        : [],
     );
     this.requestUpdate('selectedEdgeIds', previous);
   }
@@ -333,6 +343,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   @property({ type: Number, attribute: 'layer-gap' }) layerGap = 64;
   @property({ type: Number, attribute: 'node-gap' }) nodeGap = 24;
   private _decorations: FlowRunDecorations | null = null;
+  /** Deeply snapshotted, frozen run decorations, bounded to 10,000 keys and a finite nested-data
+   * budget. Reassign the record to update. */
   @property({ attribute: false })
   get decorations(): FlowRunDecorations | null {
     return this._decorations;

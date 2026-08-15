@@ -114,7 +114,8 @@ attribute now, so a stat left on `appearance="plain"` silently renders full card
   as "good"; inverts arrow/color polarity for cost/latency/error-rate-style metrics where a
   _decrease_ is the win.
 - `rows: readonly StatRow[] = []` (attribute: false) — `StatRow { readonly label: string; readonly
-value: string; readonly exactValue?: string }`; snapshotted at assignment and rendered as a simple
+value: string; readonly exactValue?: string }`; at most the first 10,000 rows are snapshotted and
+  frozen at assignment. Reassign `rows` after changing it. The snapshot renders as a simple
   label/value breakdown list (`[part="rows"]`/`[part="row"]`/
   `[part="row-label"]`/`[part="row-value"]`) beneath the caption, hidden entirely when empty. A row's
   optional `exactValue` mirrors the headline `exactValue`/`exact-value` pattern: rendered as a `title`
@@ -477,9 +478,10 @@ listeners now receive phased readonly `{ phase, sortKey, sortDir }` details from
 
 **Properties:**
 
-- `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection;
-  blank keys and later duplicates are omitted first-wins before header, cell, sort, focus, and
-  event paths) — `{ key, label, headerCell?, width?, minWidth?, maxWidth?,
+- `columns: readonly TableColumn<T>[] = []` (attribute: false; clone-owned frozen collection,
+  bounded to 10,000 valid definitions; blank keys and later duplicates are omitted first-wins
+  before header, cell, sort, focus, and event paths; reassign to update) — `{ key, label,
+headerCell?, width?, minWidth?, maxWidth?,
 resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low',
 sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', footer?, cellStyle?, heatValue?,
 cell: (row) => unknown }` —
@@ -561,7 +563,8 @@ cell: (row) => unknown }` —
   `waitUntil()`) rather than assuming a single `updateComplete` covers it. Setting it directly has no
   lasting effect; it is recomputed on the next render or resize. The toggle remains available while
   a narrow table is revealed, even though this property truthfully reports false
-- `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection). Records are retained
+- `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection bounded to the first
+  10,000 rows; reassign to update). Records are retained
   here; one canonical `rowKey` projection omits blank and later-duplicate identities first-wins
   before filtering, counts, pagination, focus, actions, and events
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
@@ -595,8 +598,9 @@ cell: (row) => unknown }` —
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
 - `selectedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
-  store in every mode. Single mode enforces at most one key; multiple mode toggles membership. Reads
-  return detached snapshots; reassign a new set to update
+  store in every mode, bounded to 10,000 keys. Single mode enforces at most one key; multiple mode
+  toggles membership. Reads return immutable detached `ReadonlySet` facades; reassign a new set to
+  update
 - `filterable: boolean = false` (attribute `filterable`, reflected) — renders a localized search
   field above the grid
 - `filterText: string = ''` (attribute `filter-text`) — controlled filter text
@@ -653,7 +657,8 @@ cell: (row) => unknown }` —
   renders a full-width detail row beneath expanded records
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
 - `expandedKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
-  expanded state; reads return detached snapshots, and consumers reassign it after
+  expanded state bounded to 10,000 keys; reads return immutable detached `ReadonlySet` facades,
+  and consumers reassign it after
   `lr-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
 - `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
@@ -1390,9 +1395,9 @@ base when no cell exists. A newer external focus destination is never reclaimed.
   - `HeatmapMatrixData { kind: 'matrix'; rowLabels: readonly string[]; colLabels: readonly
 string[]; values: readonly (readonly number[])[] }`
   - `HeatmapCalendarData { kind: 'calendar'; days: readonly CalendarDay[]; firstDayOfWeek?:
-  number; columnX?: (index:number)=>number; rowY?: (weekday:number)=>number;
-  weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
-  (jsMonth:number,year:number)=>string|undefined }`
+number; columnX?: (index:number)=>number; rowY?: (weekday:number)=>number;
+weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
+(jsMonth:number,year:number)=>string|undefined }`
     Matrix `-1` or non-finite values are no-data. Calendar identity is ISO date; invalid dates are
     omitted and duplicates use one deterministic **first-valid-wins** entry before count, scale,
     paint, selection, focus and event paths.
@@ -1685,12 +1690,14 @@ refreshes do not move focus. A queued Arrow/Home/End focus is bound to the curre
 identity and connection generation, so a same-turn replacement or disconnect/reconnect cannot
 focus an unrelated cell that merely inherited the old numeric index.
 
-High-cardinality strips mount a bounded window of at most 200 cells around the roving stop rather
-than creating one DOM node per input item. `aria-posinset`/`aria-setsize` retain positions and the
-total count from the complete canonical model; Home/End and arrows shift the window before moving
-focus, so every item remains keyboard reachable. `[part="window-range"]` visibly discloses the
-currently projected numeric range and total. The optional legend likewise mounts at most 200
-categories and exposes `[part="legend-limit"]` as a rendered/total numeric disclosure.
+High-cardinality strips retain at most the first 10,000 assigned items and categories as detached,
+frozen canonical snapshots; reassign either collection after changing it. They mount a bounded
+window of at most 200 cells around the roving stop rather than creating one DOM node per retained
+item. `aria-posinset`/`aria-setsize` retain positions and the total count from that bounded model;
+Home/End and arrows shift the window before moving focus, so every retained item remains keyboard
+reachable. `[part="window-range"]` visibly discloses the currently projected numeric range and
+total. The optional legend likewise mounts at most 200 categories and exposes
+`[part="legend-limit"]` as a rendered/total numeric disclosure.
 
 **Properties:**
 
@@ -1706,8 +1713,9 @@ readonly color, readonly label? }`; `color`
   is the cell background for every item whose `categoryId` matches `id`; invalid CSS colors,
   declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
   used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
-  back to `id` itself when unset. Both collection properties are cloned and frozen at assignment;
-  duplicate ids use the first valid entry, so identity is deterministic
+  back to `id` itself when unset. Both collection properties are cloned and frozen at assignment,
+  bounded to the first 10,000 source entries, and require reassignment after changes; duplicate ids
+  use the first valid entry, so identity is deterministic
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
   `aria-label` (a per-category "label: count" summary, e.g. `"Text: 2, Tool: 1"`). Unset computes the
   summary from `items`/`categories`; a standard host `aria-label` remains a distinct host name
@@ -2151,14 +2159,17 @@ import type {
   into layered layout. String `data.label` and `data.description` feed the declarative fallback
   card. Assignment takes a detached, deeply frozen snapshot of plain arrays/records, omitting blank
   ids and later duplicates first-wins before layout, focus, selection, gestures, companion
-  snapshots, and events. Replacing the model cancels node-drag and connect gestures whose ids
-  belonged to the old model and silently prunes selected ids that no longer exist.
+  snapshots, and events. At most the first 10,000 source nodes are retained, with finite nested
+  depth/entry budgets; reassign `nodes` after changes. Replacing the model cancels node-drag and
+  connect gestures whose ids belonged to the old model and silently prunes selected ids that no
+  longer exist.
 - `edges: readonly FlowEdge[] = []` (attribute: false) — readonly `id`, `source`, `target`, optional
   handle ids, optional drawn `label`, and optional `tone: LyraVariant`. The canonical brand value is
   `brand`; the former `accent` value and `FlowEdgeTone` alias are not part of this contract. Blank
   ids and later duplicates are omitted first-wins before render, focus, selection, gestures,
-  companion snapshots, and events; dangling endpoint references remain visible through the
-  component's documented fail-closed edge-list/stub paths.
+  companion snapshots, and events. At most the first 10,000 source edges are retained, with finite
+  nested depth/entry budgets; reassign `edges` after changes. Dangling endpoint references remain
+  visible through the component's documented fail-closed edge-list/stub paths.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — downstream layout/handle axis
 - `nodesDraggable: boolean = false` (attribute `nodes-draggable`)
 - `connectable: boolean = false`
@@ -2170,8 +2181,9 @@ import type {
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
   window pointer listeners so a later release cannot commit.
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
-  false) — seed or replace selection. Activation and clear-selection gestures update frozen arrays
-  before emitting `lr-selection-change`; model shrinkage prunes stale ids without claiming a user
+  false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids;
+  reassign after changes. Activation and clear-selection gestures update frozen arrays before
+  emitting `lr-selection-change`; model shrinkage prunes stale ids without claiming a user
   selection gesture occurred.
 - `minZoom: number = 0.25` (attribute `min-zoom`), `maxZoom: number = 2` (attribute `max-zoom`)
 - `grid: number = 8` — snap step in content px for drags/nudges/drop positions (`0` disables
@@ -2181,8 +2193,9 @@ import type {
   first pass; live changes to orientation, gaps, or card size trigger a new pass.
 - `decorations: FlowRunDecorations | null = null` (attribute: false) —
   `Record<nodeOrEdgeId, FlowRunDecoration>`, where `FlowRunDecoration` has `status` plus optional
-  `progress`, `durationMs`, and `detail`; assignment is detached and deeply frozen,
-  and invalid status entries are omitted. Usually supplied by `lr-flow-run-status`.
+  `progress`, `durationMs`, and `detail`; assignment is detached, deeply frozen, bounded to 10,000
+  keys plus finite nested depth/entry budgets, and invalid status entries are omitted. Reassign the
+  record after changes. Usually supplied by `lr-flow-run-status`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `viewport` (readonly getter) — a frozen `{ x, y, zoom }` snapshot
 
@@ -2333,7 +2346,8 @@ owns none of that.
 - `compact: boolean = false` (reflected) — tighter card padding for dense canvases and palette
   previews; the border, background, shadow and the `selected`/`status="running"` treatments all stay
 - `inputs: readonly FlowHandle[] = [{ id: 'in' }]`, `outputs: readonly FlowHandle[] = [{ id: 'out'
-}]` (attribute: false) — detached, frozen snapshots of readonly `{ id, label? }` handles
+}]` (attribute: false) — detached, frozen snapshots of at most the first 10,000 readonly
+  `{ id, label? }` handles; reassign a collection after changes
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which physical edge handles
   render on; mirrors the adopting canvas's own `orientation`
 
@@ -2542,7 +2556,8 @@ poll, or time anything — pure pushed state; `durationMs` is host-computed.
 
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
 - `decorations: FlowRunDecorations = {}` (attribute: false) — a detached, deeply frozen readonly
-  record pushed onto the resolved canvas; invalid status entries are omitted
+  record bounded to 10,000 keys plus finite nested depth/entry budgets and pushed onto the resolved
+  canvas; invalid status entries are omitted, and consumers reassign the record after changes
 - `hideSummary: boolean = false` (attribute `hide-summary`) — omits the "{done} of {total} steps
   complete" strip, keeping only the decoration push
 - `label: string = ''` — accessible name for the summary strip
@@ -2848,9 +2863,10 @@ Masking is presentational, not a security boundary: the real value sits in a DOM
 regardless of mask state. Names, revealed values, and localized action text wrap within narrow
 allocations; the name track uses at most 40% of the available inline size.
 
-**Properties:** `entries: readonly EnvEntry[] = []` (attribute: false; clone-owned/frozen snapshots;
-malformed records, blank names, and later duplicate names are skipped first-wins before render,
-reveal state, copy actions, and events), `revealable: boolean = true` (reflected), `copyable: boolean = true`
+**Properties:** `entries: readonly EnvEntry[] = []` (attribute: false; clone-owned/frozen snapshots
+of at most the first 10,000 source entries; malformed records, blank names, and later duplicate
+names are skipped first-wins before render, reveal state, copy actions, and events; reassign after
+changes), `revealable: boolean = true` (reflected), `copyable: boolean = true`
 (reflected), and `label: string = ''`.
 
 **Events:** `lr-reveal-change` (frozen readonly `detail: { envName, revealed }`); `lr-copy` (frozen
@@ -2884,14 +2900,16 @@ collection stays reachable through pagination without mounting an unbounded grid
 `sortDir: 'asc'|'desc'`; document sorting now uses the same cancelable `lr-sort-request` followed
 by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary as `lr-table`.
 
-**Properties:** clone-owned frozen `documents: readonly LibraryDocument[] = []` (document records,
-nested tags, and dates are snapshotted on assignment; malformed records, blank ids, and later
-duplicate ids are omitted first-wins before filters, counts, selection, rows, and events; reads are
-detached so `Date` mutators cannot reach retained state), `filter`, `label`, `loading`, clone-owned
-frozen `selectedIds: readonly string[] = []`, public controlled `searchTerm: string = ''`
+**Properties:** clone-owned frozen `documents: readonly LibraryDocument[] = []` (at most the first
+10,000 source documents and 10,000 tags per document are retained; document records, nested tags,
+and dates are snapshotted on assignment; malformed records, blank ids, and later duplicate ids are
+omitted first-wins before filters, counts, selection, rows, and events; reads are detached so `Date`
+mutators cannot reach retained state; reassign after changes), `filter`, `label`, `loading`,
+clone-owned frozen `selectedIds: readonly string[] = []` (at most 10,000 unique ids; reassign after
+changes), public controlled `searchTerm: string = ''`
 (`search-term`), `sortKey: LibraryDocumentSortKey = 'name'` (`sort-key`), canonical
 `sortDir: 'asc'|'desc' = 'asc'` (`sort-dir`), and clone-owned frozen
-`tagFilter: readonly string[] = []`.
+`tagFilter: readonly string[] = []` (at most 10,000 unique tags; reassign after changes).
 
 **Events:** `lr-filter-change` emits a fresh frozen readonly
 `{ searchTerm, tags, matchCount }`; cancelable `lr-sort-request` proposes frozen readonly

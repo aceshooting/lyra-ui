@@ -10,9 +10,11 @@ import { DisclosureMotionController } from './disclosure-motion.js';
 import { styles } from './details.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
+import {
+  LYRA_DEFAULT_details,
+  LYRA_DEFAULT_fieldRequired,
+} from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** The library's one size ladder, in either spelling. */
 export type LyraDetailsSize = LyraSize;
@@ -73,12 +75,14 @@ export interface LyraDetailsEventMap {
  * @csspart summary-icon - Shoelace-compatible alias for `icon`; both names are on the same node.
  * @csspart content - The panel content.
  * @cssprop [--lr-details-font-size=var(--lr-form-control-font-size)] - Text size of the summary
- *   and the panel. Each `size` tier sets it from the library's shared size ladder.
+ *   and the panel. Its private default follows the library's shared size ladder; an inherited or
+ *   direct public value remains authoritative.
  * @cssprop [--lr-details-spacing=var(--lr-form-control-padding-inline)] - Block rhythm: the
  *   summary's block padding and the panel's trailing padding, kept equal so a stack of
- *   disclosures reads evenly. Each `size` tier sets it from the shared ladder's inline-padding
+ *   disclosures reads evenly. Its private default follows the shared ladder's inline-padding
  *   knob, whose values suit a stacked panel; the ladder's own block padding exists to fit text
- *   inside a fixed control height and would collapse the summary row.
+ *   inside a fixed control height and would collapse the summary row. An inherited or direct
+ *   public value remains authoritative.
  * @cssprop [--lr-details-gap=var(--lr-space-s)] - Gap between summary content and its icon.
  * @cssprop [--lr-details-radius=var(--lr-radius)] - Disclosure surface corner radius.
  * @cssprop [--lr-details-outlined-bg=var(--lr-color-surface)] - Outlined surface background.
@@ -101,11 +105,12 @@ export interface LyraDetailsEventMap {
 export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    details: LYRA_DEFAULT_details,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      details: LYRA_DEFAULT_details,
+      fieldRequired: LYRA_DEFAULT_fieldRequired,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, sizes, styles];
@@ -115,7 +120,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     this,
     this.detailsInternals,
     () => this.renderRoot,
-    '[part~="base"]',
+    '[part~="base"]'
   );
   private _open = false;
 
@@ -168,9 +173,16 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (!this.hasUpdated) {
-      this.hasSummarySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'summary');
+      this.hasSummarySlot = Array.from(this.children).some(
+        (el) => el.getAttribute('slot') === 'summary'
+      );
     }
-    if (this.hasUpdated && changed.has('name') && this._open && !this.closeNamedPeers()) {
+    if (
+      this.hasUpdated &&
+      changed.has('name') &&
+      this._open &&
+      !this.closeNamedPeers()
+    ) {
       // A live rename has the same winner semantics as opening the renamed disclosure: this
       // disclosure wins only when every conflicting peer accepts its close. A veto rejects the
       // rename so the root never contains two open members of one named group.
@@ -206,7 +218,9 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     await this.showWithSource('programmatic');
   }
 
-  protected async showWithSource(source: LyraDetailsToggleSource): Promise<void> {
+  protected async showWithSource(
+    source: LyraDetailsToggleSource
+  ): Promise<void> {
     if (this._open || this.disabled) return;
     if (this.emit('lr-show', null, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
@@ -226,7 +240,9 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     await this.hideWithSource('programmatic');
   }
 
-  protected async hideWithSource(source: LyraDetailsToggleSource): Promise<void> {
+  protected async hideWithSource(
+    source: LyraDetailsToggleSource
+  ): Promise<void> {
     if (!this._open) return;
     if (this.emit('lr-hide', null, { cancelable: true }).defaultPrevented) {
       this.syncOpenAttribute();
@@ -275,7 +291,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
 
   private async settleTransition(
     event: 'lr-after-show' | 'lr-after-hide',
-    source: LyraDetailsToggleSource,
+    source: LyraDetailsToggleSource
   ): Promise<void> {
     const settled = await this.disclosureMotion.settle(() => {
       // `lr-toggle` is deliberately emitted here rather than synchronously from show()/hide(): a
@@ -298,15 +314,20 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     // both the platform contract and the only way a slotted link can navigate.
     const path = event.composedPath();
     const summaryIndex = path.findIndex(
-      (node) => (node as Partial<Node> | null)?.nodeType === 1 &&
-        (node as Element).localName === 'summary',
+      (node) =>
+        (node as Partial<Node> | null)?.nodeType === 1 &&
+        (node as Element).localName === 'summary'
     );
     if (
-      path.slice(0, summaryIndex < 0 ? 0 : summaryIndex).some(
-        (node) =>
-          (node as Partial<Node> | null)?.nodeType === 1 &&
-          (node as Element).matches('a[href], button, input, select, textarea, [contenteditable]:not([contenteditable="false"])'),
-      )
+      path
+        .slice(0, summaryIndex < 0 ? 0 : summaryIndex)
+        .some(
+          (node) =>
+            (node as Partial<Node> | null)?.nodeType === 1 &&
+            (node as Element).matches(
+              'a[href], button, input, select, textarea, [contenteditable]:not([contenteditable="false"])'
+            )
+        )
     ) {
       return;
     }
@@ -334,7 +355,9 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   };
 
   private onSummarySlotChange = (e: Event): void => {
-    this.hasSummarySlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasSummarySlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
   override render(): TemplateResult {
     return html`<details
@@ -346,20 +369,22 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
       <summary
         part="summary"
         aria-label=${hostAriaLabel(this) ?? nothing}
-        aria-expanded=${this.open ? 'true' : 'false'}
-        aria-disabled=${this.disabled ? 'true' : 'false'}
+        aria-expanded=${this.open ? "true" : "false"}
+        aria-disabled=${this.disabled ? "true" : "false"}
         @click=${this.onClick}
       >
         <span part="header">
           <span class="summary-content"
-            >${this.hasSummarySlot || this.summary ? '' : this.localize('details')}<slot
+            >${this.hasSummarySlot || this.summary
+              ? ""
+              : this.localize("details")}<slot
               name="summary"
               @slotchange=${this.onSummarySlotChange}
               >${this.summary}</slot
             ></span
           >
           <span part="icon summary-icon" aria-hidden="true" inert>
-            <slot name=${this.open ? 'collapse-icon' : 'expand-icon'}
+            <slot name=${this.open ? "collapse-icon" : "expand-icon"}
               ><span class="icon-fallback">${chevronIcon()}</span></slot
             >
           </span>
@@ -369,4 +394,8 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     </details>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lr-details': LyraDetails; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-details': LyraDetails;
+  }
+}

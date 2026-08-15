@@ -1,70 +1,70 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property, query, state } from "lit/decorators.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { chevronIcon, spinnerIcon } from "../../../internal/icons.js";
-import { safeDownloadHref, safeLinkHref } from "../../../internal/safe-url.js";
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, query, state } from 'lit/decorators.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
+import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import {
   syncAriaControlsElements,
   syncAriaDescribedByElements,
-} from "../../../internal/aria-controls.js";
-import { sizes } from "../../../internal/sizes.styles.js";
-import { variants } from "../../../internal/variants.styles.js";
+} from '../../../internal/aria-controls.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import { variants } from '../../../internal/variants.styles.js';
 import type {
   LyraAppearance,
   LyraSize,
   LyraVariant,
-} from "../../../internal/variants.js";
-import { styles } from "./button.styles.js";
-import { relayNativeEvent } from "../../../internal/native-event-relay.js";
-import { installInvalidEventAlias } from "../../../internal/invalid-event-alias.js";
+} from '../../../internal/variants.js';
+import { styles } from './button.styles.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import {
   attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
   setFormOwner,
   type FormOwnerValue,
-} from "../../../internal/form-associated.js";
+} from '../../../internal/form-associated.js';
 import {
   AnchoredValidityController,
   VALIDITY_ANCHOR,
-} from "../../../internal/anchored-validity.js";
-import { setCustomState } from "../../../internal/custom-states.js";
+} from '../../../internal/anchored-validity.js';
+import { setCustomState } from '../../../internal/custom-states.js';
 import {
   EXTERNAL_LABEL_ACTIVATION,
   type ExternalLabelActivation,
-} from "../../../internal/form-control-labels.js";
-import { omittedEmptyStringConverter } from "../../../internal/converters.js";
+} from '../../../internal/form-control-labels.js';
+import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import {
   currentValidityValidator,
   type LyraFormValidator,
-} from "../form-validator.js";
+} from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from "../../../internal/localization.js";
-import { LYRA_DEFAULT_fieldRequired } from "../../../internal/default-strings.generated.js";
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Alias of the library's one semantic-tone vocabulary, kept as an exported name so existing
  *  imports of `ButtonVariant` keep resolving while `internal/variants.ts` holds the only
  *  definition. */
-export type ButtonVariant = LyraVariant | "default" | "primary" | "text";
+export type ButtonVariant = LyraVariant | 'default' | 'primary' | 'text';
 /** The shared appearance vocabulary (`accent`/`filled`/`outlined`/`filled-outlined`/`plain`) plus
  *  this component's two own tiers, `link` and `quiet`. */
-export type ButtonAppearance = LyraAppearance | "link" | "quiet";
-export type ButtonType = "button" | "submit" | "reset";
+export type ButtonAppearance = LyraAppearance | 'link' | 'quiet';
+export type ButtonType = 'button' | 'submit' | 'reset';
 /** Native `formenctype` vocabulary, applied to the submission this button triggers. */
 export type ButtonFormEnctype =
-  | "application/x-www-form-urlencoded"
-  | "multipart/form-data"
-  | "text/plain";
+  | 'application/x-www-form-urlencoded'
+  | 'multipart/form-data'
+  | 'text/plain';
 /** Native `formmethod` vocabulary. `'dialog'` closes an ancestor `<dialog>` instead of submitting. */
-export type ButtonFormMethod = "get" | "post" | "dialog";
+export type ButtonFormMethod = 'get' | 'post' | 'dialog';
 
 export interface LyraButtonEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
-  "lr-focus": CustomEvent<null>;
-  "lr-blur": CustomEvent<null>;
-  "lr-invalid": CustomEvent<null>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
+  'lr-invalid': CustomEvent<null>;
 }
 
 /**
@@ -254,11 +254,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   static get validators(): LyraFormValidator<LyraButton>[] {
     return [
       currentValidityValidator(
-        "required",
-        "disabled",
-        "loading",
-        "href",
-        "value"
+        'required',
+        'disabled',
+        'loading',
+        'href',
+        'value'
       ),
     ];
   }
@@ -282,20 +282,20 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
       noAccessor: true,
       converter: omittedEmptyStringConverter,
     },
-    customError: { attribute: "custom-error", reflect: true, noAccessor: true },
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
   };
 
   private _fieldsetDisabled = false;
   private _disabled = false;
-  private _name = "";
-  private _value = "";
+  private _name = '';
+  private _value = '';
   private _required = false;
-  private _variant: LyraVariant = "neutral";
+  private _variant: LyraVariant = 'neutral';
   private hasSyncedDescribedByElements = false;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
   /** Consumer validity retained while a non-action mode is barred from validation. */
-  private customValidityMessage = "";
+  private customValidityMessage = '';
   private reflectingCustomError = false;
   /** Consumer-supplied validation message reflected through `custom-error`.
    * @default null */
@@ -307,8 +307,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   set disabled(next: boolean) {
     const old = this._disabled;
     this._disabled = Boolean(next);
-    this.toggleAttribute("disabled", this._disabled);
-    this.requestUpdate("disabled", old);
+    this.toggleAttribute('disabled', this._disabled);
+    this.requestUpdate('disabled', old);
     this.updateValidity();
   }
 
@@ -325,10 +325,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
   set name(next: string | null) {
     const old = this._name;
-    this._name = next ?? "";
-    if (this._name) this.setAttribute("name", this._name);
-    else this.removeAttribute("name");
-    this.requestUpdate("name", old);
+    this._name = next ?? '';
+    if (this._name) this.setAttribute('name', this._name);
+    else this.removeAttribute('name');
+    this.requestUpdate('name', old);
   }
 
   /** Whether the button is disabled explicitly or by an ancestor fieldset. */
@@ -337,7 +337,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
 
   /** Browser-resolved form owner; assigning an ID, form element, or `null` updates `form`. */
-  @property({ attribute: "form" })
+  @property({ attribute: 'form' })
   get form(): HTMLFormElement | null {
     return getFormOwner(this.internals);
   }
@@ -363,7 +363,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   constructor() {
     super();
     installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit("lr-invalid", null, init)
+      this.emit('lr-invalid', null, init)
     );
     this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(
@@ -379,17 +379,17 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   /** Accessible name forwarded to the internal native button or anchor. Bound to the host's
    *  `aria-label` content attribute so changing or removing that attribute after mount keeps the
    *  actual focused control synchronized. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
-  @property({ attribute: "aria-haspopup" }) private triggerHasPopup:
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-haspopup' }) private triggerHasPopup:
     | string
     | null = null;
-  @property({ attribute: "aria-expanded" }) private triggerExpanded:
+  @property({ attribute: 'aria-expanded' }) private triggerExpanded:
     | string
     | null = null;
-  @property({ attribute: "aria-controls" }) private triggerControls:
+  @property({ attribute: 'aria-controls' }) private triggerControls:
     | string
     | null = null;
-  @property({ attribute: "aria-describedby" }) private triggerDescribedBy:
+  @property({ attribute: 'aria-describedby' }) private triggerDescribedBy:
     | string
     | null = null;
 
@@ -404,10 +404,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     return this._variant;
   }
   set variant(next: ButtonVariant) {
-    if (next === "primary") this._variant = "brand";
-    else if (next === "default" || next === "text") this._variant = "neutral";
+    if (next === 'primary') this._variant = 'brand';
+    else if (next === 'default' || next === 'text') this._variant = 'neutral';
     else this._variant = next;
-    if (next === "text") this.appearance = "plain";
+    if (next === 'text') this.appearance = 'plain';
   }
   /** `'accent'` (the default, matching the upstream default) is the loud tier: the active
    *  `variant`'s solid fill with its guaranteed-legible foreground, for the one primary action in a
@@ -423,14 +423,14 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  toolbar-style icon+label action — its border/text read fixed `--lr-color-border`/`--lr-color-text-quiet`
    *  tokens regardless of `variant`, unlike `'outlined'`'s variant-tinted text, so it stays
    *  visually muted at rest. */
-  @property({ reflect: true }) appearance: ButtonAppearance = "accent";
+  @property({ reflect: true }) appearance: ButtonAppearance = 'accent';
   /** Visual size on the library's one control ladder. Accepts both the canonical `'2xs'`–`'xl'`
    *  steps and Web Awesome's/Shoelace's `'small'`/`'medium'`/`'large'` spellings of `s`/`m`/`l`, so
    *  a migration is a tag rename with no attribute rewrite; the two spellings render identically.
    *  `'2xs'` is the tightest tier — a sub-`xs` size for dense, toolbar-embedded controls (e.g.
    *  beside a native `<input type="search">` in a compact dialog header). `'m'` (the default) is
    *  the standard size. */
-  @property({ reflect: true }) size: LyraSize = "m";
+  @property({ reflect: true }) size: LyraSize = 'm';
   /** Fully rounded ends, for a pill-shaped control. Changes the private radius default to
    *  `--lr-radius-pill` rather than declaring a radius on `[part~="base"]`, so an inherited or
    *  direct `--lr-button-radius` stays authoritative. `appearance="link"` still renders with zero
@@ -446,7 +446,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  a dropdown/menu trigger. It carries no accessible name of its own — the button's label already
    *  names the action, and the popup relationship is expressed by a host `aria-haspopup`/
    *  `aria-expanded`, which are forwarded to the internal control. */
-  @property({ attribute: "with-caret", type: Boolean, reflect: true })
+  @property({ attribute: 'with-caret', type: Boolean, reflect: true })
   withCaret = false;
   /** Reflected Shoelace alias for `withCaret`; both attributes reach the same rendered chevron.
    * @default false */
@@ -459,12 +459,12 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
   /** SSR presence hint for the `start` adornment wrapper. Assigned slot content is still detected
    *  automatically, so this is optional in client-rendered markup. */
-  @property({ attribute: "with-start", type: Boolean }) withStart = false;
+  @property({ attribute: 'with-start', type: Boolean }) withStart = false;
   /** SSR presence hint for the `end` adornment wrapper. */
-  @property({ attribute: "with-end", type: Boolean }) withEnd = false;
+  @property({ attribute: 'with-end', type: Boolean }) withEnd = false;
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above
    *  for why this component (not the shadow-internal `<button>`) owns that behavior. */
-  @property() type: ButtonType = "button";
+  @property() type: ButtonType = 'button';
   /** The value submitted alongside `name`. Meaningful only together with a `name`, matching a
    *  native submit button. */
   /**
@@ -475,7 +475,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     return this._value;
   }
   set value(next: string) {
-    this._value = next ?? "";
+    this._value = next ?? '';
     this.updateValidity();
   }
   /** Whether a non-empty submitter value is required. This adds the Web Awesome form-control
@@ -491,19 +491,19 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
   /** Overrides the form owner's `action` for the submission this button triggers. Unset by
    *  default, leaving the form's own `action` in place. */
-  @property({ attribute: "formaction" }) formAction?: string;
+  @property({ attribute: 'formaction' }) formAction?: string;
   /** Overrides the form owner's `enctype` for the submission this button triggers. */
-  @property({ attribute: "formenctype" }) formEnctype?: ButtonFormEnctype;
+  @property({ attribute: 'formenctype' }) formEnctype?: ButtonFormEnctype;
   /** Overrides the form owner's `method` for the submission this button triggers. */
-  @property({ attribute: "formmethod" }) formMethod?: ButtonFormMethod;
+  @property({ attribute: 'formmethod' }) formMethod?: ButtonFormMethod;
   /** Skips the form owner's constraint validation for the submission this button triggers —
    *  the native `formnovalidate` semantics. Without it an invalid form is reported and not
    *  submitted, exactly as a native submit button behaves. */
-  @property({ attribute: "formnovalidate", type: Boolean }) formNoValidate =
+  @property({ attribute: 'formnovalidate', type: Boolean }) formNoValidate =
     false;
   /** Overrides the form owner's `target` for the submission this button triggers. Distinct from
    *  `target`, which is the anchor target used in link mode. */
-  @property({ attribute: "formtarget" }) formTarget?: string;
+  @property({ attribute: 'formtarget' }) formTarget?: string;
   /** Shows an internal spinner in place of interaction affordance and disables the button, without
    *  clearing `disabled` — a consumer's own `disabled` state and a transient `loading` state are
    *  independent (mirrors `<lr-export-button>`'s own `loading`/`disabled` pair). */
@@ -546,15 +546,15 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  `noopener noreferrer` guard whenever `target` is set. `undefined` when nothing remains, so the
    *  attribute is omitted rather than rendered empty. */
   private get resolvedRel(): string | undefined {
-    const authored = (this.rel ?? "")
+    const authored = (this.rel ?? '')
       .split(/\s+/)
-      .filter((token) => token !== "" && token.toLowerCase() !== "opener");
+      .filter((token) => token !== '' && token.toLowerCase() !== 'opener');
     const tokens = new Set(authored);
     if (this.target) {
-      tokens.add("noopener");
-      tokens.add("noreferrer");
+      tokens.add('noopener');
+      tokens.add('noreferrer');
     }
-    return tokens.size > 0 ? [...tokens].join(" ") : undefined;
+    return tokens.size > 0 ? [...tokens].join(' ') : undefined;
   }
   /** Native anchor `download` attribute, used only while `href` resolves to a link. Ignored in
    *  `<button>` mode. */
@@ -604,7 +604,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  popups from a label click is not native behavior.
    *  @internal */
   [EXTERNAL_LABEL_ACTIVATION](): ExternalLabelActivation {
-    return "activate";
+    return 'activate';
   }
 
   checkValidity(): boolean {
@@ -618,27 +618,27 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   /** Sets or clears a consumer-supplied validation error without disturbing `required`. */
   setCustomValidity(message: string): void {
     const old = this.customValidityMessage || null;
-    const next = message ?? "";
+    const next = message ?? '';
     this.customValidityMessage = next;
     this.validityController.setCustomValidity(
-      this.isValidationBarred ? "" : next
+      this.isValidationBarred ? '' : next
     );
     if (!this.reflectingCustomError) {
       this.reflectingCustomError = true;
       try {
-        if (next) this.setAttribute("custom-error", next);
-        else this.removeAttribute("custom-error");
+        if (next) this.setAttribute('custom-error', next);
+        else this.removeAttribute('custom-error');
       } finally {
         this.reflectingCustomError = false;
       }
     }
-    this.requestUpdate("customError", old);
+    this.requestUpdate('customError', old);
   }
 
   /** Clears consumer custom validity and republishes the current intrinsic constraint. */
   resetValidity(): void {
-    this.customValidityMessage = "";
-    this.validityController.setCustomValidity("");
+    this.customValidityMessage = '';
+    this.validityController.setCustomValidity('');
     this.updateValidity();
   }
 
@@ -646,32 +646,32 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  form-data entry; it is still contributed only while this control is the submitter. */
   formStateRestoreCallback(
     state: string | File | FormData | null,
-    reason: "autocomplete" | "restore"
+    reason: 'autocomplete' | 'restore',
   ): void {
     void reason;
-    this.value = typeof state === "string" ? state : "";
+    this.value = typeof state === 'string' ? state : '';
   }
 
   /** Runs the form action after every listener on the composed click path had its veto turn. */
   private runClickDefaultAction(): void {
-    if (this.type === "submit") {
+    if (this.type === 'submit') {
       const form = this.getForm();
       if (!form) return;
       if (this.hasSubmitterOverrides) this.submitAsNamedSubmitter(form);
       else form.requestSubmit();
-    } else if (this.type === "reset") {
+    } else if (this.type === 'reset') {
       this.getForm()?.reset();
     }
   }
 
   private onClick = (event: MouseEvent): void => {
-    if (this.type !== "submit" && this.type !== "reset") return;
+    if (this.type !== 'submit' && this.type !== 'reset') return;
     const ownerWindow = this.ownerDocument.defaultView;
     let settled = false;
     const finish = (): void => {
       if (settled) return;
       settled = true;
-      ownerWindow?.removeEventListener("click", finishAtWindow);
+      ownerWindow?.removeEventListener('click', finishAtWindow);
       if (event.defaultPrevented || this.effectiveDisabled || this.loading)
         return;
       this.runClickDefaultAction();
@@ -685,18 +685,18 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     // click() native-like) while still observing every pre-existing host/document/window listener.
     // stopPropagation()/stopImmediatePropagation() do not cancel native default actions, so a
     // microtask fallback performs the same action when the event never reaches Window.
-    ownerWindow?.addEventListener("click", finishAtWindow);
+    ownerWindow?.addEventListener('click', finishAtWindow);
     queueMicrotask(finish);
   };
 
   private onFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit("lr-focus");
+    this.emit('lr-focus');
   };
 
   private onBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit("lr-blur");
+    this.emit('lr-blur');
   };
 
   /** Whether anything about this button changes the submission itself, rather than merely
@@ -725,8 +725,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    * validation-blocked submission can't leave it behind.
    */
   private submitAsNamedSubmitter(form: HTMLFormElement): void {
-    const submitter = this.ownerDocument.createElement("button");
-    submitter.type = "submit";
+    const submitter = this.ownerDocument.createElement('button');
+    submitter.type = 'submit';
     submitter.hidden = true;
     submitter.tabIndex = -1;
     if (this.name) {
@@ -737,17 +737,17 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     // for example, `formaction=""` resolves against the current document rather than inheriting the
     // form owner's action. Copy raw attributes so native normalization happens on the real submitter.
     if (this.formAction !== undefined)
-      submitter.setAttribute("formaction", this.formAction);
+      submitter.setAttribute('formaction', this.formAction);
     if (this.formEnctype !== undefined)
-      submitter.setAttribute("formenctype", this.formEnctype);
+      submitter.setAttribute('formenctype', this.formEnctype);
     if (this.formMethod !== undefined)
-      submitter.setAttribute("formmethod", this.formMethod);
+      submitter.setAttribute('formmethod', this.formMethod);
     if (this.formNoValidate) submitter.formNoValidate = true;
     if (this.formTarget !== undefined)
-      submitter.setAttribute("formtarget", this.formTarget);
+      submitter.setAttribute('formtarget', this.formTarget);
 
-    if (this.parentElement && this.closest("form") === form)
-      this.insertAdjacentElement("afterend", submitter);
+    if (this.parentElement && this.closest('form') === form)
+      this.insertAdjacentElement('afterend', submitter);
     else form.append(submitter);
     try {
       form.requestSubmit(submitter);
@@ -795,12 +795,12 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
       .children;
     const children = collection ? Array.from(collection) : [];
     this.hasStartSlot = children.some((element) => {
-      const slot = element.getAttribute("slot");
-      return slot === "start" || slot === "prefix";
+      const slot = element.getAttribute('slot');
+      return slot === 'start' || slot === 'prefix';
     });
     this.hasEndSlot = children.some((element) => {
-      const slot = element.getAttribute("slot");
-      return slot === "end" || slot === "suffix";
+      const slot = element.getAttribute('slot');
+      return slot === 'end' || slot === 'suffix';
     });
   }
 
@@ -816,7 +816,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     const childElements = (this as unknown as { children?: HTMLCollection })
       .children;
     const elements = (childElements ? Array.from(childElements) : []).filter(
-      (element) => !element.getAttribute("slot")
+      (element) => !element.getAttribute('slot')
     );
     if (elements.length !== 1) return false;
     const childNodes = (
@@ -824,10 +824,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     ).childNodes;
     const directText = (childNodes ? Array.from(childNodes) : [])
       .filter((node) => node.nodeType === 3)
-      .map((node) => node.textContent ?? "")
-      .join("")
+      .map((node) => node.textContent ?? '')
+      .join('')
       .trim();
-    return directText === "" && (elements[0]?.textContent ?? "").trim() === "";
+    return directText === '' && (elements[0]?.textContent ?? '').trim() === '';
   }
 
   private onDefaultSlotChange = (): void => {
@@ -851,14 +851,14 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     if (this.isValidationBarred) {
       // Retain consumer state in `customValidityMessage` while clearing both controller layers;
       // otherwise its hostUpdated anchor refresh would reapply a barred custom error.
-      this.validityController.setCustomValidity("");
+      this.validityController.setCustomValidity('');
       this.validityController.setValidity({});
       return;
     }
     if (this.required && !this.value) {
       this.validityController.setValidity(
         { valueMissing: true },
-        this.localize("fieldRequired")
+        this.localize('fieldRequired')
       );
     } else {
       this.validityController.setValidity({});
@@ -869,7 +869,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   /** Disabled/loading controls and a link-rendering button are not form actions. */
   private get isValidationBarred(): boolean {
     return (
-      this.effectiveDisabled || this.loading || this.baseEl?.localName === "a"
+      this.effectiveDisabled || this.loading || this.baseEl?.localName === 'a'
     );
   }
 
@@ -877,12 +877,12 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     if (!this.internals) return;
     setCustomState(
       this.internals,
-      "disabled",
+      'disabled',
       this.effectiveDisabled || this.loading
     );
-    setCustomState(this.internals, "icon-button", this.isIconButton);
-    setCustomState(this.internals, "link", this.baseEl?.localName === "a");
-    setCustomState(this.internals, "loading", this.loading);
+    setCustomState(this.internals, 'icon-button', this.isIconButton);
+    setCustomState(this.internals, 'link', this.baseEl?.localName === 'a');
+    setCustomState(this.internals, 'loading', this.loading);
   }
 
   private syncDescribedByElements(): void {
@@ -979,6 +979,6 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-button": LyraButton;
+    'lr-button': LyraButton;
   }
 }

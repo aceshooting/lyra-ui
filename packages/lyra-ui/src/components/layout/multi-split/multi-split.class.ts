@@ -169,7 +169,7 @@ export interface LyraMultiSplitEventMap {
 /**
  * `<lr-multi-split>` — resizable panels for dashboard layouts. Direct light-DOM
  * children are the panels; a divider is auto-inserted between each pair. Give every panel a
- * unique, nonempty `panel-id` when using `storageKey`: persistence records `panelId`/size pairs,
+ * unique, nonempty, whitespace-stable `panel-id` when using `storageKey`: persistence records `panelId`/size pairs,
  * so reordered or replaced panels recover the size belonging to their business identity instead
  * of whichever panel happens to occupy the old array index. Missing or duplicate identities fail
  * persistence closed while leaving the live, non-persisted split usable.
@@ -247,7 +247,7 @@ export interface LyraMultiSplitEventMap {
  *   interaction and falls back to a normalized percent minimum.
  * @event lr-multi-split-orientation-change - `detail: { orientation }`, fired when an enabled
  *   `orientationBreakpoint` changes the effective resize/layout axis.
- * @slot - Panels to arrange side by side (or stacked, when `orientation="vertical"`); each direct child becomes one resizable panel. Set a unique nonempty `panel-id` on every panel when using persistence.
+ * @slot - Panels to arrange side by side (or stacked, when `orientation="vertical"`); each direct child becomes one resizable panel. Set a unique nonempty, whitespace-stable `panel-id` on every panel when using persistence.
  * @csspart base - The flex layout wrapper (`position: relative`, so the `'floating'` collapse state can anchor to it).
  * @csspart divider - Each `role="separator"` between two panels. `aria-valuenow` is the leading
  *   panel's percentage; `aria-valuemin`/`aria-valuemax` are that divider's currently achievable
@@ -832,16 +832,16 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       : undefined;
   }
 
-  /** Reads the domain identities for a complete panel sequence. A single missing/blank/duplicate
+  /** Reads the domain identities for a complete panel sequence. A single missing, blank,
+   *  whitespace-unstable, or duplicate
    *  value invalidates the whole identity model so persistence can never silently fall back to
-   *  positional ownership. Whitespace is trimmed for comparison/storage without rewriting caller
-   *  markup. */
+   *  positional ownership. Retained identities are never rewritten. */
   private panelIdsFor(panels: readonly HTMLElement[]): string[] | null {
     const ids: string[] = [];
     const seen = new Set<string>();
     for (const panel of panels) {
-      const panelId = panel.getAttribute('panel-id')?.trim() ?? '';
-      if (!panelId || seen.has(panelId)) return null;
+      const panelId = panel.getAttribute('panel-id') ?? '';
+      if (!panelId || panelId.trim() !== panelId || seen.has(panelId)) return null;
       seen.add(panelId);
       ids.push(panelId);
     }

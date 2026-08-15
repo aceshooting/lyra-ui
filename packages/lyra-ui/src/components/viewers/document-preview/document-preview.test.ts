@@ -957,8 +957,8 @@ describe("motion", () => {
     expect(css).to.include(
       "--_lr-document-preview-spin-duration: var(--lr-transition-ambient);"
     );
-    expect(css).to.include(
-      "animation: lr-document-preview-spin var(--lr-document-preview-spin-duration, var(--_lr-document-preview-spin-duration)) infinite;"
+    expect(css).to.match(
+      /animation:\s*lr-document-preview-spin\s+var\(\s*--lr-document-preview-spin-duration,\s*var\(--_lr-document-preview-spin-duration\)\s*\)\s+infinite;/
     );
     expect(css).to.include("@media (prefers-reduced-motion: reduce)");
     expect(css).to.include(".ring { animation: none !important; }");

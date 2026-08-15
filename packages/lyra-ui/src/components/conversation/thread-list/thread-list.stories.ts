@@ -16,7 +16,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename affordances, built on lr-conversation-item and virtualized via lr-virtual-list.',
+          'The conversation sidebar: a grouped, searchable list of chat sessions with unique nonempty, nonblank first-wins IDs, pin/archive/delete/rename affordances, and lr-virtual-list virtualization. Invalid-only data does not suppress valid slotted rows.',
       },
     },
   },

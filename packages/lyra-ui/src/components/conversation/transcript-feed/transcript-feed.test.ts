@@ -183,16 +183,25 @@ it('retains zero as an explicit full-history rendering opt-in', async () => {
   expect(entryEls(el)).to.have.lengthOf(501);
 });
 
-it('uses first-wins identity and rejects empty transcript ids from rendering', async () => {
+it('uses first-wins identity and rejects empty or blank transcript ids from rendering', async () => {
   const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [
     { id: 'same', text: 'first' },
     { id: 'same', text: 'second' },
     { id: '', text: 'missing identity' },
+    { id: '   ', text: 'blank identity' },
   ];
   await el.updateComplete;
   expect(entryEls(el)).to.have.lengthOf(1);
   expect(el.shadowRoot!.querySelector('[part="text"]')!.textContent).to.equal('first');
+
+  el.entries = [
+    { id: '', text: 'missing identity' },
+    { id: '   ', text: 'blank identity' },
+  ];
+  await el.updateComplete;
+  expect(entryEls(el)).to.have.lengthOf(0);
+  expect(el.shadowRoot!.querySelector('[part="empty"]') != null).to.equal(true);
 });
 
 describe('follow / stick-to-bottom contract', () => {

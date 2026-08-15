@@ -133,6 +133,39 @@ it("defaults to slotted mode and emits only a host-owned lr-query-change for sea
   expect(nativeInputs).to.have.length(0);
 });
 
+it("ignores invalid-only thread records when choosing slotted mode", async () => {
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => warnings.push(String(args[0]));
+  try {
+    const el = (await fixture(html`
+      <lr-thread-list
+        .threads=${[
+          { id: "", title: "Missing identity" },
+          { id: "   ", title: "Blank identity" },
+        ]}
+      >
+        <lr-conversation-item label="Manual row"></lr-conversation-item>
+      </lr-thread-list>
+    `)) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+
+    expect(el.shadowRoot!.querySelector("lr-virtual-list") == null).to.equal(
+      true
+    );
+    expect(
+      el.shadowRoot!.querySelector('[part="list"]')?.getAttribute("role")
+    ).to.equal("list");
+    expect(
+      el.querySelector("lr-conversation-item")?.getAttribute("role")
+    ).to.equal("listitem");
+    expect(warnings).to.deep.equal([]);
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
 it("leaves row navigation untouched for a foreign-realm group-toggle descendant", async () => {
   const el = (await fixture(
     html`<lr-thread-list></lr-thread-list>`
@@ -420,7 +453,7 @@ describe("data mode", () => {
     expect(renderedThreadIds(el)).to.deep.equal(["p1", "t1", "y1", "a1"]);
   });
 
-  it("requires non-empty unique identities and keeps the first duplicate thread", async () => {
+  it("requires non-empty, nonblank unique identities and keeps the first duplicate thread", async () => {
     const el = (await fixture(html`
       <lr-thread-list
         grouping="none"
@@ -428,6 +461,7 @@ describe("data mode", () => {
           { id: "same", title: "First" },
           { id: "same", title: "Second" },
           { id: "", title: "Missing identity" },
+          { id: "   ", title: "Blank identity" },
         ]}
       ></lr-thread-list>
     `)) as LyraThreadList;

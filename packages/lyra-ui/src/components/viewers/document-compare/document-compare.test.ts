@@ -433,6 +433,31 @@ describe('lr-document-compare', () => {
       expect(calledWith).to.equal('h1');
     });
 
+    it('matches the other pane through its normalized first-wins highlight identities', async () => {
+      const el = await highlightsFixture();
+      el.newVersion = {
+        ...el.newVersion,
+        highlights: [
+          { id: ' h1 ', label: 'First', anchor: { kind: 'region', rect: { x: 40, y: 40, width: 20, height: 20 } } },
+          { id: '\th1\t', label: 'Later duplicate', anchor: { kind: 'region', rect: { x: 60, y: 60, width: 20, height: 20 } } },
+        ],
+      };
+      await el.updateComplete;
+      const previewOld = el.shadowRoot!.querySelector('[part="pane-old"] lr-document-preview') as LyraDocumentPreview;
+      const previewNew = el.shadowRoot!.querySelector('[part="pane-new"] lr-document-preview') as LyraDocumentPreview;
+      await previewNew.updateComplete;
+      expect(previewNew.highlights.map((highlight) => highlight.id)).to.deep.equal(['h1']);
+      let calledWith: unknown;
+      previewNew.scrollToAnchor = async (target: unknown) => {
+        calledWith = target;
+        return true;
+      };
+
+      const target = previewOld.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLButtonElement;
+      target.click();
+      expect(calledWith).to.equal('h1');
+    });
+
     it('does nothing on the other pane when no highlight with the same id exists there', async () => {
       const el = await highlightsFixture();
       await el.updateComplete;

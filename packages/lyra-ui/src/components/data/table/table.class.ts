@@ -50,17 +50,55 @@ const MAX_PAGE_SIZE = 500;
 /** Matches the fixed allocation thresholds in table.styles.ts. */
 const LOW_PRIORITY_MAX_INLINE_SIZE = 899.98;
 const MEDIUM_PRIORITY_MAX_INLINE_SIZE = 639.98;
+const MAX_TABLE_COLLECTION_ENTRIES = 10_000;
 
 /** An omitted ARIA maximum defaults to 100 for `role="separator"`. Represent an author-unbounded
  * CSS maximum with the largest exact finite integer so wider pixel values stay truthful. */
 const UNBOUNDED_RESIZE_ARIA_MAX = Number.MAX_SAFE_INTEGER;
 
 function frozenArray<Value>(values: Iterable<Value>): readonly Value[] {
-  return Object.freeze([...values]);
+  const snapshot: Value[] = [];
+  try {
+    for (const value of values) {
+      snapshot.push(value);
+      if (snapshot.length >= MAX_TABLE_COLLECTION_ENTRIES) break;
+    }
+  } catch {
+    // Retain the safe prefix when an untyped iterable throws.
+  }
+  return Object.freeze(snapshot);
 }
 
 function keySet(values: Iterable<string | number>): Set<string | number> {
-  return new Set(values);
+  const snapshot = new Set<string | number>();
+  try {
+    for (const value of values) {
+      snapshot.add(value);
+      if (snapshot.size >= MAX_TABLE_COLLECTION_ENTRIES) break;
+    }
+  } catch {
+    // Retain the safe prefix when an untyped iterable throws.
+  }
+  return snapshot;
+}
+
+function readonlyKeySet(values: Iterable<string | number>): ReadonlySet<string | number> {
+  const snapshot = keySet(values);
+  let facade: ReadonlySet<string | number>;
+  facade = {
+    get size() {
+      return snapshot.size;
+    },
+    has: (value) => snapshot.has(value),
+    entries: () => snapshot.entries(),
+    keys: () => snapshot.keys(),
+    values: () => snapshot.values(),
+    [Symbol.iterator]: () => snapshot[Symbol.iterator](),
+    forEach(callback, thisArg) {
+      snapshot.forEach((value) => callback.call(thisArg, value, value, facade));
+    },
+  };
+  return Object.freeze(facade);
 }
 
 const UNSAFE_CSS_STRUCTURE = /[;{}]/;
@@ -699,9 +737,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   private _columns: readonly TableColumn<T>[] = Object.freeze([]);
-  /** Clone-owned readonly column-definition sequence. Blank keys and later duplicate keys are
-   * omitted (first valid occurrence wins) before any header, cell, sort, focus, or event path.
-   * Column objects and callbacks retain their identities; reassign the collection to update. */
+  /** Clone-owned readonly column-definition sequence, bounded to 10,000 valid definitions. Blank
+   * keys and later duplicate keys are omitted (first valid occurrence wins) before any header,
+   * cell, sort, focus, or event path. Column objects and callbacks retain their identities;
+   * reassign the collection to update. */
   @property({ attribute: false })
   get columns(): readonly TableColumn<T>[] {
     return this._columns;
@@ -717,6 +756,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           if (typeof key !== 'string' || key.trim().length === 0 || seen.has(key)) continue;
           seen.add(key);
           columns.push(column);
+          if (columns.length >= MAX_TABLE_COLLECTION_ENTRIES) break;
         } catch {
           // A malformed definition cannot reserve its key or suppress a later valid definition.
         }
@@ -727,9 +767,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   private _rows: readonly T[] = Object.freeze([]);
-  /** Clone-owned readonly row sequence. Row objects are retained here; the rendered model applies
-   * `rowKey` as one unique nonempty first-wins identity projection before filtering, counts,
-   * pagination, focus, actions, and events. Reassign the collection to update. */
+  /** Clone-owned readonly row sequence, bounded to the first 10,000 rows. Row objects are retained
+   * here; the rendered model applies `rowKey` as one unique nonempty first-wins identity
+   * projection before filtering, counts, pagination, focus, actions, and events. Reassign the
+   * collection to update. */
   @property({ attribute: false })
   get rows(): readonly T[] {
     return this._rows;
@@ -805,12 +846,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ attribute: false }) rowKey?: (row: T) => string | number;
   @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: TableSelectionMode = 'none';
   private _selectedKeys = new Set<string | number>();
-  /** Selected raw row keys in every selection mode. Single mode replaces this set with exactly
-   * one key per row activation; multiple mode toggles membership. Reads return detached snapshots;
-   * reassign a new set to update. */
+  /** Selected raw row keys in every selection mode, bounded to 10,000 keys. Single mode replaces
+   * this set with exactly one key per row activation; multiple mode toggles membership. Reads
+   * return immutable detached `ReadonlySet` facades; reassign a new set to update. */
   @property({ attribute: false })
   get selectedKeys(): ReadonlySet<string | number> {
-    return keySet(this._selectedKeys);
+    return readonlyKeySet(this._selectedKeys);
   }
   set selectedKeys(value: ReadonlySet<string | number>) {
     const previous = this._selectedKeys;
@@ -891,15 +932,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  alignment) but it renders empty — no button, no `aria-expanded`, no
    *  click handler. */
   @property({ attribute: false }) canExpand?: (row: T) => boolean;
-  /** Consumer-owned open/closed state, keyed the same way as `rowKey`/
+  /** Consumer-owned open/closed state, bounded to 10,000 keys and keyed the same way as `rowKey`/
    *  `selectedKeys`. The table never mutates this itself — it only reads it
    *  to decide which rows currently render `expandedContent`; toggle it in
    *  response to `lr-row-expand-toggle`. Unlike this controlled expansion axis,
-   *  selection and client sorting are self-managed. */
+   *  selection and client sorting are self-managed. Reads return immutable detached `ReadonlySet`
+   *  facades; reassign a new set to update. */
   private _expandedKeys = new Set<string | number>();
   @property({ attribute: false })
   get expandedKeys(): ReadonlySet<string | number> {
-    return keySet(this._expandedKeys);
+    return readonlyKeySet(this._expandedKeys);
   }
   set expandedKeys(value: ReadonlySet<string | number>) {
     const previous = this._expandedKeys;

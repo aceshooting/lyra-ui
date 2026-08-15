@@ -5,6 +5,14 @@ const meta: Meta = {
   title: 'Multi Split',
   component: 'lr-multi-split',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Persisted panels require unique, nonempty, whitespace-stable panel-id values; invalid identity fails persistence closed without rewriting author markup.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

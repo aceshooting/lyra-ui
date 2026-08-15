@@ -23,6 +23,14 @@ const meta: Meta = {
   title: 'Flow Run Status',
   component: 'lr-flow-run-status',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Decorations are copied into a deeply frozen record bounded to 10,000 keys plus finite nested-data budgets. Reassign the record after changing it.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

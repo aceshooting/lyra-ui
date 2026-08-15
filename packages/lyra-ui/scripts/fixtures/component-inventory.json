@@ -2327,7 +2327,7 @@
           {
             "name": "entries",
             "attribute": null,
-            "type": "ActivityEntry[]",
+            "type": "readonly ActivityEntry[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -2710,7 +2710,7 @@
           {
             "name": "metrics",
             "attribute": null,
-            "type": "AgentEvaluationMetric[]",
+            "type": "readonly AgentEvaluationMetric[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -2720,7 +2720,7 @@
           {
             "name": "runs",
             "attribute": null,
-            "type": "AgentEvaluationDashboardRun[]",
+            "type": "readonly AgentEvaluationDashboardRun[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -2971,7 +2971,7 @@
           {
             "name": "metrics",
             "attribute": null,
-            "type": "AgentRunMetric[]",
+            "type": "readonly AgentRunMetric[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3011,7 +3011,7 @@
           {
             "name": "statusLabels",
             "attribute": null,
-            "type": "Record<string, string>",
+            "type": "Readonly<Record<string, string>>",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3021,7 +3021,7 @@
           {
             "name": "statusVariants",
             "attribute": null,
-            "type": "Record<string, BadgeVariant>",
+            "type": "Readonly<Record<string, BadgeVariant>>",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3350,7 +3350,7 @@
           {
             "name": "hiddenKinds",
             "attribute": null,
-            "type": "LyraSpan['kind'][]",
+            "type": "readonly LyraSpan['kind'][]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3410,7 +3410,7 @@
           {
             "name": "spans",
             "attribute": null,
-            "type": "LyraSpan[]",
+            "type": "readonly LyraSpan[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3422,19 +3422,19 @@
         "events": [
           {
             "name": "lr-span-select",
-            "type": "CustomEvent<{ id: string }>",
+            "type": "CustomEvent<{ spanId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-span-toggle",
-            "type": "CustomEvent<{ id: string; expanded: boolean }>",
+            "type": "CustomEvent<{ spanId: string; expanded: boolean }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-span-visibility-change",
-            "type": "CustomEvent<{ hiddenKinds: LyraSpan['kind'][] }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ hiddenKinds: LyraSpan['kind'][] }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -3737,7 +3737,7 @@
           {
             "name": "citations",
             "attribute": null,
-            "type": "Citation[]",
+            "type": "readonly Citation[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3797,7 +3797,7 @@
           {
             "name": "contextSegments",
             "attribute": null,
-            "type": "ContextInspectorSegment[]",
+            "type": "readonly ContextInspectorSegment[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3827,7 +3827,7 @@
           {
             "name": "groundingAssessment",
             "attribute": null,
-            "type": "GroundingAssessment | null",
+            "type": "Readonly<GroundingAssessment> | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3857,7 +3857,7 @@
           {
             "name": "messages",
             "attribute": null,
-            "type": "ChatMessage[]",
+            "type": "readonly ChatMessage[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3867,7 +3867,7 @@
           {
             "name": "metrics",
             "attribute": null,
-            "type": "AgentRunMetric[]",
+            "type": "readonly AgentRunMetric[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3877,7 +3877,7 @@
           {
             "name": "retrievalChunks",
             "attribute": null,
-            "type": "RetrievalChunk[]",
+            "type": "readonly RetrievalChunk[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3917,7 +3917,7 @@
           {
             "name": "run",
             "attribute": null,
-            "type": "AgentRun | null",
+            "type": "Readonly<AgentRun> | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3927,7 +3927,7 @@
           {
             "name": "selectedRetrievalIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -3957,7 +3957,7 @@
           {
             "name": "tools",
             "attribute": null,
-            "type": "ToolTimelineEntry[]",
+            "type": "readonly ToolTimelineEntry[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -4002,7 +4002,7 @@
           },
           {
             "name": "lr-citation-select",
-            "type": "CustomEvent<CitationSelectEventDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -4026,7 +4026,7 @@
           },
           {
             "name": "lr-retrieval-select",
-            "type": "CustomEvent<RetrievalResultsSelectDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -6221,8 +6221,8 @@
             "default": false
           },
           {
-            "name": "selected-id",
-            "property": "selectedId",
+            "name": "selected-invocation-id",
+            "property": "selectedInvocationId",
             "type": "string | null",
             "reflects": false,
             "inferred": false,
@@ -6275,7 +6275,7 @@
           {
             "name": "requests",
             "attribute": null,
-            "type": "ToolApprovalRequest[]",
+            "type": "readonly ToolApprovalRequest[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -6283,8 +6283,8 @@
             "default": "[]"
           },
           {
-            "name": "selectedId",
-            "attribute": "selected-id",
+            "name": "selectedInvocationId",
+            "attribute": "selected-invocation-id",
             "type": "string | null",
             "readonly": false,
             "reflects": false,
@@ -6906,7 +6906,7 @@
           {
             "name": "versions",
             "attribute": null,
-            "type": "ArtifactVersion[]",
+            "type": "readonly ArtifactVersion[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -7861,7 +7861,7 @@
           },
           {
             "name": "lr-files",
-            "type": "CustomEvent<LyraAttachmentFilesDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraAttachmentFilesDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -11256,7 +11256,7 @@
           {
             "name": "labels",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -11332,7 +11332,7 @@
         "events": [
           {
             "name": "lr-before-legend-visibility-change",
-            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
@@ -11344,7 +11344,7 @@
           },
           {
             "name": "lr-legend-visibility-change",
-            "type": "CustomEvent<LyraChartLegendVisibilityChangeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraChartLegendVisibilityChangeDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -11637,6 +11637,12 @@
             "type": "CustomEvent<{ index: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toolbar-actions-change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
           }
         ],
         "parts": [
@@ -12270,7 +12276,7 @@
           {
             "name": "pings",
             "attribute": null,
-            "type": "BrowserPing[]",
+            "type": "readonly BrowserPing[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -13481,7 +13487,7 @@
           {
             "name": "aria-controls",
             "property": "triggerControls",
-            "type": "string | null",
+            "type": "| string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -13491,7 +13497,7 @@
           {
             "name": "aria-describedby",
             "property": "triggerDescribedBy",
-            "type": "string | null",
+            "type": "| string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -13501,7 +13507,7 @@
           {
             "name": "aria-expanded",
             "property": "triggerExpanded",
-            "type": "string | null",
+            "type": "| string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -13511,7 +13517,7 @@
           {
             "name": "aria-haspopup",
             "property": "triggerHasPopup",
-            "type": "string | null",
+            "type": "| string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -14840,7 +14846,7 @@
           {
             "name": "events",
             "attribute": null,
-            "type": "CalendarEvent[]",
+            "type": "readonly CalendarEvent[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -22199,7 +22205,7 @@
           {
             "name": "chunks",
             "attribute": null,
-            "type": "LyraChunk[]",
+            "type": "readonly LyraChunk[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -22271,7 +22277,7 @@
         "events": [
           {
             "name": "lr-chunk-open",
-            "type": "CustomEvent<{ id: string; sourceId: string; anchor?: LyraChunkAnchor; }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ id: string; sourceId: string; anchor?: LyraChunkAnchor; }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -22698,7 +22704,7 @@
           {
             "name": "citations",
             "attribute": null,
-            "type": "Citation[]",
+            "type": "readonly Citation[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -22708,7 +22714,7 @@
           {
             "name": "claims",
             "attribute": null,
-            "type": "GroundedClaim[]",
+            "type": "readonly GroundedClaim[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -22770,13 +22776,13 @@
         "events": [
           {
             "name": "lr-citation-select",
-            "type": "CustomEvent<CitationSelectEventDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-claim-select",
-            "type": "CustomEvent<{ claim: GroundedClaim }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -24856,7 +24862,7 @@
                 "parameters": [
                   {
                     "name": "position",
-                    "type": "{ top?: number; left?: number }",
+                    "type": "{ top?: number; left?: number; }",
                     "optional": true,
                     "hasDefault": false
                   }
@@ -27928,7 +27934,7 @@
           {
             "name": "commands",
             "attribute": null,
-            "type": "LyraCommand[]",
+            "type": "readonly LyraCommand[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -27981,7 +27987,7 @@
           },
           {
             "name": "lr-select",
-            "type": "CustomEvent<{ command: LyraCommand }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ command: LyraCommand }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -28293,7 +28299,7 @@
           {
             "name": "files",
             "attribute": null,
-            "type": "CommitFileChange[]",
+            "type": "readonly CommitFileChange[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -28628,7 +28634,7 @@
           {
             "name": "members",
             "attribute": null,
-            "type": "LyraEntity[]",
+            "type": "readonly LyraEntity[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -29114,13 +29120,13 @@
         "events": [
           {
             "name": "lr-add-condition",
-            "type": "CustomEvent<{ readonly condition: ConditionBuilderCondition }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ readonly condition: ConditionBuilderCondition }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ readonly value: ConditionBuilderValue }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ readonly value: ConditionBuilderValue }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -30017,7 +30023,7 @@
           {
             "name": "exportFormats",
             "attribute": null,
-            "type": "LyraExportFormatOption[]",
+            "type": "readonly LyraExportFormatOption[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -30047,7 +30053,7 @@
           {
             "name": "segments",
             "attribute": null,
-            "type": "ContextInspectorSegment[]",
+            "type": "readonly ContextInspectorSegment[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -30316,7 +30322,7 @@
           {
             "name": "segments",
             "attribute": null,
-            "type": "ContextMeterSegment[]",
+            "type": "readonly ContextMeterSegment[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -32070,7 +32076,7 @@
         ],
         "slots": [
           {
-            "name": "cell-{id}",
+            "name": "cell-{cellId}",
             "deprecated": null
           }
         ],
@@ -38887,7 +38893,7 @@
           },
           {
             "name": "lr-highlight-activate",
-            "type": "CustomEvent<{ id: string }>",
+            "type": "CustomEvent<HighlightActivateDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -39162,7 +39168,7 @@
         "events": [
           {
             "name": "lr-filter-change",
-            "type": "CustomEvent<DocumentLibraryFilterChangeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<DocumentLibraryFilterChangeDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -39174,7 +39180,7 @@
           },
           {
             "name": "lr-selection-change",
-            "type": "CustomEvent<DocumentLibrarySelectionChangeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<DocumentLibrarySelectionChangeDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -39456,12 +39462,11 @@
           {
             "name": "highlights",
             "attribute": null,
-            "type": "LyraHighlight[]",
+            "type": "readonly LyraHighlight[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -39558,7 +39563,7 @@
           },
           {
             "name": "lr-highlight-activate",
-            "type": "CustomEvent<{ id: string }>",
+            "type": "CustomEvent<HighlightActivateDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -39859,7 +39864,7 @@
           {
             "name": "highlights",
             "attribute": null,
-            "type": "LyraHighlight[]",
+            "type": "readonly LyraHighlight[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -44268,7 +44273,7 @@
           {
             "name": "points",
             "attribute": null,
-            "type": "EmbeddingPoint[]",
+            "type": "readonly EmbeddingPoint[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -45458,7 +45463,7 @@
           {
             "name": "entity",
             "attribute": null,
-            "type": "LyraEntity | null",
+            "type": "Readonly<LyraEntity> | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -45498,7 +45503,7 @@
           {
             "name": "types",
             "attribute": null,
-            "type": "LyraNodeTypeStyle[]",
+            "type": "readonly LyraNodeTypeStyle[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -45938,7 +45943,7 @@
           {
             "name": "chunks",
             "attribute": null,
-            "type": "LyraChunk[]",
+            "type": "readonly LyraChunk[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -45958,7 +45963,7 @@
           {
             "name": "confidence",
             "attribute": null,
-            "type": "LyraEntityDossierConfidence | null",
+            "type": "Readonly<LyraEntityDossierConfidence> | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -45968,7 +45973,7 @@
           {
             "name": "entity",
             "attribute": null,
-            "type": "LyraEntity | null",
+            "type": "Readonly<LyraEntity> | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -46008,7 +46013,7 @@
           {
             "name": "neighbors",
             "attribute": null,
-            "type": "LyraNeighborRow[]",
+            "type": "readonly LyraNeighborRow[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -46018,7 +46023,7 @@
           {
             "name": "provenance",
             "attribute": null,
-            "type": "LyraProvenance | null",
+            "type": "Readonly<LyraProvenance> | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -46048,7 +46053,7 @@
           {
             "name": "types",
             "attribute": null,
-            "type": "LyraNodeTypeStyle[]",
+            "type": "readonly LyraNodeTypeStyle[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -46060,7 +46065,7 @@
         "events": [
           {
             "name": "lr-chunk-open",
-            "type": "CustomEvent<{ id: string; sourceId: string; anchor?: LyraChunkAnchor; }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ id: string; sourceId: string; anchor?: LyraChunkAnchor; }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -46317,7 +46322,7 @@
           },
           {
             "name": "lr-reveal-change",
-            "type": "CustomEvent<Readonly<{ name: string; revealed: boolean }>>",
+            "type": "CustomEvent<Readonly<{ envName: string; revealed: boolean }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -46597,7 +46602,7 @@
           {
             "name": "examples",
             "attribute": null,
-            "type": "EvalExample[]",
+            "type": "readonly EvalExample[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -46607,7 +46612,7 @@
           {
             "name": "exportFormats",
             "attribute": null,
-            "type": "LyraExportFormatOption[]",
+            "type": "readonly LyraExportFormatOption[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -46706,7 +46711,7 @@
           },
           {
             "name": "lr-import-request",
-            "type": "CustomEvent<{ files: File[] }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ files: File[] }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -46896,7 +46901,7 @@
           {
             "name": "columns",
             "attribute": null,
-            "type": "TableColumn<EvalRunResult>[]",
+            "type": "readonly TableColumn<EvalRunResult>[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -46936,7 +46941,7 @@
           {
             "name": "rubricKeys",
             "attribute": null,
-            "type": "RubricKey[]",
+            "type": "readonly RubricKey[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -46946,7 +46951,7 @@
           {
             "name": "runs",
             "attribute": null,
-            "type": "EvalRunResult[]",
+            "type": "readonly EvalRunResult[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -47149,7 +47154,7 @@
           {
             "name": "examples",
             "attribute": null,
-            "type": "EvaluationExampleResult[]",
+            "type": "readonly EvaluationExampleResult[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -47191,13 +47196,13 @@
         "events": [
           {
             "name": "lr-example-citation-select",
-            "type": "CustomEvent<EvaluationCitationSelectDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<EvaluationCitationSelectDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-example-claim-select",
-            "type": "CustomEvent<EvaluationClaimSelectDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<EvaluationClaimSelectDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -49402,7 +49407,7 @@
           },
           {
             "name": "lr-validity-change",
-            "type": "CustomEvent<LyraFilterBarValidityDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraFilterBarValidityDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -50167,7 +50172,7 @@
           },
           {
             "name": "lr-edge-activate",
-            "type": "CustomEvent<Readonly<{ id: string; source: string; target: string }>>",
+            "type": "CustomEvent<Readonly<{ edgeId: string; source: string; target: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -50179,7 +50184,7 @@
           },
           {
             "name": "lr-node-activate",
-            "type": "CustomEvent<Readonly<{ id: string }>>",
+            "type": "CustomEvent<Readonly<{ nodeId: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -50191,7 +50196,7 @@
           },
           {
             "name": "lr-node-move",
-            "type": "CustomEvent<Readonly<{ readonly id: string; readonly position: Readonly<{ x: number; y: number }>; readonly previous: Readonly<{ x: number; y: number }>; }>>",
+            "type": "CustomEvent<Readonly<{ readonly nodeId: string; readonly position: Readonly<{ x: number; y: number }>; readonly previous: Readonly<{ x: number; y: number }>; }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -53681,7 +53686,7 @@
           {
             "name": "communities",
             "attribute": null,
-            "type": "GraphCommunity[]",
+            "type": "readonly GraphCommunity[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -53691,7 +53696,7 @@
           {
             "name": "dimmedLinkIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -53701,7 +53706,7 @@
           {
             "name": "dimmedNodeIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -53741,7 +53746,7 @@
           {
             "name": "hiddenTypes",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -53770,7 +53775,7 @@
           {
             "name": "links",
             "attribute": null,
-            "type": "LyraGraphLink[]",
+            "type": "readonly LyraGraphLink[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -53810,7 +53815,7 @@
           {
             "name": "nodes",
             "attribute": null,
-            "type": "LyraGraphNode[]",
+            "type": "readonly LyraGraphNode[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -53820,7 +53825,7 @@
           {
             "name": "nodeTypes",
             "attribute": null,
-            "type": "LyraNodeTypeStyle[]",
+            "type": "readonly LyraNodeTypeStyle[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -53849,7 +53854,7 @@
           {
             "name": "selectedLinkIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -53859,7 +53864,7 @@
           {
             "name": "selectedNodeIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -53949,7 +53954,7 @@
           },
           {
             "name": "lr-selection-change",
-            "type": "CustomEvent<{ nodeIds: string[]; linkIds: string[] }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ nodeIds: string[]; linkIds: string[] }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -54275,7 +54280,7 @@
           {
             "name": "counts",
             "attribute": null,
-            "type": "Record<string, number> | undefined",
+            "type": "Readonly<Record<string, number>> | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -54284,7 +54289,7 @@
           {
             "name": "hiddenTypes",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -54324,7 +54329,7 @@
           {
             "name": "types",
             "attribute": null,
-            "type": "LyraNodeTypeStyle[]",
+            "type": "readonly LyraNodeTypeStyle[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -54336,7 +54341,7 @@
         "events": [
           {
             "name": "lr-visibility-change",
-            "type": "CustomEvent<LyraGraphLegendVisibilityDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -54730,25 +54735,25 @@
           },
           {
             "name": "lr-before-query-load",
-            "type": "CustomEvent<GraphQueryLoadDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-query-run",
-            "type": "CustomEvent<GraphQueryRunDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<GraphQueryRunDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-before-query-save",
-            "type": "CustomEvent<GraphQuerySaveDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ readonly value: GraphQuery }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ readonly value: GraphQuery }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -54766,19 +54771,19 @@
           },
           {
             "name": "lr-query-load",
-            "type": "CustomEvent<GraphQueryLoadDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<GraphQueryLoadDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-query-run",
-            "type": "CustomEvent<GraphQueryRunDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<GraphQueryRunDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-query-save",
-            "type": "CustomEvent<GraphQuerySaveDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<GraphQuerySaveDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -55261,7 +55266,7 @@
           {
             "name": "assessment",
             "attribute": null,
-            "type": "GroundingAssessment | null",
+            "type": "Readonly<GroundingAssessment> | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -55271,7 +55276,7 @@
           {
             "name": "citations",
             "attribute": null,
-            "type": "Citation[]",
+            "type": "readonly Citation[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -55333,13 +55338,13 @@
         "events": [
           {
             "name": "lr-citation-select",
-            "type": "CustomEvent<CitationSelectEventDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-claim-select",
-            "type": "CustomEvent<{ claim: GroundedClaim }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "composed": true
@@ -55744,7 +55749,7 @@
           {
             "name": "cellColor",
             "attribute": null,
-            "type": "(pos: MatrixCellPos | CalendarCellPos, value: number) => string | undefined | undefined",
+            "type": "( pos: MatrixCellPos | CalendarCellPos, value: number ) => string | undefined | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -55753,7 +55758,7 @@
           {
             "name": "cellInteractive",
             "attribute": null,
-            "type": "(pos: MatrixCellPos | CalendarCellPos, value: number) => boolean | undefined",
+            "type": "( pos: MatrixCellPos | CalendarCellPos, value: number ) => boolean | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -55771,7 +55776,7 @@
           {
             "name": "cellText",
             "attribute": null,
-            "type": "(pos: MatrixCellPos | CalendarCellPos, value: number) => string | undefined",
+            "type": "( pos: MatrixCellPos | CalendarCellPos, value: number ) => string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -56218,12 +56223,11 @@
           {
             "name": "items",
             "attribute": null,
-            "type": "HighlightLayerItem[]",
+            "type": "readonly HighlightLayerItem[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -57006,7 +57010,7 @@
           {
             "name": "values",
             "attribute": null,
-            "type": "number[]",
+            "type": "readonly number[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -59639,7 +59643,7 @@
           },
           {
             "name": "lr-annotation-create",
-            "type": "CustomEvent<{ anchor: LyraAnchor }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ anchor: LyraAnchor }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -60295,7 +60299,7 @@
           {
             "name": "items",
             "attribute": null,
-            "type": "IngestionQueueItem[]",
+            "type": "readonly IngestionQueueItem[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -62909,7 +62913,7 @@
           {
             "name": "sources",
             "attribute": null,
-            "type": "KnowledgeSource[]",
+            "type": "readonly KnowledgeSource[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63158,7 +63162,7 @@
           {
             "name": "ingestionItems",
             "attribute": null,
-            "type": "IngestionQueueItem[]",
+            "type": "readonly IngestionQueueItem[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63188,7 +63192,7 @@
           {
             "name": "sources",
             "attribute": null,
-            "type": "KnowledgeSource[]",
+            "type": "readonly KnowledgeSource[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63442,7 +63446,7 @@
           {
             "name": "communities",
             "attribute": null,
-            "type": "GraphCommunity[]",
+            "type": "readonly GraphCommunity[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63452,7 +63456,7 @@
           {
             "name": "entityDetails",
             "attribute": null,
-            "type": "Record< string, LyraKnowledgeGraphEntityDetails >",
+            "type": "Readonly<Record< string, Readonly<LyraKnowledgeGraphEntityDetails> >>",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63472,7 +63476,7 @@
           {
             "name": "hiddenTypes",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63502,7 +63506,7 @@
           {
             "name": "links",
             "attribute": null,
-            "type": "LyraGraphLink[]",
+            "type": "readonly LyraGraphLink[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63522,7 +63526,7 @@
           {
             "name": "nodes",
             "attribute": null,
-            "type": "LyraGraphNode[]",
+            "type": "readonly LyraGraphNode[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63532,7 +63536,7 @@
           {
             "name": "nodeTypes",
             "attribute": null,
-            "type": "LyraNodeTypeStyle[]",
+            "type": "readonly LyraNodeTypeStyle[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63542,7 +63546,7 @@
           {
             "name": "path",
             "attribute": null,
-            "type": "LyraPathElement[]",
+            "type": "readonly LyraPathElement[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63552,7 +63556,7 @@
           {
             "name": "pinnedNodeIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -63646,7 +63650,7 @@
           },
           {
             "name": "lr-pin-change",
-            "type": "CustomEvent<{ pinnedNodeIds: string[] }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ pinnedNodeIds: string[] }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -65004,7 +65008,7 @@
           {
             "name": "lr-hide",
             "type": "CustomEvent<LyraLightboxHideDetail>",
-            "cancelable": "always",
+            "cancelable": "conditional",
             "constructor": "CustomEvent"
           },
           {
@@ -66643,7 +66647,7 @@
           {
             "name": "labels",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -68070,7 +68074,7 @@
           {
             "name": "center",
             "property": "center",
-            "type": "[number, number]",
+            "type": "readonly [number, number]",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -68112,7 +68116,7 @@
           {
             "name": "center",
             "attribute": "center",
-            "type": "[number, number]",
+            "type": "readonly [number, number]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -68122,7 +68126,7 @@
           {
             "name": "choropleth",
             "attribute": null,
-            "type": "LyraMapChoroplethLayer | undefined",
+            "type": "Readonly<LyraMapChoroplethLayer> | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -68131,7 +68135,7 @@
           {
             "name": "dataLayers",
             "attribute": null,
-            "type": "LyraMapGeoJsonDataLayer[]",
+            "type": "readonly LyraMapGeoJsonDataLayer[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -68188,7 +68192,7 @@
           {
             "name": "mapStyle",
             "attribute": null,
-            "type": "LyraMapStyleSpecification | string | undefined",
+            "type": "Readonly<LyraMapStyleSpecification> | string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -68197,7 +68201,7 @@
           {
             "name": "markers",
             "attribute": null,
-            "type": "LyraMapMarker[]",
+            "type": "readonly LyraMapMarker[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -68219,7 +68223,7 @@
         "events": [
           {
             "name": "lr-map-click",
-            "type": "CustomEvent<{ lngLat: [number, number]; feature: Feature | undefined; }>",
+            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -70133,7 +70137,7 @@
           {
             "name": "longTerm",
             "attribute": null,
-            "type": "LyraMemoryItem[]",
+            "type": "readonly LyraMemoryItem[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -70143,7 +70147,7 @@
           {
             "name": "shortTerm",
             "attribute": null,
-            "type": "LyraMemoryItem[]",
+            "type": "readonly LyraMemoryItem[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -70163,7 +70167,7 @@
           {
             "name": "types",
             "attribute": null,
-            "type": "LyraNodeTypeStyle[]",
+            "type": "readonly LyraNodeTypeStyle[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -70175,7 +70179,7 @@
         "events": [
           {
             "name": "lr-add",
-            "type": "CustomEvent<LyraMemoryAddDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraMemoryAddDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -71421,7 +71425,7 @@
           {
             "name": "controls",
             "attribute": null,
-            "type": "MessageActionControl[]",
+            "type": "readonly MessageActionControl[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -71521,7 +71525,7 @@
           },
           {
             "name": "lr-feedback-submit",
-            "type": "CustomEvent<MessageFeedbackSubmitDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
@@ -71743,9 +71747,15 @@
           },
           {
             "name": "lr-feedback-submit",
-            "type": "CustomEvent<MessageFeedbackSubmitDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toolbar-actions-change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
           }
         ],
         "parts": [
@@ -72034,7 +72044,7 @@
           {
             "name": "parts",
             "attribute": null,
-            "type": "MessagePart[]",
+            "type": "readonly MessagePart[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -72077,7 +72087,7 @@
           },
           {
             "name": "lr-citation-select",
-            "type": "CustomEvent<CitationSelectEventDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -72101,7 +72111,7 @@
           },
           {
             "name": "lr-part-retry",
-            "type": "CustomEvent<{ part: MessagePart }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ part: MessagePart }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -72378,7 +72388,7 @@
           {
             "name": "topics",
             "attribute": null,
-            "type": "LyraTopic[]",
+            "type": "readonly LyraTopic[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -74051,7 +74061,7 @@
           {
             "name": "defaultSizes",
             "attribute": null,
-            "type": "(number | string)[]",
+            "type": "readonly (number | string)[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -74158,7 +74168,7 @@
           {
             "name": "panelConstraints",
             "attribute": null,
-            "type": "(LyraMultiSplitPanelConstraint | null)[]",
+            "type": "readonly (LyraMultiSplitPanelConstraint | null)[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -74188,7 +74198,7 @@
           {
             "name": "sizes",
             "attribute": null,
-            "type": "number[]",
+            "type": "readonly number[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -74232,13 +74242,13 @@
           },
           {
             "name": "lr-resize",
-            "type": "CustomEvent<LyraMultiSplitResizeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-resize-request",
-            "type": "CustomEvent<LyraMultiSplitResizeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -76249,7 +76259,7 @@
           {
             "name": "rows",
             "attribute": null,
-            "type": "LyraNeighborRow[]",
+            "type": "readonly LyraNeighborRow[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -76425,7 +76435,7 @@
           {
             "name": "items",
             "attribute": null,
-            "type": "PaletteItem[]",
+            "type": "readonly PaletteItem[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -76500,7 +76510,7 @@
           },
           {
             "name": "lr-select",
-            "type": "CustomEvent<{ item: PaletteItem }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ item: PaletteItem }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -80768,12 +80778,11 @@
           {
             "name": "highlights",
             "attribute": null,
-            "type": "LyraHighlight[]",
+            "type": "readonly LyraHighlight[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "label",
@@ -82276,7 +82285,7 @@
           {
             "name": "path",
             "attribute": null,
-            "type": "LyraPathElement[]",
+            "type": "readonly LyraPathElement[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -86206,7 +86215,7 @@
           {
             "name": "decisions",
             "attribute": null,
-            "type": "PolicyDecision[]",
+            "type": "readonly PolicyDecision[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -88995,7 +89004,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[ \"files\", \"image\", \"audio\", ]"
+            "default": "[ 'files', 'image', 'audio', ]"
           },
           {
             "name": "attachments",
@@ -89039,7 +89048,7 @@
           {
             "name": "commandItems",
             "attribute": null,
-            "type": "LyraPromptSuggestion[]",
+            "type": "readonly LyraPromptSuggestion[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -89117,7 +89126,7 @@
           {
             "name": "mentionItems",
             "attribute": null,
-            "type": "LyraPromptSuggestion[]",
+            "type": "readonly LyraPromptSuggestion[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -89165,7 +89174,7 @@
           {
             "name": "queue",
             "attribute": null,
-            "type": "PromptQueueItem[]",
+            "type": "readonly PromptQueueItem[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -89185,7 +89194,7 @@
           {
             "name": "selectedSourceIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -89222,7 +89231,7 @@
           {
             "name": "sources",
             "attribute": null,
-            "type": "LyraSourceEntry[]",
+            "type": "readonly LyraSourceEntry[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -89366,7 +89375,7 @@
           },
           {
             "name": "lr-attachments-add",
-            "type": "CustomEvent<LyraAttachmentFilesDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraAttachmentFilesDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -89408,7 +89417,7 @@
           },
           {
             "name": "lr-mention-select",
-            "type": "CustomEvent<{ suggestionId: string; index: number; label: string; trigger: \"@\" | \"/\"; }>",
+            "type": "CustomEvent<{ suggestionId: string; index: number; label: string; trigger: '@' | '/'; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -89420,19 +89429,19 @@
           },
           {
             "name": "lr-queue-change",
-            "type": "CustomEvent<PromptQueueChangeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<PromptQueueChangeDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-send-now",
-            "type": "CustomEvent<{ item: PromptQueueItem }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ item: PromptQueueItem }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-sources-change",
-            "type": "CustomEvent<{ selectedIds: string[] }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ selectedIds: string[] }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -89803,7 +89812,7 @@
           {
             "name": "items",
             "attribute": null,
-            "type": "PromptQueueItem[]",
+            "type": "readonly PromptQueueItem[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -89835,13 +89844,13 @@
         "events": [
           {
             "name": "lr-queue-change",
-            "type": "CustomEvent<PromptQueueChangeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<PromptQueueChangeDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-send-now",
-            "type": "CustomEvent<{ item: PromptQueueItem }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ item: PromptQueueItem }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -90119,7 +90128,7 @@
           {
             "name": "messages",
             "attribute": null,
-            "type": "PromptStudioMessage[]",
+            "type": "readonly PromptStudioMessage[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -90169,7 +90178,7 @@
           {
             "name": "variables",
             "attribute": null,
-            "type": "PromptStudioVariable[]",
+            "type": "readonly PromptStudioVariable[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -90179,7 +90188,7 @@
           {
             "name": "versions",
             "attribute": null,
-            "type": "PromptStudioVersion[]",
+            "type": "readonly PromptStudioVersion[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -90214,31 +90223,31 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<PromptStudioState>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-message-reorder",
-            "type": "CustomEvent<PromptStudioMessageReorderDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<PromptStudioMessageReorderDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-run",
-            "type": "CustomEvent<PromptStudioState>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-save",
-            "type": "CustomEvent<PromptStudioState>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-version-select",
-            "type": "CustomEvent<{ version: PromptStudioVersion }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ version: PromptStudioVersion }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -90463,7 +90472,7 @@
           {
             "name": "provenance",
             "attribute": null,
-            "type": "LyraProvenance | null",
+            "type": "Readonly<LyraProvenance> | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -90483,7 +90492,7 @@
           {
             "name": "types",
             "attribute": null,
-            "type": "LyraNodeTypeStyle[]",
+            "type": "readonly LyraNodeTypeStyle[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -94100,7 +94109,36 @@
             "deprecated": null
           }
         ],
-        "staticMethods": [],
+        "staticMethods": [
+          {
+            "name": "getPropertyDescriptor",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "name",
+                    "type": "PropertyKey",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "key",
+                    "type": "string | symbol",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "options",
+                    "type": "PropertyDeclaration",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "PropertyDescriptor | undefined"
+              }
+            ]
+          }
+        ],
         "moduleExports": [],
         "form": {
           "associated": true,
@@ -95061,7 +95099,7 @@
           {
             "name": "assessment",
             "attribute": null,
-            "type": "GroundingAssessment | null",
+            "type": "Readonly<GroundingAssessment> | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -95071,7 +95109,7 @@
           {
             "name": "citations",
             "attribute": null,
-            "type": "Citation[]",
+            "type": "readonly Citation[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -95141,7 +95179,7 @@
           {
             "name": "sources",
             "attribute": null,
-            "type": "DocumentRef[]",
+            "type": "readonly DocumentRef[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -95162,13 +95200,13 @@
         "events": [
           {
             "name": "lr-citation-select",
-            "type": "CustomEvent<LyraRagCitationSelectDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraRagCitationSelectDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-claim-select",
-            "type": "CustomEvent<{ claim: GroundedClaim }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -95386,7 +95424,7 @@
           {
             "name": "metrics",
             "attribute": null,
-            "type": "RagEvaluationMetric[]",
+            "type": "readonly RagEvaluationMetric[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -95396,7 +95434,7 @@
           {
             "name": "runs",
             "attribute": null,
-            "type": "RagEvaluationRun[]",
+            "type": "readonly RagEvaluationRun[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -96618,6 +96656,16 @@
             "default": false
           },
           {
+            "name": "session-id",
+            "property": "sessionId",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "show-capture",
             "property": "showCapture",
             "type": "boolean",
@@ -96650,7 +96698,7 @@
           {
             "name": "entries",
             "attribute": null,
-            "type": "LyraTranscriptEntry[]",
+            "type": "readonly LyraTranscriptEntry[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -96696,6 +96744,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "sessionId",
+            "attribute": "session-id",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "showCapture",
@@ -97434,7 +97492,7 @@
         "events": [
           {
             "name": "lr-reorder",
-            "type": "CustomEvent<LyraReorderDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraReorderDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -98407,7 +98465,7 @@
           {
             "name": "sets",
             "attribute": null,
-            "type": "RetrievalComparisonSet[]",
+            "type": "readonly RetrievalComparisonSet[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -98429,7 +98487,7 @@
         "events": [
           {
             "name": "lr-chunk-select",
-            "type": "CustomEvent<{ setId: string; chunk: RetrievalChunk }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -98690,7 +98748,7 @@
           {
             "name": "chunks",
             "attribute": null,
-            "type": "RetrievalChunk[]",
+            "type": "readonly RetrievalChunk[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -98748,7 +98806,7 @@
           {
             "name": "groupOrder",
             "attribute": null,
-            "type": "| string[] | ((a: string, b: string) => number) | undefined",
+            "type": "| readonly string[] | ((a: string, b: string) => number) | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -98817,7 +98875,7 @@
           {
             "name": "selectedIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -98859,7 +98917,7 @@
         "events": [
           {
             "name": "lr-chunk-open",
-            "type": "CustomEvent<{ id: string; sourceId: string; anchor?: DocumentLocator; }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ id: string; sourceId: string; anchor?: DocumentLocator; }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -98871,7 +98929,7 @@
           },
           {
             "name": "lr-select",
-            "type": "CustomEvent<RetrievalResultsSelectDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -99182,7 +99240,7 @@
           {
             "name": "filters",
             "attribute": null,
-            "type": "Record<string, unknown>",
+            "type": "Readonly<Record<string, unknown>>",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -99251,7 +99309,7 @@
           {
             "name": "scope",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -99269,13 +99327,13 @@
           },
           {
             "name": "lr-filters-change",
-            "type": "CustomEvent<RetrievalFiltersChangeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<RetrievalFiltersChangeDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-search",
-            "type": "CustomEvent<RetrievalQuery>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<RetrievalQuery>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -99440,7 +99498,7 @@
           {
             "name": "stages",
             "attribute": null,
-            "type": "RetrievalStage[]",
+            "type": "readonly RetrievalStage[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -99452,19 +99510,19 @@
         "events": [
           {
             "name": "lr-stage-chunk-action",
-            "type": "CustomEvent<LyraRetrievalTraceChunkActionDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraRetrievalTraceChunkActionDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-stage-select",
-            "type": "CustomEvent<{ id: string }>",
+            "type": "CustomEvent<{ stageId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-stage-toggle",
-            "type": "CustomEvent<{ id: string; expanded: boolean }>",
+            "type": "CustomEvent<{ stageId: string; expanded: boolean }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -101387,7 +101445,7 @@
           {
             "name": "issues",
             "attribute": null,
-            "type": "SchemaValidationIssue[]",
+            "type": "readonly SchemaValidationIssue[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -101449,7 +101507,7 @@
         "events": [
           {
             "name": "lr-schema-select",
-            "type": "CustomEvent<{ path: string; schema: JsonSchemaNode }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ path: string; schema: JsonSchemaNode }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -103553,7 +103611,7 @@
           {
             "name": "actions",
             "attribute": null,
-            "type": "SelectionAction[]",
+            "type": "readonly SelectionAction[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -103654,7 +103712,7 @@
           },
           {
             "name": "lr-selection-action",
-            "type": "CustomEvent<SelectionActionDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<SelectionActionDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -106448,7 +106506,7 @@
           {
             "name": "selectedIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -106468,7 +106526,7 @@
           {
             "name": "sources",
             "attribute": null,
-            "type": "LyraSourceEntry[]",
+            "type": "readonly LyraSourceEntry[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -106480,7 +106538,7 @@
         "events": [
           {
             "name": "lr-sources-change",
-            "type": "CustomEvent<{ selectedIds: string[] }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ selectedIds: string[] }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -106727,7 +106785,7 @@
           {
             "name": "spans",
             "attribute": null,
-            "type": "LyraSpan[]",
+            "type": "readonly LyraSpan[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -106759,7 +106817,7 @@
         "events": [
           {
             "name": "lr-span-select",
-            "type": "CustomEvent<{ id: string }>",
+            "type": "CustomEvent<{ spanId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -109250,7 +109308,7 @@
         "events": [
           {
             "name": "lr-step-select",
-            "type": "CustomEvent<{ index: number; id: string }>",
+            "type": "CustomEvent<{ stepId: string; index: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -109882,7 +109940,7 @@
           {
             "name": "runs",
             "attribute": null,
-            "type": "SubagentRun[]",
+            "type": "readonly SubagentRun[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -114340,7 +114398,7 @@
           {
             "name": "items",
             "attribute": null,
-            "type": "TaskItem[]",
+            "type": "readonly TaskItem[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -114386,7 +114444,7 @@
         "events": [
           {
             "name": "lr-reorder",
-            "type": "CustomEvent<{ id: string; parentId: string | null; fromIndex: number; toIndex: number }>",
+            "type": "CustomEvent<{ taskId: string; parentTaskId: string | null; fromIndex: number; toIndex: number; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -115271,7 +115329,7 @@
           {
             "name": "statusFilter",
             "attribute": null,
-            "type": "TestStatus[]",
+            "type": "readonly TestStatus[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -115281,7 +115339,7 @@
           {
             "name": "suites",
             "attribute": null,
-            "type": "TestSuiteResult[]",
+            "type": "readonly TestSuiteResult[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -115298,7 +115356,7 @@
         "events": [
           {
             "name": "lr-filter-change",
-            "type": "CustomEvent<{ statuses: TestStatus[] }>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ statuses: TestStatus[] }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -117199,7 +117257,7 @@
           {
             "name": "collapsedGroupIds",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -117265,7 +117323,7 @@
           {
             "name": "groupOrder",
             "attribute": null,
-            "type": "| string[] | ((a: string, b: string) => number) | undefined",
+            "type": "| readonly string[] | ((a: string, b: string) => number) | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -117358,7 +117416,7 @@
           {
             "name": "rowActions",
             "attribute": null,
-            "type": "ThreadRowAction[]",
+            "type": "readonly ThreadRowAction[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -117398,7 +117456,7 @@
           {
             "name": "threads",
             "attribute": null,
-            "type": "LyraChatThread[]",
+            "type": "readonly LyraChatThread[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -121133,7 +121191,7 @@
           },
           {
             "name": "lr-token-edit",
-            "type": "CustomEvent<{ value: string; previousValue: string; index: number }>",
+            "type": "CustomEvent<{ value: string; previousValue: string; index: number; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -123819,7 +123877,7 @@
           {
             "name": "selected",
             "attribute": null,
-            "type": "string[]",
+            "type": "readonly string[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -123839,7 +123897,7 @@
           {
             "name": "tools",
             "attribute": null,
-            "type": "ToolSelectDialogTool[]",
+            "type": "readonly ToolSelectDialogTool[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -123878,7 +123936,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<ToolSelectionChangeDetail>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<ToolSelectionChangeDetail>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
@@ -124142,7 +124200,7 @@
           {
             "name": "entries",
             "attribute": null,
-            "type": "ToolTimelineEntry[]",
+            "type": "readonly ToolTimelineEntry[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -125574,7 +125632,7 @@
           {
             "name": "spans",
             "attribute": null,
-            "type": "LyraSpan[]",
+            "type": "readonly LyraSpan[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -125586,13 +125644,13 @@
         "events": [
           {
             "name": "lr-span-select",
-            "type": "CustomEvent<{ id: string }>",
+            "type": "CustomEvent<{ spanId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-span-toggle",
-            "type": "CustomEvent<{ id: string; expanded: boolean }>",
+            "type": "CustomEvent<{ spanId: string; expanded: boolean }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -125888,7 +125946,7 @@
           {
             "name": "entries",
             "attribute": null,
-            "type": "LyraTranscriptEntry[]",
+            "type": "readonly LyraTranscriptEntry[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -128752,7 +128810,7 @@
           {
             "name": "groups",
             "attribute": null,
-            "type": "VirtualListGroup[] | undefined",
+            "type": "readonly VirtualListGroup[] | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -128781,7 +128839,7 @@
           {
             "name": "items",
             "attribute": null,
-            "type": "unknown[]",
+            "type": "readonly unknown[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -130425,7 +130483,7 @@
             "default": null
           },
           {
-            "name": "activeView",
+            "name": "activeViewId",
             "attribute": null,
             "type": "string",
             "readonly": false,
@@ -130584,7 +130642,7 @@
             "deprecated": null
           },
           {
-            "name": "view-{id}",
+            "name": "view-{viewId}",
             "deprecated": null
           }
         ],

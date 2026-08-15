@@ -1,34 +1,34 @@
-import { html, nothing, type TemplateResult } from "lit";
-import { property, state } from "lit/decorators.js";
-import { hostAriaLabel } from "../../../internal/a11y.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import type { LyraEntity } from "../entity-card/entity-card.class.js";
+import { html, nothing, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type {
   LyraNeighborListEventMap,
   LyraNeighborRow,
-} from "../neighbor-list/neighbor-list.class.js";
+} from '../neighbor-list/neighbor-list.class.js';
 import type {
   LyraChunk,
   LyraChunkInspectorEventMap,
-} from "../chunk-inspector/chunk-inspector.class.js";
+} from '../chunk-inspector/chunk-inspector.class.js';
 import type {
   LyraProvenance,
   LyraProvenancePanelEventMap,
-} from "../provenance-panel/provenance-panel.class.js";
-import type { StatRow } from "../../data/stat/stat.class.js";
-import type { LyraVariant } from "../../../internal/variants.js";
-import type { LyraNodeTypeStyle } from "../../../internal/node-type-style.js";
-import type { LyraTabGroupEventMap } from "../../layout/tab-group/tab-group.class.js";
-import "../entity-card/entity-card.class.js";
-import "../neighbor-list/neighbor-list.class.js";
-import "../chunk-inspector/chunk-inspector.class.js";
-import "../provenance-panel/provenance-panel.class.js";
-import "../../data/stat/stat.class.js";
-import "../../layout/tab-group/tab-group.class.js";
-import "../../overlays/empty/empty.class.js";
-import { styles } from "./entity-dossier.styles.js";
-import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
-import type { LyraScoreThresholds } from "../graph/graph.class.js";
+} from '../provenance-panel/provenance-panel.class.js';
+import type { StatRow } from '../../data/stat/stat.class.js';
+import type { LyraVariant } from '../../../internal/variants.js';
+import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+import type { LyraTabGroupEventMap } from '../../layout/tab-group/tab-group.class.js';
+import '../entity-card/entity-card.class.js';
+import '../neighbor-list/neighbor-list.class.js';
+import '../chunk-inspector/chunk-inspector.class.js';
+import '../provenance-panel/provenance-panel.class.js';
+import '../../data/stat/stat.class.js';
+import '../../layout/tab-group/tab-group.class.js';
+import '../../overlays/empty/empty.class.js';
+import { styles } from './entity-dossier.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -36,7 +36,7 @@ import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_d
 
 /** The three tab ids this component renders -- also `lr-tab-group`' own `slot`/`tabId` values, so a
  *  `lr-tab-show` listener can switch on these literally. */
-export type LyraEntityDossierTab = "relationships" | "chunks" | "provenance";
+export type LyraEntityDossierTab = 'relationships' | 'chunks' | 'provenance';
 
 /**
  * The headline confidence KPI shown next to the entity summary. Every field here is caller-supplied
@@ -60,8 +60,8 @@ export interface LyraEntityDossierEventMap
   extends LyraNeighborListEventMap,
     LyraChunkInspectorEventMap,
     LyraProvenancePanelEventMap,
-    Omit<LyraTabGroupEventMap, "lr-tab-show"> {
-  "lr-tab-show": CustomEvent<{ tabId: LyraEntityDossierTab }>;
+    Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
+  'lr-tab-show': CustomEvent<{ tabId: LyraEntityDossierTab }>;
 }
 
 /**
@@ -129,12 +129,12 @@ export interface LyraEntityDossierEventMap
  */
 export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "entity",
-    "confidence",
-    "types",
-    "neighbors",
-    "chunks",
-    "provenance",
+    'entity',
+    'confidence',
+    'types',
+    'neighbors',
+    'chunks',
+    'provenance',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START
@@ -167,11 +167,11 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
    *  identically. */
   @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Forwarded to `lr-entity-card`'s own `communityLabel`. */
-  @property({ attribute: "community-label" }) communityLabel = "";
+  @property({ attribute: 'community-label' }) communityLabel = '';
   /** Forwarded to `lr-entity-card`'s own `showFocusButton`. */
   @property({
     type: Boolean,
-    attribute: "show-focus-button",
+    attribute: 'show-focus-button',
     converter: trueDefaultBooleanConverter,
   })
   showFocusButton = true;
@@ -182,7 +182,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   /** Forwarded to `lr-neighbor-list`'s own `rows`. */
   @property({ attribute: false }) neighbors: readonly LyraNeighborRow[] = [];
   /** Forwarded to `lr-neighbor-list`'s own `groupByRelation`. */
-  @property({ type: Boolean, attribute: "group-by-relation" }) groupByRelation =
+  @property({ type: Boolean, attribute: 'group-by-relation' }) groupByRelation =
     false;
   /** Forwarded to `lr-neighbor-list`'s own `expandable`. */
   @property({ type: Boolean }) expandable = false;
@@ -199,13 +199,13 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   @property({ attribute: false }) provenance: Readonly<LyraProvenance> | null = null;
   /** JS-only accessible name for the internal `lr-tab-group` strip while no host `aria-label` is
    *  authored. A host label independently names the dossier and is not cloned onto the strip. */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Which tab is active -- internal, not a controlled public property: `lr-tab-group` already owns
    *  this state, and a one-way `.active=${...}` binding driven by a *stale* public property here
    *  would fight the user's own click the next time this component re-renders for an unrelated
    *  reason (see `lr-spreadsheet-viewer`'s identical `activeSheetIndex` pattern). */
-  @state() private activeTab: LyraEntityDossierTab = "relationships";
+  @state() private activeTab: LyraEntityDossierTab = 'relationships';
 
   private onTabsChange = (e: CustomEvent<{ tabId: string }>): void => {
     this.activeTab = e.detail.tabId as LyraEntityDossierTab;
@@ -291,6 +291,6 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-entity-dossier": LyraEntityDossier;
+    'lr-entity-dossier': LyraEntityDossier;
   }
 }

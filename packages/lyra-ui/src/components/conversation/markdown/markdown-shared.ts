@@ -18,6 +18,8 @@ import {
   createTextQuoteIndex,
   rangeFromTextQuoteMatch,
   scopeFromElement,
+  TEXT_QUOTE_LIMITS,
+  TEXT_SELECTION_RECT_LIMIT,
   type TextQuoteIndex,
 } from '../../../internal/text-quote.js';
 import { prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
@@ -947,13 +949,35 @@ export function applyMarkdownFragmentAnchor(
   headingTree: readonly MarkdownHeadingItem[],
 ): boolean {
   if (!anchor.id) return false;
-  const index = headingTree.findIndex((h) => h.id === anchor.id);
+  let index = -1;
+  const headingLimit = Math.min(headingTree.length, TEXT_QUOTE_LIMITS.maxTraversalNodes);
+  for (let headingIndex = 0; headingIndex < headingLimit; headingIndex++) {
+    if (headingTree[headingIndex]?.id === anchor.id) {
+      index = headingIndex;
+      break;
+    }
+  }
   if (index < 0) return false;
-  const escape = root.ownerDocument.defaultView?.CSS?.escape;
-  const escapedIdMatch = escape
-    ? root.querySelector(`#${escape(anchor.id)}`)
-    : Array.from(root.querySelectorAll('[id]')).find((candidate) => candidate.getAttribute('id') === anchor.id);
-  const el = escapedIdMatch ?? root.querySelectorAll('h1, h2, h3, h4, h5, h6')[index];
+  const walker = root.ownerDocument.createTreeWalker(root, 0x1 /* NodeFilter.SHOW_ELEMENT */);
+  let inspected = 0;
+  let headingIndex = 0;
+  let escapedIdMatch: Element | null = null;
+  let positionalMatch: Element | null = null;
+  let node: Node | null;
+  while (
+    inspected < TEXT_QUOTE_LIMITS.maxTraversalNodes
+    && (node = walker.nextNode())
+  ) {
+    inspected++;
+    const candidate = node as Element;
+    if (candidate.getAttribute('id') === anchor.id) escapedIdMatch ??= candidate;
+    if (/^H[1-6]$/.test(candidate.tagName)) {
+      if (headingIndex === index) positionalMatch = candidate;
+      headingIndex++;
+    }
+    if (escapedIdMatch && positionalMatch) break;
+  }
+  const el = escapedIdMatch ?? positionalMatch;
   if (!el) return false;
   el.scrollIntoView({
     behavior: markdownScrollBehavior(root),
@@ -1036,8 +1060,23 @@ export function repaintMarkdownHighlights(options: {
     // is shared by every adopting viewer, so it can't know this component's part naming) -- stamped
     // here so a consumer can still target `::part(highlight)` in browsers lacking the CSS Custom
     // Highlight API. Nothing to stamp on the API path: no DOM element is created there.
-    for (const mark of options.root.querySelectorAll('mark[data-lr-highlight-tone]')) {
-      if (!mark.hasAttribute('part')) mark.setAttribute('part', 'highlight');
+    const walker = options.root.ownerDocument.createTreeWalker(
+      options.root,
+      0x1 /* NodeFilter.SHOW_ELEMENT */,
+    );
+    let inspected = 0;
+    let node: Node | null;
+    while (
+      inspected < TEXT_QUOTE_LIMITS.maxTraversalNodes + MARKDOWN_PAINTED_HIGHLIGHT_LIMIT
+      && (node = walker.nextNode())
+    ) {
+      inspected++;
+      const mark = node as Element;
+      if (
+        mark.localName === 'mark'
+        && mark.hasAttribute('data-lr-highlight-tone')
+        && !mark.hasAttribute('part')
+      ) mark.setAttribute('part', 'highlight');
     }
   }
   return resolved;
@@ -1052,10 +1091,12 @@ export function repaintMarkdownHighlights(options: {
  * events).
  */
 export function hitTestHighlightRanges(ranges: readonly ResolvedHighlightRange[], x: number, y: number): string | null {
+  let remainingRects = TEXT_SELECTION_RECT_LIMIT;
   for (let i = ranges.length - 1; i >= 0; i--) {
     const hit = ranges[i];
     if (!hit) continue; // unreachable: counted loop, i is in [0, length - 1]
     for (const rect of hit.range.getClientRects()) {
+      if (remainingRects-- <= 0) return null;
       if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return hit.id;
     }
   }

@@ -6,6 +6,14 @@ import type { LyraTranscriptEntry, LyraTranscriptFeed } from './transcript-feed.
 const meta: Meta = {
   title: 'Transcript Feed',
   component: 'lr-transcript-feed',
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Transcript entries require unique nonempty, nonblank IDs; invalid and later duplicate rows are omitted first-wins within each session, and an invalid-only collection renders the empty state.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

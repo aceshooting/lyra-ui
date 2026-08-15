@@ -14,7 +14,10 @@ import { styles } from './avatar-group.styles.js';
 import type { LyraAvatar, LyraAvatarShape } from '../avatar/avatar.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings.generated.js';
+import {
+  LYRA_DEFAULT_showMoreCollapsed,
+  LYRA_DEFAULT_showMoreCount,
+} from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 type AvatarPresentationAttribute = 'size' | 'shape' | 'variant';
@@ -91,11 +94,12 @@ export interface LyraAvatarGroupEventMap {
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
-    showMoreCount: LYRA_DEFAULT_showMoreCount,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
+      showMoreCount: LYRA_DEFAULT_showMoreCount,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
@@ -134,7 +138,9 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   @property() label = '';
 
   @state() private eligibleAvatarCount = 0;
-  @state() private overflowHiddenAvatars: readonly LyraAvatar[] = Object.freeze([]);
+  @state() private overflowHiddenAvatars: readonly LyraAvatar[] = Object.freeze(
+    []
+  );
   private assignedAvatars: readonly LyraAvatar[] = Object.freeze([]);
   private observedAvatars: readonly LyraAvatar[] = Object.freeze([]);
   private avatarObserver?: MutationObserver;
@@ -152,23 +158,41 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     super.willUpdate(changed);
     if (
       changed.has('size') &&
-      this.size !== '2xs' && this.size !== 'xs' && this.size !== 's' && this.size !== 'm' &&
-      this.size !== 'l' && this.size !== 'xl' && this.size !== 'small' && this.size !== 'medium' &&
+      this.size !== '2xs' &&
+      this.size !== 'xs' &&
+      this.size !== 's' &&
+      this.size !== 'm' &&
+      this.size !== 'l' &&
+      this.size !== 'xl' &&
+      this.size !== 'small' &&
+      this.size !== 'medium' &&
       this.size !== 'large'
-    ) this.size = 'medium';
-    if (changed.has('shape') && this.shape !== 'circle' && this.shape !== 'rounded' && this.shape !== 'square') {
+    )
+      this.size = 'medium';
+    if (
+      changed.has('shape') &&
+      this.shape !== 'circle' &&
+      this.shape !== 'rounded' &&
+      this.shape !== 'square'
+    ) {
       this.shape = 'circle';
     }
     if (
       changed.has('variant') &&
-      this.variant !== 'neutral' && this.variant !== 'brand' && this.variant !== 'success' &&
-      this.variant !== 'warning' && this.variant !== 'danger'
-    ) this.variant = 'neutral';
+      this.variant !== 'neutral' &&
+      this.variant !== 'brand' &&
+      this.variant !== 'success' &&
+      this.variant !== 'warning' &&
+      this.variant !== 'danger'
+    )
+      this.variant = 'neutral';
 
     if (!this.hasUpdated) {
       this.seedFirstRenderState(() => {
         this.assignedAvatars = Object.freeze(
-          Array.from(this.children).filter((element): element is LyraAvatar => this.isAvatar(element)),
+          Array.from(this.children).filter((element): element is LyraAvatar =>
+            this.isAvatar(element)
+          )
         );
         this.recomputeWindow();
       });
@@ -182,7 +206,9 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     if (!this.hasUpdated) return;
     const slot = this.renderRoot.querySelector('slot');
     if (slot?.localName === 'slot') {
-      this.reconcileAvatars((slot as HTMLSlotElement).assignedElements({ flatten: true }));
+      this.reconcileAvatars(
+        (slot as HTMLSlotElement).assignedElements({ flatten: true })
+      );
     }
   }
 
@@ -205,7 +231,9 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     if (!this.isConnected) return;
     const slot = this.renderRoot.querySelector('slot');
     if (slot?.localName === 'slot') {
-      this.reconcileAvatars((slot as HTMLSlotElement).assignedElements({ flatten: true }));
+      this.reconcileAvatars(
+        (slot as HTMLSlotElement).assignedElements({ flatten: true })
+      );
     }
   }
 
@@ -224,13 +252,22 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     return element.localName === tag('avatar');
   }
 
-  private sameAvatars(a: readonly LyraAvatar[], b: readonly LyraAvatar[]): boolean {
-    return a.length === b.length && a.every((avatar, index) => avatar === b[index]);
+  private sameAvatars(
+    a: readonly LyraAvatar[],
+    b: readonly LyraAvatar[]
+  ): boolean {
+    return (
+      a.length === b.length && a.every((avatar, index) => avatar === b[index])
+    );
   }
 
   private reconcileAvatars(elements: readonly Element[]): void {
     if (!this.isConnected) return;
-    const next = Object.freeze(elements.filter((element): element is LyraAvatar => this.isAvatar(element)));
+    const next = Object.freeze(
+      elements.filter((element): element is LyraAvatar =>
+        this.isAvatar(element)
+      )
+    );
     const nextSet = new Set(next);
     for (const avatar of this.assignedAvatars) {
       if (!nextSet.has(avatar)) this.restoreAvatarState(avatar);
@@ -244,10 +281,12 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
   private recomputeWindow(): void {
     const eligible = this.assignedAvatars.filter(
-      (avatar) => !avatar.hasAttribute('hidden') && !avatar.hasAttribute('inert'),
+      (avatar) =>
+        !avatar.hasAttribute('hidden') && !avatar.hasAttribute('inert')
     );
     const hidden = this.max == null ? [] : eligible.slice(this.max);
-    if (this.eligibleAvatarCount !== eligible.length) this.eligibleAvatarCount = eligible.length;
+    if (this.eligibleAvatarCount !== eligible.length)
+      this.eligibleAvatarCount = eligible.length;
     if (!this.sameAvatars(this.overflowHiddenAvatars, hidden)) {
       this.overflowHiddenAvatars = Object.freeze([...hidden]);
     }
@@ -257,19 +296,33 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     const ownerWindow = this.ownerDocument.defaultView;
     if (!ownerWindow) return;
     const identitiesChanged = !this.sameAvatars(this.observedAvatars, avatars);
-    if (!identitiesChanged && this.avatarObserverWindow === ownerWindow && this.avatarObserver) return;
+    if (
+      !identitiesChanged &&
+      this.avatarObserverWindow === ownerWindow &&
+      this.avatarObserver
+    )
+      return;
     this.disconnectAvatarObserver();
     this.observedAvatars = Object.freeze([...avatars]);
     this.avatarObserverWindow = ownerWindow;
     const observer = new ownerWindow.MutationObserver((records) => {
-      if (this.avatarObserver !== observer || !this.isConnected || this.ownerDocument.defaultView !== ownerWindow) return;
+      if (
+        this.avatarObserver !== observer ||
+        !this.isConnected ||
+        this.ownerDocument.defaultView !== ownerWindow
+      )
+        return;
       for (const record of records) {
-        const attribute = record.attributeName as AvatarPresentationAttribute | null;
+        const attribute =
+          record.attributeName as AvatarPresentationAttribute | null;
         if (
-          !attribute
-          || (attribute !== 'size' && attribute !== 'shape' && attribute !== 'variant')
-          || !this.isAvatar(record.target as Element)
-        ) continue;
+          !attribute ||
+          (attribute !== 'size' &&
+            attribute !== 'shape' &&
+            attribute !== 'variant') ||
+          !this.isAvatar(record.target as Element)
+        )
+          continue;
         const avatar = record.target as LyraAvatar;
         if (this.consumeOwnedAttributeWrite(avatar, attribute)) continue;
         const ownership = this.defaultOwnership.get(avatar);
@@ -291,7 +344,8 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
   private disconnectAvatarObserver(): void {
     this.avatarObserver?.disconnect();
-    for (const avatar of this.observedAvatars) this.pendingOwnedAttributeWrites.delete(avatar);
+    for (const avatar of this.observedAvatars)
+      this.pendingOwnedAttributeWrites.delete(avatar);
     this.avatarObserver = undefined;
     this.avatarObserverWindow = undefined;
     this.observedAvatars = Object.freeze([]);
@@ -299,7 +353,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
   private markOwnedAttributeWrite(
     avatar: LyraAvatar,
-    attribute: AvatarPresentationAttribute,
+    attribute: AvatarPresentationAttribute
   ): void {
     if (!this.avatarObserver || !this.observedAvatars.includes(avatar)) return;
     let writes = this.pendingOwnedAttributeWrites.get(avatar);
@@ -312,7 +366,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
   private consumeOwnedAttributeWrite(
     avatar: LyraAvatar,
-    attribute: AvatarPresentationAttribute,
+    attribute: AvatarPresentationAttribute
   ): boolean {
     const writes = this.pendingOwnedAttributeWrites.get(avatar);
     const count = writes?.get(attribute) ?? 0;
@@ -324,7 +378,11 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   }
 
   private applyGroupDefaults(): void {
-    const values = { size: this.size, shape: this.shape, variant: this.variant } as const;
+    const values = {
+      size: this.size,
+      shape: this.shape,
+      variant: this.variant,
+    } as const;
     for (const avatar of this.assignedAvatars) {
       let ownership = this.defaultOwnership.get(avatar);
       for (const attribute of ['size', 'shape', 'variant'] as const) {
@@ -337,7 +395,11 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
           ownership.set(attribute, values[attribute]);
           this.markOwnedAttributeWrite(avatar, attribute);
           avatar.setAttribute(attribute, values[attribute]);
-        } else if (ownership?.has(attribute) && avatar.getAttribute(attribute) === applied && applied !== values[attribute]) {
+        } else if (
+          ownership?.has(attribute) &&
+          avatar.getAttribute(attribute) === applied &&
+          applied !== values[attribute]
+        ) {
           ownership.set(attribute, values[attribute]);
           this.markOwnedAttributeWrite(avatar, attribute);
           avatar.setAttribute(attribute, values[attribute]);
@@ -351,12 +413,17 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   private applyVisibilityMarkers(): void {
     const hidden = new Set(this.overflowHiddenAvatars);
     const firstVisible = this.assignedAvatars.find(
-      (avatar) => !avatar.hasAttribute('hidden') && !avatar.hasAttribute('inert') && !hidden.has(avatar),
+      (avatar) =>
+        !avatar.hasAttribute('hidden') &&
+        !avatar.hasAttribute('inert') &&
+        !hidden.has(avatar)
     );
     for (const avatar of this.assignedAvatars) {
-      if (hidden.has(avatar)) avatar.setAttribute('data-lr-avatar-group-hidden', '');
+      if (hidden.has(avatar))
+        avatar.setAttribute('data-lr-avatar-group-hidden', '');
       else avatar.removeAttribute('data-lr-avatar-group-hidden');
-      if (avatar === firstVisible) avatar.setAttribute('data-lr-avatar-group-first', '');
+      if (avatar === firstVisible)
+        avatar.setAttribute('data-lr-avatar-group-first', '');
       else avatar.removeAttribute('data-lr-avatar-group-first');
     }
   }
@@ -367,7 +434,8 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     const ownership = this.defaultOwnership.get(avatar);
     if (ownership) {
       for (const [attribute, applied] of ownership) {
-        if (avatar.getAttribute(attribute) === applied) avatar.removeAttribute(attribute);
+        if (avatar.getAttribute(attribute) === applied)
+          avatar.removeAttribute(attribute);
       }
       this.defaultOwnership.delete(avatar);
     }
@@ -390,10 +458,13 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
   private onOverflowClick = (): void => {
     const hiddenAvatars = Object.freeze([...this.overflowHiddenAvatars]);
-    this.emit('lr-overflow-click', Object.freeze({
-      hiddenCount: hiddenAvatars.length,
-      hiddenAvatars,
-    }));
+    this.emit(
+      'lr-overflow-click',
+      Object.freeze({
+        hiddenCount: hiddenAvatars.length,
+        hiddenAvatars,
+      })
+    );
   };
 
   override render(): TemplateResult {
@@ -402,9 +473,12 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     // The badge is the first *visible* element in the row only when every avatar is hidden
     // (max <= 0) — there's no selector that can express "first visible thing regardless of DOM
     // position", so the margin override is computed here instead of in CSS.
-    const badgeIsFirstVisible = overflowing && hiddenCount === this.eligibleAvatarCount;
+    const badgeIsFirstVisible =
+      overflowing && hiddenCount === this.eligibleAvatarCount;
     const accessibleLabel = hostAriaLabel(this) ?? (this.label || nothing);
-    const localizedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
+    const localizedHiddenCount = getNumberFormat(this.effectiveLocale).format(
+      hiddenCount
+    );
 
     return html`
       <div part="base" role="group" aria-label=${accessibleLabel}>
@@ -414,13 +488,17 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
               part="overflow-badge"
               type="button"
               ?data-first-visible=${badgeIsFirstVisible}
-              aria-label=${this.localize('showMoreCount', undefined, {
+              aria-label=${this.localize("showMoreCount", undefined, {
                 count: localizedHiddenCount,
               })}
               @click=${this.onOverflowClick}
-            ><span part="overflow-badge-visual" aria-hidden="true">${this.localize(
-              'showMoreCollapsed', undefined, { count: localizedHiddenCount },
-            )}</span></button>`
+            >
+              <span part="overflow-badge-visual" aria-hidden="true"
+                >${this.localize("showMoreCollapsed", undefined, {
+                  count: localizedHiddenCount,
+                })}</span
+              >
+            </button>`
           : nothing}
       </div>
     `;

@@ -1,17 +1,17 @@
-import { html, render, type TemplateResult } from "lit";
+import { html, render, type TemplateResult } from 'lit';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
-} from "../../../internal/announcer.js";
-import { attachInternalsSafely } from "../../../internal/element-internals.js";
-import { property } from "lit/decorators.js";
-import { setCustomState } from "../../../internal/custom-states.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { tag } from "../../../internal/prefix.js";
-import type { LyraSize } from "../../../internal/variants.js";
-import { styles } from "./toast.styles.js";
-import type { LyraToastItem, ToastVariant } from "./toast-item.class.js";
-import "./toast-item.class.js";
+} from '../../../internal/announcer.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { property } from 'lit/decorators.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
+import type { LyraSize } from '../../../internal/variants.js';
+import { styles } from './toast.styles.js';
+import type { LyraToastItem, ToastVariant } from './toast-item.class.js';
+import './toast-item.class.js';
 import {
   isToastRegionEntry,
   TOAST_REGION_ENQUEUE,
@@ -20,22 +20,22 @@ import {
   TOAST_REGION_SET_ACTIVE,
   type ToastRegionController,
   type ToastRegionEntry,
-} from "./toast-region-protocol.js";
+} from './toast-region-protocol.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from "../../../internal/localization.js";
-import { LYRA_DEFAULT_toastOverflow } from "../../../internal/default-strings.generated.js";
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_toastOverflow } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const MAX_VISIBLE_TOASTS = 3;
 const MAX_QUEUED_TOASTS = 20;
 
 export type ToastPlacement =
-  | "top-start"
-  | "top-center"
-  | "top-end"
-  | "bottom-start"
-  | "bottom-center"
-  | "bottom-end";
+  | 'top-start'
+  | 'top-center'
+  | 'top-end'
+  | 'bottom-start'
+  | 'bottom-center'
+  | 'bottom-end';
 
 export type LyraToastIconContent = string | Node | TemplateResult;
 export type LyraToastIcon =
@@ -62,7 +62,7 @@ export interface LyraToastOptions {
 /** Options accepted beside the legacy string-form `create(message, options)`. */
 export type ToastCreateOptions = Omit<
   LyraToastOptions,
-  "message" | "placement"
+  'message' | 'placement'
 >;
 
 export interface ToastOverflowDetail {
@@ -71,7 +71,7 @@ export interface ToastOverflowDetail {
 }
 
 export interface LyraToastEventMap {
-  "lr-toast-overflow": CustomEvent<ToastOverflowDetail>;
+  'lr-toast-overflow': CustomEvent<ToastOverflowDetail>;
 }
 
 /**
@@ -122,7 +122,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** Where the stack anchors on screen. */
-  @property({ reflect: true }) placement: ToastPlacement = "top-end";
+  @property({ reflect: true }) placement: ToastPlacement = 'top-end';
 
   private readonly toastInternals = attachInternalsSafely(this);
   private childObserver?: MutationObserver;
@@ -144,13 +144,13 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     const hasToast =
       this.isConnected &&
       Array.from(this.children).some((child) => isToastRegionEntry(child));
-    setCustomState(this.toastInternals, "visible", hasToast);
+    setCustomState(this.toastInternals, 'visible', hasToast);
   };
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.connectionGeneration += 1;
-    this.overflowSink ??= acquireAnnouncementSink("polite", {
+    this.overflowSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
     });
@@ -174,7 +174,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     this.overflowSink = undefined;
     this.pendingOverflowCount = 0;
     this.overflowNotificationScheduled = false;
-    setCustomState(this.toastInternals, "visible", false);
+    setCustomState(this.toastInternals, 'visible', false);
     const releaseAfterLastingDisconnect = (): void => {
       if (
         connectionGeneration !== this.connectionGeneration ||
@@ -183,7 +183,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
         return;
       for (const entry of [...this.managedEntries]) {
         this.forgetEntry(entry);
-        entry[TOAST_REGION_EVICT](this.regionController, "rejected");
+        entry[TOAST_REGION_EVICT](this.regionController, 'rejected');
         // An entry can already have relinquished stale protocol ownership while still physically
         // parented here. A disconnected region must never retain and later resurrect that work.
         if (entry.parentElement === this) entry.remove();
@@ -233,7 +233,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     if (!isToastRegionEntry(entry)) return;
     if (!this.managedEntries.has(entry)) return;
     this.forgetEntry(entry);
-    entry[TOAST_REGION_EVICT](this.regionController, "rejected");
+    entry[TOAST_REGION_EVICT](this.regionController, 'rejected');
     this.promoteQueuedEntries();
     this.syncVisibleState();
   }
@@ -251,7 +251,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
       const evicted = this.queuedEntries.shift();
       if (evicted) {
         this.managedEntries.delete(evicted);
-        evicted[TOAST_REGION_EVICT](this.regionController, "overflow");
+        evicted[TOAST_REGION_EVICT](this.regionController, 'overflow');
         this.recordOverflow();
       }
     }
@@ -312,7 +312,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     this.promoteQueuedEntries();
     for (const child of children) {
       if (!isToastRegionEntry(child)) {
-        if (child.localName === tag("toast-item")) child.remove();
+        if (child.localName === tag('toast-item')) child.remove();
         continue;
       }
       if (!this.managedEntries.has(child)) this.admitEntry(child);
@@ -331,10 +331,10 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
       const count = this.pendingOverflowCount;
       this.pendingOverflowCount = 0;
       if (count <= 0) return;
-      this.emit("lr-toast-overflow", { count });
+      this.emit('lr-toast-overflow', { count });
       if (this.isConnected) {
         this.overflowSink?.announce(
-          this.localize("toastOverflow", undefined, { count })
+          this.localize('toastOverflow', undefined, { count })
         );
       }
     };
@@ -353,20 +353,20 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     legacyOptions: ToastCreateOptions = {}
   ): Promise<LyraToastItem> {
     if (!this.isConnected)
-      throw new TypeError("A toast region must be connected before create().");
+      throw new TypeError('A toast region must be connected before create().');
     const options: LyraToastOptions =
-      typeof messageOrOptions === "string"
+      typeof messageOrOptions === 'string'
         ? { ...legacyOptions, message: messageOrOptions }
         : messageOrOptions;
     if (options.ownerDocument && options.ownerDocument !== this.ownerDocument) {
       throw new TypeError(
-        "Toast ownerDocument must match the region owner document."
+        'Toast ownerDocument must match the region owner document.'
       );
     }
     if (options.placement && options.placement !== this.placement) {
-      throw new TypeError("Toast placement must match the region placement.");
+      throw new TypeError('Toast placement must match the region placement.');
     }
-    const itemTag = tag("toast-item");
+    const itemTag = tag('toast-item');
     const ownerRegistry = this.ownerDocument.defaultView?.customElements;
     if (!ownerRegistry?.get(itemTag)) {
       throw new TypeError(
@@ -374,7 +374,7 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
       );
     }
     const item = this.ownerDocument.createElement(itemTag) as LyraToastItem;
-    if (typeof item.hide !== "function" || !("updateComplete" in item)) {
+    if (typeof item.hide !== 'function' || !('updateComplete' in item)) {
       throw new TypeError(
         `${itemTag} does not expose the Lyra toast-item contract.`
       );
@@ -391,19 +391,19 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     item.textContent = options.message;
     if (options.icon !== undefined) {
       item.withIcon = true;
-      const iconHost = this.ownerDocument.createElement("span");
-      iconHost.slot = "icon";
-      iconHost.setAttribute("aria-hidden", "true");
+      const iconHost = this.ownerDocument.createElement('span');
+      iconHost.slot = 'icon';
+      iconHost.setAttribute('aria-hidden', 'true');
       const content =
-        typeof options.icon === "function"
+        typeof options.icon === 'function'
           ? options.icon(this.ownerDocument)
           : options.icon;
-      if (typeof content === "string") {
+      if (typeof content === 'string') {
         iconHost.textContent = content;
       } else if (
         content &&
-        typeof content === "object" &&
-        "nodeType" in content
+        typeof content === 'object' &&
+        'nodeType' in content
       ) {
         const node = content as Node;
         iconHost.append(
@@ -417,10 +417,10 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
       item.append(iconHost);
     }
     if (options.action) {
-      const action = this.ownerDocument.createElement("button");
-      action.type = "button";
+      const action = this.ownerDocument.createElement('button');
+      action.type = 'button';
       action.textContent = options.action.label;
-      action.addEventListener("click", () => options.action?.onClick(item));
+      action.addEventListener('click', () => options.action?.onClick(item));
       item.append(action);
     }
     if (!isToastRegionEntry(item)) {
@@ -446,6 +446,6 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-toast": LyraToast;
+    'lr-toast': LyraToast;
   }
 }

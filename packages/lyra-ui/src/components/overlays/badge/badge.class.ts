@@ -1,6 +1,9 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { LyraElement, type LyraEventMap } from '../../../internal/lyra-element.js';
+import {
+  LyraElement,
+  type LyraEventMap,
+} from '../../../internal/lyra-element.js';
 import {
   normalizeSize,
   type LyraAppearance,
@@ -55,13 +58,16 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * @cssprop [--lr-badge-color=var(--lr-badge-text)] - Explicit override for the badge's text color,
  * on the same terms as `--lr-badge-background`.
  * @cssprop [--lr-badge-tint=var(--lr-color-surface)] - Palette slot: the variant's quiet fill.
- * Each non-neutral `variant` sets it to that variant's quiet fill from the shared semantic grid.
+ * Its private default follows each non-neutral `variant`'s quiet fill from the shared semantic
+ * grid; an inherited or direct public value remains authoritative.
  * @cssprop [--lr-badge-solid=var(--lr-color-fill-loud)] - Palette slot: the variant's loud fill,
  * used by `appearance="accent"`.
  * @cssprop [--lr-badge-edge=var(--lr-color-border)] - Palette slot: the variant's border color.
- * Each non-neutral `variant` sets it to that variant's loud fill.
- * @cssprop [--lr-badge-ink=var(--lr-color-text)] - Palette slot: the variant's text color. Each
- * non-neutral `variant` sets it to that variant's loud fill.
+ * Its private default follows each non-neutral `variant`'s loud fill; an inherited or direct
+ * public value remains authoritative.
+ * @cssprop [--lr-badge-ink=var(--lr-color-text)] - Palette slot: the variant's text color. Its
+ * private default follows each non-neutral `variant`'s loud fill; an inherited or direct public
+ * value remains authoritative.
  * @cssprop [--lr-badge-on-solid=var(--lr-color-on-loud)] - Palette slot: the text color that
  * stays legible on `--lr-badge-solid`.
  * @cssprop [--lr-badge-fill=var(--lr-badge-tint)] - Surface slot: which palette entry `appearance`
@@ -96,7 +102,7 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  */
 export class LyraBadge<
   Events = LyraEventMap,
-  Variant extends BadgeVariant | 'text' = BadgeVariant,
+  Variant extends BadgeVariant | 'text' = BadgeVariant
 > extends LyraElement<Events> {
   static override styles = [LyraElement.styles, variants, styles];
 
@@ -142,17 +148,26 @@ export class LyraBadge<
     const value = this.variant as string;
     if (value === 'primary') return 'brand';
     return ['neutral', 'brand', 'success', 'warning', 'danger'].includes(value)
-      ? value as LyraVariant
+      ? (value as LyraVariant)
       : 'neutral';
   }
 
   protected get effectiveSize(): LyraSizeStep {
     const value = this.size as string;
-    if (!['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'].includes(value)) return 'm';
+    if (
+      !['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'].includes(
+        value
+      )
+    )
+      return 'm';
     return normalizeSize(value as LyraSize);
   }
 
-  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    value: string | null
+  ): void {
     super.attributeChangedCallback(name, oldValue, value);
     if (name === 'role' && this.semanticRole && value !== this.semanticRole) {
       this.setAttribute('role', this.semanticRole);
@@ -171,19 +186,28 @@ export class LyraBadge<
     this.setAttribute('data-effective-size', this.effectiveSize);
     // Seed from the light-DOM children synchronously before the very first render so declarative
     // start/end content doesn't flash hidden for one frame waiting on `slotchange`.
-    if (!this.hasUpdated) this.seedFirstRenderState(() => {
-      this.hasStartSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'start');
-      this.hasEndSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'end');
-    });
+    if (!this.hasUpdated)
+      this.seedFirstRenderState(() => {
+        this.hasStartSlot = Array.from(this.children).some(
+          (el) => el.getAttribute('slot') === 'start'
+        );
+        this.hasEndSlot = Array.from(this.children).some(
+          (el) => el.getAttribute('slot') === 'end'
+        );
+      });
   }
 
   private onStartSlotChange = (e: Event): void => {
     const slot = e.target as HTMLSlotElement;
     const update = (): void => {
       if (!this.isConnected) return;
-      this.hasStartSlot = slot.assignedNodes({ flatten: true }).some(
-        (node) => node.nodeType === Node.ELEMENT_NODE || (node.textContent ?? '').trim().length > 0,
-      );
+      this.hasStartSlot = slot
+        .assignedNodes({ flatten: true })
+        .some(
+          (node) =>
+            node.nodeType === Node.ELEMENT_NODE ||
+            (node.textContent ?? '').trim().length > 0
+        );
     };
     this.updateBrowserDerivedState(update);
   };
@@ -192,9 +216,13 @@ export class LyraBadge<
     const slot = e.target as HTMLSlotElement;
     const update = (): void => {
       if (!this.isConnected) return;
-      this.hasEndSlot = slot.assignedNodes({ flatten: true }).some(
-        (node) => node.nodeType === Node.ELEMENT_NODE || (node.textContent ?? '').trim().length > 0,
-      );
+      this.hasEndSlot = slot
+        .assignedNodes({ flatten: true })
+        .some(
+          (node) =>
+            node.nodeType === Node.ELEMENT_NODE ||
+            (node.textContent ?? '').trim().length > 0
+        );
     };
     this.updateBrowserDerivedState(update);
   };

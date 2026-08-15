@@ -903,7 +903,7 @@ it("uses shared svg icons instead of literal glyphs for chevron, clear, and tag-
   expect(removeBtn.textContent?.trim()).to.equal("");
 
   // The chevron is rotated to a "down" glyph via its wrapping part, not the svg itself.
-  expect(styles.cssText).to.include("[part='expand-icon'] svg");
+  expect(styles.cssText).to.match(/\[part=["']expand-icon["']\]\s+svg/);
 });
 
 it("transitions the listbox with the shared fast-transition token and respects reduced motion", () => {
@@ -3951,7 +3951,7 @@ it("clamps its floating surface width through the shared popover-viewport-clamp 
 it("colors the combobox-input's placeholder text instead of leaving the UA default", () => {
   const css = styles.cssText.replace(/\s+/g, " ");
   expect(css).to.match(
-    /\[part='combobox-input'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/
+    /\[part=["']combobox-input["']\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/
   );
 });
 
@@ -3977,12 +3977,12 @@ it("renders the combobox-input's ::placeholder in the shared quiet-text token's 
 
 it("gives the clear button a :hover rule, matching its own :focus-visible affordance", () => {
   const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(/\[part='clear-button'\]:hover/);
+  expect(css).to.match(/\[part=["']clear-button["']\]:hover/);
 });
 
 it("gives a selected tag's remove button a :hover rule, matching its own :focus-visible affordance", () => {
   const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(/\[part='tag__remove-button'\]:hover/);
+  expect(css).to.match(/\[part=["']tag__remove-button["']\]:hover/);
 });
 
 // -- Per-component theming indirection --------------------------------------

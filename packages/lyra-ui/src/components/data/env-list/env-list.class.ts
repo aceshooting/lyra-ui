@@ -17,6 +17,7 @@ import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_D
 
 
 const MASK = '•'.repeat(8);
+const MAX_ENV_ENTRIES = 10_000;
 
 /**
  * `true`-defaulting boolean attribute converter. Lit's built-in `type: Boolean` converter is
@@ -89,9 +90,9 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
 
   private _entries: readonly EnvEntry[] = [];
 
-  /** Clone-owned readonly name/value entries to render, in order. Malformed records, blank names,
-   * and later duplicate names are skipped; the first valid occurrence owns render, reveal, copy,
-   * and event identity. */
+  /** Clone-owned readonly name/value entries to render, in order, bounded to the first 10,000
+   * source entries. Malformed records, blank names, and later duplicate names are skipped; the
+   * first valid occurrence owns render, reveal, copy, and event identity. Reassign to update. */
   @property({ attribute: false })
   get entries(): readonly EnvEntry[] { return this._entries; }
   set entries(value: readonly EnvEntry[]) {
@@ -99,7 +100,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     const next: EnvEntry[] = [];
     const seen = new Set<string>();
     if (Array.isArray(value)) {
-      for (const candidate of value) {
+      for (const candidate of value.slice(0, MAX_ENV_ENTRIES)) {
         try {
           if (!candidate || typeof candidate.name !== 'string' || typeof candidate.value !== 'string') continue;
           const name = candidate.name;

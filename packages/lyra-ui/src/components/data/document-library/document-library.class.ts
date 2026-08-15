@@ -92,6 +92,7 @@ const FRESHNESS_RANK: Record<LibraryDocumentFreshness, number> = {
   aging: 1,
   stale: 2,
 };
+const MAX_LIBRARY_COLLECTION_ENTRIES = 10_000;
 const FRESHNESS_TONE: Record<
   LibraryDocumentFreshness,
   "success" | "warning" | "danger"
@@ -197,10 +198,11 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   static override styles = [LyraElement.styles, styles];
 
   private _documents: readonly LibraryDocument[] = Object.freeze([]);
-  /** Clone-owned readonly full inventory. Document records, nested tag arrays, and dates are
-   * snapshotted at assignment time; blank ids and later duplicate ids are omitted first-wins
-   * before filters, counts, selection, rows, and events. Reads return detached snapshots so even
-   * `Date` mutators cannot reach retained state. Reassign the collection to update. */
+  /** Clone-owned readonly inventory, bounded to the first 10,000 source documents and 10,000 tags
+   * per document. Document records, nested tag arrays, and dates are snapshotted at assignment
+   * time; blank ids and later duplicate ids are omitted first-wins before filters, counts,
+   * selection, rows, and events. Reads return detached snapshots so even `Date` mutators cannot
+   * reach retained state. Reassign the collection to update. */
   @property({ attribute: false })
   get documents(): readonly LibraryDocument[] {
     return this.snapshotDocuments(this._documents);
@@ -216,7 +218,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    *  `lr-selection-change`, to persist the current selection. Automatically pruned of any id no
    *  longer present in `documents` (no event fires for that pruning -- only an actual selection
    *  interaction does, mirroring `<lr-chip-group>`'s identical silent-resync convention for its
-   *  own `expanded` state). */
+   *  own `expanded` state). Assignment snapshots at most 10,000 unique ids; reassign to update. */
   private _selectedIds: readonly string[] = Object.freeze([]);
   @property({ attribute: false })
   get selectedIds(): readonly string[] {
@@ -229,7 +231,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   /** Currently-applied tag facet (`AND` semantics -- a document must carry every listed tag).
-   *  Settable up front and mutated internally by the tag filter combobox. */
+   *  Settable up front and mutated internally by the tag filter combobox. Assignment snapshots at
+   *  most 10,000 unique tags; reassign to update. */
   private _tagFilter: readonly string[] = Object.freeze([]);
   @property({ attribute: false })
   get tagFilter(): readonly string[] {
@@ -297,12 +300,14 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   private snapshotDocuments(documents: readonly LibraryDocument[]): readonly LibraryDocument[] {
     const snapshot: LibraryDocument[] = [];
     const seen = new Set<string>();
-    for (const document of documents) {
+    for (const document of documents.slice(0, MAX_LIBRARY_COLLECTION_ENTRIES)) {
       try {
         const id = document?.id;
         if (typeof id !== "string" || id.trim().length === 0 || seen.has(id)) continue;
         const updatedAt = document.updatedAt instanceof Date ? new Date(document.updatedAt.getTime()) : document.updatedAt;
-        const tags = document.tags === undefined ? undefined : Object.freeze([...document.tags]);
+        const tags = document.tags === undefined
+          ? undefined
+          : Object.freeze(document.tags.slice(0, MAX_LIBRARY_COLLECTION_ENTRIES));
         const retained = Object.freeze({ ...document, id, updatedAt, tags });
         seen.add(id);
         snapshot.push(retained);
@@ -314,7 +319,19 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   private snapshotIds(ids: Iterable<string>): readonly string[] {
-    return Object.freeze([...new Set(ids)]);
+    const snapshot: string[] = [];
+    const seen = new Set<string>();
+    try {
+      for (const id of ids) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        snapshot.push(id);
+        if (snapshot.length >= MAX_LIBRARY_COLLECTION_ENTRIES) break;
+      }
+    } catch {
+      // Retain the safe prefix when an untyped iterable throws.
+    }
+    return Object.freeze(snapshot);
   }
 
   protected override willUpdate(changed: PropertyValues): void {

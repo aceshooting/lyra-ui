@@ -1,52 +1,52 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property, query, state } from "lit/decorators.js";
-import { ifDefined } from "lit/directives/if-defined.js";
-import { repeat } from "lit/directives/repeat.js";
-import type { DocumentRef } from "../../../ai/types.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, query, state } from 'lit/decorators.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
+import { repeat } from 'lit/directives/repeat.js';
+import type { DocumentRef } from '../../../ai/types.js';
 import {
   autocorrectConverter,
   normalizeAutocorrect,
   trueDefaultBooleanConverter,
-} from "../../../internal/converters.js";
+} from '../../../internal/converters.js';
 import {
   LyraElement,
   type LyraEmitArgs,
-} from "../../../internal/lyra-element.js";
-import { relayNativeEvent } from "../../../internal/native-event-relay.js";
-import { SlotPresenceController } from "../../../internal/slot-presence-controller.js";
-import { deepActiveElementIn } from "../../../internal/active-element.js";
-import { normalizeCatalog } from "../../../internal/catalog-picker.js";
-import { composedContains } from "../../../internal/overlay-manager.js";
+} from '../../../internal/lyra-element.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { normalizeCatalog } from '../../../internal/catalog-picker.js';
+import { composedContains } from '../../../internal/overlay-manager.js';
 import type {
   LyraAttachmentCapability,
   LyraAttachmentFilesDetail,
-} from "../../media/attachment-trigger/attachment-trigger.class.js";
-import type { LyraSourceEntry } from "../../retrieval/source-picker/source-picker.class.js";
+} from '../../media/attachment-trigger/attachment-trigger.class.js';
+import type { LyraSourceEntry } from '../../retrieval/source-picker/source-picker.class.js';
 import type {
   LyraMentionItem,
   LyraMentionPopover,
   LyraMentionSelectDetail,
-} from "../../utility/mention-popover/mention-popover.class.js";
+} from '../../utility/mention-popover/mention-popover.class.js';
 import type {
   ChatComposerSelectionDirection,
   ChatComposerStatus,
   ChatComposerWrap,
   LyraChatComposer,
-} from "../chat-composer/chat-composer.class.js";
+} from '../chat-composer/chat-composer.class.js';
 import type {
   LyraCatalog,
   LyraModelCatalogEntry,
-} from "../model-select/model-select.class.js";
-import type { PromptQueueItem } from "../prompt-queue/prompt-queue.class.js";
-import type { PromptQueueChangeDetail } from "../prompt-queue/prompt-queue.class.js";
+} from '../model-select/model-select.class.js';
+import type { PromptQueueItem } from '../prompt-queue/prompt-queue.class.js';
+import type { PromptQueueChangeDetail } from '../prompt-queue/prompt-queue.class.js';
 import type {
   LyraAttachmentIdDetail,
   LyraAttachmentPreviewRequestDetail,
   LyraAttachmentUploadStatus,
-} from "../../media/attachment-chip/attachment-chip.class.js";
-import type { LyraVoiceCatalogEntry } from "../voice-picker/voice-picker.class.js";
-import { styles } from "./prompt-input.styles.js";
+} from '../../media/attachment-chip/attachment-chip.class.js';
+import type { LyraVoiceCatalogEntry } from '../voice-picker/voice-picker.class.js';
+import { styles } from './prompt-input.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptInputControls, LYRA_DEFAULT_promptInputLabel, LYRA_DEFAULT_promptInputSources } from '../../../internal/default-strings.generated.js';
@@ -57,7 +57,7 @@ export interface LyraPromptSuggestion extends LyraMentionItem {
   insertText?: string;
 }
 
-export interface LyraPromptInputAttachment extends Omit<DocumentRef, "id"> {
+export interface LyraPromptInputAttachment extends Omit<DocumentRef, 'id'> {
   attachmentId: string;
   file?: File;
   /** File size in bytes, forwarded to the rendered attachment chip. */
@@ -67,7 +67,7 @@ export interface LyraPromptInputAttachment extends Omit<DocumentRef, "id"> {
 }
 
 interface ActiveSuggestion {
-  trigger: "@" | "/";
+  trigger: '@' | '/';
   start: number;
   query: string;
 }
@@ -77,34 +77,34 @@ export interface LyraPromptInputEventMap {
   change: Event;
   focus: FocusEvent;
   blur: FocusEvent;
-  "lr-input": CustomEvent<{ value: string }>;
-  "lr-change": CustomEvent<{ value: string }>;
-  "lr-focus": CustomEvent<null>;
-  "lr-blur": CustomEvent<null>;
-  "lr-submit": CustomEvent<{ value: string }>;
-  "lr-stop": CustomEvent<null>;
-  "lr-mention-select": CustomEvent<{
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
+  'lr-focus': CustomEvent<null>;
+  'lr-blur': CustomEvent<null>;
+  'lr-submit': CustomEvent<{ value: string }>;
+  'lr-stop': CustomEvent<null>;
+  'lr-mention-select': CustomEvent<{
     suggestionId: string;
     index: number;
     label: string;
-    trigger: "@" | "/";
+    trigger: '@' | '/';
   }>;
-  "lr-attachments-add": CustomEvent<LyraEventDetailSnapshot<LyraAttachmentFilesDetail>>;
-  "lr-attachment-remove": CustomEvent<LyraAttachmentIdDetail>;
-  "lr-model-change": CustomEvent<{ value: string; inCatalog: boolean }>;
-  "lr-voice-change": CustomEvent<{ value: string; inCatalog: boolean }>;
-  "lr-sources-change": CustomEvent<LyraEventDetailSnapshot<{ selectedIds: string[] }>>;
-  "lr-queue-change": CustomEvent<LyraEventDetailSnapshot<PromptQueueChangeDetail>>;
-  "lr-send-now": CustomEvent<LyraEventDetailSnapshot<{ item: PromptQueueItem }>>;
-  "lr-camera-request": CustomEvent<null>;
-  "lr-audio-request": CustomEvent<null>;
-  "lr-attachment-retry": CustomEvent<LyraAttachmentIdDetail>;
-  "lr-attachment-preview-request": CustomEvent<LyraAttachmentPreviewRequestDetail>;
+  'lr-attachments-add': CustomEvent<LyraEventDetailSnapshot<LyraAttachmentFilesDetail>>;
+  'lr-attachment-remove': CustomEvent<LyraAttachmentIdDetail>;
+  'lr-model-change': CustomEvent<{ value: string; inCatalog: boolean }>;
+  'lr-voice-change': CustomEvent<{ value: string; inCatalog: boolean }>;
+  'lr-sources-change': CustomEvent<LyraEventDetailSnapshot<{ selectedIds: string[] }>>;
+  'lr-queue-change': CustomEvent<LyraEventDetailSnapshot<PromptQueueChangeDetail>>;
+  'lr-send-now': CustomEvent<LyraEventDetailSnapshot<{ item: PromptQueueItem }>>;
+  'lr-camera-request': CustomEvent<null>;
+  'lr-audio-request': CustomEvent<null>;
+  'lr-attachment-retry': CustomEvent<LyraAttachmentIdDetail>;
+  'lr-attachment-preview-request': CustomEvent<LyraAttachmentPreviewRequestDetail>;
 }
 
 type LyraPromptInputCustomEventName = Exclude<
   keyof LyraPromptInputEventMap,
-  "input" | "change" | "focus" | "blur"
+  'input' | 'change' | 'focus' | 'blur'
 >;
 
 /**
@@ -173,15 +173,15 @@ type LyraPromptInputCustomEventName = Exclude<
  */
 export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "attachments",
-    "attachmentCapabilities",
-    "mentionItems",
-    "commandItems",
-    "modelCatalog",
-    "voiceCatalog",
-    "sources",
-    "selectedSourceIds",
-    "queue",
+    'attachments',
+    'attachmentCapabilities',
+    'mentionItems',
+    'commandItems',
+    'modelCatalog',
+    'voiceCatalog',
+    'sources',
+    'selectedSourceIds',
+    'queue',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START
@@ -197,20 +197,20 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  @property() value = "";
-  @property() status: ChatComposerStatus = "idle";
-  @property() placeholder = "";
+  @property() value = '';
+  @property() status: ChatComposerStatus = 'idle';
+  @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) disabled = false;
-  @property({ type: Boolean, reflect: true, attribute: "readonly" }) readOnly =
+  @property({ type: Boolean, reflect: true, attribute: 'readonly' }) readOnly =
     false;
   // numeric-guard-exempt: pure pass-through to <lr-chat-composer>, which rejects non-finite and
   // negative limits and finiteCount-normalizes integers before validation or native DOM use.
-  @property({ type: Number, attribute: "minlength" }) minLength?: number;
+  @property({ type: Number, attribute: 'minlength' }) minLength?: number;
   // numeric-guard-exempt: same guarded <lr-chat-composer> pass-through as minLength above.
-  @property({ type: Number, attribute: "maxlength" }) maxLength?: number;
+  @property({ type: Number, attribute: 'maxlength' }) maxLength?: number;
   @property({
     type: Boolean,
-    attribute: "submit-on-enter",
+    attribute: 'submit-on-enter',
     converter: trueDefaultBooleanConverter,
   })
   submitOnEnter = true;
@@ -220,7 +220,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     true;
   /** Forwarded to the composed native textarea's own `autocapitalize`. Empty string omits the
    * attribute and preserves the browser default. */
-  @property() override autocapitalize = "";
+  @property() override autocapitalize = '';
   private autocorrectValue = true;
   /** Native autocorrect state forwarded through the composer. Reads are boolean; writes accept
    * boolean or the legacy `'off'`/`'false'` strings. */
@@ -233,38 +233,38 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     this.requestUpdate();
   }
   /** Native wrapping behavior forwarded to the composed textarea. */
-  @property() wrap: ChatComposerWrap = "soft";
+  @property() wrap: ChatComposerWrap = 'soft';
   /** Native autocomplete hint forwarded to the composed textarea. */
-  @property() autocomplete = "";
+  @property() autocomplete = '';
   /** Virtual-keyboard input hint forwarded to the composed textarea. */
-  @property({ attribute: "inputmode" }) override inputMode = "";
+  @property({ attribute: 'inputmode' }) override inputMode = '';
   /** Virtual-keyboard enter-action hint forwarded to the composed textarea. */
-  @property({ attribute: "enterkeyhint" }) override enterKeyHint = "";
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** Attachment chips keyed by unique, nonempty `attachmentId`; the first duplicate wins. */
   @property({ attribute: false })
   attachments: readonly LyraPromptInputAttachment[] = [];
   @property({ attribute: false })
   attachmentCapabilities: readonly LyraAttachmentCapability[] = [
-    "files",
-    "image",
-    "audio",
+    'files',
+    'image',
+    'audio',
   ];
   @property({ attribute: false }) mentionItems: readonly LyraPromptSuggestion[] = [];
   @property({ attribute: false }) commandItems: readonly LyraPromptSuggestion[] = [];
   @property({ attribute: false }) modelCatalog?: LyraCatalog<LyraModelCatalogEntry>;
-  @property() model = "";
+  @property() model = '';
   @property({ attribute: false }) voiceCatalog?: LyraCatalog<LyraVoiceCatalogEntry>;
-  @property() voice = "";
+  @property() voice = '';
   @property({ attribute: false }) sources: readonly LyraSourceEntry[] = [];
   @property({ attribute: false }) selectedSourceIds: readonly string[] = [];
   @property({ attribute: false }) queue: readonly PromptQueueItem[] = [];
-  @property() label = "";
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property() label = '';
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   @state() private activeSuggestion: ActiveSuggestion | null = null;
   private readonly slotPresence = new SlotPresenceController(this);
-  @query("lr-chat-composer") private composer?: LyraChatComposer;
-  @query("lr-mention-popover") private suggestionPopover?: LyraMentionPopover;
+  @query('lr-chat-composer') private composer?: LyraChatComposer;
+  @query('lr-mention-popover') private suggestionPopover?: LyraMentionPopover;
   private suggestionAnchor?: HTMLElement;
   private pendingSuggestionValue: string | undefined;
   private suggestionNavigationGeneration = 0;
@@ -354,11 +354,11 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     let invalidate =
-      changed.has("mentionItems") ||
-      changed.has("commandItems") ||
-      changed.has("disabled") ||
-      changed.has("readOnly");
-    if (changed.has("value")) {
+      changed.has('mentionItems') ||
+      changed.has('commandItems') ||
+      changed.has('disabled') ||
+      changed.has('readOnly');
+    if (changed.has('value')) {
       const internal = this.pendingSuggestionValue === this.value;
       this.pendingSuggestionValue = undefined;
       invalidate ||= !internal;
@@ -372,11 +372,11 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener("focusout", this.onCompositeFocusOut);
+    this.addEventListener('focusout', this.onCompositeFocusOut);
   }
 
   override disconnectedCallback(): void {
-    this.removeEventListener("focusout", this.onCompositeFocusOut);
+    this.removeEventListener('focusout', this.onCompositeFocusOut);
     this.closeSuggestions();
     super.disconnectedCallback();
   }
@@ -394,7 +394,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   private suggestions(): readonly LyraPromptSuggestion[] {
-    return this.activeSuggestion?.trigger === "/"
+    return this.activeSuggestion?.trigger === '/'
       ? this.commandItems
       : this.mentionItems;
   }
@@ -403,14 +403,14 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     const caret = this.composer?.selectionStart ?? value.length;
     const prefix = value.slice(0, caret);
     const match = /(?:^|\s)([@/])([^\s@/]*)$/.exec(prefix);
-    if (!match || (match[1] !== "@" && match[1] !== "/")) {
+    if (!match || (match[1] !== '@' && match[1] !== '/')) {
       this.activeSuggestion = null;
       return;
     }
     const start = caret - match[2]!.length - 1;
-    const items = match[1] === "@" ? this.mentionItems : this.commandItems;
+    const items = match[1] === '@' ? this.mentionItems : this.commandItems;
     this.activeSuggestion = items.length
-      ? { trigger: match[1], start, query: match[2] ?? "" }
+      ? { trigger: match[1], start, query: match[2] ?? '' }
       : null;
   }
 
@@ -423,26 +423,26 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     this.pendingSuggestionValue = event.detail.value;
     this.value = event.detail.value;
     this.detectSuggestion(this.value);
-    this.emit("lr-input", { value: this.value });
+    this.emit('lr-input', { value: this.value });
   }
 
   private onChange(event: CustomEvent<{ value: string }>): void {
     event.stopPropagation();
     if (this.disabled || this.readOnly) return;
     this.value = event.detail.value;
-    this.emit("lr-change", { value: this.value });
+    this.emit('lr-change', { value: this.value });
   }
 
   private onSubmit(event: CustomEvent<{ value: string }>): void {
     event.stopPropagation();
     if (this.disabled) return;
-    this.emit("lr-submit", event.detail);
+    this.emit('lr-submit', event.detail);
   }
 
   private onStop(event: Event): void {
     event.stopPropagation();
     if (this.disabled) return;
-    this.emit("lr-stop", null);
+    this.emit('lr-stop', null);
   }
 
   private onKeyDown(event: KeyboardEvent): void {
@@ -456,7 +456,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       return;
     if (popover.handleKeyDown(event)) {
       const shouldMoveFocus =
-        event.key === "ArrowDown" || event.key === "ArrowUp";
+        event.key === 'ArrowDown' || event.key === 'ArrowUp';
       const generation = ++this.suggestionNavigationGeneration;
       void popover.updateComplete.then(async () => {
         const reflected = this.syncSuggestionAria();
@@ -550,9 +550,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     // The popover uses element reflection when the platform accepts that
     // cross-root reference and otherwise fails closed so keyboard navigation
     // can transfer real focus into the popover's own tree.
-    input.removeAttribute("aria-controls");
+    input.removeAttribute('aria-controls');
     if (popover) return popover.syncActiveDescendant(input);
-    input.removeAttribute("aria-activedescendant");
+    input.removeAttribute('aria-activedescendant');
     return false;
   }
 
@@ -575,8 +575,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       this.value.slice(0, active.start) + inserted + this.value.slice(caret);
     const nextCaret = active.start + inserted.length;
     this.closeSuggestions();
-    this.emit("lr-input", { value: this.value });
-    this.emit("lr-mention-select", {
+    this.emit('lr-input', { value: this.value });
+    this.emit('lr-mention-select', {
       suggestionId: event.detail.suggestionId,
       index: event.detail.index,
       label: event.detail.label,
@@ -591,14 +591,14 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   private onFiles(event: CustomEvent<LyraAttachmentFilesDetail>): void {
     event.stopPropagation();
     if (this.disabled) return;
-    this.emit("lr-attachments-add", event.detail);
+    this.emit('lr-attachments-add', event.detail);
   }
 
   private get effectiveAttachments(): readonly LyraPromptInputAttachment[] {
     const seen = new Set<string>();
     return this.attachments.filter((attachment) => {
       const id = attachment?.attachmentId;
-      if (typeof id !== "string" || id.trim() === "" || seen.has(id)) return false;
+      if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) return false;
       seen.add(id);
       return true;
     });
@@ -667,7 +667,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       event.preventDefault();
       return;
     }
-    const request = this.emit("lr-attachment-preview-request", event.detail, {
+    const request = this.emit('lr-attachment-preview-request', event.detail, {
       cancelable: true,
     });
     if (request.defaultPrevented) event.preventDefault();
@@ -731,9 +731,9 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   override render(): TemplateResult {
     const label =
-      this.accessibleLabel ?? (this.label || this.localize("promptInputLabel"));
+      this.accessibleLabel ?? (this.label || this.localize('promptInputLabel'));
     const attachments = this.effectiveAttachments;
-    const hasChips = attachments.length > 0 || this.slotPresence.has("chips");
+    const hasChips = attachments.length > 0 || this.slotPresence.has('chips');
     return html`<section
       part="base"
       aria-label=${label}
@@ -825,6 +825,6 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-prompt-input": LyraPromptInput;
+    'lr-prompt-input': LyraPromptInput;
   }
 }

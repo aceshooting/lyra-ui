@@ -10,7 +10,8 @@ const meta: Meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Catalog ids must be unique and nonempty; malformed rows and later duplicates are omitted first-wins before selection and preview.',
+        component:
+          'Catalog ids must be unique and nonempty; malformed rows and later duplicates are omitted first-wins before selection and preview. Assignments become bounded clone-owned frozen snapshots; create and reassign a new array after row changes.',
       },
     },
   },

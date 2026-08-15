@@ -46,10 +46,9 @@ export const styles = css`
 
   [part="row"] {
     display: grid;
-    grid-template-columns: var(
-        --lr-span-waterfall-name-width,
-        var(--_lr-span-waterfall-name-width)
-      ) 1fr;
+    grid-template-columns:
+      var(--lr-span-waterfall-name-width, var(--_lr-span-waterfall-name-width))
+      1fr;
     align-items: center;
     gap: var(--lr-space-xs);
     padding-block: var(--lr-space-2xs);

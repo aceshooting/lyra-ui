@@ -8,6 +8,14 @@ const meta: Meta = {
   title: 'Sequence Strip',
   component: 'lr-sequence-strip',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Items and categories are copied into frozen canonical snapshots bounded to 10,000 entries, with at most 200 mounted at once. Reassign either collection after changing it.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

@@ -2127,10 +2127,11 @@ transcript sync is a separate concern.
 **Properties:** `entries: LyraTranscriptEntry[] = []` (attribute: false) — `LyraTranscriptEntry { id:
 string; speaker?: string; text: string; interim?: boolean; timestamp?: LyraTimestamp }` (exported by
 this module; `LyraTimestamp = Date | string | number`, normalized through Date/TimeClip). Reconciled
-keyed by nonempty, first-wins `id` via Lit's `repeat()`: a
+keyed by nonempty, nonblank, first-wins `id` via Lit's `repeat()`: a
 same-`id` entry with new `text` replaces in place, and a same-`id` entry whose `interim` flips from
 `true` to unset/`false` moves from the interim area into the `role="log"` region and announces
-exactly once. Interim entries render _after_ the log container — visible, but structurally outside
+exactly once. A collection with no valid entry renders the empty state. Interim entries render
+_after_ the log container — visible, but structurally outside
 it — so per-token mutations are never spoken by assistive tech. That announcement does **not** come
 from the shadow `role="log"` region, which is explicitly `aria-live="off"`: a live region inside a
 component's own shadow root is not reliably announced (JAWS with Firefox ignores one outright).
@@ -2321,10 +2322,10 @@ Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="ho
 ## `lr-thread-list`
 
 The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename
-affordances. _Data mode_ (non-empty `threads`, or empty `threads` with nothing slotted) renders every
-row as a `lr-conversation-item` inside an internal `lr-virtual-list` — virtualized by
+affordances. _Data mode_ (at least one valid `threads` record, or no valid records with nothing
+slotted) renders every row as a `lr-conversation-item` inside an internal `lr-virtual-list` — virtualized by
 construction, scroll position and per-row state survive a `threads` replacement; zero rows renders
-the built-in empty state. _Slotted mode_ (empty `threads` _and_ real slotted content) renders
+the built-in empty state. _Slotted mode_ (no valid `threads` records _and_ real slotted content) renders
 host-supplied `lr-conversation-item`s from the default slot as-is: no grouping, virtualization, or
 row actions in that mode. No thread CRUD or persistence — every mutation
 (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the _requested_ new
@@ -2345,9 +2346,9 @@ string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pi
 date?: Date }`. `LyraThreadList` and `LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
-Data-mode thread ids must be nonempty and unique; invalid rows and later duplicates are omitted with
-the first valid occurrence winning, so focus, actions, and emitted `conversationId` values remain
-unambiguous.
+Data-mode thread ids must be nonempty, nonblank, and unique; invalid rows and later duplicates are
+omitted with the first valid occurrence winning before the mode is selected, so focus, actions,
+slot ownership, and emitted `conversationId` values remain unambiguous.
 
 **Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeId: string = ''`
 (attribute `active-id`) — data mode:
@@ -2819,7 +2820,8 @@ selection direction exposed in free-text mode.
 small leading badge. `catalog?: LyraCatalog<LyraVoiceCatalogEntry>` (attribute: false) — the full
 voice list; omit (or leave empty) to fall back to plain free-text entry; replacing it retires any
 internal preview before the rendered candidate changes. Ids use the shared unique, nonempty,
-first-wins catalog rule documented under `lr-model-select`, including preview lookup.
+first-wins catalog rule documented under `lr-model-select`, including preview lookup. Assignments
+become bounded clone-owned frozen snapshots; create and reassign a new array after row changes.
 `allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`. `preview:
 boolean = true` (reflected) — whether to render preview affordances at all. `label: string = ''`,

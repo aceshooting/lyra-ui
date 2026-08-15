@@ -586,7 +586,7 @@ describe("lineNumbers", () => {
 
 it("gives the editor frame hover feedback matching the keyboard focus-visible cue", () => {
   const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(/\[part='editor'\]:hover\s*\{[^}]*border-color:/);
+  expect(css).to.match(/\[part=["']editor["']\]:hover\s*\{[^}]*border-color:/);
 });
 
 it("dims and blocks the cursor via its own disabled property/attribute", async () => {

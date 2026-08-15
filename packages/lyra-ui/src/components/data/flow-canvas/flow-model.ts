@@ -22,11 +22,18 @@ const FLOW_VARIANTS = new Set<LyraVariant>([
   'warning',
   'danger',
 ]);
+export const MAX_FLOW_COLLECTION_ENTRIES = 10_000;
+const MAX_FLOW_COLLECTION_NODES = 50_000;
+const MAX_FLOW_COLLECTION_DEPTH = 16;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
+  }
 }
 
 /** Clones and freezes the JSON-shaped portion of consumer node metadata without invoking getters.
@@ -39,23 +46,35 @@ function snapshotFlowData(value: Record<string, unknown>): Readonly<Record<strin
   const work: Array<{
     source: Record<string, unknown> | unknown[];
     target: Record<string, unknown> | unknown[];
-  }> = [{ source: value, target: root }];
+    depth: number;
+  }> = [{ source: value, target: root, depth: 0 }];
   const owned: Array<Record<string, unknown> | unknown[]> = [root];
   seen.set(value, root);
+  let remaining = MAX_FLOW_COLLECTION_NODES;
 
-  while (work.length > 0) {
-    const { source, target } = work.pop()!;
-    const descriptors = Object.getOwnPropertyDescriptors(source);
+  while (work.length > 0 && remaining > 0) {
+    const { source, target, depth } = work.pop()!;
+    let descriptors: PropertyDescriptorMap;
+    try {
+      descriptors = Object.getOwnPropertyDescriptors(source as object);
+    } catch {
+      continue;
+    }
+    let retainedEntries = 0;
     for (const [key, descriptor] of Object.entries(descriptors)) {
       if (!descriptor.enumerable || !('value' in descriptor)) continue;
+      if (retainedEntries >= MAX_FLOW_COLLECTION_ENTRIES || remaining <= 0) break;
+      retainedEntries += 1;
+      remaining -= 1;
       const item = descriptor.value as unknown;
       if (Array.isArray(item) || isRecord(item)) {
+        if (depth >= MAX_FLOW_COLLECTION_DEPTH) continue;
         let clone = seen.get(item);
         if (!clone) {
           clone = Array.isArray(item) ? [] : {};
           seen.set(item, clone);
           owned.push(clone);
-          work.push({ source: item, target: clone });
+          work.push({ source: item, target: clone, depth: depth + 1 });
         }
         (target as Record<string, unknown>)[key] = clone;
       } else {
@@ -85,7 +104,7 @@ export function snapshotFlowHandles(
 ): readonly FlowHandle[] | undefined {
   if (!Array.isArray(value)) return undefined;
   return Object.freeze(
-    value.map((handle) =>
+    value.slice(0, MAX_FLOW_COLLECTION_ENTRIES).map((handle) =>
       Object.freeze({
         id: typeof handle?.id === 'string' ? handle.id : '',
         ...(typeof handle?.label === 'string' ? { label: handle.label } : {}),
@@ -98,7 +117,7 @@ export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode
   if (!Array.isArray(value)) return Object.freeze([]);
   const nodes: FlowNode[] = [];
   const seen = new Set<string>();
-  for (const node of value) {
+  for (const node of value.slice(0, MAX_FLOW_COLLECTION_ENTRIES)) {
     try {
       const id = node?.id;
       if (typeof id !== 'string' || id.trim().length === 0 || seen.has(id)) continue;
@@ -132,7 +151,7 @@ export function snapshotFlowEdges(value: readonly FlowEdge[]): readonly FlowEdge
   if (!Array.isArray(value)) return Object.freeze([]);
   const edges: FlowEdge[] = [];
   const seen = new Set<string>();
-  for (const edge of value) {
+  for (const edge of value.slice(0, MAX_FLOW_COLLECTION_ENTRIES)) {
     try {
       const id = edge?.id;
       if (typeof id !== 'string' || id.trim().length === 0 || seen.has(id)) continue;
@@ -158,7 +177,21 @@ export function snapshotFlowEdges(value: readonly FlowEdge[]): readonly FlowEdge
 export function snapshotFlowDecorations(value: unknown): FlowRunDecorations {
   if (!isRecord(value)) return Object.freeze({});
   const entries: [string, Readonly<FlowRunDecoration>][] = [];
-  for (const [id, candidate] of Object.entries(value)) {
+  let keys: string[];
+  try {
+    keys = Object.keys(value).slice(0, MAX_FLOW_COLLECTION_ENTRIES);
+  } catch {
+    return Object.freeze({});
+  }
+  for (const id of keys) {
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(value, id);
+    } catch {
+      continue;
+    }
+    if (!descriptor || !('value' in descriptor)) continue;
+    const candidate: unknown = descriptor.value;
     if (!isRecord(candidate)) continue;
     const status = normalizeFlowStatus(candidate['status']);
     if (!status) continue;

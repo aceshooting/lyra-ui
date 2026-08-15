@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Unique nonempty environment names are first-wins before rendering and actions; `lr-reveal-change` identifies its row with `envName`. Copy settlement is explicit: `lr-copy` fires only after clipboard fulfillment; failures emit `lr-copy-error` plus `lr-error` and announce localized failure text.',
+          'Entries are copied into frozen snapshots bounded to the first 10,000 source records; reassign the collection after changing it. Unique nonempty environment names are first-wins before rendering and actions; `lr-reveal-change` identifies its row with `envName`. Copy settlement is explicit: `lr-copy` fires only after clipboard fulfillment; failures emit `lr-copy-error` plus `lr-error` and announce localized failure text.',
       },
     },
   },

@@ -59,6 +59,70 @@ export type LyraVoicePickerSelectionDirection = LyraSelectionDirection;
 /** A catalog row plus whether it's the synthetic "stale value" row — see `effectiveEntries`. */
 type DisplayEntry = DisplayCatalogEntry<LyraVoiceCatalogEntry>;
 
+const MAX_VOICE_CATALOG_ENTRIES = 10_000;
+
+function ownString(value: object, key: keyof LyraVoiceCatalogEntry): string | undefined {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return descriptor && 'value' in descriptor && typeof descriptor.value === 'string'
+      ? descriptor.value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function snapshotVoiceCatalog(
+  value: LyraCatalog<LyraVoiceCatalogEntry> | undefined,
+): LyraCatalog<LyraVoiceCatalogEntry> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const stringSnapshot: string[] = [];
+  const entrySnapshot: LyraVoiceCatalogEntry[] = [];
+  let objectCatalog = false;
+  let length = 0;
+  try {
+    length = Math.min(value.length, MAX_VOICE_CATALOG_ENTRIES);
+  } catch {
+    return Object.freeze(stringSnapshot);
+  }
+  for (let index = 0; index < length; index += 1) {
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    } catch {
+      continue;
+    }
+    if (!descriptor || !('value' in descriptor)) continue;
+    const candidate: unknown = descriptor.value;
+    if (typeof candidate === 'string') {
+      if (objectCatalog) entrySnapshot.push(Object.freeze({ id: candidate, label: candidate }));
+      else stringSnapshot.push(candidate);
+      continue;
+    }
+    if (candidate === null || typeof candidate !== 'object') continue;
+    const id = ownString(candidate, 'id');
+    const label = ownString(candidate, 'label');
+    if (id === undefined || label === undefined) continue;
+    if (!objectCatalog) {
+      entrySnapshot.push(
+        ...stringSnapshot.map((entry) => Object.freeze({ id: entry, label: entry })),
+      );
+      objectCatalog = true;
+    }
+    const language = ownString(candidate, 'language');
+    const description = ownString(candidate, 'description');
+    const previewUrl = ownString(candidate, 'previewUrl');
+    entrySnapshot.push(Object.freeze({
+      id,
+      label,
+      ...(language === undefined ? {} : { language }),
+      ...(description === undefined ? {} : { description }),
+      ...(previewUrl === undefined ? {} : { previewUrl }),
+    }));
+  }
+  return objectCatalog ? Object.freeze(entrySnapshot) : Object.freeze(stringSnapshot);
+}
+
 export interface LyraVoicePickerEventMap {
   'lr-invalid': CustomEvent<null>;
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
@@ -97,6 +161,8 @@ export interface LyraVoicePickerEventMap {
  * In free-text mode, `input` and the native selection/range-editing APIs expose the editable
  * combobox text. `setRangeText()` synchronizes `value`, form data, and validity without emitting
  * user-input events. These APIs are no-ops in closed-dropdown mode and before render.
+ * Catalog assignments become bounded, clone-owned, frozen snapshots. Create and reassign a new
+ * catalog array after changing its rows; mutating an assigned source does not update the picker.
  *
  * @customElement lr-voice-picker
  * @slot label - Custom visible label content.
@@ -223,9 +289,10 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   /** Informational only (e.g. `'elevenlabs'`); rendered as a small leading badge. */
   @property() provider = '';
-  /** The full voice list. Omit (or leave empty) to fall back to plain free-text entry. Catalog ids
-   *  must be nonempty and unique; malformed rows and later duplicates are omitted, first wins.
-   *  Replacing the catalog retires any internal preview before the rendered candidate can change. */
+  /** The bounded, clone-owned, frozen full voice list. Omit (or leave empty) to fall back to plain
+   *  free-text entry. Catalog ids must be nonempty and unique; malformed rows and later duplicates
+   *  are omitted, first wins. Replacing the catalog retires any internal preview before the
+   *  rendered candidate can change; reassign a new array after row changes. */
   @property({ attribute: false })
   get catalog(): LyraCatalog<LyraVoiceCatalogEntry> | undefined {
     return this._catalog;
@@ -234,7 +301,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const old = this._catalog;
     if (next === old) return;
     if (this.internalPreviewTargetId !== null) this.stopInternalPreview();
-    this._catalog = next;
+    this._catalog = snapshotVoiceCatalog(next);
     this.requestUpdate('catalog', old);
   }
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */

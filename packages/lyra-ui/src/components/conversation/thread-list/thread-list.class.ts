@@ -146,8 +146,8 @@ function defaultFilter(
  *
  * No thread CRUD or persistence: every mutation (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is
  * a controlled event carrying the *requested* new state — the host mutates `threads`.
- * Data-mode thread `id` values must be nonempty and unique. Untyped invalid rows and later
- * duplicates are omitted deterministically, so focus, virtualization, actions, and emitted
+ * Data-mode thread `id` values must be nonempty, nonblank, and unique. Untyped invalid rows and
+ * later duplicates are omitted deterministically, so focus, virtualization, actions, and emitted
  * `conversationId` values all resolve to the first valid occurrence.
  * Arrow/Home/End navigation skips unavailable rows, including a row placed below an `inert`
  * ancestor by `wrapRow`. Arrow navigation continues through the complete item model at a virtual
@@ -275,9 +275,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Non-empty ⇒ data mode (the default slot is ignored). Empty with no slotted content ⇒ data mode
-   *  with zero rows (the built-in empty state). Empty *with* slotted content ⇒ slotted mode. Thread
-   *  ids must be nonempty and unique; invalid/later duplicate rows are omitted, first wins. */
+  /** At least one valid thread ⇒ data mode (the default slot is ignored). No valid threads and no
+   *  slotted content ⇒ data mode with zero rows (the built-in empty state). No valid threads with
+   *  slotted content ⇒ slotted mode. Thread ids must be nonempty and unique; invalid/later
+   *  duplicate rows are omitted, first wins. */
   @property({ attribute: false }) threads: readonly LyraChatThread[] = [];
 
   /**
@@ -447,7 +448,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   // and hasn't also supplied `threads` -- empty `threads` with nothing slotted is still data mode,
   // just with zero rows, so it renders the built-in empty state rather than a silently blank slot.
   private get dataMode(): boolean {
-    return this.threads.length > 0 || !this.hasDefaultSlotContent;
+    return this.normalizedThreads.length > 0 || !this.hasDefaultSlotContent;
   }
 
   override connectedCallback(): void {
@@ -455,7 +456,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     if (this.hasUpdated) {
       const defaultSlotted = this.defaultSlottedElements();
       this.hasDefaultSlotContent = defaultSlotted.length > 0;
-      if (this.threads.length === 0) this.markAsListItems(defaultSlotted);
+      if (this.normalizedThreads.length === 0) this.markAsListItems(defaultSlotted);
     }
   }
 
@@ -476,12 +477,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const syncSlottedContent = (): void => {
       const defaultSlotted = this.defaultSlottedElements();
       this.hasDefaultSlotContent = defaultSlotted.length > 0;
-      if (this.threads.length > 0 && defaultSlotted.length > 0) {
+      const hasDataThreads = this.normalizedThreads.length > 0;
+      if (hasDataThreads && defaultSlotted.length > 0) {
         this.restoreInjectedListItemRoles();
         console.warn(
           "[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored."
         );
-      } else if (this.threads.length === 0) {
+      } else if (!hasDataThreads) {
         this.markAsListItems(defaultSlotted);
       }
     };
@@ -537,19 +539,20 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     super.disconnectedCallback();
   }
 
-  private get visibleThreads(): LyraChatThread[] {
-    const q = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
+  private get normalizedThreads(): LyraChatThread[] {
     const seen = new Set<string>();
-    const withArchiveFilter = this.threads.filter((thread) => {
-      if (
-        !thread.id ||
-        seen.has(thread.id) ||
-        (!this.showArchived && thread.archived)
-      )
-        return false;
+    return this.threads.filter((thread) => {
+      if (typeof thread.id !== "string" || thread.id.trim().length === 0 || seen.has(thread.id)) return false;
       seen.add(thread.id);
       return true;
     });
+  }
+
+  private get visibleThreads(): LyraChatThread[] {
+    const q = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
+    const withArchiveFilter = this.normalizedThreads.filter(
+      (thread) => this.showArchived || !thread.archived
+    );
     if (q === "") return withArchiveFilter;
     return withArchiveFilter.filter((t) =>
       this.filter

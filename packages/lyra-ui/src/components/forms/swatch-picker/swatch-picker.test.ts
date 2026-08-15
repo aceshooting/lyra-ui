@@ -4,6 +4,13 @@ import "./swatch-picker.js";
 import type { LyraSwatchPicker } from "./swatch-picker.js";
 import { styles } from "./swatch-picker.styles.js";
 
+const normalizedStyles = () =>
+  styles.cssText
+    .replace(/"/g, "'")
+    .replace(/\s+/g, " ")
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")");
+
 const options = () => [
   { value: "blue", color: "#0969da", label: "Blue" },
   { value: "green", color: "#1a7f37", label: "Green" },
@@ -705,7 +712,7 @@ describe("lr-swatch-picker", () => {
   });
 
   it("draws the selected ring through the --lr-swatch-picker-selected-color token", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+    const css = normalizedStyles();
     // The ring lives on [part='swatch-fill'], a descendant of the checked [part='swatch'] -- split
     // out of the interactive hit target so the hit box can grow to the shared minimum tappable size
     // without inflating the visible ring/fill (see [part='swatch']'s own styles.ts comment).
@@ -746,7 +753,7 @@ describe("lr-swatch-picker", () => {
   });
 
   it("defaults --lr-swatch-picker-shine-duration to 0s (no-op) and pulses brightness via a dedicated keyframe when set", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+    const css = normalizedStyles();
     expect(css).to.include("--_lr-swatch-picker-shine-duration: 0s;");
     expect(css).to.include(
       "--_lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);"
@@ -859,7 +866,7 @@ describe("lr-swatch-picker", () => {
   });
 
   it("disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+    const css = normalizedStyles();
     expect(css).to.match(
       /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\][^]*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/
     );

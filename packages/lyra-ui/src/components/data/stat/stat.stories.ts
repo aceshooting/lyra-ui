@@ -6,6 +6,14 @@ const meta: Meta = {
   title: 'Stat',
   component: 'lr-stat',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Breakdown rows are copied into a frozen snapshot bounded to 10,000 entries. Reassign rows after changing the source collection.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

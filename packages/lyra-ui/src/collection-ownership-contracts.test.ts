@@ -38,14 +38,30 @@ import './components/conversation/selection-toolbar/selection-toolbar.js';
 import './components/conversation/suggestion-chips/suggestion-chips.js';
 import './components/conversation/thread-list/thread-list.js';
 import './components/conversation/transcript-feed/transcript-feed.js';
+import './components/conversation/voice-picker/voice-picker.js';
 import './components/data/calendar/calendar.js';
 import './components/data/context-meter/context-meter.js';
+import './components/data/document-library/document-library.js';
+import './components/data/env-list/env-list.js';
+import './components/data/file-tree/file-tree.js';
+import './components/data/flow-canvas/flow-canvas.js';
+import './components/data/flow-node/flow-node.js';
+import './components/data/flow-run-status/flow-run-status.js';
+import './components/data/graph-query-builder/graph-query-builder.js';
 import './components/data/heatmap/heatmap.js';
+import './components/data/sequence-strip/sequence-strip.js';
+import './components/data/stat/stat.js';
+import './components/data/table/table.js';
+import './components/data/word-cloud/word-cloud.js';
 import './components/layout/command-palette/command-palette.js';
+import './components/layout/drilldown-panel/drilldown-panel.js';
 import './components/layout/multi-split/multi-split.js';
+import './components/layout/segmented/segmented.js';
+import './components/layout/stepper/stepper.js';
 import './components/layout/virtual-list/virtual-list.js';
 
 import type { LyraMessageFeedback } from './components/conversation/message-feedback/message-feedback.js';
+import type { LyraVoicePicker } from './components/conversation/voice-picker/voice-picker.js';
 import type { LyraSchemaViewer } from './components/agent-tools/schema-viewer/schema-viewer.js';
 import type {
   LyraVirtualList,
@@ -57,6 +73,11 @@ const COLLECTION_LIMIT = 10_000;
 export interface CollectionPropertyCase {
   readonly tag: `lr-${string}`;
   readonly property: string;
+}
+
+export interface BespokeCollectionPropertyCase extends CollectionPropertyCase {
+  readonly limit: number;
+  makeEntry(index: number): unknown;
 }
 
 /**
@@ -155,6 +176,46 @@ export const APP_IDENTITY_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[
   { tag: 'lr-virtual-list', property: 'source' },
 ]);
 
+/** Accessor-backed collection properties with their component/domain-specific synchronous caps. */
+export const APP_BESPOKE_ARRAY_PROPERTY_CASES: readonly BespokeCollectionPropertyCase[] =
+  Object.freeze([
+    { tag: 'lr-stat', property: 'rows', limit: 10_000, makeEntry: (index) => ({ label: String(index), value: String(index) }) },
+    { tag: 'lr-file-tree', property: 'nodes', limit: 10_000, makeEntry: (index) => ({ path: `/file-${index}` }) },
+    { tag: 'lr-table', property: 'columns', limit: 10_000, makeEntry: (index) => ({ key: String(index), label: String(index), cell: () => '' }) },
+    { tag: 'lr-table', property: 'rows', limit: 10_000, makeEntry: (index) => ({ id: index }) },
+    { tag: 'lr-document-library', property: 'documents', limit: 10_000, makeEntry: (index) => ({ id: String(index), name: String(index) }) },
+    { tag: 'lr-document-library', property: 'selectedIds', limit: 10_000, makeEntry: (index) => String(index) },
+    { tag: 'lr-document-library', property: 'tagFilter', limit: 10_000, makeEntry: (index) => String(index) },
+    { tag: 'lr-drilldown-panel', property: 'path', limit: 256, makeEntry: (index) => ({ nodeId: String(index), label: String(index) }) },
+    { tag: 'lr-drilldown-panel', property: 'types', limit: 256, makeEntry: (index) => ({ id: String(index), label: String(index) }) },
+    { tag: 'lr-env-list', property: 'entries', limit: 10_000, makeEntry: (index) => ({ name: String(index), value: String(index) }) },
+    { tag: 'lr-segmented', property: 'items', limit: 256, makeEntry: (index) => ({ value: String(index), label: String(index) }) },
+    { tag: 'lr-flow-canvas', property: 'nodes', limit: 10_000, makeEntry: (index) => ({ id: String(index) }) },
+    { tag: 'lr-flow-canvas', property: 'edges', limit: 10_000, makeEntry: (index) => ({ id: String(index), source: 'a', target: 'b' }) },
+    { tag: 'lr-flow-canvas', property: 'selectedNodeIds', limit: 10_000, makeEntry: (index) => String(index) },
+    { tag: 'lr-flow-canvas', property: 'selectedEdgeIds', limit: 10_000, makeEntry: (index) => String(index) },
+    { tag: 'lr-flow-node', property: 'inputs', limit: 10_000, makeEntry: (index) => ({ id: String(index) }) },
+    { tag: 'lr-flow-node', property: 'outputs', limit: 10_000, makeEntry: (index) => ({ id: String(index) }) },
+    { tag: 'lr-graph-query-builder', property: 'relationshipTypeOptions', limit: 500, makeEntry: (index) => ({ value: String(index) }) },
+    { tag: 'lr-graph-query-builder', property: 'nodeTypeOptions', limit: 500, makeEntry: (index) => ({ value: String(index) }) },
+    {
+      tag: 'lr-graph-query-builder',
+      property: 'savedQueries',
+      limit: 200,
+      makeEntry: (index) => ({
+        id: String(index),
+        name: String(index),
+        query: { startId: 'a', endId: '', relationshipTypes: [], nodeTypes: [], direction: 'outgoing', minHops: 1, maxHops: 1 },
+      }),
+    },
+    { tag: 'lr-sequence-strip', property: 'items', limit: 10_000, makeEntry: (index) => ({ id: String(index), categoryId: 'default' }) },
+    { tag: 'lr-sequence-strip', property: 'categories', limit: 10_000, makeEntry: (index) => ({ id: String(index), color: 'red' }) },
+    { tag: 'lr-stepper', property: 'steps', limit: 256, makeEntry: (index) => ({ stepId: String(index), label: String(index), state: 'pending' }) },
+    { tag: 'lr-word-cloud', property: 'words', limit: 10_000, makeEntry: () => ({ text: 'w', weight: 1 }) },
+    { tag: 'lr-word-cloud', property: 'palette', limit: 64, makeEntry: () => 'red' },
+    { tag: 'lr-word-cloud', property: 'legend', limit: 100, makeEntry: (index) => ({ label: String(index), color: 'red' }) },
+  ]);
+
 type DynamicElement = HTMLElement & Record<string, unknown>;
 
 function createDynamicElement(tagName: `lr-${string}`): DynamicElement {
@@ -236,6 +297,66 @@ describe('original component collection ownership contracts', () => {
     });
   }
 
+  for (const { tag, property, limit, makeEntry } of APP_BESPOKE_ARRAY_PROPERTY_CASES) {
+    it(`${tag}.${property} owns a frozen sequence within its domain cap`, () => {
+      const element = createDynamicElement(tag);
+      const source = [makeEntry(0)];
+
+      element[property] = source;
+      source.push(makeEntry(1));
+
+      const snapshot = element[property] as readonly unknown[];
+      expect(snapshot).not.to.equal(source);
+      expect(snapshot.length).to.equal(1);
+      expect(Object.isFrozen(snapshot)).to.equal(true);
+
+      element[property] = Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => makeEntry(index));
+      expect((element[property] as readonly unknown[]).length).to.equal(limit);
+      expect(Object.isFrozen(element[property])).to.equal(true);
+    });
+  }
+
+  for (const property of ['selectedKeys', 'expandedKeys'] as const) {
+    it(`lr-table.${property} returns a bounded frozen readonly-set facade`, () => {
+      const element = createDynamicElement('lr-table');
+      const source = new Set<string>(['first']);
+
+      element[property] = source;
+      source.add('later');
+
+      const snapshot = element[property] as ReadonlySet<string>;
+      expect([...snapshot]).to.deep.equal(['first']);
+      expect(Object.isFrozen(snapshot)).to.equal(true);
+      expect('add' in snapshot).to.equal(false);
+
+      element[property] = new Set(
+        Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => String(index)),
+      );
+      expect((element[property] as ReadonlySet<string>).size).to.equal(COLLECTION_LIMIT);
+    });
+  }
+
+  for (const tag of ['lr-flow-canvas', 'lr-flow-run-status'] as const) {
+    it(`${tag}.decorations owns a bounded deeply frozen record`, () => {
+      const element = createDynamicElement(tag);
+      const source = { first: { status: 'running', detail: 'before' } };
+
+      element['decorations'] = source;
+      source.first.detail = 'changed';
+
+      const snapshot = element['decorations'] as Readonly<Record<string, { readonly detail: string }>>;
+      expect(snapshot).not.to.equal(source);
+      expect(snapshot['first']!.detail).to.equal('before');
+      expect(Object.isFrozen(snapshot)).to.equal(true);
+      expect(Object.isFrozen(snapshot['first'])).to.equal(true);
+
+      element['decorations'] = Object.fromEntries(
+        Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => [String(index), { status: 'running' }]),
+      );
+      expect(Object.keys(element['decorations'] as object).length).to.equal(COLLECTION_LIMIT);
+    });
+  }
+
   it('passes a virtual-list indexed source through by identity', () => {
     const element = createDynamicElement('lr-virtual-list') as unknown as LyraVirtualList;
     const source: VirtualListIndexedSource<{ readonly id: string }> = {
@@ -247,6 +368,24 @@ describe('original component collection ownership contracts', () => {
 
     expect(element.source).to.equal(source);
     expect(Object.isFrozen(source)).to.equal(false);
+  });
+
+  it('owns and bounds the bespoke voice catalog accessor snapshot', () => {
+    const element = createDynamicElement('lr-voice-picker') as unknown as LyraVoicePicker;
+    const source = [{ id: 'aria', label: 'Aria', language: 'en-US' }];
+
+    element.catalog = source;
+    source[0]!.label = 'Changed';
+    source.push({ id: 'later', label: 'Later', language: 'en-GB' });
+
+    const snapshot = element.catalog as readonly { readonly id: string; readonly label: string }[];
+    expect(snapshot).not.to.equal(source);
+    expect(snapshot.map((entry) => entry.label)).to.deep.equal(['Aria']);
+    expect(Object.isFrozen(snapshot)).to.equal(true);
+    expect(Object.isFrozen(snapshot[0])).to.equal(true);
+
+    element.catalog = Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => String(index));
+    expect(element.catalog!.length).to.equal(COLLECTION_LIMIT);
   });
 
   it('detaches and recursively freezes schema records and arrays in emitted details', async () => {

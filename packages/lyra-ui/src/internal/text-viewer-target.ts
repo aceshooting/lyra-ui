@@ -12,6 +12,7 @@ import {
   emptyTextQuoteMatches,
   rangeFromTextQuoteMatch,
   scopeFromElement,
+  TEXT_QUOTE_LIMITS,
   type TextQuoteIndex,
   type TextQuoteMatch,
   type TextQuoteMatches,
@@ -72,6 +73,18 @@ export interface LyraTextViewerTarget extends LyraAnchorTarget {
 const SEARCH_PAINT_WINDOW = 200;
 /** Host-supplied text quotes painted at once. The active quote is always retained inside the cap. */
 const HIGHLIGHT_PAINT_LIMIT = 100;
+
+function boundedFragmentTarget(root: Element, id: string): Element | null {
+  if (root.id === id) return root;
+  const walker = root.ownerDocument.createTreeWalker(root, 0x1 /* NodeFilter.SHOW_ELEMENT */);
+  let inspected = 0;
+  while (inspected < TEXT_QUOTE_LIMITS.maxTraversalNodes && walker.nextNode()) {
+    inspected++;
+    const candidate = walker.currentNode as Element;
+    if (candidate.id === id) return candidate;
+  }
+  return null;
+}
 /** @internal Source-only overload preserving subclass statics and protected members. */
 export function TextViewerTarget<
   T extends InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
@@ -296,7 +309,7 @@ export function TextViewerTarget(
       const root = this.textContentRoot();
       if (!root) return false;
       if (anchor.kind === 'fragment') {
-        const target = root.id === anchor.id ? root : Array.from(root.querySelectorAll<HTMLElement>('[id]')).find((el) => el.id === anchor.id);
+        const target = boundedFragmentTarget(root, anchor.id);
         if (!target) return false;
         target.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
         return true;

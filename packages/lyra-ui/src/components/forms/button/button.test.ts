@@ -4,6 +4,13 @@ import type { LyraButton } from "./button.class.js";
 import { styles } from "./button.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
+const normalizedStyles = () =>
+  styles.cssText
+    .replace(/"/g, "'")
+    .replace(/\s+/g, " ")
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")");
+
 describe("lr-button", () => {
   it("emits a cancelable lr-invalid alias and forwards its veto to the native invalid event", async () => {
     const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
@@ -407,7 +414,7 @@ describe("lr-button", () => {
   });
 
   it("keeps the label space while loading and centers the spinner", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+    const css = normalizedStyles();
     expect(css).to.match(
       /:host\(\[loading\]\) \[part='label'\][^}]*opacity: 0/
     );
@@ -416,7 +423,7 @@ describe("lr-button", () => {
   });
 
   it("uses a strong border for outlined buttons", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+    const css = normalizedStyles();
     expect(css).to.include(
       "border-color: var(--lr-button-outlined-border, var(--_lr-button-outlined-border));"
     );
@@ -481,7 +488,7 @@ describe("lr-button", () => {
   });
 
   it('ships a default :hover/:active treatment on [part~="base"], disabled under reduced motion', () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+    const css = normalizedStyles();
     // The hover/press COLOURS are asserted as rendered results in the hover-and-press-feedback
     // block below -- a stylesheet-text match cannot tell a fill that moves from one that resolves
     // to the page surface, which is exactly how the quiet hover shipped broken. What is left here
@@ -647,7 +654,7 @@ describe("lr-button", () => {
   });
 
   it("propagates a consumer width from the host to the internal button", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+    const css = normalizedStyles();
     expect(css).to.include(
       "inline-size: var(--lr-button-width, var(--_lr-button-width));"
     );
@@ -749,7 +756,7 @@ describe("lr-button", () => {
   });
 
   it('declares the underline offset and keeps a focus-visible outline for appearance="link"', () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+    const css = normalizedStyles();
     expect(css).to.match(
       /:host\(\[appearance='link'\]\) \[part~='base'\][^}]*text-decoration: underline/
     );
@@ -893,7 +900,7 @@ describe("lr-button", () => {
     });
 
     it('takes every tier\'s geometry from the shared ladder, with no per-tier rule on [part~="base"]', () => {
-      const css = styles.cssText.replace(/\s+/g, " ");
+      const css = normalizedStyles();
       // The knobs read the ladder rather than restating a scale of their own.
       expect(css).to.match(
         /:host \{[^}]*--_lr-button-padding-block: var\(--lr-form-control-padding-block\);[^}]*--_lr-button-padding-inline: var\(--lr-form-control-padding-inline\);[^}]*--_lr-button-font-size: var\(--lr-form-control-font-size\);/
@@ -991,7 +998,7 @@ describe("lr-button", () => {
     });
 
     it("leaves --lr-button-height genuinely undeclared so its var() fallback arm can fire", () => {
-      const css = styles.cssText.replace(/\s+/g, " ");
+      const css = normalizedStyles();
       // A declared value -- even `auto` -- is a *defined* value that wins, so the fallback arm
       // would never run and every tier's floor would be dead code (see select.styles.ts:37-49).
       expect(
@@ -1076,7 +1083,7 @@ describe("lr-button", () => {
     });
 
     it("keeps a private outlined-fill default beside the border default and consumes the public hook first", () => {
-      const css = styles.cssText.replace(/\s+/g, " ");
+      const css = normalizedStyles();
       expect(css).to.include("--_lr-button-outlined-fill: transparent;");
       expect(css).to.match(
         /:host\(\[appearance='outlined'\]\) \[part~='base'\] \{[^}]*background: var\(--lr-button-outlined-fill, var\(--_lr-button-outlined-fill\)\);/

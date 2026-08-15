@@ -1,15 +1,15 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
-import { styleMap } from "lit/directives/style-map.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { renderInertPresentation } from "../../../internal/inert-presentation.js";
-import { isRtl } from "../../../internal/rtl.js";
-import { gemstoneGlyph, type GemstoneKey } from "../../../theme/gemstones.js";
-import type { LyraSize } from "../../../internal/variants.js";
-import { styles } from "./swatch-picker.styles.js";
-import { sanitizeCssColor } from "../../../internal/safe-css.js";
-import { literalSetConverter } from "../../../internal/converters.js";
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { renderInertPresentation } from '../../../internal/inert-presentation.js';
+import { isRtl } from '../../../internal/rtl.js';
+import { gemstoneGlyph, type GemstoneKey } from '../../../theme/gemstones.js';
+import type { LyraSize } from '../../../internal/variants.js';
+import { styles } from './swatch-picker.styles.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 
 export interface SwatchPickerItem {
   /** The option's value -- reported in `lr-change` and matched against `value`. */
@@ -31,15 +31,15 @@ export interface SwatchPickerItem {
 /** @deprecated Use {@link SwatchPickerItem}. */
 export type SwatchOption = SwatchPickerItem;
 
-export type LyraSwatchPickerMode = "swatch" | "gemstone";
+export type LyraSwatchPickerMode = 'swatch' | 'gemstone';
 
 const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
-  ["swatch", "gemstone"],
-  "swatch"
+  ['swatch', 'gemstone'],
+  'swatch'
 );
 
 export interface LyraSwatchPickerEventMap {
-  "lr-change": CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
 }
 
 /**
@@ -119,7 +119,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
       for (let index = 0; index < Math.min(next.length, 512); index += 1) {
         try {
           const raw = next[index];
-          if (raw === null || typeof raw !== "object") continue;
+          if (raw === null || typeof raw !== 'object') continue;
           const cached = this.itemSnapshots.get(raw);
           if (cached) {
             snapshots.push(cached);
@@ -129,9 +129,9 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
           const color = raw.color;
           const label = raw.label;
           if (
-            typeof value !== "string" ||
-            typeof color !== "string" ||
-            typeof label !== "string"
+            typeof value !== 'string' ||
+            typeof color !== 'string' ||
+            typeof label !== 'string'
           )
             continue;
           const snapshot = Object.freeze({
@@ -149,7 +149,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
       }
     }
     this._items = Object.freeze(snapshots);
-    this.requestUpdate("items", old);
+    this.requestUpdate('items', old);
   }
   /** @deprecated Compatibility alias for `items`. */
   get options(): readonly SwatchPickerItem[] {
@@ -166,11 +166,11 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
    *  floored at 24px (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. The Web Awesome / Shoelace spellings
    *  `small`/`medium`/`large` are accepted for `s`/`m`/`l`, so a migration is a tag rename with no
    *  attribute rewrite. */
-  @property({ reflect: true }) size: LyraSize = "m";
+  @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Visual treatment. `swatch` preserves the plain-circle default; `gemstone` renders the shared
    * gemstone glyph for items with a `gemstone` key and enables its glow/shine recipe. */
-  private _mode: LyraSwatchPickerMode = "swatch";
+  private _mode: LyraSwatchPickerMode = 'swatch';
 
   @property({ reflect: true, converter: SWATCH_PICKER_MODE })
   get mode(): LyraSwatchPickerMode {
@@ -179,22 +179,22 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   set mode(next: LyraSwatchPickerMode) {
     const normalized = SWATCH_PICKER_MODE.normalizeReflected(
       this,
-      "mode",
+      'mode',
       next
     );
     const old = this._mode;
     if (old === normalized) return;
     this._mode = normalized;
-    this.requestUpdate("mode", old);
+    this.requestUpdate('mode', old);
   }
 
   /** Accessible-name fallback for the radiogroup when the host has no `aria-label`, used when no
    *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading).
    *  The resolved name is set on the `role="radiogroup"` element. */
-  @property({ attribute: "aria-label" }) accessibleLabel = "";
+  @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
   /** @deprecated Use `accessibleLabel` or the host `aria-label` attribute. */
-  @property() label = "";
+  @property() label = '';
 
   /** Locks the whole picker: every rendered swatch becomes a genuinely `disabled` `<button>` (so
    *  it leaves the tab sequence and stops emitting activation), arrow/Home/End navigation and
@@ -249,7 +249,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     this.selectedIndex = index;
     this.value = option.value;
     if (previousValue === option.value) this.requestUpdate();
-    this.emit("lr-change", { value: option.value });
+    this.emit('lr-change', { value: option.value });
   }
 
   private focusSwatch(index: number): void {
@@ -261,13 +261,13 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (!changed.has("items")) return;
+    if (!changed.has('items')) return;
     const active = this.shadowRoot?.activeElement as HTMLElement | null;
-    if (active?.getAttribute("part") !== "swatch") return;
-    const previousOptions = changed.get("items") as
+    if (active?.getAttribute('part') !== 'swatch') return;
+    const previousOptions = changed.get('items') as
       | readonly SwatchPickerItem[]
       | undefined;
-    const previousIndex = Number(active.dataset["index"]);
+    const previousIndex = Number(active.dataset['index']);
     if (!Number.isInteger(previousIndex) || previousIndex < 0) return;
     const focusedOption = previousOptions?.[previousIndex];
     const identityIndex =
@@ -287,13 +287,13 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (!changed.has("items") || this.pendingFocusIndex === undefined) return;
+    if (!changed.has('items') || this.pendingFocusIndex === undefined) return;
     this.scheduleAfterUpdate(() => {
       const pendingIndex = this.pendingFocusIndex;
       this.pendingFocusIndex = undefined;
       if (pendingIndex === undefined || this.items.length === 0) return;
       this.focusSwatch(Math.min(pendingIndex, this.items.length - 1));
-    }, "restore-swatch-picker-focus");
+    }, 'restore-swatch-picker-focus');
   }
 
   /** The single `role="radio"` swatch that is currently in the roving tab sequence -- the
@@ -342,16 +342,16 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
       .find(
         (candidate): candidate is HTMLElement =>
           (candidate as Partial<Node>).nodeType === 1 &&
-          (candidate as Partial<Element>).getAttribute?.("part") === "swatch" &&
+          (candidate as Partial<Element>).getAttribute?.('part') === 'swatch' &&
           (candidate as Element).getRootNode() === this.renderRoot
       );
     const focused = this.shadowRoot?.activeElement;
     const candidate =
       fromEvent ??
-      (focused?.getAttribute("part") === "swatch"
+      (focused?.getAttribute('part') === 'swatch'
         ? (focused as HTMLElement)
         : undefined);
-    const index = Number(candidate?.dataset["index"]);
+    const index = Number(candidate?.dataset['index']);
     return Number.isInteger(index) && index >= 0 && index < this.items.length
       ? index
       : this.resolveSelectedIndex();
@@ -366,8 +366,8 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     if (navigable.length === 0) return;
     const currentIndex = this.keyboardOriginIndex(e);
     const rtl = isRtl(this);
-    const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
-    const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
 
     let targetIndex: number;
     switch (e.key) {
@@ -381,10 +381,10 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             ? navigable.length - 1
             : (currentIndex - 1 + navigable.length) % navigable.length;
         break;
-      case "Home":
+      case 'Home':
         targetIndex = 0;
         break;
-      case "End":
+      case 'End':
         targetIndex = navigable.length - 1;
         break;
       default:
@@ -397,7 +397,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   };
 
   override render(): TemplateResult {
-    const hostLabel = this.getAttribute("aria-label");
+    const hostLabel = this.getAttribute('aria-label');
     const ariaLabel =
       hostLabel !== null
         ? hostLabel
@@ -458,6 +458,6 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-swatch-picker": LyraSwatchPicker;
+    'lr-swatch-picker': LyraSwatchPicker;
   }
 }

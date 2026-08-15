@@ -5,6 +5,7 @@ import { LyraElement } from './lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from './text-viewer-target.js';
 import { defineElement } from './prefix.js';
 import { HIGHLIGHT_SNAPSHOT_LIMIT } from './anchor-target.js';
+import { TEXT_QUOTE_LIMITS } from './text-quote.js';
 
 const PARAGRAPH_ONE = 'The quick brown fox jumps over the lazy dog.';
 const PARAGRAPH_TWO = 'The fox runs fast under the bright sun.';
@@ -250,6 +251,32 @@ describe('TextViewerTarget mixin', () => {
       const ok = await el.scrollToAnchor({ kind: 'fragment', id: 'section-one' });
       expect(ok).to.be.true;
       expect(scrolled).to.be.true;
+    });
+
+    it('fragment: uses a bounded walk without materializing every matching element', async () => {
+      const el = await stubFixture();
+      const root = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+      Object.defineProperty(root, 'querySelectorAll', {
+        configurable: true,
+        value: () => { throw new Error('must not enumerate an unbounded NodeList'); },
+      });
+      const target = el.shadowRoot!.querySelector('#section-one') as HTMLElement;
+      let scrolled = false;
+      target.scrollIntoView = () => { scrolled = true; };
+
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: 'section-one' })).to.be.true;
+      expect(scrolled).to.be.true;
+
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index <= TEXT_QUOTE_LIMITS.maxTraversalNodes; index++) {
+        const child = document.createElement('span');
+        if (index === TEXT_QUOTE_LIMITS.maxTraversalNodes) child.id = 'past-bound';
+        fragment.append(child);
+      }
+      root.replaceChildren(fragment);
+      expect(await (el as unknown as {
+        applyAnchor(anchor: { kind: 'fragment'; id: string }): Promise<boolean>;
+      }).applyAnchor({ kind: 'fragment', id: 'past-bound' })).to.be.false;
     });
 
     it('fragment: matches when the body root itself carries the id', async () => {

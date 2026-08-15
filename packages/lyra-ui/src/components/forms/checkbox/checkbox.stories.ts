@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import { html } from 'lit';
-import './checkbox.js';
-import type { LyraCheckbox } from './checkbox.js';
+import type { Meta, StoryObj } from "@storybook/web-components-vite";
+import { html } from "lit";
+import "./checkbox.js";
+import type { LyraCheckbox } from "./checkbox.js";
 
 const meta: Meta = {
-  title: 'Checkbox',
-  component: 'lr-checkbox',
-  tags: ['autodocs'],
+  title: "Checkbox",
+  component: "lr-checkbox",
+  tags: ["autodocs"],
   parameters: {
     docs: {
       description: {
@@ -28,10 +28,12 @@ export const Checked: Story = {
 };
 
 export const SupportingTextAliases: Story = {
-  name: 'WA hint and Shoelace help text',
+  name: "WA hint and Shoelace help text",
   render: () => html`
     <div style="display:grid; gap:var(--lr-space-m);">
-      <lr-checkbox hint="Required for account recovery">Recovery email</lr-checkbox>
+      <lr-checkbox hint="Required for account recovery"
+        >Recovery email</lr-checkbox
+      >
       <lr-checkbox checked>
         Product updates
         <span slot="help-text">Shoelace-compatible supporting-text slot</span>
@@ -67,25 +69,36 @@ export const Disabled: Story = {
 };
 
 export const NoLabelSlot: Story = {
-  name: 'No label slot (aria-label only)',
+  name: "No label slot (aria-label only)",
   parameters: {
     docs: {
       description: {
         story:
           'Even at `size="2xs"`, the tier-sized visible box is centered inside the shared ' +
-          '`--lr-icon-button-size` minimum interactive target.',
+          "`--lr-icon-button-size` minimum interactive target.",
       },
     },
   },
-  render: () => html`<lr-checkbox size="2xs" aria-label="Subscribe to updates"></lr-checkbox>`,
+  render: () =>
+    html`<lr-checkbox
+      size="2xs"
+      aria-label="Subscribe to updates"
+    ></lr-checkbox>`,
 };
 
 export const ExternalDescription: Story = {
-  name: 'External description (aria-describedby)',
+  name: "External description (aria-describedby)",
   render: () => html`
-    <div style="display:flex; flex-direction:column; gap:0.25rem; align-items:flex-start;">
-      <lr-checkbox aria-describedby="maintenance-description">Enable advanced mode</lr-checkbox>
-      <p id="maintenance-description" style="margin:0; color:var(--lr-color-text-quiet); font-size:var(--lr-font-size-sm);">
+    <div
+      style="display:flex; flex-direction:column; gap:0.25rem; align-items:flex-start;"
+    >
+      <lr-checkbox aria-describedby="maintenance-description"
+        >Enable advanced mode</lr-checkbox
+      >
+      <p
+        id="maintenance-description"
+        style="margin:0; color:var(--lr-color-text-quiet); font-size:var(--lr-font-size-sm);"
+      >
         This option is unavailable during scheduled maintenance.
       </p>
     </div>
@@ -97,7 +110,7 @@ export const Required: Story = {
     <form
       @submit=${(e: Event) => {
         e.preventDefault();
-        alert('Form submitted');
+        alert("Form submitted");
       }}
       style="display:flex; flex-direction:column; gap:0.75rem; align-items:flex-start;"
     >
@@ -108,30 +121,40 @@ export const Required: Story = {
 };
 
 export const IndeterminateParent: Story = {
-  name: 'Indeterminate parent/children group',
+  name: "Indeterminate parent/children group",
   render: () => {
     const onParentChange = (e: Event) => {
       const parent = e.currentTarget as LyraCheckbox;
-      const group = parent.closest('[data-group]') as HTMLElement;
-      const children = [...group.querySelectorAll<LyraCheckbox>('.child')];
+      const group = parent.closest("[data-group]") as HTMLElement;
+      const children = [...group.querySelectorAll<LyraCheckbox>(".child")];
       children.forEach((c) => (c.checked = parent.checked));
     };
     const onChildChange = (e: Event) => {
       const child = e.currentTarget as LyraCheckbox;
-      const group = child.closest('[data-group]') as HTMLElement;
-      const parent = group.querySelector('#parent') as LyraCheckbox;
-      const children = [...group.querySelectorAll<LyraCheckbox>('.child')];
+      const group = child.closest("[data-group]") as HTMLElement;
+      const parent = group.querySelector("#parent") as LyraCheckbox;
+      const children = [...group.querySelectorAll<LyraCheckbox>(".child")];
       const checkedCount = children.filter((c) => c.checked).length;
       parent.checked = checkedCount === children.length;
       parent.indeterminate = checkedCount > 0 && checkedCount < children.length;
     };
     return html`
       <div data-group style="display:flex; flex-direction:column; gap:0.5rem;">
-        <lr-checkbox id="parent" @lr-change=${onParentChange}>Select all</lr-checkbox>
-        <div style="display:flex; flex-direction:column; gap:0.5rem; padding-inline-start:1.5rem;">
-          <lr-checkbox class="child" @lr-change=${onChildChange}>Option A</lr-checkbox>
-          <lr-checkbox class="child" @lr-change=${onChildChange}>Option B</lr-checkbox>
-          <lr-checkbox class="child" @lr-change=${onChildChange}>Option C</lr-checkbox>
+        <lr-checkbox id="parent" @lr-change=${onParentChange}
+          >Select all</lr-checkbox
+        >
+        <div
+          style="display:flex; flex-direction:column; gap:0.5rem; padding-inline-start:1.5rem;"
+        >
+          <lr-checkbox class="child" @lr-change=${onChildChange}
+            >Option A</lr-checkbox
+          >
+          <lr-checkbox class="child" @lr-change=${onChildChange}
+            >Option B</lr-checkbox
+          >
+          <lr-checkbox class="child" @lr-change=${onChildChange}
+            >Option C</lr-checkbox
+          >
         </div>
       </div>
     `;
@@ -142,48 +165,50 @@ export const Interactive: Story = {
   render: () => html`
     <lr-checkbox
       @lr-change=${(e: CustomEvent<{ checked: boolean }>) => {
-        const out = document.getElementById('checkbox-log');
+        const out = document.getElementById("checkbox-log");
         if (out) out.textContent = `checked: ${e.detail.checked}`;
       }}
       >Send me email updates</lr-checkbox
     >
-    <p id="checkbox-log" style="font-family: monospace; margin-top: 0.5rem;">checked: false</p>
+    <p id="checkbox-log" style="font-family: monospace; margin-top: 0.5rem;">
+      checked: false
+    </p>
   `,
 };
 
 export const NativeEventContract: Story = {
-  name: 'Native event and focus contract',
+  name: "Native event and focus contract",
   render: () => {
     const record = (event: Event) => {
-      const output = document.getElementById('checkbox-native-events');
-      if (output) output.textContent = `${output.textContent ?? ''}${event.type} `;
+      const output = document.getElementById("checkbox-native-events");
+      if (output)
+        output.textContent = `${output.textContent ?? ""}${event.type} `;
     };
     return html`
-      <lr-checkbox
-        @input=${record}
-        @change=${record}
-        @lr-change=${record}
+      <lr-checkbox @input=${record} @change=${record} @lr-change=${record}
         >Toggle with a click or the Space key</lr-checkbox
       >
-      <p id="checkbox-native-events" aria-live="polite">Events: </p>
+      <p id="checkbox-native-events" aria-live="polite">Events:</p>
     `;
   },
 };
 
 export const LabelIndent: Story = {
-  name: 'Aligning per-option hint text',
+  name: "Aligning per-option hint text",
   parameters: {
     docs: {
       description: {
         story:
-          '`--lr-checkbox-label-indent` controls the distance from the control\'s start edge to the start of the label — its private default is the box floor (`--lr-checkbox-box-size`, which tracks `size`) plus the label gap (`--lr-space-s`). The same input drives the real gap. Because custom properties inherit down and not sideways, a **sibling** node in your own tree cannot read the resolved private default off the checkbox: give the wrapper the same formula (from the `--lr-theme-*` tokens you control) and both stay aligned, as the second block shows.',
+          "`--lr-checkbox-label-indent` controls the distance from the control's start edge to the start of the label — its private default is the box floor (`--lr-checkbox-box-size`, which tracks `size`) plus the label gap (`--lr-space-s`). The same input drives the real gap. Because custom properties inherit down and not sideways, a **sibling** node in your own tree cannot read the resolved private default off the checkbox: give the wrapper the same formula (from the `--lr-theme-*` tokens you control) and both stay aligned, as the second block shows.",
       },
     },
   },
   render: () => html`
     <div style="display: grid; gap: 1rem; max-inline-size: 26rem;">
       <div>
-        <lr-checkbox value="daily" id="indent-checkbox">Daily digest</lr-checkbox>
+        <lr-checkbox value="daily" id="indent-checkbox"
+          >Daily digest</lr-checkbox
+        >
         <!-- This sibling cannot inherit from the checkbox, so its fallback mirrors the default
              2.25rem indent rather than pretending to read the component's private default. -->
         <p
@@ -199,8 +224,8 @@ export const LabelIndent: Story = {
         <p
           style="margin: 0.25rem 0 0; padding-inline-start: var(--indent); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
         >
-          Computed from the theme bridge tokens, so it survives a retheme without reading into the
-          checkbox's shadow root.
+          Computed from the theme bridge tokens, so it survives a retheme
+          without reading into the checkbox's shadow root.
         </p>
       </div>
     </div>
@@ -208,12 +233,12 @@ export const LabelIndent: Story = {
 };
 
 export const Sizes: StoryObj = {
-  name: 'Size ladder',
+  name: "Size ladder",
   parameters: {
     docs: {
       description: {
         story:
-          '`size` is the library\'s shared ladder, so a `size` set here matches an `<lr-input>`, `<lr-select>` or `<lr-button>` of the same `size` in the same row. Both spellings of every tier are accepted — `s`/`m`/`l` and Web Awesome\'s `small`/`medium`/`large` — so a migration is a tag rename with no attribute rewrite.',
+          "`size` is the library's shared ladder, so a `size` set here matches an `<lr-input>`, `<lr-select>` or `<lr-button>` of the same `size` in the same row. Both spellings of every tier are accepted — `s`/`m`/`l` and Web Awesome's `small`/`medium`/`large` — so a migration is a tag rename with no attribute rewrite.",
       },
     },
   },
@@ -230,12 +255,12 @@ export const Sizes: StoryObj = {
 };
 
 export const ScopedStateTheme: Story = {
-  name: 'Scoped hover / press / invalid theme',
+  name: "Scoped hover / press / invalid theme",
   parameters: {
     docs: {
       description: {
         story:
-          'Hover and press the control to see component-scoped border/ring hooks; submit the empty required control to reveal the independently themed invalid border.',
+          "Hover and press the control to see component-scoped border/ring hooks; submit the empty required control to reveal the independently themed invalid border.",
       },
     },
   },
@@ -244,26 +269,30 @@ export const ScopedStateTheme: Story = {
       <lr-checkbox
         required
         style="--lr-checkbox-hover-border: var(--lr-color-success); --lr-checkbox-active-border: var(--lr-color-warning); --lr-checkbox-active-ring: var(--lr-color-warning-quiet); --lr-checkbox-invalid-border: var(--lr-color-danger);"
-      >Accept the terms</lr-checkbox>
+        >Accept the terms</lr-checkbox
+      >
       <button type="submit">Validate</button>
     </form>
   `,
 };
 
 export const NarrowLongContent: Story = {
-  name: 'Narrow RTL long label (320px)',
+  name: "Narrow RTL long label (320px)",
   parameters: {
     docs: {
       description: {
         story:
-          'The public label wraps while the checkbox target stays fixed inside an exact 320px RTL allocation.',
+          "The public label wraps while the checkbox target stays fixed inside an exact 320px RTL allocation.",
       },
     },
   },
   render: () => html`
-    <div dir="rtl" style="inline-size:320px;max-inline-size:100%;overflow:hidden">
+    <div
+      dir="rtl"
+      style="inline-size:320px;max-inline-size:100%;overflow:hidden"
+    >
       <lr-checkbox style="display:block;max-inline-size:100%">
-        ${'LocalizedUnbrokenCheckboxLabel'.repeat(16)}
+        ${"LocalizedUnbrokenCheckboxLabel".repeat(16)}
       </lr-checkbox>
     </div>
   `,

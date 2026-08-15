@@ -152,8 +152,13 @@ function validateDocumentComplexity(node: Node): void {
     const current = pending.pop()!;
     count++;
     if (count > MAX_NODES || current.depth > MAX_DEPTH) throw new LyraResourceLimitError();
-    for (const child of Array.from(current.node.childNodes)) {
+    // Push siblings in reverse document order without first materializing an attacker-sized
+    // `childNodes` array. Fail before the pending stack itself can exceed the global node ceiling.
+    let child: ChildNode | null = current.node.lastChild;
+    while (child) {
+      if (count + pending.length >= MAX_NODES) throw new LyraResourceLimitError();
       pending.push({ node: child, depth: current.depth + 1 });
+      child = child.previousSibling;
     }
   }
 }

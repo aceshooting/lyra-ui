@@ -32,10 +32,11 @@ export interface SequenceStripCategory {
   readonly label?: string;
 }
 
-/** A bounded DOM window keeps high-cardinality strips responsive while the full canonical item
+/** A bounded DOM window keeps high-cardinality strips responsive while the bounded canonical item
  * model remains available to roving keyboard navigation and `aria-setsize`. */
 const MAX_RENDERED_ITEMS = 200;
 const MAX_RENDERED_CATEGORIES = 200;
+const MAX_SEQUENCE_COLLECTION_ENTRIES = 10_000;
 
 /**
  * `<lr-sequence-strip>` — a compact, one-thin-cell-per-item strip visualizing a sequence of
@@ -51,7 +52,9 @@ const MAX_RENDERED_CATEGORIES = 200;
  * A queued arrow/Home/End focus is generation- and identity-bound: replacing `items`, disconnecting,
  * or reconnecting before that update settles cannot focus the same numeric index in a new model.
  * At most 200 items around the roving stop are mounted at once; `aria-posinset`/`aria-setsize`
- * retain positions in the complete canonical sequence and navigation shifts the window.
+ * retain positions in the bounded canonical sequence and navigation shifts the window. Assignment
+ * retains at most the first 10,000 items and categories as detached frozen snapshots; reassign a
+ * collection after changing it.
  *
  * @customElement lr-sequence-strip
  * @csspart base - The root strip wrapper (`role="list"`).
@@ -90,7 +93,8 @@ export class LyraSequenceStrip extends LyraElement {
   private _items: readonly SequenceStripItem[] = [];
   private _categories: readonly SequenceStripCategory[] = [];
 
-  /** Canonical item snapshot. Duplicate ids use the first entry. */
+  /** Frozen snapshot of at most the first 10,000 items. Duplicate ids use the first entry. Reassign
+   * to update. */
   @property({ attribute: false })
   get items(): readonly SequenceStripItem[] { return this._items; }
   set items(value: readonly SequenceStripItem[]) {
@@ -98,22 +102,27 @@ export class LyraSequenceStrip extends LyraElement {
     const seen = new Set<string>();
     const next: SequenceStripItem[] = [];
     if (Array.isArray(value)) {
-      for (const item of value) {
-        if (!item || typeof item.id !== 'string' || !item.id || seen.has(item.id)) continue;
-        seen.add(item.id);
-        next.push(Object.freeze({
-          id: item.id,
-          categoryId: typeof item.categoryId === 'string' ? item.categoryId : '',
-          ...(item.marker === undefined ? {} : { marker: Boolean(item.marker) }),
-          ...(typeof item.label === 'string' ? { label: item.label } : {}),
-        }));
+      for (const item of value.slice(0, MAX_SEQUENCE_COLLECTION_ENTRIES)) {
+        try {
+          if (!item || typeof item.id !== 'string' || !item.id || seen.has(item.id)) continue;
+          seen.add(item.id);
+          next.push(Object.freeze({
+            id: item.id,
+            categoryId: typeof item.categoryId === 'string' ? item.categoryId : '',
+            ...(item.marker === undefined ? {} : { marker: Boolean(item.marker) }),
+            ...(typeof item.label === 'string' ? { label: item.label } : {}),
+          }));
+        } catch {
+          // Retain later valid entries when an untyped record getter throws.
+        }
       }
     }
     this._items = Object.freeze(next);
     this.requestUpdate('items', previous);
   }
 
-  /** Canonical category snapshot. Duplicate ids use the first entry. */
+  /** Frozen snapshot of at most the first 10,000 categories. Duplicate ids use the first entry.
+   * Reassign to update. */
   @property({ attribute: false })
   get categories(): readonly SequenceStripCategory[] { return this._categories; }
   set categories(value: readonly SequenceStripCategory[]) {
@@ -121,14 +130,18 @@ export class LyraSequenceStrip extends LyraElement {
     const seen = new Set<string>();
     const next: SequenceStripCategory[] = [];
     if (Array.isArray(value)) {
-      for (const category of value) {
-        if (!category || typeof category.id !== 'string' || !category.id || seen.has(category.id)) continue;
-        seen.add(category.id);
-        next.push(Object.freeze({
-          id: category.id,
-          color: typeof category.color === 'string' ? category.color : '',
-          ...(typeof category.label === 'string' ? { label: category.label } : {}),
-        }));
+      for (const category of value.slice(0, MAX_SEQUENCE_COLLECTION_ENTRIES)) {
+        try {
+          if (!category || typeof category.id !== 'string' || !category.id || seen.has(category.id)) continue;
+          seen.add(category.id);
+          next.push(Object.freeze({
+            id: category.id,
+            color: typeof category.color === 'string' ? category.color : '',
+            ...(typeof category.label === 'string' ? { label: category.label } : {}),
+          }));
+        } catch {
+          // Retain later valid entries when an untyped record getter throws.
+        }
       }
     }
     this._categories = Object.freeze(next);

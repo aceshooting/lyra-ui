@@ -27,6 +27,7 @@ import {
   rangeFromTextQuoteMatch,
   scopeFromElement,
   TEXT_QUOTE_LIMITS,
+  TEXT_SELECTION_RECT_LIMIT,
   type TextQuoteIndex,
   type TextQuoteMatches,
   type TextQuoteScope,
@@ -474,13 +475,22 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     const doc = new DOMParserCtor().parseFromString(sanitizedHtml, 'text/html');
     const slugger = new Slugger();
     const tree: DocxHeadingItem[] = [];
-    doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((heading) => {
+    const walker = doc.createTreeWalker(doc.body, 0x1 /* NodeFilter.SHOW_ELEMENT */);
+    let inspected = 0;
+    let node: Node | null;
+    while (
+      inspected < TEXT_QUOTE_LIMITS.maxTraversalNodes
+      && (node = walker.nextNode())
+    ) {
+      inspected++;
+      const heading = node as Element;
+      if (!/^H[1-6]$/.test(heading.tagName)) continue;
       const level = Number(heading.tagName.slice(1));
       const label = (heading.textContent ?? '').trim();
       const slug = slugger.slug(label);
       if (slug) heading.id = slug;
       tree.push({ id: slug, label, level });
-    });
+    }
     this.headingTree = tree;
     return doc.body.innerHTML;
   }
@@ -507,29 +517,40 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private applyFragmentAnchor(root: Element, anchor: Extract<LyraAnchor, { kind: 'fragment' }>): boolean {
     if (!anchor.id) return false;
-    const known = this.headingTree.some((h) => h.id === anchor.id);
-    if (!known) return false;
+    let expectedIndex = -1;
+    const headingLimit = Math.min(this.headingTree.length, TEXT_QUOTE_LIMITS.maxTraversalNodes);
+    for (let index = 0; index < headingLimit; index++) {
+      if (this.headingTree[index]?.id === anchor.id) {
+        expectedIndex = index;
+        break;
+      }
+    }
+    if (expectedIndex < 0) return false;
     // Fragment anchors are heading ids, so scan that fixed set and compare the raw attribute.
     // This accepts selector punctuation and works in adopted/partial DOM realms with no
     // `CSS.escape`, while the positional fallback below still covers sanitizer-stripped ids.
-    const el = [...root.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')]
-      .find((heading) => heading.getAttribute('id') === anchor.id) ??
-      this.findHeadingByComputedId(root, anchor.id);
+    const walker = root.ownerDocument.createTreeWalker(root, 0x1 /* NodeFilter.SHOW_ELEMENT */);
+    let inspected = 0;
+    let headingIndex = 0;
+    let idMatch: Element | null = null;
+    let positionalMatch: Element | null = null;
+    let node: Node | null;
+    while (
+      inspected < TEXT_QUOTE_LIMITS.maxTraversalNodes
+      && (node = walker.nextNode())
+    ) {
+      inspected++;
+      const heading = node as Element;
+      if (!/^H[1-6]$/.test(heading.tagName)) continue;
+      if (heading.getAttribute('id') === anchor.id) idMatch ??= heading;
+      if (headingIndex === expectedIndex) positionalMatch = heading;
+      headingIndex++;
+      if (idMatch && positionalMatch) break;
+    }
+    const el = idMatch ?? positionalMatch;
     if (!el) return false;
     el.scrollIntoView({ behavior: prefersReducedMotion(this.ownerDocument.defaultView) ? 'auto' : 'smooth', block: 'start' });
     return true;
-  }
-
-  /** DOMPurify's DOM-clobbering protection (`SANITIZE_DOM`, on by default) strips an `id` whose
-   *  *value* collides with a real `document` property name (e.g. a heading titled "Title" slugs to
-   *  `id="title"`, colliding with `document.title`) -- re-derives the same slug order
-   *  `getHeadingTree()` was built in and matches by position instead of by attribute, so such a
-   *  heading is still reachable even without a DOM `id` present. */
-  private findHeadingByComputedId(root: Element, id: string): Element | null {
-    const index = this.headingTree.findIndex((h) => h.id === id);
-    if (index < 0) return null;
-    const headings = root.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    return headings[index] ?? null;
   }
 
   private applyTextQuoteAnchor(root: Element, anchor: Extract<LyraAnchor, { kind: 'text-quote' }>): boolean {
@@ -598,8 +619,20 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       // module is shared by every adopting viewer, so it can't know this component's part naming)
       // -- stamped here so a consumer can still target `::part(highlight)` in browsers lacking the
       // CSS Custom Highlight API.
-      for (const mark of root.querySelectorAll('mark[data-lr-highlight-tone]')) {
-        if (!mark.hasAttribute('part')) mark.setAttribute('part', 'highlight');
+      const walker = root.ownerDocument.createTreeWalker(root, 0x1 /* NodeFilter.SHOW_ELEMENT */);
+      let inspected = 0;
+      let node: Node | null;
+      while (
+        inspected < TEXT_QUOTE_LIMITS.maxTraversalNodes + MAX_DOCX_PAINTED_HIGHLIGHTS
+        && (node = walker.nextNode())
+      ) {
+        inspected++;
+        const mark = node as Element;
+        if (
+          mark.localName === 'mark'
+          && mark.hasAttribute('data-lr-highlight-tone')
+          && !mark.hasAttribute('part')
+        ) mark.setAttribute('part', 'highlight');
       }
     }
   }
@@ -637,9 +670,11 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
    *  topmost (last-resolved) first -- the CSS Custom Highlight API paints ranges without creating
    *  any DOM element to attach a click listener to, so this works identically on both paint paths. */
   private hitTestHighlightAt(x: number, y: number): string | null {
+    let remainingRects = TEXT_SELECTION_RECT_LIMIT;
     for (let i = this.resolvedHighlightRanges.length - 1; i >= 0; i--) {
       const { highlight, range } = this.resolvedHighlightRanges[i]!; // safe: i in [0, length)
       for (const rect of range.getClientRects()) {
+        if (remainingRects-- <= 0) return null;
         if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
           return highlight.id;
         }

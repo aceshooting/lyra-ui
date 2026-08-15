@@ -1,10 +1,11 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { composedParentElement } from '../../../internal/active-element.js';
 import {
-  isAccessibilityVisible,
-} from '../../../internal/accessibility-visibility.js';
+  acquireAnnouncementSink,
+  type AnnouncementSink,
+} from '../../../internal/announcer.js';
+import { composedParentElement } from '../../../internal/active-element.js';
+import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
 import { composedAccessibilityText } from '../../../internal/announcement-text.js';
 import {
   applyComposedFocusRepair,
@@ -12,10 +13,20 @@ import {
   collectComposedFocusTargets,
 } from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import {
+  resolveHeadingLevel,
+  type LyraHeadingLevel,
+} from '../../../internal/heading-level.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import type { LyraAppearance, LyraSize, LyraVariant } from '../../../internal/variants.js';
-import { contextualSizes, contextualVariants } from '../../../internal/contextual-vocabulary.styles.js';
+import type {
+  LyraAppearance,
+  LyraSize,
+  LyraVariant,
+} from '../../../internal/variants.js';
+import {
+  contextualSizes,
+  contextualVariants,
+} from '../../../internal/contextual-vocabulary.styles.js';
 import { styles } from './callout.styles.js';
 import {
   literalSetConverter,
@@ -23,9 +34,11 @@ import {
 } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_calloutAnnouncementWithContext, LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.js';
+import {
+  LYRA_DEFAULT_calloutAnnouncementWithContext,
+  LYRA_DEFAULT_close,
+} from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** The library's one semantic-tone vocabulary. */
 export type CalloutVariant = LyraVariant;
@@ -33,20 +46,28 @@ export type CalloutVariant = LyraVariant;
 export type CalloutAppearance = LyraAppearance;
 /** The library's one size ladder, in either spelling. */
 export type CalloutSize = LyraSize;
-export interface LyraCalloutEventMap { 'lr-close': CustomEvent<null>; }
+export interface LyraCalloutEventMap {
+  'lr-close': CustomEvent<null>;
+}
 
 const CALLOUT_VARIANT = literalSetConverter<CalloutVariant>(
   ['brand', 'neutral', 'success', 'warning', 'danger'],
-  'brand',
+  'brand'
 );
-const CALLOUT_VARIANTS = new Set<CalloutVariant>(['brand', 'neutral', 'success', 'warning', 'danger']);
+const CALLOUT_VARIANTS = new Set<CalloutVariant>([
+  'brand',
+  'neutral',
+  'success',
+  'warning',
+  'danger',
+]);
 const CALLOUT_SIZE = literalSetConverter<CalloutSize>(
   ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
-  'm',
+  'm'
 );
 const CALLOUT_HEADING_LEVEL = literalSetConverter<LyraHeadingLevel>(
   ['1', '2', '3', '4', '5', '6', 'none'],
-  '3',
+  '3'
 );
 const CALLOUT_APPEARANCES = new Set<CalloutAppearance>([
   'accent',
@@ -55,9 +76,12 @@ const CALLOUT_APPEARANCES = new Set<CalloutAppearance>([
   'filled-outlined',
   'plain',
 ]);
-const normalizeCalloutAppearance = (value: unknown): CalloutAppearance | undefined =>
-  typeof value === 'string' && CALLOUT_APPEARANCES.has(value as CalloutAppearance)
-    ? value as CalloutAppearance
+const normalizeCalloutAppearance = (
+  value: unknown
+): CalloutAppearance | undefined =>
+  typeof value === 'string' &&
+  CALLOUT_APPEARANCES.has(value as CalloutAppearance)
+    ? (value as CalloutAppearance)
     : undefined;
 const calloutAppearanceConverter = {
   fromAttribute: normalizeCalloutAppearance,
@@ -81,14 +105,21 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
     mode: 'programmatic',
   }).elements;
   const owned = targets
-    .map((target, index) => isComposedWithin(owner, target) ? index : -1)
+    .map((target, index) => (isComposedWithin(owner, target) ? index : -1))
     .filter((index) => index >= 0);
   if (owned.length === 0) return null;
   const first = owned[0]!;
   const last = owned[owned.length - 1]!;
-  return targets.slice(last + 1).find((target) => !isComposedWithin(owner, target))
-    ?? targets.slice(0, first).reverse().find((target) => !isComposedWithin(owner, target))
-    ?? null;
+  return (
+    targets
+      .slice(last + 1)
+      .find((target) => !isComposedWithin(owner, target)) ??
+    targets
+      .slice(0, first)
+      .reverse()
+      .find((target) => !isComposedWithin(owner, target)) ??
+    null
+  );
 }
 
 /**
@@ -136,11 +167,13 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  *   affecting the other (e.g. keeping the hover fill visibly distinct from a `variant="brand"`
  *   panel, which shares the same default token).
  * @cssprop [--lr-callout-font-size=var(--lr-form-control-font-size,var(--lr-font-size-m))] - The callout's text size.
- *   Each `size` tier sets it from the library's shared size ladder.
+ *   Its private default follows the library's shared size ladder; an inherited or direct public
+ *   value remains authoritative.
  * @cssprop [--lr-callout-padding=var(--lr-form-control-padding-inline,var(--lr-space-m))] - Padding of the panel, on
- *   both axes. Each `size` tier sets it from the shared ladder's inline-padding knob: a panel's
+ *   both axes. Its private default follows the shared ladder's inline-padding knob: a panel's
  *   block rhythm is generous like a control's inline padding, not tight like its block padding
- *   (which exists to fit text inside a fixed control height). `inline` removes it entirely.
+ *   (which exists to fit text inside a fixed control height). `inline` removes that private
+ *   default entirely; an inherited or direct public value remains authoritative.
  * @cssprop [--lr-callout-gap=var(--lr-space-s)] - Space between the icon, the content, and the
  *   close action. Deliberately does not vary by `size`: it separates three adjacent boxes rather
  *   than setting the panel's density, and shrinking it at the small tiers only crowds them.
@@ -150,14 +183,21 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
 export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    calloutAnnouncementWithContext: LYRA_DEFAULT_calloutAnnouncementWithContext,
-    close: LYRA_DEFAULT_close,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      calloutAnnouncementWithContext:
+        LYRA_DEFAULT_calloutAnnouncementWithContext,
+      close: LYRA_DEFAULT_close,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, contextualVariants, contextualSizes, styles];
+  static override styles = [
+    LyraElement.styles,
+    contextualVariants,
+    contextualSizes,
+    styles,
+  ];
 
   /** Semantic palette. The property defaults to `brand` without forcing an attribute, allowing an
    *  unset nested callout to inherit its containing semantic context. Explicitly assigning
@@ -170,7 +210,11 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     return this._variant;
   }
   set variant(next: CalloutVariant) {
-    const normalized = CALLOUT_VARIANT.normalizeReflected(this, 'variant', next);
+    const normalized = CALLOUT_VARIANT.normalizeReflected(
+      this,
+      'variant',
+      next
+    );
     const old = this._variant;
     if (old === normalized) return;
     this._variant = normalized;
@@ -188,7 +232,10 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   }
   set appearance(next: CalloutAppearance) {
     const normalized = normalizeCalloutAppearance(next);
-    if (this.hasAttribute('appearance') && this.getAttribute('appearance') !== normalized) {
+    if (
+      this.hasAttribute('appearance') &&
+      this.getAttribute('appearance') !== normalized
+    ) {
       if (normalized === undefined) this.removeAttribute('appearance');
       else this.setAttribute('appearance', normalized);
     }
@@ -220,12 +267,20 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
    *  invalid attributes and untyped writes normalize to reflected level 3. */
   private _headingLevel: LyraHeadingLevel = '3';
 
-  @property({ attribute: 'heading-level', reflect: true, converter: CALLOUT_HEADING_LEVEL })
+  @property({
+    attribute: 'heading-level',
+    reflect: true,
+    converter: CALLOUT_HEADING_LEVEL,
+  })
   get headingLevel(): LyraHeadingLevel {
     return this._headingLevel;
   }
   set headingLevel(next: LyraHeadingLevel) {
-    const normalized = CALLOUT_HEADING_LEVEL.normalizeReflected(this, 'heading-level', next);
+    const normalized = CALLOUT_HEADING_LEVEL.normalizeReflected(
+      this,
+      'heading-level',
+      next
+    );
     const old = this._headingLevel;
     if (old === normalized) return;
     this._headingLevel = normalized;
@@ -234,7 +289,12 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   @property({ type: Boolean, reflect: true }) closable = false;
   @property({ type: Boolean, reflect: true }) inline = false;
 
-  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) open = true;
+  @property({
+    type: Boolean,
+    reflect: true,
+    converter: trueDefaultBooleanConverter,
+  })
+  open = true;
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   private readonly slotPresence = new SlotPresenceController(this);
   private liveActive = false;
@@ -255,12 +315,15 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
       document: this.ownerDocument,
       source: this,
     });
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
+    const MutationObserverCtor =
+      this.ownerDocument.defaultView?.MutationObserver;
     if (MutationObserverCtor) {
       this.contentObserver = new MutationObserverCtor((records) => {
         if (
           records.some(
-            (record) => !this.contains(record.target) || this.isAnnouncementMutation(record),
+            (record) =>
+              !this.contains(record.target) ||
+              this.isAnnouncementMutation(record)
           )
         ) {
           this.observeAnnouncementContent();
@@ -276,7 +339,9 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
       .then(() => {
         const view = this.ownerDocument?.defaultView;
         return typeof view?.requestAnimationFrame === 'function'
-          ? new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()))
+          ? new Promise<void>((resolve) =>
+              view.requestAnimationFrame(() => resolve())
+            )
           : Promise.resolve();
       })
       .then(() => this.updateComplete)
@@ -305,7 +370,11 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (!this.liveActive || !this.open) return;
-    if (changed.has('open') || changed.has('heading') || changed.has('accessibleLabel')) {
+    if (
+      changed.has('open') ||
+      changed.has('heading') ||
+      changed.has('accessibleLabel')
+    ) {
       this.announceCurrentContent(changed.has('open'));
     }
   }
@@ -313,18 +382,28 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('open') && !this.open) {
-      const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
+      const repair = captureComposedFocusRepair(
+        this,
+        nearestExternalFocusTarget(this)
+      );
       if (repair) applyComposedFocusRepair(repair);
     }
   }
 
   private isAnnouncementMutation(record: MutationRecord): boolean {
     if (record.target === this) {
-      return record.type === 'childList' ||
+      return (
+        record.type === 'childList' ||
         (record.type === 'attributes' &&
-          ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'style'].includes(
-            record.attributeName ?? '',
-          ));
+          [
+            'aria-hidden',
+            'aria-label',
+            'class',
+            'hidden',
+            'inert',
+            'style',
+          ].includes(record.attributeName ?? ''))
+      );
     }
     let top: Node = record.target;
     while (top.parentNode && top.parentNode !== this) top = top.parentNode;
@@ -348,7 +427,17 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   private announcementObservationOptions(): MutationObserverInit {
     return {
       attributes: true,
-      attributeFilter: ['alt', 'aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'open', 'slot', 'style'],
+      attributeFilter: [
+        'alt',
+        'aria-hidden',
+        'aria-label',
+        'class',
+        'hidden',
+        'inert',
+        'open',
+        'slot',
+        'style',
+      ],
       characterData: true,
       childList: true,
       subtree: true,
@@ -356,11 +445,13 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   }
 
   private announcementForwardingSlots(): HTMLSlotElement[] {
-    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
-      let top: Node = slot;
-      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
-      return top.parentNode === this && this.isAnnouncementSlotNode(top);
-    });
+    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter(
+      (slot) => {
+        let top: Node = slot;
+        while (top.parentNode && top.parentNode !== this) top = top.parentNode;
+        return top.parentNode === this && this.isAnnouncementSlotNode(top);
+      }
+    );
   }
 
   private observeAnnouncementContent(): void {
@@ -390,17 +481,25 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
 
   private resolvedAccessibleLabel(): string {
     const hostLabel = this.getAttribute('aria-label');
-    return this.normalizedText(hostLabel !== null ? hostLabel : this.accessibleLabel);
+    return this.normalizedText(
+      hostLabel !== null ? hostLabel : this.accessibleLabel
+    );
   }
 
   private announcementText(): string {
     if (!isAccessibilityVisible(this)) return '';
     const hostLabel = this.getAttribute('aria-label');
-    const context = this.normalizedText(hostLabel !== null ? hostLabel : this.accessibleLabel);
+    const context = this.normalizedText(
+      hostLabel !== null ? hostLabel : this.accessibleLabel
+    );
     const heading = [
       this.heading,
       ...Array.from(this.childNodes)
-        .filter((node) => node.nodeType === 1 && (node as Element).getAttribute('slot') === 'heading')
+        .filter(
+          (node) =>
+            node.nodeType === 1 &&
+            (node as Element).getAttribute('slot') === 'heading'
+        )
         .map((node) => composedAccessibilityText(node)),
     ];
     const message = Array.from(this.childNodes)
@@ -413,7 +512,10 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     const content = this.normalizedText([...heading, ...message].join(' '));
     if (!context || context === content) return content;
     return content
-      ? this.localize('calloutAnnouncementWithContext', undefined, { context, content })
+      ? this.localize('calloutAnnouncementWithContext', undefined, {
+          context,
+          content,
+        })
       : context;
   }
 
@@ -422,7 +524,10 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     const text = this.announcementText();
     if (!force && text === this.lastAnnouncementText) return;
     this.lastAnnouncementText = text;
-    (this.effectiveContextualVariant === 'danger' ? this.assertiveSink : this.politeSink)?.announce(text);
+    (this.effectiveContextualVariant === 'danger'
+      ? this.assertiveSink
+      : this.politeSink
+    )?.announce(text);
   }
 
   /** Resolve the same contextual tone that the inherited CSS vocabulary paints. An explicit local
@@ -432,14 +537,19 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     if (this.hasAttribute('variant')) return this.variant;
     let ancestor = composedParentElement(this);
     while (ancestor) {
-      const candidate = ancestor.getAttribute('variant') as CalloutVariant | null;
+      const candidate = ancestor.getAttribute(
+        'variant'
+      ) as CalloutVariant | null;
       if (candidate && CALLOUT_VARIANTS.has(candidate)) return candidate;
       ancestor = composedParentElement(ancestor);
     }
     return 'brand';
   }
   private close = (): void => {
-    const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
+    const repair = captureComposedFocusRepair(
+      this,
+      nearestExternalFocusTarget(this)
+    );
     const event = this.emit('lr-close', null, { cancelable: true });
     if (!event.defaultPrevented) {
       if (repair) applyComposedFocusRepair(repair);
@@ -450,20 +560,43 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     if (!this.open) return html``;
     const label = this.resolvedAccessibleLabel() || undefined;
     const headingLevel = resolveHeadingLevel(this.headingLevel);
-    return html`<div part="base" role=${label ? 'group' : nothing}
-      aria-label=${label || nothing}>
-      <span part="icon" aria-hidden="true" inert ?hidden=${!this.slotPresence.has('icon')}><slot name="icon"></slot></span>
+    return html`<div
+      part="base"
+      role=${label ? "group" : nothing}
+      aria-label=${label || nothing}
+    >
+      <span
+        part="icon"
+        aria-hidden="true"
+        inert
+        ?hidden=${!this.slotPresence.has("icon")}
+        ><slot name="icon"></slot
+      ></span>
       <div part="content">
         <div
           part="heading"
-          role=${headingLevel ? 'heading' : nothing}
+          role=${headingLevel ? "heading" : nothing}
           aria-level=${headingLevel ?? nothing}
-          ?hidden=${!this.heading && !this.slotPresence.has('heading')}
-        >${this.heading}<slot name="heading"></slot></div>
+          ?hidden=${!this.heading && !this.slotPresence.has("heading")}
+        >
+          ${this.heading}<slot name="heading"></slot>
+        </div>
         <div part="message"><slot></slot></div>
       </div>
-      <button type="button" part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}><span part="close-icon" aria-hidden="true" inert>×</span></button>
+      <button
+        type="button"
+        part="close-button"
+        ?hidden=${!this.closable}
+        aria-label=${this.localize("close")}
+        @click=${this.close}
+      >
+        <span part="close-icon" aria-hidden="true" inert>×</span>
+      </button>
     </div>`;
   }
 }
-declare global { interface HTMLElementTagNameMap { 'lr-callout': LyraCallout; } }
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-callout': LyraCallout;
+  }
+}

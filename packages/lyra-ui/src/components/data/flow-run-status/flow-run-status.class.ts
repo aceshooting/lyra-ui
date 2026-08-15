@@ -80,7 +80,8 @@ export class LyraFlowRunStatus extends LyraElement {
 
   @property() for = '';
   private _decorations: FlowRunDecorations = Object.freeze({});
-  /** Detached, deeply frozen decoration snapshot. Invalid status entries are omitted. */
+  /** Detached, deeply frozen decoration snapshot, bounded to 10,000 keys and a finite nested-data
+   * budget. Invalid status entries are omitted; reassign the record to update. */
   @property({ attribute: false })
   get decorations(): FlowRunDecorations {
     return this._decorations;

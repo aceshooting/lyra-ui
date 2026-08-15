@@ -8,8 +8,16 @@ import { literalSetConverter } from "../../../internal/converters.js";
 import type { LyraStreamPhase } from "../../../internal/stream-phase.js";
 import { styles } from "./stream-status.styles.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_audioVisualizerIdle, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled } from '../../../internal/default-strings.generated.js';
+import type { LyraLocaleStrings } from "../../../internal/localization.js";
+import {
+  LYRA_DEFAULT_audioVisualizerIdle,
+  LYRA_DEFAULT_realtimeSessionConnecting,
+  LYRA_DEFAULT_statusRunning,
+  LYRA_DEFAULT_streamRecoverAnnounce,
+  LYRA_DEFAULT_streamStallAnnounce,
+  LYRA_DEFAULT_streamStallClearedAnnounce,
+  LYRA_DEFAULT_streamStalled,
+} from "../../../internal/default-strings.generated.js";
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type StreamConnectionState = Exclude<LyraStreamPhase, "stalled">;
@@ -116,12 +124,12 @@ export interface LyraStreamStatusEventMap {
  * @csspart message - Wrapper around the default slot; only rendered while readonly `phase` is `stalled`.
  * @csspart actions - Wrapper around the `actions` slot.
  * @cssprop [--lr-stream-status-dot-color=var(--lr-color-text-quiet)] - `indicator` dot color.
- *   Its unset default is swapped by reflected `connection-state` and the component-owned
+ *   Its private default changes with reflected `connection-state` and the component-owned
  *   `data-stalled` state: `var(--lr-color-brand)` for
  *   `connecting`/`streaming`, `var(--lr-color-warning)` for `stalled`. Set it on the element or
  *   any ancestor; an element value wins.
- * @cssprop [--lr-stream-status-dot-opacity=0.35] - `indicator` dot opacity. Its unset default is
- *   swapped by those same host states: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
+ * @cssprop [--lr-stream-status-dot-opacity=0.35] - `indicator` dot opacity. Its private default
+ *   changes with those same host states: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
  *   Set it on the element or any ancestor; an element value wins.
  * @cssprop [--lr-stream-status-stalled-bg=var(--lr-color-warning-quiet)] - `base` row background
  *   while `data-stalled` is present.
@@ -136,16 +144,17 @@ export interface LyraStreamStatusEventMap {
 export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    audioVisualizerIdle: LYRA_DEFAULT_audioVisualizerIdle,
-    realtimeSessionConnecting: LYRA_DEFAULT_realtimeSessionConnecting,
-    statusRunning: LYRA_DEFAULT_statusRunning,
-    streamRecoverAnnounce: LYRA_DEFAULT_streamRecoverAnnounce,
-    streamStallAnnounce: LYRA_DEFAULT_streamStallAnnounce,
-    streamStallClearedAnnounce: LYRA_DEFAULT_streamStallClearedAnnounce,
-    streamStalled: LYRA_DEFAULT_streamStalled,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      audioVisualizerIdle: LYRA_DEFAULT_audioVisualizerIdle,
+      realtimeSessionConnecting: LYRA_DEFAULT_realtimeSessionConnecting,
+      statusRunning: LYRA_DEFAULT_statusRunning,
+      streamRecoverAnnounce: LYRA_DEFAULT_streamRecoverAnnounce,
+      streamStallAnnounce: LYRA_DEFAULT_streamStallAnnounce,
+      streamStallClearedAnnounce: LYRA_DEFAULT_streamStallClearedAnnounce,
+      streamStalled: LYRA_DEFAULT_streamStalled,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];

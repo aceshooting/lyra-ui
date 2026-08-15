@@ -21,9 +21,12 @@ import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import {
+  LYRA_DEFAULT_remove,
+  LYRA_DEFAULT_removeWithContext,
+  LYRA_DEFAULT_select,
+} from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 /** The library's one semantic-tone vocabulary. */
 export type ChipVariant = LyraVariant;
@@ -33,11 +36,11 @@ export type ChipSize = LyraSizeStep | '3xs';
 
 const CHIP_SIZE = literalSetConverter<ChipSize>(
   ['3xs', '2xs', 'xs', 's', 'm', 'l', 'xl'],
-  'm',
+  'm'
 );
 const CHIP_VARIANT = literalSetConverter<ChipVariant>(
   ['neutral', 'brand', 'success', 'warning', 'danger'],
-  'neutral',
+  'neutral'
 );
 
 export interface ChipRemoveDetail {
@@ -64,18 +67,28 @@ function isComposedWithin(owner: Element, candidate: Element): boolean {
 }
 
 function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
-  const targets = collectComposedFocusTargets(owner.ownerDocument.documentElement, {
-    mode: 'programmatic',
-  }).elements;
+  const targets = collectComposedFocusTargets(
+    owner.ownerDocument.documentElement,
+    {
+      mode: 'programmatic',
+    }
+  ).elements;
   const owned = targets
-    .map((target, index) => isComposedWithin(owner, target) ? index : -1)
+    .map((target, index) => (isComposedWithin(owner, target) ? index : -1))
     .filter((index) => index >= 0);
   if (owned.length === 0) return null;
   const first = owned[0]!;
   const last = owned[owned.length - 1]!;
-  return targets.slice(last + 1).find((target) => !isComposedWithin(owner, target))
-    ?? targets.slice(0, first).reverse().find((target) => !isComposedWithin(owner, target))
-    ?? null;
+  return (
+    targets
+      .slice(last + 1)
+      .find((target) => !isComposedWithin(owner, target)) ??
+    targets
+      .slice(0, first)
+      .reverse()
+      .find((target) => !isComposedWithin(owner, target)) ??
+    null
+  );
 }
 
 function sourceParent(node: Node): Element | null {
@@ -84,19 +97,34 @@ function sourceParent(node: Node): Element | null {
   return 'host' in root ? root.host : null;
 }
 
-function isClosedSourceDetailsBranch(details: Element, branch: Element | null): boolean {
-  if (details.localName !== 'details' || details.hasAttribute('open') || branch === null) return false;
-  return Array.from(details.children).find((child) => child.localName === 'summary') !== branch;
+function isClosedSourceDetailsBranch(
+  details: Element,
+  branch: Element | null
+): boolean {
+  if (
+    details.localName !== 'details' ||
+    details.hasAttribute('open') ||
+    branch === null
+  )
+    return false;
+  return (
+    Array.from(details.children).find(
+      (child) => child.localName === 'summary'
+    ) !== branch
+  );
 }
 
 function isSourceLabelAvailable(node: Node): boolean {
-  const target = node.nodeType === 1 ? node as Element : sourceParent(node);
+  const target = node.nodeType === 1 ? (node as Element) : sourceParent(node);
   if (!target?.isConnected) return false;
   let branch: Element | null = target;
   let current = sourceParent(target);
   if (isAccessibilitySubtreeExcluded(target)) return false;
   while (current) {
-    if (isAccessibilitySubtreeExcluded(current) || isClosedSourceDetailsBranch(current, branch)) {
+    if (
+      isAccessibilitySubtreeExcluded(current) ||
+      isClosedSourceDetailsBranch(current, branch)
+    ) {
       return false;
     }
     branch = current;
@@ -183,11 +211,14 @@ function isSourceLabelAvailable(node: Node): boolean {
  * button, kept in sync so retuning one retunes both. `pill` changes its private default to
  * `var(--lr-radius-pill)`. Does not vary by `size` tier.
  * @cssprop [--lr-chip-icon-size=var(--lr-font-size-sm)] - Font size of the `start` slot wrapper.
- * Each `size` sets it to that step's icon size.
+ * Its private default follows each `size` step's icon size; an inherited or direct public value
+ * remains authoritative.
  * @cssprop [--lr-chip-padding-block=var(--lr-size-0-25rem)] - Block padding of the pill. Each
- * `size` sets it to that step's block padding.
+ * `size` changes its private default to that step's block padding; an inherited or direct public
+ * value remains authoritative.
  * @cssprop [--lr-chip-padding-inline=var(--lr-space-s)] - Inline padding of the pill. Each `size`
- * sets it to that step's inline padding.
+ * changes its private default to that step's inline padding; an inherited or direct public value
+ * remains authoritative.
  * @cssprop [--lr-chip-min-height=var(--lr-size-1-5rem)] - Component density floor for an
  * interactive chip. The real toggle/remove controls also enforce the shared
  * `--lr-icon-button-size` target floor.
@@ -204,12 +235,13 @@ function isSourceLabelAvailable(node: Node): boolean {
 export class LyraChip extends LyraElement<LyraChipEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    remove: LYRA_DEFAULT_remove,
-    removeWithContext: LYRA_DEFAULT_removeWithContext,
-    select: LYRA_DEFAULT_select,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      remove: LYRA_DEFAULT_remove,
+      removeWithContext: LYRA_DEFAULT_removeWithContext,
+      select: LYRA_DEFAULT_select,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, variants, styles];
@@ -308,7 +340,8 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     if (this.hasUpdated) {
       sampleBrowserState();
       this.ownerDocument.defaultView?.queueMicrotask(() => {
-        if (this.isConnected && this.tracksActionLabel) this.recomputeLabelText();
+        if (this.isConnected && this.tracksActionLabel)
+          this.recomputeLabelText();
       });
     } else this.seedFirstRenderState(sampleBrowserState);
   }
@@ -321,8 +354,8 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
     if (!this.isConnected || !this.tracksActionLabel) return;
-    const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
-      ?.MutationObserver;
+    const MutationObserverCtor = (this.ownerDocument as Document | undefined)
+      ?.defaultView?.MutationObserver;
     this.labelObserver = MutationObserverCtor
       ? new MutationObserverCtor(() => {
           this.bindLabelObserverTargets();
@@ -350,9 +383,12 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private recomputeHasStartSlot(): void {
-    const children = (this as unknown as { children?: HTMLCollection }).children;
+    const children = (this as unknown as { children?: HTMLCollection })
+      .children;
     if (!children) return;
-    this.hasStartSlot = Array.from(children).some((el) => el.getAttribute('slot') === 'start');
+    this.hasStartSlot = Array.from(children).some(
+      (el) => el.getAttribute('slot') === 'start'
+    );
   }
 
   private onStartSlotChange = (e: Event): void => {
@@ -365,9 +401,12 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   };
 
   private recomputeHasEndSlot(): void {
-    const children = (this as unknown as { children?: HTMLCollection }).children;
+    const children = (this as unknown as { children?: HTMLCollection })
+      .children;
     if (!children) return;
-    this.hasEndSlot = Array.from(children).some((el) => el.getAttribute('slot') === 'end');
+    this.hasEndSlot = Array.from(children).some(
+      (el) => el.getAttribute('slot') === 'end'
+    );
   }
 
   private onEndSlotChange = (e: Event): void => {
@@ -391,30 +430,36 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   private computeLabelText(preferLightDom = false): string {
     const renderRoot = this.renderRoot as ParentNode | undefined;
     const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
-    const lightDomNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
+    const lightDomNodes = (
+      this as unknown as { childNodes?: NodeListOf<ChildNode> }
+    ).childNodes;
     const assigned = slot?.assignedNodes({ flatten: true }) ?? [];
     const direct = Array.from(lightDomNodes ?? []).filter(
-          (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
-        );
+      (node) =>
+        node.nodeType !== 1 ||
+        ((node as Element).getAttribute('slot') ?? '') === ''
+    );
     const nodes = !preferLightDom && assigned.length > 0 ? assigned : direct;
     return nodes
-      .map((node) => composedAccessibilityText(node, {
-        ancestorBoundary: this,
-        // Toggle mode makes projected label content inert because the sibling button owns the
-        // interaction. Ignore only that internal fence when deriving the button's own name.
-        isSubtreeExcluded: (element) =>
-          element.getRootNode() === this.renderRoot &&
-          element.getAttribute('part')?.split(/\s+/).includes('label')
+      .map((node) =>
+        composedAccessibilityText(node, {
+          ancestorBoundary: this,
+          // Toggle mode makes projected label content inert because the sibling button owns the
+          // interaction. Ignore only that internal fence when deriving the button's own name.
+          isSubtreeExcluded: (element) =>
+            element.getRootNode() === this.renderRoot &&
+            element.getAttribute('part')?.split(/\s+/).includes('label')
+              ? false
+              : isAccessibilitySubtreeExcluded(element),
+          // A reconnect sample can precede layout in the new owner realm. It still honors authored
+          // hidden/inert/ARIA state and is replaced by the ordinary rendered sample on slotchange.
+          requireRendered: preferLightDom
             ? false
-            : isAccessibilitySubtreeExcluded(element),
-        // A reconnect sample can precede layout in the new owner realm. It still honors authored
-        // hidden/inert/ARIA state and is replaced by the ordinary rendered sample on slotchange.
-        requireRendered: preferLightDom
-          ? false
-          : node.nodeType !== 1 || (node as Element).localName !== 'slot',
-        shouldPruneNode: (candidate) =>
-          !this.contains(candidate) && !isSourceLabelAvailable(candidate),
-      }))
+            : node.nodeType !== 1 || (node as Element).localName !== 'slot',
+          shouldPruneNode: (candidate) =>
+            !this.contains(candidate) && !isSourceLabelAvailable(candidate),
+        })
+      )
       .join(' ')
       .replace(/\s+/g, ' ')
       .trim();
@@ -438,14 +483,20 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   private get accessibleRemoveLabel(): string {
     const text = this.cachedLabelText;
-    return text ? this.localize('removeWithContext', undefined, { label: text }) : this.localize('remove');
+    return text
+      ? this.localize('removeWithContext', undefined, { label: text })
+      : this.localize('remove');
   }
 
   private onRemoveClick = (): void => {
     if (this.disabled) return;
-    const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
+    const repair = captureComposedFocusRepair(
+      this,
+      nearestExternalFocusTarget(this)
+    );
     this.emit('lr-remove', { value: this.value });
-    if (repair && (!this.isConnected || !this.removable)) applyComposedFocusRepair(repair);
+    if (repair && (!this.isConnected || !this.removable))
+      applyComposedFocusRepair(repair);
   };
 
   private onToggleClick = (): void => {
@@ -454,14 +505,14 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     const event = this.emit(
       'lr-chip-select',
       { value: this.value, selected },
-      { cancelable: true },
+      { cancelable: true }
     );
     if (!event.defaultPrevented) this.selected = selected;
   };
 
   private get primaryControl(): HTMLButtonElement | null {
     return this.renderRoot.querySelector<HTMLButtonElement>(
-      this.removable ? '[part="remove-button"]' : '[part="toggle-button"]',
+      this.removable ? '[part="remove-button"]' : '[part="toggle-button"]'
     );
   }
 
@@ -492,16 +543,26 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     const oldRemovable = changed.get('removable') ?? this.removable;
     const oldToggleable = changed.get('toggleable') ?? this.toggleable;
     const oldDisabled = changed.get('disabled') ?? this.disabled;
-    const oldMode = oldRemovable ? 'remove' : oldToggleable ? 'toggle' : 'passive';
-    const newMode = this.removable ? 'remove' : this.toggleable ? 'toggle' : 'passive';
-    if (oldMode === newMode && !(oldDisabled === false && this.disabled)) return;
-    this.pendingControlFocusRepair = captureComposedFocusRepair(
-      this,
-      nearestExternalFocusTarget(this)
-        ?? this.renderRoot.querySelector<HTMLButtonElement>(
-          '[part="remove-button"], [part="toggle-button"]',
-        ),
-    ) ?? undefined;
+    const oldMode = oldRemovable
+      ? 'remove'
+      : oldToggleable
+      ? 'toggle'
+      : 'passive';
+    const newMode = this.removable
+      ? 'remove'
+      : this.toggleable
+      ? 'toggle'
+      : 'passive';
+    if (oldMode === newMode && !(oldDisabled === false && this.disabled))
+      return;
+    this.pendingControlFocusRepair =
+      captureComposedFocusRepair(
+        this,
+        nearestExternalFocusTarget(this) ??
+          this.renderRoot.querySelector<HTMLButtonElement>(
+            '[part="remove-button"], [part="toggle-button"]'
+          )
+      ) ?? undefined;
   }
 
   protected override updated(changed: PropertyValues<this>): void {
@@ -515,7 +576,8 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private syncHostActionRole(): void {
-    const needsGroup = this.tracksActionLabel && this.hasAttribute('aria-label');
+    const needsGroup =
+      this.tracksActionLabel && this.hasAttribute('aria-label');
     if (needsGroup && !this.hasAttribute('role')) {
       this.setAttribute('role', 'group');
       this.managedActionGroupRole = true;
@@ -525,7 +587,8 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private releaseHostActionRole(): void {
-    if (this.managedActionGroupRole && this.getAttribute('role') === 'group') this.removeAttribute('role');
+    if (this.managedActionGroupRole && this.getAttribute('role') === 'group')
+      this.removeAttribute('role');
     this.managedActionGroupRole = false;
   }
 
@@ -535,27 +598,28 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     const toggleMode = this.toggleable && !this.removable;
     const pressed = this.selected && !this.removable;
     return html`
-      <span
-        part="base"
-      >
+      <span part="base">
         ${renderInertPresentation(
-          html`<slot name="start" @slotchange=${this.onStartSlotChange}></slot>`,
+          html`<slot
+            name="start"
+            @slotchange=${this.onStartSlotChange}
+          ></slot>`,
           {
-            part: 'start',
+            part: "start",
             hidden: !this.renderSlotPresence(this.hasStartSlot),
-          },
+          }
         )}
         ${renderInertPresentation(
           html`<slot @slotchange=${this.onLabelSlotChange}></slot>`,
-          { part: 'label', presentation: toggleMode },
+          { part: "label", presentation: toggleMode }
         )}
         ${renderInertPresentation(
           html`<slot name="end" @slotchange=${this.onEndSlotChange}></slot>`,
           {
-            part: 'end',
+            part: "end",
             presentation: toggleMode,
             hidden: !this.renderSlotPresence(this.hasEndSlot),
-          },
+          }
         )}
         ${toggleMode
           ? html`<button
@@ -563,7 +627,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
               type="button"
               ?disabled=${this.disabled}
               aria-label=${this.accessibleToggleLabel}
-              aria-pressed=${pressed ? 'true' : 'false'}
+              aria-pressed=${pressed ? "true" : "false"}
               @click=${this.onToggleClick}
             ></button>`
           : nothing}
@@ -582,7 +646,6 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

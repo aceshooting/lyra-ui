@@ -1,19 +1,19 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
-import { property, query } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, query } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   OrientationBreakpointController,
   type BreakpointBasis,
-} from "../../../internal/orientation-breakpoint.js";
-import type { LyraOrientation } from "../../../internal/shared-unions.js";
-import { isRtl } from "../../../internal/rtl.js";
-import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
-import { styles } from "./stepper.styles.js";
-import { getNumberFormat } from "../../../internal/intl-cache.js";
-import { activeElementIn } from "../../../internal/active-element.js";
+} from '../../../internal/orientation-breakpoint.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
+import { isRtl } from '../../../internal/rtl.js';
+import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import { styles } from './stepper.styles.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
-export type LyraStepState = "pending" | "current" | "completed" | "error";
+export type LyraStepState = 'pending' | 'current' | 'completed' | 'error';
 
 export interface LyraStepperOrientationChangeDetail {
   orientation: LyraOrientation;
@@ -41,15 +41,15 @@ export interface LyraStepItem {
 }
 
 export interface LyraStepperEventMap {
-  "lr-step-select": CustomEvent<{ stepId: string; index: number }>;
-  "lr-stepper-orientation-change": CustomEvent<LyraStepperOrientationChangeDetail>;
+  'lr-step-select': CustomEvent<{ stepId: string; index: number }>;
+  'lr-stepper-orientation-change': CustomEvent<LyraStepperOrientationChangeDetail>;
 }
 
 const STEP_STATES = new Set<LyraStepState>([
-  "pending",
-  "current",
-  "completed",
-  "error",
+  'pending',
+  'current',
+  'completed',
+  'error',
 ]);
 const MAX_STEPS = 256;
 
@@ -73,23 +73,23 @@ function snapshotSteps(value: unknown): readonly Readonly<LyraStepItem>[] {
   for (let index = 0; index < length; index += 1) {
     try {
       const candidate: unknown = value[index];
-      if (!candidate || typeof candidate !== "object") continue;
+      if (!candidate || typeof candidate !== 'object') continue;
       const record = candidate as Record<string, unknown>;
-      const stepId = record["stepId"];
-      const label = record["label"];
-      const state = record["state"];
-      const disabled = record["disabled"];
-      const title = record["title"];
-      const icon = record["icon"];
+      const stepId = record['stepId'];
+      const label = record['label'];
+      const state = record['state'];
+      const disabled = record['disabled'];
+      const title = record['title'];
+      const icon = record['icon'];
       if (
-        typeof stepId !== "string" ||
+        typeof stepId !== 'string' ||
         stepId.length === 0 ||
         stepId !== stepId.trim() ||
-        typeof label !== "string" ||
-        typeof state !== "string" ||
+        typeof label !== 'string' ||
+        typeof state !== 'string' ||
         !STEP_STATES.has(state as LyraStepState) ||
-        (disabled !== undefined && typeof disabled !== "boolean") ||
-        (title !== undefined && typeof title !== "string")
+        (disabled !== undefined && typeof disabled !== 'boolean') ||
+        (title !== undefined && typeof title !== 'string')
       ) {
         continue;
       }
@@ -110,8 +110,8 @@ function snapshotSteps(value: unknown): readonly Readonly<LyraStepItem>[] {
   return Object.freeze(normalized);
 }
 
-const GLYPH_VIEW_BOX = "0 0 24 24";
-const GLYPH_STROKE_WIDTH = "1.75";
+const GLYPH_VIEW_BOX = '0 0 24 24';
+const GLYPH_STROKE_WIDTH = '1.75';
 
 function checkmarkGlyph() {
   return html`<svg
@@ -209,14 +209,14 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   set steps(value: readonly LyraStepItem[]) {
     const previous = this.effectiveSteps;
     this.effectiveSteps = snapshotSteps(value);
-    this.requestUpdate("steps", previous);
+    this.requestUpdate('steps', previous);
   }
 
   /** `'horizontal'` (the default) lays steps out in a row (Left/Right, RTL-aware, to navigate);
    *  `'vertical'` stacks them (Up/Down navigate instead, no RTL swap needed). The *authored* axis
    *  used at/above `orientationBreakpoint` (or always, when that's unset) -- see
    *  `effectiveOrientation` for the live axis actually in effect. */
-  @property({ reflect: true }) orientation: LyraOrientation = "horizontal";
+  @property({ reflect: true }) orientation: LyraOrientation = 'horizontal';
 
   /** Opt-in inline-size breakpoint, measured on `[part="base"]`. Below it, `narrowOrientation`
    *  becomes effective instead of `orientation`. Unset (the default): no behavior change, the
@@ -236,7 +236,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  unset (no responsive observation at all), rather than as an armed breakpoint that can never
    *  be crossed. Set `orientationBreakpointBasis="viewport"` for a viewport-relative breakpoint
    *  instead. */
-  @property({ attribute: "orientation-breakpoint" }) orientationBreakpoint?:
+  @property({ attribute: 'orientation-breakpoint' }) orientationBreakpoint?:
     | number
     | string;
 
@@ -249,26 +249,26 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  A stepper given a fixed width in a row layout cannot react to that row stacking by measuring
    *  itself -- its own width never changes. That case requires `'viewport'`, which also lets the
    *  browser resolve a `rem` breakpoint with real `@media` semantics. */
-  @property({ reflect: true, attribute: "orientation-breakpoint-basis" })
-  orientationBreakpointBasis: BreakpointBasis = "container";
+  @property({ reflect: true, attribute: 'orientation-breakpoint-basis' })
+  orientationBreakpointBasis: BreakpointBasis = 'container';
 
   /** Layout/navigation axis used below `orientationBreakpoint`. */
-  @property({ reflect: true, attribute: "narrow-orientation" })
-  narrowOrientation: LyraOrientation = "vertical";
+  @property({ reflect: true, attribute: 'narrow-orientation' })
+  narrowOrientation: LyraOrientation = 'vertical';
 
   /** When true, allows step labels to wrap when the effective orientation is vertical. The
    *  default preserves the single-line labels used by the original stepper contract; horizontal
    *  labels remain single-line even when this property is enabled. */
-  @property({ type: Boolean, reflect: true, attribute: "wrap-labels" })
+  @property({ type: Boolean, reflect: true, attribute: 'wrap-labels' })
   wrapLabels = false;
 
   /** Accessible name for the `role="list"` step strip. Attribute-reflects from a host-level
    *  `aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS
    *  property. Unset, the list renders without an `aria-label` (the role carries no localized
    *  default name). */
-  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  private _effectiveOrientation: LyraOrientation = "horizontal";
+  private _effectiveOrientation: LyraOrientation = 'horizontal';
   private resizeObserver?: ResizeObserver;
   private resizeObservedElement?: HTMLElement;
   private resizeObserverOwnerDocument?: Document;
@@ -337,20 +337,20 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has("steps")) {
+    if (changed.has('steps')) {
       const focusedStep = activeElementIn(
         this.renderRoot as ShadowRoot
       ) as HTMLElement | null;
-      if (focusedStep?.getAttribute("part") === "step") {
+      if (focusedStep?.getAttribute('part') === 'step') {
         this.pendingStepFocus = {
-          stepId: focusedStep.dataset["stepId"] ?? "",
-          index: Number(focusedStep.dataset["index"]),
+          stepId: focusedStep.dataset['stepId'] ?? '',
+          index: Number(focusedStep.dataset['index']),
         };
       }
     }
     if (
-      changed.has("orientationBreakpoint") ||
-      changed.has("orientationBreakpointBasis")
+      changed.has('orientationBreakpoint') ||
+      changed.has('orientationBreakpointBasis')
     ) {
       this.orientationBreakpoints.configure(
         this.orientationBreakpoint,
@@ -358,10 +358,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       );
     }
     if (
-      changed.has("orientation") ||
-      changed.has("narrowOrientation") ||
-      changed.has("orientationBreakpoint") ||
-      changed.has("orientationBreakpointBasis")
+      changed.has('orientation') ||
+      changed.has('narrowOrientation') ||
+      changed.has('orientationBreakpoint') ||
+      changed.has('orientationBreakpointBasis')
     ) {
       // Under 'viewport' basis, `configure()` just above (re-)armed `matchMedia` synchronously, so
       // `isBelow()` below already reflects a live, authoritative read -- the same "fresh
@@ -377,7 +377,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       // measurement still owns every subsequent transition.
       this.updateEffectiveOrientation(
         this.baseEl?.clientWidth ?? this.measuredInlineSize,
-        this.hasUpdated && this.orientationBreakpointBasis === "viewport"
+        this.hasUpdated && this.orientationBreakpointBasis === 'viewport'
       );
     }
   }
@@ -391,12 +391,12 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
         ...this.renderRoot.querySelectorAll<HTMLElement>('[part="step"]'),
       ].filter(
         (step) =>
-          step.dataset["stepId"] === focusedOccurrence.stepId &&
-          step.getAttribute("aria-disabled") !== "true"
+          step.dataset['stepId'] === focusedOccurrence.stepId &&
+          step.getAttribute('aria-disabled') !== 'true'
       );
       const retainedStep =
         enabledIdentityMatches.find(
-          (step) => Number(step.dataset["index"]) === focusedOccurrence.index
+          (step) => Number(step.dataset['index']) === focusedOccurrence.index
         ) ??
         // A unique business identity may move when the collection is reordered. Duplicate IDs
         // deliberately do not take this fallback: picking the first match would collapse two
@@ -412,8 +412,8 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       )?.focus();
     }
     if (
-      changed.has("orientationBreakpoint") ||
-      changed.has("orientationBreakpointBasis")
+      changed.has('orientationBreakpoint') ||
+      changed.has('orientationBreakpointBasis')
     ) {
       if (this.orientationBreakpoints.containerObservationEnabled)
         this.armResizeObserver();
@@ -438,15 +438,15 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     // publishes this marker even though `resolved` is meaningless there -- see
     // OrientationBreakpointController's class doc.
     if (this.orientationBreakpoints.active) {
-      this.setAttribute("data-effective-orientation", next);
+      this.setAttribute('data-effective-orientation', next);
     } else {
-      this.removeAttribute("data-effective-orientation");
+      this.removeAttribute('data-effective-orientation');
     }
     if (next === this._effectiveOrientation) return;
     this._effectiveOrientation = next;
     this.requestUpdate();
     if (emitOnChange) {
-      this.emit("lr-stepper-orientation-change", { orientation: next });
+      this.emit('lr-stepper-orientation-change', { orientation: next });
     }
   }
 
@@ -504,7 +504,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     // Not cancelable -- see the class doc's `lr-step-select` entry for why this component (a
     // fully controlled, data-driven component like `lr-table`) has no default action of its own
     // to gate behind `.defaultPrevented`.
-    this.emit("lr-step-select", {
+    this.emit('lr-step-select', {
       stepId: step.stepId,
       index,
     });
@@ -525,18 +525,18 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     const focused = activeElementIn(
       this.renderRoot as ShadowRoot
     ) as HTMLElement | null;
-    const focusedIndex = Number(focused?.dataset["index"]);
+    const focusedIndex = Number(focused?.dataset['index']);
     const currentIndex = navigable.findIndex(
       (item) => item.index === focusedIndex
     );
-    const vertical = this.effectiveOrientation === "vertical";
+    const vertical = this.effectiveOrientation === 'vertical';
     const rtl = !vertical && isRtl(this);
     const forwardKey = vertical
-      ? "ArrowDown"
+      ? 'ArrowDown'
       : rtl
-      ? "ArrowLeft"
-      : "ArrowRight";
-    const backwardKey = vertical ? "ArrowUp" : rtl ? "ArrowRight" : "ArrowLeft";
+      ? 'ArrowLeft'
+      : 'ArrowRight';
+    const backwardKey = vertical ? 'ArrowUp' : rtl ? 'ArrowRight' : 'ArrowLeft';
 
     let targetIndex: number;
     switch (e.key) {
@@ -549,14 +549,14 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       case backwardKey:
         targetIndex = Math.max(0, (currentIndex < 0 ? 1 : currentIndex) - 1);
         break;
-      case "Home":
+      case 'Home':
         targetIndex = 0;
         break;
-      case "End":
+      case 'End':
         targetIndex = navigable.length - 1;
         break;
-      case "Enter":
-      case " ":
+      case 'Enter':
+      case ' ':
         e.preventDefault();
         if (currentIndex >= 0) {
           const target = navigable[currentIndex]!;
@@ -576,7 +576,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     // this fallback, an all-`completed`/all-`pending`/no-`current` `steps` array would leave every
     // button at tabindex="-1" and drop the whole stepper out of the tab order.
     const currentIndex = this.steps.findIndex(
-      (step) => step.state === "current"
+      (step) => step.state === 'current'
     );
     const rovingIndex =
       currentIndex >= 0 && !this.steps[currentIndex]!.disabled
@@ -627,6 +627,6 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-stepper": LyraStepper;
+    'lr-stepper': LyraStepper;
   }
 }

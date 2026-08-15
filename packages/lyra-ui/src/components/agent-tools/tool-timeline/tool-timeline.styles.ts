@@ -21,10 +21,9 @@ export const styles = css`
 
   [part="entry"] {
     display: grid;
-    grid-template-columns: var(
-        --lr-tool-timeline-marker-size,
-        var(--_lr-tool-timeline-marker-size)
-      ) 1fr;
+    grid-template-columns:
+      var(--lr-tool-timeline-marker-size, var(--_lr-tool-timeline-marker-size))
+      1fr;
     column-gap: var(--lr-space-m);
   }
 

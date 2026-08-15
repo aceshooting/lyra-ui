@@ -1906,15 +1906,17 @@ win over whatever `variant`/`appearance` resolved: `--lr-badge-background` (fall
 `--lr-badge-fill`), `--lr-badge-border` (falls back to `--lr-badge-stroke`), `--lr-badge-color`
 (falls back to `--lr-badge-text`).
 
-_Palette — what `variant` chooses_ (new in 8.0.0): `--lr-badge-tint` (default
-`var(--lr-color-surface)`, the quiet fill; each non-neutral variant sets it to
+_Palette — what `variant` chooses_ (new in 8.0.0): `--lr-badge-tint` (private default
+`var(--lr-color-surface)`, the quiet fill; each non-neutral variant changes that private default to
 `var(--lr-color-fill-quiet)`, which the shared variants sheet has already re-pointed at that
-variant's row of the semantic grid), `--lr-badge-solid` (default `var(--lr-color-fill-loud)`, the
-loud fill used by `appearance="accent"`), `--lr-badge-edge` (default `var(--lr-color-border)`, the
-border color), `--lr-badge-ink` (default `var(--lr-color-text)`, the text color) and
+variant's row of the semantic grid), `--lr-badge-solid` (private default
+`var(--lr-color-fill-loud)`, the loud fill used by `appearance="accent"`), `--lr-badge-edge`
+(private default `var(--lr-color-border)`, the border color), `--lr-badge-ink` (private default
+`var(--lr-color-text)`, the text color) and
 `--lr-badge-on-solid` (default `var(--lr-color-on-loud)`, the text color that stays legible on
-`--lr-badge-solid`). Neutral is the only variant whose border and text colors differ, which is why
-`-edge` and `-ink` are separate slots rather than one loud color.
+`--lr-badge-solid`). An inherited or direct public palette value remains authoritative. Neutral is
+the only variant whose border and text colors differ, which is why `-edge` and `-ink` are separate
+slots rather than one loud color.
 
 _Surface — what `appearance` routes onto the box_ (new in 8.0.0): `--lr-badge-fill` (default
 `var(--lr-badge-tint)`), `--lr-badge-stroke` (default `var(--lr-badge-edge)`) and `--lr-badge-text`
@@ -2139,14 +2141,15 @@ retargets for the panel itself) so a consumer can retint the hover fill — e.g.
 `variant="brand"` panel, which shares the same default token — without a collateral effect on the
 panel background, and vice versa.
 
-Three more, all new in 8.0.0: `--lr-callout-font-size` (default
+Three more, all new in 8.0.0: `--lr-callout-font-size` (private default
 `var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit
-`size` tier maps it from the shared ladder), `--lr-callout-padding` (default
-`var(--lr-form-control-padding-inline, var(--lr-space-m))` — the
-panel's padding on _both_ axes; each `size` tier sets it from the ladder's inline-padding knob,
-because a panel's block rhythm is generous like a control's inline padding rather than tight like
-its block padding, which only exists to fit text inside a fixed control height; `inline` removes it
-entirely) and `--lr-callout-gap` (default `var(--lr-space-s)` — the space between the icon, the
+`size` tier maps that private default from the shared ladder), `--lr-callout-padding` (private
+default `var(--lr-form-control-padding-inline, var(--lr-space-m))` — the panel's padding on _both_
+axes; each `size` tier changes that private default from the ladder's inline-padding knob, because
+a panel's block rhythm is generous like a control's inline padding rather than tight like its block
+padding, which only exists to fit text inside a fixed control height; `inline` removes the private
+default entirely). Inherited or direct public font-size and padding values remain authoritative.
+`--lr-callout-gap` (default `var(--lr-space-s)` — the space between the icon, the
 content and the close action. It deliberately does _not_ vary by `size`: it separates three adjacent
 boxes rather than setting the panel's density, and shrinking it at the small tiers only crowds
 them).

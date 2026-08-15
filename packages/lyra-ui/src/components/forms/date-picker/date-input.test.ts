@@ -1204,8 +1204,8 @@ it("does not render an orphaned asterisk when required but no label is provided"
 });
 
 it("clamps the popup to the viewport width like the combobox listbox", () => {
-  expect(styles.cssText).to.include(
-    "max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem))"
+  expect(styles.cssText).to.match(
+    /max-inline-size:\s*min\(\s*var\(--lr-popover-viewport-clamp\),\s*var\(--lr-size-28rem\)\s*\)/
   );
 });
 
@@ -1864,7 +1864,7 @@ describe("blur/focus bubbling", () => {
   it("gives enabled clear/expand buttons a :hover treatment", () => {
     const css = styles.cssText.replace(/\s+/g, " ");
     expect(css).to.match(
-      /\[part='clear-button'\]:hover:not\(:disabled\),\s*\[part='expand-button'\]:hover:not\(:disabled\)\s*\{[^}]+\}/
+      /\[part=["']clear-button["']\]:hover:not\(:disabled\),\s*\[part=["']expand-button["']\]:hover:not\(:disabled\)\s*\{[^}]+\}/
     );
   });
 });

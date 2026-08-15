@@ -1,7 +1,10 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
+import {
+  FormAssociated,
+  isBarredFromValidation,
+} from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
@@ -21,12 +24,21 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
+import {
+  currentValidityValidator,
+  type LyraFormValidator,
+} from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_hidePassword, LYRA_DEFAULT_inputLabel, LYRA_DEFAULT_showPassword, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import {
+  LYRA_DEFAULT_clear,
+  LYRA_DEFAULT_fieldRequired,
+  LYRA_DEFAULT_hidePassword,
+  LYRA_DEFAULT_inputLabel,
+  LYRA_DEFAULT_showPassword,
+  LYRA_DEFAULT_valueInvalid,
+} from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type LyraInputType =
   | 'text'
@@ -219,23 +231,35 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
 export class LyraInput extends FormAssociated(LyraInputBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    clear: LYRA_DEFAULT_clear,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-    hidePassword: LYRA_DEFAULT_hidePassword,
-    inputLabel: LYRA_DEFAULT_inputLabel,
-    showPassword: LYRA_DEFAULT_showPassword,
-    valueInvalid: LYRA_DEFAULT_valueInvalid,
-  };
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> =
+    {
+      ...super.defaultStrings,
+      clear: LYRA_DEFAULT_clear,
+      fieldRequired: LYRA_DEFAULT_fieldRequired,
+      hidePassword: LYRA_DEFAULT_hidePassword,
+      inputLabel: LYRA_DEFAULT_inputLabel,
+      showPassword: LYRA_DEFAULT_showPassword,
+      valueInvalid: LYRA_DEFAULT_valueInvalid,
+    };
   // GENERATED DEFAULT-STRING SLICE: END
 
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraInput>[] {
-    return [currentValidityValidator(
-      'required', 'disabled', 'readonly', 'value', 'type', 'pattern', 'min', 'max', 'step',
-      'minlength', 'maxlength',
-    )];
+    return [
+      currentValidityValidator(
+        'required',
+        'disabled',
+        'readonly',
+        'value',
+        'type',
+        'pattern',
+        'min',
+        'max',
+        'step',
+        'minlength',
+        'maxlength'
+      ),
+    ];
   }
   // `sizes` is the library's one form-control ladder, pulled in ahead of this component's own sheet
   // so every `--lr-input-*` geometry knob can simply point at the active tier's value -- and so
@@ -255,7 +279,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   /** Native input type. Unsupported runtime strings normalize to `text` at the public boundary so
    * native validity, type-dependent chrome, and the reflected host state cannot diverge. */
   @property({ reflect: true })
-  get type(): LyraInputType { return this._type; }
+  get type(): LyraInputType {
+    return this._type;
+  }
   set type(next: LyraInputType) {
     const old = this._type;
     this._type = INPUT_TYPES.has(next) ? next : 'text';
@@ -374,17 +400,21 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   /** `type="password"` only — renders the built-in show/hide-password button. Opt-in: a bare
    *  `type="password"` field ships no toggle at all, so a consumer whose threat model or visual
    *  design excludes one is not forced to hide it with CSS. */
-  @property({ type: Boolean, attribute: 'password-toggle', reflect: true }) passwordToggle = false;
+  @property({ type: Boolean, attribute: 'password-toggle', reflect: true })
+  passwordToggle = false;
   /** `type="password"` only — whether the field currently reveals its raw text. Toggled by the
    *  built-in `password-toggle` button; also settable by a consumer up front, with or without
    *  that button being rendered. */
-  @property({ type: Boolean, attribute: 'password-visible' }) passwordVisible = false;
+  @property({ type: Boolean, attribute: 'password-visible' }) passwordVisible =
+    false;
   /** `type="number"` only — suppresses the browser's own increment/decrement spin buttons. Left
    *  unset, the platform's spinners render exactly as they do on a bare `<input type="number">`.
    *  `<lr-number-input>` defaults it the other way, since it draws its own stepper pair. */
-  @property({ type: Boolean, attribute: 'without-spin-buttons', reflect: true }) withoutSpinButtons = false;
+  @property({ type: Boolean, attribute: 'without-spin-buttons', reflect: true })
+  withoutSpinButtons = false;
   /** Shoelace alias for {@link withoutSpinButtons}. */
-  @property({ type: Boolean, attribute: 'no-spin-buttons' }) noSpinButtons = false;
+  @property({ type: Boolean, attribute: 'no-spin-buttons' }) noSpinButtons =
+    false;
   /** Internal reactive adapter for Shoelace's public `default-value` attribute alias. The
    * supported JS property remains `defaultValue`; this accessor is not public API.
    * @internal
@@ -416,7 +446,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   constructor() {
     super();
-    this.addEventListener('invalid', () => { this.touched = true; });
+    this.addEventListener('invalid', () => {
+      this.touched = true;
+    });
   }
 
   override formResetCallback(): void {
@@ -560,7 +592,11 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     selectionEnd: number,
     selectionDirection: 'forward' | 'backward' | 'none' = 'none',
   ): void {
-    this.inputEl?.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+    this.inputEl?.setSelectionRange(
+      selectionStart,
+      selectionEnd,
+      selectionDirection,
+    );
   }
 
   /** Passthrough to the native `<input>`'s own `setRangeText()`, mirroring `<lr-textarea>`'s
@@ -614,7 +650,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     }
     if (!native) {
       if (this.required && this.value === '') {
-        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
+        this[SET_ANCHORED_VALIDITY](
+          { valueMissing: true },
+          this.localize('fieldRequired')
+        );
       } else {
         this[SET_ANCHORED_VALIDITY]({});
       }
@@ -630,7 +669,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     const tooLong = v.tooLong || own.tooLong;
     if (v.valid && !tooShort && !tooLong) {
       if (sanitizedAway) {
-        this[SET_ANCHORED_VALIDITY]({ badInput: true }, this.localize('valueInvalid'));
+        this[SET_ANCHORED_VALIDITY](
+          { badInput: true },
+          this.localize('valueInvalid')
+        );
         return;
       }
       this[SET_ANCHORED_VALIDITY]({});
@@ -651,7 +693,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
       // Empty exactly when the native input itself sees nothing wrong, i.e. when only the
       // dirty-value supplement above fired — the browser has no message for a value it considers
       // valid, so fall back to the localized generic one.
-      native.validationMessage || this.localize('valueInvalid'),
+      native.validationMessage || this.localize('valueInvalid')
     );
   }
 
@@ -760,9 +802,16 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
       this.hint.length > 0 ||
       this.helpText.length > 0 ||
       this.withHint;
-    const hasError = this.slotPresence.has('error') || this.errorText.length > 0;
-    const hasLabel = this.slotPresence.has('label') || this.label.length > 0 || this.withLabel;
-    const describedBy = [hasError ? 'input-error' : '', hasHint ? 'input-hint' : ''].filter(Boolean).join(' ');
+    const hasError =
+      this.slotPresence.has('error') || this.errorText.length > 0;
+    const hasLabel =
+      this.slotPresence.has('label') || this.label.length > 0 || this.withLabel;
+    const describedBy = [
+      hasError ? 'input-error' : '',
+      hasHint ? 'input-hint' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
     const isPassword = this.type === 'password';
     const showPasswordToggle = isPassword && this.passwordToggle;
     const nativeType = isPassword && this.passwordVisible ? 'text' : this.type;
@@ -772,13 +821,18 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
       this.value !== '';
     return html`
       <div part="form-control">
-        <label part="form-control-label" for=${this.inputId} ?hidden=${!hasLabel}>
+        <label
+          part="form-control-label"
+          for=${this.inputId}
+          ?hidden=${!hasLabel}
+        >
           <span part="label">${this.label}<slot name="label"></slot></span>
         </label>
         <div part=${this.inputWrapperParts}>
           <span
             part="start"
-            ?hidden=${!this.slotPresence.has('start') && !this.slotPresence.has('prefix')}
+            ?hidden=${!this.slotPresence.has("start") &&
+            !this.slotPresence.has("prefix")}
           >
             <slot name="start"></slot>
             <slot part="prefix" name="prefix"></slot>
@@ -791,15 +845,22 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             placeholder=${this.placeholder}
             title=${this.title || nothing}
             aria-label=${this.accessibleLabel ||
-            (hasLabel ? nothing : this.placeholder || this.localize('inputLabel'))}
+            (hasLabel
+              ? nothing
+              : this.placeholder || this.localize("inputLabel"))}
             aria-describedby=${describedBy || nothing}
-            aria-required=${this.required ? 'true' : 'false'}
-            aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
+            aria-required=${this.required ? "true" : "false"}
+            aria-invalid=${hasError ||
+            (this.touched && !this.internals.validity.valid)
+              ? "true"
+              : "false"}
             autocomplete=${this.autocomplete || nothing}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
-              ? (this.autocorrect ? 'on' : 'off')
+            autocorrect=${this.hasAttribute("autocorrect") || !this.autocorrect
+              ? this.autocorrect
+                ? "on"
+                : "off"
               : nothing}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
@@ -814,7 +875,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}
             ?autofocus=${this.autofocus}
-            ?data-without-spin-buttons=${this.withoutSpinButtons || this.noSpinButtons}
+            ?data-without-spin-buttons=${this.withoutSpinButtons ||
+            this.noSpinButtons}
             @input=${this.onInput}
             @change=${this.onChange}
             @focus=${this.onFocus}
@@ -826,32 +888,41 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
                 part="password-toggle"
                 type="button"
                 ?disabled=${this.effectiveDisabled}
-                aria-label=${this.localize(this.passwordVisible ? 'hidePassword' : 'showPassword')}
-                aria-pressed=${this.passwordVisible ? 'true' : 'false'}
+                aria-label=${this.localize(
+                  this.passwordVisible ? "hidePassword" : "showPassword"
+                )}
+                aria-pressed=${this.passwordVisible ? "true" : "false"}
                 @click=${this.onTogglePasswordVisible}
               >
                 <span part="password-toggle-button" aria-hidden="true" inert
                   >${this.passwordVisible
-                    ? html`<slot name="hide-password-icon">${eyeOffIcon()}</slot>`
-                    : html`<slot name="show-password-icon">${eyeIcon()}</slot>`}</span
+                    ? html`<slot name="hide-password-icon"
+                        >${eyeOffIcon()}</slot
+                      >`
+                    : html`<slot name="show-password-icon"
+                        >${eyeIcon()}</slot
+                      >`}</span
                 >
               </button>`
-            : ''}
+            : ""}
           ${canClear
             ? html`<button
                 part="clear-button"
                 type="button"
                 ?disabled=${this.effectiveDisabled || this.readonly}
-                aria-label=${this.localize('clear')}
+                aria-label=${this.localize("clear")}
                 @click=${this.onClear}
               >
-                <span aria-hidden="true" inert><slot name="clear-icon">${closeIcon()}</slot></span>
+                <span aria-hidden="true" inert
+                  ><slot name="clear-icon">${closeIcon()}</slot></span
+                >
               </button>`
             : nothing}
           ${this.renderControls()}
           <span
             part="end"
-            ?hidden=${!this.slotPresence.has('end') && !this.slotPresence.has('suffix')}
+            ?hidden=${!this.slotPresence.has("end") &&
+            !this.slotPresence.has("suffix")}
           >
             <slot name="end"></slot>
             <slot part="suffix" name="suffix"></slot>
@@ -860,8 +931,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
         <div id="input-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error"></slot>
         </div>
-        <div id="input-hint" part="hint form-control-help-text" ?hidden=${!hasHint}>
-          ${this.hint || this.helpText}<slot name="hint"></slot><slot name="help-text"></slot>
+        <div
+          id="input-hint"
+          part="hint form-control-help-text"
+          ?hidden=${!hasHint}
+        >
+          ${this.hint || this.helpText}<slot name="hint"></slot
+          ><slot name="help-text"></slot>
         </div>
       </div>
     `;

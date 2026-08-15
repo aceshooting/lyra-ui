@@ -4,6 +4,7 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 (`@aceshooting/lyra-flags`) — importing `lyra-ui` core never pulls in flag image weight.
 
 **Properties:**
+
 - `country?: string` (ISO 3166-1 alpha-2, e.g. `"fr"` — takes precedence over `language`)
 - `language?: string` (BCP-47-ish tag, e.g. `"en"`/`"en-US"`, resolved to a representative country
   via `languageToCountry()`)
@@ -13,7 +14,7 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
   `import frUrl from '@aceshooting/lyra-flags/flags/fr.svg?url'`. `label` is effectively required
   alongside `src` since there's no `country`/`language` to derive a fallback `alt` from.)
 - `label?: string` (accessible name / `alt` text — **defaults to a localized, human-readable region
-  name derived from the *resolved country* code via `Intl.DisplayNames` if omitted**, see gotchas)
+  name derived from the _resolved country_ code via `Intl.DisplayNames` if omitted**, see gotchas)
 - host `aria-label` takes precedence over `label` and the derived region name; an explicit empty
   value marks the image decorative
 - `shape: LyraFlagShape = 'rect'` (reflected, `'rect' | 'circle'`)
@@ -85,11 +86,14 @@ pronounces the endonym in its own language, and use `fidelity="compact"` at icon
 ```
 
 ```js
-import { localeNativeName, languageToCountry } from '@aceshooting/lyra-ui/components/media/flag/language-map.js';
+import {
+  localeNativeName,
+  languageToCountry,
+} from "@aceshooting/lyra-ui/components/media/flag/language-map.js";
 
-const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
+const rows = ["en", "fr", "de", "pt-BR", "ja", "ar"].map((tag) => ({
   tag,
-  name: localeNativeName(tag),   // endonym, e.g. "português (Brasil)"
+  name: localeNativeName(tag), // endonym, e.g. "português (Brasil)"
   country: languageToCountry(tag), // flag code for the same row
 }));
 ```
@@ -97,8 +101,10 @@ const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
 ```html
 <lr-flag country="fr" label="France"></lr-flag>
 <lr-flag language="en-US" shape="circle"></lr-flag>
-<lr-flag country="es" fidelity="compact"></lr-flag>  <!-- tiny WebP raster, icon-scale -->
-<lr-flag country="es" fidelity="detailed"></lr-flag> <!-- pristine full-fidelity vector -->
+<lr-flag country="es" fidelity="compact"></lr-flag>
+<!-- tiny WebP raster, icon-scale -->
+<lr-flag country="es" fidelity="detailed"></lr-flag>
+<!-- pristine full-fidelity vector -->
 ```
 
 ```bash
@@ -106,10 +112,11 @@ pnpm add @aceshooting/lyra-flags   # required for country/language lookup; failu
 ```
 
 ```js
-import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
+import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 ```
 
 **Known gotchas:**
+
 - `country`/`language` resolution is opt-in through
   `@aceshooting/lyra-ui/components/media/flag/flag-peer.js`; `all.js`
   registers the component without importing the optional flag asset graph. Requires the optional
@@ -122,10 +129,10 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
   retries remain separate additions. The failure also produces a one-time `console.warn`
   once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
-  page even with many `<lr-flag>` instances). An *empty* template is a different, non-error outcome:
+  page even with many `<lr-flag>` instances). An _empty_ template is a different, non-error outcome:
   the peer resolved fine but returned no URL for that code (e.g. `country="zz"`) — no `[part="error"]`,
   no `<img>`, no warning.
-- Rendering is async even when the peer *is* installed: `src` resolves after an `import()` +
+- Rendering is async even when the peer _is_ installed: `src` resolves after an `import()` +
   resolver call, so there's a brief loading-skeleton window on first paint/attribute change — don't
   assume the `<img>` exists synchronously right after setting `country`/`language`.
 - if both `aria-label` and `label` are omitted, the accessible name (`alt`) falls back to a localized
@@ -172,6 +179,7 @@ Steps a current index through `[0, itemCount)` on a fixed interval — explicit 
 playback for time-series scrubbing, without implying native audio/video playback.
 
 **Properties:**
+
 - `itemCount: number = 0` (attribute `item-count`)
 - `currentIndex: number = 0` (attribute `current-index`)
 - `intervalMs: number = 900` (attribute `interval-ms`)
@@ -221,14 +229,15 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 ```html
 <lr-sequence-playback item-count="24" interval-ms="500"></lr-sequence-playback>
 <script>
-  const playback = document.querySelector('lr-sequence-playback');
-  playback.addEventListener('lr-sequence-step', (event) => {
+  const playback = document.querySelector("lr-sequence-playback");
+  playback.addEventListener("lr-sequence-step", (event) => {
     renderFrame(event.detail.currentIndex);
   });
 </script>
 ```
 
 **Known gotchas:**
+
 - `currentIndex` is re-clamped into `[0, itemCount)` as soon as `itemCount` shrinks (in
   `willUpdate()`, not waiting for the next `tick()`/`goTo()`/`next()`/`previous()` call) — setting
   `el.itemCount = 2` while `el.currentIndex = 7` immediately pulls `currentIndex` back to `1`, and
@@ -248,7 +257,7 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 - Initial `playing` and `item-count` attributes are resolved together on the first update, so
   playback starts consistently regardless of their source order; an invalid final `itemCount <= 1`
   clears the reflected `playing` state.
-- No *visible* "N of M" position label beside the range input; the native one-based range still
+- No _visible_ "N of M" position label beside the range input; the native one-based range still
   exposes the current ordinal and total bounds, with localized `aria-valuetext` as a supplemental
   enhancement where the platform honors it.
 - Calling `play()`/`pause()` programmatically (not via the button) gives no `aria-live`
@@ -263,6 +272,7 @@ and additive plain-GeoJSON `dataLayers`, plus a peer-neutral `map` getter for co
 operations. Its runtime value is the underlying MapLibre map.
 
 **Properties:**
+
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2`
 - `mapStyle?: LyraMapStyleSpecification | string` (attribute: false) — required before a map is
@@ -274,21 +284,21 @@ operations. Its runtime value is the underlying MapLibre map.
   geometry.
 - `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
   of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
-  LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
-  'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
+LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
+'crosshatch'`. Pattern is required so color is never the sole category cue. At most 100 valid
   rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
   bounded before validation. The overlay scrolls within the map allocation.
 - readonly `legendProjection: LyraMapLegendProjection` — frozen `{ inputCount, renderedCount,
-  omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
+omittedCount, truncatedLabelCount, truncated }` result for the latest assignment. A truncated
   projection renders a localized visible `1–N of M items` summary rather than silently claiming
   the bounded rows are complete.
 - `choropleth?: LyraMapChoroplethLayer` (attribute: false) — `LyraMapChoroplethLayer { sourceId:
-  string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
+string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
   fill-color expression from `field`'s value against `stops`; `stops` must contain at least one
   `[value, color]` pair — an empty array is ignored, leaving whatever fill layer already exists, if
   any, untouched, rather than being applied)
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
-  [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
+[number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
   trimmed and must be nonempty, and the first marker for an explicit ID wins. Markers are reconciled
   by that explicit ID (falling back
   to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
@@ -307,8 +317,8 @@ operations. Its runtime value is the underlying MapLibre map.
   declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
 - `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
   `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
-  GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
-  'danger' | 'neutral' }`. `sourceId` is trimmed and must be nonempty; the first layer for a
+GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
+'danger' | 'neutral' }`. `sourceId` is trimmed and must be nonempty; the first layer for a
   `sourceId` wins and blank or later duplicate records are ignored. Each retained entry adds one
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
@@ -363,6 +373,7 @@ appended to the document's pre-mounted `[data-lr-live-region="assertive"]` sink 
 shadow chrome live; raw caught errors are never exposed.
 
 **Themeable custom properties:**
+
 - `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
   `choropleth` layer and polygon fills in every `dataLayers` entry. It intentionally inherits from
   an ancestor, so one scoped declaration rethemes every nested map without setting each host.
@@ -370,7 +381,7 @@ shadow chrome live; raw caught errors are never exposed.
   `--lr-map-popup-close-button-hover-color` (default `var(--lr-color-brand)`) — hover background
   and foreground of `popup-close-button`.
 - `--lr-map-popup-close-button-active-bg` (default `color-mix(in oklab,
-  var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
+var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))`) and
   `--lr-map-popup-close-button-active-color` (default `var(--lr-color-brand)`) — pressed
   background and foreground of `popup-close-button`.
 - Shared tokens — `--lr-space-xs/-s`, `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`,
@@ -386,24 +397,29 @@ Vite with v6:
 ```html
 <lr-map center="[2.35, 48.85]" zoom="10"></lr-map>
 <script type="module">
-  import { setWorkerUrl } from 'maplibre-gl';
-  import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+  import { setWorkerUrl } from "maplibre-gl";
+  import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
   setWorkerUrl(workerUrl);
 
-  const m = document.querySelector('lr-map');
+  const m = document.querySelector("lr-map");
   m.mapStyle = { version: 8, sources: {}, layers: [] }; // explicit, network-silent baseline
   m.choropleth = {
-    sourceId: 'regions',
+    sourceId: "regions",
     geojson: myGeoJson,
-    field: 'value',
-    stops: [[0, '#cde2fb'], [100, '#0969da']],
+    field: "value",
+    stops: [
+      [0, "#cde2fb"],
+      [100, "#0969da"],
+    ],
   };
   m.legend = [
-    { color: '#cde2fb', label: 'Low', pattern: 'solid' },
-    { color: '#0969da', label: 'High', pattern: 'diagonal' },
+    { color: "#cde2fb", label: "Low", pattern: "solid" },
+    { color: "#0969da", label: "High", pattern: "diagonal" },
   ];
-  m.markers = [{ lngLat: [2.29, 48.86], label: 'Eiffel Tower' }];
-  m.addEventListener('lr-map-click', (e) => console.log(e.detail.feature?.properties));
+  m.markers = [{ lngLat: [2.29, 48.86], label: "Eiffel Tower" }];
+  m.addEventListener("lr-map-click", (e) =>
+    console.log(e.detail.feature?.properties)
+  );
 </script>
 ```
 
@@ -412,6 +428,7 @@ installation guide for the matching setup:
 https://maplibre.org/maplibre-gl-js/docs/#esm.
 
 **Known gotchas:**
+
 - Construction is transactional. A constructor/setup/get-canvas failure removes any partially
   created peer instance, renders only the localized initialization failure, and can retry after a
   new style or reconnect without an unhandled promise rejection. Capability probes and error
@@ -419,7 +436,7 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
 - A marker with a popup handles Space at its focus boundary: one activation toggles the peer popup
   and suppresses the page-scroll default. Markers without a popup do not consume Space.
 - clearing or swapping the choropleth no longer leaks the old layer: setting `choropleth =
-  undefined`, or changing `choropleth.sourceId` to a different value, now calls `removeLayer`/
+undefined`, or changing `choropleth.sourceId` to a different value, now calls `removeLayer`/
   `removeSource` on whatever was previously applied before adding the new one (or nothing, if
   cleared).
 - `mapStyle` changes after construction now call `setStyle()` (in addition to `center`/`zoom`
@@ -471,6 +488,7 @@ A form-associated drag-drop + click-to-browse file dropzone. It stores and rende
 no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the host).
 
 **Properties:**
+
 - `multiple: boolean = false` (reflected)
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
@@ -525,18 +543,18 @@ no client-side CSV/XLSX/etc. parsing is performed (that's left entirely to the h
     are dropped, and an empty mapped set synthesizes `customError`. The message falls back from the
     result's own `message` to the validator's static or function `message`, then to the localized
     default. Attributes listed in `observedAttributes` are watched on the host and revalidate live.
-  Validators run in order and the first failure wins. A validator that throws fails closed with the
-  localized generic message rather than escaping into the caller. Unreadable proxy-backed
-  validator collections/results are contained too: a collection or result trap fails closed,
-  returned validity flags are copied through the native flag vocabulary, and an unreadable
-  `observedAttributes` list is skipped without rejecting the component's update. The public array
-  remains the live mutable mirrored contract; each validation/observer pass takes only a transient
-  iteration snapshot. `checkValidity()` and `reportValidity()` recompute at call time, so a
-  validator that starts failing without any host property changing is still seen. Own or
-  fieldset-cascaded `disabled` bars configured validators exactly as it bars the intrinsic
-  constraint. Exported types:
-  `LyraFileInputValidator`, `LyraFileInputValidatorResult`, `LyraFileInputObjectValidator`,
-  `LyraFileInputObjectValidatorResult`.
+    Validators run in order and the first failure wins. A validator that throws fails closed with the
+    localized generic message rather than escaping into the caller. Unreadable proxy-backed
+    validator collections/results are contained too: a collection or result trap fails closed,
+    returned validity flags are copied through the native flag vocabulary, and an unreadable
+    `observedAttributes` list is skipped without rejecting the component's update. The public array
+    remains the live mutable mirrored contract; each validation/observer pass takes only a transient
+    iteration snapshot. `checkValidity()` and `reportValidity()` recompute at call time, so a
+    validator that starts failing without any host property changing is still seen. Own or
+    fieldset-cascaded `disabled` bars configured validators exactly as it bars the intrinsic
+    constraint. Exported types:
+    `LyraFileInputValidator`, `LyraFileInputValidatorResult`, `LyraFileInputObjectValidator`,
+    `LyraFileInputObjectValidatorResult`.
 - `validationTarget: HTMLElement | undefined` — the focusable base of the dropzone control after
   first render. Assign another shadow descendant to override where native constraint-validation UI
   is anchored; assign `undefined` to restore the default focusable base
@@ -564,7 +582,7 @@ implementation event plus a duplicate. `lr-files` (`detail: LyraFileInputFilesDe
 readonly `files` and `rejected` arrays, fired on both drop and manual file-picker selection) —
 `LyraFileInputRejectedFile = { readonly file: File; readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit'
 }`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
-input (`multiple` unset) receives more than one file (in which case *all* files are rejected, none
+input (`multiple` unset) receives more than one file (in which case _all_ files are rejected, none
 accepted), `'size'` from `maxFileSize`, `'directory'` for a dropped folder in single-file mode,
 `'read'` when a file/directory reader fails, or `'limit'` when folder traversal exceeds its bounded
 entry budget. Read/limit failures reject the complete selection atomically; lifecycle cancellation
@@ -677,10 +695,10 @@ tokens — `--lr-space-xs`, `--lr-space-l`,
 ```html
 <lr-file-input id="dataset-files" multiple accept=".csv,.xlsx"></lr-file-input>
 <script>
-  const input = document.querySelector('#dataset-files');
-  input.allowedMimeTypes = ['text/csv'];
-  input.addEventListener('lr-files', (e) => {
-    console.log('accepted:', e.detail.files, 'rejected:', e.detail.rejected); // rejected[i].reason
+  const input = document.querySelector("#dataset-files");
+  input.allowedMimeTypes = ["text/csv"];
+  input.addEventListener("lr-files", (e) => {
+    console.log("accepted:", e.detail.files, "rejected:", e.detail.rejected); // rejected[i].reason
   });
 </script>
 ```
@@ -697,6 +715,7 @@ that as a possible match during preview so the drag-over UI doesn't flash a fals
 an extension-only `accept` list.
 
 **Known gotchas:**
+
 - Paste-from-clipboard **is** supported and on by default: a `paste` event on the dropzone reads
   `e.clipboardData.files` and routes it through the same accept/reject classification as a drop.
   Set `paste="false"` (or `.paste = false`) to opt out.
@@ -724,6 +743,7 @@ an extension-only `accept` list.
 Before/after comparison surface with two named slots and a keyboard-accessible native range handle.
 
 **Properties:**
+
 - `position: number = 50` (attribute `position`, reflected) — divider position from 0 to 100
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (attribute `orientation`, reflected)
 - `accessibleLabel: string | null` (attribute `aria-label`) — accessible name for the comparison
@@ -763,8 +783,8 @@ cleared on pointer cancellation, blur, or disconnect.
 
 ```html
 <lr-image-comparer aria-label="Before and after">
-  <img slot="before" alt="Before" src="before.png">
-  <img slot="after" alt="After" src="after.png">
+  <img slot="before" alt="Before" src="before.png" />
+  <img slot="after" alt="After" src="after.png" />
   <span slot="handle" aria-hidden="true">↔</span>
 </lr-image-comparer>
 ```
@@ -778,6 +798,7 @@ Sandboxed iframe preview that mirrors Web Awesome's zoomable-frame contract. It 
 allocated inline size with a 16:9 aspect ratio by default (override `aspect-ratio` on the host).
 
 **Properties:**
+
 - `src: string = ''` — iframe URL. Relative, `http:`, `https:`, `blob:`, and exact `about:blank`
   values are accepted; active `data:`/`javascript:` and non-embeddable schemes are omitted.
 - `srcdoc: string = ''` — inline iframe document. A present `srcdoc` wins over `src`, including an
@@ -858,7 +879,7 @@ attributes, and inline properties Lyra changed, preserving any later iframe-owne
 a watched host-page theme attribute syncs again.
 
 ```js
-import '@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js';
+import "@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.js";
 ```
 
 ```html
@@ -880,6 +901,7 @@ existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom
 import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
 
 **Properties:**
+
 - `zoom: number = 1` (reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`, and
   `zoomStep: number = 0.25` — bounded, finite zoom configuration
 - `src: string = ''` and `alt: string = ''` — optional safe image source. A rejected URL is treated
@@ -915,11 +937,15 @@ uses layout-participating CSS `zoom`, not a paint-only transform, so the viewpor
 range reaches the entire painted footprint at both logical edges in LTR and RTL.
 
 ```js
-import '@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js';
+import "@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.js";
 ```
 
 ```html
-<lr-pan-zoom src="map-preview.png" alt="Map preview" aria-label="Map preview"></lr-pan-zoom>
+<lr-pan-zoom
+  src="map-preview.png"
+  alt="Map preview"
+  aria-label="Map preview"
+></lr-pan-zoom>
 ```
 
 ---
@@ -937,6 +963,7 @@ localized action that emits a cancelable `lr-preview-request`; it never register
 or overlay, so the host composes the desired preview surface.
 
 **Properties:**
+
 - `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType`/the
   image thumbnail are all derived from it, taking precedence over the independent props below
 - `name: string = ''` — filename, used only while `file` is unset
@@ -953,7 +980,7 @@ or overlay, so the host composes the desired preview surface.
 - `previewable: boolean = true` (reflected) — shows the preview action whenever a `file` or
   `preview-src` is available
 - `status: LyraAttachmentUploadStatus = 'pending'` (reflected) — `'pending' | 'uploading' |
-  'error' | 'success'`; invalid values normalize to `pending`. Drives the accent tint and which of
+'error' | 'success'`; invalid values normalize to `pending`. Drives the accent tint and which of
   `progress`/`spinner`/`retry-button` renders.
 - `progress: number = 0` — upload completion, 0-100; only meaningful while `status="uploading"`, a
   value of `0` or `NaN` falls back to the indeterminate spinner
@@ -983,7 +1010,7 @@ and a numeric byte count answering to the same property name is a collision a co
 discovers at runtime. A leftover `size="245000"` is an unknown attribute now: `bytes` stays omitted
 and the `size` part renders nothing.
 
-The component identifies *which* attachment an action event is about through `attachmentId`. Set
+The component identifies _which_ attachment an action event is about through `attachmentId`. Set
 `attachment-id="..."` when you have a stable server-side identity; when unset and `file` is set, a
 stable attachment id is
 derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neither is available, a
@@ -997,7 +1024,7 @@ request is a host veto point; the chip itself has no preview default action.
 **Slots:** none.
 
 **CSS parts:** `base`, `thumbnail`, `meta`, `name`, `size` (the formatted `bytes` count; the part
-keeps its pre-rename name — it is the rendered size *text*, and renaming a part would break shipped
+keeps its pre-rename name — it is the rendered size _text_, and renaming a part would break shipped
 `::part()` rules for no gain), `status-text` (the visible text twin of
 the status accent color, so the state is carried in words and not only in color; empty and hidden
 for `pending`/`success`), `progress`, `progress-fill`, `spinner` (decorative/`aria-hidden` while the
@@ -1006,13 +1033,13 @@ adjacent `status-text` supplies the wording), `retry-button`, `preview-button`,
 
 **`status-text` carries no live-region role (public surface change).** It is plain visible text
 that stays in the accessibility tree and reads normally once a user reaches the chip. The
-interrupting announcement a transition *into* `status="error"` makes — so a screen-reader user not
+interrupting announcement a transition _into_ `status="error"` makes — so a screen-reader user not
 already focused on the chip still hears an upload failure — goes to the library's shared
 **light-DOM** assertive region instead, appended to the consumer's `<body>` and marked
 `data-lr-live-region="assertive"`: a live region inside a shadow root is not reliably announced
 (JAWS with Firefox ignores one outright). Two consequences worth knowing:
 
-- Only a *transition* into `error` announces. A chip that mounts already failed is history the user
+- Only a _transition_ into `error` announces. A chip that mounts already failed is history the user
   can read at their own pace, and a retry that fails the same way twice is announced twice rather
   than being a silent no-op. The ticking `uploading` readout announces nothing at all — a live
   region re-announcing every progress tick is noise, not information.
@@ -1046,16 +1073,27 @@ exactly one decimal place), and a negative or non-finite input (`NaN`, `Infinity
 an unknown size renders nothing instead of `"NaN B"`.
 
 ```html
-<lr-attachment-chip name="report.pdf" bytes="245000" mime-type="application/pdf" status="success"></lr-attachment-chip>
-<lr-attachment-chip attachment-id="att-2" status="uploading" progress="42"></lr-attachment-chip>
+<lr-attachment-chip
+  name="report.pdf"
+  bytes="245000"
+  mime-type="application/pdf"
+  status="success"
+></lr-attachment-chip>
+<lr-attachment-chip
+  attachment-id="att-2"
+  status="uploading"
+  progress="42"
+></lr-attachment-chip>
 <script type="module">
-  import { formatFileSize } from '@aceshooting/lyra-ui/components/media/attachment-chip/file-size.js';
+  import { formatFileSize } from "@aceshooting/lyra-ui/components/media/attachment-chip/file-size.js";
 
-  const chip = document.createElement('lr-attachment-chip');
+  const chip = document.createElement("lr-attachment-chip");
   chip.file = pickedFile; // name/bytes/mime-type/thumbnail all derived from the File
-  chip.addEventListener('lr-remove', (e) => removeAttachment(e.detail.attachmentId));
-  chip.addEventListener('lr-retry', (e) => retryUpload(e.detail.attachmentId));
-  chip.addEventListener('lr-preview-request', (e) => openPreview(e.detail));
+  chip.addEventListener("lr-remove", (e) =>
+    removeAttachment(e.detail.attachmentId)
+  );
+  chip.addEventListener("lr-retry", (e) => retryUpload(e.detail.attachmentId));
+  chip.addEventListener("lr-preview-request", (e) => openPreview(e.detail));
   console.log(formatFileSize(pickedFile.size));
 </script>
 ```
@@ -1069,6 +1107,7 @@ or to `undefined`, and again on disconnect. Because the same pass that allocates
 previous entry, reassigning `file` several times before the next paint leaks nothing.
 
 **Known gotchas:**
+
 - `file` always wins over `name`/`bytes`/`mimeType` when both are set — assigning those props while
   `file` is also set has no visible effect on the rendered chip.
 - A `0` `bytes` value and an unset `bytes` value are indistinguishable (there's no separate flag for
@@ -1105,7 +1144,7 @@ same property name is a collision a consumer only discovers at runtime. A leftov
 is an unknown attribute now: `bytes` stays `0` and the badge silently renders without a size.
 
 **CSS parts:** `base`, `icon`, `label`, `description` (consumer-authored registry metadata in label
-mode), and `size` (the part keeps its name — it is the rendered size *text*, and renaming a part
+mode), and `size` (the part keeps its name — it is the rendered size _text_, and renaming a part
 would break shipped `::part()` rules for no gain).
 
 **Themeable custom properties:** `--lr-file-icon-size` (default `var(--lr-size-2rem)` — the
@@ -1120,7 +1159,11 @@ mappings per instance instead of mutating module-global state. Consumer labels/d
 verbatim; built-in labels route through localization.
 
 ```html
-<lr-file-icon mime-type="application/pdf" mode="label" bytes="245000"></lr-file-icon>
+<lr-file-icon
+  mime-type="application/pdf"
+  mode="label"
+  bytes="245000"
+></lr-file-icon>
 ```
 
 ## `lr-media-card`
@@ -1132,6 +1175,7 @@ upload progress). This component has neither concern; it only ever shows a `src`
 final.
 
 **Properties:**
+
 - `src: string = ''` — the media URL. Always re-validated against a safe-scheme allowlist before
   use (see below) — never trust it unsanitized even though it's typed as a plain string.
 - `kind?: LyraMediaCardKind` (`'image' | 'video' | 'file'`, reflected) — explicit format dispatch. Leave unset to
@@ -1218,7 +1262,7 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
 
 **Safe-URL checking.** `src` is validated by internal sink-specific helpers before it's
 ever assigned to an `<img>`/`<video>` `src` or an `<a href>` — only `http:`/`https:`/`blob:` (plus
-`data:` for a *media* `src` only) or a scheme-relative/relative URL with no scheme at all pass;
+`data:` for a _media_ `src` only) or a scheme-relative/relative URL with no scheme at all pass;
 anything else (`javascript:`, `vbscript:`, and similarly suspicious schemes) is rejected. `data:` is
 allowed for a media source (a browser never executes script from a media element's `src`) but
 rejected by the stricter link validator (a `data:text/html` URI navigated to via a clicked `<a
@@ -1239,11 +1283,12 @@ nesting interactive content inside a `<button>`/`<a>`; doing so anyway would als
 the video's own native controls bubble up and spuriously fire `lr-media-open`.
 
 **Known gotchas:**
+
 - Calling the real `.click()` (or dispatching a `click`/`MouseEvent`) on the file-chip's `<a href>`
   in a test genuinely triggers real browser navigation — always `preventDefault()` on a `click`
   listener registered before triggering it, the same precaution `lr-document-preview`'s own
   download-link tests already take. A synthetic `dispatchEvent(new MouseEvent('click', {cancelable:
-  true}))` still invokes the anchor's native activation behavior if nothing calls
+true}))` still invokes the anchor's native activation behavior if nothing calls
   `preventDefault()` during dispatch — it is not a safe no-op.
 - `kind` only reflects to the host attribute when explicitly set — CSS keying off the
   auto-detected resolved kind should target the rendered `[part]`/element (e.g. `video[part="media"]`),
@@ -1261,9 +1306,10 @@ anchored menu (composed from `lr-dropdown`/`lr-menu`/`lr-menu-item`) listing eac
 capability as a row.
 
 **Properties:**
+
 - `capabilities: readonly LyraAttachmentCapability[] = ['files']` (property only, no attribute) —
   which capabilities to offer, in display order. `LyraAttachmentCapability = 'files' | 'image' |
-  'camera' | 'audio'`; `LyraFileBackedCapability = 'files' | 'image'` (the two that actually open
+'camera' | 'audio'`; `LyraFileBackedCapability = 'files' | 'image'` (the two that actually open
   the file picker). Writes are normalized to a frozen, deduplicated, at-most-four entry snapshot;
   hostile/invalid collections fail closed to the default.
 - `accept: string = ''` — a native-file-input-style accept string (e.g. `'image/*'` or
@@ -1318,7 +1364,8 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 ```
 
 **Known gotchas:**
-- `HTMLInputElement.files` is a *live* view in most browsers — clearing `input.value` after reading
+
+- `HTMLInputElement.files` is a _live_ view in most browsers — clearing `input.value` after reading
   `.files` (needed so re-picking the exact same file still fires another `change` event next time)
   mutates that exact `FileList` object back to empty in place, not just detaches a stale reference.
   A consumer reading `lr-files` later would otherwise observe an empty list — this component
@@ -1344,6 +1391,7 @@ named `icon` slot, label and image-load error event) and adds this library's sha
 `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
 **Properties:**
+
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no glyph and no
   image is set, or the image fails to load and no `icon` slot content is provided.
 - `image: string = ''` — image URL; takes priority over the `icon` slot and `initials` when set and
@@ -1361,7 +1409,7 @@ named `icon` slot, label and image-load error event) and adds this library's sha
   reaches the DOM while the image tier is the one rendering; the default matches the native default,
   so an avatar that never sets it behaves exactly as it did before the property existed.
 - `size: LyraSize = 'medium'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' |
-  'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
+'small' | 'medium' | 'large'`. Every tier renders a distinct diameter: 1.5rem (`2xs`), 2rem
   (`xs`), 2.5rem (`s`/`small`), 3rem (`m`/`medium`, the mirrored default), 4rem (`l`/`large`,
   matching `--lr-icon-button-size`), and 5rem (`xl`). Invalid and removed `sm`/`md`/`lg` writes
   normalize to `medium`.
@@ -1405,7 +1453,7 @@ the avatar and remains authoritative across size/variant states. Plus shared tok
 `--lr-radius`/`-pill`, `--lr-font-weight-semibold`.
 
 The variant colors are deliberately **not** the library's generic quiet-fill/on-quiet-text pairing:
-an avatar's initials *are* the accent, so they read in the variant's own loud color on that
+an avatar's initials _are_ the accent, so they read in the variant's own loud color on that
 variant's quiet tint.
 
 **Optional peer deps:** none.
@@ -1427,6 +1475,7 @@ variant's quiet tint.
 ```
 
 **Known gotchas:**
+
 - additive `alt`, default glyph content and `sm`/`md`/`lg` aliases were removed for exact mirrored
   vocabulary: migrate `alt→label`, default glyph content to `slot="icon"`, and size aliases to
   `small`/`medium`/`large`. The older `src→image` and `tone→variant` migrations still apply.
@@ -1445,13 +1494,14 @@ An animated GIF/APNG/WebP with a play/pause control, frozen to a captured still 
 automatically under `prefers-reduced-motion: reduce`.
 
 **Properties:**
+
 - `src: string = ''` — re-validated through `safeMediaSrc()` (same allowlist as `lr-media-card`)
   before reaching the real `<img src>`.
 - `alt?: string` — forwarded to the live image and frozen canvas. An absent or explicitly empty
   value keeps both visual owners decorative; a nonempty value names whichever one is exposed. The
   independent play/pause action still uses localized context when no nonempty `alt` is available.
-- `play: boolean = false` — the caller's *intent* (reflected).
-- `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the *effective*
+- `play: boolean = false` — the caller's _intent_ (reflected).
+- `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the _effective_
   state after reduced-motion arbitration: `play && !(respectReducedMotion && <OS prefers reduce>)`.
   It is a genuine getter-only property, so assigning to it from a strict JavaScript module throws a
   `TypeError`; drive playback via `play`.
@@ -1460,7 +1510,7 @@ automatically under `prefers-reduced-motion: reduce`.
   `[part="play-button"]` is `disabled` regardless of `play`.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present,
   including explicitly empty, it overrides `[part="play-button"]`'s computed Play/Pause label
-  verbatim in *both* states (it does not itself vary by state). Never
+  verbatim in _both_ states (it does not itself vary by state). Never
   touches the image's `alt`/the canvas's `aria-label`. For state-sensitive custom wording, override
   the `playWithContext`/`pauseWithContext`/`animatedImageDefaultAlt` strings instead.
 
@@ -1493,6 +1543,7 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - the freeze frame is captured once per successful `src` load, in the `<img>`'s own `load` handler
   (a DPR-aware `drawImage()`), not re-captured on each pause — pausing always reverts to that first
   frame, never to the frame that was on screen.
@@ -1511,10 +1562,11 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 Declaratively animates one slotted element through the native Web Animations API.
 
 **Properties:**
+
 - `name: string = 'none'` — accepts any animation registry name. The built-in names are `'none' |
-  'fade-in' | 'fade-out' | 'zoom-in' | 'zoom-out' | 'slide-in-start' | 'slide-in-end' |
-  'slide-out-start' | 'slide-out-end' | 'slide-in-up' | 'slide-in-down' | 'bounce' | 'pulse' |
-  'spin' | 'shake'`; `LyraAnimationPreset` remains the exported convenience type for that built-in
+'fade-in' | 'fade-out' | 'zoom-in' | 'zoom-out' | 'slide-in-start' | 'slide-in-end' |
+'slide-out-start' | 'slide-out-end' | 'slide-in-up' | 'slide-in-down' | 'bounce' | 'pulse' |
+'spin' | 'shake'`; `LyraAnimationPreset` remains the exported convenience type for that built-in
   subset. Other strings resolve through the registry key `animation.<name>`. The four built-in
   `-start`/`-end` slide presets are logical: "start" is physically left under `ltr`, right under
   `rtl`.
@@ -1577,21 +1629,21 @@ normal rebuild (a keyframe/timing/direction change or reconnect); the registry n
 native timeline that is already running.
 
 ```js
-import '@aceshooting/lyra-ui/components/media/animation/animation.js';
-import { setAnimation } from '@aceshooting/lyra-ui/utilities/animation-registry.js';
+import "@aceshooting/lyra-ui/components/media/animation/animation.js";
+import { setAnimation } from "@aceshooting/lyra-ui/utilities/animation-registry.js";
 
-const animation = document.createElement('lr-animation');
-animation.name = 'slide-in-start';
+const animation = document.createElement("lr-animation");
+animation.name = "slide-in-start";
 animation.iterations = 1;
-animation.innerHTML = '<span>Registry-controlled content</span>';
-const release = setAnimation(animation, 'animation.slide-in-start', {
+animation.innerHTML = "<span>Registry-controlled content</span>";
+const release = setAnimation(animation, "animation.slide-in-start", {
   keyframes: [
-    { transform: 'translateX(calc(-1 * var(--lr-size-2rem)))' },
-    { transform: 'translateX(0)' },
+    { transform: "translateX(calc(-1 * var(--lr-size-2rem)))" },
+    { transform: "translateX(0)" },
   ],
   rtlKeyframes: [
-    { transform: 'translateX(var(--lr-size-2rem))' },
-    { transform: 'translateX(0)' },
+    { transform: "translateX(var(--lr-size-2rem))" },
+    { transform: "translateX(0)" },
   ],
 });
 document.body.append(animation);
@@ -1602,6 +1654,7 @@ animation.start();
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - `iterations` defaults to `Infinity` (mirrors the upstream Web Awesome/Shoelace contract) — a named
   preset plays forever unless you set `iterations="1"`.
 - changing any timing/keyframe property rebuilds the animation from scratch; the rebuild's internal
@@ -1618,18 +1671,20 @@ excess into a localized "+N" badge. Composed over `<lr-avatar>` via plain light-
 (no `.items` array); it does **not** import/register `<lr-avatar>` — the consumer does that.
 
 **Properties:**
+
 - `max?: number` — how many assigned children stay visible before the rest collapse behind the
   badge. Unset (the default) means no limit. Any assigned value is sanitized to a finite,
   non-negative integer. Flattened slot-forwarded children count the same as direct children.
 - `size: LyraSize = 'medium'` (reflected) — reused from `<lr-avatar>`'s canonical six-step ladder.
 - `shape: LyraAvatarShape = 'circle'` (reflected) — `'circle' | 'rounded' | 'square'`.
 - `variant: LyraVariant = 'neutral'` (reflected) — `'neutral' | 'brand' | 'success' | 'warning' |
-  'danger'`.
+'danger'`.
 
 `size`/`shape`/`variant` style the overflow badge and provide defaults only to assigned avatars
 that omit the corresponding attribute. Explicit child attributes remain authoritative; owned
 defaults are restored without overwriting later author writes across removal, reparenting,
 disconnect and reconnect.
+
 - `label: string = ''` — the group's `role="group"` accessible name. A host-level `aria-label` wins
   if both are set; with neither, no `aria-label` is rendered.
 
@@ -1678,6 +1733,7 @@ circles.
 ```
 
 **Known gotchas:**
+
 - group defaults only fill omitted child attributes; they deliberately do not overwrite explicit
   heterogeneous child presentation.
 - the row never wraps (`flex-wrap` stays `nowrap`) — wrapping an overlapping stack breaks the
@@ -1693,6 +1749,7 @@ but shares the same overlay infrastructure as `<lr-dialog>`/`<lr-command-palette
 trap, Escape/backdrop dismissal, scroll lock, and focus return.
 
 **Properties:**
+
 - `open: boolean = false` (reflected) — post-render writes run the same cancelable lifecycle as
   `show()`/`hide()`/`close()`. Initial `open` markup is state and emits no lifecycle events.
 - `images: readonly LyraLightboxImage[] = []` (attribute: false) —
@@ -1763,6 +1820,7 @@ photo content.
 **Optional peer deps:** none.
 
 **Known gotchas:**
+
 - keyboard navigation is RTL-aware on panel/chrome: Arrow forward/back (mirrored under `rtl`),
   `Home`, `End`. When the embedded pan/zoom viewport owns focus, those keys remain with its native
   scroll surface and never change gallery item; `+`/`-`/`0` remain its zoom shortcuts.
@@ -1911,8 +1969,8 @@ properties. `--lr-image-viewer-highlight-fill` is the resting fill a `[part='hig
 renders, resolved per tone from the `-bg` knobs above; its hover and pressed states are color mixes
 taken from that value, so setting it directly retints all three states of one highlight at once —
 retint a whole tone through the matching `-bg` knob instead. These properties are declared as inline
-`var()` fallbacks at the point of use rather than on `:host`, so each can be set on the element *or
-on any ancestor*:
+`var()` fallbacks at the point of use rather than on `:host`, so each can be set on the element _or
+on any ancestor_:
 `::part(highlight)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — which previously left overriding the library-wide
 `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever, repainting every other
@@ -2016,7 +2074,7 @@ player does not lose its landmark or accessible name when its media is replaced 
 
 Every cue-level part above is rendered into the embedded `<lr-virtual-list>`'s own shadow root and
 forwarded back out through `exportparts`, so `lr-av-player::part(cue)` and friends work from a
-consumer stylesheet. The three cue states are separate part *names* rather than attribute selectors,
+consumer stylesheet. The three cue states are separate part _names_ rather than attribute selectors,
 because Shadow Parts forbids an attribute selector after `::part()` —
 `::part(cue)[aria-current='true']` is invalid CSS, so use `::part(cue-current)`. The `aria-current`
 and `data-*` attributes remain on each row for semantics and scripting.
@@ -2167,9 +2225,15 @@ failed, or empty thumbnail files fail closed to no preview; no caught remote err
 
 ```html
 <lr-video controls="full" poster="/posters/demo.jpg" title="Product demo">
-  <source src="/video/demo.webm" type="video/webm">
-  <source src="/video/demo.mp4" type="video/mp4">
-  <track src="/captions/demo-en.vtt" kind="captions" srclang="en" label="English" default>
+  <source src="/video/demo.webm" type="video/webm" />
+  <source src="/video/demo.mp4" type="video/mp4" />
+  <track
+    src="/captions/demo-en.vtt"
+    kind="captions"
+    srclang="en"
+    label="English"
+    default
+  />
 </lr-video>
 ```
 
@@ -2247,7 +2311,7 @@ refuses focus, which would leave `focus()` a silent no-op and kill the next arro
 has no `disabled`
 property; use the platform `inert` state exclusively. Only the child's **own** `inert` counts: a
 playlist inerted wholesale by an open modal keeps playing. The attribute is watched live, so
-marking the *current* video inert moves the selection to the nearest enabled child (emitting
+marking the _current_ video inert moves the selection to the nearest enabled child (emitting
 `lr-video-change`) and hands optional-arrow focus to the row that replaced it, instead of leaving a
 stale arrow-navigation cursor on a row that can no longer take focus.
 
@@ -2257,11 +2321,17 @@ records the stopped state but never changes selection; recovery and retry remain
 ```html
 <lr-video-playlist controls="full" repeat="all">
   <lr-video title="Introduction" poster="/posters/introduction.jpg">
-    <source src="/video/introduction.mp4" type="video/mp4">
+    <source src="/video/introduction.mp4" type="video/mp4" />
   </lr-video>
   <lr-video title="Advanced workflow" poster="/posters/advanced.jpg">
-    <source src="/video/advanced.mp4" type="video/mp4">
-    <track src="/captions/advanced-en.vtt" kind="captions" srclang="en" label="English" default>
+    <source src="/video/advanced.mp4" type="video/mp4" />
+    <track
+      src="/captions/advanced-en.vtt"
+      kind="captions"
+      srclang="en"
+      label="English"
+      default
+    />
   </lr-video>
 </lr-video-playlist>
 ```
@@ -2276,102 +2346,102 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-media-attachment-chip-attachment-chip-contracts`** — Supporting data types and helpers for this component family.
   `LyraAttachmentIdDetail {
-    attachmentId: unknown;
-  }`
+  attachmentId: unknown;
+}`
   `LyraAttachmentPreviewRequestDetail {
-    name: unknown;
-    mimeType: unknown;
-    src: unknown;
-    attachmentId: unknown;
-  }`
+  name: unknown;
+  mimeType: unknown;
+  src: unknown;
+  attachmentId: unknown;
+}`
 
 - **`components-media-attachment-trigger-attachment-trigger-contracts`** — Supporting data types and helpers for this component family.
   `LyraAttachmentFilesDetail {
-    capability: unknown;
-    files: unknown;
-  }`
+  capability: unknown;
+  files: unknown;
+}`
 
 - **`components-media-av-player-av-metadata-contracts`** — Supporting data types and helpers for this component family.
   `LyraAvCue {
-    cueId: unknown;
-    start: unknown;
-    end: unknown;
-    text: unknown;
-    speaker: unknown;
-  }`
+  cueId: unknown;
+  start: unknown;
+  end: unknown;
+  text: unknown;
+  speaker: unknown;
+}`
   `LyraAvTrack {
-    src: unknown;
-    kind: unknown;
-    srclang: unknown;
-    label: unknown;
-    default: unknown;
-  }`
+  src: unknown;
+  kind: unknown;
+  srclang: unknown;
+  label: unknown;
+  default: unknown;
+}`
 
 - **`components-media-av-player-av-player-contracts`** — Supporting data types and helpers for this component family.
   `LyraAvCueChangeDetail {
-    cueId: unknown;
-    index: unknown;
-  }`
+  cueId: unknown;
+  index: unknown;
+}`
 
 - **`components-media-avatar-group-avatar-group-contracts`** — Supporting data types and helpers for this component family.
   `LyraAvatarGroupOverflowDetail {
-    hiddenCount: unknown;
-    hiddenAvatars: unknown;
-  }`
+  hiddenCount: unknown;
+  hiddenAvatars: unknown;
+}`
 
 - **`components-media-avatar-avatar-contracts`** — Supporting data types and helpers for this component family.
   `LyraAvatarErrorDetail {
-    image: unknown;
-  }`
+  image: unknown;
+}`
 
 - **`components-media-file-icon-file-type-metadata-contracts`** — Supporting data types and helpers for this component family.
   `createFileTypeMetadataRegistry(/* public names: entries */): unknown`
   `getFileTypeMetadata(/* public names: mimeType, fileName */): unknown`
   `LyraFileTypeMetadataEntry {
-    mimeTypes: unknown;
-    metadata: unknown;
-  }`
+  mimeTypes: unknown;
+  metadata: unknown;
+}`
   `LyraFileTypeMetadata {
-    label: unknown;
-    description: unknown;
-    icon: unknown;
-    category: unknown;
-    extensions: unknown;
-  }`
+  label: unknown;
+  description: unknown;
+  icon: unknown;
+  category: unknown;
+  extensions: unknown;
+}`
   `LyraFileTypeMetadataRegistry {
-    resolve: unknown;
-    mimeType: unknown;
-    fileName: unknown;
-  }`
+  resolve: unknown;
+  mimeType: unknown;
+  fileName: unknown;
+}`
   `LyraResolvedFileTypeMetadata {
-    provenance: unknown;
-    label: unknown;
-    description: unknown;
-    icon: unknown;
-    category: unknown;
-    extensions: unknown;
-  }`
+  provenance: unknown;
+  label: unknown;
+  description: unknown;
+  icon: unknown;
+  category: unknown;
+  extensions: unknown;
+}`
 
 - **`components-media-file-input-file-input-contracts`** — Supporting data types and helpers for this component family.
   `LyraFileInputFilesDetail {
-    files: unknown;
-    rejected: unknown;
-  }`
+  files: unknown;
+  rejected: unknown;
+}`
   `LyraFileInputObjectValidator {
-    observedAttributes: unknown;
-    checkValidity: unknown;
-    input: unknown;
-    message: unknown;
-  }`
+  observedAttributes: unknown;
+  checkValidity: unknown;
+  input: unknown;
+  message: unknown;
+}`
   `LyraFileInputObjectValidatorResult {
-    message: unknown;
-    isValid: unknown;
-    invalidKeys: unknown;
-  }`
+  message: unknown;
+  isValid: unknown;
+  invalidKeys: unknown;
+}`
   `LyraFileInputRejectedFile {
-    file: unknown;
-    reason: unknown;
-  }`
+  file: unknown;
+  reason: unknown;
+}`
 
 - **`components-media-flag-flag-peer-contracts`** — Supporting data types and helpers for this component family.
   `registerLyraFlagPeer(): unknown`
@@ -2386,199 +2456,199 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-media-image-viewer-image-viewer-contracts`** — Supporting data types and helpers for this component family.
   `LyraImageRegionRect {
-    x: unknown;
-    y: unknown;
-    width: unknown;
-    height: unknown;
-  }`
+  x: unknown;
+  y: unknown;
+  width: unknown;
+  height: unknown;
+}`
 
 - **`components-media-lightbox-lightbox-contracts`** — Supporting data types and helpers for this component family.
   `LyraLightboxHideDetail {
-    source: unknown;
-  }`
+  source: unknown;
+}`
   `LyraLightboxImage {
-    src: unknown;
-    alt: unknown;
-    caption: unknown;
-  }`
+  src: unknown;
+  alt: unknown;
+  caption: unknown;
+}`
 
 - **`components-media-map-map-loader-contracts`** — Supporting data types and helpers for this component family.
   `loadMaplibre(): unknown`
   `MapLibreGeoJsonSource {
-    setData: unknown;
-    data: unknown;
-  }`
+  setData: unknown;
+  data: unknown;
+}`
   `MapLibreMapCapability {
-    getCanvas: unknown;
-    getCenter: unknown;
-    lng: unknown;
-    lat: unknown;
-    getZoom: unknown;
-    setCenter: unknown;
-    center: unknown;
-    setZoom: unknown;
-    zoom: unknown;
-    resize: unknown;
-    remove: unknown;
-    on: unknown;
-    type: unknown;
-    listener: unknown;
-    event: unknown;
-    error: unknown;
-    point: unknown;
-    lngLat: unknown;
-    once: unknown;
-    setStyle: unknown;
-    style: unknown;
-    getSource: unknown;
-    id: unknown;
-    addSource: unknown;
-    source: unknown;
-    removeSource: unknown;
-    getLayer: unknown;
-    addLayer: unknown;
-    layer: unknown;
-    removeLayer: unknown;
-    setPaintProperty: unknown;
-    layerId: unknown;
-    name: unknown;
-    value: unknown;
-    queryRenderedFeatures: unknown;
-    options: unknown;
-    layers: unknown;
-  }`
+  getCanvas: unknown;
+  getCenter: unknown;
+  lng: unknown;
+  lat: unknown;
+  getZoom: unknown;
+  setCenter: unknown;
+  center: unknown;
+  setZoom: unknown;
+  zoom: unknown;
+  resize: unknown;
+  remove: unknown;
+  on: unknown;
+  type: unknown;
+  listener: unknown;
+  event: unknown;
+  error: unknown;
+  point: unknown;
+  lngLat: unknown;
+  once: unknown;
+  setStyle: unknown;
+  style: unknown;
+  getSource: unknown;
+  id: unknown;
+  addSource: unknown;
+  source: unknown;
+  removeSource: unknown;
+  getLayer: unknown;
+  addLayer: unknown;
+  layer: unknown;
+  removeLayer: unknown;
+  setPaintProperty: unknown;
+  layerId: unknown;
+  name: unknown;
+  value: unknown;
+  queryRenderedFeatures: unknown;
+  options: unknown;
+  layers: unknown;
+}`
   `MapLibreMarkerCapability {
-    setLngLat: unknown;
-    lngLat: unknown;
-    setPopup: unknown;
-    popup: unknown;
-    getPopup: unknown;
-    addTo: unknown;
-    map: unknown;
-    remove: unknown;
-    getElement: unknown;
-  }`
+  setLngLat: unknown;
+  lngLat: unknown;
+  setPopup: unknown;
+  popup: unknown;
+  getPopup: unknown;
+  addTo: unknown;
+  map: unknown;
+  remove: unknown;
+  getElement: unknown;
+}`
   `MaplibreModule {
-    Map: unknown;
-    Marker: unknown;
-    color: unknown;
-    Popup: unknown;
-    offset: unknown;
-  }`
+  Map: unknown;
+  Marker: unknown;
+  color: unknown;
+  Popup: unknown;
+  offset: unknown;
+}`
   `MapLibrePopupCapability {
-    setHTML: unknown;
-    html: unknown;
-    setText: unknown;
-    text: unknown;
-    on: unknown;
-    type: unknown;
-    listener: unknown;
-    isOpen: unknown;
-    getElement: unknown;
-  }`
+  setHTML: unknown;
+  html: unknown;
+  setText: unknown;
+  text: unknown;
+  on: unknown;
+  type: unknown;
+  listener: unknown;
+  isOpen: unknown;
+  getElement: unknown;
+}`
 
 - **`components-media-map-map-contracts`** — Supporting data types and helpers for this component family.
   `LyraMapChoroplethLayer {
-    sourceId: unknown;
-    geojson: unknown;
-    field: unknown;
-    stops: unknown;
-  }`
+  sourceId: unknown;
+  geojson: unknown;
+  field: unknown;
+  stops: unknown;
+}`
   `LyraMapGeoJsonDataLayer {
-    sourceId: unknown;
-    geojson: unknown;
-    tone: unknown;
-  }`
+  sourceId: unknown;
+  geojson: unknown;
+  tone: unknown;
+}`
   `LyraMapInstance {
-    getCanvas: unknown;
-    getCenter: unknown;
-    lng: unknown;
-    lat: unknown;
-    getZoom: unknown;
-    setCenter: unknown;
-    center: unknown;
-    setZoom: unknown;
-    zoom: unknown;
-    resize: unknown;
-  }`
+  getCanvas: unknown;
+  getCenter: unknown;
+  lng: unknown;
+  lat: unknown;
+  getZoom: unknown;
+  setCenter: unknown;
+  center: unknown;
+  setZoom: unknown;
+  zoom: unknown;
+  resize: unknown;
+}`
   `LyraMapLegendEntry {
-    color: unknown;
-    label: unknown;
-    pattern: unknown;
-  }`
+  color: unknown;
+  label: unknown;
+  pattern: unknown;
+}`
   `LyraMapLegendProjection {
-    inputCount: unknown;
-    renderedCount: unknown;
-    omittedCount: unknown;
-    truncatedLabelCount: unknown;
-    truncated: unknown;
-  }`
+  inputCount: unknown;
+  renderedCount: unknown;
+  omittedCount: unknown;
+  truncatedLabelCount: unknown;
+  truncated: unknown;
+}`
   `LyraMapMarker {
-    id: unknown;
-    lngLat: unknown;
-    color: unknown;
-    label: unknown;
-    unsafeHtml: unknown;
-  }`
+  id: unknown;
+  lngLat: unknown;
+  color: unknown;
+  label: unknown;
+  unsafeHtml: unknown;
+}`
   `LyraMapStyleSpecification {
-    version: unknown;
-    sources: unknown;
-    layers: unknown;
-    name: unknown;
-    sprite: unknown;
-    id: unknown;
-    url: unknown;
-    glyphs: unknown;
-  }`
+  version: unknown;
+  sources: unknown;
+  layers: unknown;
+  name: unknown;
+  sprite: unknown;
+  id: unknown;
+  url: unknown;
+  glyphs: unknown;
+}`
 
 - **`components-media-media-card-media-card-contracts`** — Supporting data types and helpers for this component family.
   `LyraMediaCardOpenDetail {
-    src: unknown;
-    filename: unknown;
-  }`
+  src: unknown;
+  filename: unknown;
+}`
 
 - **`components-media-sequence-playback-sequence-playback-contracts`** — Supporting data types and helpers for this component family.
   `LyraSequencePlaybackStepDetail {
-    currentIndex: unknown;
-  }`
+  currentIndex: unknown;
+}`
 
 - **`components-media-video-playlist-video-playlist-contracts`** — Supporting data types and helpers for this component family.
   `LyraVideoPlaylistChangeDetail {
-    previousIndex: unknown;
-    currentIndex: unknown;
-    video: unknown;
-  }`
+  previousIndex: unknown;
+  currentIndex: unknown;
+  video: unknown;
+}`
   `LyraVideoPlaylistItem {
-    title: unknown;
-    poster: unknown;
-    duration: unknown;
-    unavailable: unknown;
-  }`
+  title: unknown;
+  poster: unknown;
+  duration: unknown;
+  unavailable: unknown;
+}`
   `LyraVideoPlaylistSource {
-    src: unknown;
-    type: unknown;
-    media: unknown;
-  }`
+  src: unknown;
+  type: unknown;
+  media: unknown;
+}`
   `LyraVideoPlaylistTrack {
-    src: unknown;
-    kind: unknown;
-    srclang: unknown;
-    label: unknown;
-    default: unknown;
-  }`
+  src: unknown;
+  kind: unknown;
+  srclang: unknown;
+  label: unknown;
+  default: unknown;
+}`
   `LyraVideoPlaylistVideo {
-    title: unknown;
-    poster: unknown;
-    sources: unknown;
-    tracks: unknown;
-  }`
+  title: unknown;
+  poster: unknown;
+  sources: unknown;
+  tracks: unknown;
+}`
 
 - **`components-media-video-video-contracts`** — Supporting data types and helpers for this component family.
   `VideoState {
-    playing: unknown;
-    currentTime: unknown;
-    duration: unknown;
-    volume: unknown;
-    muted: unknown;
-    playbackRate: unknown;
-  }`
+  playing: unknown;
+  currentTime: unknown;
+  duration: unknown;
+  volume: unknown;
+  muted: unknown;
+  playbackRate: unknown;
+}`

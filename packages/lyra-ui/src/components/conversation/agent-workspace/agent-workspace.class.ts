@@ -1,4 +1,4 @@
-import type { LyraEventDetailSnapshot } from "../../../internal/lyra-element.js";
+import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -106,15 +106,15 @@ export interface LyraAgentWorkspaceEventMap {
  */
 export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze([
-    "messages",
-    "run",
-    "metrics",
-    "tools",
-    "retrievalChunks",
-    "selectedRetrievalIds",
-    "groundingAssessment",
-    "citations",
-    "contextSegments",
+    'messages',
+    'run',
+    'metrics',
+    'tools',
+    'retrievalChunks',
+    'selectedRetrievalIds',
+    'groundingAssessment',
+    'citations',
+    'contextSegments',
   ]);
 
   // GENERATED DEFAULT-STRING SLICE: START

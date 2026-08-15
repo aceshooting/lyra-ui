@@ -24,6 +24,8 @@ export interface StatRow {
   readonly exactValue?: string;
 }
 
+const MAX_STAT_ROWS = 10_000;
+
 const NESTED_CONTROL_SELECTOR = [
   'a[href]',
   'button',
@@ -169,21 +171,28 @@ export class LyraStat extends LyraElement {
    *  cost/latency/error-rate-style metrics where a decrease is the win. */
   @property({ attribute: 'good-direction' }) goodDirection: StatGoodDirection = 'up';
   private _rows: readonly StatRow[] = [];
-  /** Breakdown rows rendered as a simple label/value list beneath the caption. Values are
-   * snapshotted so caller mutation cannot bypass the reactive boundary. */
+  /** Breakdown rows rendered as a simple label/value list beneath the caption. The first 10,000
+   * rows are snapshotted and frozen so caller mutation cannot bypass the reactive boundary;
+   * reassign the collection to update. */
   @property({ attribute: false })
   get rows(): readonly StatRow[] { return this._rows; }
   set rows(value: readonly StatRow[]) {
     const previous = this._rows;
-    this._rows = Object.freeze(
-      Array.isArray(value)
-        ? value.map((row) => Object.freeze({
+    const snapshot: StatRow[] = [];
+    if (Array.isArray(value)) {
+      for (const row of value.slice(0, MAX_STAT_ROWS)) {
+        try {
+          snapshot.push(Object.freeze({
             label: typeof row?.label === 'string' ? row.label : '',
             value: typeof row?.value === 'string' ? row.value : '',
             ...(typeof row?.exactValue === 'string' ? { exactValue: row.exactValue } : {}),
-          }))
-        : [],
-    );
+          }));
+        } catch {
+          // Retain the safe prefix and later valid rows when an untyped record getter throws.
+        }
+      }
+    }
+    this._rows = Object.freeze(snapshot);
     this.requestUpdate('rows', previous);
   }
   /** Visual emphasis (e.g. for a "headline" stat in a group) — orthogonal to

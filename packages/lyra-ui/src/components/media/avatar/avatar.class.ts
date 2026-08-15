@@ -79,11 +79,13 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
 
   /** `'circle'` (the default), `'rounded'` (the shared medium corner radius), or `'square'` (no
    *  corner radius at all). */
-  @property({ reflect: true, useDefault: true }) shape: LyraAvatarShape = 'circle';
+  @property({ reflect: true, useDefault: true }) shape: LyraAvatarShape =
+    'circle';
 
   /** Recolors the initials-fallback background/text, on the library's shared `variant` vocabulary.
    *  `'neutral'` (the default) reads as a plain, unaccented circle. */
-  @property({ reflect: true, useDefault: true }) variant: LyraVariant = 'neutral';
+  @property({ reflect: true, useDefault: true }) variant: LyraVariant =
+    'neutral';
 
   @state() private failedSrc?: string;
 
@@ -101,11 +103,24 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
    */
   private onDecorativeGlyphFocusIn = (event: Event): void => {
     const focusEvent = event as FocusEvent;
-    const target = event.target as (EventTarget & { blur?: () => void; nodeType?: number }) | null;
-    if (target === this || target?.nodeType !== 1 || !this.contains(target as Node)) return;
+    const target = event.target as
+      | (EventTarget & { blur?: () => void; nodeType?: number })
+      | null;
+    if (
+      target === this ||
+      target?.nodeType !== 1 ||
+      !this.contains(target as Node)
+    )
+      return;
 
-    const previous = focusEvent.relatedTarget as (EventTarget & { focus?: () => void; nodeType?: number }) | null;
-    if (previous?.nodeType === 1 && !this.contains(previous as Node) && typeof previous.focus === 'function') {
+    const previous = focusEvent.relatedTarget as
+      | (EventTarget & { focus?: () => void; nodeType?: number })
+      | null;
+    if (
+      previous?.nodeType === 1 &&
+      !this.contains(previous as Node) &&
+      typeof previous.focus === 'function'
+    ) {
       previous.focus();
       return;
     }
@@ -123,31 +138,59 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
 
   private hasIconSlotContent(nodes: Iterable<Node>): boolean {
     return Array.from(nodes).some(
-      (node) => node.nodeType === 1 && (node as Element).getAttribute('slot') === 'icon',
+      (node) =>
+        node.nodeType === 1 && (node as Element).getAttribute('slot') === 'icon'
     );
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    const mayEmitConnectionTransition = this.isConnected && !this.connectionEventBaselinePending;
-    if (changed.has('loading') && this.loading !== 'eager' && this.loading !== 'lazy') this.loading = 'eager';
+    const mayEmitConnectionTransition =
+      this.isConnected && !this.connectionEventBaselinePending;
+    if (
+      changed.has('loading') &&
+      this.loading !== 'eager' &&
+      this.loading !== 'lazy'
+    )
+      this.loading = 'eager';
     if (
       changed.has('size') &&
-      this.size !== '2xs' && this.size !== 'xs' && this.size !== 's' && this.size !== 'm' &&
-      this.size !== 'l' && this.size !== 'xl' && this.size !== 'small' && this.size !== 'medium' &&
+      this.size !== '2xs' &&
+      this.size !== 'xs' &&
+      this.size !== 's' &&
+      this.size !== 'm' &&
+      this.size !== 'l' &&
+      this.size !== 'xl' &&
+      this.size !== 'small' &&
+      this.size !== 'medium' &&
       this.size !== 'large'
-    ) this.size = 'medium';
-    if (changed.has('shape') && this.shape !== 'circle' && this.shape !== 'rounded' && this.shape !== 'square') {
+    )
+      this.size = 'medium';
+    if (
+      changed.has('shape') &&
+      this.shape !== 'circle' &&
+      this.shape !== 'rounded' &&
+      this.shape !== 'square'
+    ) {
       this.shape = 'circle';
     }
     if (
       changed.has('variant') &&
-      this.variant !== 'neutral' && this.variant !== 'brand' && this.variant !== 'success' &&
-      this.variant !== 'warning' && this.variant !== 'danger'
-    ) this.variant = 'neutral';
+      this.variant !== 'neutral' &&
+      this.variant !== 'brand' &&
+      this.variant !== 'success' &&
+      this.variant !== 'warning' &&
+      this.variant !== 'danger'
+    )
+      this.variant = 'neutral';
     if (changed.has('image')) {
       this.failedSrc = undefined;
-      if (this.hasUpdated && this.image && !this.safeImage() && mayEmitConnectionTransition) {
+      if (
+        this.hasUpdated &&
+        this.image &&
+        !this.safeImage() &&
+        mayEmitConnectionTransition
+      ) {
         this.emit('lr-error', { image: this.image });
       }
     }
@@ -169,7 +212,8 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
       image !== this.renderRoot.querySelector('[part="image"]') ||
       !failedSrc ||
       failedSrc !== currentSrc
-    ) return;
+    )
+      return;
     if (this.failedSrc === failedSrc) return;
     this.failedSrc = failedSrc;
     this.emit('lr-error', { image: failedSrc });
@@ -178,7 +222,8 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
   // A named slot only ever receives elements carrying the matching `slot` attribute, so any
   // assigned node at all is real content -- no whitespace filtering needed here.
   private onNamedIconSlotChange = (e: Event): void => {
-    this.hasIconSlot = (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).length > 0;
+    this.hasIconSlot =
+      (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).length > 0;
   };
 
   override connectedCallback(): void {
@@ -205,7 +250,8 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     const showInitials = !showGlyph && !showImage;
     const explicitHostLabel = hostAriaLabel(this);
     const accessibleName = explicitHostLabel ?? this.label;
-    const suppressFallbackSemantics = explicitHostLabel !== null || this.label.length > 0;
+    const suppressFallbackSemantics =
+      explicitHostLabel !== null || this.label.length > 0;
     // Whenever `label` is set, [part='base'] needs a real accessible name
     // regardless of which fallback tier ends up rendering -- the glyph cases
     // (their content is aria-hidden) and the initials-fallback case (its
@@ -213,11 +259,12 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
     // both rely on this. The `showImage` case is excluded: the `<img>` itself
     // already carries its alt text as its accessible name, so [part='base'] doesn't
     // need a redundant role/aria-label.
-    const hasAccessibleFallback = (showGlyph || showInitials) && accessibleName.length > 0;
+    const hasAccessibleFallback =
+      (showGlyph || showInitials) && accessibleName.length > 0;
     return html`
       <span
         part="base"
-        role=${hasAccessibleFallback ? 'img' : nothing}
+        role=${hasAccessibleFallback ? "img" : nothing}
         aria-label=${hasAccessibleFallback ? accessibleName : nothing}
       >
         <span part="icon" aria-hidden="true" inert ?hidden=${!showGlyph}
@@ -233,7 +280,11 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
             />`
           : nothing}
         ${showInitials
-          ? html`<span part="initials" aria-hidden=${suppressFallbackSemantics ? 'true' : nothing}>${this.initials}</span>`
+          ? html`<span
+              part="initials"
+              aria-hidden=${suppressFallbackSemantics ? "true" : nothing}
+              >${this.initials}</span
+            >`
           : nothing}
       </span>
     `;

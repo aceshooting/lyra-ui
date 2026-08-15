@@ -123,6 +123,7 @@ export class LyraFlowNode extends LyraElement {
    *  do the `selected` and `status="running"` treatments. */
   @property({ type: Boolean, reflect: true }) compact = false;
   private _inputs: readonly FlowHandle[] = DEFAULT_INPUTS;
+  /** Frozen snapshot of at most the first 10,000 input handles. Reassign to update. */
   @property({ attribute: false })
   get inputs(): readonly FlowHandle[] {
     return this._inputs;
@@ -134,6 +135,7 @@ export class LyraFlowNode extends LyraElement {
   }
 
   private _outputs: readonly FlowHandle[] = DEFAULT_OUTPUTS;
+  /** Frozen snapshot of at most the first 10,000 output handles. Reassign to update. */
   @property({ attribute: false })
   get outputs(): readonly FlowHandle[] {
     return this._outputs;

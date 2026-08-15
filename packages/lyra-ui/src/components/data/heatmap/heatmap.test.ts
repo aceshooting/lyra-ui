@@ -5438,10 +5438,10 @@ describe("mouse-hover feedback (states-hover-missing-with-focus-visible)", () =>
   it("declares [part='cell']:hover and [part='canvas']:hover rules using the same focus-ring color token", () => {
     const css = styles.cssText.replace(/\s+/g, " ");
     expect(css).to.match(
-      /\[part='cell'\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/
+      /\[part=["']cell["']\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/
     );
     expect(css).to.match(
-      /\[part='canvas'\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/
+      /\[part=["']canvas["']\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/
     );
   });
 });

@@ -2,7 +2,8 @@
 
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
 auto-inserted between each adjacent pair. Panels participating in persistence carry a unique,
-nonempty `panel-id`; this business identity stays independent from the platform `id` attribute.
+nonempty, whitespace-stable `panel-id`; this business identity stays independent from the platform
+`id` attribute and is never rewritten.
 
 Granular import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.js`.
 The Lyra-original v9 identity migration is mechanical: `lr-split` → `lr-multi-split`,
@@ -70,7 +71,7 @@ surface.
   `orientationBreakpoint` resolves to a usable length).
 - `storageKey?: string` (attribute `storage-key`) — persists a versioned list of `{ panelId, size }`
   records to `localStorage` under `` `lr-multi-split:${key}:panels` ``. Every direct panel must have
-  a unique, nonempty `panel-id`; a missing or duplicate identity fails persistence closed without
+  a unique, nonempty, whitespace-stable `panel-id`; a missing, surrounding-whitespace, or duplicate identity fails persistence closed without
   disabling the live split. Restores and same-instance membership reconciliation follow `panelId`,
   so a reorder/replacement never transfers a saved size to a different business panel.
 - `panelConstraints: (LyraMultiSplitPanelConstraint | null)[] = []` (attribute: false) — `LyraMultiSplitPanelConstraint { minPx?:

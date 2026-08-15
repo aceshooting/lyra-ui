@@ -35,10 +35,10 @@ describe('lr-highlight-layer', () => {
     expect(rects[0]!.style.position).to.equal('');
   });
 
-  it('defaults to empty items, active-id null, and interactive true', async () => {
+  it('defaults to empty items, active-highlight-id null, and interactive true', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
     expect(el.items).to.deep.equal([]);
-    expect(el.activeId).to.be.null;
+    expect(el.activeHighlightId).to.be.null;
     expect(el.interactive).to.be.true;
   });
 
@@ -112,9 +112,9 @@ describe('lr-highlight-layer', () => {
     expect(rect.style.getPropertyValue('inset-inline-start')).to.equal('');
   });
 
-  it('marks the matching item aria-current="true" when active-id is set', async () => {
+  it('marks the matching item aria-current="true" when active-highlight-id is set', async () => {
     const el = await fixture<LyraHighlightLayer>(
-      html`<lr-highlight-layer .items=${ITEMS} active-id="b"></lr-highlight-layer>`,
+      html`<lr-highlight-layer .items=${ITEMS} active-highlight-id="b"></lr-highlight-layer>`,
     );
     const targets = itemActions(el);
     expect(targets[0].getAttribute('aria-current')).to.equal('false');
@@ -149,7 +149,7 @@ describe('lr-highlight-layer', () => {
       { id: 'same', label: 'Second', rects: [{ x: 5, y: 20, width: 10, height: 5 }] },
     ];
     const el = await fixture<LyraHighlightLayer>(html`
-      <lr-highlight-layer .items=${duplicates} active-id="same"></lr-highlight-layer>
+      <lr-highlight-layer .items=${duplicates} active-highlight-id="same"></lr-highlight-layer>
     `);
     const targets = itemActions(el);
     expect(targets).to.have.length(1);

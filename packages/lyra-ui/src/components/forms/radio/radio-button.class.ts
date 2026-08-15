@@ -1,11 +1,11 @@
-import { html, nothing, type TemplateResult } from "lit";
-import { LyraElement } from "../../../internal/lyra-element.js";
-import { sizes } from "../../../internal/sizes.styles.js";
-import { LyraRadio } from "./radio.class.js";
-import { styles } from "./radio-button.styles.js";
+import { html, nothing, type TemplateResult } from 'lit';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import { LyraRadio } from './radio.class.js';
+import { styles } from './radio-button.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from "../../../internal/localization.js";
-import { LYRA_DEFAULT_fieldRequired } from "../../../internal/default-strings.generated.js";
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -108,14 +108,14 @@ export class LyraRadioButton extends LyraRadio {
   override render(): TemplateResult {
     const disabled = this.effectiveDisabled;
     const parts = [
-      "base",
-      "button",
-      "control",
-      this.checked ? "checked button--checked" : "",
-      disabled ? "disabled" : "",
+      'base',
+      'button',
+      'control',
+      this.checked ? 'checked button--checked' : '',
+      disabled ? 'disabled' : '',
     ]
       .filter(Boolean)
-      .join(" ");
+      .join(' ');
     return html`
       <span
         part=${parts}
@@ -145,6 +145,6 @@ export class LyraRadioButton extends LyraRadio {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "lr-radio-button": LyraRadioButton;
+    'lr-radio-button': LyraRadioButton;
   }
 }
