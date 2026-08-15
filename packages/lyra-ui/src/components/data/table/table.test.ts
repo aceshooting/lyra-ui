@@ -3123,10 +3123,14 @@ describe('column width', () => {
 });
 
 describe('expandable rows', () => {
-  it('exposes expandedRowKeys defaulting to an empty Set', async () => {
+  it('exposes expandedRowKeys defaulting to an empty, Set-like read-only facade', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
-    expect(el.expandedRowKeys).to.be.instanceOf(Set);
+    // Not a literal `instanceof Set` -- the getter returns a frozen facade (see the
+    // `readonlyKeySet()` JSDoc above `expandedRowKeys` in table.class.ts), so assert the
+    // documented Set-like contract instead of the class identity.
     expect(el.expandedRowKeys.size).to.equal(0);
+    expect([...el.expandedRowKeys]).to.deep.equal([]);
+    expect(el.expandedRowKeys.has('anything')).to.equal(false);
   });
 
   const expandableColumns: TableColumn<Row>[] = [
@@ -6199,8 +6203,13 @@ describe('v9 bounded and transactional contracts', () => {
     expect([...el.selectedRowKeys]).to.deep.equal(['a']);
     expect([...el.expandedRowKeys]).to.deep.equal(['a']);
 
-    (el.selectedRowKeys as Set<string | number>).clear();
-    (el.expandedRowKeys as Set<string | number>).clear();
+    // The read facade (readonlyKeySet() in table.class.ts) is frozen and exposes no mutating
+    // methods at all -- not even a no-op `clear()` -- so there's no reference through which a
+    // caller could corrupt the table's controlled state.
+    expect(Object.isFrozen(el.selectedRowKeys)).to.equal(true);
+    expect(Object.isFrozen(el.expandedRowKeys)).to.equal(true);
+    expect((el.selectedRowKeys as { clear?: unknown }).clear).to.equal(undefined);
+    expect((el.expandedRowKeys as { clear?: unknown }).clear).to.equal(undefined);
     expect([...el.selectedRowKeys]).to.deep.equal(['a']);
     expect([...el.expandedRowKeys]).to.deep.equal(['a']);
   });
