@@ -78,8 +78,8 @@ importers:
         specifier: ^3.3.3
         version: 3.3.3
       maplibre-gl:
-        specifier: ^6.3.0
-        version: 6.3.0
+        specifier: ^6.4.0
+        version: 6.4.0
       pdfjs-dist:
         specifier: ^6.2.108
         version: 6.2.108
@@ -253,8 +253,8 @@ importers:
         specifier: ^1.12.1
         version: 1.12.1
       maplibre-gl:
-        specifier: ^6.3.0
-        version: 6.3.0
+        specifier: ^6.4.0
+        version: 6.4.0
       marked:
         specifier: ^18.0.9
         version: 18.0.9
@@ -4028,8 +4028,8 @@ packages:
     engines: {node: '>=12.0.0'}
     hasBin: true
 
-  maplibre-gl@6.3.0:
-    resolution: {integrity: sha512-F0Is48MTzn3DvOEidPjh68E0kuSA7hdzY1YIR0ypPtFgcif3WPtzI1oZFgsv9WtHmarQnbwIXfsf+EfQYvM00A==}
+  maplibre-gl@6.4.0:
+    resolution: {integrity: sha512-pCgDUsaYFuZwIH37aV2qF4m03nZPlW79DlqC+cQ+48tpqiqW2SJyA7fEOcFrS5ilDK493f0X3LxiH17T5BqV7g==}
     engines: {node: '>=16.14.0', npm: '>=8.1.0'}
 
   marked-terminal@7.3.0:
@@ -8679,7 +8679,7 @@ snapshots:
       underscore: 1.13.8
       xmlbuilder: 10.1.1
 
-  maplibre-gl@6.3.0:
+  maplibre-gl@6.4.0:
     dependencies:
       '@mapbox/point-geometry': 1.1.0
       '@mapbox/tiny-sdf': 2.2.0

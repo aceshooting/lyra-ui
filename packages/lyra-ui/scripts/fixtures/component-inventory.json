@@ -11484,13 +11484,13 @@
           "upstream": "shoelace",
           "tag": "sl-breadcrumb",
           "tier": "free",
-          "classification": "exact"
+          "classification": "warning-required"
         },
         {
           "upstream": "webawesome",
           "tag": "wa-breadcrumb",
           "tier": "free",
-          "classification": "exact"
+          "classification": "warning-required"
         }
       ],
       "surface": {
@@ -80092,7 +80092,7 @@
           "upstream": "webawesome",
           "tag": "wa-pagination",
           "tier": "free",
-          "classification": "rewritten"
+          "classification": "warning-required"
         }
       ],
       "surface": {
@@ -180208,7 +180208,7 @@
       "targetTag": "lr-breadcrumb",
       "classification": "warning-required",
       "rationale": "lr-breadcrumb's `label` accepts an accessible-name override; it is now optional with no declared default (was `string = ''`) so an explicit empty string can suppress the localized fallback without a never-set value doing the same. The rename carries no attribute/property name change, only this default-value divergence.",
-      "decisionSource": "derived",
+      "decisionSource": "reviewed",
       "parity": {
         "staticApi": "reviewed",
         "lightDom": "surface-only",
@@ -180231,7 +180231,9 @@
           },
           "rationale": "sl-breadcrumb and lr-breadcrumb share the reviewed behavior profile: A named navigation landmark exposes the current destination."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -186075,7 +186077,7 @@
       "targetTag": "lr-breadcrumb",
       "classification": "warning-required",
       "rationale": "lr-breadcrumb's `label` accepts an accessible-name override; it is now optional with no declared default (was `string = ''`) so an explicit empty string can suppress the localized fallback without a never-set value doing the same. The rename carries no attribute/property name change, only this default-value divergence.",
-      "decisionSource": "derived",
+      "decisionSource": "reviewed",
       "parity": {
         "staticApi": "reviewed",
         "lightDom": "surface-only",
@@ -186098,7 +186100,9 @@
           },
           "rationale": "wa-breadcrumb and lr-breadcrumb share the reviewed behavior profile: A named navigation landmark exposes the current destination."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
       },
       "rewrites": {
         "attributes": [],
@@ -191671,7 +191675,7 @@
       "targetTag": "lr-pagination",
       "classification": "warning-required",
       "rationale": "The page-change events are covered by deterministic member rewrites. `label` is now optional with no declared default (was `string = ''`) so an explicit empty string can suppress the localized fallback without a never-set value doing the same -- a default-value divergence with no rewrite rule to express it, so migrating consumers get a warning instead of a silent rename.",
-      "decisionSource": "derived",
+      "decisionSource": "reviewed",
       "parity": {
         "staticApi": "reviewed",
         "lightDom": "surface-only",
@@ -191694,7 +191698,9 @@
           },
           "rationale": "wa-pagination and lr-pagination share the reviewed behavior profile: A named pagination landmark marks the current page, preserves focus, and announces changes."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
       },
       "rewrites": {
         "attributes": [],

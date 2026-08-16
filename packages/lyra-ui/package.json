@@ -2519,7 +2519,7 @@
     "katex": "^0.18.4",
     "libphonenumber-js": "^1.13.11",
     "mammoth": "^1.12.1",
-    "maplibre-gl": "^6.3.0",
+    "maplibre-gl": "^6.4.0",
     "marked": "^18.0.9",
     "oxc-parser": "^0.144.0",
     "papaparse": "^5.6.0",

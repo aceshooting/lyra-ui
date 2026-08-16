@@ -7288,10 +7288,23 @@ function prefixEventRewrites(component, target, upstream) {
   );
   return component.surface.events
     .filter((event) => event.name.startsWith(prefix))
-    .map((event) => ({
-      from: event.name,
-      to: `lr-${event.name.slice(prefix.length)}`,
-    }))
+    .map((event) => {
+      const suffix = event.name.slice(prefix.length);
+      const prefixed = `lr-${suffix}`;
+      // focus/blur are bridged through the already-bubbling native DOM event
+      // (relayNativeEvent()), not a prefixed lr-focus/lr-blur alias -- 9.0.0 removed that v8-era
+      // compatibility pair library-wide. Prefer the bare native name when the prefixed one isn't
+      // a real target event but the native one is, instead of silently dropping the rewrite (and
+      // thus reporting a false missing-event drift) the moment a mirrored component's lr-focus/
+      // lr-blur goes away.
+      const to =
+        (suffix === 'focus' || suffix === 'blur') &&
+        !targetEvents.has(prefixed) &&
+        targetEvents.has(suffix)
+          ? suffix
+          : prefixed;
+      return { from: event.name, to };
+    })
     .filter(
       (rewrite) => rewrite.from !== rewrite.to && targetEvents.has(rewrite.to)
     )

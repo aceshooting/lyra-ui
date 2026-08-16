@@ -93,6 +93,7 @@ minimumReleaseAgeExclude:
   - knip@6.32.2
   - svelte@5.56.9
   - papaparse@5.6.0
+  - maplibre-gl@6.4.0
 allowBuilds:
   esbuild: true
   rs-module-lexer: true
