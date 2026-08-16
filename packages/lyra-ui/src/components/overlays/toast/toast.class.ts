@@ -337,8 +337,18 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
         );
       }
     };
+    // admitEntry() only ever calls this synchronously, so a same-task burst evicting several
+    // queued entries reaches here before the browser's next rendering update. announce()'s
+    // isAccessibilityVisible() check ends in a native checkVisibility() call, and at least one
+    // engine answers that from the last-painted frame rather than forcing a fresh paint the way
+    // getComputedStyle()/offsetWidth force a fresh layout -- so queued on a bare microtask (which
+    // runs before that update), it can read this task's just-appended toast items as not yet
+    // rendered and silently, permanently drop the coalesced announcement (nothing here retries a
+    // skipped announce). requestAnimationFrame runs as part of that rendering update, after any
+    // pending paint for this task's DOM mutations, so the visibility check sees current state on
+    // every engine; it still guarantees exactly one flush per coalesced burst.
     const view = this.ownerDocument.defaultView;
-    if (view) view.queueMicrotask(notify);
+    if (view) view.requestAnimationFrame(notify);
     else queueMicrotask(notify);
   }
 

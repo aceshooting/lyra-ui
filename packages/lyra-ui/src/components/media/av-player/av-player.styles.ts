@@ -4,6 +4,11 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
+    /* Query container for the narrow-allocation rate-select cap below -- matches
+       lr-video's own [part='controls'] select narrow-container pattern, the proven fix for
+       this exact failure mode in a sibling media component. */
+    container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
     --_lr-av-player-transcript-height: var(--lr-size-16rem);
   }
   [part='base'] {
@@ -36,7 +41,10 @@ export const styles = css`
        for a native <select> that's driven by its widest <option> text, which can be long
        (localized playback-rate labels). inline-size/max-inline-size alone don't override that
        floor; min-inline-size:0 does, letting the select actually shrink to fit a narrow
-       container instead of forcing it to overflow. */
+       container instead of forcing it to overflow. That flex-shrink alone is not a hard
+       guarantee across engines once the option text is long enough -- the @container rule below
+       backstops it with lr-video's own [part='controls'] select pattern: a fixed max-inline-size
+       once the host itself is narrow, independent of content length or available flex space. */
     min-inline-size: 0;
     inline-size: 100%;
     max-inline-size: 100%;
@@ -47,7 +55,15 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
     cursor: pointer;
+  }
+  @container (max-inline-size: 20rem) {
+    [part='rate-select'] {
+      max-inline-size: var(--lr-size-8rem);
+    }
   }
   [part='rate-select'] option {
     background: var(--lr-color-surface);

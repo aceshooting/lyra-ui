@@ -1020,8 +1020,30 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return visible;
   }
 
+  /** Cleared twice, from two different points in `willUpdate()` -- neither alone is enough:
+   *  (1) unconditionally at the top, because `isInteractiveLink()` (what this filters on) reads
+   *  live computed style (`--lr-link-color`, `--lr-color-border`) and `link.color`/`link.width`,
+   *  none of which are reactive properties `changed` would ever report, so a style-only update
+   *  (a CSS custom-property edit plus `requestUpdate()`, `nodes`/`links` untouched) must still see
+   *  a fresh result; (2) again right after `rebuildSimulation()` reassigns `simLinks`, because
+   *  `willUpdate()`'s own `previousIndex` computation (right after clear (1), before
+   *  `rebuildSimulation()` runs) can itself call `navigableLinks()` and repopulate the cache from
+   *  the OLD `simLinks` -- without this second clear a structural change would render against
+   *  stale link membership. Caching within one render pass is still enough to fix the actual
+   *  cost: without any caching, `navigableLinks()`'s `simLinks.filter()` re-runs on every call, and
+   *  `graphItemCount()`/`normalizedGraphItem()` call it once per rendered item (roving-tabindex
+   *  math in both the SVG and canvas-mode offscreen cursor-item templates) -- an O(links) refilter
+   *  inside an O(nodes + links) render loop is an O((nodes + links) * links) render, confirmed by
+   *  local profiling to take 60+ seconds alone for a 5,000-node/10,000-link canvas-mode graph. */
+  private navigableLinksCache?: SimLink[];
+
   private navigableLinks(): SimLink[] {
-    return this.simLinks.filter((link) => this.isInteractiveLink(link));
+    if (!this.navigableLinksCache) {
+      this.navigableLinksCache = this.simLinks.filter((link) =>
+        this.isInteractiveLink(link)
+      );
+    }
+    return this.navigableLinksCache;
   }
 
   /** `width`/`height` normalized to a finite, positive viewport size — an invalid attribute value
@@ -2192,6 +2214,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but a future shared mixin under LyraElement must still run
+    // Every update gets a fresh navigableLinks() result computed at most once (see that cache
+    // field's own doc comment for why this can't be gated on graphItemsChanged like the sibling
+    // caches below).
+    this.navigableLinksCache = undefined;
     this.syncGraphHostRole();
     // Gates the mount-time selection announcement below -- selectedNodeIds/selectedLinkIds both
     // default to `[]`, a non-undefined default, so Lit marks them "changed" on the very first
@@ -2228,6 +2254,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
     if (structureChanged) {
       this.rebuildSimulation();
+      // rebuildSimulation() reassigns simLinks -- the unconditional clear at the top of this
+      // method already ran before that reassignment (previousIndex above can call
+      // navigableLinks() and repopulate the cache from the OLD simLinks), so this needs its own
+      // clear rather than relying on that earlier one.
+      this.navigableLinksCache = undefined;
     }
     // rebuildSimulation() above always reassigns simNodes, so checking it here (after that call)
     // also catches a nodes/links/hiddenTypes-driven rebuild, not just a direct communities set.
