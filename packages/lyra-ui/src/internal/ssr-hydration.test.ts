@@ -100,7 +100,7 @@ it('stops deferring once the element has hydrated', async () => {
 
 it('renders lr-avatar initials first and adopts the slotted glyph after hydration', async () => {
   const el = await mountServerRendered(
-    `<lr-avatar label="Ada">${SERVER_SHADOW}<span>AD</span></lr-avatar>`,
+    `<lr-avatar label="Ada">${SERVER_SHADOW}<span slot="icon">AD</span></lr-avatar>`,
   );
   await el.updateComplete;
   expect(el.shadowRoot?.querySelectorAll('[part="initials"]').length).to.equal(1);
@@ -124,8 +124,12 @@ it('renders lr-kbd key caps first and adopts slotted content after hydration', a
 });
 
 it('renders lr-usage-badge inert first and adopts slotted content after hydration', async () => {
+  // `hasInteractiveTooltip` requires both display content (here, the immediately-available
+  // `summary` attribute) and tooltip content (the `details` slot, only detected once the deferred
+  // hydration seed runs) -- slotted content alone never flips it, matching lr-avatar/lr-chat-composer
+  // above, whose slots gate a single condition each.
   const el = await mountServerRendered(
-    `<lr-usage-badge>${SERVER_SHADOW}<span>Custom</span></lr-usage-badge>`,
+    `<lr-usage-badge summary="Custom">${SERVER_SHADOW}<span slot="details">More</span></lr-usage-badge>`,
   );
   await el.updateComplete;
   expect(el.shadowRoot?.querySelector('[part="base"]')?.hasAttribute('role')).to.be.false;
@@ -178,15 +182,15 @@ it('renders lr-color-picker without the eyedropper first and adds it after hydra
 
 it('renders lr-chat-composer without adornment slots first and adopts them after hydration', async () => {
   const el = await mountServerRendered(
-    `<lr-chat-composer>${SERVER_SHADOW}<span slot="leading">Add</span></lr-chat-composer>`,
+    `<lr-chat-composer>${SERVER_SHADOW}<span slot="start">Add</span></lr-chat-composer>`,
   );
   await el.updateComplete;
-  expect(el.shadowRoot?.querySelector('[part="leading"]')?.hasAttribute('hidden')).to.be.true;
+  expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.true;
 
   await waitUntil(
-    () => !el.shadowRoot?.querySelector('[part="leading"]')?.hasAttribute('hidden'),
+    () => !el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden'),
   );
-  expect(el.shadowRoot?.querySelector('[part="leading"]')?.hasAttribute('hidden')).to.be.false;
+  expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.false;
 });
 
 it('keeps lr-icon custom-content slot outside the svg so it survives HTML parsing', async () => {
@@ -195,9 +199,13 @@ it('keeps lr-icon custom-content slot outside the svg so it survives HTML parsin
 
   const slot = el.shadowRoot?.querySelector('slot');
   // Serialized inside <svg>, an HTML parser builds the slot in the SVG namespace instead: an inert
-  // element that assigns nothing and has no assignedNodes() to call from updated().
+  // element that assigns nothing and has no assignedNodes() to call from updated(). render()'s
+  // outer `class="semantic-owner"` wrapper means the slot's parent is that span, not the shadow
+  // root directly -- the invariant this test cares about is that the parent isn't (or isn't inside)
+  // the svg, matching the test's own title.
   expect(slot instanceof HTMLSlotElement).to.be.true;
-  expect(slot?.parentElement?.localName ?? 'shadow-root').to.equal('shadow-root');
+  expect(slot?.parentElement?.localName).to.not.equal('svg');
+  expect(slot?.closest('svg')).to.equal(null);
   expect(slot?.assignedNodes({ flatten: true }).length).to.be.greaterThan(0);
   // The cloned copy -- not the slot -- is what actually paints, inside the component-owned svg.
   expect(el.shadowRoot?.querySelectorAll('svg [data-lr-custom-copy]').length).to.equal(1);
