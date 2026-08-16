@@ -2393,19 +2393,30 @@ it('keeps rate hover and every marker category distinguishable in forced colors'
       type: 'move',
       position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
     });
+    await aTimeout(0);
     // Firefox's forced-colors UA sheet retains the authored hover outline while normalizing the
     // native select border back to solid. The outline is the stable non-color hover cue owned by
     // this component across engines; exact native border painting is not.
     //
-    // No CSS transition is involved (av-player.styles.ts has none on this part), so the delay
-    // being waited out here is pointer-event/style-recalc processing latency, not paint timing.
-    // Passes standalone in isolation every time, with or without coverage instrumentation; only
-    // times out at 3000ms deep inside the full ~480-file WTR_COVERAGE=1 suite, where the shared
-    // session is under far more accumulated load by file ~420. 5000ms matches this codebase's own
-    // convention for other settle-style waits (see markdown-core.test.ts, archive-viewer.test.ts).
+    // Second attempt at this test's flakiness deep inside the full ~480-file WTR_COVERAGE=1 suite
+    // (only reproduces there; 121/121 clean in every standalone configuration tried, with or
+    // without coverage). First attempt just widened the waitUntil timeout 3000ms -> 5000ms; that
+    // demonstrably did not fix it -- CI failed again with the identical timeout error, which rules
+    // out plain processing latency as the whole story and points at :hover itself never actually
+    // registering, not a slow-but-eventual style recalc. `av-player.styles.ts` ties
+    // `outline: solid` to `:hover` directly with no other async dependency (including under the
+    // forced-colors media query), so the compound wait below is equivalent to waiting on :hover
+    // alone plus a same-pass style read -- but it bundled both into one polled condition where two
+    // sibling tests with the identical hover-then-assert shape (video.test.ts's `hover()` helper,
+    // tool-param-form.test.ts) instead wait on :hover alone, then assert separately, and are not
+    // among the tests failing in this same coverage run. Match that shape and add back the
+    // trailing settle tick present in video.test.ts's helper but missing here. Root cause of why
+    // :hover itself sometimes doesn't register under this specific suite's load is still open --
+    // if this test times out again, that unconfirmed mechanism (not timeout duration) is the next
+    // thing to chase, not a third timeout increase.
     await waitUntil(
-      () => select.matches(':hover') && getComputedStyle(select).outlineStyle === 'solid',
-      'the playback-rate forced-colors hover cue did not settle',
+      () => select.matches(':hover'),
+      'the playback-rate select never registered :hover',
       { timeout: 5000 },
     );
     expect(getComputedStyle(select).outlineStyle).to.equal('solid');
