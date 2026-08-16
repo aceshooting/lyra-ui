@@ -195,7 +195,9 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   /** Layout canvas. Unset/`fixed` is 1.25em × 1em; `auto` follows intrinsic width at 1em high;
    *  `square` is 1.25em × 1.25em; `roomy` is 1.5em × 1.5em. */
   @property({ reflect: true }) canvas?: LyraIconCanvas;
-  /** Compatibility alias for `canvas="auto"`.
+  /** Compatibility alias for `canvas="auto"`. Purely a CSS-level alias — it never reads or
+   *  writes `canvas` — so an explicit `canvas` attribute/property always wins and this becomes a
+   *  no-op while one is set.
    * @deprecated Use `canvas="auto"` instead. */
   @property({ type: Boolean, reflect: true, attribute: 'auto-width' })
   autoWidth = false;

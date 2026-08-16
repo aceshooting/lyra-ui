@@ -8598,6 +8598,20 @@
       }
     },
     {
+      "name": "--lr-scroller-shadow-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-scroller>`** (default: `var(--shadow-color)`) — Lyra-prefixed shadow-color alias."
+      }
+    },
+    {
+      "name": "--lr-scroller-shadow-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-scroller>`** (default: `var(--shadow-size)`) — Lyra-prefixed shadow-size alias."
+      }
+    },
+    {
       "name": "--lr-segmented-active-bg",
       "description": {
         "kind": "markdown",
@@ -9830,10 +9844,24 @@
       }
     },
     {
+      "name": "--lr-split-panel-divider-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split-panel>`** (default: `var(--lr-color-border-strong)`) — Background of `divider` while being dragged (or focused and pressed via the keyboard)."
+      }
+    },
+    {
       "name": "--lr-split-panel-divider-hit-area",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-split-panel>`** (default: `var(--divider-hit-area)`) — Lyra-prefixed hit-area alias."
+      }
+    },
+    {
+      "name": "--lr-split-panel-divider-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split-panel>`** (default: `var(--lr-color-brand)`) — Background of `divider` on hover/keyboard focus, independent of any other component's own hover token that happens to default to the same shared brand color."
       }
     },
     {

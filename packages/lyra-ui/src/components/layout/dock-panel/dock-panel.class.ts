@@ -26,6 +26,7 @@ export interface LyraDockPanelCollapseChangeDetail {
 }
 
 export interface LyraDockPanelEventMap {
+  'lr-resize-request': CustomEvent<LyraDockPanelResizeDetail>;
   'lr-resize-input': CustomEvent<LyraDockPanelResizeDetail>;
   'lr-resize-change': CustomEvent<LyraDockPanelResizeDetail>;
   'lr-collapse-request': CustomEvent<LyraDockPanelCollapseChangeDetail>;
@@ -94,11 +95,20 @@ interface DragState {
  *
  * @customElement lr-dock-panel
  * @slot - The panel's own content.
+ * @event lr-resize-request - A cancelable proposed `extent` (a `px` CSS length string), `detail: {
+ *   extent }`, fired before a discrete keyboard step commits and before a pointer drag's final
+ *   settle commits. Call `preventDefault()` to reject it: a keyboard step simply does not apply,
+ *   and a drag's final settle snaps the panel back to the size it had before that drag gesture
+ *   began. Not fired for a continuous pointer drag's own intermediate ticks -- checking a
+ *   cancelable event on every pointermove would make a live drag visibly stutter -- only its
+ *   final settle on release.
  * @event lr-resize-input - Frozen `detail: { extent }` (a `px` CSS length string), fired for every
  *   genuine pointer or keyboard value transition. Fully clamped/no-op attempts emit nothing.
  * @event lr-resize-change - Frozen `detail: { extent }`, fired once on genuine pointerup after at
- *   least one value transition, and after each genuine keyboard step. Pointer cancellation, lost
- *   capture, policy/geometry mutation, and no-op attempts emit nothing.
+ *   least one value transition and the drag's `lr-resize-request` was not prevented, and after
+ *   each genuine keyboard step whose own `lr-resize-request` was not prevented. Pointer
+ *   cancellation, lost capture, policy/geometry mutation, no-op attempts, and a prevented
+ *   `lr-resize-request` all emit nothing.
  * @event lr-collapse-request - A cancelable proposed `collapsed` state from the built-in collapse
  *   toggle. Call `preventDefault()` to keep `collapsed` unchanged. Not fired when a consumer sets
  *   `collapsed` directly. `detail: { collapsed }`.
@@ -341,12 +351,20 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     this.applyHostSize(bounds);
   }
 
-  private commitSize(px: number): string | undefined {
+  /** Computes the clamped extent a raw pixel size would resolve to, without applying it --
+   *  `undefined` when it's a no-op against the current live size. Split from `applyProposal()` so
+   *  a discrete step (keyboard, or a pointer drag's final settle) can offer the proposed extent
+   *  through the cancelable `lr-resize-request` veto before mutating anything. */
+  private resolveProposal(px: number): { bounds: { minPx: number; maxPx: number }; nextExtent: string } | undefined {
     const bounds = this.resolveBoundsPx();
     const clamped = Math.min(Math.max(px, bounds.minPx), bounds.maxPx);
     const nextExtent = `${Math.round(clamped)}px`;
     const currentExtent = `${Math.round(this.currentSizePx())}px`;
     if (nextExtent === currentExtent) return undefined;
+    return { bounds, nextExtent };
+  }
+
+  private applyProposal(bounds: { minPx: number; maxPx: number }, nextExtent: string): void {
     this.extent = nextExtent;
     // Apply the new host size synchronously instead of waiting for Lit's
     // (microtask-batched) update cycle to reach willUpdate: currentSizePx()
@@ -354,7 +372,27 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     // or another pointermove before a paint) must each see the size the
     // previous step just committed, not a stale pre-update box.
     this.applyHostSize(bounds);
-    return nextExtent;
+  }
+
+  /** Continuous pointer-drag ticks apply immediately with no per-tick veto -- checking a
+   *  cancelable event on every pointermove would make a live drag visibly stutter waiting on
+   *  synchronous listener work. `onHandleKeyDown`'s discrete steps and a drag's final settle in
+   *  `onPointerUp` each go through `lr-resize-request` instead; see those for the veto path. */
+  private commitSize(px: number): string | undefined {
+    const proposal = this.resolveProposal(px);
+    if (!proposal) return undefined;
+    this.applyProposal(proposal.bounds, proposal.nextExtent);
+    return proposal.nextExtent;
+  }
+
+  /** Proposes `extent` through the cancelable `lr-resize-request` veto point (mirroring
+   *  `lr-collapse-request`'s propose-then-commit shape) and applies it only when not
+   *  `defaultPrevented`. Returns whether it was applied. */
+  private requestResize(bounds: { minPx: number; maxPx: number }, extent: string): boolean {
+    const request = this.emit('lr-resize-request', Object.freeze({ extent }), { cancelable: true });
+    if (request.defaultPrevented) return false;
+    this.applyProposal(bounds, extent);
+    return true;
   }
 
   private emitResize(
@@ -442,8 +480,21 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const shouldCommit =
       drag.acceptedResize && this.dragSnapshotIsCurrent(drag);
     const finalExtent = drag.finalExtent;
+    const startSizePx = drag.startSizePx;
     this.endDrag();
-    if (shouldCommit) this.emitResize('lr-resize-change', finalExtent);
+    if (!shouldCommit) return;
+    // The drag already tracked the pointer live via lr-resize-input on every tick (checking a
+    // veto per-tick would stutter a live drag -- see requestResize()'s own doc comment), so a
+    // rejected final settle here means visibly snapping back to the size this drag gesture
+    // started from, not silently no-op-ing a resize the user just watched happen.
+    const request = this.emit('lr-resize-request', Object.freeze({ extent: finalExtent }), {
+      cancelable: true,
+    });
+    if (request.defaultPrevented) {
+      this.applyProposal(this.resolveBoundsPx(), `${Math.round(startSizePx)}px`);
+      return;
+    }
+    this.emitResize('lr-resize-change', finalExtent);
   };
 
   private onPointerCancel = (e: PointerEvent): void => {
@@ -472,21 +523,25 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     // it into the drag delta above.
     const forwardKey = this.axis === 'inline' ? 'ArrowRight' : 'ArrowDown';
     const backwardKey = this.axis === 'inline' ? 'ArrowLeft' : 'ArrowUp';
-    let extent: string | undefined;
+    let proposal: { bounds: { minPx: number; maxPx: number }; nextExtent: string } | undefined;
     if (e.key === forwardKey) {
       e.preventDefault();
-      extent = this.commitSize(
+      proposal = this.resolveProposal(
         this.currentSizePx() + this.growSign * KEYBOARD_STEP_PX
       );
     } else if (e.key === backwardKey) {
       e.preventDefault();
-      extent = this.commitSize(
+      proposal = this.resolveProposal(
         this.currentSizePx() - this.growSign * KEYBOARD_STEP_PX
       );
     }
-    if (extent === undefined) return;
-    this.emitResize('lr-resize-input', extent);
-    this.emitResize('lr-resize-change', extent);
+    if (!proposal) return;
+    // A keyboard step is a single discrete action, exactly like the collapse toggle -- unlike a
+    // continuous pointer drag, proposing it through lr-resize-request first costs nothing
+    // perceptible.
+    if (!this.requestResize(proposal.bounds, proposal.nextExtent)) return;
+    this.emitResize('lr-resize-input', proposal.nextExtent);
+    this.emitResize('lr-resize-change', proposal.nextExtent);
   };
 
   private toggleCollapsed = (): void => {

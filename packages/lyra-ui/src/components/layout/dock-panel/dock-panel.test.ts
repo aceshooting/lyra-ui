@@ -258,6 +258,102 @@ it("treats each genuine keyboard step as a frozen input/change transaction", asy
   ]);
 });
 
+it("proposes a keyboard step through the cancelable lr-resize-request veto before applying it", async () => {
+  const el = await dockedFixture(
+    'extent="300px" min-extent="100px" max-extent="500px"'
+  );
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+
+  const requested: LyraDockPanelResizeDetail[] = [];
+  el.addEventListener("lr-resize-request", (event) => {
+    requested.push((event as CustomEvent<LyraDockPanelResizeDetail>).detail);
+    event.preventDefault();
+  });
+  let inputs = 0;
+  let changes = 0;
+  el.addEventListener("lr-resize-input", () => (inputs += 1));
+  el.addEventListener("lr-resize-change", () => (changes += 1));
+
+  handle.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
+  );
+  await elementUpdated(el);
+
+  expect(requested.map((detail) => detail.extent)).to.deep.equal(["316px"]);
+  // A prevented request simply does not apply -- extent stays put and neither
+  // lr-resize-input nor lr-resize-change fires for the rejected step.
+  expect(el.extent).to.equal("300px");
+  expect(inputs).to.equal(0);
+  expect(changes).to.equal(0);
+});
+
+it("does not fire lr-resize-request per continuous pointer-drag tick, only on the drag's final settle", async () => {
+  const el = await dockedFixture(
+    'extent="300px" min-extent="100px" max-extent="500px"'
+  );
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+
+  let requests = 0;
+  el.addEventListener("lr-resize-request", () => (requests += 1));
+  const input = oneEvent(el, "lr-resize-input");
+
+  handle.dispatchEvent(
+    new PointerEvent("pointerdown", primaryPointer(1, { clientX: 200 }))
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 150 })
+  );
+  await input;
+  expect(el.extent).to.equal("350px");
+  expect(requests, "a live drag tick must not fire the veto event").to.equal(0);
+
+  const secondInput = oneEvent(el, "lr-resize-input");
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 140 })
+  );
+  await secondInput;
+  expect(requests, "still no veto event mid-drag").to.equal(0);
+
+  const request = oneEvent(el, "lr-resize-request");
+  window.dispatchEvent(new PointerEvent("pointerup", primaryPointer(1)));
+  const requestDetail = (
+    (await request) as CustomEvent<LyraDockPanelResizeDetail>
+  ).detail;
+  expect(requestDetail).to.deep.equal({ extent: "360px" });
+  expect(requests, "exactly one veto event, for the final settle").to.equal(1);
+});
+
+it("snaps a rejected pointer-drag final settle back to the size the gesture started from", async () => {
+  const el = await dockedFixture(
+    'extent="300px" min-extent="100px" max-extent="500px"'
+  );
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+
+  el.addEventListener("lr-resize-request", (event) => event.preventDefault());
+  let changes = 0;
+  el.addEventListener("lr-resize-change", () => (changes += 1));
+  const input = oneEvent(el, "lr-resize-input");
+
+  handle.dispatchEvent(
+    new PointerEvent("pointerdown", primaryPointer(1, { clientX: 200 }))
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 150 })
+  );
+  await input;
+  expect(el.extent).to.equal("350px");
+
+  window.dispatchEvent(new PointerEvent("pointerup", primaryPointer(1)));
+  await elementUpdated(el);
+  expect(el.extent, "rejected final settle snaps back to the pre-drag size").to.equal("300px");
+  expect(changes, "lr-resize-change must not fire for a rejected settle").to.equal(0);
+});
+
 it('swaps ArrowLeft/ArrowRight for edge="end" under dir="rtl"', async () => {
   const el = await fixture(
     html`<div

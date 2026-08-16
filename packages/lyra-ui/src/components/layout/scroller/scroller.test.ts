@@ -135,6 +135,22 @@ describe("<lr-scroller>", () => {
     expect(computed.backgroundImage).to.include("rgb(1, 2, 3)");
   });
 
+  it("prefers --lr-scroller-shadow-size/--lr-scroller-shadow-color over the unprefixed upstream aliases", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller
+        label="Items"
+        style="inline-size: 100px; --shadow-size: 17px; --shadow-color: rgb(1, 2, 3); --lr-scroller-shadow-size: 9px; --lr-scroller-shadow-color: rgb(9, 8, 7)"
+      >
+        <div style="inline-size: 500px;">wide content</div>
+      </lr-scroller>
+    `);
+    const end = el.shadowRoot!.querySelector('[part="end-shadow"]') as HTMLElement;
+    await waitUntil(() => !end.hidden, "end shadow did not appear");
+    const computed = getComputedStyle(end);
+    expect(computed.width).to.equal("9px");
+    expect(computed.backgroundImage).to.include("rgb(9, 8, 7)");
+  });
+
   it("reports scroll edges correctly at rest under RTL (CSSOM negative-scrollLeft convention)", async () => {
     const el = await fixture<LyraScroller>(html`
       <lr-scroller controls dir="rtl" style="inline-size: 100px;">

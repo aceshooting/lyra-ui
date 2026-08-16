@@ -121,12 +121,16 @@ export const styles = css`
     inset-inline: 0;
   }
 
+  /* --lr-split-panel-divider-hover-color/-active-color deliberately don't reuse the bare
+     --lr-color-brand/--lr-color-border-strong tokens directly -- the divider's drag-affordance
+     accent is its own visual purpose that happens to default to those shared colors, not tied to
+     them by design, mirroring lr-dock-panel's [part='handle'] hover/active tokens. */
   [part~='divider']:where(:hover) {
-    background: var(--lr-color-brand);
+    background: var(--lr-split-panel-divider-hover-color, var(--lr-color-brand));
   }
 
   [part~='divider']:where(:active, [data-dragging]) {
-    background: var(--lr-color-border-strong);
+    background: var(--lr-split-panel-divider-active-color, var(--lr-color-border-strong));
   }
 
   [part~='divider']:where(:focus-visible) {

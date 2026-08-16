@@ -5,6 +5,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { setCustomState } from '../../../internal/custom-states.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { styles } from './reorder-item.styles.js';
 import { reorderOwnerUpdate, type ReorderOwnerState } from './reorder-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -76,7 +77,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  private readonly reorderInternals = this.attachInternals();
+  private readonly reorderInternals = attachInternalsSafely(this);
   private readonly moveUpLabelId = nextId('reorder-move-up');
   private readonly moveDownLabelId = nextId('reorder-move-down');
   private readonly itemLabelId = nextId('reorder-item-label');

@@ -8,7 +8,7 @@
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -72,6 +72,13 @@ selected. Lyra-prefixed aliases are `--lr-split-panel-divider-width`,
 `--lr-split-panel-divider-hit-area`, `--lr-split-panel-min`, and `--lr-split-panel-max`; when both
 spellings are set, the Lyra-prefixed value wins. Constraint values may be lengths, percentages, or
 `calc()` expressions and are re-applied when their computed sizes change.
+
+`--lr-split-panel-divider-hover-color` (default `var(--lr-color-brand)`) is the divider's background
+on hover/keyboard focus. `--lr-split-panel-divider-active-color` (default
+`var(--lr-color-border-strong)`) is its background while being dragged, or focused and pressed via
+the keyboard. Both are independent, component-scoped hooks rather than the bare shared token, so
+retinting this divider does not also retint any other component that happens to default to the same
+color.
 
 Keyboard: focus the divider, then use Left/Right for a horizontal split or Up/Down for a vertical
 split. Each arrow moves one percent of the current allocation; horizontal arrows mirror under RTL.

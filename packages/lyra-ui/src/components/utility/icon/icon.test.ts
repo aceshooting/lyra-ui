@@ -1019,6 +1019,22 @@ describe('lr-icon presentation knobs', () => {
     expect(roomy.getBoundingClientRect().height).to.be.closeTo(30, 0.25);
   });
 
+  it('is a pure CSS-level alias: an explicit canvas value always wins over the deprecated auto-width attribute', async () => {
+    // auto-width alone renders 20x20 at this font size (see the preceding test). It must not
+    // override an explicit canvas="square" (25x25) set alongside it -- autoWidth never reads or
+    // writes `canvas`, so a migrating consumer's explicit canvas is never silently defeated by a
+    // leftover deprecated auto-width attribute.
+    const el = (await fixture(
+      html`<lr-icon name="search" style="font-size: 20px" canvas="square" auto-width></lr-icon>`,
+    )) as LyraIcon;
+    expect(el.getBoundingClientRect().width).to.be.closeTo(25, 0.25);
+    expect(el.getBoundingClientRect().height).to.be.closeTo(25, 0.25);
+    // The alias property itself is untouched by canvas and vice versa -- confirms it truly never
+    // syncs, rather than merely losing a CSS specificity fight.
+    expect(el.autoWidth).to.be.true;
+    expect(el.canvas).to.equal('square');
+  });
+
   it('runs every documented animation and resolves the shared timing hooks', async function () {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) this.skip();
     const names = [

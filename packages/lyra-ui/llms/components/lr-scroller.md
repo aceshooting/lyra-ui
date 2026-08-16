@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,7 +50,9 @@ previous/next control's box size; the interactive target never shrinks below `--
 regardless. `--lr-scroller-min-block-size` (default `var(--lr-size-10rem)`) — the vertical
 orientation's minimum block size, ignored while horizontal. `--shadow-color` (default
 `var(--lr-color-surface)`) and `--shadow-size` (default `var(--lr-size-2rem)`) theme each edge cue's
-base color and logical extent.
+base color and logical extent; `--lr-scroller-shadow-color` and `--lr-scroller-shadow-size` are
+Lyra-prefixed aliases for the same two (mirroring `lr-split-panel`'s alias pattern for its own
+upstream-named props), and win when both spellings are set.
 
 ```html
 <lr-scroller controls label="Project cards">

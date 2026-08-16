@@ -44,6 +44,8 @@ export interface LyraScrollerEventMap {
  * @cssprop [--lr-scroller-min-block-size=var(--lr-size-10rem)] - Minimum vertical scroller size.
  * @cssprop [--shadow-color=var(--lr-color-surface)] - Base color of each edge shadow.
  * @cssprop [--shadow-size=var(--lr-size-2rem)] - Inline/block extent of each edge shadow.
+ * @cssprop [--lr-scroller-shadow-color=var(--shadow-color)] - Lyra-prefixed shadow-color alias.
+ * @cssprop [--lr-scroller-shadow-size=var(--shadow-size)] - Lyra-prefixed shadow-size alias.
  * @status stable
  * @since 4.0.0
  */

@@ -208,6 +208,35 @@ it("keeps visually hidden content available and reveals the focusable variant on
   expect(skip.getBoundingClientRect().width).to.be.greaterThan(1);
 });
 
+it("sizes .lr-visually-hidden from --lr-visually-hidden-size/--lr-size-1px, not the unrelated --lr-border-width-thin", async () => {
+  const el = (await fixture(
+    html`<span class="lr-visually-hidden">Additional context</span>`,
+  )) as HTMLElement;
+  const style = getComputedStyle(el);
+  expect(style.inlineSize).to.equal("1px");
+  expect(style.blockSize).to.equal("1px");
+
+  // Retheming an unrelated border-width token -- a plausible "no visible hairline borders" design
+  // choice -- must not shrink this element to 0x0. It must derive from --lr-size-1px, not
+  // --lr-border-width-thin, even though both happen to default to the same 1px value.
+  el.style.setProperty("--lr-border-width-thin", "0");
+  document.documentElement.style.setProperty("--lr-theme-border-width-thin", "0");
+  try {
+    const rethemed = getComputedStyle(el);
+    expect(rethemed.inlineSize, "inline-size must not collapse to 0").to.equal("1px");
+    expect(rethemed.blockSize, "block-size must not collapse to 0").to.equal("1px");
+  } finally {
+    el.style.removeProperty("--lr-border-width-thin");
+    document.documentElement.style.removeProperty("--lr-theme-border-width-thin");
+  }
+
+  // Its own dedicated override hook does reach it.
+  el.style.setProperty("--lr-visually-hidden-size", "3px");
+  const sized = getComputedStyle(el);
+  expect(sized.inlineSize).to.equal("3px");
+  expect(sized.blockSize).to.equal("3px");
+});
+
 it("hides only opted-in undefined elements and reveals them after definition", async () => {
   fouceTagId += 1;
   const tagName = `lr-fouce-probe-${fouceTagId}`;

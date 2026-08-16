@@ -248,3 +248,44 @@ describe('move-button state cssprops', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('ElementInternals availability', () => {
+  it('does not throw when constructed in an environment without a real ElementInternals implementation', async () => {
+    const original = HTMLElement.prototype.attachInternals;
+    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+    delete HTMLElement.prototype.attachInternals;
+    try {
+      let el: LyraReorderItem | undefined;
+      expect(() => {
+        el = document.createElement('lr-reorder-item') as LyraReorderItem;
+      }).to.not.throw();
+      document.body.append(el!);
+      // Mounting drives updated()'s setCustomState() calls against the fallback ElementInternals'
+      // states Set (at-start/at-end/list-disabled/pending/busy/invalid-identity) -- the fallback
+      // must keep that wiring usable rather than merely swallowing the constructor error. A
+      // synchronous throw inside updated() would reject this promise.
+      await el!.updateComplete;
+      el!.remove();
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+
+  it('falls back to noop internals when attachInternals() throws (e.g. called a second time)', async () => {
+    const original = HTMLElement.prototype.attachInternals;
+    HTMLElement.prototype.attachInternals = function () {
+      throw new DOMException('attachInternals already called', 'InvalidStateError');
+    };
+    try {
+      let el: LyraReorderItem | undefined;
+      expect(() => {
+        el = document.createElement('lr-reorder-item') as LyraReorderItem;
+      }).to.not.throw();
+      document.body.append(el!);
+      await el!.updateComplete;
+      el!.remove();
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});

@@ -233,6 +233,53 @@ describe('<lr-mutation-observer>', () => {
       const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
       expect(result.detail.records.length).to.be.greaterThan(0);
     });
+
+    it('enables attribute observation from the observeAttributes alias set as a property, not just its attributes HTML attribute', async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer><div></div></lr-mutation-observer>`,
+      );
+      el.observeAttributes = true;
+      await el.updateComplete;
+      await aTimeout(0);
+      const target = el.querySelector('div')!;
+
+      const event = oneEvent(el, 'lr-mutation');
+      target.setAttribute('data-x', '1');
+      const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
+      expect(result.detail.records.length).to.be.greaterThan(0);
+    });
+
+    it('enables character-data observation from the characterData alias set as a property', async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer><div>Before</div></lr-mutation-observer>`,
+      );
+      el.characterData = true;
+      await el.updateComplete;
+      await aTimeout(0);
+      const target = el.querySelector('div')!;
+
+      const event = oneEvent(el, 'lr-mutation');
+      target.firstChild!.textContent = 'After';
+      const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
+      expect(result.detail.records.length).to.be.greaterThan(0);
+    });
+
+    it('reflects the observeAttributes and characterData aliases to their attributes, like every other mapped observer attribute on this element', async () => {
+      const el = await fixture<LyraMutationObserver>(
+        html`<lr-mutation-observer><div></div></lr-mutation-observer>`,
+      );
+      el.observeAttributes = true;
+      el.characterData = true;
+      await el.updateComplete;
+      expect(el.getAttribute('attributes')).to.equal('');
+      expect(el.getAttribute('character-data')).to.equal('');
+
+      el.observeAttributes = false;
+      el.characterData = false;
+      await el.updateComplete;
+      expect(el.hasAttribute('attributes')).to.equal(false);
+      expect(el.hasAttribute('character-data')).to.equal(false);
+    });
   });
 
   it('supports attr/attr-old-value and char-data/char-data-old-value mapped aliases', async () => {

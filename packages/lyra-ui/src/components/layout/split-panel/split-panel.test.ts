@@ -692,6 +692,32 @@ it('visibly changes the divider on hover and press', async () => {
   }
 });
 
+it('lets --lr-split-panel-divider-hover-color/-active-color retint the divider independently of the shared brand/border tokens', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel
+      aria-label="Resize panes"
+      style="inline-size: 400px; block-size: 100px; --lr-split-panel-divider-hover-color: rgb(70, 80, 90); --lr-split-panel-divider-active-color: rgb(100, 110, 120)"
+    ></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const handle = divider(element);
+  const rect = handle.getBoundingClientRect();
+  const position: [number, number] = [
+    Math.round(rect.left + rect.width / 2),
+    Math.round(rect.top + rect.height / 2),
+  ];
+  const resting = getComputedStyle(handle).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position });
+    expect(getComputedStyle(handle).backgroundColor).to.equal('rgb(70, 80, 90)');
+    expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
+    await sendMouse({ type: 'down' });
+    expect(getComputedStyle(handle).backgroundColor).to.equal('rgb(100, 110, 120)');
+    await sendMouse({ type: 'up' });
+  } finally {
+    await resetMouse();
+  }
+});
+
 it('ends a drag on cancellation or capture loss and clears transient state across reconnect', async () => {
   const element = (await fixture(html`
     <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>

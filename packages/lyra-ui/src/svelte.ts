@@ -3252,7 +3252,8 @@ export type LyraDockPanelSvelteProps = LyraSvelteElementProps<
   | 'lr-collapse-change'
   | 'lr-collapse-request'
   | 'lr-resize-change'
-  | 'lr-resize-input',
+  | 'lr-resize-input'
+  | 'lr-resize-request',
   | '--lr-dock-panel-collapse-toggle-hover-bg'
   | '--lr-dock-panel-collapse-toggle-hover-color'
   | '--lr-dock-panel-collapsed-size'
@@ -8299,6 +8300,8 @@ export type LyraScrollerSvelteProps = LyraSvelteElementProps<
   | 'lr-scroll',
   | '--lr-scroller-control-size'
   | '--lr-scroller-min-block-size'
+  | '--lr-scroller-shadow-color'
+  | '--lr-scroller-shadow-size'
   | '--shadow-color'
   | '--shadow-size',
   {
@@ -8772,7 +8775,9 @@ export type LyraSplitPanelSvelteProps = LyraSvelteElementProps<
   | 'lr-reposition-request',
   | '--divider-hit-area'
   | '--divider-width'
+  | '--lr-split-panel-divider-active-color'
   | '--lr-split-panel-divider-hit-area'
+  | '--lr-split-panel-divider-hover-color'
   | '--lr-split-panel-divider-width'
   | '--lr-split-panel-max'
   | '--lr-split-panel-min'

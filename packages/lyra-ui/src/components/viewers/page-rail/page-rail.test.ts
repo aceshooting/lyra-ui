@@ -8,6 +8,11 @@ import type {
 } from './page-rail.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
+import '../pdf-viewer/pdf-viewer.js';
+import type { LyraPdfViewer } from '../pdf-viewer/pdf-viewer.js';
+import '../pptx-viewer/pptx-viewer.js';
+import type { LyraPptxViewer } from '../pptx-viewer/pptx-viewer.js';
+import type { PptxRendererModule, PptxViewerApi } from '../pptx-viewer/pptx-loader.js';
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let resolve!: (value: T) => void;
@@ -1132,6 +1137,192 @@ describe('lr-page-rail', () => {
     el.page = -3;
     await el.updateComplete;
     expect(list.activeItemId).to.equal(1);
+  });
+});
+
+// Every test above wires page-rail to hand-rolled `StubViewer`/`SnapshotViewer` doubles that
+// reimplement `PageThumbnailSource` by hand -- they can never notice the real `lr-pdf-viewer`/
+// `lr-pptx-viewer` classes drifting away from the contract they're documented to satisfy (e.g. a
+// future rename of `renderPageThumbnail`/`pageViewerSnapshot`/`lr-page-viewer-state-change` on
+// either side). These tests mount the real components instead, faking only the peer-loader/network
+// boundary each component's own test file already fakes (see pdf-viewer.test.ts's
+// `installFakeLoader`/`fakeDocument` and pptx-viewer.test.ts's `fakeModule`/`zipWithDeclaredSize`),
+// so a real protocol drift fails here.
+describe('lr-page-rail wired to the real lr-pdf-viewer/lr-pptx-viewer implementers', () => {
+  function fakePdfPage(pageNumber: number) {
+    return {
+      pageNumber,
+      getViewport: ({ scale = 1 }: { scale?: number } = {}) => ({
+        width: 200 * scale,
+        height: 300 * scale,
+        scale,
+      }),
+      render: () => ({ promise: Promise.resolve(), cancel: () => {} }),
+      streamTextContent: () => new ReadableStream({ start: (controller) => controller.close() }),
+      getTextContent: () => Promise.resolve({ items: [] }),
+    };
+  }
+
+  function fakePdfjsModule(pageCount: number) {
+    return {
+      getDocument: () => ({
+        promise: Promise.resolve({
+          numPages: pageCount,
+          getPage: (pageNumber: number) => Promise.resolve(fakePdfPage(pageNumber)),
+        }),
+      }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: class {
+        async render(): Promise<void> {}
+        cancel(): void {}
+      },
+    };
+  }
+
+  function stubFetch(body: ArrayBuffer): () => void {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      arrayBuffer: () => Promise.resolve(body),
+    } as Response)) as typeof window.fetch;
+    return () => {
+      window.fetch = original;
+    };
+  }
+
+  // A minimal but structurally valid single-entry ZIP central directory -- pptx-viewer's mount()
+  // validates real bytes (assertPptxArchiveWithinLimits) before the fake renderer module is ever
+  // reached. Mirrors pptx-viewer.test.ts's identically named helper.
+  function zipWithDeclaredSize(uncompressedBytes = 1): ArrayBuffer {
+    const localSize = 32;
+    const directorySize = 47;
+    const source = new ArrayBuffer(localSize + directorySize + 22);
+    const view = new DataView(source);
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint32(18, 1, true);
+    view.setUint32(22, uncompressedBytes, true);
+    view.setUint16(26, 1, true);
+    view.setUint8(30, 0x61);
+    view.setUint8(31, 0);
+    view.setUint32(localSize, 0x02014b50, true);
+    view.setUint32(localSize + 20, 1, true);
+    view.setUint32(localSize + 24, uncompressedBytes, true);
+    view.setUint16(localSize + 28, 1, true);
+    view.setUint32(localSize + 42, 0, true);
+    view.setUint8(localSize + 46, 0x61);
+    const endOffset = localSize + directorySize;
+    view.setUint32(endOffset, 0x06054b50, true);
+    view.setUint16(endOffset + 8, 1, true);
+    view.setUint16(endOffset + 10, 1, true);
+    view.setUint32(endOffset + 12, directorySize, true);
+    view.setUint32(endOffset + 16, localSize, true);
+    return source;
+  }
+
+  function fakePptxModule(slideCount: number): PptxRendererModule {
+    const viewer = new EventTarget() as PptxViewerApi;
+    viewer.slideCount = slideCount;
+    viewer.currentSlideIndex = 0;
+    viewer.goToSlide = async (index: number) => {
+      viewer.currentSlideIndex = index;
+      viewer.dispatchEvent(new CustomEvent('slidechange', { detail: { index } }));
+    };
+    viewer.searchText = () => [];
+    viewer.highlightSearchResult = async () => ({ dispose() {} });
+    viewer.renderThumbnailToContainer = (index, container, options) => {
+      const preview = document.createElement('div');
+      preview.dataset['slideIndex'] = String(index);
+      preview.dataset['width'] = String(options?.width);
+      container.append(preview);
+      return { ready: Promise.resolve(), dispose: () => preview.remove() };
+    };
+    viewer.clearSearchHighlights = () => {};
+    viewer.destroy = () => {};
+    return {
+      PptxViewer: { open: async () => viewer },
+      RECOMMENDED_ZIP_LIMITS: {},
+    } as never;
+  }
+
+  it('tracks page/pageCount and renders real canvas thumbnails from the real lr-pdf-viewer implementer', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-pdf-viewer id="rail-real-pdf-source"></lr-pdf-viewer>
+        <lr-page-rail for="rail-real-pdf-source" thumb-width="48"></lr-page-rail>
+      </div>
+    `);
+    const pdfEl = wrapper.querySelector('lr-pdf-viewer') as LyraPdfViewer;
+    const railEl = wrapper.querySelector('lr-page-rail') as LyraPageRail;
+    (pdfEl as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary =
+      () => Promise.resolve(fakePdfjsModule(2));
+    const restoreFetch = stubFetch(new ArrayBuffer(8));
+    try {
+      pdfEl.src = 'https://example.test/real-source.pdf';
+      await waitUntil(() => pdfEl.shadowRoot?.querySelector('[part="toolbar"]') != null);
+
+      const list = railEl.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+        source: { count: number };
+      };
+      await waitUntil(
+        () => list.source.count === 2,
+        'page-rail never tracked pageCount from the real lr-pdf-viewer (PageThumbnailSource drift)',
+      );
+      expect(railEl.page).to.equal(1);
+
+      await waitUntil(
+        () => list.shadowRoot?.querySelector('canvas[part~="thumbnail-target"]') != null,
+        'page-rail never rendered a real canvas thumbnail via the real lr-pdf-viewer.renderPageThumbnail()',
+      );
+
+      pdfEl.page = 2;
+      await waitUntil(
+        () => railEl.page === 2,
+        'page-rail never tracked a page change from the real lr-pdf-viewer pageViewerSnapshot protocol',
+      );
+    } finally {
+      restoreFetch();
+    }
+  });
+
+  it('tracks page/pageCount and renders real DOM thumbnails from the real lr-pptx-viewer implementer', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-pptx-viewer id="rail-real-pptx-source"></lr-pptx-viewer>
+        <lr-page-rail for="rail-real-pptx-source" thumb-width="48"></lr-page-rail>
+      </div>
+    `);
+    const pptxEl = wrapper.querySelector('lr-pptx-viewer') as LyraPptxViewer;
+    const railEl = wrapper.querySelector('lr-page-rail') as LyraPageRail;
+    pptxEl.loadRenderer = async () => fakePptxModule(2);
+    const restoreFetch = stubFetch(zipWithDeclaredSize());
+    try {
+      pptxEl.src = 'https://example.test/real-deck.pptx';
+      await waitUntil(() => pptxEl.shadowRoot?.querySelector('[part="container"]') != null);
+
+      const list = railEl.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+        source: { count: number };
+      };
+      await waitUntil(
+        () => list.source.count === 2,
+        'page-rail never tracked slideCount from the real lr-pptx-viewer (PageThumbnailSource drift)',
+      );
+      expect(railEl.page).to.equal(1);
+
+      await waitUntil(
+        () => list.shadowRoot?.querySelector('[part~="thumbnail-target"] [data-slide-index="0"]') != null,
+        'page-rail never rendered a real DOM thumbnail via the real lr-pptx-viewer.renderPageThumbnailToContainer()',
+      );
+
+      pptxEl.page = 2;
+      await waitUntil(
+        () => railEl.page === 2,
+        'page-rail never tracked a page change from the real lr-pptx-viewer pageViewerSnapshot protocol',
+      );
+    } finally {
+      restoreFetch();
+    }
   });
 });
 

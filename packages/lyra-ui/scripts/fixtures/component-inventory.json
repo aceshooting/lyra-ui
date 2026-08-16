@@ -37912,6 +37912,12 @@
             "type": "CustomEvent<LyraDockPanelResizeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-resize-request",
+            "type": "CustomEvent<LyraDockPanelResizeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -73418,7 +73424,7 @@
             "name": "attributes",
             "property": "observeAttributes",
             "type": "boolean",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -73448,7 +73454,7 @@
             "name": "character-data",
             "property": "characterData",
             "type": "boolean",
-            "reflects": false,
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -73531,7 +73537,7 @@
             "attribute": "character-data",
             "type": "boolean",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -73591,7 +73597,7 @@
             "attribute": "attributes",
             "type": "boolean",
             "readonly": false,
-            "reflects": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -100152,6 +100158,18 @@
             "default": "var(--lr-size-10rem)"
           },
           {
+            "name": "--lr-scroller-shadow-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--shadow-color)"
+          },
+          {
+            "name": "--lr-scroller-shadow-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--shadow-size)"
+          },
+          {
             "name": "--shadow-color",
             "deprecated": null,
             "hasDefault": true,
@@ -106003,10 +106021,22 @@
             "default": "4px"
           },
           {
+            "name": "--lr-split-panel-divider-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-strong)"
+          },
+          {
             "name": "--lr-split-panel-divider-hit-area",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--divider-hit-area)"
+          },
+          {
+            "name": "--lr-split-panel-divider-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-split-panel-divider-width",

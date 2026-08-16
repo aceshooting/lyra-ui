@@ -5,6 +5,19 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
+    /* --lr-scroller-shadow-color/-size are the Lyra-prefixed aliases of the upstream
+       --shadow-color/--shadow-size cssprops (see the class JSDoc) -- resolved once here so every
+       edge-shadow rule below reads one effective value instead of repeating the full three-level
+       fallback chain at each use site, same indirection lr-split-panel/lr-dock-panel already use
+       for their own component-scoped tokens. */
+    --_lr-scroller-effective-shadow-color: var(
+      --lr-scroller-shadow-color,
+      var(--shadow-color, var(--lr-color-surface))
+    );
+    --_lr-scroller-effective-shadow-size: var(
+      --lr-scroller-shadow-size,
+      var(--shadow-size, var(--lr-size-2rem))
+    );
   }
 
   [part="base"] {
@@ -42,24 +55,24 @@ export const styles = css`
     position: absolute;
     z-index: var(--lr-layer-content);
     inset-block: 0;
-    inline-size: var(--shadow-size, var(--lr-size-2rem));
+    inline-size: var(--_lr-scroller-effective-shadow-size);
     pointer-events: none;
   }
   [part="start-shadow"][hidden],
   [part="end-shadow"][hidden] { display: none; }
   [part="start-shadow"] {
     inset-inline-start: 0;
-    background: linear-gradient(to right, var(--shadow-color, var(--lr-color-surface)), transparent);
+    background: linear-gradient(to right, var(--_lr-scroller-effective-shadow-color), transparent);
   }
   [part="end-shadow"] {
     inset-inline-end: 0;
-    background: linear-gradient(to left, var(--shadow-color, var(--lr-color-surface)), transparent);
+    background: linear-gradient(to left, var(--_lr-scroller-effective-shadow-color), transparent);
   }
   :host(:dir(rtl)) [part="start-shadow"] {
-    background: linear-gradient(to left, var(--shadow-color, var(--lr-color-surface)), transparent);
+    background: linear-gradient(to left, var(--_lr-scroller-effective-shadow-color), transparent);
   }
   :host(:dir(rtl)) [part="end-shadow"] {
-    background: linear-gradient(to right, var(--shadow-color, var(--lr-color-surface)), transparent);
+    background: linear-gradient(to right, var(--_lr-scroller-effective-shadow-color), transparent);
   }
 
   [part="content"] {
@@ -90,15 +103,15 @@ export const styles = css`
   :host([orientation="vertical"]) [part="end-shadow"] {
     inset-inline: 0;
     inline-size: auto;
-    block-size: var(--shadow-size, var(--lr-size-2rem));
+    block-size: var(--_lr-scroller-effective-shadow-size);
   }
   :host([orientation="vertical"]) [part="start-shadow"] {
     inset-block: 0 auto;
-    background: linear-gradient(to bottom, var(--shadow-color, var(--lr-color-surface)), transparent);
+    background: linear-gradient(to bottom, var(--_lr-scroller-effective-shadow-color), transparent);
   }
   :host([orientation="vertical"]) [part="end-shadow"] {
     inset-block: auto 0;
-    background: linear-gradient(to top, var(--shadow-color, var(--lr-color-surface)), transparent);
+    background: linear-gradient(to top, var(--_lr-scroller-effective-shadow-color), transparent);
   }
 
   [part~="control"] {

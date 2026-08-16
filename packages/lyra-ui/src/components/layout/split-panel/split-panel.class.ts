@@ -217,6 +217,11 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @cssprop [--lr-split-panel-divider-hit-area=var(--divider-hit-area)] - Lyra-prefixed hit-area alias.
  * @cssprop [--lr-split-panel-min=var(--min)] - Lyra-prefixed minimum-size alias.
  * @cssprop [--lr-split-panel-max=var(--max)] - Lyra-prefixed maximum-size alias.
+ * @cssprop [--lr-split-panel-divider-hover-color=var(--lr-color-brand)] - Background of `divider`
+ *   on hover/keyboard focus, independent of any other component's own hover token that happens to
+ *   default to the same shared brand color.
+ * @cssprop [--lr-split-panel-divider-active-color=var(--lr-color-border-strong)] - Background of
+ *   `divider` while being dragged (or focused and pressed via the keyboard).
  * @status stable
  * @since 8.0.0
  */

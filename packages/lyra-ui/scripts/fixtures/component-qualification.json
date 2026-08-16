@@ -13771,21 +13771,21 @@
           "evidence": [
             {
               "file": "src/components/layout/dock-panel/dock-panel.test.ts",
-              "line": 1163,
+              "line": 1259,
               "test": "is accessible in its default state (no collapsible, resizable handle only)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/dock-panel/dock-panel.test.ts",
-              "line": 1169,
+              "line": 1265,
               "test": "is accessible when collapsible and populated with content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/dock-panel/dock-panel.test.ts",
-              "line": 1175,
+              "line": 1271,
               "test": "is accessible while collapsed",
               "target": "el",
               "state": "populated"
@@ -22317,7 +22317,7 @@
           "evidence": [
             {
               "file": "src/components/utility/icon/icon.test.ts",
-              "line": 1023,
+              "line": 1039,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -28764,7 +28764,7 @@
           "evidence": [
             {
               "file": "src/components/utility/mutation-observer/mutation-observer.test.ts",
-              "line": 274,
+              "line": 321,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -30347,14 +30347,14 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 1017,
+              "line": 1022,
               "test": "is accessible in mediated mode with highlights present",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 1310,
+              "line": 1501,
               "test": "is accessible in the current-page state with the prop themed",
               "target": "el",
               "state": "populated"
@@ -30368,7 +30368,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 397,
+              "line": 402,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30391,7 +30391,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 1088,
+              "line": 1093,
               "kind": "320px allocation test signal"
             }
           ]
@@ -37842,7 +37842,7 @@
           "evidence": [
             {
               "file": "src/components/layout/scroller/scroller.test.ts",
-              "line": 300,
+              "line": 316,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -37862,7 +37862,7 @@
           "evidence": [
             {
               "file": "src/components/layout/scroller/scroller.test.ts",
-              "line": 139,
+              "line": 155,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -37879,7 +37879,7 @@
           "evidence": [
             {
               "file": "src/components/layout/scroller/scroller.test.ts",
-              "line": 654,
+              "line": 670,
               "kind": "320px allocation test signal"
             }
           ]
@@ -40312,14 +40312,14 @@
           "evidence": [
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 800,
+              "line": 826,
               "test": "is accessible with populated start, end, and custom divider slots",
               "target": "element",
               "state": "populated"
             },
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 814,
+              "line": 840,
               "test": "keeps custom divider content inert while preserving the separator as the sole resize control",
               "target": "element",
               "state": "populated"

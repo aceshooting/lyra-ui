@@ -480,14 +480,8 @@
   :where(.lr-visually-hidden),
   :where(.lr-visually-hidden-focusable:not(:focus, :focus-within)) {
     position: absolute;
-    inline-size: var(
-      --lr-visually-hidden-size,
-      var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px))
-    );
-    block-size: var(
-      --lr-visually-hidden-size,
-      var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px))
-    );
+    inline-size: var(--lr-visually-hidden-size, var(--lr-size-1px, 1px));
+    block-size: var(--lr-visually-hidden-size, var(--lr-size-1px, 1px));
     padding: 0;
     border: 0;
     clip-path: inset(50%);

@@ -11322,7 +11322,7 @@
             },
             {
               "name": "auto-width",
-              "description": "Compatibility alias for `canvas=\"auto\"`.\n\nDeprecated since `8.0.0`. Use property `canvas=\"auto\"`. Removal is not permitted before `10.0.0`. autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing.\n\nType: `boolean`  \nDefault: `false`",
+              "description": "Compatibility alias for `canvas=\"auto\"`. Purely a CSS-level alias — it never reads or\nwrites `canvas` — so an explicit `canvas` attribute/property always wins and this becomes a\nno-op while one is set.\n\nDeprecated since `8.0.0`. Use property `canvas=\"auto\"`. Removal is not permitted before `10.0.0`. autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"
@@ -14468,7 +14468,7 @@
             },
             {
               "name": "attributes",
-              "description": "Lyra compatibility alias for `attr`.\n\nType: `boolean`  \nDefault: `false`",
+              "description": "Lyra compatibility alias for `attr` (its unfiltered boolean form, equivalent to `attr: '*'`\n-- observes every attribute with no name filtering). Reflects like every other mapped\nobserver attribute on this element so DOM introspection (`outerHTML`, attribute selectors,\nSSR re-serialization) stays consistent with a property assignment, not just a declarative one.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"
@@ -14495,7 +14495,7 @@
             },
             {
               "name": "character-data",
-              "description": "Lyra compatibility alias for `charData`.\n\nType: `boolean`  \nDefault: `false`",
+              "description": "Lyra compatibility alias for `charData`. Reflects like every other mapped observer attribute\non this element so DOM introspection stays consistent with a property assignment, not just a\ndeclarative one.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"
@@ -19862,7 +19862,7 @@
         },
         {
           "name": "lr-scroller",
-          "description": "`<lr-scroller>` — a responsive overflow surface with optional previous\nand next controls. Content remains in the default slot, so cards, tabs, and\nany consumer-owned interactive elements retain their own semantics.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Scrollable content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The overall scroller layout. |\n| `content` | The slotted content wrapper. |\n| `control` | Shared part on both `previous` and `next`. |\n| `end-shadow` | Logical-end overflow cue. |\n| `next` | The next/end control. |\n| `next-glyph` | The chevron glyph inside `next`, mirrored under RTL. |\n| `previous` | The previous/start control. |\n| `previous-glyph` | The chevron glyph inside `previous`, mirrored under RTL. |\n| `start-shadow` | Logical-start overflow cue. |\n| `viewport` | The native scroll container. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-scroller-control-size` (default: `var(--lr-size-2rem)`) — Control size.\n- `--lr-scroller-min-block-size` (default: `var(--lr-size-10rem)`) — Minimum vertical scroller size.\n- `--shadow-color` (default: `var(--lr-color-surface)`) — Base color of each edge shadow.\n- `--shadow-size` (default: `var(--lr-size-2rem)`) — Inline/block extent of each edge shadow.",
+          "description": "`<lr-scroller>` — a responsive overflow surface with optional previous\nand next controls. Content remains in the default slot, so cards, tabs, and\nany consumer-owned interactive elements retain their own semantics.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Scrollable content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The overall scroller layout. |\n| `content` | The slotted content wrapper. |\n| `control` | Shared part on both `previous` and `next`. |\n| `end-shadow` | Logical-end overflow cue. |\n| `next` | The next/end control. |\n| `next-glyph` | The chevron glyph inside `next`, mirrored under RTL. |\n| `previous` | The previous/start control. |\n| `previous-glyph` | The chevron glyph inside `previous`, mirrored under RTL. |\n| `start-shadow` | Logical-start overflow cue. |\n| `viewport` | The native scroll container. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-scroller-control-size` (default: `var(--lr-size-2rem)`) — Control size.\n- `--lr-scroller-min-block-size` (default: `var(--lr-size-10rem)`) — Minimum vertical scroller size.\n- `--lr-scroller-shadow-color` (default: `var(--shadow-color)`) — Lyra-prefixed shadow-color alias.\n- `--lr-scroller-shadow-size` (default: `var(--shadow-size)`) — Lyra-prefixed shadow-size alias.\n- `--shadow-color` (default: `var(--lr-color-surface)`) — Base color of each edge shadow.\n- `--shadow-size` (default: `var(--lr-size-2rem)`) — Inline/block extent of each edge shadow.",
           "attributes": [
             {
               "name": "controls",
@@ -21027,7 +21027,7 @@
         },
         {
           "name": "lr-split-panel",
-          "description": "`<lr-split-panel>` — an accessible, draggable two-pane layout.\n\n`position` and `positionInPixels` are measured from the selected `primary`\npanel's edge. Without a primary panel, `start` is the reference and its\npercentage is preserved when the component resizes. Selecting `start` or\n`end` instead preserves that panel's pixel size.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `8.0.0`\n- Rationale: This tag entered Lyra as a stable public API with documented behavior, accessibility, and cross-browser support.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `divider` | Optional decorative content rendered inside the draggable divider. Assigned content is inert, so the separator remains the sole resize control. |\n| `end` | Content in the logical end pane. |\n| `start` | Content in the logical start pane. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The component's layout wrapper. |\n| `divider` | The draggable separator. |\n| `end` | The logical end pane. |\n| `panel` | Shared part on both pane wrappers. |\n| `split-panel` | Compatibility alias on the layout wrapper. |\n| `start` | The logical start pane. |\n\n---\n\n**CSS Custom Properties**\n\n- `--divider-hit-area` (default: `12px`) — Requested divider hit area; Lyra's minimum hit-area token remains the floor.\n- `--divider-width` (default: `4px`) — Visible divider thickness.\n- `--lr-split-panel-divider-hit-area` (default: `var(--divider-hit-area)`) — Lyra-prefixed hit-area alias.\n- `--lr-split-panel-divider-width` (default: `var(--divider-width)`) — Lyra-prefixed divider-width alias.\n- `--lr-split-panel-max` (default: `var(--max)`) — Lyra-prefixed maximum-size alias.\n- `--lr-split-panel-min` (default: `var(--min)`) — Lyra-prefixed minimum-size alias.\n- `--max` (default: `100%`) — Maximum size of the primary pane, or the start pane when `primary` is unset.\n- `--min` (default: `0`) — Minimum size of the primary pane, or the start pane when `primary` is unset.",
+          "description": "`<lr-split-panel>` — an accessible, draggable two-pane layout.\n\n`position` and `positionInPixels` are measured from the selected `primary`\npanel's edge. Without a primary panel, `start` is the reference and its\npercentage is preserved when the component resizes. Selecting `start` or\n`end` instead preserves that panel's pixel size.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `8.0.0`\n- Rationale: This tag entered Lyra as a stable public API with documented behavior, accessibility, and cross-browser support.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `divider` | Optional decorative content rendered inside the draggable divider. Assigned content is inert, so the separator remains the sole resize control. |\n| `end` | Content in the logical end pane. |\n| `start` | Content in the logical start pane. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The component's layout wrapper. |\n| `divider` | The draggable separator. |\n| `end` | The logical end pane. |\n| `panel` | Shared part on both pane wrappers. |\n| `split-panel` | Compatibility alias on the layout wrapper. |\n| `start` | The logical start pane. |\n\n---\n\n**CSS Custom Properties**\n\n- `--divider-hit-area` (default: `12px`) — Requested divider hit area; Lyra's minimum hit-area token remains the floor.\n- `--divider-width` (default: `4px`) — Visible divider thickness.\n- `--lr-split-panel-divider-active-color` (default: `var(--lr-color-border-strong)`) — Background of `divider` while being dragged (or focused and pressed via the keyboard).\n- `--lr-split-panel-divider-hit-area` (default: `var(--divider-hit-area)`) — Lyra-prefixed hit-area alias.\n- `--lr-split-panel-divider-hover-color` (default: `var(--lr-color-brand)`) — Background of `divider` on hover/keyboard focus, independent of any other component's own hover token that happens to default to the same shared brand color.\n- `--lr-split-panel-divider-width` (default: `var(--divider-width)`) — Lyra-prefixed divider-width alias.\n- `--lr-split-panel-max` (default: `var(--max)`) — Lyra-prefixed maximum-size alias.\n- `--lr-split-panel-min` (default: `var(--min)`) — Lyra-prefixed minimum-size alias.\n- `--max` (default: `100%`) — Maximum size of the primary pane, or the start pane when `primary` is unset.\n- `--min` (default: `0`) — Minimum size of the primary pane, or the start pane when `primary` is unset.",
           "attributes": [
             {
               "name": "disabled",
@@ -30646,6 +30646,14 @@
           "description": "**`<lr-scroller>`** (default: `var(--lr-size-10rem)`) — Minimum vertical scroller size."
         },
         {
+          "name": "--lr-scroller-shadow-color",
+          "description": "**`<lr-scroller>`** (default: `var(--shadow-color)`) — Lyra-prefixed shadow-color alias."
+        },
+        {
+          "name": "--lr-scroller-shadow-size",
+          "description": "**`<lr-scroller>`** (default: `var(--shadow-size)`) — Lyra-prefixed shadow-size alias."
+        },
+        {
           "name": "--lr-segmented-active-bg",
           "description": "**`<lr-segmented>`** (default: `color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))`) — Background of a pressed segment that is neither checked nor disabled."
         },
@@ -31350,8 +31358,16 @@
           "description": "**`<lr-spinner>`** (default: `var(--lr-border-width-medium)`) — Thickness of the ring track."
         },
         {
+          "name": "--lr-split-panel-divider-active-color",
+          "description": "**`<lr-split-panel>`** (default: `var(--lr-color-border-strong)`) — Background of `divider` while being dragged (or focused and pressed via the keyboard)."
+        },
+        {
           "name": "--lr-split-panel-divider-hit-area",
           "description": "**`<lr-split-panel>`** (default: `var(--divider-hit-area)`) — Lyra-prefixed hit-area alias."
+        },
+        {
+          "name": "--lr-split-panel-divider-hover-color",
+          "description": "**`<lr-split-panel>`** (default: `var(--lr-color-brand)`) — Background of `divider` on hover/keyboard focus, independent of any other component's own hover token that happens to default to the same shared brand color."
         },
         {
           "name": "--lr-split-panel-divider-width",

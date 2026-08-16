@@ -13151,6 +13151,13 @@ selected. Lyra-prefixed aliases are `--lr-split-panel-divider-width`,
 spellings are set, the Lyra-prefixed value wins. Constraint values may be lengths, percentages, or
 `calc()` expressions and are re-applied when their computed sizes change.
 
+`--lr-split-panel-divider-hover-color` (default `var(--lr-color-brand)`) is the divider's background
+on hover/keyboard focus. `--lr-split-panel-divider-active-color` (default
+`var(--lr-color-border-strong)`) is its background while being dragged, or focused and pressed via
+the keyboard. Both are independent, component-scoped hooks rather than the bare shared token, so
+retinting this divider does not also retint any other component that happens to default to the same
+color.
+
 Keyboard: focus the divider, then use Left/Right for a horizontal split or Up/Down for a vertical
 split. Each arrow moves one percent of the current allocation; horizontal arrows mirror under RTL.
 `Home` and `End` move to the current `--min` and `--max` bounds. Pointer dragging uses capture and
@@ -13600,7 +13607,9 @@ previous/next control's box size; the interactive target never shrinks below `--
 regardless. `--lr-scroller-min-block-size` (default `var(--lr-size-10rem)`) — the vertical
 orientation's minimum block size, ignored while horizontal. `--shadow-color` (default
 `var(--lr-color-surface)`) and `--shadow-size` (default `var(--lr-size-2rem)`) theme each edge cue's
-base color and logical extent.
+base color and logical extent; `--lr-scroller-shadow-color` and `--lr-scroller-shadow-size` are
+Lyra-prefixed aliases for the same two (mirroring `lr-split-panel`'s alias pattern for its own
+upstream-named props), and win when both spellings are set.
 
 ```html
 <lr-scroller controls label="Project cards">
@@ -15311,11 +15320,19 @@ resolved in the host's owner realm.
 
 **Events:**
 
+- `lr-resize-request` (cancelable; `detail: { extent }` is the proposed `px` CSS length string),
+  fired before a discrete keyboard step commits and before a pointer drag's final settle commits.
+  Call `preventDefault()` to reject it: a keyboard step simply does not apply, and a drag's final
+  settle snaps the panel back to the size it had before that drag gesture began. Not fired for a
+  continuous pointer drag's own intermediate ticks — checking a cancelable event on every
+  `pointermove` would make a live drag visibly stutter — only its final settle on release.
 - `lr-resize-input` — frozen `detail: { extent }` (a `px` CSS length string), fired for each genuine
   pointer or keyboard value transition. Fully clamped/no-op attempts emit nothing.
 - `lr-resize-change` — a fresh frozen detail snapshot, fired exactly once on genuine `pointerup`
-  after at least one value transition, and after each genuine keyboard step. `pointercancel`, lost
-  capture, disconnect/adoption, live policy/geometry mutation, and no-op attempts emit nothing.
+  after at least one value transition and the drag's `lr-resize-request` was not prevented, and
+  after each genuine keyboard step whose own `lr-resize-request` was not prevented. `pointercancel`,
+  lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
+  `lr-resize-request` all emit nothing.
 - `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the built-in
   collapse toggle. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a
   consumer assigns `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: {
@@ -19521,8 +19538,10 @@ needed; reflected), `attr: string | null = null` (reflected; `*` observes every 
 space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `charData: boolean =
 false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
 mapped attributes reflect. Lyra's
-existing aliases remain: `observeAttributes` (`attributes`), `characterData` (`character-data`),
-`subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`.
+existing aliases remain and also reflect: `observeAttributes` (`attributes`; unfiltered boolean
+form of `attr`, equivalent to `attr: '*'`) and `characterData` (`character-data`, equivalent to
+`charData`). Plus `subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`
+(neither reflects).
 
 **Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
 `detail.records` and mapped `detail.mutationList` reference the same sequence, while each native

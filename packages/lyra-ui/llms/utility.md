@@ -351,8 +351,10 @@ needed; reflected), `attr: string | null = null` (reflected; `*` observes every 
 space-separated filter), `attrOldValue: boolean = false` (`attr-old-value`), `charData: boolean =
 false` (`char-data`), and `charDataOldValue: boolean = false` (`char-data-old-value`); all four
 mapped attributes reflect. Lyra's
-existing aliases remain: `observeAttributes` (`attributes`), `characterData` (`character-data`),
-`subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`.
+existing aliases remain and also reflect: `observeAttributes` (`attributes`; unfiltered boolean
+form of `attr`, equivalent to `attr: '*'`) and `characterData` (`character-data`, equivalent to
+`charData`). Plus `subtree: boolean = true`, and programmatic `attributeFilter: string[] = []`
+(neither reflects).
 
 **Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
 `detail.records` and mapped `detail.mutationList` reference the same sequence, while each native

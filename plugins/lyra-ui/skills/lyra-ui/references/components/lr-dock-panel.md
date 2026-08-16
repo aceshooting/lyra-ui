@@ -62,11 +62,19 @@ resolved in the host's owner realm.
 
 **Events:**
 
+- `lr-resize-request` (cancelable; `detail: { extent }` is the proposed `px` CSS length string),
+  fired before a discrete keyboard step commits and before a pointer drag's final settle commits.
+  Call `preventDefault()` to reject it: a keyboard step simply does not apply, and a drag's final
+  settle snaps the panel back to the size it had before that drag gesture began. Not fired for a
+  continuous pointer drag's own intermediate ticks — checking a cancelable event on every
+  `pointermove` would make a live drag visibly stutter — only its final settle on release.
 - `lr-resize-input` — frozen `detail: { extent }` (a `px` CSS length string), fired for each genuine
   pointer or keyboard value transition. Fully clamped/no-op attempts emit nothing.
 - `lr-resize-change` — a fresh frozen detail snapshot, fired exactly once on genuine `pointerup`
-  after at least one value transition, and after each genuine keyboard step. `pointercancel`, lost
-  capture, disconnect/adoption, live policy/geometry mutation, and no-op attempts emit nothing.
+  after at least one value transition and the drag's `lr-resize-request` was not prevented, and
+  after each genuine keyboard step whose own `lr-resize-request` was not prevented. `pointercancel`,
+  lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
+  `lr-resize-request` all emit nothing.
 - `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the built-in
   collapse toggle. Call `preventDefault()` to leave `collapsed` unchanged. Not fired when a
   consumer assigns `collapsed` directly), `lr-collapse-change` (non-cancelable; `detail: {

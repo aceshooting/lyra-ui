@@ -2484,11 +2484,15 @@ export type LyraResizeChangeEvent = LyraDockPanelEventMap['lr-resize-change'];
 export type LyraResizeInputEvent = LyraDockPanelEventMap['lr-resize-input'];
 
 /**
- * `lr-resize-request` — dispatched by `<lr-multi-split>`.
+ * `lr-resize-request` — dispatched by 2 components: `<lr-dock-panel>`, `<lr-multi-split>`.
  *
- * Detail type: `LyraMultiSplitEventMap['lr-resize-request']`.
+ * A union of 2 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraDockPanelEventMap['lr-resize-request']`.
  */
-export type LyraResizeRequestEvent = LyraMultiSplitEventMap['lr-resize-request'];
+export type LyraResizeRequestEvent =
+  | LyraDockPanelEventMap['lr-resize-request']
+  | LyraMultiSplitEventMap['lr-resize-request'];
 
 /**
  * `lr-restore` — dispatched by 2 components: `<lr-artifact-panel>`, `<lr-checkpoint>`.

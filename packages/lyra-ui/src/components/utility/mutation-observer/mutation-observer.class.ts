@@ -47,10 +47,19 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   @property({ type: Boolean, attribute: 'attr-old-value', reflect: true }) attrOldValue = false;
   @property({ type: Boolean, attribute: 'char-data', reflect: true }) charData = false;
   @property({ type: Boolean, attribute: 'char-data-old-value', reflect: true }) charDataOldValue = false;
-  /** Lyra compatibility alias for `attr`. */
-  @property({ type: Boolean, attribute: 'attributes' }) observeAttributes = false;
-  /** Lyra compatibility alias for `charData`. */
-  @property({ type: Boolean, attribute: 'character-data' }) characterData = false;
+  /**
+   * Lyra compatibility alias for `attr` (its unfiltered boolean form, equivalent to `attr: '*'`
+   * -- observes every attribute with no name filtering). Reflects like every other mapped
+   * observer attribute on this element so DOM introspection (`outerHTML`, attribute selectors,
+   * SSR re-serialization) stays consistent with a property assignment, not just a declarative one.
+   */
+  @property({ type: Boolean, attribute: 'attributes', reflect: true }) observeAttributes = false;
+  /**
+   * Lyra compatibility alias for `charData`. Reflects like every other mapped observer attribute
+   * on this element so DOM introspection stays consistent with a property assignment, not just a
+   * declarative one.
+   */
+  @property({ type: Boolean, attribute: 'character-data', reflect: true }) characterData = false;
   @property({ type: Boolean, converter: trueDefaultBooleanConverter }) subtree = true;
   @property({ attribute: false }) attributeFilter: string[] = [];
 

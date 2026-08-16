@@ -303,6 +303,30 @@ async function pack(packageDir, destination) {
   return join(destination, packed[0]);
 }
 
+// pnpm substitutes every workspace: specifier for a real semver range when `pnpm pack` runs, so
+// this has never actually leaked -- but nothing asserted that, and a future pnpm/config change or
+// a hand-edited fixture could silently break it for real npm/yarn consumers, who cannot resolve
+// the workspace: protocol at all. Reads the fixture's own installed copy (already `pnpm pack`'d
+// and `pnpm install`'d by the time this runs), not the monorepo source package.json.
+async function verifyNoWorkspaceProtocolLeaked(fixtureDir) {
+  const packageRoot = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
+  const packedPackageJson = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
+  const leaked = [];
+  for (const section of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
+    for (const [name, range] of Object.entries(packedPackageJson[section] ?? {})) {
+      if (typeof range === 'string' && range.startsWith('workspace:')) {
+        leaked.push(`${section}.${name}: ${range}`);
+      }
+    }
+  }
+  if (leaked.length > 0) {
+    throw new Error(
+      `Packed package.json must not retain the pnpm-only workspace: protocol -- real npm/yarn ` +
+        `consumers cannot resolve it: ${leaked.join(', ')}`,
+    );
+  }
+}
+
 async function verifyPackedMigrationCli(fixtureDir) {
   const packageRoot = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
   const cliFiles = (await readdir(join(packageRoot, 'dist', 'cli'))).sort();
@@ -1164,6 +1188,9 @@ async function main() {
       maplibreV5Fixture,
       'MapLibre v5 peer tree check',
     );
+
+    await verifyNoWorkspaceProtocolLeaked(coreFixture);
+    await verifyNoWorkspaceProtocolLeaked(maplibreV5Fixture);
 
     await verifyPackedMigrationCli(coreFixture);
 
