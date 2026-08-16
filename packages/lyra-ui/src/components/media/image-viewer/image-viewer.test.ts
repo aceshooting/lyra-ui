@@ -1337,7 +1337,10 @@ describe("accessibility", () => {
     }
   });
 
-  it("keeps toolbar hover and pressed-toggle states visible without color", async () => {
+  it("keeps toolbar hover and pressed-toggle states visible without color", async function () {
+    // The wait below can run up to 15000ms under a loaded CI runner; mocha's own suite-wide
+    // 6000ms default (see web-test-runner.config.js) would otherwise cut the test off first.
+    this.timeout(20000);
     await setForcedColors("active");
     try {
       const el = (await fixture(
@@ -1368,10 +1371,15 @@ describe("accessibility", () => {
       // open-wc's waitUntil() default timeout (1000ms) has been observed too tight for this
       // pointer-event/style-recalc settle under a loaded full-engine suite (same class of issue
       // already fixed today for av-player.test.ts's and zoomable-frame.test.ts's equivalent waits).
+      // This rule has no CSS transition to wait out (see image-viewer.styles.ts's forced-colors
+      // block) -- the whole wait is the browser processing the mousemove and recomputing :hover,
+      // which a shared, coverage-instrumented CI runner has been observed to still not clear
+      // within 5000ms, so this widens further rather than restructuring an already-correct single
+      // polled condition (contrast av-player.test.ts's fix, which split a compound condition).
       await waitUntil(
         () => getComputedStyle(rotate).outlineStyle === "dashed",
         "the rotate button's hover outline did not settle",
-        { timeout: 5000 },
+        { timeout: 15000 },
       );
       expect(getComputedStyle(rotate).outlineStyle).to.equal("dashed");
     } finally {
