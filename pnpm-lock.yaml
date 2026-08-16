@@ -231,6 +231,15 @@ importers:
       ical.js:
         specifier: ^2.2.1
         version: 2.2.1
+      istanbul-lib-coverage:
+        specifier: ^3.2.2
+        version: 3.2.2
+      istanbul-lib-report:
+        specifier: ^3.0.1
+        version: 3.0.1
+      istanbul-reports:
+        specifier: ^3.2.0
+        version: 3.2.0
       jszip:
         specifier: ^3.10.1
         version: 3.10.1

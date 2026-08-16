@@ -207,10 +207,21 @@ const browserProduct = (process.env.WTR_BROWSER ?? 'chromium').toLowerCase();
 // entirely. Chromium/Firefox are unaffected by this env var and already run software-rendered
 // here regardless.
 const webkitLaunchOptions = { env: { ...process.env, LIBGL_ALWAYS_SOFTWARE: '1' } };
+// GitHub Actions runners mount a 64MB /dev/shm by default. Chromium uses shared memory for its
+// tile/compositor buffers, and this suite's single coverage session keeps one page alive across
+// hundreds of files, several of which mount large canvas/DOM surfaces (lr-graph's 30k-node a11y
+// layer, flow-canvas's 1,000 nodes, table/heatmap/spreadsheet-viewer). /dev/shm pressure
+// accumulates across that one long-lived page in a way no individual file reproduces, and a full
+// shm exhaustion kills the renderer with no CDP error -- observed as `test:coverage` going
+// completely silent after "481/482 files, 0 failed" and then exiting nonzero with no browser log,
+// stack trace, or testsFinishTimeout message at all (that watchdog is 300s; the silence here was
+// ~128s, too short for it to have fired). --disable-dev-shm-usage makes Chromium fall back to
+// /tmp instead, which is unconstrained on both this CI runner and this repo's own dev machines.
+const chromiumLaunchOptions = { args: ['--disable-dev-shm-usage'] };
 const browserLaunchers = {
-  chromium: { product: 'chromium' },
-  chrome: { product: 'chromium', launchOptions: { channel: 'chrome' } },
-  edge: { product: 'chromium', launchOptions: { channel: 'msedge' } },
+  chromium: { product: 'chromium', launchOptions: chromiumLaunchOptions },
+  chrome: { product: 'chromium', launchOptions: { ...chromiumLaunchOptions, channel: 'chrome' } },
+  edge: { product: 'chromium', launchOptions: { ...chromiumLaunchOptions, channel: 'msedge' } },
   safari: { product: 'webkit', launchOptions: webkitLaunchOptions },
   firefox: { product: 'firefox' },
   webkit: { product: 'webkit', launchOptions: webkitLaunchOptions },
@@ -222,6 +233,12 @@ if (!launcherConfig) {
 
 const strictConsole = process.env.WTR_STRICT_CONSOLE === '1';
 const collectCoverage = process.env.WTR_COVERAGE === '1';
+// Set only by scripts/coverage-shard-runner.mjs, one distinct value per shard sub-run, so each
+// shard's report lands in its own scratch directory instead of overwriting the others. Its
+// presence also distinguishes a shard sub-run (partial file list, no meaningful threshold to
+// enforce) from an ordinary full `WTR_COVERAGE=1 wtr ...` invocation (unset, current behavior).
+const coverageReportDir = process.env.WTR_COVERAGE_REPORT_DIR;
+const isCoverageShard = collectCoverage && coverageReportDir !== undefined;
 const testRunnerHtml = (testRunnerImport) => `
 <!doctype html>
 <html>
@@ -327,9 +344,11 @@ export default {
   // as everything else in this file) -- keep defaultReporter() alongside it so
   // local/CI console output during a normal `wtr` run is unaffected. Leaving
   // `reporters` unset when collectCoverage is false preserves wtr's own
-  // built-in default reporter behavior exactly as today.
+  // built-in default reporter behavior exactly as today. outputPath follows
+  // the same per-shard reportDir as coverageConfig below, so parallel/sequential
+  // shard sub-runs never clobber each other's JUnit output.
   reporters: collectCoverage
-    ? [defaultReporter(), junitReporter({ outputPath: 'coverage/junit.xml' })]
+    ? [defaultReporter(), junitReporter({ outputPath: `${coverageReportDir ?? 'coverage'}/junit.xml` })]
     : undefined,
   // Chromium reports ResizeObserver loop notifications as ErrorEvents whose
   // `error` payload is null. The runner's uncaught-error bridge logs that
@@ -364,14 +383,22 @@ export default {
     // Measured when the current floors were written (see that file's
     // `measured` block): statements 99.19%, branches 94.55%, functions 99.09%,
     // lines 99.19%.
-    threshold: {
-      statements: coverageFloors.statements,
-      branches: coverageFloors.branches,
-      functions: coverageFloors.functions,
-      lines: coverageFloors.lines,
-    },
+    //
+    // A shard sub-run only executes a slice of the test suite, so it can never meet a whole-repo
+    // floor -- scripts/coverage-shard-runner.mjs merges every shard into one full-repo report, and
+    // the downstream check:coverage-floors step (write-coverage-floors.mjs) enforces the real
+    // floors against that merged output, so this per-invocation gate is both redundant and wrong
+    // for a shard.
+    threshold: isCoverageShard
+      ? undefined
+      : {
+          statements: coverageFloors.statements,
+          branches: coverageFloors.branches,
+          functions: coverageFloors.functions,
+          lines: coverageFloors.lines,
+        },
     report: true,
-    reportDir: 'coverage',
+    reportDir: coverageReportDir ?? 'coverage',
     // Codecov only consumes lcov.info. html/text were fine at 8 files;
     // at ~800 they mean writing a large multi-page report and dumping an
     // 800+ row table to stdout on every CI run for no consumer.
@@ -379,6 +406,9 @@ export default {
     // real statement totals (lcov's DA/LF/LH records are line coverage, i.e.
     // statements collapsed onto their starting line) -- it is what
     // scripts/write-coverage-floors.mjs prefers when refreshing the floors.
-    reporters: ['lcovonly', 'json-summary'],
+    // A shard sub-run additionally needs 'json' -- the only reporter that writes the full raw
+    // per-file coverage map (coverage-final.json) -- so coverage-shard-runner.mjs can merge every
+    // shard's data before producing the real lcovonly/json-summary output at the top level.
+    reporters: isCoverageShard ? ['lcovonly', 'json-summary', 'json'] : ['lcovonly', 'json-summary'],
   },
 };

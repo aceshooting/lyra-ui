@@ -154,11 +154,22 @@ declare -Ar WTR_LANE_PORTS=(
   [safari]=18094
 )
 
+# Matches .github/workflows/full-engine.yml's own matrix: every browser runs the complete
+# non-coverage suite across 4 deterministic shards, not as one single ~480-file run. Beyond
+# mirroring CI faithfully, this matters locally too -- a handful of tests (see
+# src/performance.test.ts's own large-graph/large-flow benchmarks) have been observed to time out
+# only when accumulated load from hundreds of preceding files in one giant shard pushes them past
+# their deadline, never when run in a CI-sized ~120-file shard or standalone.
+SHARD_TOTAL=4
+
 run_browser_lane() {
   local browser="$1"
-  WTR_BROWSER="$browser" WTR_PORT="${WTR_LANE_PORTS[$browser]}" \
-    WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1 WTR_STRICT_CONSOLE=1 \
-    pnpm --filter @aceshooting/lyra-ui test:full-engine-shard
+  local shard
+  for shard in $(seq 1 "$SHARD_TOTAL"); do
+    WTR_BROWSER="$browser" WTR_PORT="${WTR_LANE_PORTS[$browser]}" \
+      WTR_SHARD_INDEX="$shard" WTR_SHARD_TOTAL="$SHARD_TOTAL" WTR_STRICT_CONSOLE=1 \
+      pnpm --filter @aceshooting/lyra-ui test:full-engine-shard
+  done
 }
 
 require_primary_toolchain

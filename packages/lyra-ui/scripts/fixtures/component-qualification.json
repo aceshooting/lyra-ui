@@ -22800,14 +22800,14 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1376,
+              "line": 1383,
               "test": "is accessible with highlights and annotation on",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1610,
+              "line": 1617,
               "test": "is accessible with every active-state prop themed",
               "target": "el",
               "state": "populated"
@@ -22849,7 +22849,7 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1674,
+              "line": 1681,
               "kind": "320px allocation test signal"
             }
           ]

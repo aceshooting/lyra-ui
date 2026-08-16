@@ -1365,7 +1365,14 @@ describe("accessibility", () => {
           Math.round(box.top + box.height / 2),
         ],
       });
-      await waitUntil(() => getComputedStyle(rotate).outlineStyle === "dashed");
+      // open-wc's waitUntil() default timeout (1000ms) has been observed too tight for this
+      // pointer-event/style-recalc settle under a loaded full-engine suite (same class of issue
+      // already fixed today for av-player.test.ts's and zoomable-frame.test.ts's equivalent waits).
+      await waitUntil(
+        () => getComputedStyle(rotate).outlineStyle === "dashed",
+        "the rotate button's hover outline did not settle",
+        { timeout: 5000 },
+      );
       expect(getComputedStyle(rotate).outlineStyle).to.equal("dashed");
     } finally {
       await resetMouse();

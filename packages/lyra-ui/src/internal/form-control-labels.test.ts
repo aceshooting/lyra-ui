@@ -440,7 +440,12 @@ describe('external FACE label contract', () => {
     }
   });
 
-  it('targets implicit association shape changes among 500 controls', async () => {
+  it('targets implicit association shape changes among 500 controls', async function () {
+    // 500 real DOM controls plus their MutationObserver-driven label-read bookkeeping comfortably
+    // clears mocha's 6000ms default alone, but has been observed to exceed it when running deep
+    // inside a full multi-hundred-file engine suite under load. Widen with headroom rather than
+    // fight the shared session's timing.
+    this.timeout(20000);
     const container = document.createElement('div');
     const labels: HTMLLabelElement[] = [];
     const controls: TestControl[] = [];
