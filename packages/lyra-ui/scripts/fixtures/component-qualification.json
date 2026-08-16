@@ -21542,28 +21542,28 @@
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4705,
+              "line": 4710,
               "test": "stays accessible with legendStops set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4830,
+              "line": 4835,
               "test": "stays accessible with a caption-only legend stop",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5169,
+              "line": 5174,
               "test": "stays accessible with both clamps applied",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5386,
+              "line": 5391,
               "test": "stays accessible with a date-driven cellText on the accessible-cell overlay",
               "target": "el",
               "state": "populated"
@@ -22800,14 +22800,14 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1370,
+              "line": 1376,
               "test": "is accessible with highlights and annotation on",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1604,
+              "line": 1610,
               "test": "is accessible with every active-state prop themed",
               "target": "el",
               "state": "populated"
@@ -22849,7 +22849,7 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1668,
+              "line": 1674,
               "kind": "320px allocation test signal"
             }
           ]
@@ -45232,7 +45232,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast.test.ts",
-              "line": 918,
+              "line": 930,
               "test": "is accessible once a toast item is showing inside it",
               "target": "region",
               "state": "populated"
@@ -50047,14 +50047,14 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.test.ts",
-              "line": 386,
+              "line": 391,
               "test": "keeps hostile icon overrides projected but inert under the native zoom controls",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.test.ts",
-              "line": 723,
+              "line": 728,
               "test": "is accessible with a populated inline document and visible controls",
               "target": "el",
               "state": "populated"
@@ -50079,7 +50079,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.test.ts",
-              "line": 256,
+              "line": 261,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -50096,7 +50096,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.test.ts",
-              "line": 258,
+              "line": 263,
               "kind": "320px allocation test signal"
             }
           ]
