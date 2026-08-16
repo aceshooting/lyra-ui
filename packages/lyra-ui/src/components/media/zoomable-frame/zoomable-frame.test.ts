@@ -783,7 +783,19 @@ it('forwards host focus()/blur()/click() to the frame and re-dispatches its focu
   expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
 });
 
-it('tracks sequential Tab/Shift+Tab and pointer entry at the browsing-context boundary', async () => {
+it('tracks sequential Tab/Shift+Tab and pointer entry at the browsing-context boundary', async function () {
+  // Reproduced under WTR_SHARD_INDEX=3 WTR_SHARD_TOTAL=4 WTR_BROWSER=firefox (the full 120-file
+  // engine shard, CPU-constrained to match a standard CI runner): a *synthesized* pointer click's
+  // native focus transfer into the iframe's nested browsing context can simply not register on the
+  // first attempt under heavy concurrent load -- confirmed with instrumentation showing
+  // `data-frame-focused` staying false for a full, actively-polled 20 real seconds (this test's own
+  // poll loop kept running the whole time; nothing here was itself stalled), reproducibly across
+  // both the original attempt and mocha's automatic retry. That rules out pure scheduling delay: an
+  // earlier fix (1000ms -> 3000ms poll deadline) only widened the wait, which cannot help a click
+  // whose focus transfer never happened in the first place. Retrying the physical click -- not just
+  // the wait -- is what actually recovers it; empirically confirmed clean across repeated shard runs
+  // after this change. `this.timeout()` needs the enclosing function to be non-arrow.
+  this.timeout(20000);
   const wrapper = await fixture<HTMLElement>(html`
     <div>
       <button id="before" type="button">Before</button>
@@ -809,11 +821,23 @@ it('tracks sequential Tab/Shift+Tab and pointer entry at the browsing-context bo
   try {
     await resetMouse();
     const rect = frame.getBoundingClientRect();
-    await sendMouse({
-      type: 'click',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
-    await eventually(() => el.hasAttribute('data-frame-focused'));
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    // Up to 5 real click attempts, 1000ms of polling headroom each -- generous relative to the
+    // near-instant (observed 0-16ms) resolution every successful attempt shows, bounded well within
+    // this.timeout() above even in the worst case of every attempt needing the full window.
+    let focused = false;
+    for (let attempt = 0; attempt < 5 && !focused; attempt += 1) {
+      await sendMouse({ type: 'click', position });
+      const deadline = Date.now() + 1000;
+      while (!el.hasAttribute('data-frame-focused') && Date.now() < deadline) {
+        await aTimeout(10);
+      }
+      focused = el.hasAttribute('data-frame-focused');
+    }
+    expect(focused, 'the iframe never gained focus after repeated click attempts').to.be.true;
     expect(el.shadowRoot!.activeElement === frame).to.be.true;
   } finally {
     await resetMouse();
