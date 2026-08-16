@@ -335,6 +335,14 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   }
 }
 
+// scheduleTick() synchronously writes remainingMs (and, on the due tick, deadlineConsumed/due) from
+// inside updated()'s own call chain (armTicker() -> scheduleTick()) -- Lit's own documented
+// exception to this warning ("unless the next update can only be scheduled as a side effect of the
+// previous update"), not an unguarded loop; disableWarning is Lit's sanctioned per-class opt-out
+// for it (same pattern as LyraTabGroup's identical use below tab-group.class.ts). Optional
+// chaining: absent in production (non-DEV_MODE) builds.
+LyraPollStatus.disableWarning?.('change-in-update');
+
 declare global {
   interface HTMLElementTagNameMap {
     'lr-poll-status': LyraPollStatus;
