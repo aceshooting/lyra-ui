@@ -476,7 +476,15 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.input?.select();
   }
 
-  setSelectionRange(start: number | null, end: number | null, direction?: SelectionDirection): void {
+  // Spelled out rather than the ambient DOM lib `SelectionDirection` type: that global resolves
+  // fine for `tsc --noEmit` against source, but a consumer's declaration check against the shipped
+  // .d.ts (check:packed-consumer's framework recipes) hit `TS2304: Cannot find name
+  // 'SelectionDirection'` -- an explicit literal union needs no ambient/global lookup at all.
+  setSelectionRange(
+    start: number | null,
+    end: number | null,
+    direction?: 'forward' | 'backward' | 'none',
+  ): void {
     this.input?.setSelectionRange(start, end, direction);
   }
 
