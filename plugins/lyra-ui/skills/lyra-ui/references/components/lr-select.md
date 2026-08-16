@@ -165,8 +165,7 @@ programmatic `value` write, `form.reset()`, or session-state restoration. Plus
 `input`/`lr-input`/`change`/`lr-change` run, and never when there was nothing to clear, so it never
 announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
-trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
-its unprefixed counterpart. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
+trigger. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
 non-cancelable only for the disconnect-driven close, where a veto cannot be honoured. A direct or
 fieldset-cascaded disablement is a policy closure rather than a user-requested transition: it
 synchronously closes without the vetoable `lr-hide` or settled `lr-after-hide` lifecycle, and a

@@ -76,8 +76,6 @@ export interface LyraInputEventMap {
   'lr-clear': CustomEvent<null>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 class LyraInputBase extends LyraElement<LyraInputEventMap> {}
@@ -132,8 +130,6 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @event blur - Re-dispatched from the internal native `<input>`'s own `blur` — bubbling and
  *   composed (unlike the native event, which is neither).
  * @event focus - Re-dispatched from the internal native `<input>`'s own `focus`, for the same reason as `blur`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-invalid - The input failed a validity check. Cancelable: `preventDefault()` forwards to
  *   the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
@@ -728,7 +724,6 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
 
   private onFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onBlur = (event: FocusEvent): void => {
@@ -743,7 +738,6 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     // regardless.
     if (!this.effectiveDisabled) this.touched = true;
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   /**

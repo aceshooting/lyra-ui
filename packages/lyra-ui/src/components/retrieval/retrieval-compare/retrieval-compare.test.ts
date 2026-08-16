@@ -58,6 +58,18 @@ it('applies per-instance strings to the comparison region label', async () => {
   );
 });
 
+it('honors an explicitly empty label as genuinely empty, distinct from omitting it', async () => {
+  const el = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
+  expect(el.label).to.equal(undefined);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Retrieval comparison',
+  );
+
+  el.label = '';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 it('keeps exactly one comparison owner across explicit-empty and dynamic host naming', async () => {
   const el = (await fixture(html`
     <lr-retrieval-compare aria-label="Author comparison" label="Result comparison" .sets=${sets}></lr-retrieval-compare>

@@ -560,14 +560,18 @@ describe('keyboard navigation', () => {
 
       const order: string[] = [];
       const nativeEvents: Event[] = [];
+      const removedAliases: string[] = [];
       for (const name of ['input', 'change', 'focus', 'blur'] as const) {
         el.addEventListener(name, (event) => {
           order.push(name);
           nativeEvents.push(event);
         });
       }
-      for (const name of ['lr-input', 'lr-change', 'lr-focus', 'lr-blur'] as const) {
+      for (const name of ['lr-input', 'lr-change'] as const) {
         el.addEventListener(name, () => order.push(name));
+      }
+      for (const name of ['lr-focus', 'lr-blur'] as const) {
+        el.addEventListener(name, () => removedAliases.push(name));
       }
 
       el.shadowRoot!.querySelector<HTMLButtonElement>('[part="emoji"]')!.click();
@@ -583,10 +587,9 @@ describe('keyboard navigation', () => {
         'change',
         'lr-change',
         'focus',
-        'lr-focus',
         'blur',
-        'lr-blur',
       ]);
+      expect(removedAliases).to.deep.equal([]);
       expect(nativeEvents[0] instanceof ownerWindow.InputEvent).to.equal(true);
       expect(nativeEvents[0] instanceof InputEvent).to.equal(false);
       expect(nativeEvents[1].constructor === ownerWindow.Event).to.equal(true);
@@ -769,7 +772,7 @@ describe('disabled', () => {
 });
 
 describe('native focus/blur bridging', () => {
-  it('relays the search focus/blur exactly once as FocusEvents with relatedTarget and aliases', async () => {
+  it('relays the search focus/blur exactly once as FocusEvents with relatedTarget, never firing the removed lr-focus/lr-blur aliases', async () => {
     const el = await connectEmojiPicker();
     el.groups = groups;
     await el.updateComplete;
@@ -778,21 +781,27 @@ describe('native focus/blur bridging', () => {
     const outside = document.createElement('button');
     document.body.append(outside);
     created.push(outside);
-    const focusEvents = Promise.all([oneEvent(el, 'focus'), oneEvent(el, 'lr-focus')]);
+    const removedAliases: string[] = [];
+    el.addEventListener('lr-focus', () => removedAliases.push('lr-focus'));
+    el.addEventListener('lr-blur', () => removedAliases.push('lr-blur'));
+
+    const focusEventPromise = oneEvent(el, 'focus');
     input.dispatchEvent(new FocusEvent('focus', { relatedTarget: outside }));
-    const [focusEvent] = await focusEvents;
+    const focusEvent = await focusEventPromise;
     expect(focusEvent instanceof FocusEvent).to.be.true;
     expect(focusEvent.relatedTarget === outside).to.be.true;
     expect(focusEvent.bubbles).to.be.true;
     expect(focusEvent.composed).to.be.true;
 
-    const blurEvents = Promise.all([oneEvent(el, 'blur'), oneEvent(el, 'lr-blur')]);
+    const blurEventPromise = oneEvent(el, 'blur');
     input.dispatchEvent(new FocusEvent('blur', { relatedTarget: outside }));
-    const [blurEvent] = await blurEvents;
+    const blurEvent = await blurEventPromise;
     expect(blurEvent instanceof FocusEvent).to.be.true;
     expect(blurEvent.relatedTarget === outside).to.be.true;
     expect(blurEvent.bubbles).to.be.true;
     expect(blurEvent.composed).to.be.true;
+
+    expect(removedAliases).to.deep.equal([]);
   });
 });
 

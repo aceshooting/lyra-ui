@@ -90,6 +90,20 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.path).to.deep.equal([]);
     expect(el.selectedNodeId).to.equal(null);
     expect(el.renderer).to.equal('svg');
+    expect(el.label).to.be.undefined;
+    expect(
+      el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getAttribute('aria-label')
+    ).to.equal('Knowledge graph explorer');
+  });
+
+  it('keeps an explicitly empty label distinct from an omitted one', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-graph-explorer label=""></lr-knowledge-graph-explorer>`
+    )) as LyraKnowledgeGraphExplorer;
+    expect(el.label).to.equal('');
+    expect(
+      el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getAttribute('aria-label')
+    ).to.equal('');
   });
 
   it('keeps exactly one root owner across explicit-empty and dynamic host naming', async () => {
@@ -1730,6 +1744,44 @@ describe('lr-knowledge-graph-explorer', () => {
     item.click();
     await el.updateComplete;
     expect(leaked).to.be.false;
+  });
+
+  it('emits lr-hidden-types-change with the updated array when a node type is toggled via the composed legend, and stays silent for a host assignment (bug regression)', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+
+    const details: unknown[] = [];
+    el.addEventListener('lr-hidden-types-change', (event) => {
+      details.push(
+        (event as LyraKnowledgeGraphExplorerEventMap['lr-hidden-types-change'])
+          .detail
+      );
+    });
+
+    const legend = el.shadowRoot!.querySelector(
+      'lr-graph-legend'
+    ) as LyraGraphLegend;
+    const item = legend.shadowRoot!.querySelectorAll(
+      '[part~="item"]'
+    )[0] as HTMLButtonElement;
+    item.click();
+    await el.updateComplete;
+
+    expect(details).to.deep.equal([{ hiddenTypes: ['person'] }]);
+    expect(
+      el.hiddenTypes,
+      'the component applies the toggle to its own hiddenTypes before announcing it'
+    ).to.deep.equal(['person']);
+
+    el.hiddenTypes = [];
+    await el.updateComplete;
+    expect(details.length, 'a direct host assignment stays silent').to.equal(1);
   });
 
   it("does not leak a pinned chip's internal lr-remove event through the host", async () => {

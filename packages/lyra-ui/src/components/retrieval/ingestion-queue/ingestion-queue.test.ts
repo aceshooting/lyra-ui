@@ -43,13 +43,30 @@ async function nextFrame(): Promise<void> {
   );
 }
 
-it('defaults to items=[], label="", virtualizeAt=100', async () => {
+it('defaults to items=[], label=undefined, virtualizeAt=100', async () => {
   const el = (await fixture(
     html`<lr-ingestion-queue></lr-ingestion-queue>`
   )) as LyraIngestionQueue;
   expect(el.items).to.deep.equal([]);
-  expect(el.label).to.equal("");
+  expect(el.label).to.be.undefined;
   expect(el.virtualizeAt).to.equal(100);
+});
+
+it('keeps an explicitly empty label distinct from an omitted one', async () => {
+  const omitted = (await fixture(
+    html`<lr-ingestion-queue></lr-ingestion-queue>`
+  )) as LyraIngestionQueue;
+  expect(
+    omitted.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')
+  ).to.equal('Ingestion queue');
+
+  const explicitEmpty = (await fixture(
+    html`<lr-ingestion-queue label=""></lr-ingestion-queue>`
+  )) as LyraIngestionQueue;
+  expect(explicitEmpty.label).to.equal('');
+  expect(
+    explicitEmpty.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')
+  ).to.equal('');
 });
 
 it("renders the built-in lr-empty state with no items", async () => {

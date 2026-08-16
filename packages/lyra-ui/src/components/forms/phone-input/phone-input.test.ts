@@ -472,24 +472,30 @@ it('leaves a same-string reformat (the no-adapter fallback path) untouched, incl
   expect(input.selectionStart).to.equal(6);
 });
 
-it('relays focus and blur once as native FocusEvents with relatedTarget and aliases', async () => {
+it('relays focus and blur once as native FocusEvents with relatedTarget, and never lr-focus/lr-blur', async () => {
   const el = (await fixture(html`
     <lr-phone-input label="Phone number" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
 
   const outside = document.createElement('button');
-  const focusPromise = Promise.all([oneEvent(el, 'focus'), oneEvent(el, 'lr-focus')]);
+  const aliases: string[] = [];
+  el.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  el.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+
+  const focusPromise = oneEvent(el, 'focus');
   el.input!.dispatchEvent(new FocusEvent('focus', { relatedTarget: outside }));
-  const [focus] = await focusPromise;
+  const focus = await focusPromise;
   expect(focus instanceof FocusEvent).to.be.true;
   expect(focus.relatedTarget === outside).to.be.true;
 
-  const blurPromise = Promise.all([oneEvent(el, 'blur'), oneEvent(el, 'lr-blur')]);
+  const blurPromise = oneEvent(el, 'blur');
   el.input!.dispatchEvent(new FocusEvent('blur', { relatedTarget: outside }));
-  const [blur] = await blurPromise;
+  const blur = await blurPromise;
   expect(blur instanceof FocusEvent).to.be.true;
   expect(blur.relatedTarget === outside).to.be.true;
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(aliases).to.deep.equal([]);
 });
 
 it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {

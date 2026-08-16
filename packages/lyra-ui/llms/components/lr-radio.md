@@ -55,8 +55,7 @@ restores the current default.
 native-style composed `change`, then `lr-change`; both aliases carry `{ checked, value }`. An owned
 radio emits none of those child value events; its group emits the sole aggregate sequence described
 below, so capture and bubble listeners cannot observe two differently shaped event sets. The
-internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events,
-each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
+internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
 
 **Slots:** default label content. In `appearance="button"`, `start`/`prefix` share the leading

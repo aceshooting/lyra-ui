@@ -4,6 +4,30 @@ import type { LyraKnowledgeBaseAdmin } from "./knowledge-base-admin.class.js";
 import { styles } from "./knowledge-base-admin.styles.js";
 
 describe("lr-knowledge-base-admin", () => {
+  it("keeps an explicitly empty label distinct from an omitted one", async () => {
+    const omitted = (await fixture(
+      html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`
+    )) as LyraKnowledgeBaseAdmin;
+    expect(omitted.label).to.be.undefined;
+    expect(
+      omitted.shadowRoot!.querySelector('[part="heading"]')!.textContent
+    ).to.equal("Knowledge base administration");
+    expect(
+      omitted.shadowRoot!.querySelector('[part="tabs"]')!.getAttribute("aria-label")
+    ).to.equal("Knowledge base administration");
+
+    const explicitEmpty = (await fixture(
+      html`<lr-knowledge-base-admin label=""></lr-knowledge-base-admin>`
+    )) as LyraKnowledgeBaseAdmin;
+    expect(explicitEmpty.label).to.equal("");
+    expect(
+      explicitEmpty.shadowRoot!.querySelector('[part="heading"]')!.textContent
+    ).to.equal("");
+    expect(
+      explicitEmpty.shadowRoot!.querySelector('[part="tabs"]')!.getAttribute("aria-label")
+    ).to.equal("");
+  });
+
   it("wraps the internal [aria-selected='true'] tab rule in :where() so a consumer ::part(tab) override can win (regression)", () => {
     const css = styles.cssText.replace(/\s+/g, " ");
     expect(css).to.match(/\[part='tab'\]:where\(\[aria-selected='true'\]\)/);

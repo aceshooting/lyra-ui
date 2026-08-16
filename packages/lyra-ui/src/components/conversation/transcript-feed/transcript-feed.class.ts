@@ -100,8 +100,10 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   /** Session identity. Changing it resets final-announcement history and treats
    *  the new session's current entries as a silent baseline. */
   @property({ attribute: 'session-id' }) sessionId = '';
-  /** Accessible name for the `role="log"` region. Defaults to the localized `transcriptFeedLabel`. */
-  @property() label = '';
+  /** Accessible name for the `role="log"` region. Optional. Omitting it localizes the default
+   *  `transcriptFeedLabel` message; an explicit empty string renders no visible/accessible label,
+   *  unless `accessibleLabel` is also set (it wins over both). */
+  @property() label?: string;
   /** Overrides the log region's computed accessible name. Wins over `label` and the localized
    *  default. Attribute-reflects from a host-level `aria-label` so a plain-markup consumer gets
    *  ARIA-name forwarding without setting a JS property. */
@@ -284,7 +286,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
         part="base"
         role="region"
         tabindex="0"
-        aria-label=${this.accessibleLabel ?? (this.label || this.localize('transcriptFeedLabel'))}
+        aria-label=${this.accessibleLabel ?? (this.label == null ? this.localize('transcriptFeedLabel') : this.label)}
         @scroll=${this.onScroll}
       >
         ${empty
@@ -294,7 +296,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
                 part="log"
                 role="log"
                 aria-live="off"
-                aria-label=${this.accessibleLabel ?? (this.label || this.localize('transcriptFeedLabel'))}
+                aria-label=${this.accessibleLabel ?? (this.label == null ? this.localize('transcriptFeedLabel') : this.label)}
               >
                 ${repeat(
                   finals,

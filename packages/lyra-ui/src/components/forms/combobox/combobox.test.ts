@@ -3367,7 +3367,7 @@ describe("native input surface", () => {
       .to.be.true;
   });
 
-  it("relays exactly one owner-realm native focus/blur pair and prefixed aliases", async () => {
+  it("relays exactly one owner-realm native focus/blur pair and never fires the removed lr-focus/lr-blur aliases", async () => {
     const el = (await fixture(basic())) as LyraCombobox;
     const input = el.shadowRoot!.querySelector(
       '[part="combobox-input"]'
@@ -3399,10 +3399,7 @@ describe("native input surface", () => {
     expect(
       nativeEvents.map((event) => event.relatedTarget?.nodeName)
     ).to.deep.equal(["BUTTON", "BUTTON"]);
-    expect(aliases.map(({ type, detail }) => [type, detail])).to.deep.equal([
-      ["lr-focus", null],
-      ["lr-blur", null],
-    ]);
+    expect(aliases).to.deep.equal([]);
   });
 });
 

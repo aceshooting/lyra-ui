@@ -204,6 +204,18 @@ it('uses accessibleLabel verbatim instead of the auto-generated summary when set
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom summary');
 });
 
+it('treats an explicitly empty accessibleLabel as a real override, distinct from an omitted one', async () => {
+  const explicit = (await fixture(
+    html`<lr-sequence-strip accessible-label=""></lr-sequence-strip>`,
+  )) as LyraSequenceStrip;
+  await explicit.updateComplete;
+  expect(explicit.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+
+  const omitted = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  await omitted.updateComplete;
+  expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('No items');
+});
+
 it('keeps a host aria-label distinct from the internal list name', async () => {
   const el = (await fixture(html`
     <lr-sequence-strip accessible-label="Component alias" aria-label="Host label"></lr-sequence-strip>

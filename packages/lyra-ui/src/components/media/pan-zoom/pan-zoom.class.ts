@@ -36,8 +36,6 @@ export interface LyraPanZoomEventMap {
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 
 /**
@@ -55,8 +53,6 @@ export interface LyraPanZoomEventMap {
  *   native event.
  * @event {FocusEvent} blur - Relayed once from the scrollable viewport as a bubbling, composed
  *   native event.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - The frame wrapper.
  * @csspart viewport - The scrollable viewport.
  * @csspart content - The transformed content wrapper.
@@ -160,12 +156,10 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
 
   private onViewportFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onViewportBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {

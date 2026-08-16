@@ -18,8 +18,6 @@ import { LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings.
 export interface LyraIconButtonEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
 }
 
 /** Raw SVG geometry primitives that render nothing when parsed as top-level light-DOM children
@@ -94,8 +92,6 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @customElement lr-icon-button
  * @event focus - Native focus relayed once from the internal button.
  * @event blur - Native blur relayed once from the internal button.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @slot - Optional custom icon content, rendered beside (not inside) the `icon` glyph.
  * @csspart base - Shoelace compatibility name for the interactive native control; use `button`.
  * @csspart button - Native button, or the native anchor in safe link mode. The same node also
@@ -215,12 +211,10 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
 
   private onFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private onSlotChange = (): void => {

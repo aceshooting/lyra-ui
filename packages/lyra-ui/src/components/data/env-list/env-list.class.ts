@@ -126,8 +126,9 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   /** Whether each entry gets a copy-to-clipboard button. */
   @property({ reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
 
-  /** Accessible name for the list; falls back to a localized default. */
-  @property() label = '';
+  /** Accessible name for the list; falls back to a localized default when unset. An explicitly
+   *  empty string renders as an empty label rather than falling back. */
+  @property() label?: string;
 
   @state() private revealed = new Map<string, boolean>();
 
@@ -206,7 +207,10 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   }
 
   private get accessibleLabel(): string {
-    return this.getAttribute('aria-label')?.trim() || this.label || this.localize('envListLabel');
+    return (
+      this.getAttribute('aria-label')?.trim() ||
+      (this.label == null ? this.localize('envListLabel') : this.label)
+    );
   }
 
   override render(): TemplateResult {

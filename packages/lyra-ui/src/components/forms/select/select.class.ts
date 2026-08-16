@@ -90,8 +90,6 @@ export interface LyraSelectEventMap {
   >;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 /**
  * `<lr-select>` — a plain closed-list dropdown: a direct `<lr-*>`
@@ -193,8 +191,6 @@ export interface LyraSelectEventMap {
  * browser's own validation bubble so an app can present the failure its own way.
  * @event blur - Re-dispatched from the trigger as a bubbling, composed event.
  * @event focus - Re-dispatched from the trigger as a bubbling, composed event.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @cssstate required - Matches while `required` is set. Style with `lr-select:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
  * @cssstate valid - Matches while the control satisfies its constraints, including any
@@ -1694,12 +1690,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (this.open) this.restoreFocusOnClose = false;
     void this.hide();
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private onTriggerFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   /**

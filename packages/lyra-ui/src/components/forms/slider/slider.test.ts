@@ -1559,7 +1559,7 @@ it("forwards host focus()/blur() to the internal thumb control", async () => {
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
 });
 
-it("blurs the active range thumb and relays exactly one native pair plus prefixed aliases", async () => {
+it("blurs the active range thumb and relays exactly one native pair, never lr-focus/lr-blur", async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div><lr-slider range min-value="20" max-value="80"></lr-slider></div>
   `);
@@ -1593,7 +1593,8 @@ it("blurs the active range thumb and relays exactly one native pair plus prefixe
       (event) => event.target === el && event.bubbles && event.composed
     )
   ).to.be.true;
-  expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(aliases).to.deep.equal([]);
 });
 
 it("forwards host click() to the internal thumb control", async () => {

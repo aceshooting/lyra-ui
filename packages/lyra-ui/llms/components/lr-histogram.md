@@ -31,17 +31,17 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
   specialist owns its controller because a non-bar type would contradict the derived distribution.
 - All other `LyraChart` properties are inherited and usable: `description`, `grid`, `indexAxis`
-  (`index-axis`), `hiddenDatasets`, `legend`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
+  (`index-axis`), `hiddenDatasets`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `formatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
-  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
-  (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
+  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `showDataTable`
   (`show-data-table`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
 maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
-`appendData()` remains a deprecated compatibility adapter.
+`appendData()` remains a working compatibility adapter (no longer deprecated); prefer
+`appendSamples()` for new code.
 
 **Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-legend-visibility-change` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and

@@ -103,6 +103,40 @@ it('shows args read-only inside a collapsed lr-details + lr-json-viewer only whe
   expect(viewer.data).to.deep.equal({ path: '/etc/hosts' });
 });
 
+it('stops the nested json-viewer\'s lr-copy (and sibling clipboard/search events) from leaking past the host', async () => {
+  const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => Promise.resolve() },
+  });
+  try {
+    const el = (await fixture(
+      html`<lr-confirm-bar .args=${{ path: '/etc/hosts' }}></lr-confirm-bar>`,
+    )) as LyraConfirmBar;
+    const details = el.shadowRoot!.querySelector('[part="args"]') as HTMLElement & { open: boolean };
+    details.open = true;
+    await el.updateComplete;
+    const viewer = details.querySelector('lr-json-viewer') as HTMLElement & {
+      copyable: boolean;
+      updateComplete: Promise<unknown>;
+    };
+    viewer.copyable = true;
+    await viewer.updateComplete;
+    const observed: string[] = [];
+    for (const type of ['lr-copy', 'lr-error', 'lr-copy-error', 'lr-search-change']) {
+      el.addEventListener(type, () => observed.push(type));
+    }
+    const copyButton = viewer.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    const viewerCopied = oneEvent(viewer, 'lr-copy');
+    copyButton.click();
+    await viewerCopied; // proves the copy action completed and the event fired on the viewer itself
+    expect(observed).to.deep.equal([]);
+  } finally {
+    if (original) Object.defineProperty(navigator, 'clipboard', original);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
+});
+
 it('lr-approve carries args as-is; lr-deny has no detail; both set decision and remove the buttons', async () => {
   const approveEl = (await fixture(
     html`<lr-confirm-bar .args=${{ x: 1 }}></lr-confirm-bar>`,

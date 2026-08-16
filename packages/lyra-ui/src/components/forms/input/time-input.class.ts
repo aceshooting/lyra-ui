@@ -87,8 +87,6 @@ export interface LyraTimeInputEventMap {
   blur: FocusEvent;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-clear': CustomEvent<null>;
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
@@ -198,8 +196,6 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @event blur - Re-dispatched when focus leaves the segmented editing surface.
  * @event lr-input - Prefixed compatibility alias for `input` with `detail.value`.
  * @event lr-change - Prefixed compatibility alias for `change` with `detail.value`.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-clear - The clear action removed the value.
  * @event lr-show - Cancelable event fired before the picker opens.
  * @event lr-after-show - The opening transition finished.
@@ -820,7 +816,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const related = event.relatedTarget;
     if (containsElement(this.renderRoot.querySelector('[part="input"]'), related)) return;
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onSegmentBlur = (event: FocusEvent): void => {
@@ -837,7 +832,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     if (!this.liveDisabled) this.touched = true;
     this.resetDigitBuffer();
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private segmentElement(name: SegmentName): HTMLElement | null {

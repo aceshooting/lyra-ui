@@ -119,7 +119,7 @@ it('renders the description as body text when provided, omits it when not', asyn
   await withoutDesc;
 });
 
-it('fills the confirm button with --lr-color-brand by default, --lr-color-danger when tone is "danger"', async () => {
+it('fills the confirm button with --lr-color-brand by default, --lr-color-danger when variant is "danger"', async () => {
   const neutral = confirm({ title: 'Proceed?' });
   const neutralDialog = getMountedDialog();
   const neutralConfirm = footerButtons(neutralDialog)[1];
@@ -130,6 +130,18 @@ it('fills the confirm button with --lr-color-brand by default, --lr-color-danger
   expect(neutralBackground).to.include('--lr-color-brand');
   expect(neutralColor).to.include('--lr-color-on-brand');
 
+  const danger = confirm({ title: 'Delete?', variant: 'danger' });
+  const dangerDialog = getMountedDialog();
+  const dangerConfirm = footerButtons(dangerDialog)[1];
+  const dangerBackground = dangerConfirm.style.background;
+  const dangerColor = dangerConfirm.style.color;
+  footerButtons(dangerDialog)[0].click();
+  await danger;
+  expect(dangerBackground).to.include('--lr-color-danger');
+  expect(dangerColor).to.include('--lr-color-on-danger');
+});
+
+it('still honors the deprecated "tone" spelling identically to "variant"', async () => {
   const danger = confirm({ title: 'Delete?', tone: 'danger' });
   const dangerDialog = getMountedDialog();
   const dangerConfirm = footerButtons(dangerDialog)[1];
@@ -139,6 +151,16 @@ it('fills the confirm button with --lr-color-brand by default, --lr-color-danger
   await danger;
   expect(dangerBackground).to.include('--lr-color-danger');
   expect(dangerColor).to.include('--lr-color-on-danger');
+});
+
+it('prefers "variant" over the deprecated "tone" when both are somehow set', async () => {
+  const promise = confirm({ title: 'Delete?', variant: 'danger', tone: 'neutral' });
+  const dialog = getMountedDialog();
+  const confirmButton = footerButtons(dialog)[1];
+  expect(confirmButton.style.background).to.include('--lr-color-danger');
+  expect(confirmButton.style.color).to.include('--lr-color-on-danger');
+  footerButtons(dialog)[0].click();
+  await promise;
 });
 
 it('uses the title as the dialog heading, which drives aria-label', async () => {

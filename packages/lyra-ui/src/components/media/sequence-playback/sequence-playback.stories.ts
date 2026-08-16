@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Discrete sequence playback controls with `itemCount`/`currentIndex`, native `FocusEvent` relays from the active internal control, and matching `lr-focus`/`lr-blur` aliases.',
+          'Discrete sequence playback controls with `itemCount`/`currentIndex` and native `FocusEvent` relays from the active internal control.',
       },
     },
   },

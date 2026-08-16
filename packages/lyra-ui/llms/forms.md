@@ -279,8 +279,7 @@ ownership remain unchanged, so the host can defer dismissal without reconstructi
 `detail: { inputValue }` and is also cancelable: preventing it suppresses the default append/select
 action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are relayed exactly once from the host as owner-realm
-native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`;
-`lr-focus` and `lr-blur` are no-detail prefixed aliases for the same transitions.
+native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
 
@@ -669,8 +668,7 @@ programmatic `value` write, `form.reset()`, or session-state restoration. Plus
 `input`/`lr-input`/`change`/`lr-change` run, and never when there was nothing to clear, so it never
 announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
-trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
-its unprefixed counterpart. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
+trigger. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
 non-cancelable only for the disconnect-driven close, where a veto cannot be honoured. A direct or
 fieldset-cascaded disablement is a policy closure rather than a user-requested transition: it
 synchronously closes without the vetoable `lr-hide` or settled `lr-after-hide` lifecycle, and a
@@ -1322,8 +1320,6 @@ the shadow boundary.
 | `lr-change`  | `{ value: string }` | Compatibility alias fired on native `change` timing (blur after a committed edit).                                                                                        |
 | `blur`       | none                | Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed, unlike the native event.                                                       |
 | `focus`      | none                | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`.                                                                         |
-| `lr-blur`    | none                | Prefixed compatibility alias, fired immediately after `blur`.                                                                                                             |
-| `lr-focus`   | none                | Prefixed compatibility alias, fired immediately after `focus`.                                                                                                            |
 | `lr-invalid` | none                | Fired when a validity check finds the control invalid. **Cancelable** — `preventDefault()` suppresses the native validation bubble and `reportValidity()`'s focus/scroll. |
 
 Programmatic property assignments, selection changes, `setRangeText()`, form reset, and form-state
@@ -1549,7 +1545,7 @@ listener path has accepted the default action; calling `preventDefault()` on the
 ancestor therefore vetoes it, while propagation control by itself does not. The internal button's
 `focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
-events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail). `lr-invalid` (no
+events. `lr-invalid` (no
 detail, cancelable) fires when a validity check finds the button invalid; `preventDefault()` on it
 suppresses the native validation bubble and `reportValidity()`'s focus/scroll.
 
@@ -1773,8 +1769,7 @@ best-effort fallbacks.
 activating the action button or a safe anchor through the same path as pointer/keyboard input.
 
 **Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
-`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
-its prefixed alias `lr-focus` / `lr-blur` (no detail).
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events.
 
 **Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
 sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is
@@ -1992,7 +1987,7 @@ Three more native passthroughs:
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
-own `blur`/`focus`) each followed by its prefixed alias `lr-blur`/`lr-focus` (no detail), and
+own `blur`/`focus`), and
 `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
 sequence). `lr-invalid` (no detail) fires when a validity check finds the input invalid.
 
@@ -2275,7 +2270,7 @@ field for no new capability. Each carries a localized accessible name and the sh
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
-input) each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear`
+input), and `lr-clear`
 (inherited, never fired here). The inherited `lr-invalid` (no detail) fires when a validity check
 finds the input invalid. The internal native `beforeinput` is cancelable, bubbles, and composes;
 calling `preventDefault()` on the host vetoes the edit before `value` changes.
@@ -2407,8 +2402,8 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 popup, validation, and form submission.
 
 **Events:** native `input` on user edits and native `change` on a complete commit; compatibility
-aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once
-with `lr-focus` / `lr-blur` aliases. `lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
+aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
+`lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
 precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
 `lr-invalid` follows a failed validity check.
 The hidden native autofill seam treats an intentional empty `input` followed by `change` as a
@@ -2494,7 +2489,7 @@ The inherited `--lr-input-*` theme inputs therefore remain configurable from an 
 wrapper without being shadowed by the subclass.
 
 **Events:** native-style `input` and `change`; bubbling, composed `focus` and `blur` bridges; the
-`lr-input` / `lr-change` aliases with `{ value }`; `lr-focus` / `lr-blur` aliases with no detail;
+`lr-input` / `lr-change` aliases with `{ value }`;
 `lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails.
 
 **CSS parts:** all inherited `lr-input` parts, plus `time-input` on the same control-row node as
@@ -2651,8 +2646,8 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
 emits native `Event` `change` then `lr-change`; and a country pick emits both pairs in order:
 `input`, `lr-input`, `change`, `lr-change`. Native events carry no custom detail; the aliases carry
 `{ value, inputValue, country, valid, status }`.
-Internal `focus`/`blur` are relayed once as realm-correct native `FocusEvent`s preserving `relatedTarget`,
-followed by `lr-focus`/`lr-blur`. `lr-invalid` has no detail and is the one bubbling/composed alias
+Internal `focus`/`blur` are relayed once as realm-correct native `FocusEvent`s preserving `relatedTarget`.
+`lr-invalid` has no detail and is the one bubbling/composed alias
 when native validity fails. Programmatic value writes remain silent.
 
 **Validity:** empty + `required` sets `valueMissing`; incomplete dial-like input sets `badInput`;
@@ -2822,8 +2817,7 @@ native-style composed `change` (no detail) then `lr-change` (`detail: { start, e
 on pointer release, keyboard keyup, handle blur while a changed keyboard gesture is still pending,
 or when a preset button is clicked. A blur commit retires the gesture before the later physical
 keyup, so it cannot emit a duplicate change. The focused handle's native `focus` and `blur` are
-re-dispatched from the host as bubbling, composed events, each followed by its prefixed alias
-`lr-focus` / `lr-blur` (no detail). A failed native validity check emits one bubbling/composed,
+re-dispatched from the host as bubbling, composed events. A failed native validity check emits one bubbling/composed,
 cancelable `lr-invalid` alias; cancelling it cancels the native `invalid` event and suppresses the
 browser's default validation UI.
 
@@ -3165,8 +3159,7 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 **Events:** user toggles emit, in order, bubbling/composed `input`, the compatibility `lr-input`
 alias, bubbling/composed `change`, then the compatibility `lr-change` alias (both aliases carry
 `detail: { checked: boolean }`). Programmatic `.checked` assignments are
-silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events, each followed
-by its prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a
+silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a
 validity check finds the checkbox invalid.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control;
@@ -3347,8 +3340,7 @@ a consumer observes a control they didn't write. `input` is an `InputEvent`; `ch
 `Event`. Both bubble and compose, and neither carries a detail — read `event.target.checked`.
 None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
-`focus` and `blur` are re-dispatched as bubbling, composed host events, each followed by its
-prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a validity
+`focus` and `blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a validity
 check finds the switch invalid.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control;
@@ -3531,7 +3523,7 @@ detail), then `lr-change`, fire once an interaction commits: on pointerup for a 
 for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press fires both pairs, mirroring
 native `<input type=range>` timing.
 The focused handle's native `focus` and `blur` are re-dispatched from the host as bubbling,
-composed events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
+composed events.
 `lr-invalid` (no detail) fires when a validity check finds the slider invalid.
 **Breaking in 8.0.0:** both details widened from `{ value: number }` to
 `{ value: number; minValue: number; maxValue: number; handle: 'value' | 'min' | 'max' }`. `value` is
@@ -3734,8 +3726,7 @@ restores the current default.
 native-style composed `change`, then `lr-change`; both aliases carry `{ checked, value }`. An owned
 radio emits none of those child value events; its group emits the sole aggregate sequence described
 below, so capture and bubble listeners cannot observe two differently shaped event sets. The
-internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events,
-each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
+internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
 
 **Slots:** default label content. In `appearance="button"`, `start`/`prefix` share the leading
@@ -3832,8 +3823,7 @@ size used by the button's form and chrome logic.
 **Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
 then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
 aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
-not cross the shadow boundary, each followed by its prefixed alias `lr-focus` / `lr-blur`
-(no detail). `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
+not cross the shadow boundary. `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
 its own alias.
 
 **Slots:** default (label text), `start` (leading content, typically an icon), and `end` (trailing
@@ -3976,8 +3966,7 @@ so a listener that decides asynchronously (`await`-ing a check before letting th
 still veto it; it then goes through the same resolved default button as Enter-to-submit, so
 `SubmitEvent.submitter` and the button's own `name`/`value` reach the submission. The real input's native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
-do not cross the shadow boundary; each is followed by its prefixed alias `lr-focus` / `lr-blur` (no
-detail). Replacing the live or default code, resetting/restoring the form state, or disconnecting
+do not cross the shadow boundary. Replacing the live or default code, resetting/restoring the form state, or disconnecting
 the component before the deferred task runs retires that completion's submission; a task for code
 A can never submit a later full code B.
 `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
@@ -4255,7 +4244,7 @@ the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-com
 each list mutation; native events have no detail and both aliases carry a frozen
 `{ value: readonly string[] }` snapshot.
 Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
-`relatedTarget`, followed by `lr-focus`/`lr-blur`. `lr-add`
+`relatedTarget`. `lr-add`
 (`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
 readonly, complete ordered and deduplicated set of tokens added by that commit),
 `lr-remove`
@@ -4420,7 +4409,7 @@ showing error chrome alone does not mutate `ElementInternals` validity.
 **Events:** exactly one realm-correct native `input`, `change`, `focus`, and `blur` is relayed from
 the internal textarea; native payload such as `InputEvent.inputType` and
 `FocusEvent.relatedTarget` is preserved. Typed `lr-input`/`lr-change` aliases carry
-`detail: { value }`, and `lr-focus`/`lr-blur` are the prefixed lifecycle aliases. `lr-invalid`
+`detail: { value }`. `lr-invalid`
 (no detail) fires once when validity fails.
 
 **Slots:** `label`, `hint`, `error`.
@@ -4596,8 +4585,8 @@ during a drag is authoritative instead: it retires the gesture and remains curre
 Also emitted are `lr-show` / `lr-after-show` and `lr-hide` / `lr-after-hide` (the panel opened
 or closed — never emitted for a declaratively-open picker's first render, nor for a close caused by
 disconnection; because this panel has no opening animation, each `lr-after-*` immediately follows
-its matching lifecycle event in the completed update), and `focus`/`blur` plus their migrated
-`lr-focus`/`lr-blur` aliases (exactly one bubbling/composed native `FocusEvent` relay when focus
+its matching lifecycle event in the completed update), and `focus`/`blur`
+(exactly one bubbling/composed native `FocusEvent` relay when focus
 enters or leaves the internal controls in either popup or inline mode), and `lr-invalid`
 (no detail) once when native validity fails. A change that
 doesn't move the serialized value emits nothing, so dragging within a single rounded colour is
@@ -4785,8 +4774,8 @@ consumer-supplied custom validity and recomputes current intrinsic constraints; 
 
 **Events:** a pick emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
 `lr-change`; both aliases carry `detail: { value }`. The internal search input's `focus` and `blur`
-are relayed once as native `FocusEvent`s preserving `relatedTarget`, followed by
-`lr-focus`/`lr-blur`. All four native events use the picker's current owner-document realm, including
+are relayed once as native `FocusEvent`s preserving `relatedTarget`.
+All four native events use the picker's current owner-document realm, including
 after adoption. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
 fails; preventing it also prevents the native `invalid` event that produced it. Programmatic `value`
 changes are silent.
@@ -5025,8 +5014,8 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
 every explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
 active locale untouched, so a host can persist the choice first and apply it later. `focus`/`blur`
-are relayed once from the trigger as native `FocusEvent`s preserving `relatedTarget`, followed
-respectively by `lr-focus`/`lr-blur`. `lr-invalid` is the single
+are relayed once from the trigger as native `FocusEvent`s preserving `relatedTarget`.
+`lr-invalid` is the single
 bubbling/composed, cancelable alias of a failed native validity check.
 
 `direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing

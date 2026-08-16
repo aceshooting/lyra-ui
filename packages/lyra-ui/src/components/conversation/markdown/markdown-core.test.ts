@@ -266,6 +266,50 @@ Some **bold** text with a [link](https://example.com/docs).
     ).to.include("&lt;b&gt;raw&lt;/b&gt;");
   });
 
+  it("neutralizes a javascript: markdown link in escape mode instead of rendering it clickable", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core
+        html-mode="escape"
+        content=${"[click me](javascript:alert(1))"}
+      ></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="content"]')!.textContent!.trim().length > 0
+    );
+    const anchor = el.shadowRoot!.querySelector("a");
+    if (anchor) expect(anchor.getAttribute("href") ?? "").to.not.match(/^javascript:/i);
+    else expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain("click me");
+  });
+
+  it("still renders an ordinary https link unaffected in escape mode", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core
+        html-mode="escape"
+        content=${"[docs](https://example.com/docs)"}
+      ></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="link"]') !== null);
+    expect(
+      el.shadowRoot!.querySelector('[part="link"]')!.getAttribute("href")
+    ).to.equal("https://example.com/docs");
+  });
+
+  it("bypasses the scheme allowlist in trusted mode, as documented", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core
+        html-mode="trusted"
+        content=${"[click me](javascript:alert(1))"}
+      ></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector("a") !== null);
+    expect(el.shadowRoot!.querySelector("a")!.getAttribute("href")).to.equal(
+      "javascript:alert(1)"
+    );
+  });
+
   it("is accessible with plain content", async () => {
     // Includes a link (focusable content) alongside the heading -- axe's scrollable-region-focusable
     // rule flags [part="content"]'s overflow-inline: auto whenever the rendered content has no

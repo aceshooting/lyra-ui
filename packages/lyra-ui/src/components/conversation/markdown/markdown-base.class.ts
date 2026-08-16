@@ -432,6 +432,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       linkTarget: this.linkTarget,
       headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
       escapeHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'escape',
+      trustedHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'trusted',
       highlightCodeOption: this.highlightCode && !this.streaming,
       getCachedHighlight: (key) => this.getCachedHighlight(key),
       failedHighlightKeys: this.failedHighlightKeys,

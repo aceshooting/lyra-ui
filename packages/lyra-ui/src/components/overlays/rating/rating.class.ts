@@ -82,8 +82,6 @@ export interface LyraRatingEventMap {
   'lr-hover': CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 
@@ -133,8 +131,6 @@ function starSolid(): SVGTemplateResult {
  * pointer position would produce — enough to render a live description of what is being hovered.
  * @event focus - The native focus event from the host-owned slider.
  * @event blur - The native blur event from the host-owned slider.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-invalid - The rating failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -329,7 +325,6 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // once, in the constructor, so a disconnect/reconnect cycle cannot stack duplicates.
     this.addEventListener('focusout', this.markInteracted);
     this.addEventListener('keydown', this.onHostKeyDown as EventListener);
-    this.addEventListener('focus', this.onFocus);
     this.addEventListener('blur', this.onBlur);
     this.syncValidityStates();
   }
@@ -823,14 +818,9 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     if (!this.effectiveDisabled) super.click();
   }
 
-  private onFocus = (event: FocusEvent): void => {
-    if (event.target === this) this.emit('lr-focus');
-  };
-
   private onBlur = (event: FocusEvent): void => {
     if (event.target !== this) return;
     this.markInteracted();
-    this.emit('lr-blur');
   };
 
   /**

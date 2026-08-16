@@ -65,8 +65,8 @@ const DEFAULT_TEMPERATURE = 1;
  * The visible temperature readout uses the effective locale and switches to bounded scientific
  * notation when a full decimal expansion would disturb the layout. The slider retains the exact
  * finite value through `aria-valuenow`.
- * Native `focus` and `blur` relayed by the nested model selector remain local to that child; this
- * panel exposes only its declared consolidated `lr-change` event.
+ * Native `focus` and `blur` relayed by the nested model selector or slider remain local to that
+ * child; this panel exposes only its declared consolidated `lr-change` event.
  *
  * @customElement lr-model-settings-panel
  * @event lr-change - Either child control changed. `detail: { model: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
@@ -267,6 +267,8 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             .valueAsNumber=${this.temperature}
             .showValue=${false}
             .disabled=${this.disabled}
+            @focus=${this.containNativeEvent}
+            @blur=${this.containNativeEvent}
             @lr-input=${this.onTemperatureInput}
             @lr-change=${this.onTemperatureChange}
           ></lr-slider>

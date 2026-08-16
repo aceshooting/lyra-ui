@@ -193,6 +193,11 @@ it('a host aria-label overrides the localized default', async () => {
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Deployment history');
 });
 
+it('treats an explicitly empty aria-label as a real override, distinct from an omitted one', async () => {
+  const el = (await fixture(html`<lr-timeline aria-label=""></lr-timeline>`)) as LyraTimeline;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 it('honors a .strings override for the timeline key', async () => {
   const el = (await fixture(
     html`<lr-timeline .strings=${{ timeline: 'Chronologie' }}></lr-timeline>`,

@@ -316,6 +316,8 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
       tabindex="-1"
       @input=${this.containNativeEvent}
       @change=${this.containNativeEvent}
+      @focus=${this.containNativeEvent}
+      @blur=${this.containNativeEvent}
     >
       <h3 part="heading">${visibleLabel}</h3>
       ${items.length

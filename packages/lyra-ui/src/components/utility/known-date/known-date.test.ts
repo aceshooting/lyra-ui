@@ -272,6 +272,37 @@ describe('mirrored Web Awesome public surface', () => {
     expect(el.validity.customError).to.be.false;
     expect(el.validity.badInput).to.be.true;
   });
+
+  it('anchors validationTarget on the first visible field, not the hidden native mirror', async () => {
+    const el = (await fixture(
+      html`<lr-known-date locale="en-GB" required></lr-known-date>`
+    )) as LyraKnownDate;
+    await el.updateComplete;
+
+    const visibleFields = fields(el);
+    expect(visibleFields.length).to.equal(3);
+    expect(el.validationTarget === visibleFields[0]).to.be.true;
+    expect(el.validationTarget === el.valueInput).to.be.false;
+    expect(el.validationTarget?.hasAttribute('hidden')).to.be.false;
+    expect(el.validationTarget?.getAttribute('tabindex')).to.not.equal('-1');
+  });
+
+  it('lets validationTarget be overridden and restored to the default field anchor', async () => {
+    const el = (await fixture(
+      html`<lr-known-date locale="en-GB"></lr-known-date>`
+    )) as LyraKnownDate;
+    await el.updateComplete;
+
+    const defaultTarget = el.validationTarget;
+    const anchor = document.createElement('span');
+    expect(defaultTarget === fields(el)[0]).to.be.true;
+
+    el.validationTarget = anchor;
+    expect(el.validationTarget === anchor).to.equal(true);
+
+    el.validationTarget = undefined;
+    expect(el.validationTarget === defaultTarget).to.equal(true);
+  });
 });
 
 it('leaves value empty and out of FormData while any field is blank', async () => {

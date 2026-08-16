@@ -4,11 +4,11 @@ import '../source-card/source-card.js';
 import '../../utility/copy-button/copy-button.js';
 import { LyraSourceList } from './source-list.js';
 
-it('defaults to collapsed with empty label/label-plural', async () => {
+it('defaults to collapsed with an omitted label and an empty label-plural', async () => {
   const el = (await fixture(html`<lr-source-list></lr-source-list>`)) as LyraSourceList;
   expect(el.expanded).to.be.false;
   expect(el.hasAttribute('expanded')).to.be.false;
-  expect(el.label).to.equal('');
+  expect(el.label).to.equal(undefined);
   expect(el.labelPlural).to.equal('');
 });
 
@@ -20,6 +20,16 @@ it('falls back to the literal word "Sources" when neither label nor label-plural
 it('uses label when set and label-plural is unset', async () => {
   const el = (await fixture(html`<lr-source-list label="Source"></lr-source-list>`)) as LyraSourceList;
   expect(el.shadowRoot!.querySelector('[part="header"]')!.textContent!.trim()).to.equal('Source');
+});
+
+it('honors an explicitly empty label as genuinely empty, distinct from omitting it', async () => {
+  const el = (await fixture(html`<lr-source-list label=""></lr-source-list>`)) as LyraSourceList;
+  expect(el.label).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="header"]')!.textContent!.trim()).to.equal('');
+
+  el.label = undefined;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="header"]')!.textContent!.trim()).to.equal('Sources');
 });
 
 it('prefers label-plural over label when both are set', async () => {

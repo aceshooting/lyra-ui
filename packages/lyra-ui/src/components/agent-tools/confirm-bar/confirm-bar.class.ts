@@ -324,7 +324,13 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
               @lr-after-show=${this.stopNestedLifecycle}
               @lr-hide=${this.stopNestedLifecycle}
               @lr-after-hide=${this.stopNestedLifecycle}>
-              <lr-json-viewer .data=${this.args}></lr-json-viewer>
+              <lr-json-viewer
+                .data=${this.args}
+                @lr-copy=${this.stopNestedLifecycle}
+                @lr-error=${this.stopNestedLifecycle}
+                @lr-copy-error=${this.stopNestedLifecycle}
+                @lr-search-change=${this.stopNestedLifecycle}
+              ></lr-json-viewer>
             </lr-details>`
           : nothing}
         <div part="footer">

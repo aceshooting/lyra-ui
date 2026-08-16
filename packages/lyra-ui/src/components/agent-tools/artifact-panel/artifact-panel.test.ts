@@ -40,6 +40,35 @@ describe('lr-artifact-panel', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('distinguishes an omitted label from an explicit empty override on the view-toggle group name', async () => {
+    const omitted = (await fixture(html`
+      <lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await omitted.updateComplete;
+    expect(
+      (omitted.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLElement).getAttribute('aria-label')
+    ).to.equal('Artifact');
+    expect(omitted.shadowRoot!.querySelector('[part="label"]') === null).to.be.true;
+
+    const explicitEmpty = (await fixture(html`
+      <lr-artifact-panel label=""><pre slot="code">code</pre></lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await explicitEmpty.updateComplete;
+    expect(
+      (explicitEmpty.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLElement).getAttribute('aria-label')
+    ).to.equal('');
+    expect(explicitEmpty.shadowRoot!.querySelector('[part="label"]') === null).to.be.true;
+
+    const explicitOverride = (await fixture(html`
+      <lr-artifact-panel label="Custom title"><pre slot="code">code</pre></lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await explicitOverride.updateComplete;
+    expect(
+      (explicitOverride.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLElement).getAttribute('aria-label')
+    ).to.equal('Custom title');
+    expect(explicitOverride.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Custom title');
+  });
+
   it('returns to preview when the active code slot is removed', async () => {
     const el = (await fixture(html`
       <lr-artifact-panel>

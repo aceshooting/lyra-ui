@@ -64,8 +64,8 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
 every explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
 active locale untouched, so a host can persist the choice first and apply it later. `focus`/`blur`
-are relayed once from the trigger as native `FocusEvent`s preserving `relatedTarget`, followed
-respectively by `lr-focus`/`lr-blur`. `lr-invalid` is the single
+are relayed once from the trigger as native `FocusEvent`s preserving `relatedTarget`.
+`lr-invalid` is the single
 bubbling/composed, cancelable alias of a failed native validity check.
 
 `direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing

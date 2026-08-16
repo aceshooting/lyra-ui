@@ -47,8 +47,7 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 **Events:** user toggles emit, in order, bubbling/composed `input`, the compatibility `lr-input`
 alias, bubbling/composed `change`, then the compatibility `lr-change` alias (both aliases carry
 `detail: { checked: boolean }`). Programmatic `.checked` assignments are
-silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events, each followed
-by its prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a
+silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a
 validity check finds the checkbox invalid.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control;

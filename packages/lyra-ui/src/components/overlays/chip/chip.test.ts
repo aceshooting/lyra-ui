@@ -193,6 +193,31 @@ it('keeps size="m" pixel-equivalent to the original chip and scales compact tier
   }
 });
 
+it('accepts the Web Awesome size spellings as exact synonyms of the s/m/l step names', async () => {
+  const render = async (size: string): Promise<LyraChip> =>
+    (await fixture(html`
+      <lr-chip size=${size}><svg slot="start" viewBox="0 0 10 10"></svg>Tag</lr-chip>
+    `)) as LyraChip;
+  const metrics = (el: LyraChip) => {
+    const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    const icon = getComputedStyle(el.shadowRoot!.querySelector('[part="start"]') as HTMLElement);
+    return {
+      font: Number.parseFloat(base.fontSize),
+      paddingBlock: Number.parseFloat(base.paddingBlockStart),
+      paddingInline: Number.parseFloat(base.paddingInlineStart),
+      gap: Number.parseFloat(base.gap),
+      icon: Number.parseFloat(icon.fontSize),
+    };
+  };
+
+  for (const [step, alias] of [['s', 'small'], ['m', 'medium'], ['l', 'large']] as const) {
+    const stepped = await render(step);
+    const aliased = await render(alias);
+    expect(aliased.getAttribute('size'), `${alias} attribute round-trips verbatim`).to.equal(alias);
+    expect(metrics(aliased), `${alias} metrics match ${step}`).to.deep.equal(metrics(stepped));
+  }
+});
+
 it('3xs is smaller than 2xs on every density metric except the shared gap floor', async () => {
   const render = async (size: '2xs' | '3xs'): Promise<LyraChip> =>
     (await fixture(html`

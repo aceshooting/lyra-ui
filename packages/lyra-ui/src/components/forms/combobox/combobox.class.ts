@@ -301,8 +301,6 @@ export interface LyraComboboxEventMap {
   >;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 /**
  * `<lr-combobox>` — a filterable single/multi select that combines a text
@@ -369,8 +367,6 @@ export interface LyraComboboxEventMap {
  * non-cancelable event.
  * @event {FocusEvent} focus - Re-dispatched from the internal native input as a bubbling, composed,
  * non-cancelable event.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @event lr-invalid - The combobox failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -2279,7 +2275,6 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.restoreFocusOnClose = false;
     this.hide();
     relayNativeEvent(this, event);
-    this.emit('lr-blur', null);
   };
 
   private onInputFocus = (event: FocusEvent): void => {
@@ -2289,7 +2284,6 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     }
     if (!this.restoringOverlayFocus) this.show();
     relayNativeEvent(this, event);
-    this.emit('lr-focus', null);
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {

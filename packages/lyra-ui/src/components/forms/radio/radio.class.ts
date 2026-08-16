@@ -36,8 +36,6 @@ export interface LyraRadioEventMap {
   'lr-change': CustomEvent<{ checked: boolean; value: string }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
 }
 
 interface RadioGroupController {
@@ -90,8 +88,6 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  *   instead of any child value events.
  * @event focus - The internal radio received focus.
  * @event blur - The internal radio lost focus.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-invalid - The standalone radio failed a validity check. Aggregate groups emit their
  *   own alias instead. Cancelable: calling `preventDefault()` also cancels the native `invalid`
  *   event behind it, suppressing the browser's own validation bubble so an app can present the
@@ -679,7 +675,6 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   };
   protected onFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
   protected onBlur = (event: FocusEvent): void => {
     if (!this.effectiveDisabled) {
@@ -687,7 +682,6 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       this.reflectValidityStates();
     }
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
   private isDefaultLabelNode(node: Node): boolean {
     if (node.nodeType !== 1) return true;

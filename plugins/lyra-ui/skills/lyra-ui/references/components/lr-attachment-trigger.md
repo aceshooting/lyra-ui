@@ -52,7 +52,7 @@ capture UI of its own, the host owns everything from here (there's no single rig
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
 blob to `<lr-attachment-chip>`). `focus`/`blur` from the active single- or multi-capability trigger
 are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`), followed by `lr-focus`/`lr-blur`; the hidden file input is not the focus owner.
+`relatedTarget`); the hidden file input is not the focus owner.
 The composed dropdown/menu implementation lifecycle, item-state, and selection events are
 contained inside the trigger. Only the attachment events listed above cross the host boundary.
 

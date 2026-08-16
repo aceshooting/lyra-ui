@@ -59,8 +59,8 @@ consumer-supplied custom validity and recomputes current intrinsic constraints; 
 
 **Events:** a pick emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
 `lr-change`; both aliases carry `detail: { value }`. The internal search input's `focus` and `blur`
-are relayed once as native `FocusEvent`s preserving `relatedTarget`, followed by
-`lr-focus`/`lr-blur`. All four native events use the picker's current owner-document realm, including
+are relayed once as native `FocusEvent`s preserving `relatedTarget`.
+All four native events use the picker's current owner-document realm, including
 after adoption. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
 fails; preventing it also prevents the native `invalid` event that produced it. Programmatic `value`
 changes are silent.

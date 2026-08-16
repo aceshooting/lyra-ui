@@ -32,10 +32,10 @@ const topics: LyraTopic[] = [
   },
 ];
 
-it('defaults to empty topics, empty label, expandDepth=1', async () => {
+it('defaults to empty topics, an unset label, expandDepth=1', async () => {
   const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   expect(el.topics).to.deep.equal([]);
-  expect(el.label).to.equal('');
+  expect(el.label).to.be.undefined;
   expect(el.expandDepth).to.equal(1);
 });
 
@@ -651,8 +651,8 @@ it('normalizes a NaN expandDepth instead of silently collapsing every ring (fall
 });
 
 it('resolves the default svg accessible name through a .strings override for mindMapLabel when label is unset', async () => {
-  // label stays at its '' default, so the `this.label || this.localize('mindMapLabel')`
-  // aria-label must fall through to the .strings/registry path.
+  // label stays unset (never assigned), so the `this.label == null ? this.localize(...) :
+  // this.label` aria-label must fall through to the .strings/registry path.
   const el = (await fixture(
     html`<lr-mind-map
       .strings=${{ mindMapLabel: 'Carte mentale' }}
@@ -663,6 +663,21 @@ it('resolves the default svg accessible name through a .strings override for min
   expect(
     el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')
   ).to.equal('Carte mentale');
+});
+
+it('keeps an explicitly empty label genuinely empty instead of falling back to the localized default', async () => {
+  const el = (await fixture(
+    html`<lr-mind-map
+      label=""
+      .strings=${{ mindMapLabel: 'Carte mentale' }}
+    ></lr-mind-map>`
+  )) as LyraMindMap;
+  el.topics = topics;
+  await el.updateComplete;
+  expect(el.label).to.equal('');
+  expect(
+    el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')
+  ).to.equal('');
 });
 
 it('keeps explicit-empty and dynamic host naming distinct from the SVG, tree, and implicit hub', async () => {

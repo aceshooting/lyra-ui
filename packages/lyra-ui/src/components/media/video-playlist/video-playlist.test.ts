@@ -1176,7 +1176,7 @@ describe('lr-video-playlist inert handling', () => {
   });
 });
 
-it('forwards host focus()/blur()/click() to the arrow-navigation playlist row and re-dispatches its focus/blur', async () => {
+it('forwards host focus()/blur()/click() to the arrow-navigation playlist row and re-dispatches its focus/blur with no prefixed alias', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div>
       <lr-video-playlist>
@@ -1200,11 +1200,9 @@ it('forwards host focus()/blur()/click() to the arrow-navigation playlist row an
   });
   wrapper.addEventListener('lr-focus', () => {
     aliases.push('lr-focus');
-    sequence.push('lr-focus');
   });
   wrapper.addEventListener('lr-blur', () => {
     aliases.push('lr-blur');
-    sequence.push('lr-blur');
   });
 
   el.focus();
@@ -1229,6 +1227,6 @@ it('forwards host focus()/blur()/click() to the arrow-navigation playlist row an
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur', 'focus']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur', 'lr-focus']);
-  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur', 'focus', 'lr-focus']);
+  expect(sequence).to.deep.equal(['focus', 'blur', 'focus']);
+  expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
 });

@@ -32,6 +32,9 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
 - `valueInput: HTMLInputElement` — hidden native `type="date"` mirror kept synchronized with
   `value`, `min`, `max`, `required`, `disabled`, and `readonly` for integrations that inspect native
   date constraints
+- `validationTarget: HTMLElement | undefined` (attribute: false) — the browser validation bubble's
+  focus anchor; defaults to the first visible day/month/year field in locale order, never the
+  hidden `valueInput` mirror. Settable to override which element the popup anchors to
 - `min: string = ''`, `max: string = ''` — inclusive `YYYY-MM-DD` bounds, surfaced as
   `rangeUnderflow`/`rangeOverflow`
 - `readonly: boolean = false` (reflected) — also suspends all validity flags

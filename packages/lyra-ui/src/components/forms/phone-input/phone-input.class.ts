@@ -152,8 +152,6 @@ export interface LyraPhoneInputEventMap {
   blur: FocusEvent;
   'lr-input': CustomEvent<LyraPhoneInputEventDetail>;
   'lr-change': CustomEvent<LyraPhoneInputEventDetail>;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
 }
 
 class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
@@ -335,8 +333,6 @@ function normalizeCountryCatalog(source: unknown): readonly LyraPhoneCountry[] {
  * @event lr-change - Lyra commit alias; detail contains the canonical and display values.
  * @event focus - Native `FocusEvent` relayed when the internal telephone input receives focus.
  * @event blur - Native `FocusEvent` relayed when the internal telephone input loses focus.
- * @event lr-focus - Lyra alias emitted after the native `focus` relay.
- * @event lr-blur - Lyra alias emitted after the native `blur` relay.
  * @event lr-invalid - The phone input failed a validity check. Cancelable: `preventDefault()`
  *   forwards to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
@@ -818,7 +814,6 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onBlur = (event: FocusEvent): void => {
@@ -828,7 +823,6 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     // Lit's dev-mode "scheduled an update after an update completed" warning.
     if (!this.liveDisabled) this.touched = true;
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private onLabelSlotChange = (event: Event): void => {

@@ -437,8 +437,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @property({ type: Boolean, attribute: 'sticky-groups', reflect: true })
   stickyGroups = false;
 
-  /** Accessible name for the list region. Defaults to the localized `threadListLabel`. */
-  @property() label = '';
+  /** Accessible name for the list region. Optional. Omitting it localizes the default
+   *  `threadListLabel` message; an explicit empty string renders no visible/accessible label. */
+  @property() label?: string;
 
   /** Data mode only: wraps each row's built-in `<lr-conversation-item>` with host-supplied
    *  content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface — e.g. a
@@ -662,8 +663,16 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private orderedCustomGroupIds(grouped: Map<string, LyraChatThread[]>): string[] {
     const firstSeen = [...grouped.keys()];
-    if (typeof this.groupOrder === 'function')
-      return firstSeen.sort(this.groupOrder);
+    if (typeof this.groupOrder === 'function') {
+      // Sorts a copy, not `firstSeen` itself: `Array.prototype.sort` reorders in place before a
+      // throwing comparator surfaces its exception, so sorting `firstSeen` directly would leave the
+      // fallback below with a partially-shuffled array instead of the documented first-seen order.
+      try {
+        return [...firstSeen].sort(this.groupOrder);
+      } catch {
+        return firstSeen;
+      }
+    }
     if (!this.groupOrder) return firstSeen;
     const ordered = [...new Set(this.groupOrder)].filter((id) =>
       grouped.has(id)
@@ -1256,7 +1265,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   override render(): TemplateResult {
     const label =
       this.getAttribute('aria-label') ??
-      (this.label || this.localize('threadListLabel'));
+      (this.label == null ? this.localize('threadListLabel') : this.label);
     // Both modes share one outer template so the mode switch replaces only the list inside it.
     // Slotted rows are invisible to a server renderer, which therefore always emits data mode; a
     // hydrating list has to reuse that markup rather than discard it on its corrective update.

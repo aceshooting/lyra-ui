@@ -1522,7 +1522,7 @@ describe("editable tokens", () => {
     expect(inputs).to.equal(1);
   });
 
-  it("commits an inline edit before relaying its native blur and typed aliases", async () => {
+  it("commits an inline edit before relaying its native blur, and never lr-blur", async () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
@@ -1558,8 +1558,9 @@ describe("editable tokens", () => {
       "change",
       "lr-change",
       "blur",
-      "lr-blur",
     ]);
+    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+    expect(order).to.not.include("lr-blur");
   });
 
   it("discards transient edits and drafts without user-change events when disabling the control", async () => {

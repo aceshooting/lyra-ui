@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
-import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
   acquireAnnouncementSink,
@@ -952,9 +952,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   override render(): TemplateResult {
     const hasToolbar = this.copyable || this.downloadable;
-    const ariaLabel = hostAriaLabel(this) === null && this.accessibleLabel
-      ? this.accessibleLabel
-      : this.localize('terminalLabel');
+    const ariaLabel = this.accessibleLabel || this.localize('terminalLabel');
     // Computed once per render, then consumed with O(1) lookups inside renderLine() for every
     // visible row -- rather than each row independently re-scanning `highlights`/`searchMatches`.
     const { perLine: highlightByLine, owners: highlightOwnerLines } = this.resolvedHighlightLines();

@@ -97,6 +97,11 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  self-toggle-then-emit contract `lr-pin-change` follows, so reassigning it back is optional and
    *  a direct host assignment stays silent. */
   'lr-search-change': CustomEvent<{ searchQuery: string }>;
+  /** A node type's visibility changed via the composed legend. `detail: { hiddenTypes }` -- the
+   *  complete updated array. This component already applies it to its own `hiddenTypes` before
+   *  emitting, the same self-toggle-then-emit contract `lr-pin-change`/`lr-search-change` follow,
+   *  so reassigning it back is optional and a direct host assignment stays silent. */
+  'lr-hidden-types-change': CustomEvent<LyraEventDetailSnapshot<{ hiddenTypes: string[] }>>;
   'lr-node-click': CustomEvent<{ nodeId: string; x: number; y: number }>;
   'lr-link-click': CustomEvent<{
     sourceNodeId: string;
@@ -175,6 +180,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-pin-change - `detail: { pinnedNodeIds }`. See the class doc above.
  * @event lr-search-change - The user typed in the toolbar's search box. `detail:
  *   { searchQuery: string }`. Direct host assignments do not emit.
+ * @event lr-hidden-types-change - A node type's visibility changed via the composed legend.
+ *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
  * @event lr-node-click - Bubbles straight through from the composed `lr-graph`, unmodified.
  * @event lr-link-click - Bubbles straight through from the composed `lr-graph`, unmodified.
  * @event lr-node-expand - Bubbles straight through from `lr-graph` and/or `lr-neighbor-list` (the
@@ -234,6 +241,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   static override styles = [LyraElement.styles, styles, srOnly];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-pin-change',
+    'lr-hidden-types-change',
   ]);
 
   /** Nodes forwarded to the composed graph and search experience. */
@@ -276,8 +284,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   @property({ type: Number }) height = 600;
   /** Fallback name for the root group; defaults to localized `graphExplorerLabel`. A non-empty
    *  host `aria-label` makes the host the sole overall owner; an explicitly empty host label stays
-   *  empty on the group. */
-  @property() label = '';
+   *  empty on the group, and so does an explicitly empty `label`. */
+  @property() label?: string;
   /** What drives this component's own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on top of the
    *  always-active search-match dimming -- see the class doc's dedicated paragraph. */
   @property() highlight: KnowledgeGraphHighlight = 'selection';
@@ -766,6 +774,10 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   ): void => {
     event.stopPropagation();
     this.hiddenTypes = event.detail.hiddenTypes;
+    // Same self-toggle-then-emit contract as setInternalSelectedNodeId()/togglePin()/
+    // onSearchInput(): only a component-initiated change announces itself, so a host that assigns
+    // the property back in response cannot start a feedback loop.
+    this.emit('lr-hidden-types-change', { hiddenTypes: this.hiddenTypes });
   };
 
   private onSearchInput = (event: CustomEvent<{ value: string }>): void => {
@@ -932,7 +944,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   override render(): TemplateResult {
     const groupLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize('graphExplorerLabel')
+      this.label == null ? this.localize('graphExplorerLabel') : this.label
     );
     const groupRole = retrievalSemanticRole(this, 'group');
     const matches = this.matchingNodes();

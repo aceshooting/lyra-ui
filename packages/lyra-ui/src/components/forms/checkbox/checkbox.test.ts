@@ -1256,7 +1256,7 @@ it("does not emit native or prefixed value events for a programmatic .checked as
   expect(fired).to.deep.equal([]);
 });
 
-it("forwards focus/blur and relays exactly one native pair plus prefixed aliases", async () => {
+it("forwards focus/blur and relays exactly one native pair, never firing the removed lr-focus/lr-blur aliases", async () => {
   const el = (await fixture(
     html`<lr-checkbox>Label</lr-checkbox>`
   )) as LyraCheckbox;
@@ -1287,7 +1287,7 @@ it("forwards focus/blur and relays exactly one native pair plus prefixed aliases
       (event) => event.target === el && event.bubbles && event.composed
     )
   ).to.be.true;
-  expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
+  expect(aliases).to.deep.equal([]);
 });
 
 it("forwards host click() to the internal control, toggling checked", async () => {

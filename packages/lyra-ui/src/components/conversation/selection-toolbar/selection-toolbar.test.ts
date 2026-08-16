@@ -531,6 +531,44 @@ it("does not steal a newer external focus destination while actions shrink", asy
   );
 });
 
+it("contains native focus and blur events relayed by a composed action button without silencing the button itself or the roving-focus bookkeeping", async () => {
+  const wrapper = await fixture(html`<div>
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  </div>`);
+  const el = wrapper.querySelector(
+    "lr-selection-toolbar"
+  ) as LyraSelectionToolbar;
+  await aTimeout(0);
+  const quote = el.shadowRoot!.querySelector<
+    HTMLElement & { focus(): void; blur(): void }
+  >('[data-action="quote"]')!;
+
+  let childFocuses = 0;
+  let childBlurs = 0;
+  let leakedFocuses = 0;
+  let leakedBlurs = 0;
+  quote.addEventListener("focus", () => childFocuses++);
+  quote.addEventListener("blur", () => childBlurs++);
+  wrapper.addEventListener("focus", () => leakedFocuses++);
+  wrapper.addEventListener("blur", () => leakedBlurs++);
+
+  quote.focus();
+  await aTimeout(0);
+  // The existing focusin-driven roving-focus bookkeeping must still see the move (a different
+  // event type from the focus/blur containment this test is verifying).
+  expect(el.shadowRoot!.activeElement?.getAttribute("data-action")).to.equal(
+    "quote"
+  );
+  quote.blur();
+
+  expect(childFocuses, "the action's own focus listener still fires").to.equal(
+    1
+  );
+  expect(childBlurs, "the action's own blur listener still fires").to.equal(1);
+  expect(leakedFocuses, "no focus leaked past the host").to.equal(0);
+  expect(leakedBlurs, "no blur leaked past the host").to.equal(0);
+});
+
 it("restarts positioning after a disconnect/reconnect while open", async () => {
   const rect = new DOMRect(20, 30, 100, 20);
   const el = (await fixture(html`<lr-selection-toolbar

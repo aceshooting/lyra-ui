@@ -369,6 +369,19 @@ it("forwards a controlled retrieval selection as lr-retrieval-select, without le
   ).to.be.false;
 });
 
+it("owns a clone-owned snapshot of selectedRetrievalChunkIds -- a later mutation of the assigned array does not change the retained value", async () => {
+  const el = await fixture<LyraAgentWorkspace>(
+    html`<lr-agent-workspace></lr-agent-workspace>`
+  );
+  const source = ["chunk-1", "chunk-2"];
+  el.selectedRetrievalChunkIds = source;
+  source.push("chunk-3");
+  source[0] = "mutated";
+
+  expect(el.selectedRetrievalChunkIds).to.not.equal(source);
+  expect(el.selectedRetrievalChunkIds).to.deep.equal(["chunk-1", "chunk-2"]);
+});
+
 it("lets named slots replace the data-driven transcript and details", async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
     <lr-agent-workspace .messages=${messages}>

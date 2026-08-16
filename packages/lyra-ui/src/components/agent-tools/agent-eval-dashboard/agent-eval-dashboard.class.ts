@@ -97,7 +97,10 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   @property({ attribute: 'metric-id' }) metricId: string | null = null;
   /** ISO 4217 currency code used by metrics whose format is `currency`. Invalid codes use USD. */
   @property() currency = 'USD';
-  @property() label = '';
+  /** Accessible/visible heading override. Optional. Omitting it localizes the default
+   *  `evaluationDashboardLabel` message; an explicit empty string renders no visible/accessible
+   *  label. */
+  @property() label?: string;
   @property({ type: Boolean, attribute: 'show-chart', reflect: true, converter: trueDefaultBooleanConverter }) showChart = true;
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
   /** Maximum history entries rendered into both the run list and trend chart. Clamped to 1–500. */
@@ -169,7 +172,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     })}</section>`;
   }
   override render(): TemplateResult {
-    const label = this.label || this.localize('evaluationDashboardLabel');
+    const label = this.label == null ? this.localize('evaluationDashboardLabel') : this.label;
     const semanticLabel = overallSemanticLabel(this, label);
     const active = this.activeMetric;
     const runs = this.projectedRuns;

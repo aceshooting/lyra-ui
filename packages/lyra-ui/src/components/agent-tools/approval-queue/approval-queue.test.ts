@@ -220,6 +220,19 @@ describe('lr-approval-queue', () => {
     expect(el.shadowRoot!.querySelector('section')!.getAttribute('aria-label')).to.equal('');
   });
 
+  it('distinguishes an omitted label from an explicit empty override on the heading', async () => {
+    const omitted = (await fixture(html`<lr-approval-queue></lr-approval-queue>`)) as LyraApprovalQueue;
+    expect(omitted.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Tool approval queue');
+
+    const explicitEmpty = (await fixture(html`<lr-approval-queue label=""></lr-approval-queue>`)) as LyraApprovalQueue;
+    expect(explicitEmpty.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('');
+
+    const explicitOverride = (await fixture(
+      html`<lr-approval-queue label="Custom heading"></lr-approval-queue>`
+    )) as LyraApprovalQueue;
+    expect(explicitOverride.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Custom heading');
+  });
+
   it('renders a strings override in the DOM', async () => {
     const el = (await fixture(html`
       <lr-approval-queue .strings=${{ approvalQueueEmpty: 'Nothing requires review' }}></lr-approval-queue>

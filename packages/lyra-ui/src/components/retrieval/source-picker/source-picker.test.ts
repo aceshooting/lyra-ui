@@ -33,7 +33,7 @@ const sources: LyraSourceEntry[] = [
   { id: "doc3", label: "notes.txt", mimeType: "text/plain" },
 ];
 
-it('defaults to empty sources/selectedSourceIds, showSelectAll=true, searchable=true, empty label', async () => {
+it('defaults to empty sources/selectedSourceIds, showSelectAll=true, searchable=true, omitted label', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
@@ -41,7 +41,7 @@ it('defaults to empty sources/selectedSourceIds, showSelectAll=true, searchable=
   expect(el.selectedSourceIds).to.deep.equal([]);
   expect(el.showSelectAll).to.be.true;
   expect(el.searchable).to.be.true;
-  expect(el.label).to.equal("");
+  expect(el.label).to.equal(undefined);
 });
 
 it('renders a role="tree" with one treeitem per visible entry (top-level collapsed by default)', async () => {
@@ -286,6 +286,44 @@ it('keeps explicit-empty and dynamic host naming distinct from the source tree',
   expect(
     el.shadowRoot!.querySelector('[role="tree"]')!.getAttribute("aria-label")
   ).to.equal("Sources");
+});
+
+it('honors an explicitly empty label as genuinely empty, distinct from omitting it', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker></lr-source-picker>`
+  )) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = () => el.shadowRoot!.querySelector('[role="tree"]')!;
+  expect(el.label).to.equal(undefined);
+  expect(tree().getAttribute("aria-label")).to.equal("Sources");
+
+  el.label = "";
+  await el.updateComplete;
+  expect(tree().getAttribute("aria-label")).to.equal("");
+
+  el.label = undefined;
+  await el.updateComplete;
+  expect(tree().getAttribute("aria-label")).to.equal("Sources");
+});
+
+it('honors an explicitly empty label as genuinely empty when the host already has an aria-label', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker aria-label="Grounding sources"></lr-source-picker>`
+  )) as LyraSourcePicker;
+  el.sources = sources;
+  await el.updateComplete;
+  const tree = () => el.shadowRoot!.querySelector('[role="tree"]')!;
+  expect(el.label).to.equal(undefined);
+  expect(tree().getAttribute("aria-label")).to.equal("Sources");
+
+  el.label = "";
+  await el.updateComplete;
+  expect(tree().getAttribute("aria-label")).to.equal("");
+
+  el.label = undefined;
+  await el.updateComplete;
+  expect(tree().getAttribute("aria-label")).to.equal("Sources");
 });
 
 it("honors a .strings override for the select-all label and the empty/no-matches states", async () => {

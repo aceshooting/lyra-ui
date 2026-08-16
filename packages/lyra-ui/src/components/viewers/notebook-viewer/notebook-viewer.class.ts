@@ -5,8 +5,8 @@ import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
-import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
-import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
+import { DocumentAnchorTarget, prioritizedHighlightCandidates, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
+import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -33,6 +33,9 @@ const MAX_OUTPUTS = 20_000;
 const MAX_JSON_NODES = 100_000;
 const SUPPORTED_MAJOR = 4;
 const SUPPORTED_MINORS = [0, 1, 2, 3, 4, 5];
+/** Candidates considered per `repaintHighlights()` pass -- mirrors docx-viewer's/ebook-viewer's own
+ *  painted-highlight ceiling (`MAX_DOCX_PAINTED_HIGHLIGHTS`/`MAX_PAINTED_HIGHLIGHTS`). */
+const MAX_NOTEBOOK_PAINTED_HIGHLIGHTS = 100;
 
 interface NotebookOutput {
   readonly output_type: 'stream' | 'error' | 'display_data' | 'execute_result';
@@ -350,11 +353,10 @@ type SanitizeProfile = 'svg' | 'html';
  *  them returns authority to the already configured URL without requiring a `src` reassignment. */
 export type LyraNotebookViewerSource = LyraViewerSource<NotebookDoc | string>;
 
-export interface LyraNotebookViewerEventMap {
+export interface LyraNotebookViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-load': CustomEvent<{ cellCount: number; language: string }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
-  'lr-anchor-result': CustomEvent<AnchorResultDetail>;
 }
 
 // Same one-line base every other `DocumentAnchorTarget()` adopter uses: the mixin takes a
@@ -380,6 +382,26 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * scroll. `node-path` anchors resolve `path[0]` as a cell index; `fragment` anchors resolve a cell's
  * own `id`.
  *
+ * Adopts `DocumentAnchorTarget`: `scrollToAnchor()`/the declarative `anchor` property resolve
+ * through the cell-granularity model above, and `highlights`/`activeHighlightId` resolve through
+ * that exact same model (`resolveAnchorCellIndex()`), not a pixel-precise text range within a
+ * cell's own rendered markdown/code/output -- this viewer's addressable unit is the cell, matching
+ * its `anchorKinds`. A `highlights` entry whose anchor resolves paints its matched cell with a
+ * `cell-highlighted` part plus a tone-specific `cell-highlighted-<tone>` part (`accent` default,
+ * `success`, `warning`, `danger`, `neutral`); the entry whose `id` equals `activeHighlightId`
+ * additionally carries `cell-highlight-active`. Unlike docx-viewer/ebook-viewer there is no raw
+ * markup to imperatively wrap or annotate -- cells are already declaratively re-rendered by Lit on
+ * every `highlights`/`activeHighlightId`/load-state change, so `repaintHighlights()` just recomputes
+ * that per-cell mapping ahead of the next render pass. `lr-highlight-activate` and `lr-text-select`
+ * are present on this component's event map only because it's inherited, structurally, from the
+ * shared `LyraAnchorTargetEventMap` every `DocumentAnchorTarget` adopter carries -- neither is
+ * actually emitted by this viewer: there is no keyboard-accessible highlight-activation surface
+ * (docx-viewer's/ebook-viewer's own click-to-activate needs a raw content DOM to hit-test or an
+ * annotation-click callback, neither of which this cell-level model has), and the mixin's default
+ * `bindTextSelection()` would anchor a selection as a `text-quote`, a kind outside this viewer's own
+ * `anchorKinds`/highlight-resolution model, so wiring it would offer a selection event whose own
+ * anchor could never be fed back in as a highlight.
+ *
  * `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()` follow the shared viewer search
  * contract (`internal/text-viewer-target.ts`'s `LyraTextViewerTarget`): `search()` resolves the
  * match count and the two navigation methods resolve `true` once the active match moved, `false`
@@ -403,10 +425,20 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. Non-cancelable. `detail: { found }`.
  * @csspart base - The root scroll container.
- * @csspart cell - One cell row (`data-cell-type`, `data-active`).
+ * @csspart cell - One cell row (`data-cell-type`, `data-active`, `data-highlighted`).
  * @csspart cell-active - Added alongside `cell` on the cell currently targeted by an anchor or the
  *   active search match. A second part name rather than an attribute selector, because Shadow Parts
  *   forbids an attribute selector after `::part()`.
+ * @csspart cell-highlighted - Added alongside `cell` on a cell matched by a `highlights` entry.
+ *   Always paired with a tone-specific `cell-highlighted-<tone>` part below (a second part name
+ *   rather than an attribute selector, for the same Shadow Parts reason as `cell-active`).
+ * @csspart cell-highlighted-accent - Tone-specific highlight styling hook (the default tone).
+ * @csspart cell-highlighted-success - Tone-specific highlight styling hook.
+ * @csspart cell-highlighted-warning - Tone-specific highlight styling hook.
+ * @csspart cell-highlighted-danger - Tone-specific highlight styling hook.
+ * @csspart cell-highlighted-neutral - Tone-specific highlight styling hook.
+ * @csspart cell-highlight-active - Added alongside `cell-highlighted`/`cell-highlighted-<tone>` when
+ *   the matched highlight's `id` equals `activeHighlightId`.
  * @csspart cell-gutter - The `In [n]`/`Out [n]` label column.
  * @csspart cell-source - A cell's source content.
  * @csspart raw-source - A horizontally scrollable raw-cell source surface.
@@ -421,6 +453,18 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  *   before it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-notebook-viewer-active-bg=var(--lr-color-brand-quiet)] - Background of the
  *   `[part="cell"]` currently targeted by an anchor or the active search match.
+ * @cssprop [--lr-notebook-viewer-highlight-accent-background=var(--lr-color-brand-quiet)] -
+ *   Background of an `accent`-tone (the default) highlighted cell.
+ * @cssprop [--lr-notebook-viewer-highlight-success-background=var(--lr-color-success-quiet)] -
+ *   Background of a `success`-tone highlighted cell.
+ * @cssprop [--lr-notebook-viewer-highlight-warning-background=var(--lr-color-warning-quiet)] -
+ *   Background of a `warning`-tone highlighted cell.
+ * @cssprop [--lr-notebook-viewer-highlight-danger-background=var(--lr-color-danger-quiet)] -
+ *   Background of a `danger`-tone highlighted cell.
+ * @cssprop [--lr-notebook-viewer-highlight-neutral-background=var(--lr-color-surface-raised)] -
+ *   Background of a `neutral`-tone highlighted cell.
+ * @cssprop [--lr-notebook-viewer-highlight-active-outline=var(--lr-focus-ring-color)] - Outline of
+ *   the highlighted cell whose highlight `id` equals `activeHighlightId`.
  * @status stable
  * @since 4.0.0
  */
@@ -535,6 +579,11 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   @query('lr-virtual-list') private virtualListEl?: HTMLElement & {
     scrollToIndex(index: number, options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }): void;
   };
+  /** Cell index -> the highest-priority `highlights` entry resolved against it, recomputed by
+   *  `repaintHighlights()` (called from `willUpdate()`, ahead of the render pass that same property
+   *  change already triggers -- a plain field, not `@state()`, is enough since nothing else needs to
+   *  independently schedule an update for it). */
+  private highlightedCells: ReadonlyMap<number, LyraHighlight> = new Map();
 
   private generation = 0;
   private lastSearchLocale = '';
@@ -575,6 +624,9 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     super.willUpdate(changed);
     if (changed.has('src') && this._notebook === undefined) {
       this.beginSourceTransition(this.src ? 'loading' : 'idle');
+    }
+    if (changed.has('highlights') || changed.has('activeHighlightId') || changed.has('loadState')) {
+      this.repaintHighlights();
     }
   }
 
@@ -722,15 +774,56 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
-    if (this.loadState.kind !== 'loaded') return false;
+    const index = this.resolveAnchorCellIndex(anchor);
+    if (index < 0) return false;
+    this.activeCellIndex = index;
+    return true;
+  }
+
+  /** Resolves an anchor to a cell index using this viewer's own addressable units -- `node-path`
+   *  treats `path[0]` as a cell index, `fragment` matches a cell's own `id`. Shared by
+   *  `applyAnchor()` (`scrollToAnchor()`/the declarative `anchor` property) and
+   *  `repaintHighlights()` (`highlights` painting), since both resolve against the exact same
+   *  cell-granularity anchor model. `-1` when nothing is loaded, the anchor kind isn't one of this
+   *  viewer's `anchorKinds`, or the resolved index is out of range. */
+  private resolveAnchorCellIndex(anchor: LyraAnchor): number {
+    if (this.loadState.kind !== 'loaded') return -1;
     const cells = this.loadState.doc.cells;
     let index = -1;
     if (anchor.kind === 'node-path' && Number.isInteger(anchor.path[0])) index = anchor.path[0] as number;
     else if (anchor.kind === 'fragment') index = cells.findIndex((c) => c.id === anchor.id);
-    else return false;
-    if (index < 0 || index >= cells.length) return false;
-    this.activeCellIndex = index;
-    return true;
+    else return -1;
+    if (index < 0 || index >= cells.length) return -1;
+    return index;
+  }
+
+  /** Re-resolves every `highlights` entry against `resolveAnchorCellIndex()` and records, per
+   *  matched cell index, the highest-priority entry targeting it (`prioritizedHighlightCandidates()`
+   *  always orders an `activeHighlightId` match first, so it wins any same-cell collision).
+   *  `renderCell()` reads this map to paint `cell-highlighted`/`cell-highlighted-<tone>`/
+   *  `cell-highlight-active`. Unlike docx-viewer/ebook-viewer there is no raw markup to imperatively
+   *  wrap or annotate here -- cells are already declaratively re-rendered by Lit on every
+   *  `highlights`/`activeHighlightId`/load-state change (see `willUpdate()`), so "repainting" is
+   *  just recomputing this derived map ahead of that same render pass. At most
+   *  `MAX_NOTEBOOK_PAINTED_HIGHLIGHTS` candidates are considered per pass. Only `node-path`/
+   *  `fragment` highlight anchors -- this viewer's own `anchorKinds` -- ever resolve; any other kind
+   *  (e.g. a `text-quote` highlight authored for a different viewer) is silently skipped, exactly
+   *  like that same anchor kind fed to `scrollToAnchor()`. */
+  private repaintHighlights(): void {
+    if (this.loadState.kind !== 'loaded') {
+      if (this.highlightedCells.size > 0) this.highlightedCells = new Map();
+      return;
+    }
+    const next = new Map<number, LyraHighlight>();
+    let considered = 0;
+    for (const highlight of prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)) {
+      if (considered >= MAX_NOTEBOOK_PAINTED_HIGHLIGHTS) break;
+      considered++;
+      const index = this.resolveAnchorCellIndex(highlight.anchor);
+      if (index < 0 || next.has(index)) continue;
+      next.set(index, highlight);
+    }
+    this.highlightedCells = next;
   }
 
   /** Case-insensitive substring search over every accepted cell's joined source text and
@@ -1011,8 +1104,15 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
         ? this.localize('notebookViewerMarkdownCell', undefined, { index: numberFormat.format(index + 1) })
         : this.localize('notebookViewerRawCell', undefined, { index: numberFormat.format(index + 1) });
     const active = this.activeCellIndex === index;
-    const part = active ? 'cell cell-active' : 'cell';
-    return html`<div part=${part} role="group" aria-label=${rowLabel} data-cell-type=${c.cell_type} ?data-active=${active}>
+    const highlight = this.highlightedCells.get(index);
+    const highlighted = highlight !== undefined;
+    const parts = ['cell'];
+    if (active) parts.push('cell-active');
+    if (highlighted) {
+      parts.push('cell-highlighted', `cell-highlighted-${highlight.tone ?? 'accent'}`);
+      if (highlight.id === this.activeHighlightId) parts.push('cell-highlight-active');
+    }
+    return html`<div part=${parts.join(' ')} role="group" aria-label=${rowLabel} data-cell-type=${c.cell_type} ?data-active=${active} ?data-highlighted=${highlighted}>
       <div part="cell-gutter">${c.cell_type === 'code' ? inCount : ''}</div>
       <div part="cell-source">
         ${c.cell_type === 'markdown'
@@ -1050,7 +1150,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     >
       ${this.loadState.kind === 'loaded'
         ? html`<lr-virtual-list
-            exportparts="cell:cell, cell-active:cell-active, cell-gutter:cell-gutter, cell-source:cell-source, raw-source:raw-source, outputs:outputs, output:output, output-error:output-error, error-output-label:error-output-label, output-toggle:output-toggle"
+            exportparts="cell:cell, cell-active:cell-active, cell-highlighted:cell-highlighted, cell-highlighted-accent:cell-highlighted-accent, cell-highlighted-success:cell-highlighted-success, cell-highlighted-warning:cell-highlighted-warning, cell-highlighted-danger:cell-highlighted-danger, cell-highlighted-neutral:cell-highlighted-neutral, cell-highlight-active:cell-highlight-active, cell-gutter:cell-gutter, cell-source:cell-source, raw-source:raw-source, outputs:outputs, output:output, output-error:output-error, error-output-label:error-output-label, output-toggle:output-toggle"
             .items=${this.loadState.doc.cells}
             .renderItem=${this.renderCell}
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}

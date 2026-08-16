@@ -129,8 +129,9 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     converter: trueDefaultBooleanConverter,
   })
   showClaims = true;
-  /** Visible answer label and fallback article name. */
-  @property() label = '';
+  /** Visible answer label and fallback article name, used when omitted; falls back to the
+   *  localized `ragAnswerLabel`. An explicitly empty override stays empty. */
+  @property() label?: string;
   /** JS-only accessible-name override for the article while the host attribute is absent. A
    *  non-empty markup `aria-label` makes the host the sole overall owner; an explicitly empty host
    *  label stays empty on the article. */
@@ -284,7 +285,8 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     const assessment = this.normalizedAssessment;
     const label = retrievalSemanticLabel(
       this,
-      this.accessibleLabel ?? (this.label || this.localize('ragAnswerLabel'))
+      this.accessibleLabel ??
+        (this.label == null ? this.localize('ragAnswerLabel') : this.label)
     );
     const articleRole = retrievalSemanticRole(this, 'article');
     const state = this.presentationState();

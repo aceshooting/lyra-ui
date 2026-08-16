@@ -266,8 +266,9 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   @property({ type: Boolean, reflect: true }) loading = false;
 
   /** Accessible name for the region and the inner grid. Defaults to the localized
-   *  `documentLibraryLabel`. */
-  @property() label = '';
+   *  `documentLibraryLabel` when unset. An explicitly empty string renders as an empty label
+   *  rather than falling back. */
+  @property() label?: string;
 
   private announcementSink?: AnnouncementSink;
   private isMounting = true;
@@ -719,8 +720,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   override render(): TemplateResult {
     const label =
       this.getAttribute('aria-label')?.trim() ||
-      this.label ||
-      this.localize('documentLibraryLabel');
+      (this.label == null ? this.localize('documentLibraryLabel') : this.label);
     const visible = this.visibleDocuments;
     const tags = this.allTags;
     const emptyHeading =

@@ -199,8 +199,6 @@ export interface LyraAvPlayerEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 
 class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
@@ -264,8 +262,6 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   native event.
  * @event {FocusEvent} blur - Relayed once from the native media element as a bubbling, composed
  *   native event.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - The root wrapper.
  * @csspart media - The native `<audio>`/`<video>` element.
  * @csspart toolbar - The playback-rate control row.
@@ -505,12 +501,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   private onMediaFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus', null);
   };
 
   private onMediaBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur', null);
   };
 
   /** Live playback position: the media element's own `currentTime` once mounted, else the last

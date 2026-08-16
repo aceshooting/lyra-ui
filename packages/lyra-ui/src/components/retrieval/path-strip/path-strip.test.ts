@@ -31,12 +31,23 @@ const path: LyraPathElement[] = [
   { kind: 'node', node: { id: 'e2', label: 'Polonium' } },
 ];
 
-it('defaults to an empty path and empty label', async () => {
+it('defaults to an empty path and an unset label', async () => {
   const el = (await fixture(
     html`<lr-path-strip></lr-path-strip>`
   )) as LyraPathStrip;
   expect(el.path).to.deep.equal([]);
+  expect(el.label).to.be.undefined;
+});
+
+it('keeps an explicitly empty label genuinely empty instead of falling back to the localized default', async () => {
+  const el = (await fixture(
+    html`<lr-path-strip label="" .path=${path}></lr-path-strip>`
+  )) as LyraPathStrip;
+  await el.updateComplete;
   expect(el.label).to.equal('');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('');
 });
 
 it('renders one control per path element, in order', async () => {

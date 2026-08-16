@@ -33,8 +33,6 @@ export interface LyraCodeEditorEventMap {
   focus: FocusEvent;
   'lr-input': CustomEvent<{ value: string }>;
   'lr-change': CustomEvent<{ value: string }>;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 export type LyraCodeEditorResize =
@@ -79,8 +77,6 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @event lr-change - Lyra commit alias; detail is `{ value }`.
  * @event focus - Realm-correct native `FocusEvent` relayed from the textarea with `relatedTarget`.
  * @event blur - Realm-correct native `FocusEvent` relayed from the textarea with `relatedTarget`.
- * @event lr-focus - Lyra compatibility alias for `focus`.
- * @event lr-blur - Lyra compatibility alias for `blur`.
  * @event lr-invalid - The editor failed a validity check. Cancelable: `preventDefault()` forwards to
  * the native `invalid` event, suppressing the browser's own validation bubble and the focus/scroll
  * `reportValidity()` would otherwise perform.
@@ -429,7 +425,6 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
   // Disabling a focused native control forces the browser to blur it --
   // plain native HTML behavior, not a real user interaction -- so that forced blur must not mark
@@ -439,7 +434,6 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     if (!this.liveDisabled) this.touched = true;
     this.tabBypassArmed = false;
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
   private tabBypassArmed = false;
   private onKeyDown = (event: KeyboardEvent): void => {

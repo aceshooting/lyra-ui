@@ -818,13 +818,13 @@ const ok = await confirm({
   title: "Delete conversation?",
   description: "This cannot be undone.",
   confirmLabel: "Delete",
-  tone: "danger",
+  variant: "danger",
 });
 if (ok) deleteConversation();
 ```
 
 `confirm(options: ConfirmOptions): Promise<boolean>` where
-`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; tone?: 'neutral' | 'danger' /* = 'neutral' */ }`.
+`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */; tone?: 'neutral' | 'danger' /* @deprecated, use variant */ }`.
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
@@ -834,8 +834,9 @@ of the call and removes it once settled, rather than reusing a persistent page-l
 (contrast `lr-toast`'s `toaster.ts`). Concurrent calls are distinct dialogs in the shared overlay
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
-a direct light-DOM `<p>`. `tone: 'danger'` fills the confirm button with `--lr-color-danger` instead
-of `--lr-color-brand`, for destructive actions. Confirm/cancel actions deliberately use native
+a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
+instead of `--lr-color-brand`, for destructive actions. The deprecated `tone` option is a one-major
+back-compat alias for `variant`; `variant` wins when both are set. Confirm/cancel actions deliberately use native
 inline-styled `<button>` elements so this helper does not register or import the broader button
 component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
 states as every other control in the library: a hover/pressed fill mixed toward
@@ -2287,8 +2288,6 @@ Left unset, the built-in star outline/solid pair is unchanged.
   preview silently, with no `end` phase — that teardown wasn't user-driven.
 - `focus` / `blur` — the host-owned slider's ordinary native focus transitions. Like native focus
   events, they do not bubble; listen on the rating itself (or use capture on an ancestor).
-- `lr-focus` / `lr-blur` — bubbling, composed prefixed compatibility aliases (no detail), each
-  fired from the corresponding native host transition.
 - `lr-invalid` — no detail; fired when a validity check finds the rating invalid.
 
 **Methods:** `focus()`, `blur()` and `click()` operate on the host-owned slider and are gated while
@@ -2400,6 +2399,7 @@ These named interfaces and helper signatures are available to typed integrations
   description: unknown;
   confirmLabel: unknown;
   cancelLabel: unknown;
+  variant: unknown;
   tone: unknown;
 }`
 

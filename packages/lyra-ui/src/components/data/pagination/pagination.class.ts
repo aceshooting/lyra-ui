@@ -304,7 +304,10 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @property({ attribute: 'item-label' }) itemLabel = '';
   /** Accessible name forwarded from the host to the internal navigation landmark. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
-  @property() label = '';
+  /** Accessible-name override for the internal navigation landmark, applied when no host
+   *  `aria-label` is set. Optional. Omitting it localizes the default `paginationLabel` message;
+   *  an explicit empty string renders no visible/accessible label. */
+  @property() label?: string;
   /** Optional control-label overrides. Omission localizes the matching message key; supplied
    * strings, including the built-in English text or an empty string, render verbatim. */
   @property({ attribute: 'page-label' }) pageLabel?: string;
@@ -766,7 +769,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   override render(): TemplateResult | typeof nothing {
     if (this.hideSinglePage && this.calculatedTotalPages <= 1) return nothing;
-    const navigationLabel = this.accessibleLabel || this.label || this.localize('paginationLabel');
+    const navigationLabel =
+      this.accessibleLabel || this.localizedProperty('paginationLabel', this.label);
 
     return html`
       <nav part="base pagination" aria-label=${navigationLabel} aria-busy=${this.loading ? 'true' : 'false'}>

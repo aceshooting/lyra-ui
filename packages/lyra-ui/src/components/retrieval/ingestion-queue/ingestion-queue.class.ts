@@ -251,8 +251,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   @property({ attribute: false }) items: readonly IngestionQueueItem[] = [];
 
   /** Accessible name for the stable region when the host has no `aria-label`; defaults to
-   *  localized `ingestionQueueLabel`. An explicitly empty host label stays empty. */
-  @property() label = '';
+   *  localized `ingestionQueueLabel`. An explicitly empty host label stays empty, and so does an
+   *  explicitly empty `label`. */
+  @property() label?: string;
 
   /** Above this item count, the list renders through an internal `<lr-virtual-list>`. Exclusive,
    *  like every other `virtualize-at` in this family: exactly this many items still render as a
@@ -503,7 +504,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     const items = this.normalizedItems;
     const ariaLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize('ingestionQueueLabel')
+      this.label == null ? this.localize('ingestionQueueLabel') : this.label
     );
     const regionRole = retrievalSemanticRole(this, 'region');
 

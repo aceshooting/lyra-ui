@@ -154,8 +154,6 @@ export interface LyraAttachmentTriggerEventMap {
   'lr-files': CustomEvent<LyraEventDetailSnapshot<LyraAttachmentFilesDetail>>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 /**
  * `<lr-attachment-trigger>` — a compact attach affordance designed for a
@@ -200,8 +198,6 @@ export interface LyraAttachmentTriggerEventMap {
  *   native event.
  * @event {FocusEvent} blur - Relayed once from the active trigger button as a bubbling, composed
  *   native event.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart trigger - The single-capability icon button. Only rendered when `capabilities.length === 1`.
  * @csspart menu - The `<lr-dropdown>` shell. Only rendered when `capabilities.length > 1`.
  * @csspart menu-trigger - The multi-capability button slotted into `<lr-dropdown>`'s `trigger` slot. Only rendered when `capabilities.length > 1`.
@@ -372,11 +368,9 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   }
   private onControlFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus', null);
   };
   private onControlBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur', null);
   };
   private stopInternalEvent = (event: Event): void => {
     event.stopPropagation();

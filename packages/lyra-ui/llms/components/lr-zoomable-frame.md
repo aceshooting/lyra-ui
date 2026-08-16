@@ -70,8 +70,8 @@ rather than a second interactive control; the native zoom buttons remain the sol
 actions.
 
 **Events:** internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
-`FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-`lr-focus`/`lr-blur`; native `load` and `error` are relayed exactly once from the current iframe
+`FocusEvent`s (bubbling and composed, preserving `relatedTarget`);
+native `load` and `error` are relayed exactly once from the current iframe
 generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes
 replace the iframe, so a late event from an earlier document is ignored; detached frames do not
 notify.

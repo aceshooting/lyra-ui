@@ -6806,6 +6806,48 @@
       }
     },
     {
+      "name": "--lr-notebook-viewer-highlight-accent-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-notebook-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Background of an `accent`-tone (the default) highlighted cell."
+      }
+    },
+    {
+      "name": "--lr-notebook-viewer-highlight-active-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-notebook-viewer>`** (default: `var(--lr-focus-ring-color)`) — Outline of the highlighted cell whose highlight `id` equals `activeHighlightId`."
+      }
+    },
+    {
+      "name": "--lr-notebook-viewer-highlight-danger-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-notebook-viewer>`** (default: `var(--lr-color-danger-quiet)`) — Background of a `danger`-tone highlighted cell."
+      }
+    },
+    {
+      "name": "--lr-notebook-viewer-highlight-neutral-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-notebook-viewer>`** (default: `var(--lr-color-surface-raised)`) — Background of a `neutral`-tone highlighted cell."
+      }
+    },
+    {
+      "name": "--lr-notebook-viewer-highlight-success-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-notebook-viewer>`** (default: `var(--lr-color-success-quiet)`) — Background of a `success`-tone highlighted cell."
+      }
+    },
+    {
+      "name": "--lr-notebook-viewer-highlight-warning-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-notebook-viewer>`** (default: `var(--lr-color-warning-quiet)`) — Background of a `warning`-tone highlighted cell."
+      }
+    },
+    {
       "name": "--lr-notebook-viewer-max-height",
       "description": {
         "kind": "markdown",

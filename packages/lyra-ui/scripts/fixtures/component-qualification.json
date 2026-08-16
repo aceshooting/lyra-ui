@@ -687,7 +687,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.test.ts",
-              "line": 178,
+              "line": 195,
               "kind": "320px allocation test signal"
             }
           ]
@@ -1167,7 +1167,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/agent-workspace/agent-workspace.test.ts",
-              "line": 548,
+              "line": 561,
               "test": "is accessible in a populated state",
               "target": "el",
               "state": "populated"
@@ -1199,7 +1199,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/agent-workspace/agent-workspace.test.ts",
-              "line": 499,
+              "line": 512,
               "kind": "320px allocation test signal"
             }
           ]
@@ -1509,28 +1509,28 @@
           "evidence": [
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 708,
+              "line": 706,
               "test": "keeps interactive glyph overrides inert and pointer-transparent in both states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 708,
+              "line": 706,
               "test": "keeps interactive glyph overrides inert and pointer-transparent in both states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 772,
+              "line": 770,
               "test": "is accessible (default frozen state)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "line": 778,
+              "line": 776,
               "test": "is accessible (actively playing state)",
               "target": "el",
               "state": "populated"
@@ -2265,7 +2265,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/approval-queue/approval-queue.test.ts",
-              "line": 273,
+              "line": 286,
               "kind": "320px allocation test signal"
             }
           ]
@@ -2389,14 +2389,14 @@
           "evidence": [
             {
               "file": "src/components/viewers/archive-viewer/archive-viewer.test.ts",
-              "line": 335,
+              "line": 339,
               "test": "applies localized empty strings and is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/archive-viewer/archive-viewer.test.ts",
-              "line": 1030,
+              "line": 1034,
               "test": "is accessible with entries listed",
               "target": "el",
               "state": "populated"
@@ -2573,7 +2573,7 @@
             },
             {
               "file": "src/components/agent-tools/artifact-panel/artifact-panel.test.ts",
-              "line": 363,
+              "line": 392,
               "test": "is accessible with versions, streaming, and both slots populated",
               "target": "el",
               "state": "populated"
@@ -2593,7 +2593,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/artifact-panel/artifact-panel.test.ts",
-              "line": 183,
+              "line": 212,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -2610,7 +2610,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/artifact-panel/artifact-panel.test.ts",
-              "line": 461,
+              "line": 490,
               "kind": "320px allocation test signal"
             }
           ]
@@ -2673,7 +2673,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/artifact-panel/artifact-panel.class.ts",
-              "line": 221,
+              "line": 223,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -2908,21 +2908,21 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.test.ts",
-              "line": 593,
+              "line": 591,
               "test": "is accessible with a populated multi-capability menu",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.test.ts",
-              "line": 715,
+              "line": 713,
               "test": "is accessible with a single audio capability and with audio in a multi-capability menu",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.test.ts",
-              "line": 715,
+              "line": 713,
               "test": "is accessible with a single audio capability and with audio in a multi-capability menu",
               "target": "el",
               "state": "populated"
@@ -4552,21 +4552,21 @@
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 137,
+              "line": 157,
               "test": "keeps generated focusable shared separators decorative and strips cloned identities",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 210,
+              "line": 230,
               "test": "keeps local native separator controls decorative",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 232,
+              "line": 252,
               "test": "keeps custom shared separator controls decorative",
               "target": "el",
               "state": "populated"
@@ -4586,7 +4586,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 295,
+              "line": 315,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4603,7 +4603,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 294,
+              "line": 314,
               "kind": "320px allocation test signal"
             }
           ]
@@ -4761,21 +4761,21 @@
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 137,
+              "line": 157,
               "test": "keeps generated focusable shared separators decorative and strips cloned identities",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 210,
+              "line": 230,
               "test": "keeps local native separator controls decorative",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 232,
+              "line": 252,
               "test": "keeps custom shared separator controls decorative",
               "target": "el",
               "state": "populated"
@@ -4795,7 +4795,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 295,
+              "line": 315,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4812,7 +4812,7 @@
           "evidence": [
             {
               "file": "src/components/layout/breadcrumb/breadcrumb.test.ts",
-              "line": 294,
+              "line": 314,
               "kind": "320px allocation test signal"
             }
           ]
@@ -6403,14 +6403,14 @@
             },
             {
               "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 1850,
+              "line": 1874,
               "test": "is accessible with the current-state props themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/carousel/carousel.test.ts",
-              "line": 2167,
+              "line": 2191,
               "test": "is accessible with focusable content inside an off-screen slide",
               "target": "el",
               "state": "populated"
@@ -8038,98 +8038,98 @@
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 219,
+              "line": 244,
               "test": "keeps a removable/toggleable 3xs chip at the WCAG 2.5.8 minimum tap target",
               "target": "removable",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 219,
+              "line": 244,
               "test": "keeps a removable/toggleable 3xs chip at the WCAG 2.5.8 minimum tap target",
               "target": "toggleable",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 236,
+              "line": 261,
               "test": "keeps compact removable and toggleable chips keyboard-accessible with adequate targets",
               "target": "removable",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 236,
+              "line": 261,
               "test": "keeps compact removable and toggleable chips keyboard-accessible with adequate targets",
               "target": "toggleable",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 396,
+              "line": 421,
               "test": "keeps arbitrary interactive start content visible but inert beside a real action",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 452,
+              "line": 477,
               "test": "keeps end content actionable in passive mode but presentation-only beneath a toggle",
               "target": "toggle",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 577,
+              "line": 602,
               "test": "never leaves a start-adornment-only toggleable chip\\'s real control unnamed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 672,
+              "line": 697,
               "test": "is accessible in the default (non-removable, no start adornment) state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 677,
+              "line": 702,
               "test": "is accessible in a populated removable state with a start adornment and a non-neutral variant",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 734,
+              "line": 759,
               "test": "does not make [part=base] interactive when combined with removable",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 743,
+              "line": 768,
               "test": "is accessible when selected and interactive",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 748,
+              "line": 773,
               "test": "uses a real button outside an inert label slot so interactive slotted descendants cannot nest or double-toggle",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 1045,
+              "line": 1070,
               "test": "is accessible once toggled off (still interactive, now unselected)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/chip/chip.test.ts",
-              "line": 1242,
+              "line": 1267,
               "test": "stays accessible with a pinned exact height",
               "target": "el",
               "state": "populated"
@@ -9506,7 +9506,7 @@
             },
             {
               "file": "src/components/forms/color-picker/color-picker.test.ts",
-              "line": 2431,
+              "line": 2434,
               "test": "is accessible in its populated, open state",
               "target": "el",
               "state": "populated"
@@ -9619,7 +9619,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 910,
+              "line": 906,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9726,7 +9726,7 @@
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 3770,
+              "line": 3767,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -9751,7 +9751,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 3740,
+              "line": 3737,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -9903,21 +9903,21 @@
           "evidence": [
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 141,
+              "line": 163,
               "test": "is accessible while open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 402,
+              "line": 424,
               "test": "owns grouped options through labeled ARIA groups",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 890,
+              "line": 912,
               "test": "is accessible with the active-command prop themed",
               "target": "el",
               "state": "populated"
@@ -9931,7 +9931,7 @@
           "evidence": [
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 75,
+              "line": 97,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9954,7 +9954,7 @@
           "evidence": [
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 461,
+              "line": 483,
               "kind": "320px allocation test signal"
             }
           ]
@@ -10725,49 +10725,49 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.test.ts",
-              "line": 210,
+              "line": 244,
               "test": "is accessible before and after a decision, with and without args",
               "target": "plain",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.test.ts",
-              "line": 210,
+              "line": 244,
               "test": "is accessible before and after a decision, with and without args",
               "target": "withArgs",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.test.ts",
-              "line": 210,
+              "line": 244,
               "test": "is accessible before and after a decision, with and without args",
               "target": "decided",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.test.ts",
-              "line": 396,
+              "line": 430,
               "test": "is accessible in the compact and chrome-less presentations, before and after a decision",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.test.ts",
-              "line": 396,
+              "line": 430,
               "test": "is accessible in the compact and chrome-less presentations, before and after a decision",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.test.ts",
-              "line": 396,
+              "line": 430,
               "test": "is accessible in the compact and chrome-less presentations, before and after a decision",
               "target": "dense",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.test.ts",
-              "line": 631,
+              "line": 665,
               "test": "is accessible while a decision is pending (loading + disabled lr-button still expose a valid name/state)",
               "target": "el",
               "state": "populated"
@@ -14136,7 +14136,7 @@
           "evidence": [
             {
               "file": "src/components/data/document-library/document-library.test.ts",
-              "line": 632,
+              "line": 650,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -14153,7 +14153,7 @@
           "evidence": [
             {
               "file": "src/components/data/document-library/document-library.test.ts",
-              "line": 648,
+              "line": 666,
               "kind": "320px allocation test signal"
             }
           ]
@@ -16231,14 +16231,14 @@
           "evidence": [
             {
               "file": "src/components/forms/emoji-picker/emoji-picker.test.ts",
-              "line": 882,
+              "line": 891,
               "test": "is accessible with the label/hint/error chrome populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/emoji-picker/emoji-picker.test.ts",
-              "line": 956,
+              "line": 965,
               "test": "is accessible with groups populated",
               "target": "el",
               "state": "populated"
@@ -17063,7 +17063,7 @@
           "evidence": [
             {
               "file": "src/components/data/env-list/env-list.test.ts",
-              "line": 336,
+              "line": 352,
               "test": "is accessible with masked and revealed entries",
               "target": "el",
               "state": "populated"
@@ -17095,7 +17095,7 @@
           "evidence": [
             {
               "file": "src/components/data/env-list/env-list.test.ts",
-              "line": 401,
+              "line": 417,
               "kind": "320px allocation test signal"
             }
           ]
@@ -17540,7 +17540,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/evaluation-run/evaluation-run.test.ts",
-              "line": 482,
+              "line": 532,
               "test": "is accessible with populated, expanded examples including grounding and a tool trace",
               "target": "el",
               "state": "populated"
@@ -17560,7 +17560,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/evaluation-run/evaluation-run.test.ts",
-              "line": 464,
+              "line": 514,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -17577,7 +17577,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/evaluation-run/evaluation-run.test.ts",
-              "line": 462,
+              "line": 512,
               "kind": "320px allocation test signal"
             }
           ]
@@ -18206,7 +18206,7 @@
           "evidence": [
             {
               "file": "src/components/data/file-tree/file-tree.test.ts",
-              "line": 262,
+              "line": 272,
               "test": "is accessible with a nested, git-status-decorated tree",
               "target": "el",
               "state": "populated"
@@ -21208,14 +21208,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/grounding-summary/grounding-summary.test.ts",
-              "line": 479,
+              "line": 497,
               "test": "is accessible fully populated with stats, warnings, and evidence",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/grounding-summary/grounding-summary.test.ts",
-              "line": 489,
+              "line": 507,
               "test": "renders correctly under dir=\"rtl\" fully populated, with no leftover physical-side styling assumptions",
               "target": "el",
               "state": "populated"
@@ -21235,7 +21235,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/grounding-summary/grounding-summary.test.ts",
-              "line": 491,
+              "line": 509,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -21252,7 +21252,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/grounding-summary/grounding-summary.test.ts",
-              "line": 504,
+              "line": 522,
               "kind": "320px allocation test signal"
             }
           ]
@@ -22462,28 +22462,28 @@
           "evidence": [
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 453,
+              "line": 454,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 463,
+              "line": 464,
               "test": "is accessible with slotted content instead of a named glyph",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 517,
+              "line": 518,
               "test": "renders safe href/target/download as a real anchor with a derived safe rel",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/icon-button/icon-button.test.ts",
-              "line": 568,
+              "line": 569,
               "test": "makes disabled link mode inert and restores its href when re-enabled",
               "target": "el",
               "state": "populated"
@@ -23133,7 +23133,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.test.ts",
-              "line": 928,
+              "line": 945,
               "test": "is accessible with a populated, mixed-stage queue",
               "target": "el",
               "state": "populated"
@@ -23153,7 +23153,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.test.ts",
-              "line": 271,
+              "line": 288,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -23298,14 +23298,14 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 319,
+              "line": 320,
               "test": "is accessible with populated adornments and a clear action",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 804,
+              "line": 805,
               "test": "is accessible as type=\"password\" with the toggle rendered",
               "target": "el",
               "state": "populated"
@@ -23326,7 +23326,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1343,
+              "line": 1344,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -23337,7 +23337,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 954,
+              "line": 955,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -23354,7 +23354,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 953,
+              "line": 954,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24131,7 +24131,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-base/knowledge-base.test.ts",
-              "line": 310,
+              "line": 322,
               "test": "is accessible with populated sources and an open row action menu",
               "target": "el",
               "state": "populated"
@@ -24151,7 +24151,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-base/knowledge-base.test.ts",
-              "line": 290,
+              "line": 302,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -24168,7 +24168,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-base/knowledge-base.test.ts",
-              "line": 278,
+              "line": 290,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24291,14 +24291,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-base-admin/knowledge-base-admin.test.ts",
-              "line": 198,
+              "line": 222,
               "test": "is accessible in both tabs",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/knowledge-base-admin/knowledge-base-admin.test.ts",
-              "line": 198,
+              "line": 222,
               "test": "is accessible in both tabs",
               "target": "el",
               "state": "populated"
@@ -24312,7 +24312,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-base-admin/knowledge-base-admin.test.ts",
-              "line": 73,
+              "line": 97,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -24453,14 +24453,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1195,
+              "line": 1209,
               "test": "renders correctly under dir=\"rtl\" and stays accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1227,
+              "line": 1241,
               "test": "is accessible with search results, a pinned node, a path, and an open details popover",
               "target": "el",
               "state": "populated"
@@ -24474,7 +24474,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1131,
+              "line": 1145,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -24485,7 +24485,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1196,
+              "line": 1210,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -24502,7 +24502,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1213,
+              "line": 1227,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24565,7 +24565,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 465,
+              "line": 473,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24628,7 +24628,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.test.ts",
-              "line": 1140,
+              "line": 1171,
               "test": "is accessible when touched and invalid with a rendered error message",
               "target": "el",
               "state": "populated"
@@ -24642,7 +24642,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.test.ts",
-              "line": 631,
+              "line": 662,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -24653,7 +24653,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.test.ts",
-              "line": 699,
+              "line": 730,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -24670,7 +24670,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.test.ts",
-              "line": 1253,
+              "line": 1284,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24733,7 +24733,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.class.ts",
-              "line": 415,
+              "line": 419,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25501,14 +25501,14 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 610,
+              "line": 616,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 603,
+              "line": 609,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -25522,7 +25522,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 487,
+              "line": 493,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -25533,7 +25533,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 627,
+              "line": 633,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25608,7 +25608,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 854,
+              "line": 848,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25685,7 +25685,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2327,
+              "line": 2367,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -25696,7 +25696,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2572,
+              "line": 2612,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25713,7 +25713,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2566,
+              "line": 2606,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25793,7 +25793,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 624,
+              "line": 639,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26048,21 +26048,21 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 269,
+              "line": 313,
               "test": "is accessible with plain content",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 379,
+              "line": 423,
               "test": "is accessible once highlighted via languages",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/markdown/markdown-core.test.ts",
-              "line": 1846,
+              "line": 1890,
               "test": "is accessible with a custom tab size on a tab-indented fenced block",
               "target": "el",
               "state": "populated"
@@ -26569,14 +26569,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/memory-panel/memory-panel.test.ts",
-              "line": 1056,
+              "line": 1066,
               "test": "renders correctly under dir=\"rtl\" and stays accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/memory-panel/memory-panel.test.ts",
-              "line": 1075,
+              "line": 1085,
               "test": "is accessible in a populated state with a pending confirmation open",
               "target": "el",
               "state": "populated"
@@ -26590,7 +26590,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/memory-panel/memory-panel.test.ts",
-              "line": 686,
+              "line": 696,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -26601,7 +26601,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/memory-panel/memory-panel.test.ts",
-              "line": 1058,
+              "line": 1068,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26618,7 +26618,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/memory-panel/memory-panel.test.ts",
-              "line": 1037,
+              "line": 1047,
               "kind": "320px allocation test signal"
             }
           ]
@@ -28059,7 +28059,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/mind-map/mind-map.test.ts",
-              "line": 709,
+              "line": 724,
               "test": "is accessible with an expanded, multi-level tree",
               "target": "el",
               "state": "populated"
@@ -28422,14 +28422,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/model-settings-panel/model-settings-panel.test.ts",
-              "line": 541,
+              "line": 566,
               "test": "is accessible with a populated catalog and non-default temperature",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/model-settings-panel/model-settings-panel.test.ts",
-              "line": 553,
+              "line": 578,
               "test": "is accessible in compact layout",
               "target": "el",
               "state": "populated"
@@ -28928,7 +28928,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1343,
+              "line": 1344,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -28939,7 +28939,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 954,
+              "line": 955,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -28956,7 +28956,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 953,
+              "line": 954,
               "kind": "320px allocation test signal"
             }
           ]
@@ -29092,14 +29092,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/neighbor-list/neighbor-list.test.ts",
-              "line": 468,
+              "line": 487,
               "test": "is accessible with grouped, expandable rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/neighbor-list/neighbor-list.test.ts",
-              "line": 588,
+              "line": 607,
               "test": "is accessible in the ${label} path",
               "target": "el",
               "state": "populated"
@@ -29266,7 +29266,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/node-palette/node-palette.test.ts",
-              "line": 560,
+              "line": 574,
               "test": "is accessible with items, groups, and a disabled item",
               "target": "el",
               "state": "populated"
@@ -29280,7 +29280,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/node-palette/node-palette.test.ts",
-              "line": 132,
+              "line": 146,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -29421,7 +29421,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1184,
+              "line": 1242,
               "test": "is accessible with a rendered notebook",
               "target": "el",
               "state": "populated"
@@ -29441,7 +29441,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1322,
+              "line": 1380,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29458,7 +29458,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1208,
+              "line": 1266,
               "kind": "320px allocation test signal"
             }
           ]
@@ -29619,7 +29619,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1343,
+              "line": 1344,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -29630,7 +29630,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 954,
+              "line": 955,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29647,7 +29647,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 953,
+              "line": 954,
               "kind": "320px allocation test signal"
             }
           ]
@@ -29786,7 +29786,7 @@
             },
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 3770,
+              "line": 3767,
               "test": "is accessible with adornments slotted and the listbox open",
               "target": "el",
               "state": "open"
@@ -29818,7 +29818,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.test.ts",
-              "line": 3740,
+              "line": 3737,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29963,14 +29963,14 @@
             },
             {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "line": 1731,
+              "line": 1732,
               "test": "applies label/hint attribute precedence and error-slot precedence without concatenating sources",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "line": 1761,
+              "line": 1762,
               "test": "uses populated label, hint, and error slots as the accessible chrome when attributes are empty",
               "target": "el",
               "state": "populated"
@@ -30086,7 +30086,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 284,
+              "line": 280,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30528,42 +30528,42 @@
           "evidence": [
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 552,
+              "line": 575,
               "test": "disables every control for empty data, disabled, and loading states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 792,
+              "line": 815,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 1785,
+              "line": 1808,
               "test": "is accessible as a populated page list, as links, and in the compact layout",
               "target": "standard",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 1785,
+              "line": 1808,
               "test": "is accessible as a populated page list, as links, and in the compact layout",
               "target": "links",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 1785,
+              "line": 1808,
               "test": "is accessible as a populated page list, as links, and in the compact layout",
               "target": "inline fixture",
               "state": "populated"
             },
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 2178,
+              "line": 2201,
               "test": "is accessible with interactive ellipses, custom icons, and an RTL link surface",
               "target": "el",
               "state": "populated"
@@ -30577,7 +30577,7 @@
           "evidence": [
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 327,
+              "line": 350,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30588,7 +30588,7 @@
           "evidence": [
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 738,
+              "line": 761,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -30605,7 +30605,7 @@
           "evidence": [
             {
               "file": "src/components/data/pagination/pagination.test.ts",
-              "line": 752,
+              "line": 775,
               "kind": "320px allocation test signal"
             }
           ]
@@ -30737,7 +30737,7 @@
           "evidence": [
             {
               "file": "src/components/media/pan-zoom/pan-zoom.test.ts",
-              "line": 310,
+              "line": 308,
               "test": "keeps the pan/zoom surface accessible in populated state",
               "target": "el",
               "state": "populated"
@@ -30779,7 +30779,7 @@
           "evidence": [
             {
               "file": "src/components/media/pan-zoom/pan-zoom.test.ts",
-              "line": 280,
+              "line": 278,
               "kind": "320px allocation test signal"
             }
           ]
@@ -30911,7 +30911,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/path-strip/path-strip.test.ts",
-              "line": 318,
+              "line": 329,
               "test": "is accessible with a full path",
               "target": "el",
               "state": "populated"
@@ -30925,7 +30925,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/path-strip/path-strip.test.ts",
-              "line": 166,
+              "line": 177,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30936,7 +30936,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/path-strip/path-strip.test.ts",
-              "line": 233,
+              "line": 244,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31278,14 +31278,14 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 823,
+              "line": 829,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 1504,
+              "line": 1510,
               "test": "is accessible with flags enabled",
               "target": "el",
               "state": "populated"
@@ -31299,7 +31299,7 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 1566,
+              "line": 1572,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -32549,7 +32549,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "line": 800,
+              "line": 817,
               "test": "is accessible with a mounted presentation and its slide-nav controls visible",
               "target": "el",
               "state": "populated"
@@ -32569,7 +32569,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "line": 1180,
+              "line": 1197,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -32638,7 +32638,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "line": 226,
+              "line": 243,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -33200,7 +33200,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-queue/prompt-queue.test.ts",
-              "line": 369,
+              "line": 415,
               "test": "honors editable=\"false\" and is accessible while populated",
               "target": "el",
               "state": "populated"
@@ -33516,7 +33516,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/provenance-panel/provenance-panel.test.ts",
-              "line": 194,
+              "line": 209,
               "test": "is accessible with full provenance",
               "target": "el",
               "state": "populated"
@@ -34227,28 +34227,28 @@
             },
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 636,
+              "line": 637,
               "test": "moves selection and DOM focus when arrow navigation is used",
               "target": "group",
               "state": "populated"
             },
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 1819,
+              "line": 1820,
               "test": "is accessible as a label-less radio named only by aria-label",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 2079,
+              "line": 2080,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 2227,
+              "line": 2228,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -34592,14 +34592,14 @@
           "evidence": [
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 636,
+              "line": 637,
               "test": "moves selection and DOM focus when arrow navigation is used",
               "target": "group",
               "state": "populated"
             },
             {
               "file": "src/components/forms/radio/radio.test.ts",
-              "line": 2227,
+              "line": 2228,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -36947,21 +36947,21 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1029,
+              "line": 1045,
               "test": "is accessible with a populated, selectable, metadata-carrying result set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1177,
+              "line": 1193,
               "test": "is accessible while grouped and virtualized",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1415,
+              "line": 1431,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -36981,7 +36981,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1218,
+              "line": 1234,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -36998,7 +36998,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1231,
+              "line": 1247,
               "kind": "320px allocation test signal"
             }
           ]
@@ -37072,7 +37072,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 466,
+              "line": 467,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37137,21 +37137,21 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 897,
+              "line": 913,
               "test": "is accessible in a populated state (query, mode, filters, scope chips)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 913,
+              "line": 929,
               "test": "is accessible while loading",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 924,
+              "line": 940,
               "test": "is accessible with an error",
               "target": "el",
               "state": "populated"
@@ -37176,7 +37176,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 742,
+              "line": 758,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -37193,7 +37193,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 771,
+              "line": 787,
               "kind": "320px allocation test signal"
             }
           ]
@@ -37321,14 +37321,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-trace/retrieval-trace.test.ts",
-              "line": 609,
+              "line": 671,
               "test": "is accessible with stages, an expanded chunk evidence panel, and an expanded metadata panel",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-trace/retrieval-trace.test.ts",
-              "line": 690,
+              "line": 752,
               "test": "is accessible with the active-evidence prop themed",
               "target": "el",
               "state": "populated"
@@ -37348,7 +37348,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-trace/retrieval-trace.test.ts",
-              "line": 516,
+              "line": 577,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -38180,49 +38180,49 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2159,
+              "line": 2160,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 3980,
+              "line": 3981,
               "test": "is accessible with tags rendered and the listbox open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2152,
+              "line": 2153,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2422,
+              "line": 2423,
               "test": "is accessible with a single enabled option",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2979,
+              "line": 2980,
               "test": "makes every mirrored adornment wrapper decorative and inert",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 4199,
+              "line": 4200,
               "test": "is accessible with the clear button rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 4459,
+              "line": 4460,
               "test": "is accessible in every appearance",
               "target": "el",
               "state": "populated"
@@ -38247,7 +38247,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2717,
+              "line": 2718,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -38264,7 +38264,7 @@
           "evidence": [
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 2648,
+              "line": 2649,
               "kind": "320px allocation test signal"
             }
           ]
@@ -38497,7 +38497,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
-              "line": 796,
+              "line": 800,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38721,28 +38721,28 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.test.ts",
-              "line": 257,
+              "line": 269,
               "test": "gives an unnamed category a localized nonempty list-item and tooltip label",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/sequence-strip/sequence-strip.test.ts",
-              "line": 573,
+              "line": 585,
               "test": "is accessible with items, categories, and markers set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/sequence-strip/sequence-strip.test.ts",
-              "line": 672,
+              "line": 684,
               "test": "is accessible with the legend shown",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/sequence-strip/sequence-strip.test.ts",
-              "line": 786,
+              "line": 798,
               "test": "is accessible with the marker legend row shown",
               "target": "el",
               "state": "populated"
@@ -38847,7 +38847,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 214,
+              "line": 215,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39082,28 +39082,28 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.test.ts",
-              "line": 1951,
+              "line": 1952,
               "test": "is accessible in a populated, labeled state with a fractional step",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/slider/slider.test.ts",
-              "line": 3118,
+              "line": 3119,
               "test": "is accessible as a labeled two-handle range with markers, a tooltip and a hint",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/slider/slider.test.ts",
-              "line": 3140,
+              "line": 3141,
               "test": "is accessible as a vertical, readonly slider",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/slider/slider.test.ts",
-              "line": 3229,
+              "line": 3230,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -39219,7 +39219,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 743,
+              "line": 739,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39463,28 +39463,28 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-list/source-list.test.ts",
-              "line": 236,
+              "line": 246,
               "test": "preserves native semantic and ElementInternals-owned slotted children",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/retrieval/source-list/source-list.test.ts",
-              "line": 139,
+              "line": 149,
               "test": "is accessible with no cards and collapsed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/source-list/source-list.test.ts",
-              "line": 144,
+              "line": 154,
               "test": "is accessible with cards and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/source-list/source-list.test.ts",
-              "line": 219,
+              "line": 229,
               "test": "preserves native and author-defined interactive roles in the default slot",
               "target": "el",
               "state": "populated"
@@ -39634,7 +39634,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 354,
+              "line": 392,
               "test": "is accessible with a mixed-selection tree",
               "target": "el",
               "state": "populated"
@@ -39659,7 +39659,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 622,
+              "line": 660,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -39676,7 +39676,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 1287,
+              "line": 1325,
               "kind": "320px allocation test signal"
             }
           ]
@@ -39739,7 +39739,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 466,
+              "line": 467,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39972,7 +39972,7 @@
           "evidence": [
             {
               "file": "src/components/data/sparkline/sparkline.test.ts",
-              "line": 399,
+              "line": 406,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -40494,7 +40494,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.test.ts",
-              "line": 1781,
+              "line": 1843,
               "test": "is accessible with a highlighted cell rendered",
               "target": "el",
               "state": "populated"
@@ -40508,7 +40508,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.test.ts",
-              "line": 1135,
+              "line": 1197,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -41683,7 +41683,7 @@
             },
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.test.ts",
-              "line": 248,
+              "line": 264,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -41697,7 +41697,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.test.ts",
-              "line": 144,
+              "line": 160,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -41708,7 +41708,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.test.ts",
-              "line": 153,
+              "line": 169,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -41783,7 +41783,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
-              "line": 160,
+              "line": 161,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42204,28 +42204,28 @@
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1406,
+              "line": 1407,
               "test": "is accessible in a checked, labeled, required state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1413,
+              "line": 1414,
               "test": "keeps interactive label content outside the switch and does not toggle through it",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1448,
+              "line": 1449,
               "test": "is accessible with a populated hint/errorText (the parts never rendered by the cases above)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1690,
+              "line": 1691,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -43111,42 +43111,42 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 3295,
+              "line": 3310,
               "test": "is accessible with expandedContent and an open row",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4280,
+              "line": 4295,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4728,
+              "line": 4743,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5177,
+              "line": 5192,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5608,
+              "line": 5623,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5721,
+              "line": 5736,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"
@@ -44020,14 +44020,14 @@
             },
             {
               "file": "src/components/forms/textarea/textarea.test.ts",
-              "line": 1347,
+              "line": 1348,
               "test": "is accessible with the count rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/textarea/textarea.test.ts",
-              "line": 1653,
+              "line": 1654,
               "test": "is accessible with the pill treatment applied",
               "target": "el",
               "state": "populated"
@@ -44351,49 +44351,49 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 499,
+              "line": 548,
               "test": "uses one string group-label contract and renders rich adornments outside the toggle",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 555,
+              "line": 604,
               "test": "keeps group collapse controlled and removes collapsed rows from virtual-list measurement",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 1502,
+              "line": 1551,
               "test": "is accessible in both modes",
               "target": "dataMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 1502,
+              "line": 1551,
               "test": "is accessible in both modes",
               "target": "slottedMode",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2029,
+              "line": 2078,
               "test": "is accessible with wrapped rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2190,
+              "line": 2239,
               "test": "is accessible with a part-styled dense row and a renderActions control",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2882,
+              "line": 2931,
               "test": "is accessible with a pinned group header",
               "target": "el",
               "state": "populated"
@@ -44418,7 +44418,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 347,
+              "line": 376,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -44435,7 +44435,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 345,
+              "line": 374,
               "kind": "320px allocation test signal"
             }
           ]
@@ -44588,7 +44588,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1343,
+              "line": 1344,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -44599,7 +44599,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 954,
+              "line": 955,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -44616,7 +44616,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 953,
+              "line": 954,
               "kind": "320px allocation test signal"
             }
           ]
@@ -44741,21 +44741,21 @@
           "evidence": [
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 186,
+              "line": 187,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 2451,
+              "line": 2452,
               "test": "is accessible with presets set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 2544,
+              "line": 2545,
               "test": "is accessible with the active-preset props themed",
               "target": "el",
               "state": "populated"
@@ -44780,7 +44780,7 @@
           "evidence": [
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 903,
+              "line": 904,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -44797,7 +44797,7 @@
           "evidence": [
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 2742,
+              "line": 2743,
               "kind": "320px allocation test signal"
             }
           ]
@@ -44918,7 +44918,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 272,
+              "line": 277,
               "test": "is accessible with a realistic set of timeline items",
               "target": "el",
               "state": "populated"
@@ -45085,7 +45085,7 @@
             },
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 272,
+              "line": 277,
               "test": "is accessible with a realistic set of timeline items",
               "target": "el",
               "state": "populated"
@@ -45594,7 +45594,7 @@
           "evidence": [
             {
               "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 2214,
+              "line": 2215,
               "test": "is accessible with an open token editor",
               "target": "el",
               "state": "populated"
@@ -45619,7 +45619,7 @@
           "evidence": [
             {
               "file": "src/components/forms/token-input/token-input.test.ts",
-              "line": 1841,
+              "line": 1842,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -47473,7 +47473,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/transcript-feed/transcript-feed.test.ts",
-              "line": 359,
+              "line": 371,
               "test": "is accessible with a mix of final and interim entries",
               "target": "el",
               "state": "populated"
@@ -47493,7 +47493,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/transcript-feed/transcript-feed.test.ts",
-              "line": 333,
+              "line": 345,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -47510,7 +47510,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/transcript-feed/transcript-feed.test.ts",
-              "line": 331,
+              "line": 343,
               "kind": "320px allocation test signal"
             }
           ]
@@ -48736,7 +48736,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 590,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50174,7 +50174,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 353,
+              "line": 348,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

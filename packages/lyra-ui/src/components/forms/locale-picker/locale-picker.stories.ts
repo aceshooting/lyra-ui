@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "A single-select picker over the library's locale registry: a closed-list dropdown that offers every locale registered via `registerLyraLocale()` (plus `en`) by default, or an explicit `locales` catalog. Selecting a row calls `setLyraLocale()` unless the `lr-change` event is cancelled. Trigger focus/blur relay as native FocusEvents followed by `lr-focus`/`lr-blur`.",
+          "A single-select picker over the library's locale registry: a closed-list dropdown that offers every locale registered via `registerLyraLocale()` (plus `en`) by default, or an explicit `locales` catalog. Selecting a row calls `setLyraLocale()` unless the `lr-change` event is cancelled. Trigger focus/blur relay once each as native FocusEvents.",
       },
     },
   },

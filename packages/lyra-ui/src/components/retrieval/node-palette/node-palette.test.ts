@@ -34,12 +34,26 @@ const items: LyraPaletteItem[] = [
   { type: "webhook", label: "Webhook", category: "Actions" },
 ];
 
-it("defaults to empty items and label", async () => {
+it("defaults to empty items and an unset label", async () => {
   const el = (await fixture(
     html`<lr-node-palette></lr-node-palette>`
   )) as LyraNodePalette;
   expect(el.items).to.deep.equal([]);
+  expect(el.label).to.be.undefined;
+});
+
+it("keeps an explicitly empty label genuinely empty instead of falling back to the localized default", async () => {
+  const el = (await fixture(
+    html`<lr-node-palette label="" .items=${items}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
   expect(el.label).to.equal("");
+  expect(listbox.getAttribute("aria-label")).to.equal("");
+
+  el.setAttribute("aria-label", "Custom");
+  await el.updateComplete;
+  expect(listbox.getAttribute("aria-label")).to.equal("");
 });
 
 it("keeps explicit-empty and dynamic host naming distinct from the listbox label", async () => {

@@ -44,7 +44,7 @@ the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-com
 each list mutation; native events have no detail and both aliases carry a frozen
 `{ value: readonly string[] }` snapshot.
 Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
-`relatedTarget`, followed by `lr-focus`/`lr-blur`. `lr-add`
+`relatedTarget`. `lr-add`
 (`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
 readonly, complete ordered and deduplicated set of tokens added by that commit),
 `lr-remove`

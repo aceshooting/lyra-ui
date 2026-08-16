@@ -16,7 +16,7 @@ import { renderInertPresentation } from '../../../internal/inert-presentation.js
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { literalSetConverter } from '../../../internal/converters.js';
-import type { LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
+import type { LyraSizeAlias, LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { styles } from './chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -26,12 +26,15 @@ import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_selec
 
 /** The library's one semantic-tone vocabulary. */
 export type ChipVariant = LyraVariant;
-/** The shared six-step ladder plus one step below it: a chip is the library's smallest labelled
- *  surface and needs a tier that fits inside a table cell, which no other component does. */
-export type ChipSize = LyraSizeStep | '3xs';
+/** The shared six-step ladder plus one step below it (a chip is the library's smallest labelled
+ *  surface and needs a tier that fits inside a table cell, which no other component does), plus
+ *  the `small`/`medium`/`large` aliases `<lr-badge>`/`<lr-callout>` already accept for the six
+ *  shared steps. `3xs` has no long-form alias -- it is a Lyra-only step below the shared ladder,
+ *  not part of the upstream scale either spelling mirrors. */
+export type ChipSize = LyraSizeStep | '3xs' | LyraSizeAlias;
 
 const CHIP_SIZE = literalSetConverter<ChipSize>(
-  ['3xs', '2xs', 'xs', 's', 'm', 'l', 'xl'],
+  ['3xs', '2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
   'm'
 );
 const CHIP_VARIANT = literalSetConverter<ChipVariant>(
@@ -242,7 +245,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   static override styles = [LyraElement.styles, variants, styles];
 
   /** Visual density. `m` preserves the original chip dimensions and is the fallback for
-   *  unsupported values. */
+   *  unsupported values. Both Web Awesome spellings are accepted for the shared `s`/`m`/`l`
+   *  steps (`small`/`medium`/`large`), matching `<lr-badge>`/`<lr-callout>`; `3xs` has no
+   *  long-form alias. */
   private _size: ChipSize = 'm';
 
   @property({ reflect: true, converter: CHIP_SIZE })

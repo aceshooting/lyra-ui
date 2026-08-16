@@ -140,9 +140,11 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     high: 0.75,
     medium: 0.5,
   };
-  /** Fallback name for the provenance group. A non-empty host `aria-label` makes the host the sole
-   *  overall owner; an explicitly empty host label stays empty on the group. */
-  @property() label = '';
+  /** Fallback name for the provenance group, used when omitted; falls back to the localized
+   *  `provenancePanelLabel`. A non-empty host `aria-label` makes the host the sole overall owner;
+   *  an explicitly empty host label stays empty on the group, and so does an explicitly empty
+   *  `label`. */
+  @property() label?: string;
 
   @state() private expandedSections: Record<Section, boolean> = {
     entities: true,
@@ -200,7 +202,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
       chunks.length === 0;
     const groupLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize('provenancePanelLabel')
+      this.label == null ? this.localize('provenancePanelLabel') : this.label
     );
     const groupRole = retrievalSemanticRole(this, 'group');
 

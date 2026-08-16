@@ -79,8 +79,8 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 popup, validation, and form submission.
 
 **Events:** native `input` on user edits and native `change` on a complete commit; compatibility
-aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once
-with `lr-focus` / `lr-blur` aliases. `lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
+aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
+`lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
 precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
 `lr-invalid` follows a failed validity check.
 The hidden native autofill seam treats an intentional empty `input` followed by `change` as a

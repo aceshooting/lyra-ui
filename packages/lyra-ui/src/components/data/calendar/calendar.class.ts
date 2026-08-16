@@ -7,7 +7,6 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './calendar.styles.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_calendarEmpty, LYRA_DEFAULT_calendarLabel, LYRA_DEFAULT_calendarNextMonth, LYRA_DEFAULT_calendarPreviousMonth } from '../../../internal/default-strings.generated.js';
@@ -131,7 +130,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     if (this.getAttribute('view') !== this._view) this.setAttribute('view', this._view);
   }
   override render(): TemplateResult {
-    const start = this.viewStart; const weeks = this.weeks(); const monthTitle = getDateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(start); const today = formatISO(new Date()); const label = hostAriaLabel(this) !== null ? this.localize('calendarLabel') : this.accessibleLabel || this.localize('calendarLabel');
+    const start = this.viewStart; const weeks = this.weeks(); const monthTitle = getDateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(start); const today = formatISO(new Date()); const label = this.accessibleLabel || this.localize('calendarLabel');
     const dayLabelFmt = getDateTimeFormat(this.effectiveLocale, { dateStyle: 'full' });
     const agendaDateFmt = getDateTimeFormat(this.effectiveLocale, { dateStyle: 'medium' });
     const dayNumberFmt = getNumberFormat(this.effectiveLocale);

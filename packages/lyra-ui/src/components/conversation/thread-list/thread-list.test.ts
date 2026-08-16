@@ -216,6 +216,35 @@ it("applies the host accessible name to the element that owns the list role", as
   expect(list.getAttribute("aria-label")).to.equal("Conversations");
 });
 
+it("distinguishes an omitted label property from an explicit empty override", async () => {
+  const omitted = (await fixture(html`
+    <lr-thread-list>
+      <lr-conversation-item label="Manual row"></lr-conversation-item>
+    </lr-thread-list>
+  `)) as LyraThreadList;
+  expect(
+    omitted.shadowRoot!.querySelector('[part="list"]')!.getAttribute("aria-label")
+  ).to.equal("Conversations");
+
+  const explicitEmpty = (await fixture(html`
+    <lr-thread-list label="">
+      <lr-conversation-item label="Manual row"></lr-conversation-item>
+    </lr-thread-list>
+  `)) as LyraThreadList;
+  expect(
+    explicitEmpty.shadowRoot!.querySelector('[part="list"]')!.getAttribute("aria-label")
+  ).to.equal("");
+
+  const explicitOverride = (await fixture(html`
+    <lr-thread-list label="Custom list name">
+      <lr-conversation-item label="Manual row"></lr-conversation-item>
+    </lr-thread-list>
+  `)) as LyraThreadList;
+  expect(
+    explicitOverride.shadowRoot!.querySelector('[part="list"]')!.getAttribute("aria-label")
+  ).to.equal("Custom list name");
+});
+
 it("contains a slotted row lr-select at the slot boundary without blocking child listeners", async () => {
   const outer = (await fixture(html`
     <div>
@@ -494,6 +523,26 @@ describe("data mode", () => {
     const pending = oneEvent(el, 'lr-group-toggle');
     toggle.click();
     expect((await pending).detail).to.deep.equal({ groupId: 'project', collapsed: true });
+  });
+
+  it('falls back to first-seen custom group order when a groupOrder comparator throws', async () => {
+    const projectThreads = [
+      { id: 'a1', title: 'Alpha one', project: 'alpha' },
+      { id: 'b1', title: 'Beta one', project: 'beta' },
+    ];
+    const el = (await fixture(html`<lr-thread-list style="block-size:400px"></lr-thread-list>`)) as LyraThreadList;
+    el.threads = projectThreads;
+    el.grouping = 'custom';
+    el.groupBy = (thread) => (thread as (typeof projectThreads)[number]).project;
+    el.groupOrder = () => {
+      throw new Error('boom');
+    };
+    await el.updateComplete;
+    await nextFrame();
+
+    expect(renderedGroupLabels(el)).to.deep.equal(['alpha', 'beta']);
+    expect(renderedThreadIds(el)).to.deep.equal(['a1', 'b1']);
+    expect(dataRows(el).map((row) => row.conversationId)).to.deep.equal(['a1', 'b1']);
   });
 
   it("uses one string group-label contract and renders rich adornments outside the toggle", async () => {

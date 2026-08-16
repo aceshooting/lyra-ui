@@ -270,6 +270,13 @@ it('counts only rendered finite samples in its accessible summary', async () => 
   );
 });
 
+it('synthesizes the same accessible summary for the data-string path as the values-array path', async () => {
+  const el = (await fixture(html`<lr-sparkline data="1 2 3"></lr-sparkline>`)) as LyraSparkline;
+  const svg = el.shadowRoot!.querySelector('svg')!;
+  expect(svg.getAttribute('role')).to.equal('img');
+  expect(svg.getAttribute('aria-label')).to.equal('Trend of 3 values, last 3');
+});
+
 it('formats the last value in aria-label instead of announcing raw float noise', async () => {
   const el = (await fixture(`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;
   el.values = [1, 2, 3.456789123];

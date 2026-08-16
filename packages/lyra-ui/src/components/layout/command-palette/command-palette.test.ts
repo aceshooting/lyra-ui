@@ -12,6 +12,28 @@ it("provides hover feedback for enabled command rows", () => {
   );
 });
 
+it("keeps an explicitly empty aria-label distinct from an omitted one", async () => {
+  const omitted = (await fixture(
+    html`<lr-command-palette></lr-command-palette>`
+  )) as LyraCommandPalette;
+  expect(omitted.accessibleLabel).to.equal(undefined);
+  omitted.openPalette();
+  await omitted.updateComplete;
+  expect(
+    omitted.shadowRoot!.querySelector('[part="dialog"]')!.getAttribute("aria-label")
+  ).to.equal("Command palette");
+
+  const explicitEmpty = (await fixture(
+    html`<lr-command-palette aria-label=""></lr-command-palette>`
+  )) as LyraCommandPalette;
+  expect(explicitEmpty.accessibleLabel).to.equal("");
+  explicitEmpty.openPalette();
+  await explicitEmpty.updateComplete;
+  expect(
+    explicitEmpty.shadowRoot!.querySelector('[part="dialog"]')!.getAttribute("aria-label")
+  ).to.equal("");
+});
+
 it("opens, filters, and selects a command", async () => {
   const el = (await fixture(
     html`<lr-command-palette

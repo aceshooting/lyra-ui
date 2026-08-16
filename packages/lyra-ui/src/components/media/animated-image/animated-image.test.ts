@@ -601,7 +601,7 @@ describe('focus / blur', () => {
     expect((el.shadowRoot!.activeElement) === (null)).to.equal(true);
   });
 
-  it('relays one native focus/blur pair with payload plus one prefixed alias pair', async () => {
+  it('relays one native focus/blur pair with payload and fires no prefixed alias', async () => {
     const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
     await loaded(el);
     const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
@@ -619,11 +619,9 @@ describe('focus / blur', () => {
     });
     el.addEventListener('lr-focus', () => {
       aliases.push('lr-focus');
-      sequence.push('lr-focus');
     });
     el.addEventListener('lr-blur', () => {
       aliases.push('lr-blur');
-      sequence.push('lr-blur');
     });
 
     button.dispatchEvent(new FocusEvent('focus', {
@@ -646,8 +644,8 @@ describe('focus / blur', () => {
     expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
     expect(nativeEvents.every((event) => event.relatedTarget === related && event.view === window)).to.be.true;
     expect(nativeEvents.map((event) => event.detail)).to.deep.equal([7, 9]);
-    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
-    expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+    expect(sequence).to.deep.equal(['focus', 'blur']);
+    expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
   });
 
   it('forwards host click() to the play button', async () => {

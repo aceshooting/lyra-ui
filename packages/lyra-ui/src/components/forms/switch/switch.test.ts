@@ -709,7 +709,7 @@ it("suppresses host focus/click in the same task that fieldset disablement start
   expect(el.checked).to.be.false;
 });
 
-it("relays exactly one native focus/blur pair plus one prefixed alias pair", async () => {
+it("relays exactly one native focus/blur pair, and never lr-focus/lr-blur", async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   const nativeEvents: FocusEvent[] = [];
   const aliases: string[] = [];
@@ -738,7 +738,8 @@ it("relays exactly one native focus/blur pair plus one prefixed alias pair", asy
       (event) => event.target === el && event.bubbles && event.composed
     )
   ).to.be.true;
-  expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(aliases).to.deep.equal([]);
 });
 
 it("reflects aria-invalid on the inner switch only after the field has been interacted with once", async () => {

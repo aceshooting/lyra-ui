@@ -460,7 +460,7 @@ it('forwards host click() to the play button', async () => {
   expect(el.playing).to.be.false;
 });
 
-it('relays one native focus/blur pair with payload plus one prefixed alias pair', async () => {
+it('relays one native focus/blur pair with payload and fires no prefixed alias', async () => {
   const el = (await fixture(html`<lr-sequence-playback item-count="3"></lr-sequence-playback>`)) as LyraSequencePlayback;
   const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
   const related = document.createElement('button');
@@ -477,11 +477,9 @@ it('relays one native focus/blur pair with payload plus one prefixed alias pair'
   });
   el.addEventListener('lr-focus', () => {
     aliases.push('lr-focus');
-    sequence.push('lr-focus');
   });
   el.addEventListener('lr-blur', () => {
     aliases.push('lr-blur');
-    sequence.push('lr-blur');
   });
 
   slider.dispatchEvent(new FocusEvent('focus', {
@@ -501,8 +499,8 @@ it('relays one native focus/blur pair with payload plus one prefixed alias pair'
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
   expect(nativeEvents.every((event) => event.relatedTarget === related)).to.be.true;
-  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
-  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+  expect(sequence).to.deep.equal(['focus', 'blur']);
+  expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
 });
 
 it('toggles playback when the rendered play-button is clicked', async () => {

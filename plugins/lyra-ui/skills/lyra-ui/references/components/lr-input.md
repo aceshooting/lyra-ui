@@ -161,7 +161,7 @@ Three more native passthroughs:
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
-own `blur`/`focus`) each followed by its prefixed alias `lr-blur`/`lr-focus` (no detail), and
+own `blur`/`focus`), and
 `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
 sequence). `lr-invalid` (no detail) fires when a validity check finds the input invalid.
 

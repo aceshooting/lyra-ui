@@ -154,7 +154,8 @@ export class LyraSequenceStrip extends LyraElement {
     this.requestUpdate('categories', previous);
   }
   /** Overrides the auto-generated `aria-label` (a per-category "label: count" summary). Unset
-   *  computes the summary from `items`/`categories`. */
+   *  computes the summary from `items`/`categories`; an explicitly empty string renders as an
+   *  empty label rather than falling back to the auto-generated summary. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
   /** Renders a static `[part="legend"]` key of every `categories` entry below the strip, so the
    *  color-to-category mapping is readable without hovering each cell. Deliberately
@@ -369,7 +370,7 @@ export class LyraSequenceStrip extends LyraElement {
 
   override render(): TemplateResult {
     const categoryMap = this.categoryMap();
-    const ariaLabel = this.accessibleLabel || this.autoSummary();
+    const ariaLabel = this.accessibleLabel == null ? this.autoSummary() : this.accessibleLabel;
     const activeIndex = this.hoverIndex ?? this.keyboardIndex;
     const active = activeIndex !== null ? this.items[activeIndex] : undefined;
     const tabStop = this.keyboardIndex ?? 0;

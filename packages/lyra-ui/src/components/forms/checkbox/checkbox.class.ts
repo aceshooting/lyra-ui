@@ -80,8 +80,6 @@ export interface LyraCheckboxEventMap {
   'lr-change': CustomEvent<{ checked: boolean }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 /**
@@ -129,8 +127,6 @@ export interface LyraCheckboxEventMap {
  * `detail: { checked }`. Not fired for a programmatic `.checked` assignment.
  * @event focus - Re-dispatched from the internal control as a bubbling, composed event.
  * @event blur - Re-dispatched from the internal control as a bubbling, composed event.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-invalid - The checkbox failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -811,12 +807,10 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
       this.reflectInvalid();
     }
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private onFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   override render(): TemplateResult {

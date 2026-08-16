@@ -53,8 +53,6 @@ export interface LyraOtpInputEventMap {
   change: Event;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-clear': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
   'lr-complete': CustomEvent<{ value: string }>;
@@ -106,8 +104,6 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  *   `Event`.
  * @event focus - Native focus relayed once from the real input.
  * @event blur - Native blur relayed once from the real input.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-clear - The value was cleared. Bubbling, composed, and non-cancelable.
  * @event lr-invalid - The one-time-code input failed a validity check. Cancelable:
  * `preventDefault()` forwards to the native `invalid` event, suppressing the browser's own
@@ -783,7 +779,6 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   private onFocus = (event: FocusEvent): void => {
     this.focused = true;
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
   private onBlur = (event: FocusEvent): void => {
     this.focused = false;
@@ -793,7 +788,6 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     if (!this.effectiveDisabled) this.touched = true;
     this.flushPendingChange();
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private onLabelSlotChange = (event: Event): void => {

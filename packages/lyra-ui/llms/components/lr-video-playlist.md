@@ -42,8 +42,8 @@ the optional-arrow navigation cursor (falling back to the first enabled row). Th
 convenience; every enabled row is independently reachable through ordinary sequential Tab order.
 
 **Events:** internal `focus`/`blur` from a playlist row are relayed exactly once as owner-realm
-native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-`lr-focus`/`lr-blur`. `lr-video-change` is bubbling and composed but non-cancelable, with exact
+native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`).
+`lr-video-change` is bubbling and composed but non-cancelable, with exact
 detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, mutable plain-data snapshot with
 exact shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains
 fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;

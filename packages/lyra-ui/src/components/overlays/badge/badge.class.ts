@@ -114,7 +114,7 @@ export class LyraBadge<
    * the private canonical value instead of rewriting the public property or reflected attribute. */
   @property({ reflect: true }) variant: Variant = 'neutral' as Variant;
 
-  /** Visual density, matching `<lr-chip>`'s `2xs`–`xl` size scale. `m` preserves the original
+  /** Visual density, matching `<lr-chip>`'s `3xs`–`xl` size scale. `m` preserves the original
    * badge dimensions. Valid `small`/`medium`/`large` values round-trip exactly. */
   @property({ reflect: true }) size: BadgeSize = 'm';
 

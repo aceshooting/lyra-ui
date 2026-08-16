@@ -11,6 +11,7 @@ import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraSpan } from '../../agent-tools/trace-tree/span.js';
 import '../../agent-tools/span-waterfall/span-waterfall.class.js';
 import '../chunk-inspector/chunk-inspector.class.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { styles } from './retrieval-trace.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -200,13 +201,24 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
 
   private readonly evidenceDomIdPrefix = nextId('retrieval-trace-evidence');
 
+  /** `stages`, deduped to the first stage for each nonblank `id` -- keeps the timeline (which
+   *  `<lr-span-waterfall>` already dedupes internally) and the evidence list (rendered one row
+   *  per entry here) in agreement, and keeps `expandedStageIds`/`activeStageId` comparisons keyed
+   *  by an id that identifies exactly one stage. */
+  private get normalizedStages(): RetrievalStage[] {
+    return firstByRetrievalIdentity(
+      Array.isArray(this.stages) ? this.stages : [],
+      (stage) => stage.id
+    );
+  }
+
   private stageLabel(stage: RetrievalStage): string {
     if (stage.label) return stage.label;
     return this.localize(STAGE_LABEL[stage.kind].key);
   }
 
   private toSpans(): LyraSpan[] {
-    return this.stages.map(
+    return this.normalizedStages.map(
       (stage): LyraSpan => ({
         id: stage.id,
         name: this.stageLabel(stage),
@@ -236,7 +248,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     // stage, see what it did" flow), but never auto-collapses it again on a second click -- the
     // dedicated evidence-toggle button (with its own aria-expanded/aria-controls) is the only
     // control that closes it, so the two affordances stay independently predictable.
-    const stage = this.stages.find((s) => s.id === stageId);
+    const stage = this.normalizedStages.find((s) => s.id === stageId);
     if (
       stage &&
       hasEvidence(stage.evidence) &&
@@ -252,7 +264,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('stages')) {
-      const ids = new Set(this.stages.map((s) => s.id));
+      const ids = new Set(this.normalizedStages.map((s) => s.id));
       let pruned: Set<string> | null = null;
       for (const id of this.expandedStageIds) {
         if (!ids.has(id)) {
@@ -382,7 +394,9 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
 
   override render(): TemplateResult {
     const spans = this.toSpans();
-    const hasAnyEvidence = this.stages.some((s) => hasEvidence(s.evidence));
+    const hasAnyEvidence = this.normalizedStages.some((s) =>
+      hasEvidence(s.evidence)
+    );
     // A host aria-label names this composed trace. Forward only the distinct timeline label; the
     // nested waterfall supplies its own localized purpose when this remains empty.
     const label = this.label;
@@ -397,7 +411,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
         ></lr-span-waterfall>
         ${hasAnyEvidence
           ? html`<div part="evidence-list">
-              ${this.stages.map((stage, index) =>
+              ${this.normalizedStages.map((stage, index) =>
                 this.renderEvidenceRow(stage, index)
               )}
             </div>`

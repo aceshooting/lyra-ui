@@ -427,9 +427,28 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
 
   private renderContent(content: EvalContent, part: 'input' | 'output'): TemplateResult {
     if (content.format === 'code') {
-      return html`<lr-code-block part=${part} code=${content.text} language=${content.language ?? ''}></lr-code-block>`;
+      return html`<lr-code-block
+        part=${part}
+        code=${content.text}
+        language=${content.language ?? ''}
+        @lr-copy=${this.stopOwnedEvent}
+        @lr-error=${this.stopOwnedEvent}
+        @lr-copy-error=${this.stopOwnedEvent}
+        @lr-toggle-request=${this.stopOwnedEvent}
+        @lr-toggle=${this.stopOwnedEvent}
+        @lr-line-activate=${this.stopOwnedEvent}
+        @lr-text-select=${this.stopOwnedEvent}
+      ></lr-code-block>`;
     }
-    return html`<lr-markdown part=${part} content=${content.text}></lr-markdown>`;
+    return html`<lr-markdown
+      part=${part}
+      content=${content.text}
+      @lr-link-click=${this.stopOwnedEvent}
+      @lr-render-error=${this.stopOwnedEvent}
+      @lr-highlight-activate=${this.stopOwnedEvent}
+      @lr-text-select=${this.stopOwnedEvent}
+      @lr-anchor-result=${this.stopOwnedEvent}
+    ></lr-markdown>`;
   }
 
   private renderGrounding(example: EvalExampleResult, grounding: GroundingAssessment): TemplateResult {

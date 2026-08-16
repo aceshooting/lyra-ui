@@ -88,6 +88,24 @@ it('applies per-instance strings to the evaluation region label', async () => {
   );
 });
 
+it('honors an explicitly empty label as genuinely empty, distinct from omitting it', async () => {
+  const el = (await fixture(
+    html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>`,
+  )) as LyraRagEvalDashboard;
+  expect(el.label).to.equal(undefined);
+  expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal(
+    'RAG evaluation dashboard',
+  );
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'RAG evaluation dashboard',
+  );
+
+  el.label = '';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 it('preserves an unavailable controlled slice and renders a localized unavailable-filter state', async () => {
   const el = (await fixture(html`
     <lr-rag-eval-dashboard

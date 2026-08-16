@@ -98,8 +98,7 @@ so a listener that decides asynchronously (`await`-ing a check before letting th
 still veto it; it then goes through the same resolved default button as Enter-to-submit, so
 `SubmitEvent.submitter` and the button's own `name`/`value` reach the submission. The real input's native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
-do not cross the shadow boundary; each is followed by its prefixed alias `lr-focus` / `lr-blur` (no
-detail). Replacing the live or default code, resetting/restoring the form state, or disconnecting
+do not cross the shadow boundary. Replacing the live or default code, resetting/restoring the form state, or disconnecting
 the component before the deferred task runs retires that completion's submission; a task for code
 A can never submit a later full code B.
 `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.

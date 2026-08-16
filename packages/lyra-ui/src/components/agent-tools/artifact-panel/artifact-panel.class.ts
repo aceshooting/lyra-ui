@@ -115,8 +115,10 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The artifact's title, shown in the header. */
-  @property() label = '';
+  /** The artifact's title, shown in the header. Optional. Omitting it localizes the default
+   *  `artifactPanelLabel` message for the view-toggle group's accessible name (and shows no
+   *  visible title); an explicit empty string also renders no visible/accessible label. */
+  @property() label?: string;
 
   /** A short kind label (e.g. `document`, `code`), shown as a badge next to `label`. */
   @property() kind = '';
@@ -179,7 +181,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   };
 
   private get accessibleLabel(): string {
-    return this.label || this.localize('artifactPanelLabel');
+    return this.label == null ? this.localize('artifactPanelLabel') : this.label;
   }
 
   private setView(view: ArtifactPanelView): void {

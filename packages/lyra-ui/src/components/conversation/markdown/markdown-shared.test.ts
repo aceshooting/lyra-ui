@@ -1,5 +1,6 @@
 import { aTimeout, expect } from '@open-wc/testing';
 import { loadMarkdownDeps } from './markdown-loader.js';
+import type { MarkedModule } from './markdown-loader.js';
 import {
   addFailedHighlightKey,
   FAILED_HIGHLIGHT_MAX,
@@ -31,6 +32,7 @@ describe('Markdown highlight resource bounds', () => {
         linkTarget: null,
         headingOffset: 0,
         escapeHtmlOption: false,
+        trustedHtmlOption: false,
         highlightCodeOption: true,
         getCachedHighlight: (key) => getCachedHighlight(cache, key),
         failedHighlightKeys: new Set(),
@@ -133,6 +135,7 @@ describe('parseMarkdownDocument renderer overrides emit well-formed, matched-quo
       linkTarget: '_blank',
       headingOffset: 0,
       escapeHtmlOption: false,
+      trustedHtmlOption: false,
       highlightCodeOption: false,
       getCachedHighlight: () => undefined,
       failedHighlightKeys: new Set(),
@@ -199,5 +202,73 @@ describe('parseMarkdownDocument renderer overrides emit well-formed, matched-quo
 
     // No renderer-emitted attribute soup should have leaked into text content anywhere in the tree.
     expect(container.textContent).to.not.contain('part=');
+  });
+});
+
+describe('parseMarkdownDocument link/image scheme allowlist', () => {
+  const parse = (content: string, marked: MarkedModule, trustedHtmlOption: boolean): string => {
+    const { html } = parseMarkdownDocument({
+      marked,
+      content,
+      gfm: true,
+      linkTarget: null,
+      headingOffset: 0,
+      escapeHtmlOption: false,
+      trustedHtmlOption,
+      highlightCodeOption: false,
+      getCachedHighlight: () => undefined,
+      failedHighlightKeys: new Set(),
+      headingAnchorsOption: false,
+      mathOption: false,
+      cachedKatex: null,
+      pendingKeys: [],
+      headingTreeOut: [],
+    });
+    return html;
+  };
+
+  it('drops a javascript: markdown-native link href (not trusted) instead of emitting it', async () => {
+    const marked = (await loadMarkdownDeps()).marked!;
+    const html = parse('[click me](javascript:alert(1))', marked, false);
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    expect(
+      container.querySelector('a') === null,
+      'no anchor should be emitted for a rejected scheme',
+    ).to.be.true;
+    expect(container.textContent).to.contain('click me');
+  });
+
+  it('drops a javascript: markdown-native image src (not trusted) instead of emitting it', async () => {
+    const marked = (await loadMarkdownDeps()).marked!;
+    const html = parse('![alt text](javascript:alert(1))', marked, false);
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    expect(
+      container.querySelector('img') === null,
+      'no img should be emitted for a rejected scheme',
+    ).to.be.true;
+    expect(container.textContent).to.contain('alt text');
+  });
+
+  it('still allows an ordinary https: link/image and a data: image (not trusted)', async () => {
+    const marked = (await loadMarkdownDeps()).marked!;
+    const html = parse(
+      '[docs](https://example.com/docs)\n\n![pixel](data:image/png;base64,AAAA)',
+      marked,
+      false,
+    );
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    expect(container.querySelector('a')!.getAttribute('href')).to.equal('https://example.com/docs');
+    expect(container.querySelector('img')!.getAttribute('src')).to.equal('data:image/png;base64,AAAA');
+  });
+
+  it('bypasses the allowlist entirely when trustedHtmlOption is set, as documented', async () => {
+    const marked = (await loadMarkdownDeps()).marked!;
+    const html = parse('[click me](javascript:alert(1))', marked, true);
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    expect(container.querySelector('a')!.getAttribute('href')).to.equal('javascript:alert(1)');
   });
 });

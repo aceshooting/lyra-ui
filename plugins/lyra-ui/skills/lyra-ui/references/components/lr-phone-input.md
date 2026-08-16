@@ -150,8 +150,8 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
 emits native `Event` `change` then `lr-change`; and a country pick emits both pairs in order:
 `input`, `lr-input`, `change`, `lr-change`. Native events carry no custom detail; the aliases carry
 `{ value, inputValue, country, valid, status }`.
-Internal `focus`/`blur` are relayed once as realm-correct native `FocusEvent`s preserving `relatedTarget`,
-followed by `lr-focus`/`lr-blur`. `lr-invalid` has no detail and is the one bubbling/composed alias
+Internal `focus`/`blur` are relayed once as realm-correct native `FocusEvent`s preserving `relatedTarget`.
+`lr-invalid` has no detail and is the one bubbling/composed alias
 when native validity fails. Programmatic value writes remain silent.
 
 **Validity:** empty + `required` sets `valueMissing`; incomplete dial-like input sets `badInput`;

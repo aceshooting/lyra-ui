@@ -68,7 +68,7 @@ field for no new capability. Each carries a localized accessible name and the sh
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
-input) each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear`
+input), and `lr-clear`
 (inherited, never fired here). The inherited `lr-invalid` (no detail) fires when a validity check
 finds the input invalid. The internal native `beforeinput` is cancelable, bubbles, and composes;
 calling `preventDefault()` on the host vetoes the edit before `value` changes.

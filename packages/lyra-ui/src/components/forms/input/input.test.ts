@@ -201,7 +201,7 @@ describe('lr-input', () => {
     expect(aliases[0].detail).to.deep.equal({ value: 'x' });
   });
 
-  it('exposes exactly one native focus/blur pair plus lr aliases', async () => {
+  it('exposes exactly one native focus/blur pair, and never lr-focus/lr-blur', async () => {
     const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
     const nativeEvents: FocusEvent[] = [];
     const aliases: string[] = [];
@@ -218,7 +218,8 @@ describe('lr-input', () => {
     expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
     expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
     expect(nativeEvents.every((event) => event.target === el)).to.be.true;
-    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+    expect(aliases).to.deep.equal([]);
   });
 
   it('updates value and fires lr-input on user typing', async () => {

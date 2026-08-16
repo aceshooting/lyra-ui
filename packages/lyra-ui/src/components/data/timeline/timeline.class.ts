@@ -83,8 +83,9 @@ export class LyraTimeline extends LyraElement {
   /** Host-level `aria-label` override for the list's accessible name — wins over the localized
    *  default `"Timeline"`. Needed because the `role="list"` element lives in the shadow root and
    *  never inherits a host attribute automatically — same reasoning as `<lr-breadcrumb>`'s
-   *  identical property. */
-  @property({ attribute: 'aria-label' }) accessibleLabel = '';
+   *  identical property. Unset falls back to the localized default; an explicitly empty
+   *  `aria-label` stays empty. */
+  @property({ attribute: 'aria-label' }) accessibleLabel?: string;
 
   // Tracks the default slot's assigned-element count purely for the `itemCount` convenience getter
   // below -- copies <lr-source-list>'s sourceCount three-part technique (pre-count in willUpdate to
@@ -144,7 +145,7 @@ export class LyraTimeline extends LyraElement {
 
   override render(): TemplateResult {
     return html`
-      <div part="base" role="list" aria-label=${this.accessibleLabel || this.localize('timeline')}>
+      <div part="base" role="list" aria-label=${this.accessibleLabel == null ? this.localize('timeline') : this.accessibleLabel}>
         <slot @slotchange=${this.onSlotChange}></slot>
       </div>
     `;

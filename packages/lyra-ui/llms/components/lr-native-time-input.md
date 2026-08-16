@@ -31,7 +31,7 @@ The inherited `--lr-input-*` theme inputs therefore remain configurable from an 
 wrapper without being shadowed by the subclass.
 
 **Events:** native-style `input` and `change`; bubbling, composed `focus` and `blur` bridges; the
-`lr-input` / `lr-change` aliases with `{ value }`; `lr-focus` / `lr-blur` aliases with no detail;
+`lr-input` / `lr-change` aliases with `{ value }`;
 `lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails.
 
 **CSS parts:** all inherited `lr-input` parts, plus `time-input` on the same control-row node as

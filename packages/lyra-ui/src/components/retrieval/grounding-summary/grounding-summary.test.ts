@@ -34,6 +34,24 @@ it("renders the groundingSummaryEmpty state when assessment is null (the default
   expect(el.shadowRoot!.querySelectorAll("lr-stat").length).to.equal(0);
 });
 
+it("keeps an explicitly empty label distinct from an omitted one", async () => {
+  const omitted = (await fixture(
+    html`<lr-grounding-summary></lr-grounding-summary>`
+  )) as LyraGroundingSummary;
+  expect(omitted.label).to.be.undefined;
+  expect(
+    omitted.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
+  ).to.equal("Grounding summary");
+
+  const explicitEmpty = (await fixture(
+    html`<lr-grounding-summary label=""></lr-grounding-summary>`
+  )) as LyraGroundingSummary;
+  expect(explicitEmpty.label).to.equal("");
+  expect(
+    explicitEmpty.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
+  ).to.equal("");
+});
+
 it("renders supported/unsupported/coverage as lr-stat, omitting confidence when unset", async () => {
   const el = (await fixture(
     html`<lr-grounding-summary></lr-grounding-summary>`

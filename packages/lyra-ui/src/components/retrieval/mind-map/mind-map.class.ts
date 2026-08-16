@@ -107,8 +107,8 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
    *  visible text is `label`. */
   @property({ attribute: false }) topics: readonly LyraTopic[] = [];
   /** Accessible name for the SVG group *and* the implicit hub's text; falls back to the localized
-   *  `mindMapLabel`. */
-  @property() label = '';
+   *  `mindMapLabel` when omitted. An explicitly empty override stays empty. */
+  @property() label?: string;
   /** Initial expansion depth (root + first ring). Expansion state is component-managed
    *  afterward, keyed by topic id, and survives `topics` reassignment. */
   @property({ type: Number, attribute: 'expand-depth' }) expandDepth = 1;
@@ -284,7 +284,8 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   }
 
   private relayout(): void {
-    const hubLabel = this.label || this.localize('mindMapLabel');
+    const hubLabel =
+      this.label == null ? this.localize('mindMapLabel') : this.label;
     this.cachedLayout = layoutMindMap(this.topics, hubLabel, {
       ringGap: this.ringGapPx(),
       rtl: isRtl(this),
@@ -294,7 +295,8 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    const hubLabel = this.label || this.localize('mindMapLabel');
+    const hubLabel =
+      this.label == null ? this.localize('mindMapLabel') : this.label;
     const context = `${hubLabel}\u0000${
       isRtl(this) ? 'rtl' : 'ltr'
     }\u0000${this.ringGapPx()}`;
@@ -503,7 +505,8 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     // A host aria-label names the complete component. The interactive SVG keeps
     // a purpose-specific name and the parallel semantic tree is unnamed so each
     // representation has one distinct semantic owner.
-    const ariaLabel = this.label || this.localize('mindMapLabel');
+    const ariaLabel =
+      this.label == null ? this.localize('mindMapLabel') : this.label;
     const byId = new Map(layout.placed.map((p) => [p.id, p]));
     const childrenByParent = new Map<string | null, PlacedTopic[]>();
     for (const topic of layout.placed) {

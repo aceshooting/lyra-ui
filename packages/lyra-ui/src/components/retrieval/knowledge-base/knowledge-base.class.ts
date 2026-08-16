@@ -229,8 +229,9 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
 
   /** Heading text and the nested table's accessible name. A host `aria-label` independently
-   *  names the complete component. Falls back to a localized default. */
-  @property() label = '';
+   *  names the complete component. Omitted falls back to a localized default; an explicitly
+   *  empty `label` is used as-is. */
+  @property() label?: string;
 
   /** Hides the aggregate summary row (total/synced/syncing/needs-attention). */
   @property({ type: Boolean, attribute: 'hide-summary', reflect: true }) hideSummary = false;
@@ -444,7 +445,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   override render(): TemplateResult {
     const sources = this.normalizedSources;
-    const heading = this.label || this.localize('knowledgeBaseHeading');
+    const heading = this.label == null ? this.localize('knowledgeBaseHeading') : this.label;
     return html`
       <div part="base">
         <div part="toolbar">

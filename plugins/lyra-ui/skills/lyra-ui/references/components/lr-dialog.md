@@ -282,13 +282,13 @@ const ok = await confirm({
   title: "Delete conversation?",
   description: "This cannot be undone.",
   confirmLabel: "Delete",
-  tone: "danger",
+  variant: "danger",
 });
 if (ok) deleteConversation();
 ```
 
 `confirm(options: ConfirmOptions): Promise<boolean>` where
-`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; tone?: 'neutral' | 'danger' /* = 'neutral' */ }`.
+`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */; tone?: 'neutral' | 'danger' /* @deprecated, use variant */ }`.
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
@@ -298,8 +298,9 @@ of the call and removes it once settled, rather than reusing a persistent page-l
 (contrast `lr-toast`'s `toaster.ts`). Concurrent calls are distinct dialogs in the shared overlay
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
-a direct light-DOM `<p>`. `tone: 'danger'` fills the confirm button with `--lr-color-danger` instead
-of `--lr-color-brand`, for destructive actions. Confirm/cancel actions deliberately use native
+a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
+instead of `--lr-color-brand`, for destructive actions. The deprecated `tone` option is a one-major
+back-compat alias for `variant`; `variant` wins when both are set. Confirm/cancel actions deliberately use native
 inline-styled `<button>` elements so this helper does not register or import the broader button
 component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
 states as every other control in the library: a hover/pressed fill mixed toward

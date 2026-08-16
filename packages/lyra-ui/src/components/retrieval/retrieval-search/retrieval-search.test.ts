@@ -687,6 +687,22 @@ describe("accessible naming", () => {
     ).to.equal(null);
     expect(el3.getAttribute("aria-label")).to.equal("Support search");
   });
+
+  it("honors an explicitly empty label as genuinely empty, distinct from omitting it", async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search></lr-retrieval-search>`
+    )) as LyraRetrievalSearch;
+    expect(el.label).to.equal(undefined);
+    expect(
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+    ).to.equal("Retrieval search");
+
+    el.label = "";
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+    ).to.equal("");
+  });
 });
 
 describe("localization", () => {

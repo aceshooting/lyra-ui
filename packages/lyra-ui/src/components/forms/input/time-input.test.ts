@@ -290,7 +290,7 @@ describe('lr-time-input segmented field', () => {
     expect(el.valueAsDate).to.equal(null);
   });
 
-  it('relays focus and blur once when focus crosses the component boundary', async () => {
+  it('relays focus and blur once when focus crosses the component boundary, and never lr-focus/lr-blur', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
     const seen: string[] = [];
     el.addEventListener('focus', () => seen.push('focus'));
@@ -300,7 +300,8 @@ describe('lr-time-input segmented field', () => {
     el.focus();
     await el.updateComplete;
     el.blur();
-    expect(seen).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+    expect(seen).to.deep.equal(['focus', 'blur']);
   });
 
   it('rejects host focus while directly or fieldset disabled without relaying focus events', async () => {
@@ -314,7 +315,6 @@ describe('lr-time-input segmented field', () => {
     for (const el of [direct, inherited]) {
       const seen: string[] = [];
       el.addEventListener('focus', () => seen.push('focus'));
-      el.addEventListener('lr-focus', () => seen.push('lr-focus'));
       el.focus();
       await el.updateComplete;
       expect(el.shadowRoot!.activeElement === null).to.equal(true);
@@ -995,8 +995,8 @@ describe('lr-time-input segment editing edge cases', () => {
       contains: () => false,
     });
     const seen: string[] = [];
-    el.addEventListener('lr-focus', () => seen.push('lr-focus'));
-    el.addEventListener('lr-blur', () => seen.push('lr-blur'));
+    el.addEventListener('focus', () => seen.push('focus'));
+    el.addEventListener('blur', () => seen.push('blur'));
 
     const focusEvent = new FocusEvent('focus', {
       bubbles: true,
@@ -1004,7 +1004,7 @@ describe('lr-time-input segment editing edge cases', () => {
       relatedTarget: fakeElement as unknown as EventTarget,
     });
     segment(el, 'hour').dispatchEvent(focusEvent);
-    expect(seen).to.deep.equal(['lr-focus']);
+    expect(seen).to.deep.equal(['focus']);
 
     const blurEvent = new FocusEvent('blur', {
       bubbles: true,
@@ -1012,7 +1012,7 @@ describe('lr-time-input segment editing edge cases', () => {
       relatedTarget: fakeElement as unknown as EventTarget,
     });
     segment(el, 'hour').dispatchEvent(blurEvent);
-    expect(seen).to.deep.equal(['lr-focus', 'lr-blur']);
+    expect(seen).to.deep.equal(['focus', 'blur']);
   });
 });
 
@@ -1148,8 +1148,8 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
     expect((el.shadowRoot!.activeElement) === (segment(el, 'dayPeriod'))).to.equal(true);
     let focusRelays = 0;
     let blurRelays = 0;
-    el.addEventListener('lr-focus', () => focusRelays++);
-    el.addEventListener('lr-blur', () => blurRelays++);
+    el.addEventListener('focus', () => focusRelays++);
+    el.addEventListener('blur', () => blurRelays++);
 
     el.setAttribute('hour-format', '24');
     await el.updateComplete;

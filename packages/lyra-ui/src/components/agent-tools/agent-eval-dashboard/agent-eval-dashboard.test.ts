@@ -63,6 +63,23 @@ describe('lr-agent-eval-dashboard', () => {
     expect(decorative.shadowRoot!.querySelector('section')!.getAttribute('aria-label')).to.equal('');
   });
 
+  it('distinguishes an omitted label from an explicit empty override on the heading', async () => {
+    const omitted = (await fixture(html`
+      <lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }}></lr-agent-eval-dashboard>
+    `)) as LyraAgentEvalDashboard;
+    expect(omitted.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Evaluation overview');
+
+    const explicitEmpty = (await fixture(html`
+      <lr-agent-eval-dashboard label=""></lr-agent-eval-dashboard>
+    `)) as LyraAgentEvalDashboard;
+    expect(explicitEmpty.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('');
+
+    const explicitOverride = (await fixture(html`
+      <lr-agent-eval-dashboard label="Custom heading"></lr-agent-eval-dashboard>
+    `)) as LyraAgentEvalDashboard;
+    expect(explicitOverride.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Custom heading');
+  });
+
   it('formats percent, unit, and currency metrics with the effective locale and currency', async () => {
     const el = (await fixture(html`
       <lr-agent-eval-dashboard

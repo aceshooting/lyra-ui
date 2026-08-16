@@ -91,9 +91,10 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   @property({ type: Number, attribute: 'top-k' }) topK = 10;
   /** Controlled chunk id highlighted across every set that contains it. */
   @property({ attribute: 'selected-chunk-id' }) selectedChunkId = '';
-  /** Fallback name for the comparison region. A non-empty host `aria-label` makes the host the
-   *  sole overall owner; an explicitly empty host label stays empty on the region. */
-  @property() label = '';
+  /** Fallback name for the comparison region. Omitting it falls back to a localized default; an
+   *  explicit empty string clears it. A non-empty host `aria-label` makes the host the sole
+   *  overall owner; an explicitly empty host label stays empty on the region. */
+  @property() label?: string;
 
   private readonly headingIdPrefix = `lr-retrieval-compare-${++retrievalCompareInstance}`;
 
@@ -236,7 +237,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     const sets = this.normalizedSets;
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize('retrievalCompareLabel')
+      this.label == null ? this.localize('retrievalCompareLabel') : this.label
     );
     const role = retrievalSemanticRole(this, 'region');
     if (!sets.length) {

@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
-import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
+import { LyraResourceLimitError, LyraUserFacingError } from '../../../internal/resource-loader.js';
 import './archive-viewer.js';
 import type { LyraArchiveViewer } from './archive-viewer.js';
 import type JSZipType from 'jszip';
@@ -323,7 +323,11 @@ describe('lr-archive-viewer', () => {
       ])) as CustomEvent<{ error: unknown }> | null;
       expect(event).to.not.be.null;
       if (!event) return;
-      expect(event.detail.error).to.be.instanceOf(Error);
+      // Matches every sibling viewer's identical unsafe-source-URL case (calendar-viewer,
+      // contact-viewer, csv-viewer, dataset-viewer, document-preview): a LyraUserFacingError, not
+      // a plain Error, so a consumer's error handler can distinguish an intentionally-refused,
+      // already-localized message from an unexpected failure.
+      expect(event.detail.error).to.be.instanceOf(LyraUserFacingError);
       await el.updateComplete;
       expect(fetchCalls).to.equal(0);
       expect(errorCount).to.equal(1);

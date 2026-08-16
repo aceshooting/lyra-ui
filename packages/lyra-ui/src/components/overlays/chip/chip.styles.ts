@@ -71,14 +71,20 @@ export const styles = css`
     --_lr-chip-gap: var(--lr-space-2xs);
     --_lr-chip-icon-size: var(--lr-font-size-xs);
   }
-  :host([size='s']) {
+  /* 'small'/'large' are the Web Awesome/Shoelace spellings of these same two tiers -- accepted
+     verbatim by CHIP_SIZE (chip.class.ts) rather than normalised away, same precedent as
+     sizes.styles.ts/contextual-vocabulary.styles.ts. 'medium' needs no rule of its own: it is
+     the default tier already declared on :host above, exactly like the unaliased 'm'. */
+  :host([size='s']),
+  :host([size='small']) {
     --_lr-chip-font-size: var(--lr-font-size-xs);
     --_lr-chip-padding-block: var(--lr-size-0-125rem);
     --_lr-chip-padding-inline: var(--lr-size-0-375rem);
     --_lr-chip-gap: var(--lr-space-2xs);
     --_lr-chip-icon-size: var(--lr-font-size-xs);
   }
-  :host([size='l']) {
+  :host([size='l']),
+  :host([size='large']) {
     --_lr-chip-font-size: var(--lr-font-size-m);
     --_lr-chip-padding-block: var(--lr-size-0-375rem);
     --_lr-chip-padding-inline: var(--lr-space-m);

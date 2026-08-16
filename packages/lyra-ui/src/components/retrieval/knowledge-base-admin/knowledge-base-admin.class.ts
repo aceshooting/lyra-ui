@@ -81,8 +81,9 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
    * contract. */
   @property({ attribute: 'active-tab', reflect: true })
   activeTab: KnowledgeBaseAdminTab = 'sources';
-  /** Accessible name and visible heading. */
-  @property() label = '';
+  /** Accessible name and visible heading. Omitted falls back to a localized default; an
+   *  explicitly empty `label` is used as-is. */
+  @property() label?: string;
   /** Hides the ingestion tab and queue. An active/focused ingestion tab moves to Sources. */
   @property({ type: Boolean, attribute: 'hide-ingestion' }) hideIngestion =
     false;
@@ -168,7 +169,8 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   }
 
   override render(): TemplateResult {
-    const visibleLabel = this.label || this.localize('knowledgeBaseAdminLabel');
+    const visibleLabel =
+      this.label == null ? this.localize('knowledgeBaseAdminLabel') : this.label;
     const tab: KnowledgeBaseAdminTab =
       this.activeTab === 'ingestion' && !this.hideIngestion
         ? 'ingestion'

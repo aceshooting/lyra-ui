@@ -400,6 +400,25 @@ it('names the inner group from label or the localized default without duplicatin
   expect(withAria.getAttribute('aria-label')).to.equal('Custom');
 });
 
+it('keeps an explicitly empty label genuinely empty instead of falling back to the localized default', async () => {
+  const withUnsetLabel = (await fixture(
+    html`<lr-neighbor-list .rows=${rows}></lr-neighbor-list>`
+  )) as LyraNeighborList;
+  await withUnsetLabel.updateComplete;
+  expect(withUnsetLabel.label).to.be.undefined;
+
+  const withEmptyLabel = (await fixture(
+    html`<lr-neighbor-list label="" .rows=${rows}></lr-neighbor-list>`
+  )) as LyraNeighborList;
+  await withEmptyLabel.updateComplete;
+  expect(withEmptyLabel.label).to.equal('');
+  expect(
+    withEmptyLabel
+      .shadowRoot!.querySelector('[part="base"]')!
+      .getAttribute('aria-label')
+  ).to.equal('');
+});
+
 it('keeps exactly one stable owner across explicit-empty and dynamic host naming', async () => {
   const el = (await fixture(
     html`<lr-neighbor-list

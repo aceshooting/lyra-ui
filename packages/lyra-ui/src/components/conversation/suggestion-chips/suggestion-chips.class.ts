@@ -84,8 +84,9 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   /** Wraps into multiple rows instead of a single horizontally scrollable line. */
   @property({ type: Boolean, reflect: true }) wrap = false;
 
-  /** Accessible name for the group. Defaults to the localized `suggestionsLabel`. */
-  @property() label = '';
+  /** Accessible name for the group. Optional. Omitting it localizes the default `suggestionsLabel`
+   *  message; an explicit empty string renders no visible/accessible label. */
+  @property() label?: string;
 
   @state() private activeIndex = 0;
   private pendingFocus?: PendingSuggestionFocus;
@@ -223,7 +224,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   override render(): TemplateResult {
     const suggestions = this.effectiveSuggestions;
     if (suggestions.length === 0) return html``;
-    const label = this.label || this.localize('suggestionsLabel');
+    const label = this.label == null ? this.localize('suggestionsLabel') : this.label;
     const ariaLabel = this.getAttribute('aria-label') ?? label;
     const chips = repeat(
       suggestions,

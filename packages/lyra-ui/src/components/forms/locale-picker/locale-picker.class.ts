@@ -119,8 +119,6 @@ export interface LyraLocalePickerEventMap {
   'lr-change': CustomEvent<LyraLocaleChangeDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 
 /**
@@ -167,8 +165,6 @@ export interface LyraLocalePickerEventMap {
  *   `event.preventDefault()` stops the automatic `setLyraLocale()` call without reverting `value`.
  * @event blur - Native `FocusEvent` relayed from the internal trigger button.
  * @event focus - Native `FocusEvent` relayed from the internal trigger button.
- * @event lr-blur - Lyra alias emitted after the native `blur` relay.
- * @event lr-focus - Lyra alias emitted after the native `focus` relay.
  * @event lr-invalid - The locale picker failed a validity check; cancelable. Calling
  *   `preventDefault()` also cancels the native `invalid` event it aliases, suppressing the
  *   browser's own validation bubble and `reportValidity()`'s focus/scroll.
@@ -762,7 +758,6 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.syncCustomStates();
     this.hide();
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
   private onTriggerFocus = (event: FocusEvent): void => {
     if (this.liveDisabled) {
@@ -770,7 +765,6 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onLabelSlotChange = (e: Event): void => {

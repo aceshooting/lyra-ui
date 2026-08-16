@@ -198,7 +198,6 @@ export class LyraSparkline extends LyraElement {
   private accessibleName(values: readonly number[]): string {
     if (this.label) return this.label;
     if (this.accessibleLabel) return this.accessibleLabel;
-    if (this.data.trim()) return '';
 
     const last = values.at(-1);
     if (last === undefined) return this.localize('noData');

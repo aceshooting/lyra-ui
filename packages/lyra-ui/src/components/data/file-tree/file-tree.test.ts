@@ -120,6 +120,16 @@ describe('lr-file-tree', () => {
     expect(tree.label).to.equal('Files');
   });
 
+  it('treats an explicitly empty label as a real override, distinct from an omitted one', async () => {
+    const explicit = (await fixture(html`<lr-file-tree label=""></lr-file-tree>`)) as LyraFileTree;
+    const explicitTree = explicit.shadowRoot!.querySelector('lr-tree')!;
+    expect(explicitTree.label).to.equal('');
+
+    const omitted = (await fixture(html`<lr-file-tree></lr-file-tree>`)) as LyraFileTree;
+    const omittedTree = omitted.shadowRoot!.querySelector('lr-tree')!;
+    expect(omittedTree.label).to.equal('Files');
+  });
+
   it('renders a per-instance .strings override in the internal tree accessible name', async () => {
     const el = (await fixture(
       html`<lr-file-tree .strings=${{ fileTreeLabel: 'Localized file tree' }}></lr-file-tree>`,

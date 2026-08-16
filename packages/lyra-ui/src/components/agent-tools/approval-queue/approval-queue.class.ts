@@ -92,8 +92,9 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   @property({ type: Boolean, reflect: true }) open = false;
   /** Allows argument editing in the nested approval dialog. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter }) editable = true;
-  /** Accessible name and visible heading. */
-  @property() label = '';
+  /** Accessible name and visible heading. Optional. Omitting it localizes the default
+   *  `approvalQueueLabel` message; an explicit empty string renders no visible/accessible label. */
+  @property() label?: string;
 
   private get normalizedRequests(): ToolApprovalRequest[] {
     return firstByIdentity(Array.isArray(this.requests) ? this.requests : [], (request) => request.id);
@@ -182,7 +183,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.label || this.localize('approvalQueueLabel');
+    const label = this.label == null ? this.localize('approvalQueueLabel') : this.label;
     const request = this.selectedRequest;
     const requests = this.normalizedRequests;
     const pendingCount = this.pendingCount();

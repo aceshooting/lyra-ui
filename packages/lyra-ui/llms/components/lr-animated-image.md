@@ -46,8 +46,7 @@ automatically under `prefers-reduced-motion: reduce`.
 an empty `src`), `lr-play`/`lr-pause` (real transitions of the effective `playing` value only, so a
 `play = true` that reduced motion blocks emits nothing, while a live reduced-motion change that
 forces a freeze does emit `lr-pause`). Internal `focus`/`blur` are relayed exactly once as
-owner-realm native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-the `lr-focus`/`lr-blur` compatibility aliases.
+owner-realm native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`).
 
 **Slots:** `play-icon`, `pause-icon` — decorative custom glyphs for the frozen/paused and playing
 states. Both stay mounted and are toggled via the native `hidden` attribute. Their assigned content

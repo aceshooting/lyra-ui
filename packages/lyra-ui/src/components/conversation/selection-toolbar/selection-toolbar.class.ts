@@ -554,6 +554,10 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     void this.syncRovingStops(index);
   };
 
+  private containNativeEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private onToolbarFocusOut = (event: FocusEvent): void => {
     const destination = event.relatedTarget;
     if (
@@ -848,6 +852,8 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       style=${styleMap(this.coordinates())}
       @focusin=${this.onToolbarFocusIn}
       @focusout=${this.onToolbarFocusOut}
+      @focus=${this.containNativeEvent}
+      @blur=${this.containNativeEvent}
       @keydown=${this.onToolbarKeyDown}
     >
       ${repeat(

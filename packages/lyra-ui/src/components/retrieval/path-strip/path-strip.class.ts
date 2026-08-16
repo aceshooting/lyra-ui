@@ -87,8 +87,9 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   /** Rendered in array order; alternation is the intended shape but not enforced. */
   @property({ attribute: false }) path: readonly LyraPathElement[] = [];
   /** Accessible name for the stable group when the host has no `aria-label`; falls back to
-   *  localized `pathStripLabel`. An explicitly empty host label stays empty. */
-  @property() label = '';
+   *  localized `pathStripLabel` when omitted. An explicitly empty host label stays empty, and so
+   *  does an explicitly empty `label`. */
+  @property() label?: string;
 
   @state() private activeIndex = 0;
   @state() private liveText = '';
@@ -300,7 +301,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     const path = this.pathOccurrences;
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize('pathStripLabel')
+      this.label == null ? this.localize('pathStripLabel') : this.label
     );
     const role = retrievalSemanticRole(this, 'group');
     if (path.length === 0) {

@@ -101,12 +101,14 @@ export class LyraBreadcrumb extends LyraElement {
    *  copied onto it. Both spellings work: an `aria-label` attribute on `<lr-breadcrumb>` (which the
    *  attribute mapping also surfaces here) and a plain property assignment
    *  (`el.accessibleLabel = 'Docs trail'`). Wins over `label` and over the localized default
-   *  ("Breadcrumb"); an explicitly empty `aria-label` attribute stays empty. */
-  @property({ attribute: 'aria-label' }) accessibleLabel = '';
+   *  ("Breadcrumb"); an explicitly empty `aria-label` attribute or an explicitly empty
+   *  `accessibleLabel`/`label` property assignment stays empty rather than falling through. */
+  @property({ attribute: 'aria-label' }) accessibleLabel?: string;
 
   /** Accessible name matching both pinned upstream breadcrumb contracts. A host `aria-label`
-   * remains the highest-priority override. */
-  @property() label = '';
+   * remains the highest-priority override. An explicitly empty string stays empty rather than
+   * falling back to the localized default. */
+  @property() label?: string;
 
   private generatedSeparators = new Map<Element, Array<{ source: Element; clone: Element }>>();
   private separatorObserver?: MutationObserver;
@@ -211,7 +213,9 @@ export class LyraBreadcrumb extends LyraElement {
     const hostLabel = this.getAttribute('aria-label');
     const label =
       hostLabel === null
-        ? this.accessibleLabel || this.label || this.localize('breadcrumb')
+        ? this.accessibleLabel == null
+          ? (this.label == null ? this.localize('breadcrumb') : this.label)
+          : this.accessibleLabel
         : hostLabel;
     return html`<nav part="base breadcrumb" aria-label=${label}>
       <div part="list" role="list"><slot @slotchange=${this.syncSeparators}></slot></div>

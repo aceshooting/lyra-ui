@@ -371,15 +371,15 @@ describe('lr-terminal', () => {
     expect(leaked).to.be.false;
   });
 
-  it('keeps the nested log purpose-named instead of cloning non-empty or empty host labels', async () => {
+  it('mirrors a non-empty host aria-label onto the nested log, falling back to the generic label when unset', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
     expect(viewport.getAttribute('role')).to.equal('log');
-    expect(viewport.getAttribute('aria-label')).to.be.a('string').and.not.equal('');
+    expect(viewport.getAttribute('aria-label')).to.equal('Terminal output');
     const labeled = (await fixture(html`<lr-terminal aria-label="Build output"></lr-terminal>`)) as LyraTerminal;
     const labeledViewport = labeled.shadowRoot!.querySelector('[part="viewport"]')!;
     expect(labeled.getAttribute('aria-label')).to.equal('Build output');
-    expect(labeledViewport.getAttribute('aria-label')).to.equal('Terminal output');
+    expect(labeledViewport.getAttribute('aria-label')).to.equal('Build output');
 
     labeled.setAttribute('aria-label', '');
     await labeled.updateComplete;

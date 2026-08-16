@@ -54,8 +54,7 @@ size used by the button's form and chrome logic.
 **Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
 then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
 aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
-not cross the shadow boundary, each followed by its prefixed alias `lr-focus` / `lr-blur`
-(no detail). `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
+not cross the shadow boundary. `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
 its own alias.
 
 **Slots:** default (label text), `start` (leading content, typically an icon), and `end` (trailing

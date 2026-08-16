@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Scrollable pan-and-zoom surface for slotted content or a safe image source. Scaling participates in layout so the entire painted footprint remains reachable; rejected sources fall back to the slot. Viewport focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
+          'Scrollable pan-and-zoom surface for slotted content or a safe image source. Scaling participates in layout so the entire painted footprint remains reachable; rejected sources fall back to the slot. Viewport focus transitions relay exactly one native `FocusEvent`.',
       },
     },
   },

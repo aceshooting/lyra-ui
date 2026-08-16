@@ -206,7 +206,7 @@ playback for time-series scrubbing, without implying native audio/video playback
 **Events:** `lr-play`, `lr-pause` (no detail), `lr-sequence-step`
 (`detail: LyraSequencePlaybackStepDetail { currentIndex }`, fired on every tick and manual step);
 internal `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and
-composed, preserving `relatedTarget`), followed by `lr-focus`/`lr-blur`.
+composed, preserving `relatedTarget`).
 
 **Class and event types:** `LyraSequencePlayback`, `LyraSequencePlaybackEventMap`, and
 `LyraSequencePlaybackStepDetail`. The former generic `LyraPlayback`, `<lr-playback>`, `length`,
@@ -861,8 +861,8 @@ rather than a second interactive control; the native zoom buttons remain the sol
 actions.
 
 **Events:** internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
-`FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-`lr-focus`/`lr-blur`; native `load` and `error` are relayed exactly once from the current iframe
+`FocusEvent`s (bubbling and composed, preserving `relatedTarget`);
+native `load` and `error` are relayed exactly once from the current iframe
 generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes
 replace the iframe, so a late event from an earlier document is ignored; detached frames do not
 notify.
@@ -935,7 +935,7 @@ component's own keyboard target — a bare host `.focus()` would otherwise be a 
 
 **Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
 relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`), followed by `lr-focus`/`lr-blur`.
+`relatedTarget`).
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
 `reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
@@ -1353,7 +1353,7 @@ capture UI of its own, the host owns everything from here (there's no single rig
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
 blob to `<lr-attachment-chip>`). `focus`/`blur` from the active single- or multi-capability trigger
 are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`), followed by `lr-focus`/`lr-blur`; the hidden file input is not the focus owner.
+`relatedTarget`); the hidden file input is not the focus owner.
 The composed dropdown/menu implementation lifecycle, item-state, and selection events are
 contained inside the trigger. Only the attachment events listed above cross the host boundary.
 
@@ -1540,8 +1540,7 @@ automatically under `prefers-reduced-motion: reduce`.
 an empty `src`), `lr-play`/`lr-pause` (real transitions of the effective `playing` value only, so a
 `play = true` that reduced motion blocks emits nothing, while a live reduced-motion change that
 forces a freeze does emit `lr-pause`). Internal `focus`/`blur` are relayed exactly once as
-owner-realm native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-the `lr-focus`/`lr-blur` compatibility aliases.
+owner-realm native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`).
 
 **Slots:** `play-icon`, `pause-icon` — decorative custom glyphs for the frozen/paused and playing
 states. Both stay mounted and are toggled via the native `hidden` attribute. Their assigned content
@@ -2077,7 +2076,7 @@ events are also relayed exactly once from the host as native `Event` instances. 
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
 `lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are relayed
 exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`), followed by `lr-focus`/`lr-blur`. `lr-text-select` is not part of this
+`relatedTarget`). `lr-text-select` is not part of this
 player's event contract: transcript rows live inside the embedded virtual list's nested shadow
 root, so no selection binding is installed.
 
@@ -2191,7 +2190,7 @@ play/pause control (absent, and therefore a no-op, under `controls="none"`).
 non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
 immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
 play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
-(bubbling and composed, preserving `relatedTarget`), followed by `lr-focus`/`lr-blur`.
+(bubbling and composed, preserving `relatedTarget`).
 
 **Slots:** the default slot accepts direct `<source>` and `<track>` children;
 `controls-after-play`, `controls-start`, `exit-fullscreen-icon`, `fullscreen-icon`, `mute-icon`,
@@ -2290,8 +2289,8 @@ the optional-arrow navigation cursor (falling back to the first enabled row). Th
 convenience; every enabled row is independently reachable through ordinary sequential Tab order.
 
 **Events:** internal `focus`/`blur` from a playlist row are relayed exactly once as owner-realm
-native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-`lr-focus`/`lr-blur`. `lr-video-change` is bubbling and composed but non-cancelable, with exact
+native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`).
+`lr-video-change` is bubbling and composed but non-cancelable, with exact
 detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, mutable plain-data snapshot with
 exact shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains
 fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;

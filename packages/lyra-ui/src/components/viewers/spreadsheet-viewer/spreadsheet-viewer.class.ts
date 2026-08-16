@@ -216,6 +216,27 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   override disconnectedCallback(): void {
     this.generation++;
     this.cancelPendingAnimationFrames();
+    // Reset rather than leaving a stale "loaded" state behind: without this, a reconnect with an
+    // unchanged `src` (connectedCallback() re-triggers the load below, but only once the next
+    // update completes) would keep rendering the previously-loaded sheet grid as if it were still
+    // live -- interactive and scrollable against data that's about to be replaced -- instead of an
+    // idle/loading state during the reload window. Mirrors svg-viewer.class.ts's unconditional
+    // reset (this viewer, like svg-viewer, has no inline-data alternative to `src` that would make
+    // the reset conditional, unlike xml-viewer/notebook-viewer's own disconnectedCallback).
+    this.fetchState = { kind: 'idle' };
+    // Mirrors willUpdate()'s own `changed.has('src')` reset block -- the same dependent state a
+    // `src` change already clears must not survive a disconnect/reconnect cycle either. Deliberately
+    // NOT routed through `pendingSearchResetEvent`: that flag is only ever consumed inside
+    // `updated()`'s `changed.has('src')` branch, which a same-`src` reconnect never re-triggers, so
+    // setting it here could leave it stuck (or attribute a stale reset to a later, unrelated `src`
+    // change); a disconnect resets state silently, matching every sibling viewer's own
+    // disconnectedCallback (none of them emit an event from here either).
+    this.searchQuery = '';
+    this.searchMatches = [];
+    this.searchMatchCountExact = true;
+    this.searchActiveIndex = -1;
+    this.activeRowKey = '';
+    this.activeSheetIndex = 0;
     this.announcements.disconnect();
     super.disconnectedCallback();
   }

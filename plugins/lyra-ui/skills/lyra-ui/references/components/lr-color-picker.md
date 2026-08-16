@@ -140,8 +140,8 @@ during a drag is authoritative instead: it retires the gesture and remains curre
 Also emitted are `lr-show` / `lr-after-show` and `lr-hide` / `lr-after-hide` (the panel opened
 or closed — never emitted for a declaratively-open picker's first render, nor for a close caused by
 disconnection; because this panel has no opening animation, each `lr-after-*` immediately follows
-its matching lifecycle event in the completed update), and `focus`/`blur` plus their migrated
-`lr-focus`/`lr-blur` aliases (exactly one bubbling/composed native `FocusEvent` relay when focus
+its matching lifecycle event in the completed update), and `focus`/`blur`
+(exactly one bubbling/composed native `FocusEvent` relay when focus
 enters or leaves the internal controls in either popup or inline mode), and `lr-invalid`
 (no detail) once when native validity fails. A change that
 doesn't move the serialized value emits nothing, so dragging within a single rounded colour is

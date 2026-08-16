@@ -170,6 +170,22 @@ describe('lr-env-list', () => {
     expect(base().getAttribute('aria-label')).to.equal('Environment');
   });
 
+  it('treats an explicitly empty label as a real override, distinct from an omitted one', async () => {
+    const explicit = (await fixture(
+      html`<lr-env-list label="" .entries=${[{ name: 'NODE_ENV', value: 'production', secret: false }]}></lr-env-list>`,
+    )) as LyraEnvList;
+    await explicit.updateComplete;
+    expect(explicit.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+
+    const omitted = (await fixture(
+      html`<lr-env-list .entries=${[{ name: 'NODE_ENV', value: 'production', secret: false }]}></lr-env-list>`,
+    )) as LyraEnvList;
+    await omitted.updateComplete;
+    expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Environment variables',
+    );
+  });
+
   it('forwards a host aria-label to an empty-state semantic owner', async () => {
     const el = (await fixture(
       html`<lr-env-list aria-label="Deployment variables"></lr-env-list>`,

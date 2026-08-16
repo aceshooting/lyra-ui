@@ -24,7 +24,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Experimental direct-child video playlist with reversible child-state ownership, safe current-video switching, ended-only automatic advancement, repeat modes, fresh detached mutable change snapshots, and ordinary Tab-reachable row buttons with optional arrow shortcuts. Visible durations are programmatic row descriptions. Row focus transitions relay exactly one native `FocusEvent` plus the `lr-focus`/`lr-blur` alias.',
+          'Experimental direct-child video playlist with reversible child-state ownership, safe current-video switching, ended-only automatic advancement, repeat modes, fresh detached mutable change snapshots, and ordinary Tab-reachable row buttons with optional arrow shortcuts. Visible durations are programmatic row descriptions. Row focus transitions relay exactly one native `FocusEvent`.',
       },
     },
   },

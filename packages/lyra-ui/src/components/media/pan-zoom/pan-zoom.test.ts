@@ -225,11 +225,9 @@ it('forwards host focus()/blur()/click() to the keyboard-zoomable viewport', asy
   });
   wrapper.addEventListener('lr-focus', () => {
     aliases.push('lr-focus');
-    sequence.push('lr-focus');
   });
   wrapper.addEventListener('lr-blur', () => {
     aliases.push('lr-blur');
-    sequence.push('lr-blur');
   });
 
   el.focus();
@@ -247,8 +245,8 @@ it('forwards host focus()/blur()/click() to the keyboard-zoomable viewport', asy
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
-  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+  expect(sequence).to.deep.equal(['focus', 'blur']);
+  expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
 });
 
 it('preserves host aria-label presence without duplicating it on the nested semantic owner', async () => {

@@ -46,8 +46,6 @@ export interface LyraSequencePlaybackEventMap {
   'lr-sequence-step': CustomEvent<LyraSequencePlaybackStepDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 /**
  * `<lr-sequence-playback>` — steps a current index through `[0, itemCount)` on a fixed
@@ -62,8 +60,6 @@ export interface LyraSequencePlaybackEventMap {
  *   composed native event.
  * @event {FocusEvent} focus - Relayed once from an internal playback control as a bubbling,
  *   composed native event.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @csspart base - The playback controls wrapper.
  * @csspart play-button - The play/pause button.
  * @csspart slider - The playback position slider.
@@ -315,12 +311,10 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
 
   private onControlFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onControlBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   override render(): TemplateResult {

@@ -110,6 +110,29 @@ it("forwards a host aria-label to the internal navigation landmark", async () =>
   ).to.equal("Search result pages");
 });
 
+it("distinguishes an omitted label from an explicit empty override on the navigation landmark", async () => {
+  const omitted = await pagination(
+    html` <lr-pagination total="95"></lr-pagination> `
+  );
+  expect(
+    omitted.shadowRoot!.querySelector("nav")!.getAttribute("aria-label")
+  ).to.equal("Pagination");
+
+  const explicitEmpty = await pagination(
+    html` <lr-pagination total="95" label=""></lr-pagination> `
+  );
+  expect(
+    explicitEmpty.shadowRoot!.querySelector("nav")!.getAttribute("aria-label")
+  ).to.equal("");
+
+  const explicitOverride = await pagination(
+    html` <lr-pagination total="95" label="Result pages"></lr-pagination> `
+  );
+  expect(
+    explicitOverride.shadowRoot!.querySelector("nav")!.getAttribute("aria-label")
+  ).to.equal("Result pages");
+});
+
 it("is controlled and emits the requested page without mutating page itself", async () => {
   const el = await pagination();
   const next = el.shadowRoot!.querySelector(

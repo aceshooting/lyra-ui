@@ -103,9 +103,10 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   /** Controlled evaluation slice. An unavailable value is preserved and renders an explicit
    * localized state until the host changes it or supplies a matching run. */
   @property() slice = '';
-  /** Visible dashboard heading and fallback overall-region name. A non-empty host `aria-label`
+  /** Visible dashboard heading and fallback overall-region name. Omitting it falls back to a
+   *  localized default; an explicit empty string clears both. A non-empty host `aria-label`
    *  makes the host the sole overall owner; an explicitly empty host label stays empty. */
-  @property() label = '';
+  @property() label?: string;
   /** Whether a trend chart is rendered when an active metric and matching runs exist. */
   @property({
     type: Boolean,
@@ -221,7 +222,8 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     const metrics = this.normalizedMetrics;
     const runs = this.normalizedRuns;
     const slices = this.slices(runs);
-    const visibleLabel = this.label || this.localize('ragEvalDashboardLabel');
+    const visibleLabel =
+      this.label == null ? this.localize('ragEvalDashboardLabel') : this.label;
     const label = retrievalSemanticLabel(this, visibleLabel);
     const role = retrievalSemanticRole(this, 'region');
     if (!runs.length) {

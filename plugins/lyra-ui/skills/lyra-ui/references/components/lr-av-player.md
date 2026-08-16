@@ -90,7 +90,7 @@ events are also relayed exactly once from the host as native `Event` instances. 
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
 `lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are relayed
 exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`), followed by `lr-focus`/`lr-blur`. `lr-text-select` is not part of this
+`relatedTarget`). `lr-text-select` is not part of this
 player's event contract: transcript rows live inside the embedded virtual list's nested shadow
 root, so no selection binding is installed.
 

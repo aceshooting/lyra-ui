@@ -182,6 +182,22 @@ it("keeps one populated owner across explicit-empty and dynamic host naming", as
   expect(group().getAttribute("role")).to.equal(null);
 });
 
+it("honors an explicitly empty label as genuinely empty, distinct from omitting it", async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`
+  )) as LyraRetrievalResults;
+  expect(el.label).to.equal(undefined);
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+  ).to.equal("Retrieved chunks");
+
+  el.label = "";
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+  ).to.equal("");
+});
+
 it("renders a neutral error message and announces only later errors from light DOM", async () => {
   const el = (await fixture(
     html`<lr-retrieval-results

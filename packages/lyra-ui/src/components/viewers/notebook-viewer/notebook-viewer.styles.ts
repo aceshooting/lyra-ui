@@ -37,6 +37,50 @@ export const styles = css`
   lr-virtual-list::part(cell-active) {
     background: var(--lr-notebook-viewer-active-bg, var(--lr-color-brand-quiet));
   }
+  /* Tone-specific rules below only override the custom property, not background directly -- the
+     base rule here both declares the accent-tone default and is the only rule that reads the
+     property into background, so whichever tone-specific rule matches alongside it (later in
+     source order, same specificity) wins the property's value. Mirrors docx-viewer.styles.ts's
+     identical --_lr-docx-viewer-highlight-background tone-override pattern. */
+  lr-virtual-list::part(cell-highlighted) {
+    --_lr-notebook-viewer-highlight-background: var(
+      --lr-notebook-viewer-highlight-accent-background,
+      var(--lr-color-brand-quiet)
+    );
+    background: var(--_lr-notebook-viewer-highlight-background);
+  }
+  lr-virtual-list::part(cell-highlighted-success) {
+    --_lr-notebook-viewer-highlight-background: var(
+      --lr-notebook-viewer-highlight-success-background,
+      var(--lr-color-success-quiet)
+    );
+  }
+  lr-virtual-list::part(cell-highlighted-warning) {
+    --_lr-notebook-viewer-highlight-background: var(
+      --lr-notebook-viewer-highlight-warning-background,
+      var(--lr-color-warning-quiet)
+    );
+  }
+  lr-virtual-list::part(cell-highlighted-danger) {
+    --_lr-notebook-viewer-highlight-background: var(
+      --lr-notebook-viewer-highlight-danger-background,
+      var(--lr-color-danger-quiet)
+    );
+  }
+  lr-virtual-list::part(cell-highlighted-neutral) {
+    --_lr-notebook-viewer-highlight-background: var(
+      --lr-notebook-viewer-highlight-neutral-background,
+      var(--lr-color-surface-raised)
+    );
+  }
+  /* Applied alongside cell-highlighted/cell-highlighted-<tone> -- an inset outline (rather than
+     cell-active's plain background swap) so it stays visible layered on top of any highlight tone
+     background above instead of replacing it. */
+  lr-virtual-list::part(cell-highlight-active) {
+    outline: var(--lr-focus-ring-width) solid
+      var(--lr-notebook-viewer-highlight-active-outline, var(--lr-focus-ring-color));
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
   lr-virtual-list::part(cell-gutter) {
     min-inline-size: var(--lr-size-4rem);
     color: var(--lr-color-text-quiet);

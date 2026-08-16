@@ -87,8 +87,6 @@ function isElementValue(value: unknown): value is Element {
 export interface LyraColorPickerEventMap {
   'lr-invalid': CustomEvent<null>;
   'lr-input': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
@@ -145,8 +143,6 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *   `lr-show`.
  * @event {CustomEvent<null>} lr-after-hide - The colour panel finished closing; follows `lr-hide` in the
  *   same update.
- * @event lr-focus - Shoelace-compatible alias emitted when focus enters the control.
- * @event lr-blur - Shoelace-compatible alias emitted when focus leaves the control.
  * @event {FocusEvent} focus - Native-constructor relay when focus enters an internal control;
  *   bubbling and composed across the shadow boundary.
  * @event {FocusEvent} blur - Native-constructor relay when focus leaves the internal controls.
@@ -997,7 +993,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const previous = event.relatedTarget;
     if (isNodeValue(previous) && this.renderRoot.contains(previous)) return;
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onControlBlur = (event: FocusEvent): void => {
@@ -1005,7 +1000,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const next = event.relatedTarget;
     if (isNodeValue(next) && this.renderRoot.contains(next)) return;
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
     // FormAssociated marks the control interacted on the composed focusout boundary. Its custom
     // validity state is not itself a Lit property, so schedule the ARIA projection explicitly.
     this.requestUpdate();

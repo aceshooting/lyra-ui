@@ -26,7 +26,22 @@ it('renders the provenanceEmpty state when provenance is null (the default)', as
     html`<lr-provenance-panel></lr-provenance-panel>`
   )) as LyraProvenancePanel;
   expect(el.provenance).to.equal(null);
+  expect(el.label).to.be.undefined;
   expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
+});
+
+it('keeps an explicitly empty label genuinely empty instead of falling back to the localized default', async () => {
+  const el = (await fixture(
+    html`<lr-provenance-panel
+      label=""
+      .provenance=${provenance}
+    ></lr-provenance-panel>`
+  )) as LyraProvenancePanel;
+  await el.updateComplete;
+  expect(el.label).to.equal('');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('');
 });
 
 it('keeps exactly one stable owner across explicit-empty and dynamic host naming', async () => {

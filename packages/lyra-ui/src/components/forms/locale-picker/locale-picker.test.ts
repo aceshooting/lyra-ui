@@ -158,21 +158,27 @@ it('formResetCallback restores the value-attribute default', async () => {
   expect(el.value).to.equal('fr');
 });
 
-it('relays trigger blur/focus once as native FocusEvents with relatedTarget and aliases', async () => {
+it('relays trigger blur/focus once as native FocusEvents with relatedTarget, and never lr-focus/lr-blur', async () => {
   const el = (await fixture(
     html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
   const outside = document.createElement('button');
-  const focusEvents = Promise.all([oneEvent(el, 'focus'), oneEvent(el, 'lr-focus')]);
+  const aliases: string[] = [];
+  el.addEventListener('lr-focus', () => aliases.push('lr-focus'));
+  el.addEventListener('lr-blur', () => aliases.push('lr-blur'));
+
+  const focusEvent = oneEvent(el, 'focus');
   trigger(el).dispatchEvent(new FocusEvent('focus', { relatedTarget: outside }));
-  const [focus] = await focusEvents;
+  const focus = await focusEvent;
   expect(focus instanceof FocusEvent).to.be.true;
   expect(focus.relatedTarget === outside).to.be.true;
-  const blurEvents = Promise.all([oneEvent(el, 'blur'), oneEvent(el, 'lr-blur')]);
+  const blurEvent = oneEvent(el, 'blur');
   trigger(el).dispatchEvent(new FocusEvent('blur', { relatedTarget: outside }));
-  const [blur] = await blurEvents;
+  const blur = await blurEvent;
   expect(blur instanceof FocusEvent).to.be.true;
   expect(blur.relatedTarget === outside).to.be.true;
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(aliases).to.deep.equal([]);
 });
 
 it('click()/focus()/blur() forward to the internal trigger', async () => {

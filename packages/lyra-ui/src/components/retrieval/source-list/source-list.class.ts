@@ -71,8 +71,10 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
    *  so a message's sources don't eat vertical space until asked for. */
   @property({ type: Boolean, reflect: true }) expanded = false;
 
-  /** Header text used when `label-plural` isn't set, e.g. `"Sources"`. */
-  @property() label = '';
+  /** Header text used when `label-plural` isn't set, e.g. `"Sources"`. Omitting it falls back to
+   *  a localized default; an explicit empty string clears it (still overridden by
+   *  `label-plural` when that's set). */
+  @property() label?: string;
 
   /** Fully consumer-built, already-pluralized header summary, e.g. `"3 sources"`
    *  or `"1 source"` — this component never counts or pluralizes on its own
@@ -285,7 +287,8 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
   override render(): TemplateResult {
     const headerText =
-      this.labelPlural || this.label || this.localize('sourceListDefaultLabel');
+      this.labelPlural ||
+      (this.label == null ? this.localize('sourceListDefaultLabel') : this.label);
 
     return html`
       <div part="base">

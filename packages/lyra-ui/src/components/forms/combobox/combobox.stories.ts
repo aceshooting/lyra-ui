@@ -17,7 +17,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "The internal input relays one owner-realm native focus/blur pair from the host, with lr-focus/lr-blur compatibility aliases. Omit emptyText/loadingText/overflowText to localize status copy; supplied strings (including empty strings) win verbatim, with {n} still interpolated in overflowText.",
+          "The internal input relays one owner-realm native focus/blur pair from the host. Omit emptyText/loadingText/overflowText to localize status copy; supplied strings (including empty strings) win verbatim, with {n} still interpolated in overflowText.",
       },
     },
   },

@@ -93,8 +93,6 @@ Left unset, the built-in star outline/solid pair is unchanged.
   preview silently, with no `end` phase — that teardown wasn't user-driven.
 - `focus` / `blur` — the host-owned slider's ordinary native focus transitions. Like native focus
   events, they do not bubble; listen on the rating itself (or use capture on an ancestor).
-- `lr-focus` / `lr-blur` — bubbling, composed prefixed compatibility aliases (no detail), each
-  fired from the corresponding native host transition.
 - `lr-invalid` — no detail; fired when a validity check finds the rating invalid.
 
 **Methods:** `focus()`, `blur()` and `click()` operate on the host-owned slider and are gated while

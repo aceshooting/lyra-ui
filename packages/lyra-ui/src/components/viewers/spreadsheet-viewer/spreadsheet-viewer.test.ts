@@ -694,6 +694,68 @@ describe('lr-spreadsheet-viewer', () => {
     }
   });
 
+  it('shows idle/loading, not the stale grid, during the reload window after reconnecting', async () => {
+    const original = window.fetch;
+    const value = buffer(GRID_WORKBOOK);
+    let calls = 0;
+    const gate = deferred<Response>();
+    window.fetch = ((): Promise<Response> => {
+      calls++;
+      if (calls === 1) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          arrayBuffer: () => Promise.resolve(value),
+        } as Response);
+      }
+      return gate.promise;
+    }) as typeof window.fetch;
+    try {
+      const el = (await fixture(
+        html`<lr-spreadsheet-viewer
+          src="https://example.test/book.xlsx"
+        ></lr-spreadsheet-viewer>`
+      )) as LyraSpreadsheetViewer;
+      await waitUntil(
+        () =>
+          calls === 1 &&
+          el.shadowRoot!.querySelector('[part="header-row"]') !== null
+      );
+
+      const parent = el.parentElement!;
+      el.remove();
+      // disconnectedCallback() resets fetchState to idle synchronously -- assert it directly,
+      // before any reconnect/re-render could mask a stale value with a freshly loading one.
+      expect(
+        (el as unknown as { fetchState: { kind: string } }).fetchState.kind
+      ).to.equal('idle');
+      parent.append(el);
+      await el.updateComplete;
+
+      // Before the reconnect-triggered second fetch resolves, the previously-loaded sheet grid
+      // must not still be rendered as if it were live/current data.
+      expect(el.shadowRoot!.querySelector('[part="header-row"]') === null).to.be.true;
+      const emptyOrLoading =
+        el.shadowRoot!.querySelector('.empty-note') !== null ||
+        el.shadowRoot!.querySelector('[part="spinner"]') !== null;
+      expect(emptyOrLoading, 'renders idle or loading, not the stale grid').to
+        .be.true;
+
+      gate.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        arrayBuffer: () => Promise.resolve(value),
+      } as Response);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="header-row"]') !== null
+      );
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('rejects cumulative workbook rows across individually valid sheets before rendering', async () => {
     const el = (await fixture(
       html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`

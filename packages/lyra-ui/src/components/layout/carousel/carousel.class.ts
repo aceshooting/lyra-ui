@@ -219,7 +219,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   get slides(): number {
     return this._slides;
   }
-  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  /** Accessible name used when the host has no `aria-label`; omitted falls back to the localized
+   *  `carouselLabel` default. An explicitly empty `accessible-label` is used as-is. */
+  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel:
     | string
     | null = null;
@@ -1385,7 +1387,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const hasPagination = this.pagination && pageTargets.length > 1;
     const label = this.hostAccessibleLabel !== null
       ? this.hostAccessibleLabel
-      : this.accessibleLabel || this.localize('carouselLabel');
+      : this.accessibleLabel == null
+        ? this.localize('carouselLabel')
+        : this.accessibleLabel;
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const orientation = this.effectiveOrientation();
     const perPage = this.pageSize(count);

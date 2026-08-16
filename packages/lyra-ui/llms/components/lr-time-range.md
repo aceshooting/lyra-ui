@@ -62,8 +62,7 @@ native-style composed `change` (no detail) then `lr-change` (`detail: { start, e
 on pointer release, keyboard keyup, handle blur while a changed keyboard gesture is still pending,
 or when a preset button is clicked. A blur commit retires the gesture before the later physical
 keyup, so it cannot emit a duplicate change. The focused handle's native `focus` and `blur` are
-re-dispatched from the host as bubbling, composed events, each followed by its prefixed alias
-`lr-focus` / `lr-blur` (no detail). A failed native validity check emits one bubbling/composed,
+re-dispatched from the host as bubbling, composed events. A failed native validity check emits one bubbling/composed,
 cancelable `lr-invalid` alias; cancelling it cancels the native `invalid` event and suppresses the
 browser's default validation UI.
 

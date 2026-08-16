@@ -96,8 +96,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   /** Above this row count the list renders through an internal `lr-virtual-list`. */
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 100;
   /** Accessible name for the stable group when the host has no `aria-label`; falls back to the
-   *  localized `neighborListLabel` default. An explicitly empty host label stays empty. */
-  @property() label = '';
+   *  localized `neighborListLabel` default when omitted. An explicitly empty host label stays
+   *  empty, and so does an explicitly empty `label`. */
+  @property() label?: string;
 
   /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
    *  own default of `100`) -- a raw `NaN` (e.g. an invalid `virtualize-at` attribute) would
@@ -228,7 +229,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     const sorted = this.sortedRows();
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize('neighborListLabel')
+      this.label == null ? this.localize('neighborListLabel') : this.label
     );
     const role = retrievalSemanticRole(this, 'group');
     if (sorted.length === 0) {

@@ -200,8 +200,7 @@ ownership remain unchanged, so the host can defer dismissal without reconstructi
 `detail: { inputValue }` and is also cancelable: preventing it suppresses the default append/select
 action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are relayed exactly once from the host as owner-realm
-native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`;
-`lr-focus` and `lr-blur` are no-detail prefixed aliases for the same transitions.
+native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
 

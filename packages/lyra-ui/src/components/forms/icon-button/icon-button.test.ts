@@ -54,7 +54,7 @@ it('clones nested bare geometry with the adopted owner document SVG constructors
   }
 });
 
-it('relays exactly one native focus/blur pair plus one prefixed alias pair', async () => {
+it('relays exactly one native focus/blur pair, and never lr-focus/lr-blur', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div><lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button></div>
   `);
@@ -72,7 +72,8 @@ it('relays exactly one native focus/blur pair plus one prefixed alias pair', asy
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(aliases).to.deep.equal([]);
 });
 
 it('keeps the visual glyph independent from the icon button hit target', async () => {

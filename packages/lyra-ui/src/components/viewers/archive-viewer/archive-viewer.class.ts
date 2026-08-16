@@ -6,7 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { fileIcon, folderIcon } from '../../../internal/icons.js';
-import { isAbortError, isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   boundedSelectionRects,
@@ -373,8 +373,10 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const fetchTarget = resolveOwnerFetchTarget(this, this.src);
     if (!fetchTarget) {
-      const error = new Error('Unsafe archive source URL');
-      this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') };
+      const error = new LyraUserFacingError(
+        this.localize('documentPreviewUrlNotAllowed')
+      );
+      this.fetchState = { kind: 'error', message: error.message };
       this.emit('lr-render-error', { error });
       return;
     }

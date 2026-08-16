@@ -152,7 +152,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     'metrics',
     'tools',
     'retrievalChunks',
-    'selectedRetrievalIds',
+    'selectedRetrievalChunkIds',
     'groundingAssessment',
     'citations',
     'contextSegments',

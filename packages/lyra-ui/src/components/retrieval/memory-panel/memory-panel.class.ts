@@ -241,8 +241,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   };
 
   /** Fallback overall group name. A non-empty host `aria-label` makes the host the sole owner; an
-   *  explicitly empty host label stays empty on the group. */
-  @property() label = '';
+   *  explicitly empty host label stays empty on the group, and so does an explicitly empty
+   *  `label`. */
+  @property() label?: string;
 
   @state() private expandedIds = new Set<string>();
   @state() private pending: PendingAction | null = null;
@@ -692,7 +693,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     const allEmpty = shortTerm.length === 0 && longTerm.length === 0;
     const groupLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize('memoryPanelLabel')
+      this.label == null ? this.localize('memoryPanelLabel') : this.label
     );
     const groupRole = retrievalSemanticRole(this, 'group');
 

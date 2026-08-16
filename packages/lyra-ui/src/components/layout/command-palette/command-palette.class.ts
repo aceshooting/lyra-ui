@@ -178,7 +178,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   /** Exact global activation chord. `mod` resolves to Command on macOS and Control elsewhere,
    * using Client Hints with legacy platform and reduced user-agent fallbacks. */
   @property() hotkey = 'mod+k';
-  @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  /** Accessible name for the dialog. Omitted falls back to the localized `commandPaletteLabel`
+   *  default. An explicitly empty `aria-label` is used as-is. */
+  @property({ attribute: 'aria-label' }) accessibleLabel?: string;
   @state() private queryText = '';
   @state() private activeIndex = 0;
   @state() private listScrollTop = 0;
@@ -805,8 +807,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         part="dialog"
         role="dialog"
         aria-modal="true"
-        aria-label=${this.accessibleLabel ||
-        this.localize('commandPaletteLabel')}
+        aria-label=${this.accessibleLabel == null
+          ? this.localize('commandPaletteLabel')
+          : this.accessibleLabel}
         tabindex="-1"
         @keydown=${this.onKeyDown}
       >

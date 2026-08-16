@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A compact attach affordance for a chat composer\'s leading slot. Renders a single plain icon button when only one `capabilities` entry is configured, or a small anchored menu when more than one. `files`/`image` open a hidden native file input and emit a readonly array snapshot as `lr-files`; `camera` only fires `lr-camera-request` — this component never implements capture UI itself, that\'s entirely a host concern. The active trigger relays one native `FocusEvent` for `focus`/`blur`, followed by `lr-focus`/`lr-blur`.',
+          'A compact attach affordance for a chat composer\'s leading slot. Renders a single plain icon button when only one `capabilities` entry is configured, or a small anchored menu when more than one. `files`/`image` open a hidden native file input and emit a readonly array snapshot as `lr-files`; `camera` only fires `lr-camera-request` — this component never implements capture UI itself, that\'s entirely a host concern. The active trigger relays one native `FocusEvent` for `focus`/`blur`.',
       },
     },
   },

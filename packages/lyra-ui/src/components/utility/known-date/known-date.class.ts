@@ -5,7 +5,10 @@ import {
   FormAssociated,
   isBarredFromValidation,
 } from '../../../internal/form-associated.js';
-import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import {
+  SET_ANCHORED_VALIDITY,
+  VALIDITY_ANCHOR,
+} from '../../../internal/anchored-validity.js';
 import {
   composedParentElement,
   isAccessibilitySubtreeExcluded,
@@ -375,6 +378,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
   /** Hidden native date mirror used by integrations that inspect native constraints directly. */
   @query('input[data-value-input]') valueInput!: HTMLInputElement;
+  private validationTargetOverride?: HTMLElement;
 
   constructor() {
     super();
@@ -680,8 +684,10 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   private fieldInputElement(
     field: LyraKnownDateField
   ): HTMLInputElement | null {
-    return this.renderRoot.querySelector<HTMLInputElement>(
-      `input[data-field="${field}"]`
+    return (
+      this.renderRoot?.querySelector<HTMLInputElement>(
+        `input[data-field="${field}"]`
+      ) ?? null
     );
   }
 
@@ -807,6 +813,28 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   override setCustomValidity(message: string): void {
     super.setCustomValidity(message);
     this.requestUpdate();
+  }
+
+  /** The browser validation bubble's focus anchor -- the first visible day/month/year field in
+   *  locale order by default, never the hidden native `type="date"` mirror (`valueInput`), which
+   *  sits first in DOM order but must never receive focus or a validation popup. */
+  get validationTarget(): HTMLElement | undefined {
+    return (
+      this.validationTargetOverride ??
+      this.fieldInputElement(this.fieldOrder[0]!) ??
+      undefined
+    );
+  }
+
+  set validationTarget(next: HTMLElement | undefined) {
+    const old = this.validationTarget;
+    this.validationTargetOverride = next ?? undefined;
+    this.requestUpdate('validationTarget', old);
+  }
+
+  /** @internal */
+  [VALIDITY_ANCHOR](): HTMLElement | undefined {
+    return this.validationTarget;
   }
 
   /** Clears consumer-supplied validity and republishes the intrinsic date constraints. */

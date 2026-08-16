@@ -1651,6 +1651,9 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   computes/fetches the path and assigns it back through `path`.
 - `lr-pin-change` (`detail: { pinnedNodeIds: string[] }`) — the complete updated array. Already
   self-applied before emitting, so reassigning back is optional.
+- `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
+  via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
+  `lr-search-change`, so reassigning back is optional.
 - `lr-search-change` (`detail: { searchQuery: string }`) — the user typed in the toolbar's search
   box. Already self-applied before emitting, so reassigning back is optional; a direct host
   assignment to `searchQuery` stays silent.

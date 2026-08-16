@@ -259,7 +259,9 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     this.requestUpdate('nodes', previous);
   }
   @property({ attribute: 'selected-path' }) selectedPath: string | null = null;
-  @property() label = '';
+  /** Accessible-name override for the internal `<lr-tree>`; falls back to the localized default
+   *  when unset. An explicitly empty string renders as an empty label rather than falling back. */
+  @property() label?: string;
 
   private nodesByPath = new Map<string, FileTreeNode>();
   private parentPathByPath = new Map<string, string>();
@@ -421,7 +423,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
       <div part="base">
         <lr-tree
           .data=${this.treeItems}
-          label=${hostLabel ?? (this.label || this.localize('fileTreeLabel'))}
+          label=${hostLabel ?? (this.label == null ? this.localize('fileTreeLabel') : this.label)}
           @lr-node-select=${this.onNodeSelect}
           @lr-node-toggle=${this.onNodeToggle}
         ></lr-tree>

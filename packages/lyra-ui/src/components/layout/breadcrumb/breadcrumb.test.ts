@@ -94,6 +94,26 @@ it("accepts the mapped label property while preserving host aria-label priority"
   expect(overridden.shadowRoot!.querySelector("nav")?.getAttribute("aria-label")).to.equal("Host trail");
 });
 
+it("treats an explicitly empty accessibleLabel/label property as a real override, distinct from an omitted one", async () => {
+  const el = await fixture<LyraBreadcrumb>(html`<lr-breadcrumb>
+    <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
+  </lr-breadcrumb>`);
+  const nav = (): string | null =>
+    el.shadowRoot!.querySelector("nav")?.getAttribute("aria-label") ?? null;
+  expect(nav()).to.equal("Breadcrumb");
+
+  // A plain JS assignment writes no attribute, so this only reaches an empty landmark name if
+  // render() distinguishes the explicit empty string from an omitted (undefined) property.
+  el.accessibleLabel = "";
+  await el.updateComplete;
+  expect(nav()).to.equal("");
+
+  el.accessibleLabel = undefined;
+  el.label = "";
+  await el.updateComplete;
+  expect(nav()).to.equal("");
+});
+
 it("distributes the breadcrumb-level separator slot to every item", async () => {
   const el = await fixture(html`<lr-breadcrumb>
     <span slot="separator">→</span>

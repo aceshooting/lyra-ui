@@ -1868,7 +1868,7 @@ it("forwards public focus and blur to the trigger", async () => {
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
 });
 
-it("bridges exactly one native trigger focus/blur pair plus typed aliases", async () => {
+it("relays exactly one native trigger focus/blur pair, and never lr-focus/lr-blur", async () => {
   const el = (await fixture(basic())) as LyraSelect;
   const btn = trigger(el);
   const nativeEvents: FocusEvent[] = [];
@@ -1895,7 +1895,8 @@ it("bridges exactly one native trigger focus/blur pair plus typed aliases", asyn
       (event) => event.target === el && event.bubbles && event.composed
     )
   ).to.be.true;
-  expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(aliases).to.deep.equal([]);
 });
 
 it("marks touched from a real user blur of the trigger", async () => {

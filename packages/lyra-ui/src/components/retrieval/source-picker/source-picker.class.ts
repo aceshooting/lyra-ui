@@ -161,8 +161,9 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   /** Whether the built-in source filter is rendered. */
   @property({ type: Boolean, converter: trueDefaultBooleanConverter })
   searchable = true;
-  /** Visible/fallback accessible label for the source tree. */
-  @property() label = '';
+  /** Visible/fallback accessible label for the source tree. Omitting it falls back to a
+   *  localized default; an explicit empty string clears it. */
+  @property() label?: string;
   /** JS-only accessible-name override for the tree. A markup `aria-label` names the component
    *  as a whole, so it is not cloned onto the inner tree. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -595,8 +596,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     const label =
       hostLabel === null
         ? this.accessibleLabel ??
-          (this.label || this.localize('sourceListDefaultLabel'))
-        : this.label && this.label !== hostLabel
+          (this.label == null ? this.localize('sourceListDefaultLabel') : this.label)
+        : this.label != null && this.label !== hostLabel
           ? this.label
           : this.localize('sourceListDefaultLabel');
     if (this.sources.length === 0) {

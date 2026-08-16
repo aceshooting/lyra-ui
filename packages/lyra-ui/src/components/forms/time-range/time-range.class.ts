@@ -113,8 +113,6 @@ export interface LyraTimeRangeEventMap {
   'lr-change': CustomEvent<{ start: number; end: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 /**
@@ -169,8 +167,6 @@ export interface LyraTimeRangeEventMap {
  *   preset button is clicked. `detail: { start, end }`.
  * @event focus - Native focus relayed once from either handle.
  * @event blur - Native blur relayed once from either handle.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-invalid - Cancelable prefixed alias fired when native validity checking fails.
  * @csspart base - The time-range wrapper.
  * @csspart track - The complete range track.
@@ -381,13 +377,11 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   private onHandleFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onHandleBlur = (event: FocusEvent): void => {
     this.finishKeyboardGesture();
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,

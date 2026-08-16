@@ -47,8 +47,6 @@ export interface LyraVideoEventMap {
   volumechange: Event;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 
 interface ThumbnailCue {
@@ -213,8 +211,6 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  *   composed native event.
  * @event {FocusEvent} blur - Relayed once from the internal play/pause control as a bubbling,
  *   composed native event.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - Alias on the same root node as `video-wrapper`.
  * @csspart caption - Active native caption text.
  * @csspart caption-overlay - Caption positioning layer.
@@ -368,12 +364,10 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   private onControlFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onControlBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   override connectedCallback(): void {

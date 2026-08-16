@@ -58,8 +58,7 @@ a consumer observes a control they didn't write. `input` is an `InputEvent`; `ch
 `Event`. Both bubble and compose, and neither carries a detail — read `event.target.checked`.
 None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
-`focus` and `blur` are re-dispatched as bubbling, composed host events, each followed by its
-prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a validity
+`focus` and `blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a validity
 check finds the switch invalid.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control;

@@ -90,7 +90,6 @@ import type { LyraOptionEventMap } from './components/forms/combobox/option.clas
 import type { LyraDateInputEventMap } from './components/forms/date-picker/date-input.class.js';
 import type { LyraDatePickerEventMap } from './components/forms/date-picker/date-picker.class.js';
 import type { LyraEmojiPickerEventMap } from './components/forms/emoji-picker/emoji-picker.class.js';
-import type { LyraIconButtonEventMap } from './components/forms/icon-button/icon-button.class.js';
 import type { LyraInputEventMap } from './components/forms/input/input.class.js';
 import type { LyraTimeInputEventMap } from './components/forms/input/time-input.class.js';
 import type { LyraLocalePickerEventMap } from './components/forms/locale-picker/locale-picker.class.js';
@@ -146,8 +145,6 @@ import type { LyraMediaCardEventMap } from './components/media/media-card/media-
 import type { LyraPanZoomEventMap } from './components/media/pan-zoom/pan-zoom.class.js';
 import type { LyraSequencePlaybackEventMap } from './components/media/sequence-playback/sequence-playback.class.js';
 import type { LyraVideoPlaylistEventMap } from './components/media/video-playlist/video-playlist.class.js';
-import type { LyraVideoEventMap } from './components/media/video/video.class.js';
-import type { LyraZoomableFrameEventMap } from './components/media/zoomable-frame/zoomable-frame.class.js';
 import type { LyraAlertEventMap } from './components/overlays/alert/alert.class.js';
 import type { LyraTagEventMap } from './components/overlays/badge/tag.class.js';
 import type { LyraCalloutEventMap } from './components/overlays/callout/callout.class.js';
@@ -326,7 +323,7 @@ export type LyraAfterShowEvent =
  * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`,
  * `<lr-svg-viewer>`, `<lr-xml-viewer>`.
  *
- * A union of 13 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 12 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraAnchorTargetEventMap['lr-anchor-result']`.
  */
@@ -341,7 +338,6 @@ export type LyraAnchorResultEvent =
   | LyraHtmlViewerEventMap['lr-anchor-result']
   | LyraImageViewerEventMap['lr-anchor-result']
   | LyraIncludeEventMap['lr-anchor-result']
-  | LyraNotebookViewerEventMap['lr-anchor-result']
   | LyraPptxViewerEventMap['lr-anchor-result']
   | LyraXmlViewerEventMap['lr-anchor-result'];
 
@@ -512,49 +508,6 @@ export type LyraBeforeQueryRunEvent = LyraGraphQueryBuilderEventMap['lr-before-q
  * Detail type: `LyraGraphQueryBuilderEventMap['lr-before-query-save']`.
  */
 export type LyraBeforeQuerySaveEvent = LyraGraphQueryBuilderEventMap['lr-before-query-save'];
-
-/**
- * `lr-blur` — dispatched by 31 components: `<lr-animated-image>`, `<lr-attachment-trigger>`,
- * `<lr-av-player>`, `<lr-button>`, `<lr-checkbox>`, `<lr-code-editor>`, `<lr-color-picker>`,
- * `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-icon-button>`, `<lr-input>`, `<lr-locale-picker>`,
- * `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-pan-zoom>`,
- * `<lr-phone-input>`, `<lr-radio-button>`, `<lr-radio>`, `<lr-rating>`, `<lr-select>`,
- * `<lr-sequence-playback>`, `<lr-slider>`, `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`,
- * `<lr-time-range>`, `<lr-token-input>`, `<lr-video-playlist>`, `<lr-video>`,
- * `<lr-zoomable-frame>`.
- *
- * A union of 28 component entries, so `event.detail` here exposes only what all of them share. For
- * one component's exact detail, index its own map — e.g. `LyraAnimatedImageEventMap['lr-blur']`.
- */
-export type LyraBlurEvent =
-  | LyraAnimatedImageEventMap['lr-blur']
-  | LyraAttachmentTriggerEventMap['lr-blur']
-  | LyraAvPlayerEventMap['lr-blur']
-  | LyraButtonEventMap['lr-blur']
-  | LyraCheckboxEventMap['lr-blur']
-  | LyraCodeEditorEventMap['lr-blur']
-  | LyraColorPickerEventMap['lr-blur']
-  | LyraComboboxEventMap['lr-blur']
-  | LyraEmojiPickerEventMap['lr-blur']
-  | LyraIconButtonEventMap['lr-blur']
-  | LyraInputEventMap['lr-blur']
-  | LyraLocalePickerEventMap['lr-blur']
-  | LyraOtpInputEventMap['lr-blur']
-  | LyraPanZoomEventMap['lr-blur']
-  | LyraPhoneInputEventMap['lr-blur']
-  | LyraRadioEventMap['lr-blur']
-  | LyraRatingEventMap['lr-blur']
-  | LyraSelectEventMap['lr-blur']
-  | LyraSequencePlaybackEventMap['lr-blur']
-  | LyraSliderEventMap['lr-blur']
-  | LyraSwitchEventMap['lr-blur']
-  | LyraTextareaEventMap['lr-blur']
-  | LyraTimeInputEventMap['lr-blur']
-  | LyraTimeRangeEventMap['lr-blur']
-  | LyraTokenInputEventMap['lr-blur']
-  | LyraVideoEventMap['lr-blur']
-  | LyraVideoPlaylistEventMap['lr-blur']
-  | LyraZoomableFrameEventMap['lr-blur'];
 
 /**
  * `lr-branch-change` — dispatched by `<lr-branch-picker>`.
@@ -1382,49 +1335,6 @@ export type LyraFinishEvent = LyraAnimationEventMap['lr-finish'];
 export type LyraFitChangeEvent = LyraImageViewerEventMap['lr-fit-change'];
 
 /**
- * `lr-focus` — dispatched by 31 components: `<lr-animated-image>`, `<lr-attachment-trigger>`,
- * `<lr-av-player>`, `<lr-button>`, `<lr-checkbox>`, `<lr-code-editor>`, `<lr-color-picker>`,
- * `<lr-combobox>`, `<lr-emoji-picker>`, `<lr-icon-button>`, `<lr-input>`, `<lr-locale-picker>`,
- * `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-pan-zoom>`,
- * `<lr-phone-input>`, `<lr-radio-button>`, `<lr-radio>`, `<lr-rating>`, `<lr-select>`,
- * `<lr-sequence-playback>`, `<lr-slider>`, `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`,
- * `<lr-time-range>`, `<lr-token-input>`, `<lr-video-playlist>`, `<lr-video>`,
- * `<lr-zoomable-frame>`.
- *
- * A union of 28 component entries, so `event.detail` here exposes only what all of them share. For
- * one component's exact detail, index its own map — e.g. `LyraAnimatedImageEventMap['lr-focus']`.
- */
-export type LyraFocusEvent =
-  | LyraAnimatedImageEventMap['lr-focus']
-  | LyraAttachmentTriggerEventMap['lr-focus']
-  | LyraAvPlayerEventMap['lr-focus']
-  | LyraButtonEventMap['lr-focus']
-  | LyraCheckboxEventMap['lr-focus']
-  | LyraCodeEditorEventMap['lr-focus']
-  | LyraColorPickerEventMap['lr-focus']
-  | LyraComboboxEventMap['lr-focus']
-  | LyraEmojiPickerEventMap['lr-focus']
-  | LyraIconButtonEventMap['lr-focus']
-  | LyraInputEventMap['lr-focus']
-  | LyraLocalePickerEventMap['lr-focus']
-  | LyraOtpInputEventMap['lr-focus']
-  | LyraPanZoomEventMap['lr-focus']
-  | LyraPhoneInputEventMap['lr-focus']
-  | LyraRadioEventMap['lr-focus']
-  | LyraRatingEventMap['lr-focus']
-  | LyraSelectEventMap['lr-focus']
-  | LyraSequencePlaybackEventMap['lr-focus']
-  | LyraSliderEventMap['lr-focus']
-  | LyraSwitchEventMap['lr-focus']
-  | LyraTextareaEventMap['lr-focus']
-  | LyraTimeInputEventMap['lr-focus']
-  | LyraTimeRangeEventMap['lr-focus']
-  | LyraTokenInputEventMap['lr-focus']
-  | LyraVideoEventMap['lr-focus']
-  | LyraVideoPlaylistEventMap['lr-focus']
-  | LyraZoomableFrameEventMap['lr-focus'];
-
-/**
  * `lr-focus-day` — dispatched by `<lr-date-picker>`.
  *
  * Detail type: `LyraDatePickerEventMap['lr-focus-day']`.
@@ -1495,6 +1405,13 @@ export type LyraGroupExpandEvent = LyraDataGridEventMap['lr-group-expand'];
  * Detail type: `LyraThreadListEventMap['lr-group-toggle']`.
  */
 export type LyraGroupToggleEvent = LyraThreadListEventMap['lr-group-toggle'];
+
+/**
+ * `lr-hidden-types-change` — dispatched by `<lr-knowledge-graph-explorer>`.
+ *
+ * Detail type: `LyraKnowledgeGraphExplorerEventMap['lr-hidden-types-change']`.
+ */
+export type LyraHiddenTypesChangeEvent = LyraKnowledgeGraphExplorerEventMap['lr-hidden-types-change'];
 
 /**
  * `lr-hide` — dispatched by 16 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
@@ -3551,7 +3468,6 @@ export interface LyraGlobalEventMap {
   'lr-before-query-load': LyraBeforeQueryLoadEvent;
   'lr-before-query-run': LyraBeforeQueryRunEvent;
   'lr-before-query-save': LyraBeforeQuerySaveEvent;
-  'lr-blur': LyraBlurEvent;
   'lr-branch-change': LyraBranchChangeEvent;
   'lr-camera-request': LyraCameraRequestEvent;
   'lr-cancel': LyraCancelEvent;
@@ -3634,7 +3550,6 @@ export interface LyraGlobalEventMap {
   'lr-filters-change': LyraFiltersChangeEvent;
   'lr-finish': LyraFinishEvent;
   'lr-fit-change': LyraFitChangeEvent;
-  'lr-focus': LyraFocusEvent;
   'lr-focus-day': LyraFocusDayEvent;
   'lr-follow-change': LyraFollowChangeEvent;
   'lr-forget': LyraForgetEvent;
@@ -3644,6 +3559,7 @@ export interface LyraGlobalEventMap {
   'lr-group-collapse': LyraGroupCollapseEvent;
   'lr-group-expand': LyraGroupExpandEvent;
   'lr-group-toggle': LyraGroupToggleEvent;
+  'lr-hidden-types-change': LyraHiddenTypesChangeEvent;
   'lr-hide': LyraHideEvent;
   'lr-highlight-activate': LyraHighlightActivateEvent;
   'lr-hover': LyraHoverEvent;

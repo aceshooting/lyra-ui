@@ -167,6 +167,52 @@ it("contains native input/change events from its child editors", async () => {
   expect(changes).to.equal(0);
 });
 
+it("contains native focus and blur events relayed by every composed child (editor and row actions) without silencing the child itself", async () => {
+  // Three rows so the middle row (index 1) has every action enabled -- the first row's "up" and
+  // the last row's "down" are disabled by design, and a disabled lr-button's focus() is a no-op.
+  const threeItems: PromptQueueItem[] = [
+    { id: "one", value: "First follow-up" },
+    { id: "two", value: "Second follow-up" },
+    { id: "three", value: "Third follow-up" },
+  ];
+  const wrapper = await fixture(html`<div>
+    <lr-prompt-queue .items=${threeItems}></lr-prompt-queue>
+  </div>`);
+  const el = wrapper.querySelector("lr-prompt-queue") as LyraPromptQueue;
+  const middleRow = el.shadowRoot!.querySelectorAll('[part~="item"]')[1]!;
+  const editor = middleRow.querySelector(
+    "lr-textarea"
+  ) as HTMLElement & { focus(): void; blur(): void };
+  const actions = [
+    ...middleRow.querySelectorAll<HTMLElement & { focus(): void; blur(): void }>(
+      '[data-action]'
+    ),
+  ];
+  const composedChildren = [editor, ...actions];
+  expect(composedChildren).to.have.lengthOf(5);
+
+  let leakedFocuses = 0;
+  let leakedBlurs = 0;
+  wrapper.addEventListener("focus", () => leakedFocuses++);
+  wrapper.addEventListener("blur", () => leakedBlurs++);
+
+  for (const child of composedChildren) {
+    let childFocuses = 0;
+    let childBlurs = 0;
+    child.addEventListener("focus", () => childFocuses++);
+    child.addEventListener("blur", () => childBlurs++);
+
+    child.focus();
+    child.blur();
+
+    expect(childFocuses, `${child.tagName} focus reached itself`).to.equal(1);
+    expect(childBlurs, `${child.tagName} blur reached itself`).to.equal(1);
+  }
+
+  expect(leakedFocuses, "no focus leaked past the host").to.equal(0);
+  expect(leakedBlurs, "no blur leaked past the host").to.equal(0);
+});
+
 it("blocks genuine child edits and actions when capture changes state in the same dispatch", async () => {
   const el = (await fixture(html`
     <lr-prompt-queue .items=${items}></lr-prompt-queue>

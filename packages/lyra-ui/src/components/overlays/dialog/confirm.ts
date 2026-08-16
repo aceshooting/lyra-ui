@@ -18,12 +18,15 @@ export interface ConfirmOptions {
   /** Cancel button label. Defaults to the localized `'cancel'` message (`'Cancel'` in English). */
   cancelLabel?: string;
   /** `'danger'` fills the confirm button with `--lr-color-danger` instead of `--lr-color-brand` -- for destructive actions. */
+  variant?: 'neutral' | 'danger';
+  /** @deprecated Use `variant` instead. Kept as a one-major back-compat alias; `variant` wins when
+   *  both are set. */
   tone?: 'neutral' | 'danger';
 }
 
 // Native buttons keep this focused helper leaf independent of the broader button registration.
 // Every value below is still a --lr-* token reference, never a raw literal, same requirement as a
-// component's own styles.ts. Each filled tone uses its matching on-color token so standalone
+// component's own styles.ts. Each filled variant uses its matching on-color token so standalone
 // light/dark fallbacks and a consumer's Web Awesome theme stay paired.
 const BUTTON_BASE_STYLE =
   'font: inherit; font-size: var(--lr-font-size-md-sm); padding: var(--lr-space-xs) var(--lr-space-m); ' +
@@ -31,7 +34,7 @@ const BUTTON_BASE_STYLE =
 const CANCEL_STYLE =
   '--lr-confirm-button-fill: var(--lr-color-surface); ' +
   'background: var(--lr-confirm-button-state, var(--lr-color-surface)); color: var(--lr-color-text);';
-const CONFIRM_TONE_STYLE: Record<'neutral' | 'danger', string> = {
+const CONFIRM_VARIANT_STYLE: Record<'neutral' | 'danger', string> = {
   neutral:
     '--lr-confirm-button-fill: var(--lr-color-brand); ' +
     'background: var(--lr-confirm-button-state, var(--lr-color-brand)); color: var(--lr-color-on-brand); ' +
@@ -98,7 +101,7 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  *   title: 'Delete conversation?',
  *   description: 'This cannot be undone.',
  *   confirmLabel: 'Delete',
- *   tone: 'danger',
+ *   variant: 'danger',
  * });
  * if (ok) deleteConversation();
  */
@@ -106,7 +109,11 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
   // The root re-exports this helper, so registration belongs to invocation rather than module
   // evaluation. This keeps a bare root import pure without making the synchronous API async.
   defineElement('dialog', LyraDialog);
-  const { title, description, confirmLabel, cancelLabel, tone = 'neutral' } = options;
+  // `tone` was this option's name before it was renamed to match the library's shared `variant`
+  // vocabulary; it stays accepted for one major as a deprecated alias, with `variant` winning
+  // when both are somehow set.
+  const { title, description, confirmLabel, cancelLabel, variant, tone } = options;
+  const resolvedVariant = variant ?? tone ?? 'neutral';
 
   return new Promise<boolean>((resolve) => {
     const dialog = document.createElement(tag('dialog')) as LyraDialog;
@@ -155,7 +162,7 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
     cancelButton.slot = 'footer';
     const confirmButton = createButton(
       resolveLyraString(dialog, 'confirm', undefined, confirmLabel, undefined, CONFIRM_DEFAULT_STRINGS),
-      CONFIRM_TONE_STYLE[tone],
+      CONFIRM_VARIANT_STYLE[resolvedVariant],
       () => dialog.close('confirm'),
     );
     confirmButton.slot = 'footer';

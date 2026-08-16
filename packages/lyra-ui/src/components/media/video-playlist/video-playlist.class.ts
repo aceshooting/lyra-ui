@@ -67,8 +67,6 @@ export interface LyraVideoPlaylistEventMap {
   'lr-video-change': CustomEvent<LyraEventDetailSnapshot<LyraVideoPlaylistChangeDetail>>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 
 interface VideoListeners {
@@ -184,8 +182,6 @@ function trackSnapshot(
  *   event.
  * @event {FocusEvent} blur - Relayed once from a playlist row as a bubbling, composed native
  *   event.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart base - Deprecated alias on the same root node as `video-playlist`.
  * @csspart video-playlist - Root video-and-playlist layout.
  * @csspart playlist - Playlist sidebar container.
@@ -848,12 +844,10 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
 
   private onItemFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onItemBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private focusItem(index: number): void {

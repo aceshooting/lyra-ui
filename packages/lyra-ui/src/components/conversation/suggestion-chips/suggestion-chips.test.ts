@@ -111,6 +111,22 @@ it('is a labeled group with a default or custom label', async () => {
   );
 });
 
+it('distinguishes an omitted label property from an explicit empty override', async () => {
+  const omitted = (await fixture(
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
+  )) as LyraSuggestionChips;
+  expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Suggested prompts',
+  );
+
+  const explicitEmpty = (await fixture(
+    html`<lr-suggestion-chips .suggestions=${suggestions} label=""></lr-suggestion-chips>`,
+  )) as LyraSuggestionChips;
+  expect(explicitEmpty.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    '',
+  );
+});
+
 it('preserves an explicitly empty host aria-label', async () => {
   const el = (await fixture(html`
     <lr-suggestion-chips aria-label="" .suggestions=${suggestions}></lr-suggestion-chips>

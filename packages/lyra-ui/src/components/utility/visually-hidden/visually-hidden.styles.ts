@@ -6,8 +6,8 @@ export const styles = css`
      here is that assistive technology still reaches it. */
   :host {
     position: absolute !important;
-    inline-size: var(--lr-border-width-thin) !important;
-    block-size: var(--lr-border-width-thin) !important;
+    inline-size: var(--lr-size-1px) !important;
+    block-size: var(--lr-size-1px) !important;
     clip-path: inset(50%) !important;
     overflow: hidden !important;
     white-space: nowrap !important;

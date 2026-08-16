@@ -1135,6 +1135,64 @@ describe('node-path and fragment anchors', () => {
   });
 });
 
+describe('highlights', () => {
+  async function mountHighlighted(): Promise<{ el: LyraNotebookViewer; vlistRoot: ShadowRoot }> {
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part~="cell"]').length > 0);
+    return { el, vlistRoot: rowRoot(el) };
+  }
+
+  it('paints the resolved cell for a node-path highlight with its default accent tone', async () => {
+    const { el, vlistRoot } = await mountHighlighted();
+    el.highlights = [{ id: 'h1', anchor: { kind: 'node-path', path: [1] } }];
+    await el.updateComplete;
+    const highlighted = [...vlistRoot.querySelectorAll('[part~="cell-highlighted"]')];
+    expect(highlighted.length).to.equal(1);
+    expect(highlighted[0]!.getAttribute('data-cell-type')).to.equal('code');
+    expect(highlighted[0]!.hasAttribute('data-highlighted')).to.be.true;
+    expect(highlighted[0]!.getAttribute('part')).to.contain('cell-highlighted-accent');
+  });
+
+  it('resolves a fragment highlight against a cell id and paints its explicit tone', async () => {
+    const { el, vlistRoot } = await mountHighlighted();
+    el.highlights = [{ id: 'h1', anchor: { kind: 'fragment', id: 'raw1' }, tone: 'danger' }];
+    await el.updateComplete;
+    const cell = vlistRoot.querySelector('[data-cell-type="raw"]')!;
+    expect(cell.getAttribute('part')).to.contain('cell-highlighted-danger');
+    expect(cell.getAttribute('part')).to.not.contain('cell-highlighted-accent');
+  });
+
+  it('adds cell-highlight-active only to the entry matching activeHighlightId', async () => {
+    const { el, vlistRoot } = await mountHighlighted();
+    el.highlights = [
+      { id: 'h1', anchor: { kind: 'node-path', path: [0] } },
+      { id: 'h2', anchor: { kind: 'node-path', path: [1] } },
+    ];
+    el.activeHighlightId = 'h2';
+    await el.updateComplete;
+    const cells = [...vlistRoot.querySelectorAll('[part~="cell"]')];
+    expect(cells[0]!.getAttribute('part')).to.not.contain('cell-highlight-active');
+    expect(cells[1]!.getAttribute('part')).to.contain('cell-highlight-active');
+  });
+
+  it('never paints a highlight whose anchor kind this viewer does not resolve', async () => {
+    const { el, vlistRoot } = await mountHighlighted();
+    el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'Some text.' } }];
+    await el.updateComplete;
+    expect(vlistRoot.querySelector('[part~="cell-highlighted"]') === null).to.be.true;
+  });
+
+  it('clears painted highlights once highlights is reassigned empty', async () => {
+    const { el, vlistRoot } = await mountHighlighted();
+    el.highlights = [{ id: 'h1', anchor: { kind: 'node-path', path: [1] } }];
+    await el.updateComplete;
+    expect(vlistRoot.querySelector('[part~="cell-highlighted"]')).to.not.be.null;
+    el.highlights = [];
+    await el.updateComplete;
+    expect(vlistRoot.querySelector('[part~="cell-highlighted"]') === null).to.be.true;
+  });
+});
+
 describe('notebookLanguage', () => {
   it('falls back to an empty string when called while no notebook is loaded', async () => {
     // render() only ever invokes renderCell() (and therefore notebookLanguage())

@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Sandboxed iframe preview with discrete zoom controls. Real browsing-context focus paints the shared boundary ring and relays exactly one owner-realm native `FocusEvent` plus the `lr-focus`/`lr-blur` alias in Chromium, Firefox, and WebKit.',
+          'Sandboxed iframe preview with discrete zoom controls. Real browsing-context focus paints the shared boundary ring and relays exactly one owner-realm native `FocusEvent` in Chromium, Firefox, and WebKit.',
       },
     },
   },

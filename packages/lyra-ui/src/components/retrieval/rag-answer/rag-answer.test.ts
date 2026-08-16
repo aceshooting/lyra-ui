@@ -355,6 +355,22 @@ describe("lr-rag-answer", () => {
     expect(el.getAttribute("aria-label")).to.equal(null);
     expect(spinnerLabel()).to.equal("Loading…");
   });
+  it("defaults to an unset label", async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer></lr-rag-answer>`
+    )) as LyraRagAnswer;
+    expect(el.label).to.be.undefined;
+  });
+  it("keeps an explicitly empty label genuinely empty instead of falling back to the localized default", async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer label="" answer="Answer"></lr-rag-answer>`
+    )) as LyraRagAnswer;
+    await el.updateComplete;
+    expect(el.label).to.equal("");
+    expect(
+      el.shadowRoot!.querySelector('[part="base"]')?.getAttribute("aria-label")
+    ).to.equal("");
+  });
   it("forwards claim-level visibility to its grounding summary", async () => {
     const assessment = {
       supportedClaims: 1,

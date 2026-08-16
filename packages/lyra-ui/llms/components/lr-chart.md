@@ -25,16 +25,14 @@ property).
   'radar' | 'polarArea' | 'bubble'` — every named default used by a typed `lr-*-chart` is
   already a first-class member, so `<lr-chart type="pie">` needs no subclass or cast to work;
   unknown runtime attribute/property values fall back to `bar` before reaching Chart.js
-- `description: string | null = null` — accessible chart description; the additive
-  `accessibleDescription` remains a fallback alias
+- `description: string | null = null` — accessible chart description
 - `grid: 'x'|'y'|'both'|'none' = 'both'` — controls cartesian grid lines. On a radial chart, `x`
   controls angle lines and `y` controls concentric grid lines
 - `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. `'y'` is Chart.js's own
   mechanism for horizontal bars (it also flips `line`/`area` types onto a horizontal category axis).
   The `horizontal` boolean that used to alias `'y'` was removed in 9.0.0 — use `index-axis="y"`
 - `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence
-  by presence, including an explicit empty string; additive `accessibleLabel: string | null = null`
-  remains the fallback alias with the same explicit-empty behavior
+  by presence, including an explicit empty string
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
@@ -69,12 +67,12 @@ property).
   non-integer, negative, and out-of-range indexes are discarded. The component writes the accepted
   legend-toggle snapshot back to this property so a host can persist it, and a programmatic write
   reconciles Chart.js and the DOM legend silently without emitting either legend-visibility event.
-- `legend: boolean = true` — additive positive alias for the visible legend; renders a wrapping DOM
-  legend whose keyboard-operable buttons toggle
-  dataset visibility. The DOM surface preserves long public labels that a canvas legend would clip.
-  Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is defined, otherwise
-  the effective dataset's declarative `hidden` value before Chart.js is ready and across chart
-  type/plugin rebuilds.
+- `withoutLegend: boolean = false` (attribute `without-legend`) — the legend shows by default;
+  set this to hide it. Renders a wrapping DOM legend (when shown) whose keyboard-operable buttons
+  toggle dataset visibility. The DOM surface preserves long public labels that a canvas legend
+  would clip. Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is
+  defined, otherwise the effective dataset's declarative `hidden` value before Chart.js is ready
+  and across chart type/plugin rebuilds.
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — accepts the
   Chart.js `left|top|right|bottom|center|chartArea|{ [scaleId]: number }` positions plus logical
   `start`/`end`; the additive `auto` chooses right above 480px and bottom below that allocation
@@ -138,8 +136,6 @@ property).
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
-- `accessibleLabel` / `accessibleDescription` — deprecated compatibility aliases for `label` /
-  `description`; a host `aria-label` remains highest precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in

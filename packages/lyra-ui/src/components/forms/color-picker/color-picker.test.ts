@@ -1922,7 +1922,7 @@ it("does not activate panel positioning when open is set directly while disconne
   expect(el.isConnected).to.equal(false);
 });
 
-it("emits migrated focus/input and after-show/after-hide aliases exactly once", async () => {
+it("emits migrated input and after-show/after-hide aliases exactly once, never the removed focus/blur aliases", async () => {
   const el = (await fixture(
     html`<lr-color-picker label="A" value="#ff0000"></lr-color-picker>`
   )) as LyraColorPicker;
@@ -1956,8 +1956,8 @@ it("emits migrated focus/input and after-show/after-hide aliases exactly once", 
   el.hide();
   await el.updateComplete;
 
-  expect(seen.get("lr-focus")).to.equal(seen.get("focus"));
-  expect(seen.get("lr-blur")).to.equal(seen.get("blur"));
+  expect(seen.get("lr-focus")).to.equal(undefined);
+  expect(seen.get("lr-blur")).to.equal(undefined);
   expect(nativeFocusEvents.length).to.equal(
     (seen.get("focus") ?? 0) + (seen.get("blur") ?? 0)
   );
@@ -1972,7 +1972,7 @@ it("emits migrated focus/input and after-show/after-hide aliases exactly once", 
   }
 });
 
-it("emits the composed focus/blur relays and migrated aliases in inline mode", async () => {
+it("emits the composed focus/blur relays in inline mode without the removed lr-focus/lr-blur aliases", async () => {
   const el = (await fixture(
     html`<lr-color-picker inline label="Inline colour"></lr-color-picker>`
   )) as LyraColorPicker;
@@ -1992,8 +1992,11 @@ it("emits the composed focus/blur relays and migrated aliases in inline mode", a
     true
   );
   el.blur();
-  for (const name of ["focus", "blur", "lr-focus", "lr-blur"]) {
+  for (const name of ["focus", "blur"]) {
     expect(seen.get(name), name).to.equal(1);
+  }
+  for (const name of ["lr-focus", "lr-blur"]) {
+    expect(seen.get(name), name).to.equal(undefined);
   }
   expect(nativeFocusEvents.every((event) => event.target === el)).to.equal(
     true

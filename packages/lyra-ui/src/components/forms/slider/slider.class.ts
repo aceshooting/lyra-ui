@@ -101,8 +101,6 @@ export interface LyraSliderEventMap {
   'lr-change': CustomEvent<LyraSliderChangeDetail>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 
@@ -162,8 +160,6 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  *   committed step too. `detail: { value, minValue, maxValue, handle }`.
  * @event focus - Native focus relayed once from the focused thumb.
  * @event blur - Native blur relayed once from the thumb losing focus.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-invalid - The slider failed a validity check. Cancelable: calling `preventDefault()`
  * also cancels the native `invalid` event behind it, suppressing the browser's own validation
  * bubble so an app can present the failure its own way.
@@ -1409,7 +1405,6 @@ export class LyraSlider extends LyraSliderBase {
       this.requestUpdate();
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   }
 
   private onHandleBlur(handle: SliderHandle, event: FocusEvent): void {
@@ -1419,7 +1414,6 @@ export class LyraSlider extends LyraSliderBase {
       this.requestUpdate();
     }
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   }
 
   private onSlotChange = (event: Event): void => {

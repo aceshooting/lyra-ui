@@ -851,8 +851,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ attribute: 'default-sort-dir' }) defaultSortDir: TableSortDirection = 'asc';
   /** Accessible name for the `role="grid"` — a typed alternative to setting `aria-label` on the
    *  host. When set it becomes the grid's `aria-label`; a host `aria-label` is used as a fallback
-   *  when this is unset. Consumer-supplied text, so it is NOT run through `this.localize()`. */
-  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+   *  when this is unset. Consumer-supplied text, so it is NOT run through `this.localize()`. An
+   *  explicitly empty string is a real override (renders `aria-label=""`) rather than falling
+   *  back to the host `aria-label`. */
+  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
   /** Optional visible caption rendered as the table's `<caption>`. Also names the grid (via
    *  `aria-labelledby`) when no `accessibleLabel`/host `aria-label` is set. Consumer-supplied
    *  text, not localized. */
@@ -2577,7 +2579,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // stays put, which is only achievable by rendering the real table.
     const hasHostAriaLabel = this.hasAttribute('aria-label');
     const gridAriaLabel =
-      this.accessibleLabel || (hasHostAriaLabel ? this.getAttribute('aria-label')! : nothing);
+      this.accessibleLabel == null
+        ? (hasHostAriaLabel ? this.getAttribute('aria-label')! : nothing)
+        : this.accessibleLabel;
 
     // Sorted, not merely filtered: `footer`/`grandTotal` are documented as seeing every rendered
     // row "post-sort, pre-pagination", and an aggregate that reads position (a first/last value, a
@@ -2648,7 +2652,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             part="table"
             role="grid"
             aria-label=${gridAriaLabel}
-            aria-labelledby=${!this.accessibleLabel && !hasHostAriaLabel && this.caption
+            aria-labelledby=${this.accessibleLabel == null && !hasHostAriaLabel && this.caption
               ? this.captionId
               : nothing}
             aria-multiselectable=${this.selectionMode === 'multiple' ? 'true' : nothing}

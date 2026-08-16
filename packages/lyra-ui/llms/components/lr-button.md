@@ -162,7 +162,7 @@ listener path has accepted the default action; calling `preventDefault()` on the
 ancestor therefore vetoes it, while propagation control by itself does not. The internal button's
 `focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
-events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail). `lr-invalid` (no
+events. `lr-invalid` (no
 detail, cancelable) fires when a validity check finds the button invalid; `preventDefault()` on it
 suppresses the native validation bubble and `reportValidity()`'s focus/scroll.
 

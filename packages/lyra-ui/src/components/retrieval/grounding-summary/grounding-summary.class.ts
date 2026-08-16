@@ -138,8 +138,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   };
 
   /** Accessible name used by the stable group when the host has no `aria-label`; falls back to the
-   *  localized `groundingSummaryLabel` default. An explicitly empty host label stays empty. */
-  @property() label = '';
+   *  localized `groundingSummaryLabel` default. An explicitly empty host label stays empty, and so
+   *  does an explicitly empty `label`. */
+  @property() label?: string;
 
   /** Renders `assessment.claims` through `<lr-claim-evidence>` when available. */
   @property({
@@ -248,7 +249,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   override render(): TemplateResult {
     const groupLabel = retrievalSemanticLabel(
       this,
-      this.label || this.localize('groundingSummaryLabel')
+      this.label == null ? this.localize('groundingSummaryLabel') : this.label
     );
     const groupRole = retrievalSemanticRole(this, 'group');
     const a = this.assessment;

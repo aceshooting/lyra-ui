@@ -732,7 +732,7 @@ it('is accessible with a populated inline document and visible controls', async 
   await expect(el).to.be.accessible();
 });
 
-it('forwards host focus()/blur()/click() to the frame and re-dispatches its focus/blur', async () => {
+it('forwards host focus()/blur()/click() to the frame and re-dispatches its focus/blur with no prefixed alias', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div><lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame></div>
   `);
@@ -752,11 +752,9 @@ it('forwards host focus()/blur()/click() to the frame and re-dispatches its focu
   });
   wrapper.addEventListener('lr-focus', () => {
     aliases.push('lr-focus');
-    sequence.push('lr-focus');
   });
   wrapper.addEventListener('lr-blur', () => {
     aliases.push('lr-blur');
-    sequence.push('lr-blur');
   });
 
   el.focus();
@@ -779,8 +777,8 @@ it('forwards host focus()/blur()/click() to the frame and re-dispatches its focu
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
-  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+  expect(sequence).to.deep.equal(['focus', 'blur']);
+  expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
 });
 
 it('tracks sequential Tab/Shift+Tab and pointer entry at the browsing-context boundary', async function () {
@@ -880,7 +878,7 @@ it('does not invent focus transitions before a live iframe exists', () => {
   expect(el.hasAttribute('data-frame-focused')).to.be.false;
 });
 
-it('constructs iframe focus relays in the host owner realm and preserves payload', async () => {
+it('constructs iframe focus relays in the host owner realm, preserves payload, and fires no prefixed alias', async () => {
   const ownerFrame = document.createElement('iframe');
   const loaded = new Promise<void>((resolve) => ownerFrame.addEventListener('load', () => resolve(), { once: true }));
   ownerFrame.srcdoc = '<!doctype html><html><body></body></html>';
@@ -911,11 +909,9 @@ it('constructs iframe focus relays in the host owner realm and preserves payload
     });
     el.addEventListener('lr-focus', () => {
       aliases.push('lr-focus');
-      sequence.push('lr-focus');
     });
     el.addEventListener('lr-blur', () => {
       aliases.push('lr-blur');
-      sequence.push('lr-blur');
     });
 
     const internal = el as unknown as {
@@ -941,8 +937,8 @@ it('constructs iframe focus relays in the host owner realm and preserves payload
     expect(nativeEvents.every((event) => event instanceof FocusEvent), 'not ambient-branded').to.be.false;
     expect(nativeEvents.every((event) => event.target === el && event.relatedTarget === related)).to.be.true;
     expect(nativeEvents.map((event) => event.detail)).to.deep.equal([3, 5]);
-    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
-    expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+    expect(sequence).to.deep.equal(['focus', 'blur']);
+    expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
   } finally {
     ownerFrame.remove();
   }

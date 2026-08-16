@@ -39,16 +39,14 @@ property).
   'radar' | 'polarArea' | 'bubble'` — every named default used by a typed `lr-*-chart` is
   already a first-class member, so `<lr-chart type="pie">` needs no subclass or cast to work;
   unknown runtime attribute/property values fall back to `bar` before reaching Chart.js
-- `description: string | null = null` — accessible chart description; the additive
-  `accessibleDescription` remains a fallback alias
+- `description: string | null = null` — accessible chart description
 - `grid: 'x'|'y'|'both'|'none' = 'both'` — controls cartesian grid lines. On a radial chart, `x`
   controls angle lines and `y` controls concentric grid lines
 - `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. `'y'` is Chart.js's own
   mechanism for horizontal bars (it also flips `line`/`area` types onto a horizontal category axis).
   The `horizontal` boolean that used to alias `'y'` was removed in 9.0.0 — use `index-axis="y"`
 - `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence
-  by presence, including an explicit empty string; additive `accessibleLabel: string | null = null`
-  remains the fallback alias with the same explicit-empty behavior
+  by presence, including an explicit empty string
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
@@ -83,12 +81,12 @@ property).
   non-integer, negative, and out-of-range indexes are discarded. The component writes the accepted
   legend-toggle snapshot back to this property so a host can persist it, and a programmatic write
   reconciles Chart.js and the DOM legend silently without emitting either legend-visibility event.
-- `legend: boolean = true` — additive positive alias for the visible legend; renders a wrapping DOM
-  legend whose keyboard-operable buttons toggle
-  dataset visibility. The DOM surface preserves long public labels that a canvas legend would clip.
-  Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is defined, otherwise
-  the effective dataset's declarative `hidden` value before Chart.js is ready and across chart
-  type/plugin rebuilds.
+- `withoutLegend: boolean = false` (attribute `without-legend`) — the legend shows by default;
+  set this to hide it. Renders a wrapping DOM legend (when shown) whose keyboard-operable buttons
+  toggle dataset visibility. The DOM surface preserves long public labels that a canvas legend
+  would clip. Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is
+  defined, otherwise the effective dataset's declarative `hidden` value before Chart.js is ready
+  and across chart type/plugin rebuilds.
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — accepts the
   Chart.js `left|top|right|bottom|center|chartArea|{ [scaleId]: number }` positions plus logical
   `start`/`end`; the additive `auto` chooses right above 480px and bottom below that allocation
@@ -152,8 +150,6 @@ property).
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
-- `accessibleLabel` / `accessibleDescription` — deprecated compatibility aliases for `label` /
-  `description`; a host `aria-label` remains highest precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
@@ -440,7 +436,12 @@ passthrough). Not a subclass of `LyraChart`.
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical
   placement for the DOM legend; side positions are bounded and stack responsively in narrow hosts
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
-  and description; host `aria-label` wins. `accessibleLabel` remains a deprecated migration alias
+  and description; host `aria-label` wins by presence, including an explicit empty string
+- `accessibleLabel?: string` (attribute `accessible-label`) — overrides the `<svg>`'s auto-derived
+  `aria-label` (`datasets.map(d => d.label).join(', ') || 'Chart'`); a host `aria-label` still wins.
+  Unset keeps the auto-derived (English-fallback) label. `lr-lite-chart` keeps this property under
+  its original `accessible-label` name, unrelated to the deprecated `accessible-label` alias that
+  `lr-chart`/`lr-box-plot` dropped in favor of their mirrored `label` property.
 - `height: string = '280px'` — accepts a valid CSS `height` as a private fallback. A consumer-set
   `--lr-chart-height` always wins; invalid values, declaration-breaking input, and `url()` remove
   the fallback and leave the public token/default in control.
@@ -501,8 +502,7 @@ passthrough). Not a subclass of `LyraChart`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no
   mark/tabindex/tooltip) for a value that is exactly `0`; `null`/non-finite values are always
   skipped regardless.
-- `valueAxisGutter?: number` (attribute `value-axis-gutter`) — value-axis gutter width. The former
-  `padLeft` / `pad-left` spelling remains a deprecated migration alias.
+- `valueAxisGutter?: number` (attribute `value-axis-gutter`) — value-axis gutter width.
 - `barGapRatio?: number` (attribute `bar-gap-ratio`) — overrides the internal 0.2 `BAR_GROUP_GAP`
   fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2.
 - `scale: 'linear' | 'sqrt' = 'linear'` (bar type only) — `'sqrt'` maps a bar's value to height via
@@ -511,12 +511,11 @@ passthrough). Not a subclass of `LyraChart`.
   by one dominant value; gridlines/tick labels stay on the linear domain either way, and `type="line"`
   ignores it entirely.
 - `withoutValueAxis: boolean = false` (attribute `without-value-axis`) — suppresses gridlines and
-  value-axis tick labels; x-axis category labels remain. `hideAxis` / `hide-axis` is a deprecated alias.
+  value-axis tick labels; x-axis category labels remain.
 - `selectedIndices: readonly number[] = []` (attribute: false) — applies to every interactive data mark for
   both `type="bar"` and `type="line"`: matching bars and line points receive `data-selected` and
   explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`. For a multi-series
-  chart, the category index selects the matching mark in every dataset. Empty is the default;
-  `selectedIndex` remains a deprecated alias.
+  chart, the category index selects the matching mark in every dataset. Empty is the default.
   Style the built-in highlight through `--lr-lite-chart-selected-outline-color` and
   `--lr-lite-chart-selected-outline-width`. Note
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
@@ -659,10 +658,9 @@ of every entry in these lists.**
 **Properties:** `description`, `grid`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
 (`legend-position`), `max`, `min`, `plugins`, `stacked`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
-`yLabel` (`y-label`), plus additive `labels`, `datasets`, `legend`, `valueFormatter`, `formatter`, `area`, `zoom`,
+`yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`, `area`, `zoom`,
 `height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`
-(`data-labels`), `stackTotals` (`stack-totals`), `config`, `accessibleLabel`
-(`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
+(`data-labels`), `stackTotals` (`stack-totals`), `config`, `showDataTable`
 (`show-data-table`), `chartArea` (readonly), and `chart`. `type` differs only in its initial value.
 
 **Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `renderChart()`, `resetZoom()`,
@@ -737,17 +735,17 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
   specialist owns its controller because a non-bar type would contradict the derived distribution.
 - All other `LyraChart` properties are inherited and usable: `description`, `grid`, `indexAxis`
-  (`index-axis`), `hiddenDatasets`, `legend`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
+  (`index-axis`), `hiddenDatasets`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `formatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
-  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
-  (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
+  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `showDataTable`
   (`show-data-table`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
 maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
-`appendData()` remains a deprecated compatibility adapter.
+`appendData()` remains a working compatibility adapter (no longer deprecated); prefer
+`appendSamples()` for new code.
 
 **Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-legend-visibility-change` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
@@ -811,8 +809,7 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 **Properties:**
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly
-  `LyraBoxPlotSummary { min, q1, median, q3, max }` values. `boxes`, `BoxPlotSeries`, and
-  `BoxPlotPoint` remain deprecated migration aliases. Summaries must be finite and ordered
+  `LyraBoxPlotSummary { min, q1, median, q3, max }` values. Summaries must be finite and ordered
   `min <= q1 <= median <= q3 <= max`; invalid entries are omitted and caller objects are never
   passed to the mutating peer.
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled visibility snapshot
@@ -833,9 +830,7 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
-  and description; host `aria-label` wins by presence, including an explicit empty string. The
-  `accessibleLabel` (attribute `accessible-label`) and `accessibleDescription` (attribute
-  `accessible-description`) remain nullable deprecated aliases with the same explicit-empty behavior
+  and description; host `aria-label` wins by presence, including an explicit empty string
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table

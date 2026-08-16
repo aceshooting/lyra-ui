@@ -1541,8 +1541,9 @@ collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (at
 `max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for
 the shared anchor-target contract). The inherited carrier fields `highlights: readonly LyraHighlight[] = []`
-(property only) and `activeHighlightId: string | null = null` (attribute `active-highlight-id`) are
-available for structural anchor-target compatibility, but this viewer does not paint them; use
+(property only) and `activeHighlightId: string | null = null` (attribute `active-highlight-id`)
+paint every highlight entry that resolves to a cell index (capped at 100 painted highlights), each
+tinted by its tone and, when its `id` matches `activeHighlightId`, outlined. Use
 `anchor: LyraAnchor | string | null = null` or `scrollToAnchor()` for notebook-cell navigation.
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
@@ -1564,17 +1565,24 @@ non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment
 `scrollToAnchor()` call is applied.
 
 Neither `lr-highlight-activate` nor `lr-text-select` is part of `lr-notebook-viewer`'s event
-contract: notebook host highlights are not painted and no selection binding is installed. Use
-`anchor` plus `lr-anchor-result` for notebook cell navigation outcomes.
+contract: highlights are painted but not click-to-activate, and no selection binding is installed.
+Use `anchor` plus `lr-anchor-result` for notebook cell navigation outcomes.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
 `data-active`), `cell-active` (added alongside `cell` on the cell currently targeted by an anchor
 or the active search match),
+`cell-highlighted` (added alongside `cell` on a cell matched by a `highlights` entry, always paired
+with a tone-specific `cell-highlighted-<tone>` part below), `cell-highlighted-accent` (the default
+tone), `cell-highlighted-success`, `cell-highlighted-warning`, `cell-highlighted-danger`,
+`cell-highlighted-neutral`, `cell-highlight-active` (added alongside `cell-highlighted`/
+`cell-highlighted-<tone>` when the matched highlight's `id` equals `activeHighlightId`),
 `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `raw-source` (the horizontally
 scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
 an error output), `error-output-label` (the label introducing an error output's traceback),
-`output-toggle`, `error`, `spinner`.
+`output-toggle`, `error`, `spinner`. The highlight/active state variants are separate part _names_
+rather than attribute selectors, because Shadow Parts forbids an attribute selector after
+`::part()`.
 The document-level spinner always includes visible localized loading text alongside its decorative
 ring; the text remains understandable without CSS or animation and the ring stops under reduced
 motion.
@@ -1592,6 +1600,15 @@ remain on the elements for scripting.
 cell currently targeted by an anchor or the active search match — the `cell-active` part. It is an
 inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
 the element or on any ancestor.
+
+`--lr-notebook-viewer-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-notebook-viewer-highlight-success-background` (default `var(--lr-color-success-quiet)`),
+`--lr-notebook-viewer-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
+`--lr-notebook-viewer-highlight-danger-background` (default `var(--lr-color-danger-quiet)`), and
+`--lr-notebook-viewer-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) are
+each tone's highlighted-cell background. `--lr-notebook-viewer-highlight-active-outline` (default
+`var(--lr-focus-ring-color)`) outlines the highlighted cell whose highlight `id` equals
+`activeHighlightId`.
 
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to

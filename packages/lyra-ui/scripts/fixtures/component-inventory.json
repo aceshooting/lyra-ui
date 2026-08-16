@@ -2598,12 +2598,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -2670,12 +2669,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -4628,19 +4626,7 @@
             "composed": true
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-error",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
             "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -6189,12 +6175,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -6241,12 +6226,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -6806,12 +6790,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -6898,12 +6881,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -7870,12 +7852,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-camera-request",
             "type": "CustomEvent<null>",
             "cancelable": "never",
@@ -7884,12 +7860,6 @@
           {
             "name": "lr-files",
             "type": "CustomEvent<LyraEventDetailSnapshot<LyraAttachmentFilesDetail>>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -8619,20 +8589,8 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-cue-change",
             "type": "CustomEvent<LyraAvCueChangeDetail>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -11540,22 +11498,20 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -11572,22 +11528,20 @@
           {
             "name": "accessibleLabel",
             "attribute": "aria-label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -13807,18 +13761,6 @@
             "constructor": "FocusEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-invalid",
             "type": "CustomEvent<null>",
             "cancelable": "always",
@@ -15891,12 +15833,11 @@
           {
             "name": "accessible-label",
             "property": "accessibleLabel",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "aria-label",
@@ -16033,12 +15974,11 @@
           {
             "name": "accessibleLabel",
             "attribute": "accessible-label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "autoplay",
@@ -19724,20 +19664,8 @@
             "composed": true
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ checked: boolean }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -24101,20 +24029,8 @@
             "constructor": "InputEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -25097,20 +25013,8 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -26689,12 +26593,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }> >",
             "cancelable": "never",
@@ -26715,12 +26613,6 @@
           {
             "name": "lr-filter",
             "type": "CustomEvent<ComboboxFilterDetail>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -27349,12 +27241,11 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "hotkey",
@@ -27390,12 +27281,11 @@
           {
             "name": "accessibleLabel",
             "attribute": "aria-label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "commands",
@@ -38429,12 +38319,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "loading",
@@ -38509,12 +38398,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "loading",
@@ -44092,20 +43980,8 @@
             "constructor": "InputEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -45545,12 +45421,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -45596,12 +45471,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -48381,12 +48255,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -48413,12 +48286,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -54558,12 +54430,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -54620,12 +54491,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -58008,18 +57878,6 @@
             "type": "FocusEvent",
             "cancelable": "never",
             "constructor": "FocusEvent"
-          },
-          {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -59465,12 +59323,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -59507,12 +59364,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -60695,12 +60551,6 @@
             "composed": true
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
@@ -60708,12 +60558,6 @@
           },
           {
             "name": "lr-clear",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
             "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -62320,12 +62164,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -62362,12 +62205,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -62589,12 +62431,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -62641,12 +62482,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -62853,12 +62693,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -62965,12 +62804,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "links",
@@ -63086,6 +62924,13 @@
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "lr-hidden-types-change",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ hiddenTypes: string[] }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
             "composed": true
           },
           {
@@ -63720,6 +63565,15 @@
             "attribute": null,
             "type": "string",
             "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "validationTarget",
+            "attribute": null,
+            "type": "HTMLElement | undefined",
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -66882,21 +66736,9 @@
             "constructor": "FocusEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<LyraLocaleChangeDetail>",
             "cancelable": "always",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -69320,12 +69162,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -69342,12 +69183,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -71561,12 +71401,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -71593,12 +71432,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -74819,12 +74657,6 @@
             "composed": true
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
@@ -74832,12 +74664,6 @@
           },
           {
             "name": "lr-clear",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
             "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -75400,12 +75226,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -75452,12 +75277,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -75606,12 +75430,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -75658,12 +75481,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -76051,6 +75873,34 @@
             "deprecated": null
           },
           {
+            "name": "cell-highlight-active",
+            "deprecated": null
+          },
+          {
+            "name": "cell-highlighted",
+            "deprecated": null
+          },
+          {
+            "name": "cell-highlighted-accent",
+            "deprecated": null
+          },
+          {
+            "name": "cell-highlighted-danger",
+            "deprecated": null
+          },
+          {
+            "name": "cell-highlighted-neutral",
+            "deprecated": null
+          },
+          {
+            "name": "cell-highlighted-success",
+            "deprecated": null
+          },
+          {
+            "name": "cell-highlighted-warning",
+            "deprecated": null
+          },
+          {
             "name": "cell-source",
             "deprecated": null
           },
@@ -76093,6 +75943,42 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-notebook-viewer-highlight-accent-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-notebook-viewer-highlight-active-outline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-focus-ring-color)"
+          },
+          {
+            "name": "--lr-notebook-viewer-highlight-danger-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger-quiet)"
+          },
+          {
+            "name": "--lr-notebook-viewer-highlight-neutral-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          },
+          {
+            "name": "--lr-notebook-viewer-highlight-success-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-success-quiet)"
+          },
+          {
+            "name": "--lr-notebook-viewer-highlight-warning-background",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-warning-quiet)"
           },
           {
             "name": "--lr-notebook-viewer-max-height",
@@ -77254,12 +77140,6 @@
             "composed": true
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
@@ -77267,12 +77147,6 @@
           },
           {
             "name": "lr-clear",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
             "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -78820,12 +78694,6 @@
             "constructor": "InputEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-clear",
             "type": "CustomEvent<null>",
             "cancelable": "never",
@@ -78837,12 +78705,6 @@
             "name": "lr-complete",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "always",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -80321,12 +80183,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "last-label",
@@ -80558,12 +80419,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "lastLabel",
@@ -81262,18 +81122,6 @@
             "composed": true
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-zoom-change",
             "type": "CustomEvent<{ zoom: number }>",
             "cancelable": "never",
@@ -81456,12 +81304,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -81478,12 +81325,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -82907,20 +82753,8 @@
             "constructor": "InputEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<LyraPhoneInputEventDetail>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -86676,12 +86510,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -86778,12 +86611,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -89435,12 +89267,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -89457,12 +89288,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -91742,20 +91572,8 @@
             "composed": true
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ checked: boolean; value: string }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -92515,20 +92333,8 @@
             "constructor": "Event"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ checked: boolean; value: string }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -93890,12 +93696,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "loading",
@@ -93992,12 +93797,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "loading",
@@ -94195,12 +93999,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -94257,12 +94060,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -95129,20 +94931,8 @@
             "constructor": "FocusEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: number }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -97256,12 +97046,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -97298,12 +97087,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -97529,12 +97317,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "loading",
@@ -97688,12 +97475,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "loading",
@@ -98012,12 +97798,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "loading",
@@ -98113,12 +97898,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "loading",
@@ -101457,12 +101241,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: string | readonly string[] }> >",
             "cancelable": "never",
@@ -101470,12 +101248,6 @@
           },
           {
             "name": "lr-clear",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
             "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -102437,18 +102209,6 @@
             "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
-          },
-          {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
           },
           {
             "name": "lr-pause",
@@ -103908,20 +103668,8 @@
             "constructor": "InputEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<LyraSliderChangeDetail>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -104724,12 +104472,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "label-plural",
@@ -104766,12 +104513,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "labelPlural",
@@ -104903,12 +104649,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -104955,12 +104700,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -108596,12 +108340,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -108628,12 +108371,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -109898,20 +109640,8 @@
             "composed": true
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ checked: boolean }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -111073,12 +110803,11 @@
           {
             "name": "accessible-label",
             "property": "accessibleLabel",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "autocapitalize",
@@ -111424,12 +111153,11 @@
           {
             "name": "accessibleLabel",
             "attribute": "accessible-label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "autocapitalize",
@@ -114883,20 +114611,8 @@
             "composed": true
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -115662,12 +115378,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -115809,12 +115524,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -116901,12 +116615,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
@@ -116914,12 +116622,6 @@
           },
           {
             "name": "lr-clear",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
             "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -117758,20 +117460,8 @@
             "constructor": "Event"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<{ start: number; end: number }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -118129,12 +117819,11 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -118160,12 +117849,11 @@
           {
             "name": "accessibleLabel",
             "attribute": "aria-label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "itemCount",
@@ -119631,20 +119319,8 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-change",
             "type": "CustomEvent<Readonly<{ value: readonly string[] }>>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -124359,12 +124035,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -124450,12 +124125,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -126486,18 +126160,6 @@
             "composed": false
           },
           {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "pause",
             "type": "Event",
             "cancelable": "never",
@@ -127019,18 +126681,6 @@
             "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
-          },
-          {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
           },
           {
             "name": "lr-video-change",
@@ -130628,18 +130278,6 @@
             "constructor": "Event",
             "bubbles": false,
             "composed": false
-          },
-          {
-            "name": "lr-blur",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-focus",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -180538,8 +180176,8 @@
       "upstreamTag": "sl-breadcrumb",
       "upstreamTier": "free",
       "targetTag": "lr-breadcrumb",
-      "classification": "exact",
-      "rationale": null,
+      "classification": "warning-required",
+      "rationale": "lr-breadcrumb's `label` accepts an accessible-name override; it is now optional with no declared default (was `string = ''`) so an explicit empty string can suppress the localized fallback without a never-set value doing the same. The rename carries no attribute/property name change, only this default-value divergence.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -180590,7 +180228,15 @@
         "cssDefaultEquivalences": [],
         "deprecationEquivalences": []
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "default-mismatch",
+          "section": "attributes",
+          "member": "label",
+          "expected": "",
+          "actual": null
+        }
+      ]
     },
     {
       "upstream": "shoelace",
@@ -180696,11 +180342,11 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           },
           {
             "from": "sl-invalid",
@@ -181148,7 +180794,7 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-change",
@@ -181156,7 +180802,7 @@
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           },
           {
             "from": "sl-input",
@@ -181273,7 +180919,7 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-change",
@@ -181281,7 +180927,7 @@
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           },
           {
             "from": "sl-input",
@@ -182388,11 +182034,11 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           }
         ],
         "slots": [],
@@ -182649,7 +182295,7 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-change",
@@ -182661,7 +182307,7 @@
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           },
           {
             "from": "sl-input",
@@ -183547,11 +183193,11 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           }
         ],
         "slots": [],
@@ -183636,11 +183282,11 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           }
         ],
         "slots": [],
@@ -183843,7 +183489,7 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-change",
@@ -183851,7 +183497,7 @@
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           },
           {
             "from": "sl-input",
@@ -184222,7 +183868,7 @@
           },
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-change",
@@ -184234,7 +183880,7 @@
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           },
           {
             "from": "sl-hide",
@@ -184659,7 +184305,7 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-change",
@@ -184667,7 +184313,7 @@
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           },
           {
             "from": "sl-input",
@@ -185142,7 +184788,7 @@
         "events": [
           {
             "from": "sl-blur",
-            "to": "lr-blur"
+            "to": "blur"
           },
           {
             "from": "sl-change",
@@ -185150,7 +184796,7 @@
           },
           {
             "from": "sl-focus",
-            "to": "lr-focus"
+            "to": "focus"
           },
           {
             "from": "sl-input",
@@ -186397,8 +186043,8 @@
       "upstreamTag": "wa-breadcrumb",
       "upstreamTier": "free",
       "targetTag": "lr-breadcrumb",
-      "classification": "exact",
-      "rationale": null,
+      "classification": "warning-required",
+      "rationale": "lr-breadcrumb's `label` accepts an accessible-name override; it is now optional with no declared default (was `string = ''`) so an explicit empty string can suppress the localized fallback without a never-set value doing the same. The rename carries no attribute/property name change, only this default-value divergence.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -186458,7 +186104,15 @@
           }
         ]
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "default-mismatch",
+          "section": "attributes",
+          "member": "label",
+          "expected": "",
+          "actual": null
+        }
+      ]
     },
     {
       "upstream": "webawesome",
@@ -191985,8 +191639,8 @@
       "upstreamTag": "wa-pagination",
       "upstreamTier": "free",
       "targetTag": "lr-pagination",
-      "classification": "rewritten",
-      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
+      "classification": "warning-required",
+      "rationale": "The page-change events are covered by deterministic member rewrites. `label` is now optional with no declared default (was `string = ''`) so an explicit empty string can suppress the localized fallback without a never-set value doing the same -- a default-value divergence with no rewrite rule to express it, so migrating consumers get a warning instead of a silent rename.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -192093,7 +191747,15 @@
           }
         ]
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "default-mismatch",
+          "section": "attributes",
+          "member": "label",
+          "expected": "",
+          "actual": null
+        }
+      ]
     },
     {
       "upstream": "webawesome",

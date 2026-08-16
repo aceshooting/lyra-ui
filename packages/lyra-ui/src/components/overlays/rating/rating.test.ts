@@ -453,7 +453,7 @@ it("locale-formats the spoken slider value and forwards host focus/blur/click to
   expect(clicked).to.equal(1);
 });
 
-it("exposes one native host focus/blur pair and one prefixed alias pair", async () => {
+it("exposes one native host focus/blur pair and fires no prefixed alias", async () => {
   const wrapper = await fixture<HTMLElement>(
     html`<div><lr-rating value="2"></lr-rating></div>`
   );
@@ -485,7 +485,7 @@ it("exposes one native host focus/blur pair and one prefixed alias pair", async 
     directNativeEvents.every((event) => event.target === el && !event.bubbles)
   ).to.be.true;
   expect(bubbledNativeEvents).to.deep.equal([]);
-  expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
+  expect(aliases, "lr-focus/lr-blur compatibility aliases must not fire").to.deep.equal([]);
 });
 
 it("reverses horizontal value movement under RTL", async () => {

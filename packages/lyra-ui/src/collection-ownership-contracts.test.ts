@@ -27,6 +27,7 @@ import './components/agent-tools/tool-timeline/tool-timeline.js';
 import './components/charts/chart/box-plot.js';
 import './components/charts/chart/histogram.js';
 import './components/charts/chart/lite-chart.js';
+import './components/conversation/agent-workspace/agent-workspace.js';
 import './components/conversation/message-actions/message-actions.js';
 import './components/conversation/message-feedback/message-feedback.js';
 import './components/conversation/message-parts/message-parts.js';
@@ -95,6 +96,7 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-agent-run', property: 'metrics' },
   { tag: 'lr-agent-trace', property: 'spans' },
   { tag: 'lr-agent-trace', property: 'hiddenKinds' },
+  { tag: 'lr-agent-workspace', property: 'selectedRetrievalChunkIds' },
   { tag: 'lr-approval-queue', property: 'requests' },
   { tag: 'lr-artifact-panel', property: 'versions' },
   { tag: 'lr-browser-frame', property: 'pings' },

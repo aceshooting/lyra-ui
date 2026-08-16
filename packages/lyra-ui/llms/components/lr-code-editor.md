@@ -74,7 +74,7 @@ showing error chrome alone does not mutate `ElementInternals` validity.
 **Events:** exactly one realm-correct native `input`, `change`, `focus`, and `blur` is relayed from
 the internal textarea; native payload such as `InputEvent.inputType` and
 `FocusEvent.relatedTarget` is preserved. Typed `lr-input`/`lr-change` aliases carry
-`detail: { value }`, and `lr-focus`/`lr-blur` are the prefixed lifecycle aliases. `lr-invalid`
+`detail: { value }`. `lr-invalid`
 (no detail) fires once when validity fails.
 
 **Slots:** `label`, `hint`, `error`.

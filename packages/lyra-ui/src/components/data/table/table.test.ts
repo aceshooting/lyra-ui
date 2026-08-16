@@ -2895,6 +2895,21 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     expect(grid.getAttribute('aria-label')).to.equal('Primary');
     expect(grid.hasAttribute('aria-labelledby')).to.be.false;
   });
+
+  it('treats an explicitly empty accessibleLabel as a real override, distinct from an omitted one', async () => {
+    // An explicit empty override renders a genuinely blank aria-label and still suppresses the
+    // caption aria-labelledby fallback -- unlike an omitted accessibleLabel, which lets caption
+    // name the grid instead.
+    const el = (await fixture(
+      html`<lr-table accessible-label="" caption="Quarterly results"></lr-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(grid.getAttribute('aria-label')).to.equal('');
+    expect(grid.hasAttribute('aria-labelledby')).to.be.false;
+  });
 });
 
 it('does not trigger a Lit "scheduled an update after an update completed" dev warning when a priority column transitions to actually-hidden', async () => {

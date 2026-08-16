@@ -21,8 +21,7 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 **Properties:**
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly
-  `LyraBoxPlotSummary { min, q1, median, q3, max }` values. `boxes`, `BoxPlotSeries`, and
-  `BoxPlotPoint` remain deprecated migration aliases. Summaries must be finite and ordered
+  `LyraBoxPlotSummary { min, q1, median, q3, max }` values. Summaries must be finite and ordered
   `min <= q1 <= median <= q3 <= max`; invalid entries are omitted and caller objects are never
   passed to the mutating peer.
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled visibility snapshot
@@ -43,9 +42,7 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
-  and description; host `aria-label` wins by presence, including an explicit empty string. The
-  `accessibleLabel` (attribute `accessible-label`) and `accessibleDescription` (attribute
-  `accessible-description`) remain nullable deprecated aliases with the same explicit-empty behavior
+  and description; host `aria-label` wins by presence, including an explicit empty string
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table

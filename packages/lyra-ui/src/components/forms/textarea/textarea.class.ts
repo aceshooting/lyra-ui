@@ -68,8 +68,6 @@ export interface LyraTextareaEventMap {
   'lr-change': CustomEvent<{ value: string }>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
@@ -96,8 +94,6 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @event change - Native-style composed event fired at the native `change` timing.
  * @event lr-input - Compatibility alias for `input`; `detail: { value }`.
  * @event lr-change - Compatibility alias for `change`; `detail: { value }`.
- * @event lr-blur - Prefixed compatibility alias for the native-style `blur` relay.
- * @event lr-focus - Prefixed compatibility alias for the native-style `focus` relay.
  * @event lr-invalid - The textarea failed a validity check. Cancelable: `preventDefault()` forwards
  *   to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
@@ -730,7 +726,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onBlur = (event: FocusEvent): void => {
@@ -745,7 +740,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     // validation regardless.
     if (!this.liveDisabled) this.touched = true;
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   override render(): TemplateResult {

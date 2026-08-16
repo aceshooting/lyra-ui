@@ -618,9 +618,7 @@ export type LyraAnimatedImageSvelteProps = LyraSvelteElementProps<
   LyraAnimatedImageEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
   | 'lr-error'
-  | 'lr-focus'
   | 'lr-load'
   | 'lr-pause'
   | 'lr-play',
@@ -893,10 +891,8 @@ export type LyraAttachmentTriggerSvelteProps = LyraSvelteElementProps<
   | 'blur'
   | 'focus'
   | 'lr-audio-request'
-  | 'lr-blur'
   | 'lr-camera-request'
-  | 'lr-files'
-  | 'lr-focus',
+  | 'lr-files',
 never,
   {
     'accessible-label'?: LyraAttachmentTrigger['accessibleLabel'];
@@ -957,9 +953,7 @@ export type LyraAvPlayerSvelteProps = LyraSvelteElementProps<
   | 'focus'
   | 'loadedmetadata'
   | 'lr-anchor-result'
-  | 'lr-blur'
   | 'lr-cue-change'
-  | 'lr-focus'
   | 'lr-highlight-activate'
   | 'lr-load'
   | 'lr-pause'
@@ -1405,8 +1399,6 @@ export type LyraButtonSvelteProps = LyraSvelteElementProps<
   LyraButtonEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'lr-invalid',
   | '--lr-button-accent'
   | '--lr-button-accent-fill'
@@ -1888,9 +1880,7 @@ export type LyraCheckboxSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--checked-icon-color'
@@ -2217,9 +2207,7 @@ export type LyraCodeEditorSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-code-editor-font-size'
@@ -2282,9 +2270,7 @@ export type LyraColorPickerSvelteProps = LyraSvelteElementProps<
   | 'input'
   | 'lr-after-hide'
   | 'lr-after-show'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-hide'
   | 'lr-input'
   | 'lr-invalid'
@@ -2387,12 +2373,10 @@ export type LyraComboboxSvelteProps = LyraSvelteElementProps<
   | 'input'
   | 'lr-after-hide'
   | 'lr-after-show'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
   | 'lr-create'
   | 'lr-filter'
-  | 'lr-focus'
   | 'lr-hide'
   | 'lr-invalid'
   | 'lr-show',
@@ -3791,9 +3775,7 @@ export type LyraEmojiPickerSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-emoji-picker-active-bg'
@@ -4973,9 +4955,7 @@ export type LyraIconButtonSvelteProps = LyraSvelteElementProps<
   },
   LyraIconButtonEventMap,
   | 'blur'
-  | 'focus'
-  | 'lr-blur'
-  | 'lr-focus',
+  | 'focus',
   | '--lr-icon-button-background'
   | '--lr-icon-button-background-active'
   | '--lr-icon-button-background-hover'
@@ -5178,10 +5158,8 @@ export type LyraInputSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -5383,6 +5361,7 @@ export type LyraKnowledgeGraphExplorerSvelteProps = LyraSvelteElementProps<
   {},
   LyraKnowledgeGraphExplorerEventMap,
   | 'lr-community-click'
+  | 'lr-hidden-types-change'
   | 'lr-link-click'
   | 'lr-node-click'
   | 'lr-node-expand'
@@ -5422,6 +5401,7 @@ export type LyraKnownDateSvelteProps = LyraSvelteElementProps<
   | 'required'
   | 'size'
   | 'strings'
+  | 'validationTarget'
   | 'value'
   | 'valueAsDate'
   | 'valueInput'
@@ -5704,9 +5684,7 @@ export type LyraLocalePickerSvelteProps = LyraSvelteElementProps<
   LyraLocalePickerEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
@@ -6331,10 +6309,8 @@ export type LyraNativeTimeInputSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -6437,6 +6413,12 @@ export type LyraNotebookViewerSvelteProps = LyraSvelteElementProps<
   | 'lr-render-error'
   | 'lr-search-change',
   | '--lr-notebook-viewer-active-bg'
+  | '--lr-notebook-viewer-highlight-accent-background'
+  | '--lr-notebook-viewer-highlight-active-outline'
+  | '--lr-notebook-viewer-highlight-danger-background'
+  | '--lr-notebook-viewer-highlight-neutral-background'
+  | '--lr-notebook-viewer-highlight-success-background'
+  | '--lr-notebook-viewer-highlight-warning-background'
   | '--lr-notebook-viewer-max-height',
   {
     'active-highlight-id'?: LyraNotebookViewer['activeHighlightId'];
@@ -6508,10 +6490,8 @@ export type LyraNumberInputSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -6622,10 +6602,8 @@ export type LyraOtpInputSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-clear'
   | 'lr-complete'
-  | 'lr-focus'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
@@ -6813,8 +6791,6 @@ export type LyraPanZoomSvelteProps = LyraSvelteElementProps<
   LyraPanZoomEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'lr-zoom-change',
   | '--lr-pan-zoom-min-block-size'
   | '--lr-pan-zoom-zoom',
@@ -6919,9 +6895,7 @@ export type LyraPhoneInputSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -7672,9 +7646,7 @@ export type LyraRadioSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--checked-icon-color'
@@ -7718,9 +7690,7 @@ export type LyraRadioButtonSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--checked-icon-color'
@@ -7904,9 +7874,7 @@ export type LyraRatingSvelteProps = LyraSvelteElementProps<
   | 'blur'
   | 'change'
   | 'focus'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-hover'
   | 'lr-invalid',
   | '--lr-rating-active-color'
@@ -8413,10 +8381,8 @@ export type LyraSelectSvelteProps = LyraSvelteElementProps<
   | 'input'
   | 'lr-after-hide'
   | 'lr-after-show'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-hide'
   | 'lr-input'
   | 'lr-invalid'
@@ -8495,8 +8461,6 @@ export type LyraSequencePlaybackSvelteProps = LyraSvelteElementProps<
   LyraSequencePlaybackEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'lr-pause'
   | 'lr-play'
   | 'lr-sequence-step',
@@ -8604,9 +8568,7 @@ export type LyraSliderSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -9116,9 +9078,7 @@ export type LyraSwitchSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--height'
@@ -9521,9 +9481,7 @@ export type LyraTextareaSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -9667,10 +9625,8 @@ export type LyraTimeInputSvelteProps = LyraSvelteElementProps<
   | 'input'
   | 'lr-after-hide'
   | 'lr-after-show'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-hide'
   | 'lr-input'
   | 'lr-invalid'
@@ -9739,9 +9695,7 @@ export type LyraTimeRangeSvelteProps = LyraSvelteElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-time-range-base-size'
@@ -9897,9 +9851,7 @@ export type LyraTokenInputSvelteProps = LyraSvelteElementProps<
   | 'focus'
   | 'input'
   | 'lr-add'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid'
   | 'lr-remove'
@@ -10429,8 +10381,6 @@ export type LyraVideoSvelteProps = LyraSvelteElementProps<
   | 'error'
   | 'focus'
   | 'loadedmetadata'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'pause'
   | 'play'
   | 'timeupdate'
@@ -10460,8 +10410,6 @@ export type LyraVideoPlaylistSvelteProps = LyraSvelteElementProps<
   LyraVideoPlaylistEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'lr-video-change',
   | '--lr-video-playlist-item-current-background'
   | '--lr-video-playlist-item-current-border-color',
@@ -10739,9 +10687,7 @@ export type LyraZoomableFrameSvelteProps = LyraSvelteElementProps<
   | 'blur'
   | 'error'
   | 'focus'
-  | 'load'
-  | 'lr-blur'
-  | 'lr-focus',
+  | 'load',
   | '--lr-zoomable-frame-control-hover-background'
   | '--lr-zoomable-frame-zoom',
   {

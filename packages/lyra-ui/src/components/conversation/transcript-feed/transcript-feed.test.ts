@@ -109,6 +109,18 @@ it('names the log via label, with a host aria-label winning over both label and 
   expect(el.shadowRoot!.querySelector('[part="log"]')!.getAttribute('aria-label')).to.equal('Support call');
 });
 
+it('distinguishes an omitted label from an explicit empty override on the log region', async () => {
+  const omitted = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  omitted.entries = [{ id: '1', text: 'hi' }];
+  await omitted.updateComplete;
+  expect(omitted.shadowRoot!.querySelector('[part="log"]')!.getAttribute('aria-label')).to.equal('Transcript');
+
+  const explicitEmpty = (await fixture(html`<lr-transcript-feed label=""></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  explicitEmpty.entries = [{ id: '1', text: 'hi' }];
+  await explicitEmpty.updateComplete;
+  expect(explicitEmpty.shadowRoot!.querySelector('[part="log"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 describe('timestamps', () => {
   it('renders the built-in short-time format when no formatTimestamp is supplied', async () => {
     const el = (await fixture(html`<lr-transcript-feed show-timestamps locale="en"></lr-transcript-feed>`)) as LyraTranscriptFeed;

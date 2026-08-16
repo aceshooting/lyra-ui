@@ -25,8 +25,6 @@ export interface LyraAnimatedImageEventMap {
   'lr-pause': CustomEvent<null>;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 
 /**
@@ -88,8 +86,6 @@ export interface LyraAnimatedImageEventMap {
  *   composed native event.
  * @event {FocusEvent} focus - Relayed once from the internal play/pause button as a bubbling,
  *   composed native event.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
  * @csspart base - Root wrapper; positioning context for `control-box`.
  * @csspart image - The live `<img>`.
  * @csspart canvas - The frozen-frame `<canvas>`, shown in place of `image` while not playing.
@@ -313,12 +309,10 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   private onControlFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus', null);
   };
 
   private onControlBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur', null);
   };
 
   override render(): TemplateResult {

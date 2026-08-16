@@ -249,7 +249,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Type: `string`  \nDefault: `''`"
+            "value": "Accessible/visible heading override. Optional. Omitting it localizes the default\n`evaluationDashboardLabel` message; an explicit empty string renders no visible/accessible\nlabel.\n\nType: `string | undefined`"
           }
         },
         {
@@ -1033,7 +1033,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name and visible heading.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name and visible heading. Optional. Omitting it localizes the default\n`approvalQueueLabel` message; an explicit empty string renders no visible/accessible label.\n\nType: `string | undefined`"
           }
         },
         {
@@ -1142,7 +1142,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "The artifact's title, shown in the header.\n\nType: `string`  \nDefault: `''`"
+            "value": "The artifact's title, shown in the header. Optional. Omitting it localizes the default\n`artifactPanelLabel` message for the view-toggle group's accessible name (and shows no\nvisible title); an explicit empty string also renders no visible/accessible label.\n\nType: `string | undefined`"
           }
         },
         {
@@ -1880,7 +1880,7 @@
           "name": "size",
           "description": {
             "kind": "markdown",
-            "value": "Visual density, matching `<lr-chip>`'s `2xs`–`xl` size scale. `m` preserves the original\nbadge dimensions. Valid `small`/`medium`/`large` values round-trip exactly.\n\nType: `BadgeSize`  \nDefault: `'m'`"
+            "value": "Visual density, matching `<lr-chip>`'s `3xs`–`xl` size scale. `m` preserves the original\nbadge dimensions. Valid `small`/`medium`/`large` values round-trip exactly.\n\nType: `BadgeSize`  \nDefault: `'m'`"
           },
           "values": [
             {
@@ -2308,14 +2308,14 @@
           "name": "aria-label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible-name override for the trail, mapped to the host's `aria-label` attribute the same\nway every other Lyra component spells this member. The `<nav>` landmark that owns the role\nlives in the shadow root and never inherits a host attribute automatically, so the value is\ncopied onto it. Both spellings work: an `aria-label` attribute on `<lr-breadcrumb>` (which the\nattribute mapping also surfaces here) and a plain property assignment\n(`el.accessibleLabel = 'Docs trail'`). Wins over `label` and over the localized default\n(\"Breadcrumb\"); an explicitly empty `aria-label` attribute stays empty.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible-name override for the trail, mapped to the host's `aria-label` attribute the same\nway every other Lyra component spells this member. The `<nav>` landmark that owns the role\nlives in the shadow root and never inherits a host attribute automatically, so the value is\ncopied onto it. Both spellings work: an `aria-label` attribute on `<lr-breadcrumb>` (which the\nattribute mapping also surfaces here) and a plain property assignment\n(`el.accessibleLabel = 'Docs trail'`). Wins over `label` and over the localized default\n(\"Breadcrumb\"); an explicitly empty `aria-label` attribute or an explicitly empty\n`accessibleLabel`/`label` property assignment stays empty rather than falling through.\n\nType: `string | undefined`"
           }
         },
         {
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name matching both pinned upstream breadcrumb contracts. A host `aria-label`\nremains the highest-priority override.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name matching both pinned upstream breadcrumb contracts. A host `aria-label`\nremains the highest-priority override. An explicitly empty string stays empty rather than\nfalling back to the localized default.\n\nType: `string | undefined`"
           }
         },
         {
@@ -3484,7 +3484,7 @@
           "name": "accessible-label",
           "description": {
             "kind": "markdown",
-            "value": "Type: `string`  \nDefault: `''`"
+            "value": "Accessible name used when the host has no `aria-label`; omitted falls back to the localized\n`carouselLabel` default. An explicitly empty `accessible-label` is used as-is.\n\nType: `string | undefined`"
           }
         },
         {
@@ -4647,6 +4647,15 @@
             },
             {
               "name": "3xs"
+            },
+            {
+              "name": "small"
+            },
+            {
+              "name": "medium"
+            },
+            {
+              "name": "large"
             }
           ]
         },
@@ -5949,7 +5958,7 @@
           "name": "aria-label",
           "description": {
             "kind": "markdown",
-            "value": "Type: `string`  \nDefault: `''`"
+            "value": "Accessible name for the dialog. Omitted falls back to the localized `commandPaletteLabel`\ndefault. An explicitly empty `aria-label` is used as-is.\n\nType: `string | undefined`"
           }
         },
         {
@@ -8343,7 +8352,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the region and the inner grid. Defaults to the localized\n`documentLibraryLabel`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the region and the inner grid. Defaults to the localized\n`documentLibraryLabel` when unset. An explicitly empty string renders as an empty label\nrather than falling back.\n\nType: `string | undefined`"
           }
         },
         {
@@ -9893,7 +9902,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the list; falls back to a localized default.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the list; falls back to a localized default when unset. An explicitly\nempty string renders as an empty label rather than falling back.\n\nType: `string | undefined`"
           }
         },
         {
@@ -10417,7 +10426,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Type: `string`  \nDefault: `''`"
+            "value": "Accessible-name override for the internal `<lr-tree>`; falls back to the localized default\nwhen unset. An explicitly empty string renders as an empty label rather than falling back.\n\nType: `string | undefined`"
           }
         },
         {
@@ -11842,7 +11851,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name used by the stable group when the host has no `aria-label`; falls back to the\nlocalized `groundingSummaryLabel` default. An explicitly empty host label stays empty.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name used by the stable group when the host has no `aria-label`; falls back to the\nlocalized `groundingSummaryLabel` default. An explicitly empty host label stays empty, and so\ndoes an explicitly empty `label`.\n\nType: `string | undefined`"
           }
         },
         {
@@ -12878,7 +12887,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the stable region when the host has no `aria-label`; defaults to\nlocalized `ingestionQueueLabel`. An explicitly empty host label stays empty.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the stable region when the host has no `aria-label`; defaults to\nlocalized `ingestionQueueLabel`. An explicitly empty host label stays empty, and so does an\nexplicitly empty `label`.\n\nType: `string | undefined`"
           }
         },
         {
@@ -13486,7 +13495,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Heading text and the nested table's accessible name. A host `aria-label` independently\nnames the complete component. Falls back to a localized default.\n\nType: `string`  \nDefault: `''`"
+            "value": "Heading text and the nested table's accessible name. A host `aria-label` independently\nnames the complete component. Omitted falls back to a localized default; an explicitly\nempty `label` is used as-is.\n\nType: `string | undefined`"
           }
         },
         {
@@ -13531,7 +13540,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name and visible heading.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name and visible heading. Omitted falls back to a localized default; an\nexplicitly empty `label` is used as-is.\n\nType: `string | undefined`"
           }
         },
         {
@@ -13579,7 +13588,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Fallback name for the root group; defaults to localized `graphExplorerLabel`. A non-empty\nhost `aria-label` makes the host the sole overall owner; an explicitly empty host label stays\nempty on the group.\n\nType: `string`  \nDefault: `''`"
+            "value": "Fallback name for the root group; defaults to localized `graphExplorerLabel`. A non-empty\nhost `aria-label` makes the host the sole overall owner; an explicitly empty host label stays\nempty on the group, and so does an explicitly empty `label`.\n\nType: `string | undefined`"
           }
         },
         {
@@ -14614,7 +14623,7 @@
           "name": "html-mode",
           "description": {
             "kind": "markdown",
-            "value": "How authored raw HTML is handled: sanitized through DOMPurify (default), escaped as visible\ntext, or deliberately trusted.\n\nType: `MarkdownHtmlMode`  \nDefault: `'sanitize'`"
+            "value": "How authored raw HTML is handled: sanitized through DOMPurify (default), escaped as visible\ntext, or deliberately trusted. Independently of this, every markdown-native link/image\n`href`/`src` is always scheme-validated (`http:`/`https:`/`blob:`/`mailto:`, plus `data:` for\nimages) unless `htmlMode` is `trusted` -- a rejected scheme drops the anchor/image, rendering\nonly its text/alt content.\n\nType: `MarkdownHtmlMode`  \nDefault: `'sanitize'`"
           },
           "values": [
             {
@@ -14725,7 +14734,7 @@
           "name": "html-mode",
           "description": {
             "kind": "markdown",
-            "value": "How authored raw HTML is handled: sanitized through DOMPurify (default), escaped as visible\ntext, or deliberately trusted.\n\nType: `MarkdownHtmlMode`  \nDefault: `'sanitize'`"
+            "value": "How authored raw HTML is handled: sanitized through DOMPurify (default), escaped as visible\ntext, or deliberately trusted. Independently of this, every markdown-native link/image\n`href`/`src` is always scheme-validated (`http:`/`https:`/`blob:`/`mailto:`, plus `data:` for\nimages) unless `htmlMode` is `trusted` -- a rejected scheme drops the anchor/image, rendering\nonly its text/alt content.\n\nType: `MarkdownHtmlMode`  \nDefault: `'sanitize'`"
           },
           "values": [
             {
@@ -14929,7 +14938,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Fallback overall group name. A non-empty host `aria-label` makes the host the sole owner; an\nexplicitly empty host label stays empty on the group.\n\nType: `string`  \nDefault: `''`"
+            "value": "Fallback overall group name. A non-empty host `aria-label` makes the host the sole owner; an\nexplicitly empty host label stays empty on the group, and so does an explicitly empty\n`label`.\n\nType: `string | undefined`"
           }
         },
         {
@@ -15329,7 +15338,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the SVG group *and* the implicit hub's text; falls back to the localized\n`mindMapLabel`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the SVG group *and* the implicit hub's text; falls back to the localized\n`mindMapLabel` when omitted. An explicitly empty override stays empty.\n\nType: `string | undefined`"
           }
         },
         {
@@ -15530,7 +15539,7 @@
       "name": "lr-model-settings-panel",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-model-settings-panel>` — a fixed composition of `<lr-model-select>`\nand `<lr-slider>` into one agent-configuration card: pick a provider's\nmodel, then tune its sampling temperature. Not a generic layout shell (no\nslots) — it exists so a consumer doesn't have to re-wire the same two\nchild `lr-change` events into one combined settings object by hand every\ntime this pairing comes up.\n\nEvery prop here is a plain pass-through to (or mirror of) the matching\nchild control's own prop of the same/similar name; see the child\ncomponents themselves for the exact semantics of `catalog`/`allowCustom`\nand `temperatureMin`/`temperatureMax`/`temperatureStep`.\nArray-valued catalogs are clone-owned, bounded readonly snapshots. Create and reassign a new\ncatalog array after changing its rows.\n\nThe panel's own `temperature` readout mirrors the slider's *live* value —\nupdated on every `lr-input` (drag/key-repeat), not just the committed\n`lr-change` — and is re-clamped into `[temperatureMin, temperatureMax]`\n(snapped to `temperatureStep`) whenever those three properties change, so\nit can never drift from what the nested `lr-slider` itself shows.\nThe visible temperature readout uses the effective locale and switches to bounded scientific\nnotation when a full decimal expansion would disturb the layout. The slider retains the exact\nfinite value through `aria-valuenow`.\nNative `focus` and `blur` relayed by the nested model selector remain local to that child; this\npanel exposes only its declared consolidated `lr-change` event.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outermost wrapping container. |\n| `model-label` | The model selector's visible label. |\n| `model-row` | The row wrapping the internal `lr-model-select`. |\n| `model-select` | The internal model selector. |\n| `temperature-label` | The visible \"Temperature\" caption. |\n| `temperature-row` | The row wrapping the temperature label/slider/value. |\n| `temperature-value` | The visible current temperature readout. |"
+        "value": "`<lr-model-settings-panel>` — a fixed composition of `<lr-model-select>`\nand `<lr-slider>` into one agent-configuration card: pick a provider's\nmodel, then tune its sampling temperature. Not a generic layout shell (no\nslots) — it exists so a consumer doesn't have to re-wire the same two\nchild `lr-change` events into one combined settings object by hand every\ntime this pairing comes up.\n\nEvery prop here is a plain pass-through to (or mirror of) the matching\nchild control's own prop of the same/similar name; see the child\ncomponents themselves for the exact semantics of `catalog`/`allowCustom`\nand `temperatureMin`/`temperatureMax`/`temperatureStep`.\nArray-valued catalogs are clone-owned, bounded readonly snapshots. Create and reassign a new\ncatalog array after changing its rows.\n\nThe panel's own `temperature` readout mirrors the slider's *live* value —\nupdated on every `lr-input` (drag/key-repeat), not just the committed\n`lr-change` — and is re-clamped into `[temperatureMin, temperatureMax]`\n(snapped to `temperatureStep`) whenever those three properties change, so\nit can never drift from what the nested `lr-slider` itself shows.\nThe visible temperature readout uses the effective locale and switches to bounded scientific\nnotation when a full decimal expansion would disturb the layout. The slider retains the exact\nfinite value through `aria-valuenow`.\nNative `focus` and `blur` relayed by the nested model selector or slider remain local to that\nchild; this panel exposes only its declared consolidated `lr-change` event.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outermost wrapping container. |\n| `model-label` | The model selector's visible label. |\n| `model-row` | The row wrapping the internal `lr-model-select`. |\n| `model-select` | The internal model selector. |\n| `temperature-label` | The visible \"Temperature\" caption. |\n| `temperature-row` | The row wrapping the temperature label/slider/value. |\n| `temperature-value` | The visible current temperature readout. |"
       },
       "attributes": [
         {
@@ -16259,7 +16268,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the stable group when the host has no `aria-label`; falls back to the\nlocalized `neighborListLabel` default. An explicitly empty host label stays empty.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the stable group when the host has no `aria-label`; falls back to the\nlocalized `neighborListLabel` default when omitted. An explicitly empty host label stays\nempty, and so does an explicitly empty `label`.\n\nType: `string | undefined`"
           }
         },
         {
@@ -16296,7 +16305,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the palette; empty uses the localized default.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the palette; omitted uses the localized default. An explicit empty\nstring is used as-is (see `render()`'s `listLabel` for how it interacts with a host\n`aria-label`).\n\nType: `string | undefined`"
           }
         },
         {
@@ -16319,7 +16328,7 @@
       "name": "lr-notebook-viewer",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-notebook-viewer>` — read-only Jupyter notebook (nbformat 4.x) renderer, composing existing\ncomponents per cell. Execution is a hard non-goal.\n\nMarkdown cells render through `<lr-markdown>`, code cells through `<lr-code-block>` (using the\nnotebook's kernel language for syntax highlighting), and raw cells as plain preformatted text. A\ncode cell's `execute_result`/`display_data` outputs prefer, in order, `image/png`, `image/jpeg`,\n`image/svg+xml` (sanitized), `text/html` (sanitized), `application/json` (via `<lr-json-viewer>`),\nthen `text/plain`. Stream/error outputs (tinted `danger` for stderr/tracebacks) interpret embedded\nANSI SGR color/style escapes via the shared `internal/ansi.ts` parser, same as `<lr-terminal>`.\nSanitizing raw HTML/SVG\noutput markup lazy-loads the optional peer dependency `dompurify` via `dompurify-loader.ts`; when\nthat peer isn't installed, the output renders a localized notice instead of raw markup.\n\nCells are virtualized through `<lr-virtual-list>` so a notebook with many cells stays cheap to\nscroll. `node-path` anchors resolve `path[0]` as a cell index; `fragment` anchors resolve a cell's\nown `id`.\n\n`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()` follow the shared viewer search\ncontract (`internal/text-viewer-target.ts`'s `LyraTextViewerTarget`): `search()` resolves the\nmatch count and the two navigation methods resolve `true` once the active match moved, `false`\nwhen there is nothing to move to. A find-in-page host can therefore drive this viewer through the\nsame typed surface as every other one.\n\nParsed `notebook` assignments are synchronously clone-owned and recursively frozen. Mutate a\ncopy and reassign it to update the viewer; later changes to the source object are not observed.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root scroll container. |\n| `cell` | One cell row (`data-cell-type`, `data-active`). |\n| `cell-active` | Added alongside `cell` on the cell currently targeted by an anchor or the active search match. A second part name rather than an attribute selector, because Shadow Parts forbids an attribute selector after `::part()`. |\n| `cell-gutter` | The `In [n]`/`Out [n]` label column. |\n| `cell-source` | A cell's source content. |\n| `error` | The error region. |\n| `error-output-label` | The label introducing an error output's traceback. |\n| `output` | One output (`data-output-type`, `data-stream`). |\n| `output-error` | Added alongside `output` on a stderr stream or an error output. |\n| `output-toggle` | Expands/collapses a long text output. |\n| `outputs` | The wrapper around a code cell's outputs. |\n| `raw-source` | A horizontally scrollable raw-cell source surface. |\n| `spinner` | Visible ordinary loading content with a motion-safe progress indicator. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-notebook-viewer-max-height` (default: `none`) — Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.\n- `--lr-notebook-viewer-active-bg` (default: `var(--lr-color-brand-quiet)`) — Background of the `[part=\"cell\"]` currently targeted by an anchor or the active search match."
+        "value": "`<lr-notebook-viewer>` — read-only Jupyter notebook (nbformat 4.x) renderer, composing existing\ncomponents per cell. Execution is a hard non-goal.\n\nMarkdown cells render through `<lr-markdown>`, code cells through `<lr-code-block>` (using the\nnotebook's kernel language for syntax highlighting), and raw cells as plain preformatted text. A\ncode cell's `execute_result`/`display_data` outputs prefer, in order, `image/png`, `image/jpeg`,\n`image/svg+xml` (sanitized), `text/html` (sanitized), `application/json` (via `<lr-json-viewer>`),\nthen `text/plain`. Stream/error outputs (tinted `danger` for stderr/tracebacks) interpret embedded\nANSI SGR color/style escapes via the shared `internal/ansi.ts` parser, same as `<lr-terminal>`.\nSanitizing raw HTML/SVG\noutput markup lazy-loads the optional peer dependency `dompurify` via `dompurify-loader.ts`; when\nthat peer isn't installed, the output renders a localized notice instead of raw markup.\n\nCells are virtualized through `<lr-virtual-list>` so a notebook with many cells stays cheap to\nscroll. `node-path` anchors resolve `path[0]` as a cell index; `fragment` anchors resolve a cell's\nown `id`.\n\nAdopts `DocumentAnchorTarget`: `scrollToAnchor()`/the declarative `anchor` property resolve\nthrough the cell-granularity model above, and `highlights`/`activeHighlightId` resolve through\nthat exact same model (`resolveAnchorCellIndex()`), not a pixel-precise text range within a\ncell's own rendered markdown/code/output -- this viewer's addressable unit is the cell, matching\nits `anchorKinds`. A `highlights` entry whose anchor resolves paints its matched cell with a\n`cell-highlighted` part plus a tone-specific `cell-highlighted-<tone>` part (`accent` default,\n`success`, `warning`, `danger`, `neutral`); the entry whose `id` equals `activeHighlightId`\nadditionally carries `cell-highlight-active`. Unlike docx-viewer/ebook-viewer there is no raw\nmarkup to imperatively wrap or annotate -- cells are already declaratively re-rendered by Lit on\nevery `highlights`/`activeHighlightId`/load-state change, so `repaintHighlights()` just recomputes\nthat per-cell mapping ahead of the next render pass. `lr-highlight-activate` and `lr-text-select`\nare present on this component's event map only because it's inherited, structurally, from the\nshared `LyraAnchorTargetEventMap` every `DocumentAnchorTarget` adopter carries -- neither is\nactually emitted by this viewer: there is no keyboard-accessible highlight-activation surface\n(docx-viewer's/ebook-viewer's own click-to-activate needs a raw content DOM to hit-test or an\nannotation-click callback, neither of which this cell-level model has), and the mixin's default\n`bindTextSelection()` would anchor a selection as a `text-quote`, a kind outside this viewer's own\n`anchorKinds`/highlight-resolution model, so wiring it would offer a selection event whose own\nanchor could never be fed back in as a highlight.\n\n`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()` follow the shared viewer search\ncontract (`internal/text-viewer-target.ts`'s `LyraTextViewerTarget`): `search()` resolves the\nmatch count and the two navigation methods resolve `true` once the active match moved, `false`\nwhen there is nothing to move to. A find-in-page host can therefore drive this viewer through the\nsame typed surface as every other one.\n\nParsed `notebook` assignments are synchronously clone-owned and recursively frozen. Mutate a\ncopy and reassign it to update the viewer; later changes to the source object are not observed.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root scroll container. |\n| `cell` | One cell row (`data-cell-type`, `data-active`, `data-highlighted`). |\n| `cell-active` | Added alongside `cell` on the cell currently targeted by an anchor or the active search match. A second part name rather than an attribute selector, because Shadow Parts forbids an attribute selector after `::part()`. |\n| `cell-gutter` | The `In [n]`/`Out [n]` label column. |\n| `cell-highlight-active` | Added alongside `cell-highlighted`/`cell-highlighted-<tone>` when the matched highlight's `id` equals `activeHighlightId`. |\n| `cell-highlighted` | Added alongside `cell` on a cell matched by a `highlights` entry. Always paired with a tone-specific `cell-highlighted-<tone>` part below (a second part name rather than an attribute selector, for the same Shadow Parts reason as `cell-active`). |\n| `cell-highlighted-accent` | Tone-specific highlight styling hook (the default tone). |\n| `cell-highlighted-danger` | Tone-specific highlight styling hook. |\n| `cell-highlighted-neutral` | Tone-specific highlight styling hook. |\n| `cell-highlighted-success` | Tone-specific highlight styling hook. |\n| `cell-highlighted-warning` | Tone-specific highlight styling hook. |\n| `cell-source` | A cell's source content. |\n| `error` | The error region. |\n| `error-output-label` | The label introducing an error output's traceback. |\n| `output` | One output (`data-output-type`, `data-stream`). |\n| `output-error` | Added alongside `output` on a stderr stream or an error output. |\n| `output-toggle` | Expands/collapses a long text output. |\n| `outputs` | The wrapper around a code cell's outputs. |\n| `raw-source` | A horizontally scrollable raw-cell source surface. |\n| `spinner` | Visible ordinary loading content with a motion-safe progress indicator. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-notebook-viewer-max-height` (default: `none`) — Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.\n- `--lr-notebook-viewer-active-bg` (default: `var(--lr-color-brand-quiet)`) — Background of the `[part=\"cell\"]` currently targeted by an anchor or the active search match.\n- `--lr-notebook-viewer-highlight-accent-background` (default: `var(--lr-color-brand-quiet)`) — Background of an `accent`-tone (the default) highlighted cell.\n- `--lr-notebook-viewer-highlight-success-background` (default: `var(--lr-color-success-quiet)`) — Background of a `success`-tone highlighted cell.\n- `--lr-notebook-viewer-highlight-warning-background` (default: `var(--lr-color-warning-quiet)`) — Background of a `warning`-tone highlighted cell.\n- `--lr-notebook-viewer-highlight-danger-background` (default: `var(--lr-color-danger-quiet)`) — Background of a `danger`-tone highlighted cell.\n- `--lr-notebook-viewer-highlight-neutral-background` (default: `var(--lr-color-surface-raised)`) — Background of a `neutral`-tone highlighted cell.\n- `--lr-notebook-viewer-highlight-active-outline` (default: `var(--lr-focus-ring-color)`) — Outline of the highlighted cell whose highlight `id` equals `activeHighlightId`."
       },
       "attributes": [
         {
@@ -17306,7 +17315,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Type: `string`  \nDefault: `''`"
+            "value": "Accessible-name override for the internal navigation landmark, applied when no host\n`aria-label` is set. Optional. Omitting it localizes the default `paginationLabel` message;\nan explicit empty string renders no visible/accessible label.\n\nType: `string | undefined`"
           }
         },
         {
@@ -17514,7 +17523,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the stable group when the host has no `aria-label`; falls back to\nlocalized `pathStripLabel`. An explicitly empty host label stays empty.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the stable group when the host has no `aria-label`; falls back to\nlocalized `pathStripLabel` when omitted. An explicitly empty host label stays empty, and so\ndoes an explicitly empty `label`.\n\nType: `string | undefined`"
           }
         },
         {
@@ -18797,7 +18806,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible-name override for the viewer region.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible-name override for the viewer region. Omitting it falls back to `name`, then a\nlocalized default; an explicit empty string clears it.\n\nType: `string | undefined`"
           }
         },
         {
@@ -19317,7 +19326,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Fallback name for the provenance group. A non-empty host `aria-label` makes the host the sole\noverall owner; an explicitly empty host label stays empty on the group.\n\nType: `string`  \nDefault: `''`"
+            "value": "Fallback name for the provenance group, used when omitted; falls back to the localized\n`provenancePanelLabel`. A non-empty host `aria-label` makes the host the sole overall owner;\nan explicitly empty host label stays empty on the group, and so does an explicitly empty\n`label`.\n\nType: `string | undefined`"
           }
         },
         {
@@ -20192,7 +20201,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Visible answer label and fallback article name.\n\nType: `string`  \nDefault: `''`"
+            "value": "Visible answer label and fallback article name, used when omitted; falls back to the\nlocalized `ragAnswerLabel`. An explicitly empty override stays empty.\n\nType: `string | undefined`"
           }
         },
         {
@@ -20243,7 +20252,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Visible dashboard heading and fallback overall-region name. A non-empty host `aria-label`\nmakes the host the sole overall owner; an explicitly empty host label stays empty.\n\nType: `string`  \nDefault: `''`"
+            "value": "Visible dashboard heading and fallback overall-region name. Omitting it falls back to a\nlocalized default; an explicit empty string clears both. A non-empty host `aria-label`\nmakes the host the sole overall owner; an explicitly empty host label stays empty.\n\nType: `string | undefined`"
           }
         },
         {
@@ -20967,7 +20976,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Fallback name for the comparison region. A non-empty host `aria-label` makes the host the\nsole overall owner; an explicitly empty host label stays empty on the region.\n\nType: `string`  \nDefault: `''`"
+            "value": "Fallback name for the comparison region. Omitting it falls back to a localized default; an\nexplicit empty string clears it. A non-empty host `aria-label` makes the host the sole\noverall owner; an explicitly empty host label stays empty on the region.\n\nType: `string | undefined`"
           }
         },
         {
@@ -21050,7 +21059,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Fallback name for the results region. Defaults to the localized `chunkInspectorLabel`\n(\"Retrieved chunks\") -- reused rather than a new key, since it already says exactly what this\nregion is. A non-empty host `aria-label` makes the host the sole overall owner; an explicitly\nempty host label stays empty on the region.\n\nType: `string`  \nDefault: `''`"
+            "value": "Fallback name for the results region. Omitting it falls back to the localized\n`chunkInspectorLabel` (\"Retrieved chunks\") -- reused rather than a new key, since it already\nsays exactly what this region is. An explicit empty string clears the fallback. A non-empty\nhost `aria-label` makes the host the sole overall owner; an explicitly empty host label stays\nempty on the region.\n\nType: `string | undefined`"
           }
         },
         {
@@ -21145,7 +21154,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the inner search landmark when the host has no `aria-label`; falls back\nto the localized default.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the inner search landmark when the host has no `aria-label`. Omitting it\nfalls back to the localized default; an explicit empty string clears it.\n\nType: `string | undefined`"
           }
         },
         {
@@ -22100,7 +22109,7 @@
           "name": "accessible-label",
           "description": {
             "kind": "markdown",
-            "value": "Overrides the auto-generated `aria-label` (a per-category \"label: count\" summary). Unset\ncomputes the summary from `items`/`categories`.\n\nType: `string | undefined`"
+            "value": "Overrides the auto-generated `aria-label` (a per-category \"label: count\" summary). Unset\ncomputes the summary from `items`/`categories`; an explicitly empty string renders as an\nempty label rather than falling back to the auto-generated summary.\n\nType: `string | undefined`"
           }
         },
         {
@@ -22571,7 +22580,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Header text used when `label-plural` isn't set, e.g. `\"Sources\"`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Header text used when `label-plural` isn't set, e.g. `\"Sources\"`. Omitting it falls back to\na localized default; an explicit empty string clears it (still overridden by\n`label-plural` when that's set).\n\nType: `string | undefined`"
           }
         },
         {
@@ -22608,7 +22617,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Visible/fallback accessible label for the source tree.\n\nType: `string`  \nDefault: `''`"
+            "value": "Visible/fallback accessible label for the source tree. Omitting it falls back to a\nlocalized default; an explicit empty string clears it.\n\nType: `string | undefined`"
           }
         },
         {
@@ -23436,7 +23445,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the group. Defaults to the localized `suggestionsLabel`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the group. Optional. Omitting it localizes the default `suggestionsLabel`\nmessage; an explicit empty string renders no visible/accessible label.\n\nType: `string | undefined`"
           }
         },
         {
@@ -23902,7 +23911,7 @@
           "name": "accessible-label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the `role=\"grid\"` — a typed alternative to setting `aria-label` on the\nhost. When set it becomes the grid's `aria-label`; a host `aria-label` is used as a fallback\nwhen this is unset. Consumer-supplied text, so it is NOT run through `this.localize()`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the `role=\"grid\"` — a typed alternative to setting `aria-label` on the\nhost. When set it becomes the grid's `aria-label`; a host `aria-label` is used as a fallback\nwhen this is unset. Consumer-supplied text, so it is NOT run through `this.localize()`. An\nexplicitly empty string is a real override (renders `aria-label=\"\"`) rather than falling\nback to the host `aria-label`.\n\nType: `string | undefined`"
           }
         },
         {
@@ -24292,7 +24301,7 @@
           "name": "size",
           "description": {
             "kind": "markdown",
-            "value": "Visual density, matching `<lr-chip>`'s `2xs`–`xl` size scale. `m` preserves the original\nbadge dimensions. Valid `small`/`medium`/`large` values round-trip exactly.\n\nType: `BadgeSize`  \nDefault: `'m'`"
+            "value": "Visual density, matching `<lr-chip>`'s `3xs`–`xl` size scale. `m` preserves the original\nbadge dimensions. Valid `small`/`medium`/`large` values round-trip exactly.\n\nType: `BadgeSize`  \nDefault: `'m'`"
           },
           "values": [
             {
@@ -25060,7 +25069,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the list region. Defaults to the localized `threadListLabel`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the list region. Optional. Omitting it localizes the default\n`threadListLabel` message; an explicit empty string renders no visible/accessible label.\n\nType: `string | undefined`"
           }
         },
         {
@@ -25519,7 +25528,7 @@
           "name": "aria-label",
           "description": {
             "kind": "markdown",
-            "value": "Host-level `aria-label` override for the list's accessible name — wins over the localized\ndefault `\"Timeline\"`. Needed because the `role=\"list\"` element lives in the shadow root and\nnever inherits a host attribute automatically — same reasoning as `<lr-breadcrumb>`'s\nidentical property.\n\nType: `string`  \nDefault: `''`"
+            "value": "Host-level `aria-label` override for the list's accessible name — wins over the localized\ndefault `\"Timeline\"`. Needed because the `role=\"list\"` element lives in the shadow root and\nnever inherits a host attribute automatically — same reasoning as `<lr-breadcrumb>`'s\nidentical property. Unset falls back to the localized default; an explicitly empty\n`aria-label` stays empty.\n\nType: `string | undefined`"
           }
         },
         {
@@ -26796,7 +26805,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Accessible name for the `role=\"log\"` region. Defaults to the localized `transcriptFeedLabel`.\n\nType: `string`  \nDefault: `''`"
+            "value": "Accessible name for the `role=\"log\"` region. Optional. Omitting it localizes the default\n`transcriptFeedLabel` message; an explicit empty string renders no visible/accessible label,\nunless `accessibleLabel` is also set (it wins over both).\n\nType: `string | undefined`"
           }
         },
         {

@@ -129,8 +129,10 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   /** Node templates available for filtering, activation, dragging, and optional reordering. */
   @property({ attribute: false }) items: readonly LyraPaletteItem[] = [];
-  /** Accessible name for the palette; empty uses the localized default. */
-  @property() label = '';
+  /** Accessible name for the palette; omitted uses the localized default. An explicit empty
+   *  string is used as-is (see `render()`'s `listLabel` for how it interacts with a host
+   *  `aria-label`). */
+  @property() label?: string;
   /**
    * Opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard reordering (see the class doc). Defaults to
    * `false`: unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps behaving exactly like
@@ -578,8 +580,10 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     const listLabel =
       hostLabel === null
         ? this.accessibleLabel ??
-          (this.label || this.localize('nodePaletteLabel'))
-        : this.label && this.label !== hostLabel
+          (this.label == null
+            ? this.localize('nodePaletteLabel')
+            : this.label)
+        : this.label != null && this.label !== hostLabel
           ? this.label
           : this.localize('nodePaletteLabel');
     return html`<div part="base">

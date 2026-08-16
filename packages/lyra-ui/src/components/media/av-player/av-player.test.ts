@@ -2509,7 +2509,7 @@ it('searchNext/searchPrevious resolve a boolean, matching the shared viewer sear
   expect(await el.searchPrevious(), 'no matches to move to').to.be.false;
 });
 
-it('forwards host focus()/blur()/click() to the native media element and re-dispatches its focus/blur', async () => {
+it('forwards host focus()/blur()/click() to the native media element and re-dispatches its focus/blur with no prefixed alias', async () => {
   const wrapper = await fixture<HTMLElement>(
     html`<div><lr-av-player src=${MP3_SRC}></lr-av-player></div>`,
   );
@@ -2529,11 +2529,9 @@ it('forwards host focus()/blur()/click() to the native media element and re-disp
   });
   wrapper.addEventListener('lr-focus', () => {
     aliases.push('lr-focus');
-    sequence.push('lr-focus');
   });
   wrapper.addEventListener('lr-blur', () => {
     aliases.push('lr-blur');
-    sequence.push('lr-blur');
   });
 
   el.focus();
@@ -2551,6 +2549,6 @@ it('forwards host focus()/blur()/click() to the native media element and re-disp
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
-  expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+  expect(sequence).to.deep.equal(['focus', 'blur']);
+  expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
 });

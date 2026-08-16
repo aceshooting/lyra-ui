@@ -1665,7 +1665,7 @@ it('marks the next segment active only while focused', async () => {
   expect(active).to.equal(2);
 });
 
-it('relays one native focus/blur pair and one prefixed alias pair from the real input', async () => {
+it('relays one native focus/blur pair from the real input, and never lr-focus/lr-blur', async () => {
   const wrapper = await fixture<HTMLElement>(html` <div><lr-otp-input label="Code" length="4"></lr-otp-input></div> `);
   const el = wrapper.querySelector('lr-otp-input') as LyraOtpInput;
   const nativeEvents: FocusEvent[] = [];
@@ -1681,7 +1681,8 @@ it('relays one native focus/blur pair and one prefixed alias pair from the real 
   expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
   expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-  expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(aliases).to.deep.equal([]);
 });
 
 it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {

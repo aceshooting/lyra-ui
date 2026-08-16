@@ -68,6 +68,18 @@ describe('lr-knowledge-base', () => {
     expect(el.hideCreate).to.be.false;
   });
 
+  it('keeps an explicitly empty label distinct from an omitted one', async () => {
+    const omitted = (await fixture(html`<lr-knowledge-base></lr-knowledge-base>`)) as LyraKnowledgeBase;
+    expect(omitted.label).to.be.undefined;
+    expect(omitted.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Knowledge base');
+
+    const explicitEmpty = (await fixture(
+      html`<lr-knowledge-base label=""></lr-knowledge-base>`,
+    )) as LyraKnowledgeBase;
+    expect(explicitEmpty.label).to.equal('');
+    expect(explicitEmpty.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('');
+  });
+
   it('renders the default localized heading, and `label` overrides it', async () => {
     const el = (await fixture(html`<lr-knowledge-base></lr-knowledge-base>`)) as LyraKnowledgeBase;
     expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Knowledge base');

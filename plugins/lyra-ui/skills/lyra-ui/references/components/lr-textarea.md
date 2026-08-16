@@ -145,8 +145,6 @@ the shadow boundary.
 | `lr-change`  | `{ value: string }` | Compatibility alias fired on native `change` timing (blur after a committed edit).                                                                                        |
 | `blur`       | none                | Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed, unlike the native event.                                                       |
 | `focus`      | none                | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`.                                                                         |
-| `lr-blur`    | none                | Prefixed compatibility alias, fired immediately after `blur`.                                                                                                             |
-| `lr-focus`   | none                | Prefixed compatibility alias, fired immediately after `focus`.                                                                                                            |
 | `lr-invalid` | none                | Fired when a validity check finds the control invalid. **Cancelable** — `preventDefault()` suppresses the native validation bubble and `reportValidity()`'s focus/scroll. |
 
 Programmatic property assignments, selection changes, `setRangeText()`, form reset, and form-state

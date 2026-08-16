@@ -57,8 +57,7 @@ best-effort fallbacks.
 activating the action button or a safe anchor through the same path as pointer/keyboard input.
 
 **Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
-`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
-its prefixed alias `lr-focus` / `lr-blur` (no detail).
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events.
 
 **Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
 sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is

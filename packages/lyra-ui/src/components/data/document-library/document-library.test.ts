@@ -602,6 +602,24 @@ it("reaches the DOM with a .strings override for the region label and search pla
   ).to.equal("Rechercher");
 });
 
+it("treats an explicitly empty label as a real override, distinct from an omitted one", async () => {
+  const explicit = (await fixture(
+    html`<lr-document-library label="" .documents=${docs}></lr-document-library>`
+  )) as LyraDocumentLibrary;
+  await explicit.updateComplete;
+  expect(
+    explicit.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+  ).to.equal("");
+
+  const omitted = (await fixture(
+    html`<lr-document-library .documents=${docs}></lr-document-library>`
+  )) as LyraDocumentLibrary;
+  await omitted.updateComplete;
+  expect(
+    omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+  ).to.equal("Document library");
+});
+
 it("lets a host aria-label override label on the region and table, including late changes", async () => {
   const el = (await fixture(
     html`<lr-document-library

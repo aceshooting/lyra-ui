@@ -34,7 +34,12 @@ passthrough). Not a subclass of `LyraChart`.
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical
   placement for the DOM legend; side positions are bounded and stack responsively in narrow hosts
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
-  and description; host `aria-label` wins. `accessibleLabel` remains a deprecated migration alias
+  and description; host `aria-label` wins by presence, including an explicit empty string
+- `accessibleLabel?: string` (attribute `accessible-label`) — overrides the `<svg>`'s auto-derived
+  `aria-label` (`datasets.map(d => d.label).join(', ') || 'Chart'`); a host `aria-label` still wins.
+  Unset keeps the auto-derived (English-fallback) label. `lr-lite-chart` keeps this property under
+  its original `accessible-label` name, unrelated to the deprecated `accessible-label` alias that
+  `lr-chart`/`lr-box-plot` dropped in favor of their mirrored `label` property.
 - `height: string = '280px'` — accepts a valid CSS `height` as a private fallback. A consumer-set
   `--lr-chart-height` always wins; invalid values, declaration-breaking input, and `url()` remove
   the fallback and leave the public token/default in control.
@@ -95,8 +100,7 @@ passthrough). Not a subclass of `LyraChart`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no
   mark/tabindex/tooltip) for a value that is exactly `0`; `null`/non-finite values are always
   skipped regardless.
-- `valueAxisGutter?: number` (attribute `value-axis-gutter`) — value-axis gutter width. The former
-  `padLeft` / `pad-left` spelling remains a deprecated migration alias.
+- `valueAxisGutter?: number` (attribute `value-axis-gutter`) — value-axis gutter width.
 - `barGapRatio?: number` (attribute `bar-gap-ratio`) — overrides the internal 0.2 `BAR_GROUP_GAP`
   fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2.
 - `scale: 'linear' | 'sqrt' = 'linear'` (bar type only) — `'sqrt'` maps a bar's value to height via
@@ -105,12 +109,11 @@ passthrough). Not a subclass of `LyraChart`.
   by one dominant value; gridlines/tick labels stay on the linear domain either way, and `type="line"`
   ignores it entirely.
 - `withoutValueAxis: boolean = false` (attribute `without-value-axis`) — suppresses gridlines and
-  value-axis tick labels; x-axis category labels remain. `hideAxis` / `hide-axis` is a deprecated alias.
+  value-axis tick labels; x-axis category labels remain.
 - `selectedIndices: readonly number[] = []` (attribute: false) — applies to every interactive data mark for
   both `type="bar"` and `type="line"`: matching bars and line points receive `data-selected` and
   explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`. For a multi-series
-  chart, the category index selects the matching mark in every dataset. Empty is the default;
-  `selectedIndex` remains a deprecated alias.
+  chart, the category index selects the matching mark in every dataset. Empty is the default.
   Style the built-in highlight through `--lr-lite-chart-selected-outline-color` and
   `--lr-lite-chart-selected-outline-width`. Note
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts

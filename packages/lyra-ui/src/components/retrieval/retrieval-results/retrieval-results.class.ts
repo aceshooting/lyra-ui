@@ -283,11 +283,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  reconnect content is not replayed. */
   @property({ attribute: 'error-text' }) errorText = '';
 
-  /** Fallback name for the results region. Defaults to the localized `chunkInspectorLabel`
-   *  ("Retrieved chunks") -- reused rather than a new key, since it already says exactly what this
-   *  region is. A non-empty host `aria-label` makes the host the sole overall owner; an explicitly
-   *  empty host label stays empty on the region. */
-  @property() label = '';
+  /** Fallback name for the results region. Omitting it falls back to the localized
+   *  `chunkInspectorLabel` ("Retrieved chunks") -- reused rather than a new key, since it already
+   *  says exactly what this region is. An explicit empty string clears the fallback. A non-empty
+   *  host `aria-label` makes the host the sole overall owner; an explicitly empty host label stays
+   *  empty on the region. */
+  @property() label?: string;
   private pendingFocusTarget: string | 'base' | undefined;
   private previousProcessedChunkIds: string[] = [];
   private focusRestoreGeneration = 0;
@@ -720,7 +721,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   override render(): TemplateResult {
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize('chunkInspectorLabel')
+      this.label == null ? this.localize('chunkInspectorLabel') : this.label
     );
     const groupRole = retrievalSemanticRole(this, 'group');
 

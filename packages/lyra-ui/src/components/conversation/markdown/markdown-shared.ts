@@ -25,6 +25,7 @@ import {
   type TextQuoteMatch,
 } from '../../../internal/text-quote.js';
 import { prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
+import { safeLinkHref, safeMediaSrc } from '../../../internal/safe-url.js';
 import { supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraHighlight, LyraHighlightTone } from '../../viewers/document-viewer/anchors.js';
 import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighter } from '../code-block/shiki-types.js';
@@ -356,6 +357,10 @@ export interface ParseMarkdownOptions {
    *  internally, same as before extraction. */
   headingOffset: number;
   escapeHtmlOption: boolean;
+  /** `htmlMode === 'trusted'` -- a deliberate, fully-documented opt-out of every safety net this
+   *  parser applies, `link()`/`image()`'s scheme allowlist included. `sanitize` and `escape` both
+   *  validate; only `trusted` bypasses, matching `renderMarkdownDocument()`'s own DOMPurify skip. */
+  trustedHtmlOption: boolean;
   /** Already combines `highlightCode && !streaming` -- computed by the caller since that
    *  combination differs by call site only in name, never in meaning. */
   highlightCodeOption: boolean;
@@ -390,6 +395,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
     gfm,
     linkTarget,
     escapeHtmlOption,
+    trustedHtmlOption,
     highlightCodeOption,
     getCachedHighlight: getCached,
     failedHighlightKeys,
@@ -521,9 +527,17 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         const text = this.parser.parseInline(token.tokens);
         const href = cleanHref(token.href);
         if (href === null) return text;
+        // Scheme-validated the same way `<lr-button>`/`<lr-breadcrumb-item>` validate an authored
+        // `href` before it ever reaches an `<a>` -- `javascript:`/`vbscript:`/etc. never survive to
+        // become a clickable payload, regardless of `htmlMode`. `trusted` is the sole, documented
+        // full bypass: it already skips the DOMPurify pass below in `renderMarkdownDocument()`, so
+        // gating this check the same way keeps the two behaviors consistent instead of `trusted`
+        // getting an unvalidated `href` while everything else downstream of it stays raw.
+        const safeHref = trustedHtmlOption ? href : safeLinkHref(href);
+        if (safeHref === null) return text;
         const titleAttr = token.title ? ` title='${escapeHtml(token.title)}'` : '';
         const targetAttr = linkTarget ? ` target='${escapeHtml(linkTarget)}' rel='noopener noreferrer'` : '';
-        return `<a part='link' href='${escapeHtml(href)}'${titleAttr}${targetAttr}>${text}</a>`;
+        return `<a part='link' href='${escapeHtml(safeHref)}'${titleAttr}${targetAttr}>${text}</a>`;
       },
       image(token) {
         // Mirrors marked's own default image() renderer (alt text
@@ -534,8 +548,12 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): {
         const altText = this.parser.parseInline(token.tokens, this.parser.textRenderer);
         const href = cleanHref(token.href);
         if (href === null) return escapeHtml(altText);
+        // Same scheme allowlist rationale as link() above, using the media-src allowlist (which
+        // also admits `data:` -- inline base64 images are ordinary, legitimate markdown content).
+        const safeHref = trustedHtmlOption ? href : safeMediaSrc(href);
+        if (safeHref === null) return escapeHtml(altText);
         const titleAttr = token.title ? ` title='${escapeHtml(token.title)}'` : '';
-        return `<img part='img' src='${escapeHtml(href)}' alt='${escapeHtml(altText)}'${titleAttr}>`;
+        return `<img part='img' src='${escapeHtml(safeHref)}' alt='${escapeHtml(altText)}'${titleAttr}>`;
       },
       html(token) {
         return escapeHtmlOption ? escapeHtml(token.text) : token.text;

@@ -36,7 +36,7 @@ playback for time-series scrubbing, without implying native audio/video playback
 **Events:** `lr-play`, `lr-pause` (no detail), `lr-sequence-step`
 (`detail: LyraSequencePlaybackStepDetail { currentIndex }`, fired on every tick and manual step);
 internal `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and
-composed, preserving `relatedTarget`), followed by `lr-focus`/`lr-blur`.
+composed, preserving `relatedTarget`).
 
 **Class and event types:** `LyraSequencePlayback`, `LyraSequencePlaybackEventMap`, and
 `LyraSequencePlaybackStepDetail`. The former generic `LyraPlayback`, `<lr-playback>`, `length`,

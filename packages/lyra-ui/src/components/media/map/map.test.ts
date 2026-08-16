@@ -1886,6 +1886,28 @@ describe('dataLayers', () => {
     });
     expect(el.map!.getSource(dataLayerResourceId(el, 'zones')) != null).to.be.true;
   });
+
+  it('caps dataLayers at MAX_MAP_DATA_LAYERS, only applying the capped count of sources/layers', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    const CAP = 100; // mirrors map.class.ts's private MAX_MAP_DATA_LAYERS
+    el.dataLayers = Array.from({ length: CAP * 2 }, (_, index) => ({
+      ...POLY_LAYER,
+      sourceId: `zone-${index}`,
+    })) as unknown as typeof el.dataLayers;
+    await el.updateComplete;
+    await waitUntilMapLoaded(el);
+    await waitUntil(
+      () => Boolean(dataLayerResourceId(el, `zone-${CAP - 1}`)),
+      'last within-cap data layer never applied',
+      { timeout: 5000 },
+    );
+
+    const applied = (el as unknown as { _appliedDataLayerIds: Map<string, string> })._appliedDataLayerIds;
+    expect(applied.size).to.equal(CAP);
+    expect(dataLayerResourceId(el, `zone-${CAP}`)).to.equal('');
+  });
 });
 
 it('adds a maplibregl.Marker per entry in markers', async function () {
@@ -1907,6 +1929,24 @@ it('adds a maplibregl.Marker per entry in markers', async function () {
     (marker) => marker.getAttribute('aria-label'),
   );
   expect(labels).to.deep.equal(['Station A', 'Station B']);
+});
+
+it('caps markers at MAX_MAP_MARKERS, creating only the capped count of marker DOM elements', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  const CAP = 2_000; // mirrors map.class.ts's private MAX_MAP_MARKERS
+  el.markers = Array.from({ length: CAP * 2 }, (_, index) => ({
+    id: `marker-${index}`,
+    lngLat: [0, 0] as [number, number],
+  }));
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(CAP);
 });
 
 it('provides shadow-local layout for MapLibre canvas, markers, and popups without document CSS', async function () {

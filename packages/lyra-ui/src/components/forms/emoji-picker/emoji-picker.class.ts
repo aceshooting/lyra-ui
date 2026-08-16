@@ -156,8 +156,6 @@ export interface LyraEmojiPickerEventMap {
   'lr-input': CustomEvent<{ value: string }>;
   /** Fired when an emoji pick is committed. `detail.value` is the picked glyph. */
   'lr-change': CustomEvent<{ value: string }>;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 
 class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
@@ -209,8 +207,6 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @event lr-change - An emoji pick was committed. `detail: { value }`.
  * @event blur - Native owner-realm `FocusEvent` relayed from the internal search input.
  * @event focus - Native owner-realm `FocusEvent` relayed from the internal search input.
- * @event lr-blur - Lyra alias emitted after the native `blur` relay.
- * @event lr-focus - Lyra alias emitted after the native `focus` relay.
  * @event lr-invalid - The emoji picker failed a validity check. Cancelable — preventing this
  *   alias also prevents the native `invalid` event that produced it.
  * @slot label - Custom label content.
@@ -812,7 +808,6 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onSearchBlur = (event: FocusEvent): void => {
@@ -826,7 +821,6 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // needed -- a disabled control is barred from validation regardless.
     if (!this.liveDisabled) this.touched = true;
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private onLabelSlotChange = (event: Event): void => {

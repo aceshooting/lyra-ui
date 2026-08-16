@@ -616,9 +616,7 @@ export type LyraAnimatedImageReactProps = LyraReactElementProps<
   LyraAnimatedImageEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
   | 'lr-error'
-  | 'lr-focus'
   | 'lr-load'
   | 'lr-pause'
   | 'lr-play',
@@ -891,10 +889,8 @@ export type LyraAttachmentTriggerReactProps = LyraReactElementProps<
   | 'blur'
   | 'focus'
   | 'lr-audio-request'
-  | 'lr-blur'
   | 'lr-camera-request'
-  | 'lr-files'
-  | 'lr-focus',
+  | 'lr-files',
 never,
   {
     'accessible-label'?: LyraAttachmentTrigger['accessibleLabel'];
@@ -955,9 +951,7 @@ export type LyraAvPlayerReactProps = LyraReactElementProps<
   | 'focus'
   | 'loadedmetadata'
   | 'lr-anchor-result'
-  | 'lr-blur'
   | 'lr-cue-change'
-  | 'lr-focus'
   | 'lr-highlight-activate'
   | 'lr-load'
   | 'lr-pause'
@@ -1403,8 +1397,6 @@ export type LyraButtonReactProps = LyraReactElementProps<
   LyraButtonEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'lr-invalid',
   | '--lr-button-accent'
   | '--lr-button-accent-fill'
@@ -1886,9 +1878,7 @@ export type LyraCheckboxReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--checked-icon-color'
@@ -2215,9 +2205,7 @@ export type LyraCodeEditorReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-code-editor-font-size'
@@ -2280,9 +2268,7 @@ export type LyraColorPickerReactProps = LyraReactElementProps<
   | 'input'
   | 'lr-after-hide'
   | 'lr-after-show'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-hide'
   | 'lr-input'
   | 'lr-invalid'
@@ -2385,12 +2371,10 @@ export type LyraComboboxReactProps = LyraReactElementProps<
   | 'input'
   | 'lr-after-hide'
   | 'lr-after-show'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
   | 'lr-create'
   | 'lr-filter'
-  | 'lr-focus'
   | 'lr-hide'
   | 'lr-invalid'
   | 'lr-show',
@@ -3789,9 +3773,7 @@ export type LyraEmojiPickerReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-emoji-picker-active-bg'
@@ -4971,9 +4953,7 @@ export type LyraIconButtonReactProps = LyraReactElementProps<
   },
   LyraIconButtonEventMap,
   | 'blur'
-  | 'focus'
-  | 'lr-blur'
-  | 'lr-focus',
+  | 'focus',
   | '--lr-icon-button-background'
   | '--lr-icon-button-background-active'
   | '--lr-icon-button-background-hover'
@@ -5176,10 +5156,8 @@ export type LyraInputReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -5381,6 +5359,7 @@ export type LyraKnowledgeGraphExplorerReactProps = LyraReactElementProps<
   {},
   LyraKnowledgeGraphExplorerEventMap,
   | 'lr-community-click'
+  | 'lr-hidden-types-change'
   | 'lr-link-click'
   | 'lr-node-click'
   | 'lr-node-expand'
@@ -5420,6 +5399,7 @@ export type LyraKnownDateReactProps = LyraReactElementProps<
   | 'required'
   | 'size'
   | 'strings'
+  | 'validationTarget'
   | 'value'
   | 'valueAsDate'
   | 'valueInput'
@@ -5702,9 +5682,7 @@ export type LyraLocalePickerReactProps = LyraReactElementProps<
   LyraLocalePickerEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
@@ -6329,10 +6307,8 @@ export type LyraNativeTimeInputReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -6435,6 +6411,12 @@ export type LyraNotebookViewerReactProps = LyraReactElementProps<
   | 'lr-render-error'
   | 'lr-search-change',
   | '--lr-notebook-viewer-active-bg'
+  | '--lr-notebook-viewer-highlight-accent-background'
+  | '--lr-notebook-viewer-highlight-active-outline'
+  | '--lr-notebook-viewer-highlight-danger-background'
+  | '--lr-notebook-viewer-highlight-neutral-background'
+  | '--lr-notebook-viewer-highlight-success-background'
+  | '--lr-notebook-viewer-highlight-warning-background'
   | '--lr-notebook-viewer-max-height',
   {
     'active-highlight-id'?: LyraNotebookViewer['activeHighlightId'];
@@ -6506,10 +6488,8 @@ export type LyraNumberInputReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -6620,10 +6600,8 @@ export type LyraOtpInputReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-clear'
   | 'lr-complete'
-  | 'lr-focus'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
   | '--lr-form-control-required-content'
@@ -6811,8 +6789,6 @@ export type LyraPanZoomReactProps = LyraReactElementProps<
   LyraPanZoomEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'lr-zoom-change',
   | '--lr-pan-zoom-min-block-size'
   | '--lr-pan-zoom-zoom',
@@ -6917,9 +6893,7 @@ export type LyraPhoneInputReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -7670,9 +7644,7 @@ export type LyraRadioReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--checked-icon-color'
@@ -7716,9 +7688,7 @@ export type LyraRadioButtonReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--checked-icon-color'
@@ -7902,9 +7872,7 @@ export type LyraRatingReactProps = LyraReactElementProps<
   | 'blur'
   | 'change'
   | 'focus'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-hover'
   | 'lr-invalid',
   | '--lr-rating-active-color'
@@ -8411,10 +8379,8 @@ export type LyraSelectReactProps = LyraReactElementProps<
   | 'input'
   | 'lr-after-hide'
   | 'lr-after-show'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-hide'
   | 'lr-input'
   | 'lr-invalid'
@@ -8493,8 +8459,6 @@ export type LyraSequencePlaybackReactProps = LyraReactElementProps<
   LyraSequencePlaybackEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'lr-pause'
   | 'lr-play'
   | 'lr-sequence-step',
@@ -8602,9 +8566,7 @@ export type LyraSliderReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -9114,9 +9076,7 @@ export type LyraSwitchReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--height'
@@ -9519,9 +9479,7 @@ export type LyraTextareaReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-form-control-required-color'
@@ -9665,10 +9623,8 @@ export type LyraTimeInputReactProps = LyraReactElementProps<
   | 'input'
   | 'lr-after-hide'
   | 'lr-after-show'
-  | 'lr-blur'
   | 'lr-change'
   | 'lr-clear'
-  | 'lr-focus'
   | 'lr-hide'
   | 'lr-input'
   | 'lr-invalid'
@@ -9737,9 +9693,7 @@ export type LyraTimeRangeReactProps = LyraReactElementProps<
   | 'change'
   | 'focus'
   | 'input'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid',
   | '--lr-time-range-base-size'
@@ -9895,9 +9849,7 @@ export type LyraTokenInputReactProps = LyraReactElementProps<
   | 'focus'
   | 'input'
   | 'lr-add'
-  | 'lr-blur'
   | 'lr-change'
-  | 'lr-focus'
   | 'lr-input'
   | 'lr-invalid'
   | 'lr-remove'
@@ -10427,8 +10379,6 @@ export type LyraVideoReactProps = LyraReactElementProps<
   | 'error'
   | 'focus'
   | 'loadedmetadata'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'pause'
   | 'play'
   | 'timeupdate'
@@ -10458,8 +10408,6 @@ export type LyraVideoPlaylistReactProps = LyraReactElementProps<
   LyraVideoPlaylistEventMap,
   | 'blur'
   | 'focus'
-  | 'lr-blur'
-  | 'lr-focus'
   | 'lr-video-change',
   | '--lr-video-playlist-item-current-background'
   | '--lr-video-playlist-item-current-border-color',
@@ -10737,9 +10685,7 @@ export type LyraZoomableFrameReactProps = LyraReactElementProps<
   | 'blur'
   | 'error'
   | 'focus'
-  | 'load'
-  | 'lr-blur'
-  | 'lr-focus',
+  | 'load',
   | '--lr-zoomable-frame-control-hover-background'
   | '--lr-zoomable-frame-zoom',
   {

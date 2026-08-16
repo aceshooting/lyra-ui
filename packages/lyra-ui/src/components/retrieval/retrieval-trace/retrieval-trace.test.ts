@@ -232,6 +232,67 @@ describe("lr-retrieval-trace", () => {
     expect(rowIds).to.deep.equal(["rewrite", "embed", "retrieve"]);
   });
 
+  it("dedupes stages sharing the same id (first wins), keeping the evidence list in sync with the timeline's own dedup (bug regression)", async () => {
+    const duplicateId: RetrievalStage[] = [
+      {
+        id: "retrieve",
+        kind: "retrieve",
+        startMs: 0,
+        endMs: 50,
+        status: "success",
+        detail: "first",
+        evidence: { text: "first occurrence" },
+      },
+      {
+        id: "retrieve",
+        kind: "rerank",
+        startMs: 50,
+        endMs: 90,
+        status: "success",
+        detail: "second",
+        evidence: { text: "second occurrence" },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-retrieval-trace .stages=${duplicateId}></lr-retrieval-trace>`
+    )) as LyraRetrievalTrace;
+    await el.updateComplete;
+
+    // Evidence list: exactly one row for the shared id -- first stage wins.
+    const rows = el.shadowRoot!.querySelectorAll('[part="evidence-row"]');
+    expect(rows.length).to.equal(1);
+    expect(rows[0]!.getAttribute("data-id")).to.equal("retrieve");
+
+    // Timeline: exactly one bar for the shared id too, matching lr-span-waterfall's own dedup --
+    // before the fix this was 1 (waterfall deduped internally) against 2 evidence rows.
+    const waterfall = el.shadowRoot!.querySelector(
+      "lr-span-waterfall"
+    ) as LyraSpanWaterfall;
+    await waterfall.updateComplete;
+    const bars = waterfall.shadowRoot!.querySelectorAll('[part="bar"]');
+    expect(bars.length).to.equal(1);
+
+    // Toggling the surviving row only affects that row -- there is no second row left to desync.
+    (
+      el.shadowRoot!.querySelector(
+        '[part="evidence-row"] [part="evidence-toggle"]'
+      ) as HTMLButtonElement
+    ).click();
+    await el.updateComplete;
+    const rowsAfterToggle = el.shadowRoot!.querySelectorAll(
+      '[part="evidence-row"]'
+    );
+    expect(rowsAfterToggle.length).to.equal(1);
+    expect(
+      rowsAfterToggle[0]!
+        .querySelector('[part="evidence-toggle"]')!
+        .getAttribute("aria-expanded")
+    ).to.equal("true");
+    // The first stage's evidence text (not the second, discarded one) is what's shown.
+    const text = el.shadowRoot!.querySelector('[part="evidence-text"]');
+    expect(text!.textContent).to.equal("first occurrence");
+  });
+
   it("renders no evidence-list at all when no stage has evidence", async () => {
     const bare: RetrievalStage[] = [
       { id: "x", kind: "retrieve", startMs: 0, status: "success" },
@@ -538,7 +599,7 @@ describe("lr-retrieval-trace", () => {
     expect(waterfall.shadowRoot!.querySelector("lr-empty")).to.exist;
   });
 
-  it("uses instance- and occurrence-safe evidence ids for hostile and duplicate stages", async () => {
+  it("keeps evidence-toggle DOM ids hostile-id-safe and unique across instances, and dedupes duplicate stage entries sharing an id within one instance (bug regression)", async () => {
     const stage: RetrievalStage = {
       ...STAGES[0]!,
       id: 'raw id" with spaces',
@@ -559,9 +620,10 @@ describe("lr-retrieval-trace", () => {
       .shadowRoot!.querySelector('[part="evidence-toggle"]')!
       .getAttribute("aria-controls")!;
 
-    expect(firstControls).to.have.length(2);
-    expect(new Set(firstControls).size).to.equal(2);
-    expect(new Set([...firstControls, secondControls]).size).to.equal(3);
+    // [stage, stage] share one id -- deduped (first wins) to a single evidence row, not two.
+    expect(firstControls).to.have.length(1);
+    // Still unique across the two independent component instances.
+    expect(new Set([...firstControls, secondControls]).size).to.equal(2);
     for (const controls of firstControls) {
       expect(controls).to.not.include(stage.id);
       expect(

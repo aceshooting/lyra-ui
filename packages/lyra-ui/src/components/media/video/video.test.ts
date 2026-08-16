@@ -1475,7 +1475,7 @@ describe('lr-video control surface', () => {
     ).to.equal('0:05 of 1:01');
   });
 
-  it('forwards host focus()/blur()/click() to the play control and re-dispatches its focus/blur', async () => {
+  it('forwards host focus()/blur()/click() to the play control and re-dispatches its focus/blur with no prefixed alias', async () => {
     const wrapper = await fixture<HTMLElement>(html`<div><lr-video></lr-video></div>`);
     const el = wrapper.querySelector('lr-video') as LyraVideo;
     await el.updateComplete;
@@ -1493,11 +1493,9 @@ describe('lr-video control surface', () => {
     });
     wrapper.addEventListener('lr-focus', () => {
       aliases.push('lr-focus');
-      sequence.push('lr-focus');
     });
     wrapper.addEventListener('lr-blur', () => {
       aliases.push('lr-blur');
-      sequence.push('lr-blur');
     });
 
     el.focus();
@@ -1515,8 +1513,8 @@ describe('lr-video control surface', () => {
     expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
     expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
     expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-    expect(aliases).to.deep.equal(['lr-focus', 'lr-blur']);
-    expect(sequence).to.deep.equal(['focus', 'lr-focus', 'blur', 'lr-blur']);
+    expect(sequence).to.deep.equal(['focus', 'blur']);
+    expect(aliases, 'lr-focus/lr-blur compatibility aliases must not fire').to.deep.equal([]);
   });
 
   it('applies the volume slider and playback-rate selector to the media element', async () => {

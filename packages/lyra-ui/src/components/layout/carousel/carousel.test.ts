@@ -1721,6 +1721,30 @@ it("is accessible and supports a consumer supplied accessible label", async () =
   await expect(el).to.be.accessible();
 });
 
+it("keeps an explicitly empty accessible-label distinct from an omitted one", async () => {
+  const omitted = await carousel(html`
+    <lr-carousel>
+      <div>One</div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  expect(omitted.accessibleLabel).to.equal(undefined);
+  expect(
+    omitted.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
+  ).to.equal("Carousel");
+
+  const explicitEmpty = await carousel(html`
+    <lr-carousel accessible-label="">
+      <div>One</div>
+      <div>Two</div>
+    </lr-carousel>
+  `);
+  expect(explicitEmpty.accessibleLabel).to.equal("");
+  expect(
+    explicitEmpty.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
+  ).to.equal("");
+});
+
 it("preserves an explicitly empty host aria-label on both carousel landmarks", async () => {
   const el = await carousel(html`
     <lr-carousel aria-label="" accessible-label="Fallback name">

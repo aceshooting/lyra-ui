@@ -4110,8 +4110,7 @@ ownership remain unchanged, so the host can defer dismissal without reconstructi
 `detail: { inputValue }` and is also cancelable: preventing it suppresses the default append/select
 action so the host can normalize and commit its own option.
 The internal input's `focus` and `blur` are relayed exactly once from the host as owner-realm
-native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`;
-`lr-focus` and `lr-blur` are no-detail prefixed aliases for the same transitions.
+native `FocusEvent`s. Both bubble, cross the shadow boundary, and preserve `relatedTarget`.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed, **cancelable** alias when native
 validity fails — see "The validity alias is cancelable in 8.0.0" above.
 
@@ -4500,8 +4499,7 @@ programmatic `value` write, `form.reset()`, or session-state restoration. Plus
 `input`/`lr-input`/`change`/`lr-change` run, and never when there was nothing to clear, so it never
 announces a no-op),
 `lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
-trigger, each with a prefixed alias — `lr-focus` and `lr-blur` (no detail) — fired immediately after
-its unprefixed counterpart. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
+trigger. `lr-show` is cancelable; `lr-hide` is cancelable while connected and
 non-cancelable only for the disconnect-driven close, where a veto cannot be honoured. A direct or
 fieldset-cascaded disablement is a policy closure rather than a user-requested transition: it
 synchronously closes without the vetoable `lr-hide` or settled `lr-after-hide` lifecycle, and a
@@ -5153,8 +5151,6 @@ the shadow boundary.
 | `lr-change`  | `{ value: string }` | Compatibility alias fired on native `change` timing (blur after a committed edit).                                                                                        |
 | `blur`       | none                | Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed, unlike the native event.                                                       |
 | `focus`      | none                | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`.                                                                         |
-| `lr-blur`    | none                | Prefixed compatibility alias, fired immediately after `blur`.                                                                                                             |
-| `lr-focus`   | none                | Prefixed compatibility alias, fired immediately after `focus`.                                                                                                            |
 | `lr-invalid` | none                | Fired when a validity check finds the control invalid. **Cancelable** — `preventDefault()` suppresses the native validation bubble and `reportValidity()`'s focus/scroll. |
 
 Programmatic property assignments, selection changes, `setRangeText()`, form reset, and form-state
@@ -5380,7 +5376,7 @@ listener path has accepted the default action; calling `preventDefault()` on the
 ancestor therefore vetoes it, while propagation control by itself does not. The internal button's
 `focus` and `blur` — which do not
 cross the shadow boundary on their own — are re-dispatched from the host as bubbling, composed
-events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail). `lr-invalid` (no
+events. `lr-invalid` (no
 detail, cancelable) fires when a validity check finds the button invalid; `preventDefault()` on it
 suppresses the native validation bubble and `reportValidity()`'s focus/scroll.
 
@@ -5604,8 +5600,7 @@ best-effort fallbacks.
 activating the action button or a safe anchor through the same path as pointer/keyboard input.
 
 **Events:** a plain native `click` crosses the shadow boundary unmodified. The internal button's
-`focus` and `blur` are re-dispatched from the host as bubbling, composed events, each followed by
-its prefixed alias `lr-focus` / `lr-blur` (no detail).
+`focus` and `blur` are re-dispatched from the host as bubbling, composed events.
 
 **Slots:** (default) — custom icon content. It is rendered **beside** the `icon` glyph, as a
 sibling of it, not piped through `<lr-icon>`: the internal `<lr-icon>` mounts only when `icon` is
@@ -5823,7 +5818,7 @@ Three more native passthroughs:
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
-own `blur`/`focus`) each followed by its prefixed alias `lr-blur`/`lr-focus` (no detail), and
+own `blur`/`focus`), and
 `lr-clear` (no detail, fired after the clear action's `input`/`lr-input`/`change`/`lr-change`
 sequence). `lr-invalid` (no detail) fires when a validity check finds the input invalid.
 
@@ -6106,7 +6101,7 @@ field for no new capability. Each carries a localized accessible name and the sh
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
-input) each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail), and `lr-clear`
+input), and `lr-clear`
 (inherited, never fired here). The inherited `lr-invalid` (no detail) fires when a validity check
 finds the input invalid. The internal native `beforeinput` is cancelable, bubbles, and composes;
 calling `preventDefault()` on the host vetoes the edit before `value` changes.
@@ -6238,8 +6233,8 @@ the bounds, and Enter/Space activate the focused native option button. Disabled 
 popup, validation, and form submission.
 
 **Events:** native `input` on user edits and native `change` on a complete commit; compatibility
-aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once
-with `lr-focus` / `lr-blur` aliases. `lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
+aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
+`lr-clear` follows a clear. Cancelable `lr-show` / `lr-hide`
 precede popup state changes; `lr-after-show` / `lr-after-hide` follow motion settlement.
 `lr-invalid` follows a failed validity check.
 The hidden native autofill seam treats an intentional empty `input` followed by `change` as a
@@ -6325,7 +6320,7 @@ The inherited `--lr-input-*` theme inputs therefore remain configurable from an 
 wrapper without being shadowed by the subclass.
 
 **Events:** native-style `input` and `change`; bubbling, composed `focus` and `blur` bridges; the
-`lr-input` / `lr-change` aliases with `{ value }`; `lr-focus` / `lr-blur` aliases with no detail;
+`lr-input` / `lr-change` aliases with `{ value }`;
 `lr-clear` after the inherited clear action; and `lr-invalid` when a validity check fails.
 
 **CSS parts:** all inherited `lr-input` parts, plus `time-input` on the same control-row node as
@@ -6482,8 +6477,8 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
 emits native `Event` `change` then `lr-change`; and a country pick emits both pairs in order:
 `input`, `lr-input`, `change`, `lr-change`. Native events carry no custom detail; the aliases carry
 `{ value, inputValue, country, valid, status }`.
-Internal `focus`/`blur` are relayed once as realm-correct native `FocusEvent`s preserving `relatedTarget`,
-followed by `lr-focus`/`lr-blur`. `lr-invalid` has no detail and is the one bubbling/composed alias
+Internal `focus`/`blur` are relayed once as realm-correct native `FocusEvent`s preserving `relatedTarget`.
+`lr-invalid` has no detail and is the one bubbling/composed alias
 when native validity fails. Programmatic value writes remain silent.
 
 **Validity:** empty + `required` sets `valueMissing`; incomplete dial-like input sets `badInput`;
@@ -6653,8 +6648,7 @@ native-style composed `change` (no detail) then `lr-change` (`detail: { start, e
 on pointer release, keyboard keyup, handle blur while a changed keyboard gesture is still pending,
 or when a preset button is clicked. A blur commit retires the gesture before the later physical
 keyup, so it cannot emit a duplicate change. The focused handle's native `focus` and `blur` are
-re-dispatched from the host as bubbling, composed events, each followed by its prefixed alias
-`lr-focus` / `lr-blur` (no detail). A failed native validity check emits one bubbling/composed,
+re-dispatched from the host as bubbling, composed events. A failed native validity check emits one bubbling/composed,
 cancelable `lr-invalid` alias; cancelling it cancels the native `invalid` event and suppresses the
 browser's default validation UI.
 
@@ -6996,8 +6990,7 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 **Events:** user toggles emit, in order, bubbling/composed `input`, the compatibility `lr-input`
 alias, bubbling/composed `change`, then the compatibility `lr-change` alias (both aliases carry
 `detail: { checked: boolean }`). Programmatic `.checked` assignments are
-silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events, each followed
-by its prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a
+silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a
 validity check finds the checkbox invalid.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control;
@@ -7178,8 +7171,7 @@ a consumer observes a control they didn't write. `input` is an `InputEvent`; `ch
 `Event`. Both bubble and compose, and neither carries a detail — read `event.target.checked`.
 None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
-`focus` and `blur` are re-dispatched as bubbling, composed host events, each followed by its
-prefixed alias `lr-focus`/`lr-blur` (no detail). `lr-invalid` (no detail) fires when a validity
+`focus` and `blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a validity
 check finds the switch invalid.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control;
@@ -7362,7 +7354,7 @@ detail), then `lr-change`, fire once an interaction commits: on pointerup for a 
 for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press fires both pairs, mirroring
 native `<input type=range>` timing.
 The focused handle's native `focus` and `blur` are re-dispatched from the host as bubbling,
-composed events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
+composed events.
 `lr-invalid` (no detail) fires when a validity check finds the slider invalid.
 **Breaking in 8.0.0:** both details widened from `{ value: number }` to
 `{ value: number; minValue: number; maxValue: number; handle: 'value' | 'min' | 'max' }`. `value` is
@@ -7565,8 +7557,7 @@ restores the current default.
 native-style composed `change`, then `lr-change`; both aliases carry `{ checked, value }`. An owned
 radio emits none of those child value events; its group emits the sole aggregate sequence described
 below, so capture and bubble listeners cannot observe two differently shaped event sets. The
-internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events,
-each followed by its prefixed alias `lr-focus`/`lr-blur` (no detail).
+internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
 
 **Slots:** default label content. In `appearance="button"`, `start`/`prefix` share the leading
@@ -7663,8 +7654,7 @@ size used by the button's form and chrome logic.
 **Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
 then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
 aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
-not cross the shadow boundary, each followed by its prefixed alias `lr-focus` / `lr-blur`
-(no detail). `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
+not cross the shadow boundary. `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
 its own alias.
 
 **Slots:** default (label text), `start` (leading content, typically an icon), and `end` (trailing
@@ -7807,8 +7797,7 @@ so a listener that decides asynchronously (`await`-ing a check before letting th
 still veto it; it then goes through the same resolved default button as Enter-to-submit, so
 `SubmitEvent.submitter` and the button's own `name`/`value` reach the submission. The real input's native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
-do not cross the shadow boundary; each is followed by its prefixed alias `lr-focus` / `lr-blur` (no
-detail). Replacing the live or default code, resetting/restoring the form state, or disconnecting
+do not cross the shadow boundary. Replacing the live or default code, resetting/restoring the form state, or disconnecting
 the component before the deferred task runs retires that completion's submission; a task for code
 A can never submit a later full code B.
 `lr-invalid` (no detail) fires when a validity check finds the one-time-code input invalid.
@@ -8086,7 +8075,7 @@ the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-com
 each list mutation; native events have no detail and both aliases carry a frozen
 `{ value: readonly string[] }` snapshot.
 Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
-`relatedTarget`, followed by `lr-focus`/`lr-blur`. `lr-add`
+`relatedTarget`. `lr-add`
 (`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
 readonly, complete ordered and deduplicated set of tokens added by that commit),
 `lr-remove`
@@ -8251,7 +8240,7 @@ showing error chrome alone does not mutate `ElementInternals` validity.
 **Events:** exactly one realm-correct native `input`, `change`, `focus`, and `blur` is relayed from
 the internal textarea; native payload such as `InputEvent.inputType` and
 `FocusEvent.relatedTarget` is preserved. Typed `lr-input`/`lr-change` aliases carry
-`detail: { value }`, and `lr-focus`/`lr-blur` are the prefixed lifecycle aliases. `lr-invalid`
+`detail: { value }`. `lr-invalid`
 (no detail) fires once when validity fails.
 
 **Slots:** `label`, `hint`, `error`.
@@ -8427,8 +8416,8 @@ during a drag is authoritative instead: it retires the gesture and remains curre
 Also emitted are `lr-show` / `lr-after-show` and `lr-hide` / `lr-after-hide` (the panel opened
 or closed — never emitted for a declaratively-open picker's first render, nor for a close caused by
 disconnection; because this panel has no opening animation, each `lr-after-*` immediately follows
-its matching lifecycle event in the completed update), and `focus`/`blur` plus their migrated
-`lr-focus`/`lr-blur` aliases (exactly one bubbling/composed native `FocusEvent` relay when focus
+its matching lifecycle event in the completed update), and `focus`/`blur`
+(exactly one bubbling/composed native `FocusEvent` relay when focus
 enters or leaves the internal controls in either popup or inline mode), and `lr-invalid`
 (no detail) once when native validity fails. A change that
 doesn't move the serialized value emits nothing, so dragging within a single rounded colour is
@@ -8616,8 +8605,8 @@ consumer-supplied custom validity and recomputes current intrinsic constraints; 
 
 **Events:** a pick emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
 `lr-change`; both aliases carry `detail: { value }`. The internal search input's `focus` and `blur`
-are relayed once as native `FocusEvent`s preserving `relatedTarget`, followed by
-`lr-focus`/`lr-blur`. All four native events use the picker's current owner-document realm, including
+are relayed once as native `FocusEvent`s preserving `relatedTarget`.
+All four native events use the picker's current owner-document realm, including
 after adoption. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
 fails; preventing it also prevents the native `invalid` event that produced it. Programmatic `value`
 changes are silent.
@@ -8856,8 +8845,8 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
 every explicit pick; if not `defaultPrevented`, the component applies the pick itself via
 `setLyraLocale(value)`. A listener calling `event.preventDefault()` leaves `value` updated but the
 active locale untouched, so a host can persist the choice first and apply it later. `focus`/`blur`
-are relayed once from the trigger as native `FocusEvent`s preserving `relatedTarget`, followed
-respectively by `lr-focus`/`lr-blur`. `lr-invalid` is the single
+are relayed once from the trigger as native `FocusEvent`s preserving `relatedTarget`.
+`lr-invalid` is the single
 bubbling/composed, cancelable alias of a failed native validity check.
 
 `direction` (`'ltr' | 'rtl'`, typed as `LyraLocaleDirection`) is the picked locale's writing
@@ -17546,13 +17535,13 @@ const ok = await confirm({
   title: "Delete conversation?",
   description: "This cannot be undone.",
   confirmLabel: "Delete",
-  tone: "danger",
+  variant: "danger",
 });
 if (ok) deleteConversation();
 ```
 
 `confirm(options: ConfirmOptions): Promise<boolean>` where
-`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; tone?: 'neutral' | 'danger' /* = 'neutral' */ }`.
+`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */; tone?: 'neutral' | 'danger' /* @deprecated, use variant */ }`.
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
@@ -17562,8 +17551,9 @@ of the call and removes it once settled, rather than reusing a persistent page-l
 (contrast `lr-toast`'s `toaster.ts`). Concurrent calls are distinct dialogs in the shared overlay
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
-a direct light-DOM `<p>`. `tone: 'danger'` fills the confirm button with `--lr-color-danger` instead
-of `--lr-color-brand`, for destructive actions. Confirm/cancel actions deliberately use native
+a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
+instead of `--lr-color-brand`, for destructive actions. The deprecated `tone` option is a one-major
+back-compat alias for `variant`; `variant` wins when both are set. Confirm/cancel actions deliberately use native
 inline-styled `<button>` elements so this helper does not register or import the broader button
 component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
 states as every other control in the library: a hover/pressed fill mixed toward
@@ -19015,8 +19005,6 @@ Left unset, the built-in star outline/solid pair is unchanged.
   preview silently, with no `end` phase — that teardown wasn't user-driven.
 - `focus` / `blur` — the host-owned slider's ordinary native focus transitions. Like native focus
   events, they do not bubble; listen on the rating itself (or use capture on an ancestor).
-- `lr-focus` / `lr-blur` — bubbling, composed prefixed compatibility aliases (no detail), each
-  fired from the corresponding native host transition.
 - `lr-invalid` — no detail; fired when a validity check finds the rating invalid.
 
 **Methods:** `focus()`, `blur()` and `click()` operate on the host-owned slider and are gated while
@@ -19128,6 +19116,7 @@ These named interfaces and helper signatures are available to typed integrations
   description: unknown;
   confirmLabel: unknown;
   cancelLabel: unknown;
+  variant: unknown;
   tone: unknown;
 }`
 
@@ -20599,6 +20588,9 @@ calendar popup. Uses the shared `FormAssociated` mixin; the submitted value is a
 - `valueInput: HTMLInputElement` — hidden native `type="date"` mirror kept synchronized with
   `value`, `min`, `max`, `required`, `disabled`, and `readonly` for integrations that inspect native
   date constraints
+- `validationTarget: HTMLElement | undefined` (attribute: false) — the browser validation bubble's
+  focus anchor; defaults to the first visible day/month/year field in locale order, never the
+  hidden `valueInput` mirror. Settable to override which element the popup anchors to
 - `min: string = ''`, `max: string = ''` — inclusive `YYYY-MM-DD` bounds, surfaced as
   `rangeUnderflow`/`rangeOverflow`
 - `readonly: boolean = false` (reflected) — also suspends all validity flags
@@ -21273,7 +21265,7 @@ playback for time-series scrubbing, without implying native audio/video playback
 **Events:** `lr-play`, `lr-pause` (no detail), `lr-sequence-step`
 (`detail: LyraSequencePlaybackStepDetail { currentIndex }`, fired on every tick and manual step);
 internal `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and
-composed, preserving `relatedTarget`), followed by `lr-focus`/`lr-blur`.
+composed, preserving `relatedTarget`).
 
 **Class and event types:** `LyraSequencePlayback`, `LyraSequencePlaybackEventMap`, and
 `LyraSequencePlaybackStepDetail`. The former generic `LyraPlayback`, `<lr-playback>`, `length`,
@@ -21928,8 +21920,8 @@ rather than a second interactive control; the native zoom buttons remain the sol
 actions.
 
 **Events:** internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
-`FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-`lr-focus`/`lr-blur`; native `load` and `error` are relayed exactly once from the current iframe
+`FocusEvent`s (bubbling and composed, preserving `relatedTarget`);
+native `load` and `error` are relayed exactly once from the current iframe
 generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes
 replace the iframe, so a late event from an earlier document is ignored; detached frames do not
 notify.
@@ -22002,7 +21994,7 @@ component's own keyboard target — a bare host `.focus()` would otherwise be a 
 
 **Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
 relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`), followed by `lr-focus`/`lr-blur`.
+`relatedTarget`).
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
 `reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from
@@ -22420,7 +22412,7 @@ capture UI of its own, the host owns everything from here (there's no single rig
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
 blob to `<lr-attachment-chip>`). `focus`/`blur` from the active single- or multi-capability trigger
 are relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`), followed by `lr-focus`/`lr-blur`; the hidden file input is not the focus owner.
+`relatedTarget`); the hidden file input is not the focus owner.
 The composed dropdown/menu implementation lifecycle, item-state, and selection events are
 contained inside the trigger. Only the attachment events listed above cross the host boundary.
 
@@ -22607,8 +22599,7 @@ automatically under `prefers-reduced-motion: reduce`.
 an empty `src`), `lr-play`/`lr-pause` (real transitions of the effective `playing` value only, so a
 `play = true` that reduced motion blocks emits nothing, while a live reduced-motion change that
 forces a freeze does emit `lr-pause`). Internal `focus`/`blur` are relayed exactly once as
-owner-realm native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-the `lr-focus`/`lr-blur` compatibility aliases.
+owner-realm native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`).
 
 **Slots:** `play-icon`, `pause-icon` — decorative custom glyphs for the frozen/paused and playing
 states. Both stay mounted and are toggled via the native `hidden` attribute. Their assigned content
@@ -23144,7 +23135,7 @@ events are also relayed exactly once from the host as native `Event` instances. 
 media notifications, these relays are non-bubbling, non-composed, and non-cancelable. The richer
 `lr-*` notifications above remain unchanged. The native media element's `focus`/`blur` are relayed
 exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`), followed by `lr-focus`/`lr-blur`. `lr-text-select` is not part of this
+`relatedTarget`). `lr-text-select` is not part of this
 player's event contract: transcript rows live inside the embedded virtual list's nested shadow
 root, so no selection binding is installed.
 
@@ -23258,7 +23249,7 @@ play/pause control (absent, and therefore a no-op, under `controls="none"`).
 non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
 immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
 play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
-(bubbling and composed, preserving `relatedTarget`), followed by `lr-focus`/`lr-blur`.
+(bubbling and composed, preserving `relatedTarget`).
 
 **Slots:** the default slot accepts direct `<source>` and `<track>` children;
 `controls-after-play`, `controls-start`, `exit-fullscreen-icon`, `fullscreen-icon`, `mute-icon`,
@@ -23357,8 +23348,8 @@ the optional-arrow navigation cursor (falling back to the first enabled row). Th
 convenience; every enabled row is independently reachable through ordinary sequential Tab order.
 
 **Events:** internal `focus`/`blur` from a playlist row are relayed exactly once as owner-realm
-native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`), followed by
-`lr-focus`/`lr-blur`. `lr-video-change` is bubbling and composed but non-cancelable, with exact
+native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`).
+`lr-video-change` is bubbling and composed but non-cancelable, with exact
 detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, mutable plain-data snapshot with
 exact shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains
 fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;
@@ -23787,16 +23778,14 @@ property).
   'radar' | 'polarArea' | 'bubble'` — every named default used by a typed `lr-*-chart` is
   already a first-class member, so `<lr-chart type="pie">` needs no subclass or cast to work;
   unknown runtime attribute/property values fall back to `bar` before reaching Chart.js
-- `description: string | null = null` — accessible chart description; the additive
-  `accessibleDescription` remains a fallback alias
+- `description: string | null = null` — accessible chart description
 - `grid: 'x'|'y'|'both'|'none' = 'both'` — controls cartesian grid lines. On a radial chart, `x`
   controls angle lines and `y` controls concentric grid lines
 - `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. `'y'` is Chart.js's own
   mechanism for horizontal bars (it also flips `line`/`area` types onto a horizontal category axis).
   The `horizontal` boolean that used to alias `'y'` was removed in 9.0.0 — use `index-axis="y"`
 - `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence
-  by presence, including an explicit empty string; additive `accessibleLabel: string | null = null`
-  remains the fallback alias with the same explicit-empty behavior
+  by presence, including an explicit empty string
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
@@ -23831,12 +23820,12 @@ property).
   non-integer, negative, and out-of-range indexes are discarded. The component writes the accepted
   legend-toggle snapshot back to this property so a host can persist it, and a programmatic write
   reconciles Chart.js and the DOM legend silently without emitting either legend-visibility event.
-- `legend: boolean = true` — additive positive alias for the visible legend; renders a wrapping DOM
-  legend whose keyboard-operable buttons toggle
-  dataset visibility. The DOM surface preserves long public labels that a canvas legend would clip.
-  Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is defined, otherwise
-  the effective dataset's declarative `hidden` value before Chart.js is ready and across chart
-  type/plugin rebuilds.
+- `withoutLegend: boolean = false` (attribute `without-legend`) — the legend shows by default;
+  set this to hide it. Renders a wrapping DOM legend (when shown) whose keyboard-operable buttons
+  toggle dataset visibility. The DOM surface preserves long public labels that a canvas legend
+  would clip. Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is
+  defined, otherwise the effective dataset's declarative `hidden` value before Chart.js is ready
+  and across chart type/plugin rebuilds.
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — accepts the
   Chart.js `left|top|right|bottom|center|chartArea|{ [scaleId]: number }` positions plus logical
   `start`/`end`; the additive `auto` chooses right above 480px and bottom below that allocation
@@ -23900,8 +23889,6 @@ property).
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
-- `accessibleLabel` / `accessibleDescription` — deprecated compatibility aliases for `label` /
-  `description`; a host `aria-label` remains highest precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
@@ -24188,7 +24175,12 @@ passthrough). Not a subclass of `LyraChart`.
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical
   placement for the DOM legend; side positions are bounded and stack responsively in narrow hosts
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
-  and description; host `aria-label` wins. `accessibleLabel` remains a deprecated migration alias
+  and description; host `aria-label` wins by presence, including an explicit empty string
+- `accessibleLabel?: string` (attribute `accessible-label`) — overrides the `<svg>`'s auto-derived
+  `aria-label` (`datasets.map(d => d.label).join(', ') || 'Chart'`); a host `aria-label` still wins.
+  Unset keeps the auto-derived (English-fallback) label. `lr-lite-chart` keeps this property under
+  its original `accessible-label` name, unrelated to the deprecated `accessible-label` alias that
+  `lr-chart`/`lr-box-plot` dropped in favor of their mirrored `label` property.
 - `height: string = '280px'` — accepts a valid CSS `height` as a private fallback. A consumer-set
   `--lr-chart-height` always wins; invalid values, declaration-breaking input, and `url()` remove
   the fallback and leave the public token/default in control.
@@ -24249,8 +24241,7 @@ passthrough). Not a subclass of `LyraChart`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no
   mark/tabindex/tooltip) for a value that is exactly `0`; `null`/non-finite values are always
   skipped regardless.
-- `valueAxisGutter?: number` (attribute `value-axis-gutter`) — value-axis gutter width. The former
-  `padLeft` / `pad-left` spelling remains a deprecated migration alias.
+- `valueAxisGutter?: number` (attribute `value-axis-gutter`) — value-axis gutter width.
 - `barGapRatio?: number` (attribute `bar-gap-ratio`) — overrides the internal 0.2 `BAR_GROUP_GAP`
   fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2.
 - `scale: 'linear' | 'sqrt' = 'linear'` (bar type only) — `'sqrt'` maps a bar's value to height via
@@ -24259,12 +24250,11 @@ passthrough). Not a subclass of `LyraChart`.
   by one dominant value; gridlines/tick labels stay on the linear domain either way, and `type="line"`
   ignores it entirely.
 - `withoutValueAxis: boolean = false` (attribute `without-value-axis`) — suppresses gridlines and
-  value-axis tick labels; x-axis category labels remain. `hideAxis` / `hide-axis` is a deprecated alias.
+  value-axis tick labels; x-axis category labels remain.
 - `selectedIndices: readonly number[] = []` (attribute: false) — applies to every interactive data mark for
   both `type="bar"` and `type="line"`: matching bars and line points receive `data-selected` and
   explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`. For a multi-series
-  chart, the category index selects the matching mark in every dataset. Empty is the default;
-  `selectedIndex` remains a deprecated alias.
+  chart, the category index selects the matching mark in every dataset. Empty is the default.
   Style the built-in highlight through `--lr-lite-chart-selected-outline-color` and
   `--lr-lite-chart-selected-outline-width`. Note
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
@@ -24407,10 +24397,9 @@ of every entry in these lists.**
 **Properties:** `description`, `grid`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
 (`legend-position`), `max`, `min`, `plugins`, `stacked`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
-`yLabel` (`y-label`), plus additive `labels`, `datasets`, `legend`, `valueFormatter`, `formatter`, `area`, `zoom`,
+`yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`, `area`, `zoom`,
 `height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`
-(`data-labels`), `stackTotals` (`stack-totals`), `config`, `accessibleLabel`
-(`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
+(`data-labels`), `stackTotals` (`stack-totals`), `config`, `showDataTable`
 (`show-data-table`), `chartArea` (readonly), and `chart`. `type` differs only in its initial value.
 
 **Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `renderChart()`, `resetZoom()`,
@@ -24485,17 +24474,17 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
   specialist owns its controller because a non-bar type would contradict the derived distribution.
 - All other `LyraChart` properties are inherited and usable: `description`, `grid`, `indexAxis`
-  (`index-axis`), `hiddenDatasets`, `legend`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
+  (`index-axis`), `hiddenDatasets`, `legendPosition` (`legend-position`), `max`, `min`, `plugins`,
   `withoutAnimation` (`without-animation`), `withoutLegend` (`without-legend`), `withoutTooltip`
   (`without-tooltip`), `valueFormatter`, `formatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
-  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
-  (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
+  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `showDataTable`
   (`show-data-table`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
 maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
-`appendData()` remains a deprecated compatibility adapter.
+`appendData()` remains a working compatibility adapter (no longer deprecated); prefer
+`appendSamples()` for new code.
 
 **Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-click`, `lr-before-legend-visibility-change` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-click`'s `index` is the bucket index and
@@ -24559,8 +24548,7 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 **Properties:**
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly
-  `LyraBoxPlotSummary { min, q1, median, q3, max }` values. `boxes`, `BoxPlotSeries`, and
-  `BoxPlotPoint` remain deprecated migration aliases. Summaries must be finite and ordered
+  `LyraBoxPlotSummary { min, q1, median, q3, max }` values. Summaries must be finite and ordered
   `min <= q1 <= median <= q3 <= max`; invalid entries are omitted and caller objects are never
   passed to the mutating peer.
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled visibility snapshot
@@ -24581,9 +24569,7 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
-  and description; host `aria-label` wins by presence, including an explicit empty string. The
-  `accessibleLabel` (attribute `accessible-label`) and `accessibleDescription` (attribute
-  `accessible-description`) remain nullable deprecated aliases with the same explicit-empty behavior
+  and description; host `aria-label` wins by presence, including an explicit empty string
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
@@ -26443,8 +26429,9 @@ collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (at
 `max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly
 LyraAnchorKind[] = ['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for
 the shared anchor-target contract). The inherited carrier fields `highlights: readonly LyraHighlight[] = []`
-(property only) and `activeHighlightId: string | null = null` (attribute `active-highlight-id`) are
-available for structural anchor-target compatibility, but this viewer does not paint them; use
+(property only) and `activeHighlightId: string | null = null` (attribute `active-highlight-id`)
+paint every highlight entry that resolves to a cell index (capped at 100 painted highlights), each
+tinted by its tone and, when its `id` matches `activeHighlightId`, outlined. Use
 `anchor: LyraAnchor | string | null = null` or `scrollToAnchor()` for notebook-cell navigation.
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
@@ -26466,17 +26453,24 @@ non-cancelable; `detail: { found: boolean }`, fired after an `anchor` assignment
 `scrollToAnchor()` call is applied.
 
 Neither `lr-highlight-activate` nor `lr-text-select` is part of `lr-notebook-viewer`'s event
-contract: notebook host highlights are not painted and no selection binding is installed. Use
-`anchor` plus `lr-anchor-result` for notebook cell navigation outcomes.
+contract: highlights are painted but not click-to-activate, and no selection binding is installed.
+Use `anchor` plus `lr-anchor-result` for notebook cell navigation outcomes.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
 `data-active`), `cell-active` (added alongside `cell` on the cell currently targeted by an anchor
 or the active search match),
+`cell-highlighted` (added alongside `cell` on a cell matched by a `highlights` entry, always paired
+with a tone-specific `cell-highlighted-<tone>` part below), `cell-highlighted-accent` (the default
+tone), `cell-highlighted-success`, `cell-highlighted-warning`, `cell-highlighted-danger`,
+`cell-highlighted-neutral`, `cell-highlight-active` (added alongside `cell-highlighted`/
+`cell-highlighted-<tone>` when the matched highlight's `id` equals `activeHighlightId`),
 `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `raw-source` (the horizontally
 scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
 an error output), `error-output-label` (the label introducing an error output's traceback),
-`output-toggle`, `error`, `spinner`.
+`output-toggle`, `error`, `spinner`. The highlight/active state variants are separate part _names_
+rather than attribute selectors, because Shadow Parts forbids an attribute selector after
+`::part()`.
 The document-level spinner always includes visible localized loading text alongside its decorative
 ring; the text remains understandable without CSS or animation and the ring stops under reduced
 motion.
@@ -26494,6 +26488,15 @@ remain on the elements for scripting.
 cell currently targeted by an anchor or the active search match — the `cell-active` part. It is an
 inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
 the element or on any ancestor.
+
+`--lr-notebook-viewer-highlight-accent-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-notebook-viewer-highlight-success-background` (default `var(--lr-color-success-quiet)`),
+`--lr-notebook-viewer-highlight-warning-background` (default `var(--lr-color-warning-quiet)`),
+`--lr-notebook-viewer-highlight-danger-background` (default `var(--lr-color-danger-quiet)`), and
+`--lr-notebook-viewer-highlight-neutral-background` (default `var(--lr-color-surface-raised)`) are
+each tone's highlighted-cell background. `--lr-notebook-viewer-highlight-active-outline` (default
+`var(--lr-focus-ring-color)`) outlines the highlighted cell whose highlight `id` equals
+`activeHighlightId`.
 
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to
@@ -27378,6 +27381,12 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
 - a malformed percent-escape or lone UTF-16 surrogate in a link's raw `href` makes the internal
   `encodeURI`-based validity guard throw, silently dropping just that anchor (the link text still
   renders, with no `href`) — mirrors `marked`'s own default `link()` renderer's defensive behavior.
+- every rendered link/image `href`/`src` is additionally scheme-checked against the same allowlist
+  `<lr-button>`/`<lr-card>` use for a navigation `href` (`http:`, `https:`, `blob:`, `mailto:`, and
+  relative URLs — plus `data:` for images only), independently of `htmlMode` — `sanitize` and
+  `escape` both reject a disallowed scheme (e.g. `javascript:`) by dropping the anchor/image and
+  rendering only its text/alt content, exactly like the malformed-`href` case above; only
+  `html-mode="trusted"` skips this check, consistent with its documented full bypass.
 - `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.
@@ -35825,6 +35834,9 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   computes/fetches the path and assigns it back through `path`.
 - `lr-pin-change` (`detail: { pinnedNodeIds: string[] }`) — the complete updated array. Already
   self-applied before emitting, so reassigning back is optional.
+- `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
+  via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
+  `lr-search-change`, so reassigning back is optional.
 - `lr-search-change` (`detail: { searchQuery: string }`) — the user typed in the toolbar's search
   box. Already self-applied before emitting, so reassigning back is optional; a direct host
   assignment to `searchQuery` stays silent.

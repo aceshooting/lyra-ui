@@ -42,7 +42,7 @@ component's own keyboard target — a bare host `.focus()` would otherwise be a 
 
 **Events:** `lr-zoom-change` (`detail: { zoom }`); internal `focus`/`blur` from the viewport are
 relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed, preserving
-`relatedTarget`), followed by `lr-focus`/`lr-blur`.
+`relatedTarget`).
 
 **CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`. The
 `reset` button's visible text is the live zoom percentage, locale-formatted and recomputed from

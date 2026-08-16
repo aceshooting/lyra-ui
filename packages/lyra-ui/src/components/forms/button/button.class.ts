@@ -62,8 +62,6 @@ export type ButtonFormMethod = 'get' | 'post' | 'dialog';
 export interface LyraButtonEventMap {
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 
@@ -121,8 +119,6 @@ export interface LyraButtonEventMap {
  * @customElement lr-button
  * @event focus - Native focus relayed once from the internal button or anchor.
  * @event blur - Native blur relayed once from the internal button or anchor.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-invalid - The button failed a validity check. Cancelable; preventing it also prevents
  *   the native `invalid` event's default validation UI.
  * @slot - Default slot: the button's label content.
@@ -690,12 +686,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   private onFocus = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onBlur = (event: FocusEvent): void => {
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   /** Whether anything about this button changes the submission itself, rather than merely

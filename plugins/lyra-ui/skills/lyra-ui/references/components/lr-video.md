@@ -64,7 +64,7 @@ play/pause control (absent, and therefore a no-op, under `controls="none"`).
 non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
 immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
 play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
-(bubbling and composed, preserving `relatedTarget`), followed by `lr-focus`/`lr-blur`.
+(bubbling and composed, preserving `relatedTarget`).
 
 **Slots:** the default slot accepts direct `<source>` and `<track>` children;
 `controls-after-play`, `controls-start`, `exit-fullscreen-icon`, `fullscreen-icon`, `mute-icon`,

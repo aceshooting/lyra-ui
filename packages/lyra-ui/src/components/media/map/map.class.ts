@@ -193,6 +193,13 @@ export interface LyraMapGeoJsonDataLayer {
   readonly tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
 }
 
+/** Each entry becomes one real, individually-focusable DOM marker element (with its own aria
+ *  attributes and, when it carries a popup, a keydown listener) -- unbounded input would let a
+ *  hostile/oversized `markers` assignment synchronously mint an unbounded number of them. First-N
+ *  deterministic truncation, matching lightbox.class.ts's `MAX_LIGHTBOX_IMAGES` and
+ *  image-viewer.class.ts's `IMAGE_VIEWER_HIGHLIGHT_LIMIT`. */
+const MAX_MAP_MARKERS = 2_000;
+
 export interface LyraMapMarker {
   /** Optional explicit business identity. Explicit IDs are trimmed and must be nonempty; the
    * first occurrence is retained. Markers with no `id` remain distinct by coordinate occurrence. */
@@ -224,11 +231,19 @@ function popupText(host: Element, markup: string): string {
   return (template.content.textContent ?? '').replace(/\s+/gu, ' ').trim();
 }
 
+/** Each entry becomes a source plus up to three GL layers (`fill`/`line`/`circle`) -- unbounded
+ *  input would let a hostile/oversized `dataLayers` assignment synchronously add an unbounded
+ *  number of sources/layers to the underlying map. First-N deterministic truncation, same
+ *  rationale and pattern as `MAX_MAP_MARKERS` above. */
+const MAX_MAP_DATA_LAYERS = 100;
+
 function normalizedDataLayers(value: unknown): LyraMapGeoJsonDataLayer[] {
   if (!Array.isArray(value)) return [];
   const output: LyraMapGeoJsonDataLayer[] = [];
   const seenSourceIds = new Set<string>();
-  for (const candidate of value) {
+  const scanCount = Math.min(value.length, MAX_MAP_DATA_LAYERS);
+  for (let index = 0; index < scanCount; index++) {
+    const candidate = value[index];
     try {
       if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
       const rawSourceId = (candidate as { sourceId?: unknown }).sourceId;
@@ -1125,7 +1140,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // order in `this.markers` doesn't change.
     const coordCounts = new Map<string, number>();
     const explicitIds = new Set<string>();
-    for (const candidate of Array.isArray(this.markers) ? this.markers : []) {
+    // First-N deterministic truncation -- see `MAX_MAP_MARKERS` above.
+    const markers = Array.isArray(this.markers) ? this.markers.slice(0, MAX_MAP_MARKERS) : [];
+    for (const candidate of markers) {
       const lngLat = this.validMarkerLngLat(candidate);
       if (!lngLat) continue;
       const m = candidate as LyraMapMarker;

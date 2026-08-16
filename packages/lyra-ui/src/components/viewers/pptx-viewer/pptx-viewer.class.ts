@@ -140,8 +140,9 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   @property() src = '';
   /** Optional presentation name. */
   @property() name = '';
-  /** Accessible-name override for the viewer region. */
-  @property() label = '';
+  /** Accessible-name override for the viewer region. Omitting it falls back to `name`, then a
+   *  localized default; an explicit empty string clears it. */
+  @property() label?: string;
   /** One-based current slide for page-addressed integrations; assignments navigate when ready. */
   @property({ type: Number, reflect: true }) page = 1;
   /** A CSS `max-height` that caps the scrollable renderer output container; invalid values are ignored. */
@@ -716,7 +717,10 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   override render(): TemplateResult {
-    const ariaLabel = viewerSemanticLabel(this, this.label || this.name || this.localize('pptxViewerLabel'));
+    const ariaLabel = viewerSemanticLabel(
+      this,
+      this.label == null ? this.name || this.localize('pptxViewerLabel') : this.label
+    );
     return html`
       <div
         part="base"

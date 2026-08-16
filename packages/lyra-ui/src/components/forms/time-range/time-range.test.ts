@@ -133,7 +133,7 @@ it("forwards host focus()/blur() to the start handle", async () => {
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
 });
 
-it("relays each handle focus/blur as one native pair plus one prefixed alias pair", async () => {
+it("relays each handle focus/blur as one native pair, and never lr-focus/lr-blur", async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div>
       <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
@@ -167,7 +167,8 @@ it("relays each handle focus/blur as one native pair plus one prefixed alias pai
       (event) => event.target === el && event.bubbles && event.composed
     )
   ).to.be.true;
-  expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(aliases).to.deep.equal([]);
 });
 
 it("forwards host click() to the start handle", async () => {

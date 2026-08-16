@@ -37,8 +37,6 @@ export interface LyraSwitchEventMap {
   'lr-change': CustomEvent<{ checked: boolean }>;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
 }
 /**
@@ -83,8 +81,6 @@ export interface LyraSwitchEventMap {
  * non-bubbling native `focus`, re-dispatched as bubbling and composed.
  * @event blur - The internal switch control lost focus. Bridges the internal element's
  * non-bubbling native `blur`, re-dispatched as bubbling and composed.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @event lr-invalid - The switch failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -566,7 +562,6 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
       this.reflectValidityStates();
     }
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
 
   private onFocus = (event: FocusEvent): void => {
@@ -575,7 +570,6 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {

@@ -184,9 +184,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
    *  `<lr-input>`'s own placeholder-as-label fallback). */
   @property() placeholder = '';
 
-  /** Accessible name for the inner search landmark when the host has no `aria-label`; falls back
-   *  to the localized default. */
-  @property() label = '';
+  /** Accessible name for the inner search landmark when the host has no `aria-label`. Omitting it
+   *  falls back to the localized default; an explicit empty string clears it. */
+  @property() label?: string;
 
   /** JS-only accessible-name override for the inner search landmark. A non-empty markup
    *  `aria-label` names the host as the sole overall owner instead. */
@@ -355,7 +355,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     const label = retrievalSemanticLabel(
       this,
       this.accessibleLabel ??
-        (this.label || this.localize('retrievalSearchLabel'))
+        (this.label == null ? this.localize('retrievalSearchLabel') : this.label)
     );
     const searchRole = retrievalSemanticRole(this, 'search');
     const hasFilters =

@@ -71,6 +71,16 @@ describe("lr-memory-panel", () => {
     const shell = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(shell.getAttribute("role")).to.equal("group");
     expect(shell.getAttribute("aria-label")).to.equal("Memory");
+    expect(el.label).to.be.undefined;
+  });
+
+  it("keeps an explicitly empty label distinct from an omitted one", async () => {
+    const el = (await fixture(
+      html`<lr-memory-panel label=""></lr-memory-panel>`
+    )) as LyraMemoryPanel;
+    expect(el.label).to.equal("");
+    const shell = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(shell.getAttribute("aria-label")).to.equal("");
   });
 
   it('renders one section per non-empty list with localized headings and role="list" wrappers', async () => {

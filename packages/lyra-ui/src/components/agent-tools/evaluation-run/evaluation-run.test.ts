@@ -349,6 +349,56 @@ it('contains nested lifecycle/tool events and correlates the second example at i
   expect([rawActivations, rawRenderErrors]).to.deep.equal([0, 0]);
 });
 
+it('contains raw lr-code-block events at the example boundary, including a collapse lr-toggle that must not be mistaken for the details disclosure', async () => {
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${examples}></lr-eval-run>`);
+  const row = await expandExample(el, 1); // ex-2, format: 'code'
+  const codeBlock = row.querySelector('[part="input"]') as HTMLElement;
+  expect(codeBlock.tagName.toLowerCase()).to.equal('lr-code-block');
+
+  const leaked: string[] = [];
+  for (const type of ['lr-copy', 'lr-error', 'lr-copy-error', 'lr-toggle-request', 'lr-line-activate', 'lr-text-select']) {
+    el.addEventListener(type, () => leaked.push(type));
+  }
+  let toggles = 0;
+  el.addEventListener('lr-example-toggle', () => toggles++);
+
+  codeBlock.dispatchEvent(new CustomEvent('lr-copy', { bubbles: true, composed: true, detail: { ok: true, text: 'print("hi")' } }));
+  codeBlock.dispatchEvent(new CustomEvent('lr-error', { bubbles: true, composed: true, detail: null }));
+  codeBlock.dispatchEvent(new CustomEvent('lr-copy-error', { bubbles: true, composed: true, detail: { ok: false } }));
+  codeBlock.dispatchEvent(new CustomEvent('lr-toggle-request', { bubbles: true, composed: true, detail: { collapsed: true } }));
+  codeBlock.dispatchEvent(new CustomEvent('lr-line-activate', { bubbles: true, composed: true, detail: { line: 1 } }));
+  codeBlock.dispatchEvent(new CustomEvent('lr-text-select', { bubbles: true, composed: true, detail: { text: 'hi', anchor: null, rects: [] } }));
+  // lr-code-block's own internal collapse toggle shares its event name with lr-details' disclosure
+  // toggle -- unstopped, it bubbles straight into the ancestor <lr-details>'s own @lr-toggle handler
+  // and gets misread as the example collapsing (a code-block-shaped { collapsed } detail has no
+  // `open` field, which reads as falsy and deletes the example from expandedIds).
+  codeBlock.dispatchEvent(new CustomEvent('lr-toggle', { bubbles: true, composed: true, detail: { collapsed: true } }));
+  await el.updateComplete;
+
+  expect(leaked).to.deep.equal([]);
+  expect(toggles).to.equal(0);
+  expect(row.querySelector('[part="input"]')).to.not.equal(null); // example is still expanded
+});
+
+it('contains raw lr-markdown events at the example boundary', async () => {
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${examples}></lr-eval-run>`);
+  const row = await expandExample(el); // ex-1, default (markdown) format
+  const markdown = row.querySelector('[part="input"]') as HTMLElement;
+  expect(markdown.tagName.toLowerCase()).to.equal('lr-markdown');
+
+  const leaked: string[] = [];
+  for (const type of ['lr-link-click', 'lr-render-error', 'lr-highlight-activate', 'lr-text-select', 'lr-anchor-result']) {
+    el.addEventListener(type, () => leaked.push(type));
+  }
+  markdown.dispatchEvent(new CustomEvent('lr-link-click', { bubbles: true, composed: true, detail: { href: 'https://example.com' } }));
+  markdown.dispatchEvent(new CustomEvent('lr-render-error', { bubbles: true, composed: true, detail: { error: new Error('boom') } }));
+  markdown.dispatchEvent(new CustomEvent('lr-highlight-activate', { bubbles: true, composed: true, detail: { highlightId: 'h1' } }));
+  markdown.dispatchEvent(new CustomEvent('lr-text-select', { bubbles: true, composed: true, detail: { text: 'x', anchor: null, rects: [] } }));
+  markdown.dispatchEvent(new CustomEvent('lr-anchor-result', { bubbles: true, composed: true, detail: { anchor: null, found: false } }));
+
+  expect(leaked).to.deep.equal([]);
+});
+
 it('keeps the real nested approval pending when the correlated wrapper decision is vetoed', async () => {
   const pendingTrace: ToolTimelineEntry[] = [
     {

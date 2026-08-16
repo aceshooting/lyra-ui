@@ -113,7 +113,7 @@ detail), then `lr-change`, fire once an interaction commits: on pointerup for a 
 for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press fires both pairs, mirroring
 native `<input type=range>` timing.
 The focused handle's native `focus` and `blur` are re-dispatched from the host as bubbling,
-composed events, each followed by its prefixed alias `lr-focus` / `lr-blur` (no detail).
+composed events.
 `lr-invalid` (no detail) fires when a validity check finds the slider invalid.
 **Breaking in 8.0.0:** both details widened from `{ value: number }` to
 `{ value: number; minValue: number; maxValue: number; handle: 'value' | 'min' | 'max' }`. `value` is

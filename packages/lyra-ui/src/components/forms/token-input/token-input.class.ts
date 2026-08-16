@@ -52,8 +52,6 @@ export interface LyraTokenInputEventMap {
   blur: FocusEvent;
   'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
   'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
-  'lr-focus': CustomEvent<null>;
-  'lr-blur': CustomEvent<null>;
   'lr-add': CustomEvent<Readonly<{ value: string; values: readonly string[] }>>;
   'lr-remove': CustomEvent<{ value: string; index: number }>;
   'lr-token-edit': CustomEvent<{
@@ -132,8 +130,6 @@ const stringArrayConverter = {
  * @event lr-change - Lyra commit alias; detail is `{ value }` with the current token list.
  * @event focus - Native `FocusEvent` relayed from the draft input or inline token editor.
  * @event blur - Native `FocusEvent` relayed from the draft input or inline token editor.
- * @event lr-focus - Lyra alias emitted after each native `focus` relay.
- * @event lr-blur - Lyra alias emitted after each native `blur` relay.
  * @event lr-add - One or more tokens were added in a single commit. Detail is
  *   `{ value, values }`, where `value` is the final added token for compatibility and `values` is
  *   the complete ordered batch.
@@ -896,7 +892,6 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     }
     this.editorBlurRelayed = false;
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
   private onEditKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Enter') {
@@ -928,7 +923,6 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
         this.commitEdit(false);
       }
       relayNativeEvent(this, event);
-      this.emit('lr-blur');
     });
   };
 
@@ -976,7 +970,6 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     }
     this.syncValidity();
     relayNativeEvent(this, event);
-    this.emit('lr-blur');
   };
   private onFocus = (event: FocusEvent): void => {
     if (this.liveDisabled) {
@@ -984,7 +977,6 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       return;
     }
     relayNativeEvent(this, event);
-    this.emit('lr-focus');
   };
   private stopInternalChange(event: Event): void {
     event.stopPropagation();

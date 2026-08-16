@@ -86,7 +86,7 @@ describe("lr-button", () => {
     expect(ev.composed).to.be.true;
   });
 
-  it("relays exactly one native focus/blur pair plus one prefixed alias pair", async () => {
+  it("relays exactly one native focus/blur pair and never fires the removed lr-focus/lr-blur aliases", async () => {
     const wrapper = await fixture<HTMLElement>(
       html`<div><lr-button>Save</lr-button></div>`
     );
@@ -116,7 +116,7 @@ describe("lr-button", () => {
         (event) => event.target === el && event.bubbles && event.composed
       )
     ).to.be.true;
-    expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
+    expect(aliases).to.deep.equal([]);
   });
 
   it("never fires click while disabled or loading (native disabled button semantics)", async () => {

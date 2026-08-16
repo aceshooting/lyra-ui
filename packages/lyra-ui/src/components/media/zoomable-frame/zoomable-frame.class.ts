@@ -146,8 +146,6 @@ export interface LyraZoomableFrameEventMap {
   error: Event;
   blur: FocusEvent;
   focus: FocusEvent;
-  'lr-blur': CustomEvent<null>;
-  'lr-focus': CustomEvent<null>;
 }
 
 /**
@@ -181,8 +179,6 @@ export interface LyraZoomableFrameEventMap {
  *   event.
  * @event {FocusEvent} blur - Relayed once from the internal iframe as a bubbling, composed native
  *   event.
- * @event lr-focus - Prefixed compatibility alias for `focus`.
- * @event lr-blur - Prefixed compatibility alias for `blur`.
  * @csspart iframe - The internal `<iframe>` element.
  * @csspart controls - The zoom-controls toolbar.
  * @csspart zoom-in-button - The zoom-in button.
@@ -308,7 +304,6 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       detail: source?.detail ?? 0,
     });
     relayNativeEvent(this, nativeSource);
-    this.emit(type === 'focus' ? 'lr-focus' : 'lr-blur');
   }
 
   private emitHostFocus(source?: FocusEvent, relatedTarget: EventTarget | null = null): void {

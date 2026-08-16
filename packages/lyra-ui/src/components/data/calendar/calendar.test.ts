@@ -454,11 +454,11 @@ it('uses the normalized current month for agenda filtering when view-date is inv
   expect(el.shadowRoot!.querySelector('[part="agenda-event"]')?.textContent).to.contain('Current event');
 });
 
-it('keeps an authored host aria-label distinct from the purpose-specific section name', async () => {
+it('uses an authored host aria-label as the internal section name instead of the generic default', async () => {
   const el = (await fixture(html`<lr-calendar aria-label="Product schedule"></lr-calendar>`)) as LyraCalendar;
   const section = el.shadowRoot!.querySelector('section')!;
   expect(el.getAttribute('aria-label')).to.equal('Product schedule');
-  expect(section.getAttribute('aria-label')).to.equal('Calendar');
+  expect(section.getAttribute('aria-label')).to.equal('Product schedule');
 });
 
 it('themes the title and date weights through the shared semibold token', async () => {

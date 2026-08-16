@@ -600,7 +600,7 @@ it("canonicalizes a declarative empty name attribute to omission", async () => {
   expect(el.hasAttribute("name")).to.be.false;
 });
 
-it("relays exactly one native focus/blur pair and retains typed aliases", async () => {
+it("relays exactly one native focus/blur pair, and never lr-focus/lr-blur", async () => {
   const el = (await fixture(html`<lr-radio>One</lr-radio>`)) as LyraRadio;
   const events: FocusEvent[] = [];
   const aliases: string[] = [];
@@ -616,7 +616,8 @@ it("relays exactly one native focus/blur pair and retains typed aliases", async 
   expect(events.every((event) => event instanceof FocusEvent)).to.be.true;
   expect(events.every((event) => event.target === el)).to.be.true;
   expect(events.every((event) => event.bubbles && event.composed)).to.be.true;
-  expect(aliases).to.deep.equal(["lr-focus", "lr-blur"]);
+  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
+  expect(aliases).to.deep.equal([]);
 });
 
 it("forwards a host-level click() to the internal base control, like lr-button", async () => {

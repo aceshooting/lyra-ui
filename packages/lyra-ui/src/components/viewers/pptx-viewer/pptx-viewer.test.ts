@@ -146,7 +146,7 @@ function stubFetch(ok = true): () => void {
 }
 
 describe("lr-pptx-viewer", () => {
-  it("leaves a non-empty host aria-label on the host, then uses label, name, and localized fallbacks", async () => {
+  it("leaves a non-empty host aria-label on the host, then uses label, then falls through to name and a localized default when label is omitted", async () => {
     const el = (await fixture(
       html`<lr-pptx-viewer
         aria-label="Host deck"
@@ -161,12 +161,29 @@ describe("lr-pptx-viewer", () => {
     el.removeAttribute("aria-label");
     await el.updateComplete;
     expect(base().getAttribute("aria-label")).to.equal("API deck");
-    el.label = "";
+    el.label = undefined;
     await el.updateComplete;
     expect(base().getAttribute("aria-label")).to.equal("Visible deck");
     el.name = "";
     await el.updateComplete;
     expect(base().getAttribute("aria-label")).to.equal("Presentation viewer");
+  });
+
+  it("honors an explicitly empty label as genuinely empty, distinct from omitting it (which falls through to name)", async () => {
+    const el = (await fixture(
+      html`<lr-pptx-viewer label="API deck" name="Visible deck"></lr-pptx-viewer>`
+    )) as LyraPptxViewer;
+    const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base().getAttribute("aria-label")).to.equal("API deck");
+
+    el.label = "";
+    await el.updateComplete;
+    expect(el.label).to.equal("");
+    expect(base().getAttribute("aria-label")).to.equal("");
+
+    el.label = undefined;
+    await el.updateComplete;
+    expect(base().getAttribute("aria-label")).to.equal("Visible deck");
   });
 
   it("preserves an explicitly empty host aria-label on the region owner", async () => {
