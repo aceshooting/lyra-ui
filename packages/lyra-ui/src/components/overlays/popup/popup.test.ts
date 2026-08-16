@@ -528,10 +528,21 @@ it('does not flip when flip is turned off', async () => {
 it('is accessible while active, with content rendered', async () => {
   // The inactive fixture above proves nothing about the state that actually renders: hidden
   // content is absent from the accessibility tree.
+  //
+  // Both buttons carry an explicit, guaranteed-AA-compliant color pair rather than relying on
+  // the browser's own native UA button stylesheet: Lyra authors no color/background for a plain
+  // slotted <button>, so this axe check would otherwise incidentally grade each engine's default
+  // button appearance instead of anything this component controls. Confirmed real, not a WebKit
+  // measurement quirk -- #5c5c5c-on-#cdcdcd (WebKit's native default button colors here) computes
+  // to a true 4.20:1 (WCAG AA needs 4.5:1 for this 16px/normal-weight text), while Chromium's own
+  // default button gray happens to clear it.
   const el = await fixture<LyraPopup>(html`
     <lr-popup active arrow>
-      <button slot="anchor">Anchor</button>
-      <div><p>Positioned content</p><button type="button">Act</button></div>
+      <button slot="anchor" style="color: #000; background: #fff;">Anchor</button>
+      <div>
+        <p>Positioned content</p>
+        <button type="button" style="color: #000; background: #fff;">Act</button>
+      </div>
     </lr-popup>
   `);
   await settle(el);
