@@ -2359,7 +2359,12 @@ it('honors inherited and direct-host AV theme hooks', async () => {
   await waitUntil(() => getComputedStyle(marker).backgroundColor === 'rgb(4, 5, 6)');
 });
 
-it('keeps rate hover and every marker category distinguishable in forced colors', async () => {
+it('keeps rate hover and every marker category distinguishable in forced colors', async function () {
+  // The retry loop below can run up to 15000ms under a loaded CI runner; mocha's own suite-wide
+  // 6000ms default (see web-test-runner.config.js) would otherwise cut the test off first -- the
+  // same class of fix already applied to image-viewer.test.ts's equivalent forced-colors hover
+  // wait for the identical "shared, coverage-instrumented GitHub Actions runner" timing gap.
+  this.timeout(20000);
   await setForcedColors('active');
   try {
     const el = (await fixture(html`
@@ -2397,23 +2402,24 @@ it('keeps rate hover and every marker category distinguishable in forced colors'
     // native select border back to solid. The outline is the stable non-color hover cue owned by
     // this component across engines; exact native border painting is not.
     //
-    // Third attempt at this test's flakiness (reproduced under both WTR_COVERAGE=1's full-suite
+    // Fourth attempt at this test's flakiness (reproduced under both WTR_COVERAGE=1's full-suite
     // load and, separately, a plain non-coverage chrome-channel shard run -- always the identical
-    // "never registered :hover" timeout, always 121/121 clean standalone). First attempt widened
-    // the waitUntil timeout 3000ms -> 5000ms; second attempt split a compound wait into a single
-    // polled :hover condition plus a separate style read -- neither stopped it recurring, which
-    // rules out both processing latency and a compound-condition race as the whole story: the
+    // "never registered :hover" timeout, always clean standalone). First attempt widened the
+    // waitUntil timeout 3000ms -> 5000ms; second attempt split a compound wait into a single
+    // polled :hover condition plus a separate style read; third attempt retried the physical
+    // mouse dispatch itself (5 attempts x 1000ms) rather than just the wait, since the
     // synthesized mouse move's underlying CDP command completing (what sendMouse()'s returned
     // promise actually waits on -- see wtr-mouse.ts) does not guarantee the browser has gone on to
-    // process the resulting native pointer event and update :hover matching state, and under
-    // sufficient event-loop load that gap can apparently exceed several seconds rather than settle
-    // quickly. zoomable-frame.test.ts's analogous "focus never transferred after a synthesized
-    // click" flake, root-caused the same way, was fixed by retrying the physical input itself, not
-    // just the wait -- matching that shape here too.
+    // process the resulting native pointer event and update :hover matching state. None of the
+    // three fully stopped it recurring on a sufficiently loaded shared CI runner, so this widens
+    // the per-attempt budget 1000ms -> 3000ms (15000ms total across 5 attempts), matching the
+    // 15000ms figure that finally stabilized image-viewer.test.ts's identical forced-colors hover
+    // wait -- see this test's own `this.timeout(20000)` above for why mocha's 6000ms default no
+    // longer cuts this off first.
     let hovered = false;
     for (let attempt = 0; attempt < 5 && !hovered; attempt += 1) {
       await sendMouse({ type: 'move', position });
-      const deadline = Date.now() + 1000;
+      const deadline = Date.now() + 3000;
       while (!select.matches(':hover') && Date.now() < deadline) {
         await aTimeout(10);
       }
