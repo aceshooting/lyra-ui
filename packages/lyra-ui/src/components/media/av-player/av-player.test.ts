@@ -2389,36 +2389,38 @@ it('keeps rate hover and every marker category distinguishable in forced colors'
     select.scrollIntoView({ block: 'center', inline: 'center' });
     await aTimeout(0);
     const rect = select.getBoundingClientRect();
-    await sendMouse({
-      type: 'move',
-      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-    });
-    await aTimeout(0);
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
     // Firefox's forced-colors UA sheet retains the authored hover outline while normalizing the
     // native select border back to solid. The outline is the stable non-color hover cue owned by
     // this component across engines; exact native border painting is not.
     //
-    // Second attempt at this test's flakiness deep inside the full ~480-file WTR_COVERAGE=1 suite
-    // (only reproduces there; 121/121 clean in every standalone configuration tried, with or
-    // without coverage). First attempt just widened the waitUntil timeout 3000ms -> 5000ms; that
-    // demonstrably did not fix it -- CI failed again with the identical timeout error, which rules
-    // out plain processing latency as the whole story and points at :hover itself never actually
-    // registering, not a slow-but-eventual style recalc. `av-player.styles.ts` ties
-    // `outline: solid` to `:hover` directly with no other async dependency (including under the
-    // forced-colors media query), so the compound wait below is equivalent to waiting on :hover
-    // alone plus a same-pass style read -- but it bundled both into one polled condition where two
-    // sibling tests with the identical hover-then-assert shape (video.test.ts's `hover()` helper,
-    // tool-param-form.test.ts) instead wait on :hover alone, then assert separately, and are not
-    // among the tests failing in this same coverage run. Match that shape and add back the
-    // trailing settle tick present in video.test.ts's helper but missing here. Root cause of why
-    // :hover itself sometimes doesn't register under this specific suite's load is still open --
-    // if this test times out again, that unconfirmed mechanism (not timeout duration) is the next
-    // thing to chase, not a third timeout increase.
-    await waitUntil(
-      () => select.matches(':hover'),
-      'the playback-rate select never registered :hover',
-      { timeout: 5000 },
-    );
+    // Third attempt at this test's flakiness (reproduced under both WTR_COVERAGE=1's full-suite
+    // load and, separately, a plain non-coverage chrome-channel shard run -- always the identical
+    // "never registered :hover" timeout, always 121/121 clean standalone). First attempt widened
+    // the waitUntil timeout 3000ms -> 5000ms; second attempt split a compound wait into a single
+    // polled :hover condition plus a separate style read -- neither stopped it recurring, which
+    // rules out both processing latency and a compound-condition race as the whole story: the
+    // synthesized mouse move's underlying CDP command completing (what sendMouse()'s returned
+    // promise actually waits on -- see wtr-mouse.ts) does not guarantee the browser has gone on to
+    // process the resulting native pointer event and update :hover matching state, and under
+    // sufficient event-loop load that gap can apparently exceed several seconds rather than settle
+    // quickly. zoomable-frame.test.ts's analogous "focus never transferred after a synthesized
+    // click" flake, root-caused the same way, was fixed by retrying the physical input itself, not
+    // just the wait -- matching that shape here too.
+    let hovered = false;
+    for (let attempt = 0; attempt < 5 && !hovered; attempt += 1) {
+      await sendMouse({ type: 'move', position });
+      const deadline = Date.now() + 1000;
+      while (!select.matches(':hover') && Date.now() < deadline) {
+        await aTimeout(10);
+      }
+      hovered = select.matches(':hover');
+    }
+    expect(hovered, 'the playback-rate select never registered :hover after repeated attempts').to.be.true;
+    await aTimeout(0);
     expect(getComputedStyle(select).outlineStyle).to.equal('solid');
   } finally {
     await resetMouse();
