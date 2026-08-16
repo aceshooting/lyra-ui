@@ -410,6 +410,26 @@ for dir in "${RELEASE_DIRS[@]}"; do
   echo "==> [$name] Regenerate manifest with current component metadata"
   pnpm --filter "$name" --if-present run manifest
   echo
+  echo "==> [$name] Generate default-string slices"
+  pnpm --filter "$name" --if-present run default-string-slices
+  echo
+  echo "==> [$name] Generate framework types"
+  pnpm --filter "$name" --if-present run framework-types
+  echo
+  echo "==> [$name] Generate design-token artifacts"
+  pnpm --filter "$name" --if-present run design-tokens
+  echo
+  echo "==> [$name] Generate editor data"
+  pnpm --filter "$name" --if-present run generate-editor-data
+  echo
+  echo "==> [$name] Generate LLM reference artifacts"
+  # Must run before Lint: lint's own check-llms-freshness.mjs/check-llms-artifacts.mjs verify
+  # llms/ against the just-regenerated manifest and the package-metadata-embedded version, both
+  # of which this loop already updated above -- running llms generation after lint (as this loop
+  # used to) meant every release that changed manifest content or bumped the version failed
+  # lint on stale llms/ output, since nothing had regenerated it yet.
+  pnpm --filter "$name" --if-present run llms
+  echo
   echo "==> [$name] Lint"
   pnpm --filter "$name" --if-present run lint
   echo
@@ -426,21 +446,6 @@ for dir in "${RELEASE_DIRS[@]}"; do
   else
     pnpm --filter "$name" --if-present run test
   fi
-  echo
-  echo "==> [$name] Generate default-string slices"
-  pnpm --filter "$name" --if-present run default-string-slices
-  echo
-  echo "==> [$name] Generate framework types"
-  pnpm --filter "$name" --if-present run framework-types
-  echo
-  echo "==> [$name] Generate design-token artifacts"
-  pnpm --filter "$name" --if-present run design-tokens
-  echo
-  echo "==> [$name] Generate editor data"
-  pnpm --filter "$name" --if-present run generate-editor-data
-  echo
-  echo "==> [$name] Generate LLM reference artifacts"
-  pnpm --filter "$name" --if-present run llms
 done
 
 if [[ "$LYRA_UI_RELEASED" -eq 1 ]]; then
