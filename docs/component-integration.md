@@ -103,7 +103,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-toast`
 - Transitive Lyra dependencies: `lr-toast-item`
-- Standalone gzip: 47.7 KiB (48823 bytes; bundle SHA-256 `3b04bd9dd58a874d0226a526eab3e3dd1a945c4c5009f591555baa7629577a90`)
+- Standalone gzip: 47.7 KiB (48825 bytes; bundle SHA-256 `2de103ee2bb3073ebc78d57fd604647243ee11099df40ab1572d4050ae040813`)
 
 </details>
 
@@ -3091,7 +3091,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-toast-item`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 43.7 KiB (44759 bytes; bundle SHA-256 `d1e43e8f623935dc1c3576a967949953950ec01be6c87eb36c3d89043e1d6a2c`)
+- Standalone gzip: 43.7 KiB (44762 bytes; bundle SHA-256 `54a7a96b076b6d68d5c2b4e06014173d1de9765b6d3aaa1d8cf0af3cca5b0028`)
 
 </details>
 
