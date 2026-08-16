@@ -1355,9 +1355,15 @@ describe("accessibility", () => {
 
       expect(getComputedStyle(annotate).borderStyle).to.equal("double");
       const box = rotate.getBoundingClientRect();
+      // sendMouse requires integer coordinates; an unrounded midpoint throws under some engines
+      // and silently misses the hit area under others when the rect's width/height is odd (same
+      // fix already applied to av-player.test.ts's equivalent hover-position call).
       await sendMouse({
         type: "move",
-        position: [box.left + box.width / 2, box.top + box.height / 2],
+        position: [
+          Math.round(box.left + box.width / 2),
+          Math.round(box.top + box.height / 2),
+        ],
       });
       await waitUntil(() => getComputedStyle(rotate).outlineStyle === "dashed");
       expect(getComputedStyle(rotate).outlineStyle).to.equal("dashed");

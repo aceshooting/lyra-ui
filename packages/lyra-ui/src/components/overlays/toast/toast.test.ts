@@ -640,14 +640,26 @@ it('coalesces overflow loss into one typed event and one localized polite announ
   const items = await Promise.all(
     Array.from({ length: 26 }, (_, index) => region.create(`observable burst ${index + 1}`, { duration: 0 })),
   );
-  await aTimeout(0);
 
+  await waitUntil(() => events.length > 0, 'one synchronous burst emits one coalesced loss event');
   expect(events.length, 'one synchronous burst emits one coalesced loss event').to.equal(1);
   expect(events[0]!.detail).to.deep.equal({ count: 3 });
   expect(events[0]!.cancelable).to.equal(false);
   expect(events[0]!.bubbles).to.equal(true);
   expect(events[0]!.composed).to.equal(true);
   const localizedCount = new Intl.NumberFormat('ar').format(3);
+  // The announce() call this fires through drops the message if the region isn't accessibility-
+  // visible (isAccessibilityVisible) at that exact microtask -- correct by construction (every
+  // create() synchronously re-syncs visibility before this notify microtask can run), but under
+  // heavy parallel load the style recalc that :state()-driven visibility depends on can lag behind
+  // by a tick or two. Poll rather than asserting immediately after one queueMicrotask-scale wait.
+  await waitUntil(
+    () =>
+      announcementTexts('polite').some(
+        (message) => message === `Skipped ${localizedCount} notifications.`,
+      ),
+    'the coalesced loss is announced once with localized digits through the region string',
+  );
   expect(
     announcementTexts('polite').filter(
       (message) => message === `Skipped ${localizedCount} notifications.`,

@@ -70,8 +70,9 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
 
   `import '@aceshooting/lyra-ui';` is registration-free in v8. Use
   `@aceshooting/lyra-ui/all.js` for the explicit compatibility registration set, or prefer
-  per-component entries in application code. `all.js` omits the 15 peer-gated tags (the chart
-  family, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`, `lr-geojson-view`).
+  per-component entries in application code. `all.js` omits the 16 peer-gated tags (the chart
+  family, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`, `lr-geojson-view`,
+  `lr-geojson-viewer`).
 
 - **Theme only through `--lr-theme-*` custom properties.** Never hardcode a color, spacing or font
   value that fights the token system; override the relevant `--lr-theme-*` property on any ancestor
@@ -101,13 +102,14 @@ lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, an
 `references/migration.md` holds the generated `wa-*` → `lr-*` and `sl-*` → `lr-*` tables plus the
 import-specifier rewrites. For a mirrored component the migration is a mechanical tag/import rename;
 intentional differences are called out in that component's own `references/components/<tag>.md`
-section (for example, Lyra's combobox uses `with-clear` where Web Awesome uses `clearable`). A tag
+section (for example, Lyra's combobox uses `clearable` where Web Awesome uses `with-clear`). A tag
 absent from the tables has no documented counterpart — check `references/index.md` for a Lyra
 component covering the same job under a different name.
 
-Run `/lyra-ui:migrate-from-wa` or `/lyra-ui:migrate-from-shoelace` to apply the rename across a
-project automatically, or `/lyra-ui:update` for the broader periodic audit (bump to latest,
-sweep for remaining `wa-*`/hand-rolled UI, migrate what's adoptable, file genuine gaps upstream).
+Run `/lyra-ui:migrate-legacy` to apply the rename across a project automatically (mechanical for
+`wa-*`, best-effort for `sl-*`), or `/lyra-ui:update` for the broader periodic audit (bump to
+latest, sweep for remaining `wa-*`/hand-rolled UI, migrate what's adoptable, file genuine gaps
+upstream).
 
 ## Report gaps, bugs, and improvement ideas on a user's behalf
 

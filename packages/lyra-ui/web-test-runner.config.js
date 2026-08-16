@@ -238,6 +238,7 @@ const testRunnerHtml = (testRunnerImport) => `
       // Suppressing the expected, benign warning at the source avoids ever triggering it.
       globalThis.litIssuedWarnings = new Set(['dev-mode', 'no-override-get-property-descriptor']);
       globalThis.__LYRA_WTR_COVERAGE__ = ${collectCoverage};
+      globalThis.__LYRA_WTR_STRICT_CONSOLE__ = ${strictConsole};
       ${strictConsole ? `
       // Trip once, then fall back to the real console methods for the rest of this page's life.
       // WTR's own client-side error reporting re-logs a caught exception via console.error; with

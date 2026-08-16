@@ -139,9 +139,25 @@ map_install_browser() {
   esac
 }
 
+# WTR's automatic port probe is not atomic with its later server bind (see scripts/test.sh's own
+# copy of this note): concurrent lanes can both select the same apparently-free port, then one
+# fails with EADDRINUSE. Running the default five browsers in parallel with no port assigned here
+# has every lane race for the same auto-discovered port -- reproduced locally as three of five
+# lanes crashing immediately on `EADDRINUSE: address already in use :::8000`. Keep each supported
+# browser on its own deterministic, distinct port below the platform's ephemeral range, matching
+# scripts/test.sh's WTR_LANE_PORTS pattern.
+declare -Ar WTR_LANE_PORTS=(
+  [chromium]=18090
+  [firefox]=18091
+  [chrome]=18092
+  [edge]=18093
+  [safari]=18094
+)
+
 run_browser_lane() {
   local browser="$1"
-  WTR_BROWSER="$browser" WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1 WTR_STRICT_CONSOLE=1 \
+  WTR_BROWSER="$browser" WTR_PORT="${WTR_LANE_PORTS[$browser]}" \
+    WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1 WTR_STRICT_CONSOLE=1 \
     pnpm --filter @aceshooting/lyra-ui test:full-engine-shard
 }
 

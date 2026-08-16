@@ -20,7 +20,12 @@ it('keeps implementation constants and sink-policy helpers private', () => {
 });
 
 async function eventually(condition: () => boolean): Promise<void> {
-  const deadline = Date.now() + 1000;
+  // scheduleFrameFocusReconciliation (zoomable-frame.class.ts) defers through a setTimeout(fn, 0)
+  // macrotask, which can land well past 0ms once the event loop's macrotask queue is backed up --
+  // observed to exceed a 1000ms deadline deep inside the full multi-hundred-file engine suite,
+  // though never in an isolated run of this file alone. 3000ms keeps the same poll shape with
+  // headroom for that queue depth.
+  const deadline = Date.now() + 3000;
   while (!condition() && Date.now() < deadline) await aTimeout(10);
   expect(condition()).to.be.true;
 }

@@ -747,7 +747,17 @@ it('handles a rejected placement after cleanup and disconnect without a global r
   }
 });
 
-it('does not swallow an exception deliberately thrown by onPlaced', async () => {
+it('does not swallow an exception deliberately thrown by onPlaced', async function () {
+  // WTR's own client-side test harness (index.html) registers its global unhandledrejection/error
+  // handlers before any test module runs, and reports to the runner via console.error immediately
+  // -- independent of, and ahead of, this test's own later-added listener calling
+  // event.preventDefault() (listener order on the same target is FIFO; WTR's handler has already
+  // reported by the time this one's turn comes). This test's whole premise -- proving an onPlaced
+  // exception becomes a genuine, engine-level uncaught rejection -- is therefore structurally
+  // incompatible with strict-console mode (WTR_STRICT_CONSOLE=1, set by CI's full-engine.yml): no
+  // amount of test-side event handling can suppress WTR's own report. Every other engine/lane still
+  // runs this test with strict console off, so the guarantee itself stays covered.
+  if (globalThis.__LYRA_WTR_STRICT_CONSOLE__) this.skip();
   const popup = await fixture<HTMLElement>(html`<div style="width:50px; height:20px;">pop</div>`);
   const anchor: VirtualAnchor = {
     getBoundingClientRect: () => new DOMRect(100, 100, 0, 0),
@@ -755,29 +765,31 @@ it('does not swallow an exception deliberately thrown by onPlaced', async () => 
   const failure = new Error('consumer onPlaced failure');
   let failureThrown = false;
   let stop = () => undefined;
-  const observed = new Promise<unknown>((resolve) => {
-    window.addEventListener(
-      'unhandledrejection',
-      (event) => {
-        event.preventDefault();
-        stop();
-        resolve(event.reason);
-      },
-      { once: true },
-    );
-  });
+  const unhandled: unknown[] = [];
+  const onUnhandled = (event: PromiseRejectionEvent) => {
+    unhandled.push(event.reason);
+    event.preventDefault();
+  };
+  window.addEventListener('unhandledrejection', onUnhandled);
 
-  stop = place(anchor, popup, {
-    onPlaced: () => {
-      if (failureThrown) return;
-      failureThrown = true;
-      // Stop the auto-update loop before surfacing the deliberate consumer failure. Otherwise a
-      // callback already queued by the initial observer pass could surface the same failure twice.
-      stop();
-      throw failure;
-    },
-  });
-  expect(await observed).to.equal(failure);
+  try {
+    stop = place(anchor, popup, {
+      onPlaced: () => {
+        if (failureThrown) return;
+        failureThrown = true;
+        // Stop the auto-update loop before surfacing the deliberate consumer failure. Otherwise a
+        // callback already queued by the initial observer pass could surface the same failure twice.
+        stop();
+        throw failure;
+      },
+    });
+    await waitFor(() => unhandled.length, (count) => count > 0);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(unhandled).to.deep.equal([failure]);
+  } finally {
+    stop();
+    window.removeEventListener('unhandledrejection', onUnhandled);
+  }
 });
 
 it('honors a custom offset from PlaceOptions', async () => {

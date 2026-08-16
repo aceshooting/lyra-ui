@@ -287,8 +287,8 @@ index, per-component pages, tokens, peers, and migration reference. CI freshness
 artifacts against `custom-elements.json` and the authored sources.
 
 **Claude Code users:** this repo is also a plugin marketplace — installing the `lyra-ui` plugin gives
-Claude the same reference as a skill, plus `/lyra-ui:migrate-from-wa`,
-`/lyra-ui:migrate-from-shoelace` and `/lyra-ui:update` commands.
+Claude the same reference as a skill, plus `/lyra-ui:migrate-legacy` and `/lyra-ui:update`
+commands.
 
 **Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
 contributor guide for agents working _on_ lyra-ui, not the same document as the above.

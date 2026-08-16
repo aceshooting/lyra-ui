@@ -33,23 +33,27 @@ with the user's explicit approval, files feature requests for them. Filing is ne
    (custom pickers, custom charts, custom tables, custom dialogs, etc.). Every `<wa-*>` hit belongs
    on this list — the goal is full removal, not a partial pass.
 
-4. **Verify against the real installed source, not memory or doc prose.** For each item on that
-   list, check whether an existing (or newly-shipped) lyra-ui component now covers it. Verify
-   against the *actual installed* contract in `node_modules/@aceshooting/lyra-ui/`:
+4. **Migrate `wa-*` mechanically.** If step 3 found any `<wa-*>` tags, run
+   `/lyra-ui:migrate-legacy`'s `wa-*` procedure against `$1` rather than re-deriving the rename by
+   hand — mirror status and per-component differences are only accurate in
+   `references/migration.md` and each component's own reference, never memory. Carry forward
+   anything it reports as unresolved (no documented counterpart) into step 6's gap list.
+
+5. **Verify hand-rolled UI against the real installed source, not memory or doc prose.** For each
+   hand-rolled widget from step 3, check whether an existing (or newly-shipped) lyra-ui component
+   now covers it. Verify against the *actual installed* contract in `node_modules/@aceshooting/lyra-ui/`:
    `llms/index.md` and `llms/components/<tag>.md`, `custom-elements.json`, the component's
    `.d.ts`, and its `dist`/`src` source
    when needed — not doc prose or what an older version used to do. A gap that has already shipped,
    or a design detail (a `data-*` hook, a `part=` attribute) that only shows up in the real source,
-   is easy to miss from memory alone.
-
-5. **Migrate what's adoptable.** Swap the component in, delete the replaced hand-rolled CSS/JS/
-   dependency, and update the project's own migration-notes doc if it keeps one (e.g.
-   `docs/lyra-ui-migration.md`).
+   is easy to miss from memory alone. For each hand-rolled widget confirmed covered, swap the
+   component in, delete the replaced hand-rolled CSS/JS/dependency, and update the project's own
+   migration-notes doc if it keeps one (e.g. `docs/lyra-ui-migration.md`).
 
 6. **List genuine gaps (and any bugs or optimization ideas noticed along the way), then ask
-   before filing.** For anything that's still a real gap after step 4's verification, list it —
-   even a missing variant or a missing CSS part is worth listing. Also list any actual bug or
-   inconsistency you noticed in an existing lyra-ui component while migrating to it (not a
+   before filing.** For anything that's still a real gap after step 4 or step 5's verification,
+   list it — even a missing variant or a missing CSS part is worth listing. Also list any actual
+   bug or inconsistency you noticed in an existing lyra-ui component while migrating to it (not a
    Web-Awesome-side issue), and any concrete optimization idea (bundle size, API friction). Under-
    listing is what quietly keeps a project on Web Awesome or hand-rolled code forever.
 

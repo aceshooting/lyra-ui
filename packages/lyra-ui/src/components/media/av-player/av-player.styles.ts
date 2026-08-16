@@ -32,6 +32,12 @@ export const styles = css`
     max-inline-size: 100%;
   }
   [part='rate-select'] {
+    /* A flex item's default min-width:auto floors it at its content's min-content size --
+       for a native <select> that's driven by its widest <option> text, which can be long
+       (localized playback-rate labels). inline-size/max-inline-size alone don't override that
+       floor; min-inline-size:0 does, letting the select actually shrink to fit a narrow
+       container instead of forcing it to overflow. */
+    min-inline-size: 0;
     inline-size: 100%;
     max-inline-size: 100%;
     appearance: none;

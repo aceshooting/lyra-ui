@@ -1,5 +1,5 @@
 ---
-description: Review a consumer project's lyra-ui usage for correctness, a11y/i18n/RTL, and performance
+description: Review a consumer project's lyra-ui usage for correctness, design-token/native-element adoption, a11y/i18n/RTL, and performance
 argument-hint: [path]
 allowed-tools: Read, Grep, Glob, Bash(grep:*)
 ---
@@ -30,6 +30,20 @@ Check, in this order:
    e.g. mutating a component's property when the reference documents it as read-only, or listening
    for a native event (`click`, `input`) where the component's reference says to use its
    `lr-*`-prefixed custom event instead for correct behavior.
+6. **Design tokens & native elements.** Grep CSS/style blocks and inline `style=` attributes for
+   hardcoded hex colors (`#[0-9a-fA-F]{3,8}`), `rgb(`/`rgba(`/`hsl(` literals, and hardcoded `px`
+   spacing/sizing values in files that also import from `@aceshooting/lyra-ui` (skip files that
+   don't touch lyra-ui at all — this is about lyra-ui adoption, not a general lint pass). For each
+   hit, check `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/tokens.md` (the full generated
+   design-token catalog: every `--lr-*` token, its `--lr-theme-*` input and its fallback) for a
+   token whose documented default is the same or a close color/size family — only suggest a
+   replacement when there's a genuinely matching one, don't force an unrelated token onto an
+   unrelated value. Separately, grep for native `<button>`, `<input>`, `<select>`, `<dialog>`, and
+   `<textarea>` in files that already import at least one `lr-*` component — flag each as a
+   candidate for the matching `lr-button`/`lr-input` (or `lr-select`/`lr-combobox`, check
+   both)/`lr-dialog`/`lr-textarea`, since the project has already opted into lyra-ui elsewhere.
 
 Report grouped by category above, each finding with file:line and a one-line fix suggestion
-grounded in what the reference actually documents — not a generic best-practice guess.
+grounded in what the reference actually documents — not a generic best-practice guess. A category 6
+hit might be intentional (e.g. matching a third-party brand color), so flag it rather than assuming
+it's a defect.
