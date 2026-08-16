@@ -4515,15 +4515,20 @@ describe("coverage: miscellaneous cell-text/navigation/accessible-cells branches
 });
 
 /** Strips Lit's internal marker comments so a legend markup snapshot compares only the nodes,
- *  attributes and text a consumer can actually see, select and style. A single well-formed-comment
- *  pass leaves any unclosed `<!--` (no later `-->`) untouched, so strip stray markers afterward
- *  too -- this is only ever fed known Lit-rendered markup, but the result must never be able to
- *  retain a literal `<!--`. */
+ *  attributes and text a consumer can actually see, select and style. Removing a well-formed
+ *  comment can splice its neighbors into a new `<!--`/`-->` that a single pass would miss (e.g.
+ *  `<!<!---->!--`), so repeat until a pass changes nothing -- this is only ever fed known
+ *  Lit-rendered markup, but the result must never be able to retain a literal `<!--`. */
 function stripLitMarkers(markup: string): string {
-  return markup
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replaceAll("<!--", "")
-    .replaceAll("-->", "");
+  let stripped = markup;
+  for (;;) {
+    const next = stripped
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replaceAll("<!--", "")
+      .replaceAll("-->", "");
+    if (next === stripped) return next;
+    stripped = next;
+  }
 }
 
 describe("legendStops", () => {
