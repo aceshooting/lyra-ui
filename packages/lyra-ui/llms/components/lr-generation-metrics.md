@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-generation-metrics.js';` (stable tag alias; registers the tag)
 - **Class** `LyraGenerationMetrics`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/generation-metrics/generation-metrics.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

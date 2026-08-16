@@ -311,7 +311,7 @@ function normalizeConditionBuilderValue(value: unknown, fields: readonly Conditi
  * @csspart add-button - The "Add condition" `lr-button`.
  * @csspart empty - The message shown when there are no fields, or no conditions yet.
  * @status stable
- * @since unreleased
+ * @since 9.0.0
  */
 export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

@@ -198,7 +198,7 @@ type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
  * @csspart empty - The empty-state message shown when `examples` is empty.
  * @csspart live-region - The internal status-announcement live region.
  * @status stable
- * @since unreleased
+ * @since 9.0.0
  */
 export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

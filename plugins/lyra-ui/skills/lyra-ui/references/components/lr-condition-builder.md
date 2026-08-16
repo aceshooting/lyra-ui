@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-condition-builder.js';` (stable tag alias; registers the tag)
 - **Class** `LyraConditionBuilder`, also available unregistered from `@aceshooting/lyra-ui/components/data/condition-builder/condition-builder.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

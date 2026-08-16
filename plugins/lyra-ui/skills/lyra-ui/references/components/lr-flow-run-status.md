@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-flow-run-status.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFlowRunStatus`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-run-status/flow-run-status.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below

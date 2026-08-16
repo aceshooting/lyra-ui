@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraGeoJsonViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
 - **Themeable via** 6 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-eval-run.js';` (stable tag alias; registers the tag)
 - **Class** `LyraEvalRun`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom`, `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

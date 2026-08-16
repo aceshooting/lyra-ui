@@ -70,7 +70,7 @@ export interface LyraSequencePlaybackEventMap {
  * @cssprop [--lr-sequence-playback-play-button-active-border-color=var(--lr-color-brand)] - Pressed
  *   play/pause button border color; read as an inline fallback so an ancestor value inherits.
  * @status stable
- * @since unreleased
+ * @since 9.0.0
  */
 export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

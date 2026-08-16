@@ -225,7 +225,7 @@ function snapshotSchema(value: unknown): JsonSchemaNode | null {
  * @cssprop [--lr-schema-viewer-info-border=var(--lr-color-brand)] - Info issue border.
  * @cssprop [--lr-schema-viewer-info-bg=var(--lr-color-brand-quiet)] - Info issue background.
  * @status stable
- * @since unreleased
+ * @since 9.0.0
  */
 export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

@@ -193,7 +193,7 @@ const GENERATION_METRICS_STATUS = literalSetConverter<GenerationMetricsStatus>(
  * @csspart throughput - The throughput segment, e.g. `"27 tok/s"`. Only rendered when a value is available (host-supplied or derived; see the class doc).
  * @csspart stop-button - The built-in Stop button. Only rendered while `status="running"` and `show-stop` is true.
  * @status stable
- * @since unreleased
+ * @since 9.0.0
  */
 export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

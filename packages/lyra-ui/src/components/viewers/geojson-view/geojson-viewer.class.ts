@@ -485,7 +485,7 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  * @csspart spinner - The decorative loading placeholder and its ordinary visually-hidden label;
  *   transitions announce through the shared document-level polite region.
  * @status stable
- * @since unreleased
+ * @since 9.0.0
  */
 export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   // GENERATED DEFAULT-STRING SLICE: START

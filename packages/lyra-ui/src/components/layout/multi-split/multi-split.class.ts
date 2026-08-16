@@ -260,7 +260,7 @@ export interface LyraMultiSplitEventMap {
  *   The real layout gutter reserved for each divider along the resize axis. The narrow visual rule
  *   is centered inside this owned track, so the target never overlaps either adjacent panel.
  * @status stable
- * @since unreleased
+ * @since 9.0.0
  */
 export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
