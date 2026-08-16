@@ -534,8 +534,11 @@ test('validation rejects unsorted, pre-introduction, and future deprecation reco
   const knownDate = metadata.deprecations.find(
     (entry) => entry.tag === 'lr-known-date' && entry.name === 'label'
   );
-  knownDate.since = '9.0.0';
-  knownDate.removalNotBefore = '11.0.0';
+  // A version that will realistically never be the real current package version -- this test
+  // broke the day the real version became exactly '9.0.0' (the literal it used to hardcode here),
+  // since a deprecation dated to exactly the current release is valid, not "after" it.
+  knownDate.since = '999.0.0';
+  knownDate.removalNotBefore = '1001.0.0';
 
   const findings = validateComponentMetadata(metadata, { ...state, metadata });
   assert.ok(
