@@ -4515,20 +4515,19 @@ describe("coverage: miscellaneous cell-text/navigation/accessible-cells branches
 });
 
 /** Strips Lit's internal marker comments so a legend markup snapshot compares only the nodes,
- *  attributes and text a consumer can actually see, select and style. Removing a well-formed
- *  comment can splice its neighbors into a new `<!--`/`-->` that a single pass would miss (e.g.
- *  `<!<!---->!--`), so repeat until a pass changes nothing -- this is only ever fed known
- *  Lit-rendered markup, but the result must never be able to retain a literal `<!--`. */
-function stripLitMarkers(markup: string): string {
-  let stripped = markup;
-  for (;;) {
-    const next = stripped
-      .replace(/<!--[\s\S]*?-->/g, "")
-      .replaceAll("<!--", "")
-      .replaceAll("-->", "");
-    if (next === stripped) return next;
-    stripped = next;
+ *  attributes and text a consumer can actually see, select and style. Removes actual DOM Comment
+ *  nodes rather than string-matching `<!--`/`-->`: a real comment node can never be spliced into
+ *  a fake one the way naive string removal can (e.g. `<!<!---->!--`), so this is correct by
+ *  construction instead of needing to repeat a text pass until it stabilizes. */
+function stripLitMarkers(root: Element): string {
+  const clone = root.cloneNode(true) as Element;
+  const walker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT);
+  const comments: Comment[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    comments.push(node as Comment);
   }
+  for (const comment of comments) comment.remove();
+  return clone.innerHTML;
 }
 
 describe("legendStops", () => {
@@ -4559,7 +4558,7 @@ describe("legendStops", () => {
       '[part="legend"]'
     ) as HTMLElement;
     expect(el.legendStops).to.equal(undefined);
-    expect(stripLitMarkers(legend.innerHTML)).to.equal(BASELINE_LEGEND);
+    expect(stripLitMarkers(legend)).to.equal(BASELINE_LEGEND);
     expect(legend.querySelector('[part="legend-stop"]') == null).to.be.true;
   });
 
