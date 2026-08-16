@@ -2396,10 +2396,17 @@ it('keeps rate hover and every marker category distinguishable in forced colors'
     // Firefox's forced-colors UA sheet retains the authored hover outline while normalizing the
     // native select border back to solid. The outline is the stable non-color hover cue owned by
     // this component across engines; exact native border painting is not.
+    //
+    // No CSS transition is involved (av-player.styles.ts has none on this part), so the delay
+    // being waited out here is pointer-event/style-recalc processing latency, not paint timing.
+    // Passes standalone in isolation every time, with or without coverage instrumentation; only
+    // times out at 3000ms deep inside the full ~480-file WTR_COVERAGE=1 suite, where the shared
+    // session is under far more accumulated load by file ~420. 5000ms matches this codebase's own
+    // convention for other settle-style waits (see markdown-core.test.ts, archive-viewer.test.ts).
     await waitUntil(
       () => select.matches(':hover') && getComputedStyle(select).outlineStyle === 'solid',
       'the playback-rate forced-colors hover cue did not settle',
-      { timeout: 3000 },
+      { timeout: 5000 },
     );
     expect(getComputedStyle(select).outlineStyle).to.equal('solid');
   } finally {
