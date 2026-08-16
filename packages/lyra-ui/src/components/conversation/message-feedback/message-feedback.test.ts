@@ -1233,7 +1233,10 @@ async function hoverCentre(
   await sendMouse({ type: "move", position: centre() });
 }
 
-it("stops the submit button reacting to a real hover the moment it becomes disabled", async () => {
+it("stops the submit button reacting to a real hover the moment it becomes disabled", async function () {
+  // The hover wait below can run up to 15000ms under a loaded CI runner; mocha's own suite-wide
+  // 6000ms default (see web-test-runner.config.js) would otherwise cut the test off first.
+  this.timeout(20000);
   const el = (await fixture(
     html`<lr-message-feedback
       .detail=${{ reasons, commentable: true }}
@@ -1252,10 +1255,16 @@ it("stops the submit button reacting to a real hover the moment it becomes disab
 
   try {
     await hoverCentre(el, submit);
-    expect(
-      getComputedStyle(submit).backgroundColor,
-      "the pointer really is over the enabled submit button"
-    ).to.not.equal(resting);
+    // Polled, not asserted once: the synthesized mouse move's underlying CDP command completing
+    // (what sendMouse()'s returned promise actually waits on) does not guarantee the browser has
+    // gone on to process the resulting native pointer event and recompute :hover-driven styles,
+    // especially under a loaded CI runner -- the same class of flake already hardened for
+    // av-player.test.ts's, image-viewer.test.ts's, and media-card.test.ts's equivalent waits.
+    await waitUntil(
+      () => getComputedStyle(submit).backgroundColor !== resting,
+      "the pointer really is over the enabled submit button",
+      { timeout: 15000 }
+    );
 
     // The pointer never moves; only `pending` flips. :hover keeps matching a disabled control, so
     // the rule's own :not(:disabled) gate is the only thing that can take the hover fill back off.
