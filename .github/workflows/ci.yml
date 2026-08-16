@@ -325,7 +325,13 @@ jobs:
   # release-qualification: required
   packed-consumer:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # check:packed-consumer alone (attw across every packed entry point, plus the
+    # React/Vue/Svelte framework recipes) has been observed taking ~13-14 minutes on a normal
+    # runner, consistently exceeding the previous 15-minute ceiling right as it finished and
+    # getting cancelled -- not failed -- so the job silently never reached check:package-size or
+    # check:public-api. The platform-contracts matrix's Node-20 leg runs this same check (plus a
+    # full platform test suite) under its existing 30-minute budget without issue.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
