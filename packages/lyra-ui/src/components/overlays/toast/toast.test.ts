@@ -626,7 +626,11 @@ it('bounds a synchronous burst, settles every create() promise, and evicts only 
     .true;
 });
 
-it('coalesces overflow loss into one typed event and one localized polite announcement', async () => {
+it('coalesces overflow loss into one typed event and one localized polite announcement', async function () {
+  // Two sequential waitUntil()s below each now carry a real 15000ms CI-timing budget (see their
+  // own doc comments); a plain arrow function can't call this.timeout(), and the suite's 6000ms
+  // mocha default (web-test-runner.config.js) would otherwise cut this test off first.
+  this.timeout(35000);
   const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
   region.locale = 'ar';
   region.strings = {
@@ -641,7 +645,15 @@ it('coalesces overflow loss into one typed event and one localized polite announ
     Array.from({ length: 26 }, (_, index) => region.create(`observable burst ${index + 1}`, { duration: 0 })),
   );
 
-  await waitUntil(() => events.length > 0, 'one synchronous burst emits one coalesced loss event');
+  // recordOverflow() now schedules its flush through a double requestAnimationFrame (see
+  // toast.class.ts) rather than a bare microtask, so this event can land a frame or two later
+  // than before, especially on a loaded CI worker where rAF scheduling itself can lag. open-wc's
+  // default waitUntil() timeout (1000ms) has been observed too tight for that class of delay
+  // elsewhere in this suite (see performance.test.ts, image-viewer.test.ts) -- widen with the
+  // same real headroom rather than assuming a bare rAF always lands well inside 1000ms.
+  await waitUntil(() => events.length > 0, 'one synchronous burst emits one coalesced loss event', {
+    timeout: 15000,
+  });
   expect(events.length, 'one synchronous burst emits one coalesced loss event').to.equal(1);
   expect(events[0]!.detail).to.deep.equal({ count: 3 });
   expect(events[0]!.cancelable).to.equal(false);
@@ -649,16 +661,23 @@ it('coalesces overflow loss into one typed event and one localized polite announ
   expect(events[0]!.composed).to.equal(true);
   const localizedCount = new Intl.NumberFormat('ar').format(3);
   // The announce() call this fires through drops the message if the region isn't accessibility-
-  // visible (isAccessibilityVisible) at that exact microtask -- correct by construction (every
-  // create() synchronously re-syncs visibility before this notify microtask can run), but under
-  // heavy parallel load the style recalc that :state()-driven visibility depends on can lag behind
-  // by a tick or two. Poll rather than asserting immediately after one queueMicrotask-scale wait.
+  // visible (isAccessibilityVisible) at that exact rAF -- correct by construction (every create()
+  // synchronously re-syncs visibility before this notify callback can run), and toast.class.ts's
+  // recordOverflow() now nests a second requestAnimationFrame specifically so that check always
+  // observes a real post-paint state on every engine (see its doc comment) rather than racing a
+  // single rAF's pre-paint timing. That mechanism fix is about correctness (never silently
+  // dropping the announcement), not about how fast the double rAF is serviced -- under a loaded CI
+  // worker, two chained rAF callbacks plus the DOM read to append the announcement can still take
+  // meaningfully longer than open-wc's 1000ms default, so this widens with the same real headroom
+  // used elsewhere in this suite for CI-timing-sensitive waits. Poll rather than asserting
+  // immediately after one fixed-length wait.
   await waitUntil(
     () =>
       announcementTexts('polite').some(
         (message) => message === `Skipped ${localizedCount} notifications.`,
       ),
     'the coalesced loss is announced once with localized digits through the region string',
+    { timeout: 15000 },
   );
   expect(
     announcementTexts('polite').filter(

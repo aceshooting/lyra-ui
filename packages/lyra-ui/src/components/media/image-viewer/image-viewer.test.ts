@@ -1343,8 +1343,27 @@ describe("accessibility", () => {
     this.timeout(20000);
     await setForcedColors("active");
     try {
+      // LOADABLE_PNG, not PNG_SRC: root-caused via WebKit instrumentation (rotate.disabled logged
+      // alongside the failing outline check) after two prior widenings of the wait below
+      // (5000ms -> 15000ms, then a since-reverted bounded-retry-with-resend of sendMouse) both
+      // failed to fix this on real CI. Every failed attempt showed `disabled= true` from the very
+      // first check -- never `false`, never a hover/paint race -- which pointed straight at
+      // `hasOperableContent`/`?disabled=${!operable}` rather than :hover or timing. PNG_SRC is a
+      // real `https://` URL (an unregistered RFC 2606 `.test` host, so it never resolves), and this
+      // component sets a real `<img src=${safeSrc}>` (see image-viewer.class.ts's `@load`/`@error`
+      // wiring) whose fetch keeps running in the browser after `stubImageLoad()` below fakes a
+      // synchronous success. PNG_SRC's own module-level doc comment already documents that eventual
+      // real failure "replaces the frame mid-test" at network-timing-dependent points, which is
+      // exactly why `LOADABLE_PNG` exists and why every OTHER fixture in this file needing sustained
+      // state across an `await` already uses it instead (see the `withAnnotateActive()` block
+      // comment) -- this test was the one straggler still on PNG_SRC. Once the real fetch's error
+      // event lands, `onImgError()` flips `loadState` to `'error'`, `hasOperableContent` goes
+      // false, and the rotate button's `?disabled=${!operable}` binding disables it -- which also
+      // fails the forced-colors rule below at `[part="rotate-button"]:hover:not(:disabled)`
+      // (image-viewer.styles.ts) permanently for the rest of the test, no matter how long or how
+      // many times hover is retried: a disabled control simply never matches that selector again.
       const el = (await fixture(
-        html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`
+        html`<lr-image-viewer src=${LOADABLE_PNG}></lr-image-viewer>`
       )) as LyraImageViewer;
       await stubImageLoad(el);
       const rotate = el.shadowRoot!.querySelector(
@@ -1368,20 +1387,17 @@ describe("accessibility", () => {
           Math.round(box.top + box.height / 2),
         ],
       });
-      // open-wc's waitUntil() default timeout (1000ms) has been observed too tight for this
-      // pointer-event/style-recalc settle under a loaded full-engine suite (same class of issue
-      // already fixed today for av-player.test.ts's and zoomable-frame.test.ts's equivalent waits).
       // This rule has no CSS transition to wait out (see image-viewer.styles.ts's forced-colors
-      // block) -- the whole wait is the browser processing the mousemove and recomputing :hover,
-      // which a shared, coverage-instrumented CI runner has been observed to still not clear
-      // within 5000ms, so this widens further rather than restructuring an already-correct single
-      // polled condition (contrast av-player.test.ts's fix, which split a compound condition).
+      // block) -- the whole wait is the browser processing the mousemove and recomputing :hover.
+      // 15000ms keeps real headroom for that on a loaded CI runner now that the fixture itself
+      // (LOADABLE_PNG above) can no longer flip the button `disabled` out from under this wait.
       await waitUntil(
         () => getComputedStyle(rotate).outlineStyle === "dashed",
         "the rotate button's hover outline did not settle",
         { timeout: 15000 },
       );
       expect(getComputedStyle(rotate).outlineStyle).to.equal("dashed");
+      expect(rotate.disabled, "the rotate button must stay enabled for the hover rule to apply").to.equal(false);
     } finally {
       await resetMouse();
       await setForcedColors("none");

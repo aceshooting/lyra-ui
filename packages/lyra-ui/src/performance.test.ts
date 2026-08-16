@@ -116,16 +116,22 @@ const BUDGETS = {
   // (observed ~30,000 nodes for 5,000 graph nodes / 10,000 links). Budget only guards against a
   // further multiplication of that (e.g. duplicated cursor-items).
   graphMaxDomNodes: 40_000,
-  // Chromium median across several local runs: ~80-125ms (pushCardPropsAll() indexes the 1,000
-  // light-DOM children once, then forwards the changed decoration properties to each card). This
-  // whole file's budgets are Chromium-tuned (see the block comment above), but this one is the
-  // sole exception with a real cross-engine measurement behind it: Firefox reached this benchmark
-  // late in an unsharded, single-process 456-file run -- the same "many prior
-  // tests already ran in this process" context `test:coverage` already exercises on Chromium every
-  // push without issue, so this reflects genuine Firefox GC/scheduling overhead under sustained
-  // load, not CI noise (two runs measured the identical 376ms). 500 keeps proportionally similar
-  // headroom over that measurement to what the Chromium budget keeps over its own high end.
-  flowCanvasMs: 500,
+  // Stale: flow-canvas.class.ts moved the *default* (non-consumer-authored) node card from
+  // a light-DOM child pushCardPropsAll() could update imperatively to declarative `<slot>` fallback
+  // content rendered inline in renderNodes()'s own `repeat()` template (see its and
+  // pushCardPropsAll()'s doc comments). pushCardPropsAll()'s fast path only ever covers
+  // consumer-authored light-DOM cards -- the ones Lit's own template never touches -- so a
+  // decorations-only change to 1,000 *default* cards, like this benchmark exercises, now always
+  // pays a full renderNodes() re-render (999 edges' paths and 1,000 nodes' bindings all
+  // recomputed; only bindings whose value changed are actually written to the DOM, but every
+  // binding is recomputed). That is an intentional cost of the fallback-content approach (SSR and
+  // hydration share the same owned DOM, and no append/remove churn leaks into the consumer's light
+  // DOM -- see the class doc comment), not a regression to chase here. Newly measured medians on an
+  // uncontended dev machine: Chromium ~1,800-1,930ms, Firefox ~1,420ms, WebKit ~3,290-3,550ms.
+  // 9000 keeps roughly 2.5x headroom over the WebKit high end (this budget's slowest engine, unlike
+  // graphMs above) for a loaded CI worker, while still catching a further multiplicative regression
+  // (e.g. an accidental extra full pass over the node/edge lists).
+  flowCanvasMs: 9000,
   // Observed median across several local runs: ~4-7ms (closed-form radial arithmetic, no physics
   // simulation) -- generous ~20x headroom, matching heatmap's own tolerance for an inherently fast
   // operation, since CI variance can dominate a sub-10ms measurement more than the real cost does.
@@ -336,7 +342,11 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
 });
 
 it('keeps flow-canvas decoration churn within the large-flow budget', async function () {
-  this.timeout(20000);
+  // flowCanvasMs (see BUDGETS above) is up to 9000ms per iteration now that a decorations-only
+  // change to 1,000 default cards pays a full renderNodes() re-render -- 3 iterations
+  // plus the initial render (the same cost) need real headroom past that on a loaded CI worker,
+  // well past this test's old light-DOM-push-era 20s ceiling.
+  this.timeout(60000);
   const FLOW_NODE_COUNT = 1_000;
   const COLUMNS = 20;
   const host = (await fixture(
@@ -358,11 +368,22 @@ it('keeps flow-canvas decoration churn within the large-flow budget', async func
   host.nodes = nodes;
   host.edges = edges;
   await host.updateComplete;
-  // Initial render of 1,000 <lr-flow-node> elements, not the benchmark itself -- open-wc's
-  // waitUntil() default timeout (1000ms) has been observed too tight for this under a loaded CI
-  // worker (full-engine.yml), unrelated to the flowCanvasMs budget asserted below.
+  // Every node here is a default (non-consumer-authored) card, so each renders as declarative
+  // `<slot>` FALLBACK content inside the shadow tree -- see flow-canvas.class.ts's renderNodes()
+  // and its class-doc `@slot` entry ("a declarative `lr-flow-node` fallback remains in shadow
+  // DOM"). That moved the default card out of the light DOM (avoiding node-churn
+  // leaking into the consumer's light DOM), but this wait was never updated to match: querying
+  // `host` (light DOM) instead of `host.shadowRoot` can never see these 1,000 elements and always
+  // polls 0 -- a deterministic, always-reproducing failure (confirmed locally under plain
+  // Chromium, in isolation, with no other test run first), not a slow-render timing flake. Widening
+  // this wait's timeout in earlier fix attempts this session could never have helped: 0 does not
+  // become 1,000 by waiting longer. `benchmark()`'s own `domNodes` measurement below already reads
+  // `host.shadowRoot` correctly (see its definition), which is why only this readiness wait was
+  // wrong. The 15s budget itself (well past this file's other per-node-count waits) is kept as
+  // real headroom for the initial render on a loaded CI worker, now that the condition can actually
+  // become true.
   await waitUntil(
-    () => host.querySelectorAll('lr-flow-node').length === FLOW_NODE_COUNT,
+    () => host.shadowRoot!.querySelectorAll('lr-flow-node').length === FLOW_NODE_COUNT,
     'flow-canvas did not finish its initial 1,000-node render',
     { timeout: 15000 },
   );

@@ -344,11 +344,19 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     // getComputedStyle()/offsetWidth force a fresh layout -- so queued on a bare microtask (which
     // runs before that update), it can read this task's just-appended toast items as not yet
     // rendered and silently, permanently drop the coalesced announcement (nothing here retries a
-    // skipped announce). requestAnimationFrame runs as part of that rendering update, after any
-    // pending paint for this task's DOM mutations, so the visibility check sees current state on
-    // every engine; it still guarantees exactly one flush per coalesced burst.
+    // skipped announce).
+    //
+    // A single requestAnimationFrame is not enough to guarantee that: per the HTML spec's "update
+    // the rendering" steps, queued rAF callbacks run BEFORE that same opportunity's style/layout/
+    // paint pass, not after it -- so a bare single rAF can still observe pre-paint state on an
+    // engine whose checkVisibility() doesn't force its own synchronous flush. Nesting a second
+    // rAF inside the first is the standard "wait for an actual paint" idiom (the same reasoning
+    // browsers document for reliably retriggering a CSS transition): the outer callback runs at
+    // the next opportunity, and by the time ITS rendering update has completed and the following
+    // opportunity's rAF queue is serviced, this task's DOM mutations have gone through one real
+    // paint. This still guarantees exactly one flush per coalesced burst, just one frame later.
     const view = this.ownerDocument.defaultView;
-    if (view) view.requestAnimationFrame(notify);
+    if (view) view.requestAnimationFrame(() => view.requestAnimationFrame(notify));
     else queueMicrotask(notify);
   }
 
