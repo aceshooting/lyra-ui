@@ -82,6 +82,18 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }
+  /* Each meta fragment (chunk count, embedding status, attempt count) interpolates a
+     locale-formatted number into fixed surrounding words -- resolve each from its own first
+     strong character so the digits stay in reading order instead of being bidi-reordered against
+     the page's own direction, matching toast-item.styles.ts's identical [part="content"] rule. */
+  [part="item-chunk-count"],
+  lr-virtual-list::part(item-chunk-count),
+  [part="item-embedding-status"],
+  lr-virtual-list::part(item-embedding-status),
+  [part="item-attempts"],
+  lr-virtual-list::part(item-attempts) {
+    unicode-bidi: plaintext;
+  }
   [part="item-error"],
   lr-virtual-list::part(item-error) {
     margin: 0;

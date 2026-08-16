@@ -573,13 +573,13 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
                     dir="auto"
                     ?hidden=${!(this.hasExcerptSlot || this.excerpt)}
                   >
+                    ${!this.hasExcerptSlot && this.excerpt
+                      ? this.excerpt
+                      : nothing}
                     <slot
                       name="excerpt"
                       @slotchange=${this.onExcerptSlotChange}
                     ></slot>
-                    ${!this.hasExcerptSlot && this.excerpt
-                      ? this.excerpt
-                      : nothing}
                   </span>
                   <span part="meta" ?hidden=${!this.hasMetaSlot}>
                     <slot

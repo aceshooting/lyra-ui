@@ -343,6 +343,48 @@ it('contains long details and suffix content in narrow LTR and RTL rows', async 
   }
 });
 
+it("keeps a keyboard-shortcut hint's own glyph order fixed under an inherited RTL direction, while the row's icon/label mirroring still applies", async () => {
+  const wrapper = await fixture(html`
+    <div dir="rtl" role="menu" aria-label="Actions">
+      <lr-menu-item value="duplicate">
+        <span slot="icon">✏️</span>
+        Duplicate
+        <span slot="details">⌘D</span>
+      </lr-menu-item>
+    </div>
+  `);
+  const item = wrapper.querySelector('lr-menu-item') as LyraMenuItem;
+  await item.updateComplete;
+
+  const details = item.shadowRoot!.querySelector('[part="details"]') as HTMLElement;
+  // The fixed-convention shortcut glyph resolves its own direction from its first strong
+  // character instead of inheriting the ambient RTL embedding -- same mechanism as
+  // toast-item.styles.ts/alert.styles.ts's identical [part="content"]/[part="message"] rules.
+  expect(getComputedStyle(details).unicodeBidi).to.equal('plaintext');
+
+  // Verify the actual rendered glyph order, not just the declared mode: '⌘' must still render
+  // visually before 'D', matching the fixed OS shortcut convention, even inside an RTL row.
+  const hint = wrapper.querySelector('span[slot="details"]')!;
+  const text = hint.firstChild as Text;
+  const rectFor = (index: number): DOMRect => {
+    const range = document.createRange();
+    range.setStart(text, index);
+    range.setEnd(text, index + 1);
+    return range.getBoundingClientRect();
+  };
+  const modRect = rectFor(0); // '⌘'
+  const keyRect = rectFor(1); // 'D'
+  expect(modRect.left, 'mod glyph renders to the start of the D glyph').to.be.lessThan(keyRect.left);
+
+  // The row itself still mirrors under RTL: the leading icon (first in DOM) sits to the
+  // physical right of the trailing details text (later in DOM), exactly like every other
+  // menu item's icon/label mirroring -- only the hint's own internal order is frozen.
+  const icon = item.shadowRoot!.querySelector('[part~="icon"]') as HTMLElement;
+  expect(icon.getBoundingClientRect().left, 'icon still mirrors to the row start (right, under RTL)').to.be.greaterThan(
+    details.getBoundingClientRect().left,
+  );
+});
+
 it('keeps every display slot decorative while the host retains the sole menuitem action', async () => {
   const wrapper = (await fixture(html`
     <lr-menu label="Actions">

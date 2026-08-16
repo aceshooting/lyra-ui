@@ -1241,6 +1241,71 @@ describe('resolveColors()', () => {
   });
 });
 
+// Round-tripping a raw token value (hex, or the hex canvas.fillStyle normalizes to) through a real
+// element's backgroundColor normalizes it to rgb(), so it is directly comparable with any other
+// computed colour string -- mirrors dialog.test.ts's toComputedColor().
+function toComputedColor(rawColorValue: string): string {
+  const probe = document.createElement('div');
+  probe.style.backgroundColor = rawColorValue;
+  document.body.append(probe);
+  try {
+    return getComputedStyle(probe).backgroundColor;
+  } finally {
+    probe.remove();
+  }
+}
+
+function relativeLuminance(color: string): number {
+  const channels = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/u.exec(color);
+  if (!channels) throw new Error(`unparseable computed colour: ${color}`);
+  const [r, g, b] = [1, 2, 3].map((index) => {
+    const channel = Number(channels[index]) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(a: string, b: string): number {
+  const [lighter, darker] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+describe('idle-state bar-fill contrast (WCAG 1.4.11 non-text contrast, >= 3:1)', () => {
+  // The idle bars paint with the "quiet" colour (draw()'s `active` is false: no stream, no level,
+  // and state !== listening/thinking/speaking). Forcing hostSize + a synchronous draw() reads the
+  // exact colour real usage paints, instead of re-deriving it from stylesheet text.
+  async function idleBarFillContrast(dark: boolean): Promise<number> {
+    const el = (await fixture(
+      dark
+        ? html`<lr-audio-visualizer state="idle" data-lr-theme="dark"></lr-audio-visualizer>`
+        : html`<lr-audio-visualizer state="idle"></lr-audio-visualizer>`,
+    )) as LyraAudioVisualizer;
+    const priv = el as unknown as {
+      hostSize?: { width: number; height: number };
+      resolvedColors?: { active: string; quiet: string };
+      draw: (nowMs: number) => void;
+    };
+    priv.hostSize = { width: 200, height: 48 };
+    priv.resolvedColors = undefined;
+    priv.draw(0);
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const barFill = toComputedColor(ctx.fillStyle as string);
+    const background = toComputedColor(getComputedStyle(el).getPropertyValue('--lr-color-surface').trim());
+    return contrastRatio(barFill, background);
+  }
+
+  it('meets the minimum against the page surface in light theme', async () => {
+    const ratio = await idleBarFillContrast(false);
+    expect(ratio, `computed contrast ratio was ${ratio.toFixed(3)}:1`).to.be.at.least(3);
+  });
+
+  it('meets the minimum against the page surface in dark theme', async () => {
+    const ratio = await idleBarFillContrast(true);
+    expect(ratio, `computed contrast ratio was ${ratio.toFixed(3)}:1`).to.be.at.least(3);
+  });
+});
+
 describe('waveform draw with a single sample (division-by-zero guard)', () => {
   class SingleSampleAudioContext extends EventTarget {
     state: 'suspended' | 'running' | 'closed' = 'suspended';

@@ -8194,7 +8194,7 @@
             "name": "--lr-audio-visualizer-quiet-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "var(--lr-color-brand-border-normal)"
           }
         ],
         "cssStates": [],

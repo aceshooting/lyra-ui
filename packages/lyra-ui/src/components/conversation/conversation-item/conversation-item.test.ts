@@ -258,6 +258,67 @@ it("isolates caller text and formatted timestamps from an inherited RTL directio
   expect(
     el.shadowRoot!.querySelector('[part="timestamp"]')!.getAttribute("dir")
   ).to.equal("auto");
+
+  // The `dir="auto"` attribute alone doesn't prove the browser actually
+  // resolved it correctly -- assert the *effective* computed direction, not
+  // just that the attribute is present.
+  expect(
+    getComputedStyle(el.shadowRoot!.querySelector('[part="label"]')!)
+      .direction
+  ).to.equal("ltr");
+  expect(
+    getComputedStyle(el.shadowRoot!.querySelector('[part="excerpt"]')!)
+      .direction
+  ).to.equal("ltr");
+});
+
+it("resolves the excerpt's computed direction from its own content even though a same-named, always-present <slot> element precedes the fallback-property text node in the shadow template", async () => {
+  // Regression test: `[part="excerpt"]`'s template used to render
+  // `<slot name="excerpt"></slot>` *before* the `${this.excerpt}` fallback
+  // text. With no assigned nodes, that empty <slot> is a no-op for layout
+  // and content -- but Chromium's dir="auto" first-strong-character scan
+  // stops at that leading (empty) <slot> element instead of continuing on to
+  // the plain-English fallback text node that follows it, so it fell back to
+  // the ambient (host) direction. Under an RTL host this silently flipped
+  // `text-overflow: ellipsis` truncation to the wrong end of the string --
+  // exactly the "excerpt shows different trailing text under rtl" bug this
+  // guards. The fix reorders the template so the fallback text node comes
+  // first. Covered with plain English text (should stay ltr under an rtl
+  // host) and genuinely Arabic text (should still auto-detect rtl) so the
+  // fix doesn't just force ltr unconditionally.
+  const wrapper = await fixture(html`
+    <div dir="rtl">
+      <lr-conversation-item
+        label="Refactor the auth module"
+        excerpt="Can you check why the token refresh is failing intermittently"
+      ></lr-conversation-item>
+    </div>
+  `);
+  const el = wrapper.querySelector(
+    "lr-conversation-item"
+  ) as LyraConversationItem;
+  await el.updateComplete;
+  expect(
+    getComputedStyle(el.shadowRoot!.querySelector('[part="excerpt"]')!)
+      .direction
+  ).to.equal("ltr");
+
+  const rtlWrapper = await fixture(html`
+    <div dir="rtl">
+      <lr-conversation-item
+        label="Refactor the auth module"
+        excerpt="هل يمكنك التحقق من ذلك"
+      ></lr-conversation-item>
+    </div>
+  `);
+  const rtlEl = rtlWrapper.querySelector(
+    "lr-conversation-item"
+  ) as LyraConversationItem;
+  await rtlEl.updateComplete;
+  expect(
+    getComputedStyle(rtlEl.shadowRoot!.querySelector('[part="excerpt"]')!)
+      .direction
+  ).to.equal("rtl");
 });
 
 describe("timestamp", () => {

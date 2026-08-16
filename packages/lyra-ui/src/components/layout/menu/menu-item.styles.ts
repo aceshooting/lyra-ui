@@ -130,6 +130,13 @@ export const styles = css`
     white-space: nowrap;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
+    /* Resolve each slotted fragment from its own first strong character (e.g. a keyboard-
+       shortcut hint like '⌘D', whose leading glyph is bidi-neutral) instead of inheriting the
+       row's ambient direction. Only the *position* of these trailing parts should mirror under
+       RTL -- the flex row above already handles that -- their own internal glyph order must stay
+       fixed, matching how the OS itself displays the shortcut. Same mechanism as
+       toast-item.styles.ts's/alert.styles.ts's identical [part="content"]/[part="message"] rules. */
+    unicode-bidi: plaintext;
   }
   [part='details'] ::slotted(*),
   [part='suffix'] ::slotted(*) {

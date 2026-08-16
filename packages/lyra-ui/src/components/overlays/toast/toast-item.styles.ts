@@ -137,8 +137,18 @@ export const styles = css`
   ::slotted(button) {
     display: inline-block;
     /* Symmetric logical spacing remains on the correct side when plaintext bidi resolution makes
-       the slotted content's reading direction differ from the page direction. */
-    margin-inline: var(--lr-space-s);
+       the slotted content's reading direction differ from the page direction.
+       !important is deliberate and load-bearing here, not stylistic: this button is a plain
+       light-DOM node toaster.ts appends as a sibling of the message text (see the comment below),
+       so a consumer's own page-level CSS -- not just this component's shadow root -- can also
+       select it directly. A ::slotted() rule from this shadow root loses the cascade to an
+       unrelated global reset placed in a CSS layer (e.g. Tailwind Preflight's own
+       margin-zeroing universal selector inside its base layer), even though that reset never
+       named this button and the rule here is unlayered -- confirmed against Storybook's own
+       tailwind.css bundle, which collapses this exact gap to 0 and renders "Item deletedUndo"
+       with no visible separator. Without !important, any consumer whose global stylesheet resets
+       margins inside a layer silently loses this spacing. */
+    margin-inline: var(--lr-space-s) !important;
     padding: 0;
     border: none;
     background: none;

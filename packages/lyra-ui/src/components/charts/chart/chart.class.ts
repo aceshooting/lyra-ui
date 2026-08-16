@@ -2008,7 +2008,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         r: {
           beginAtZero: this.beginAtZero,
           ...this.scaleBounds(),
-          ticks: { ...this.tickOptions(theme), showLabelBackdrop: false },
+          // `z: 1` (any value > 0) moves the ring tick labels into Chart.js's post-dataset
+          // `_layers` pass (core.controller.js `draw()` runs every z<=0 layer, then
+          // `_drawDatasets()`, then every z>0 layer) -- without it `ticks.z` defaults to 0, so a
+          // polarArea wedge or radar fill paints over the ring labels sitting inside the plot
+          // area (unlike a cartesian axis, whose tick labels sit outside the chart area and are
+          // never at risk of being covered by data regardless of draw order).
+          ticks: { ...this.tickOptions(theme), showLabelBackdrop: false, z: 1 },
           grid: {
             color: theme.grid,
             display: this.gridAxisVisible('y'),

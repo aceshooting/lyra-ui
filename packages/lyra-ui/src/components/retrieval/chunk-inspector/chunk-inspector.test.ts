@@ -526,6 +526,15 @@ it('formats visible score percentages with the effective locale', async () => {
     .to.include(new Intl.NumberFormat('ar-EG').format(92));
 });
 
+it('isolates chunk text bidi under dir="rtl" so trailing punctuation does not jump to the front', async () => {
+  const wrapper = await fixture(html`<div dir="rtl"><lr-chunk-inspector></lr-chunk-inspector></div>`);
+  const el = wrapper.querySelector('lr-chunk-inspector') as LyraChunkInspector;
+  el.chunks = [chunks[0]!];
+  await el.updateComplete;
+  const text = el.shadowRoot!.querySelector('[part~="text"]') as HTMLElement;
+  expect(getComputedStyle(text).unicodeBidi).to.equal('isolate');
+});
+
 it('formats finite numeric page locators with the effective locale while retaining string locators verbatim', async () => {
   const locale = 'ar-u-nu-arab';
   const numericPage = new Intl.NumberFormat(locale).format(3);

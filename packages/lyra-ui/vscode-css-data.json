@@ -1279,7 +1279,7 @@
       "name": "--lr-audio-visualizer-quiet-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-audio-visualizer>`** (default: `var(--lr-color-brand-quiet)`) — Inactive/idle color."
+        "value": "**`<lr-audio-visualizer>`** (default: `var(--lr-color-brand-border-normal)`) — Inactive/idle color. Chosen over `--lr-color-brand-quiet` for its WCAG 1.4.11 non-text contrast against `--lr-color-surface` (the idle bars have no other distinguishing shape or border)."
       }
     },
     {

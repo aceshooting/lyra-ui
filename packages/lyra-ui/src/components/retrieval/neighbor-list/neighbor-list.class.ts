@@ -2,7 +2,6 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
-import { isRtl } from '../../../internal/rtl.js';
 import { expandIcon } from '../../../internal/icons.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import {
@@ -143,11 +142,16 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     return groups;
   }
 
+  /** The arrow encodes the graph edge's actual direction (outgoing vs incoming) -- real semantic
+   *  data about which entity points to which -- so its meaning must stay fixed regardless of
+   *  reading direction; it is never derived from `isRtl()`. Only the row's overall layout (icon
+   *  position, text order) mirrors under RTL, and it already does so for free via this row's
+   *  inline-axis flex flow (`neighbor-list.styles.ts`'s `[part='row']` rule) -- no code here needs
+   *  to reason about direction at all. See docs/agents/i18n-rtl-theming.md: "directional glyphs
+   *  mirror via the wrapping part, not the icon." */
   private directionGlyph(direction: LyraNeighborRow['direction']): string {
     if (direction === 'both') return '↔';
-    const rtl = isRtl(this);
-    const pointsInlineEnd = direction === 'out';
-    return pointsInlineEnd ? (rtl ? '←' : '→') : rtl ? '→' : '←';
+    return direction === 'out' ? '→' : '←';
   }
 
   private directionText(direction: LyraNeighborRow['direction']): string {

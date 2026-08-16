@@ -8445,7 +8445,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
@@ -8488,9 +8487,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/retrieval/chunk-inspector/chunk-inspector.test.ts",
+              "line": 530,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -8591,7 +8595,6 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -11576,28 +11579,28 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
-              "line": 1071,
+              "line": 1132,
               "test": "is accessible in a populated, active state with an excerpt, timestamp, and actions slot",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
-              "line": 1085,
+              "line": 1146,
               "test": "is accessible while renaming",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
-              "line": 1200,
+              "line": 1261,
               "test": "is accessible with the active-state props themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
-              "line": 1370,
+              "line": 1431,
               "test": "is accessible in a populated compact state",
               "target": "el",
               "state": "populated"
@@ -11611,7 +11614,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.test.ts",
-              "line": 435,
+              "line": 496,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -15601,7 +15604,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1577,
+              "line": 1619,
               "kind": "320px allocation test signal"
             }
           ]
@@ -23117,7 +23120,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "reducedMotion",
           "narrowAllocation",
           "forcedColors",
@@ -23131,7 +23133,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.test.ts",
-              "line": 899,
+              "line": 928,
               "test": "is accessible with a populated, mixed-stage queue",
               "target": "el",
               "state": "populated"
@@ -23147,9 +23149,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/retrieval/ingestion-queue/ingestion-queue.test.ts",
+              "line": 271,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -23250,7 +23257,6 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -26909,42 +26915,42 @@
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 346,
+              "line": 388,
               "test": "keeps every display slot decorative while the host retains the sole menuitem action",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 747,
+              "line": 789,
               "test": "is accessible with type=\"checkbox\", both unchecked and checked",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 759,
+              "line": 801,
               "test": "is accessible in the default state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 766,
+              "line": 808,
               "test": "is accessible with an icon, disabled and variant=\"danger\" states",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 863,
+              "line": 905,
               "test": "is accessible at the smallest and largest tiers",
               "target": "smallest",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 863,
+              "line": 905,
               "test": "is accessible at the smallest and largest tiers",
               "target": "largest",
               "state": "populated"
@@ -27021,7 +27027,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1577,
+              "line": 1619,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27156,42 +27162,42 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 346,
+              "line": 388,
               "test": "keeps every display slot decorative while the host retains the sole menuitem action",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 747,
+              "line": 789,
               "test": "is accessible with type=\"checkbox\", both unchecked and checked",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 759,
+              "line": 801,
               "test": "is accessible in the default state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 766,
+              "line": 808,
               "test": "is accessible with an icon, disabled and variant=\"danger\" states",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 863,
+              "line": 905,
               "test": "is accessible at the smallest and largest tiers",
               "target": "smallest",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 863,
+              "line": 905,
               "test": "is accessible at the smallest and largest tiers",
               "target": "largest",
               "state": "populated"
@@ -27268,7 +27274,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1577,
+              "line": 1619,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27433,7 +27439,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1577,
+              "line": 1619,
               "kind": "320px allocation test signal"
             }
           ]
@@ -29074,7 +29080,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
@@ -29087,14 +29092,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/neighbor-list/neighbor-list.test.ts",
-              "line": 439,
+              "line": 468,
               "test": "is accessible with grouped, expandable rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/neighbor-list/neighbor-list.test.ts",
-              "line": 559,
+              "line": 588,
               "test": "is accessible in the ${label} path",
               "target": "el",
               "state": "populated"
@@ -29110,9 +29115,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/retrieval/neighbor-list/neighbor-list.test.ts",
+              "line": 341,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -29213,7 +29223,6 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -29400,7 +29409,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "keyboard",
-          "rtl",
           "peerFailure",
           "forcedColors",
           "assistiveTechnology"
@@ -29429,9 +29437,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
+              "line": 1322,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -29543,7 +29556,6 @@
       },
       "knownLimitations": [
         "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -45413,7 +45425,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.test.ts",
-              "line": 869,
+              "line": 917,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -45732,7 +45744,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "rtl",
           "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
@@ -45745,35 +45756,35 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1186,
+              "line": 1203,
               "test": "is accessible while a decision is pending (loading + disabled lr-button still expose a valid name/state)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1208,
+              "line": 1225,
               "test": "is accessible while open in the read-only view",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1216,
+              "line": 1233,
               "test": "is accessible while open and editing, including with an invalid-JSON error shown",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1216,
+              "line": 1233,
               "test": "is accessible while open and editing, including with an invalid-JSON error shown",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1201,
+              "line": 1218,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -45787,16 +45798,21 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 582,
+              "line": 599,
               "kind": "component keyboard assertion signal"
             }
           ]
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
+              "line": 108,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -45896,7 +45912,6 @@
         }
       },
       "knownLimitations": [
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
