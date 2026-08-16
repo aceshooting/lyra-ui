@@ -722,6 +722,54 @@ it("gives the close button the shared minimum hit area", async () => {
   expect(getComputedStyle(button).minBlockSize).to.equal("40px");
 });
 
+it('keeps a visible gap between the message text and a slotted action button, even under a page-level layered CSS reset', async () => {
+  // Mirrors LyraToast.create()'s actual DOM shape (toast.class.ts): a plain
+  // text-content message followed by an appended <button>, with no
+  // whitespace text node in between -- exactly what toast() produces for
+  // `action: { label: 'Undo', ... }`. That button is a real light-DOM node
+  // (the shadow root only reaches it through ::slotted()), so it is also
+  // reachable by the *consumer's own* page-level CSS -- e.g. Tailwind's
+  // Preflight, which zeroes margins via `@layer base { *, ::before, ::after,
+  // ::backdrop { margin: 0; ... } }`. An unlayered `::slotted(button)` rule
+  // loses to that layered reset (confirmed against Storybook's own
+  // tailwind.css bundle, which reproduces "Item deletedUndo" with zero
+  // visual gap), so the fix must be robust to it, not just to a plain
+  // reset with no layer.
+  const resetStyle = document.createElement('style');
+  resetStyle.textContent = `
+    @layer reset {
+      *, ::before, ::after, ::backdrop {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+    }
+  `;
+  document.head.append(resetStyle);
+  const el = document.createElement('lr-toast-item') as LyraToastItem;
+  el.duration = 0;
+  el.textContent = 'Item deleted';
+  const action = document.createElement('button');
+  action.type = 'button';
+  action.textContent = 'Undo';
+  el.append(action);
+  document.body.append(el);
+  try {
+    await oneEvent(el, 'lr-show');
+    const messageRange = document.createRange();
+    messageRange.selectNodeContents(el.firstChild!);
+    const messageRect = messageRange.getBoundingClientRect();
+    const actionRect = action.getBoundingClientRect();
+    expect(
+      actionRect.left - messageRect.right,
+      'a slotted action button must not visually run into the preceding message text, even under a page-level layered reset',
+    ).to.be.greaterThan(0);
+  } finally {
+    el.remove();
+    resetStyle.remove();
+  }
+});
+
 it('keeps focus on the close button once hiding starts, instead of dropping it to <body>', async () => {
   // A native `disabled` attribute forces the browser to blur the element
   // outright with nothing to move focus to -- the primary way a keyboard or

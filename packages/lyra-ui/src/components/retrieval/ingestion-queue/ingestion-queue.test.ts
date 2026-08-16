@@ -266,6 +266,35 @@ describe("populated rows", () => {
     ).to.equal("4 of 10 chunks embedded");
   });
 
+  it('isolates the meta text parts from bidi reordering under dir="rtl"', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        dir="rtl"
+        .items=${[
+          item({
+            id: "1",
+            stage: "embedding",
+            chunkCount: 10,
+            embeddedChunkCount: 4,
+            attempts: 2,
+          }),
+        ]}
+      ></lr-ingestion-queue>`
+    )) as LyraIngestionQueue;
+    for (const part of [
+      "item-chunk-count",
+      "item-embedding-status",
+      "item-attempts",
+    ]) {
+      const target = el.shadowRoot!.querySelector(
+        `[part="${part}"]`
+      ) as HTMLElement;
+      expect(getComputedStyle(target).unicodeBidi, part).to.equal(
+        "plaintext"
+      );
+    }
+  });
+
   it("shows the attempt count only once attempts is greater than 0", async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue

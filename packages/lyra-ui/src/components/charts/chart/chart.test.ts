@@ -1379,6 +1379,24 @@ it('builds a radial `r` scale (not cartesian x/y) for a polarArea chart', async 
   expect(config.options.scales.y).to.not.exist;
 });
 
+it('draws the radial `r` scale tick labels above (after) the dataset for radar/polarArea, not under it', async () => {
+  // Chart.js draws every `_layers` entry whose z <= 0 BEFORE `_drawDatasets()`, and every entry
+  // with z > 0 AFTER it (chart.js core.controller.js `draw()`); a scale's tick labels default to
+  // `ticks.z || 0`, i.e. z <= 0, so a radial scale's ring labels are painted UNDER a polarArea
+  // wedge or radar fill by default -- exactly the clipped-digit regression this guards.
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'Series', data: [10, 20] }];
+
+  for (const type of ['radar', 'polarArea'] as const) {
+    el.type = type;
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const ticksZ = (el as any).buildConfig().options.scales.r.ticks.z;
+    expect(ticksZ, `${type} radial ticks.z`).to.be.a('number').that.is.greaterThan(0);
+  }
+});
+
 it('still builds the cartesian x/y scales block for a line chart', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';

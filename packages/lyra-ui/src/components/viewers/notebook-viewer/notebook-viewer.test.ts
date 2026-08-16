@@ -1317,6 +1317,38 @@ describe('virtualized cell part styling', () => {
     expect(getComputedStyle(toggle).color).to.equal(tokenValue(vlistRoot, 'color: var(--lr-color-brand)', 'color'));
   });
 
+  it('keeps a stream output LTR-isolated and left-aligned under dir="rtl", matching the code input', async () => {
+    const wrapper = await fixture<HTMLElement>(
+      html`<div dir="rtl" style="inline-size: 900px"><lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer></div>`,
+    );
+    const el = wrapper.querySelector('lr-notebook-viewer') as LyraNotebookViewer;
+    await waitUntil(() => (el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="output"]').length ?? 0) > 0);
+    const vlistRoot = rowRoot(el);
+    const output = vlistRoot.querySelector('[part~="output"]') as HTMLElement;
+    const codeBlock = vlistRoot.querySelector('lr-code-block') as HTMLElement;
+    // lr-code-block may render a loading skeleton before shiki resolves and swaps in
+    // [part="pre"] (see code-block.test.ts's "shiki highlighting" describe block) -- wait for it
+    // instead of assuming it's already there, so this isn't racy against shiki's load time.
+    await waitUntil(() => codeBlock.shadowRoot!.querySelector('[part="pre"]') !== null);
+    const codePre = codeBlock.shadowRoot!.querySelector('[part="pre"]') as HTMLElement;
+
+    // The output stays LTR-isolated, matching the code input rendered above it, instead of
+    // inheriting the ambient dir="rtl" from the host.
+    expect(getComputedStyle(output).direction).to.equal('ltr');
+    expect(getComputedStyle(output).direction).to.equal(getComputedStyle(codePre).direction);
+    expect(getComputedStyle(output).unicodeBidi).to.equal('isolate');
+
+    // Confirm the rendered pixels: a short output line hugs the output box's own start (left) edge
+    // rather than right-aligning under the ambient RTL direction.
+    const textNode = output.querySelector('span')!.firstChild as Text;
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, 2); // "hi", excluding the trailing newline
+    const outputRect = output.getBoundingClientRect();
+    const textRect = range.getBoundingClientRect();
+    expect(textRect.left - outputRect.left).to.be.lessThan(20);
+  });
+
   it('exposes the cell parts to a consumer through exportparts', async () => {
     const style = document.createElement('style');
     style.textContent = `

@@ -89,12 +89,29 @@ it('renders the tool name in the heading, defaulting to a generic "tool" when un
   )) as LyraToolApprovalDialog;
   expect(withName.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('web_search');
   expect(withName.shadowRoot!.querySelector('h2')!.textContent).to.equal('Approve web_search call?');
-  expect(withName.shadowRoot!.querySelector('h2')!.getAttribute('dir')).to.equal('auto');
+  // dir="auto" bidi-isolates only the arbitrary, consumer-supplied tool name (mirrors
+  // file-input's [part="file-name"] and conversation-item's [part="label"] scoping this same
+  // way) -- the heading element itself must NOT carry its own dir="auto", or its resolved
+  // direction would be auto-detected from this locale's (English) chrome text and permanently
+  // override the ambient RTL/LTR direction it should inherit; see the RTL test below.
+  expect(withName.shadowRoot!.querySelector('h2')!.hasAttribute('dir')).to.be.false;
+  expect(withName.shadowRoot!.querySelector('[part="tool-name"]')!.getAttribute('dir')).to.equal('auto');
 
   const withoutName = (await fixture(
     html`<lr-tool-approval-dialog></lr-tool-approval-dialog>`,
   )) as LyraToolApprovalDialog;
   expect(withoutName.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('tool');
+});
+
+it('mirrors the heading direction under RTL instead of freezing it to the auto-detected (English) content direction', async () => {
+  const el = (await fixture(
+    html`<lr-tool-approval-dialog dir="rtl" tool-name="web_search" open></lr-tool-approval-dialog>`,
+  )) as LyraToolApprovalDialog;
+  const heading = el.shadowRoot!.querySelector('h2') as HTMLElement;
+  // The rest of the panel (footer/body) already mirrors correctly by inheriting `direction`
+  // from the host's dir="rtl" -- the heading must do the same rather than resolving its own
+  // direction from an unrelated dir="auto" scan of its (English) text content.
+  expect(getComputedStyle(heading).direction).to.equal('rtl');
 });
 
 it('renders args read-only via lr-json-viewer by default', async () => {

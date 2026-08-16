@@ -204,8 +204,18 @@
     { "id": "charts-pie--default", "profile": "forced-colors-chart" },
     { "id": "charts-doughnut--default", "profile": "standard" },
     { "id": "charts-radar--default", "profile": "standard" },
-    { "id": "charts-scatter--default", "profile": "standard" },
-    { "id": "charts-polararea--default", "profile": "standard" },
+    {
+      "id": "charts-scatter--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "scatter-chart.stories.ts's Default story changed its x-label/y-label from single letters (\"X\"/\"Y\") to \"X value\"/\"Y value\" -- a rotated single capital letter is inherently illegible (reads as a generic chevron regardless of font), which multi-character labels fix. The current capture reflects that intentional demo-data change and awaits human visual review."
+    },
+    {
+      "id": "charts-polararea--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "chart.class.ts's buildScales() now sets the radial (r) scale's ticks.z: 1 so Chart.js draws ring labels after datasets instead of before, fixing labels (e.g. \"20\"/\"15\") being partly painted over by data wedges. The current capture reflects that fix and awaits human visual review."
+    },
     { "id": "charts-bubble--default", "profile": "standard" },
     { "id": "charts-histogram--default", "profile": "standard" },
     { "id": "charts-boxplot--default", "profile": "standard" },
@@ -215,7 +225,12 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "Current capture renders a structurally valid but differently-moduled QR code for the same unchanged story value, with no corresponding qr-code.class.ts/story change since the last baseline refresh (bd4ac0ac) -- likely resolved-version drift in the optional qrcode peer, not a lyra-ui source change. Awaits human visual review."
     },
-    { "id": "audio-visualizer--idle", "profile": "standard" },
+    {
+      "id": "audio-visualizer--idle",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The idle-state bar fill swapped from --lr-color-brand-quiet (a subtle panel-fill token, ~1.1-1.3:1 contrast against the surface) to --lr-color-brand-border-normal (~4:1 in both themes), fixing a WCAG 1.4.11 non-text contrast failure. The current capture reflects that fix and awaits human visual review."
+    },
     { "id": "animatedimage--default", "profile": "standard" },
     { "id": "documentviewer-pdfviewer--default", "profile": "standard" },
     { "id": "jsonviewer--default", "profile": "standard" },
@@ -229,10 +244,25 @@
     { "id": "documentviewer-csvviewer--quoted-fields", "profile": "standard" },
     { "id": "docxviewer--default", "profile": "standard" },
     { "id": "chunk-inspector--default", "profile": "standard" },
-    { "id": "ingestion-queue--default", "profile": "standard" },
+    {
+      "id": "ingestion-queue--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "item-chunk-count/item-embedding-status/item-attempts now carry unicode-bidi: plaintext, fixing RTL word/digit reordering in their status text (e.g. \"26 of 48 chunks embedded\" no longer reordering). The current rtl capture reflects that fix and awaits human visual review."
+    },
     { "id": "documentviewer-pagerail--mediated", "profile": "standard" },
-    { "id": "threadlist--default", "profile": "standard" },
-    { "id": "documentviewer-notebookviewer--default", "profile": "standard" },
+    {
+      "id": "threadlist--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "lr-conversation-item's excerpt template now renders its fallback text node before the (usually empty) excerpt <slot>, fixing a dir=\"auto\" first-strong-character detection bug where the preceding empty <slot> element caused Chromium to fall back to the ambient RTL host direction instead of the excerpt's own (English) content -- which silently flipped text-overflow: ellipsis truncation to the wrong end of the string under RTL. The current rtl capture reflects that fix and awaits human visual review."
+    },
+    {
+      "id": "documentviewer-notebookviewer--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The virtualized cell's stream-output part now carries direction: ltr; unicode-bidi: isolate, matching the code-input block rendered above it, instead of inheriting the ambient RTL host direction and right-aligning independently of the input. The current rtl capture reflects that fix and awaits human visual review."
+    },
     { "id": "neighbor-list--default", "profile": "standard" },
     {
       "id": "retrieval-results--default",

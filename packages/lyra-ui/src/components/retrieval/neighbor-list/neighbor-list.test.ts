@@ -321,6 +321,35 @@ it('renders the direction as an aria-hidden glyph plus localized text folded int
   );
 });
 
+it('keeps the direction glyph meaning fixed under RTL instead of mirroring it (out stays →, in stays ←)', async () => {
+  // The arrow encodes the graph edge's actual direction (outgoing vs incoming) -- real semantic
+  // data about which entity points to which -- not decorative chrome, so its meaning must survive
+  // `dir="rtl"` unchanged. Only the row's overall layout (icon position, text order) may mirror;
+  // per docs/agents/i18n-rtl-theming.md ("directional glyphs mirror via the wrapping part, not the
+  // icon"), and this row's flex flow already reverses for free under `dir="rtl"` with no extra
+  // code, so the glyph itself must never be swapped based on directionality.
+  const ltr = (await fixture(
+    html`<lr-neighbor-list .rows=${rows}></lr-neighbor-list>`
+  )) as LyraNeighborList;
+  await ltr.updateComplete;
+  const ltrGlyphs = [
+    ...ltr.shadowRoot!.querySelectorAll('[part="direction"]'),
+  ].map((g) => g.textContent);
+  expect(ltrGlyphs).to.deep.equal(['→', '↔', '←']);
+
+  const rtl = (await fixture(
+    html`<lr-neighbor-list dir="rtl" .rows=${rows}></lr-neighbor-list>`
+  )) as LyraNeighborList;
+  await rtl.updateComplete;
+  const rtlGlyphs = [
+    ...rtl.shadowRoot!.querySelectorAll('[part="direction"]'),
+  ].map((g) => g.textContent);
+  expect(rtlGlyphs).to.deep.equal(ltrGlyphs);
+  // The symmetric ('both') row was never affected by the bug -- pin it explicitly so the fix
+  // can't accidentally regress the one case that was already correct.
+  expect(rtlGlyphs).to.deep.equal(['→', '↔', '←']);
+});
+
 it('shows neighborListEmpty when rows is empty', async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`

@@ -118,12 +118,22 @@ export const styles = css`
   lr-virtual-list::part(title) {
     font: inherit;
   }
+  /* chunk.text is arbitrary consumer-supplied content -- it may genuinely be RTL prose (e.g. a
+     real Arabic/Hebrew search snippet). isolate (not plaintext, and never a forced dir="ltr")
+     keeps the paragraph's own edge punctuation from being reordered by the surrounding host
+     direction while still letting the browser's per-paragraph bidi detection run correctly for
+     genuinely RTL content. Without it, under dir="rtl" a trailing period (e.g. "...Curie in
+     1898.") visually jumps to the front of the line. Chromium and Firefox already default block
+     boxes to unicode-bidi: isolate (see the HTML "bidi rendering" UA-stylesheet rules), which
+     masks this on those two engines; WebKit does not, so the bug and this rule are only visible
+     cross-engine -- see this component's own dir="rtl" test. */
   [part~='text'],
   lr-virtual-list::part(text) {
     margin: 0;
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
+    unicode-bidi: isolate;
   }
   [part~='text-clamped'],
   lr-virtual-list::part(text-clamped) {

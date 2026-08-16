@@ -67,7 +67,9 @@ interface OwnedAnimationFrame {
  * @csspart canvas - The drawing surface (`aria-hidden`; the host itself carries `role="img"` and the
  *   accessible name).
  * @cssprop [--lr-audio-visualizer-color=var(--lr-color-brand)] - Active bar/waveform color.
- * @cssprop [--lr-audio-visualizer-quiet-color=var(--lr-color-brand-quiet)] - Inactive/idle color.
+ * @cssprop [--lr-audio-visualizer-quiet-color=var(--lr-color-brand-border-normal)] - Inactive/idle
+ *   color. Chosen over `--lr-color-brand-quiet` for its WCAG 1.4.11 non-text contrast against
+ *   `--lr-color-surface` (the idle bars have no other distinguishing shape or border).
  * @cssprop [--lr-audio-visualizer-height=var(--lr-size-3rem)] - The host's block size, which the
  *   canvas fills at 100%.
  * @cssprop [--lr-audio-visualizer-ambient-duration=var(--lr-duration-ambient)] - Time-only

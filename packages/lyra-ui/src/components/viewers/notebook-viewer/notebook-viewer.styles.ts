@@ -74,6 +74,14 @@ export const styles = css`
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
     white-space: pre-wrap;
+    /* Output is raw/code-like content (stdout/stderr text, tracebacks, text/plain results), read
+       left-to-right regardless of the surrounding document direction -- same reasoning as
+       code-block.styles.ts's [part=pre] rule for the code-input block directly above it. Without
+       this, an ambient dir="rtl" bidi-reorders the text and right-aligns it (text-align: start
+       resolving to right), producing a cell whose input stays pinned left and whose output flips
+       right. isolate keeps any RTL run inside the output text from leaking out and reordering it. */
+    direction: ltr;
+    unicode-bidi: isolate;
   }
   lr-virtual-list::part(output-error) {
     color: var(--lr-color-danger);

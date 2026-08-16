@@ -28,8 +28,8 @@ export const Default: Story = {
       <lr-scatter-chart
         height="16rem"
         style="width: 22rem"
-        x-label="X"
-        y-label="Y"
+        x-label="X value"
+        y-label="Y value"
         .datasets=${series}
       ></lr-scatter-chart>
     `;

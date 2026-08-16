@@ -495,9 +495,9 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         tabindex="-1"
       >
         <div part="header">
-          <h2 id=${this.titleId} dir="auto">${headingParts.map(
+          <h2 id=${this.titleId}>${headingParts.map(
             (part, index) =>
-              html`${index > 0 ? html`<span part="tool-name">${toolName}</span>` : nothing}${part}`,
+              html`${index > 0 ? html`<span part="tool-name" dir="auto">${toolName}</span>` : nothing}${part}`,
           )}</h2>
         </div>
         <div part="body">
