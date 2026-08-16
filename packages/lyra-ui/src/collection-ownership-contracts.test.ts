@@ -117,7 +117,6 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-stack-trace', property: 'internalPatterns' },
   { tag: 'lr-subagent-panel', property: 'runs' },
   { tag: 'lr-task-list', property: 'items' },
-  { tag: 'lr-test-results', property: 'suites' },
   { tag: 'lr-test-results', property: 'statusFilter' },
   { tag: 'lr-tool-select-dialog', property: 'tools' },
   { tag: 'lr-tool-select-dialog', property: 'selectedToolIds' },
@@ -151,7 +150,6 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-thread-list', property: 'collapsedGroupIds' },
   { tag: 'lr-thread-list', property: 'rowActions' },
   { tag: 'lr-transcript-feed', property: 'entries' },
-  { tag: 'lr-calendar', property: 'events' },
   { tag: 'lr-context-meter', property: 'segments' },
   { tag: 'lr-heatmap', property: 'annotations' },
   { tag: 'lr-heatmap', property: 'legendStops' },
@@ -162,21 +160,29 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-virtual-list', property: 'groups' },
 ]);
 
-/** Top-level records whose legitimate public shapes contain arrays or keyed collections. */
+/**
+ * Top-level records whose legitimate public shapes contain arrays or keyed collections, and which
+ * go through LyraElement's generic `ownedCollectionProperties` deep-freeze machinery. `schema`
+ * (schema-viewer) and `data` (heatmap) are deliberately excluded: both opt out of the generic
+ * machinery in favor of their own bespoke, colocated normalization -- see the JSDoc above
+ * `snapshotSchemaNode` in schema-viewer.class.ts and above `identityCollectionObjectProperties`
+ * in heatmap.class.ts for why. Per this file's own top comment, bespoke accessor-backed properties
+ * have their contracts covered by their colocated component tests instead.
+ */
 export const APP_OWNED_RECORD_PROPERTY_CASES: readonly CollectionPropertyCase[] = Object.freeze([
   { tag: 'lr-agent-run', property: 'run' },
   { tag: 'lr-agent-run', property: 'statusLabels' },
   { tag: 'lr-agent-run', property: 'statusVariants' },
   { tag: 'lr-mcp-app', property: 'resource' },
-  { tag: 'lr-json-schema-viewer', property: 'schema' },
   { tag: 'lr-message-feedback', property: 'detail' },
   { tag: 'lr-selection-toolbar', property: 'anchor' },
-  { tag: 'lr-heatmap', property: 'data' },
 ]);
 
 /** The only sequence fields in this lane whose caller item identity is the public contract. */
 export const APP_IDENTITY_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] = Object.freeze([
   { tag: 'lr-command-palette', property: 'commands' },
+  { tag: 'lr-test-results', property: 'suites' },
+  { tag: 'lr-calendar', property: 'events' },
   { tag: 'lr-virtual-list', property: 'items' },
   { tag: 'lr-virtual-list', property: 'source' },
 ]);

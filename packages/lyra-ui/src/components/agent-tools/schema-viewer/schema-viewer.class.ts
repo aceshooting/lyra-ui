@@ -129,6 +129,18 @@ function snapshotSchemaNode(
   delete output['allOf'];
   delete output['anyOf'];
   delete output['oneOf'];
+  // The shallow `{ ...value }` spread above keeps every other keyword's original array reference
+  // (`type`, `enum`, `required`, ...) -- the recursive rebuild below only replaces the five schema-
+  // composition keys deleted above. `Object.freeze(output)` at the end of this function is itself
+  // shallow and only protects output's own property slots, not what they still point to, so a
+  // caller mutating their original array after assignment (e.g. `schema.type.push(...)`) would
+  // otherwise reach straight through into this "detached" snapshot. Detach and freeze each
+  // surviving array field too.
+  for (const key in output) {
+    if (!Object.prototype.hasOwnProperty.call(output, key)) continue;
+    const fieldValue = output[key];
+    if (Array.isArray(fieldValue)) output[key] = Object.freeze([...fieldValue]);
+  }
   if (depth < MAX_SCHEMA_DEPTH) {
     const properties = (value as JsonSchemaNode).properties;
     if (isSchemaRecord(properties)) {
