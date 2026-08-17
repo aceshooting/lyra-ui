@@ -1620,6 +1620,19 @@ files matter when scaffolding a project's editor configuration. Build tools can 
 through the explicit `@aceshooting/lyra-ui/custom-elements.json` package export; native Node ESM
 uses `with { type: 'json' }` on that import.
 
+**Inherited members in `custom-elements.json`.** A subclass declaration's `cssParts` array is
+always the complete flattened set, including everything inherited from a superclass — `::part()`
+has no type-level inheritance chain a consumer could otherwise walk. `attributes`, `members`,
+`events`, `slots`, and `cssProperties` are the opposite: a subclass declaration lists only its own
+entries plus any inherited entry it explicitly overrides, pruning an inherited-and-unmodified entry
+of those four kinds. This is intentional, not a gap — a TypeScript/JS consumer already gets the
+full set for free from the generated `.d.ts` `extends` chain, the same resolution `web-types.json`
+and `vscode-html-data.json` perform ahead of time. A consumer reading `custom-elements.json`
+directly and needing the complete `attributes`/`members`/`events`/`slots`/`cssProperties` set for
+those four kinds must walk the declaration's own `superclass.name`/`superclass.module` across
+`modules[].declarations[]` itself, or read `web-types.json`/`vscode-html-data.json` instead, which
+are already fully resolved.
+
 ## Independence and migration
 
 Lyra has no runtime, theme, or design-token dependency on Shoelace or Web Awesome. Documented `wa-*`

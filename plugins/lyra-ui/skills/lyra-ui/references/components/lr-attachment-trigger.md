@@ -15,8 +15,8 @@
 
 ## `lr-attachment-trigger`
 
-A compact attach affordance designed for a chat composer's leading slot (see `lr-chat-composer`'s
-own `leading` slot, which this drops straight into, though it has no code dependency on it). First-
+A compact attach affordance designed for a chat composer's start slot (see `lr-chat-composer`'s
+own `start` slot, which this drops straight into, though it has no code dependency on it). First-
 party invention (no Web Awesome equivalent). Its shape adapts to how many attachment `capabilities`
 are configured: exactly one renders a single plain icon button; more than one renders a small
 anchored menu (composed from `lr-dropdown`/`lr-menu`/`lr-menu-item`) listing each

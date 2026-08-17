@@ -1672,6 +1672,19 @@ files matter when scaffolding a project's editor configuration. Build tools can 
 through the explicit `@aceshooting/lyra-ui/custom-elements.json` package export; native Node ESM
 uses `with { type: 'json' }` on that import.
 
+**Inherited members in `custom-elements.json`.** A subclass declaration's `cssParts` array is
+always the complete flattened set, including everything inherited from a superclass — `::part()`
+has no type-level inheritance chain a consumer could otherwise walk. `attributes`, `members`,
+`events`, `slots`, and `cssProperties` are the opposite: a subclass declaration lists only its own
+entries plus any inherited entry it explicitly overrides, pruning an inherited-and-unmodified entry
+of those four kinds. This is intentional, not a gap — a TypeScript/JS consumer already gets the
+full set for free from the generated `.d.ts` `extends` chain, the same resolution `web-types.json`
+and `vscode-html-data.json` perform ahead of time. A consumer reading `custom-elements.json`
+directly and needing the complete `attributes`/`members`/`events`/`slots`/`cssProperties` set for
+those four kinds must walk the declaration's own `superclass.name`/`superclass.module` across
+`modules[].declarations[]` itself, or read `web-types.json`/`vscode-html-data.json` instead, which
+are already fully resolved.
+
 ## Independence and migration
 
 Lyra has no runtime, theme, or design-token dependency on Shoelace or Web Awesome. Documented `wa-*`
@@ -10597,7 +10610,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."
   description to the host's own `aria-label`, and adds localized selected wording to the keyboard
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
-  `<lr-lite-chart>`'s `selectedIndex`, this component never mutates it itself. Unset (the default,
+  `<lr-lite-chart>`'s `selectedIndices`, this component never mutates it itself. Unset (the default,
   `null`) reproduces today's exact output.
 - `accessibleCells: boolean = false` (attribute `accessible-cells`) — renders `[part="cells"]` with
   at most 400 `[part="cell"]` native buttons around the active cell. The semantic grid exposes the
@@ -22394,8 +22407,8 @@ true}))` still invokes the anchor's native activation behavior if nothing calls
 
 ## `lr-attachment-trigger`
 
-A compact attach affordance designed for a chat composer's leading slot (see `lr-chat-composer`'s
-own `leading` slot, which this drops straight into, though it has no code dependency on it). First-
+A compact attach affordance designed for a chat composer's start slot (see `lr-chat-composer`'s
+own `start` slot, which this drops straight into, though it has no code dependency on it). First-
 party invention (no Web Awesome equivalent). Its shape adapts to how many attachment `capabilities`
 are configured: exactly one renders a single plain icon button; more than one renders a small
 anchored menu (composed from `lr-dropdown`/`lr-menu`/`lr-menu-item`) listing each
