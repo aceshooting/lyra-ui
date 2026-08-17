@@ -76,6 +76,9 @@ unambiguous beside other previous/next controls and are overridable through `.st
 matches `application/epub+zip` and `.epub` filenames, declaring `{ anchors: ['cfi', 'text-quote'],
 search: true, textSelect: true }` capabilities and forwarding `anchor`/`highlights` to the mounted
 viewer. The peer loader requires the callable EPUB factory; malformed module shapes fail closed.
+A granular consumer (not importing the `all.js` compatibility bundle) must also import
+`@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer-register.js` once to install
+this registration; without it `<lr-document-viewer>` never recognizes `.epub` files.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the ebook.
