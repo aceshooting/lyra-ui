@@ -888,14 +888,18 @@ describe('active-state cssprops', () => {
       // passing on Chromium and Firefox in the same run). Same treatment slider.test.ts's thumb and
       // time-range.test.ts's handle paint assertions already carry. open-wc's waitUntil() default
       // timeout (1000ms) has since been observed too tight for this same wait under a loaded
-      // full-engine-suite webkit shard -- widened to 15000ms, matching the figure that stabilized
-      // image-viewer.test.ts's and av-player.test.ts's equivalent forced-colors/hover waits; each
-      // call site below raises its own mocha this.timeout() so the suite's 6000ms default doesn't
-      // cut the wait off first.
+      // full-engine-suite webkit shard -- widened first to 15000ms (the figure that stabilized
+      // image-viewer.test.ts's and av-player.test.ts's equivalent forced-colors/hover waits), then
+      // to 25000ms after that also proved too tight once under a since-loaded run; unlike three
+      // other WebKit-shard failures diagnosed the same day (image-viewer, poll-status, map), this
+      // one reproduces 0/3 locally under repeated runs, consistent with genuine CI-load-only
+      // timing rather than a JS-level ordering bug worth chasing further. Each call site below
+      // raises its own mocha this.timeout() so the suite's 6000ms default doesn't cut the wait off
+      // first.
       await waitUntil(
         () => target.matches(':active'),
         'the physical pointer puts the card action in its active state',
-        { timeout: 15000 },
+        { timeout: 25000 },
       );
       const style = getComputedStyle(target);
       return { borderTopColor: style.borderTopColor, backgroundColor: style.backgroundColor };
@@ -922,9 +926,9 @@ describe('active-state cssprops', () => {
   }
 
   it('keeps the prior token-derived active paint when no component property is supplied', async function () {
-    // pressedPaint()'s wait can run up to 15000ms under a loaded CI runner; mocha's own
+    // pressedPaint()'s wait can run up to 25000ms under a loaded CI runner; mocha's own
     // suite-wide 6000ms default (see web-test-runner.config.js) would otherwise cut it off first.
-    this.timeout(20000);
+    this.timeout(35000);
     const card = (await fixture(html`
       <lr-media-card
         style="--lr-transition-fast: 0ms"
@@ -939,10 +943,10 @@ describe('active-state cssprops', () => {
   });
 
   it('inherits pressed border and background properties from an ancestor for image and file actions', async function () {
-    // Two cards each call pressedPaint() in the loop below, each able to run up to 15000ms under a
+    // Two cards each call pressedPaint() in the loop below, each able to run up to 25000ms under a
     // loaded CI runner; mocha's own suite-wide 6000ms default (see web-test-runner.config.js)
     // would otherwise cut this off long before either could finish.
-    this.timeout(35000);
+    this.timeout(60000);
     const wrapper = await fixture<HTMLElement>(html`
       <div style="
         --lr-media-card-active-border-color: rgb(10, 20, 30);
