@@ -50,6 +50,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
   normalizeGraphModel,

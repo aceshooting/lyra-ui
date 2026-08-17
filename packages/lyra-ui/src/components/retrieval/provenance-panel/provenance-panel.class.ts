@@ -29,6 +29,7 @@ import {
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';

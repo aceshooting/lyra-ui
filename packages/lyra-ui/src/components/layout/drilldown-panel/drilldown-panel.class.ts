@@ -9,6 +9,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../../retrieval/entity-card/entity-card.class.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { styles } from './drilldown-panel.styles.js';
 import '../breadcrumb/breadcrumb.class.js';
 import '../breadcrumb/breadcrumb-item.class.js';

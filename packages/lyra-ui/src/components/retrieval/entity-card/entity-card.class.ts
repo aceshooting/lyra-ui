@@ -20,6 +20,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_entityCommunity, LYRA_DEFAULT_entityDegree, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_focusInGraph, LYRA_DEFAULT_noData, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 /** One knowledge-graph entity, as consumed by every knowledge-graph explorer component. Field
  *  names deliberately mirror `lr-graph`'s node shape (`type`, `communityId`), so
  *  `{ ...graphNode, label: graphNode.label ?? graphNode.id }` adapts a graph node into a

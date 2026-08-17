@@ -18,6 +18,7 @@ import type {
 import type { StatRow } from '../../data/stat/stat.class.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraTabGroupEventMap } from '../../layout/tab-group/tab-group.class.js';
 import '../entity-card/entity-card.class.js';
 import '../neighbor-list/neighbor-list.class.js';

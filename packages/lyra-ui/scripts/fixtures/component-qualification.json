@@ -20820,7 +20820,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph.class.ts",
-              "line": 839,
+              "line": 840,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24565,7 +24565,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 473,
+              "line": 474,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

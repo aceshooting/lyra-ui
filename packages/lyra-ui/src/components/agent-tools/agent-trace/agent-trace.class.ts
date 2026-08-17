@@ -4,6 +4,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { styles } from './agent-trace.styles.js';
 import { normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 import type { LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';

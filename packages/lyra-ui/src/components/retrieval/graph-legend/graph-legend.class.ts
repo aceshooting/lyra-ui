@@ -23,6 +23,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphLegendLabel, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export interface LyraGraphLegendVisibilityDetail {
   hiddenTypes: string[];
 }
