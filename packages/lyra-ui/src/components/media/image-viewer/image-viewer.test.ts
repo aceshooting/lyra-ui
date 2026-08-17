@@ -556,7 +556,11 @@ describe("region highlights", () => {
     }
   });
 
-  it("scrollToAnchor resolves true for a region anchor and false for an unsupported kind", async () => {
+  it("scrollToAnchor resolves true for a region anchor and false for an unsupported kind", async function () {
+    // The genuine-success call below now runs against the mixin's real 5000ms default timeout
+    // (see the comment at that call); mocha's own suite-wide 6000ms default (see
+    // web-test-runner.config.js) would leave too tight a margin under a loaded CI runner.
+    this.timeout(20000);
     const el = (await fixture(
       html`<lr-image-viewer
         src=${PNG_SRC}
@@ -565,14 +569,18 @@ describe("region highlights", () => {
     )) as LyraImageViewer;
     await stubImageLoad(el);
     await el.updateComplete;
-    // Shrink the retry loop's real-timer thresholds so the unsupported-kind case below (which
-    // never succeeds and only resolves once the retry loop times out) doesn't take the mixin's
-    // default 5s before settling to false.
+    // The genuine-success case keeps the mixin's default (generous) real-timer thresholds --
+    // a shared 30ms budget for both calls has been observed too tight for scrollToAnchor("h1")
+    // itself to resolve under a loaded CI runner (same class of timing flake already hardened
+    // elsewhere in this suite), even though 30ms is plenty for the *expected-to-fail* case below.
+    expect(await el.scrollToAnchor("h1")).to.be.true;
+    // Shrink the retry loop's real-timer thresholds so the unsupported-kind case (which never
+    // succeeds and only resolves once the retry loop times out) doesn't take the mixin's default
+    // 5s before settling to false.
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
     (
       el as unknown as { anchorRetryIntervalMs: number }
     ).anchorRetryIntervalMs = 5;
-    expect(await el.scrollToAnchor("h1")).to.be.true;
     expect(await el.scrollToAnchor({ kind: "page", page: 1 })).to.be.false;
   });
 
