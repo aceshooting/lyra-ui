@@ -7121,28 +7121,28 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
-              "line": 832,
+              "line": 877,
               "test": "is accessible fully populated: avatar, badges, attachments, actions, timestamp, and status=\"failed\"",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
-              "line": 850,
+              "line": 895,
               "test": "is accessible with outside actions populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
-              "line": 1196,
+              "line": 1241,
               "test": "is accessible with a custom failure-slot alert banner",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
-              "line": 1342,
+              "line": 1387,
               "test": "is accessible with the bubble geometry props set on a failed message",
               "target": "el",
               "state": "populated"
@@ -21538,35 +21538,35 @@
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 3383,
+              "line": 3429,
               "test": "is accessible with a selected cell",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4709,
+              "line": 4755,
               "test": "stays accessible with legendStops set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4834,
+              "line": 4880,
               "test": "stays accessible with a caption-only legend stop",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5173,
+              "line": 5219,
               "test": "stays accessible with both clamps applied",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5390,
+              "line": 5436,
               "test": "stays accessible with a date-driven cellText on the accessible-cell overlay",
               "target": "el",
               "state": "populated"
@@ -21682,7 +21682,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 1582,
+              "line": 1608,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

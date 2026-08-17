@@ -91,7 +91,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-agent-run`, `lr-chat-composer`, `lr-chat-message`, `lr-chat-viewport`, `lr-context-inspector`, `lr-empty`, `lr-grounding-summary`, `lr-markdown`, `lr-message-parts`, `lr-retrieval-results`, `lr-tool-timeline`
 - Transitive Lyra dependencies: `lr-attachment-chip`, `lr-badge`, `lr-button`, `lr-checkbox`, `lr-chunk-inspector`, `lr-citation-badge`, `lr-claim-evidence`, `lr-context-meter`, `lr-copy-button`, `lr-details`, `lr-export-button`, `lr-generation-metrics`, `lr-json-viewer`, `lr-live-region`, `lr-skeleton`, `lr-spinner`, `lr-stat`, `lr-task-list`, `lr-thinking-panel`, `lr-tool-approval-dialog`, `lr-tool-call-chip`, `lr-tool-result-view`, `lr-tooltip`, `lr-usage-badge`, `lr-virtual-list`, `lr-widget-renderer`
-- Standalone gzip: 218.4 KiB (223610 bytes; bundle SHA-256 `e5d6b86e85d6a8e59165ef6e82ce1f2bd71af84605b98cf18342de208a7c115f`)
+- Standalone gzip: 218.4 KiB (223629 bytes; bundle SHA-256 `ac0889a1ecd6e2373ed09371d8ac31f7289c09eafcd1201e2aa924947c30985c`)
 
 </details>
 
@@ -487,7 +487,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: `lr-live-region`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.8 KiB (38681 bytes; bundle SHA-256 `142c141b43a115104cdb1a6478e97519b7a5ed1120c27a3bcf2452837129db6b`)
+- Standalone gzip: 37.8 KiB (38697 bytes; bundle SHA-256 `537cccff680d25a0038a0df195634bcbebeaa5b19ee5a3ff21a1037b3b3be110`)
 
 </details>
 
@@ -1483,7 +1483,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: none
 - Direct Lyra dependencies: none
 - Transitive Lyra dependencies: none
-- Standalone gzip: 49.7 KiB (50863 bytes; bundle SHA-256 `63c51c363fcd71ebf112ab1f2fc7d5a9400a72e912888f0ec3e3b6137750b022`)
+- Standalone gzip: 49.7 KiB (50924 bytes; bundle SHA-256 `dbae6b90a47a098caf83a9cfba8bbeaaa1801ccfac364c28b00ac93e4d7e2628`)
 
 </details>
 
