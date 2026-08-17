@@ -69,8 +69,8 @@ export const styles = css`
   [part='icon'] ::slotted(*) { max-inline-size: 100%; }
   [part='icon'][hidden], [part='close-button'][hidden] { display: none; }
   [part='heading'] { margin-block-end: var(--lr-space-xs); font-weight: var(--lr-font-weight-semibold); }
-  [part='content'] { grid-column: 2; min-inline-size: 0; overflow-wrap: anywhere; }
-  [part='message'] { min-inline-size: 0; overflow-wrap: anywhere; }
+  [part='content'] { grid-column: 2; min-inline-size: 0; overflow-wrap: break-word; }
+  [part='message'] { min-inline-size: 0; overflow-wrap: break-word; }
   /* The interactive hit target meets the shared minimum tappable size (--lr-icon-button-size)
      in both the default panel and the compact [inline] variant below -- the *visible* "×" glyph
      is what shrinks for [inline] instead, rendered on the separate [part='close-icon'] child and

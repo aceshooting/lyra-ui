@@ -1091,3 +1091,12 @@ describe('quiet-tier background in dark mode', () => {
     }
   });
 });
+
+it('uses break-word, not anywhere, on content/message text', async () => {
+  const el = (await fixture(html`<lr-callout>A short two word message</lr-callout>`)) as LyraCallout;
+  await el.updateComplete;
+  const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+  const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
+  expect(getComputedStyle(content).overflowWrap).to.equal('break-word');
+  expect(getComputedStyle(message).overflowWrap).to.equal('break-word');
+});
