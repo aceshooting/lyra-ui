@@ -259,6 +259,12 @@ it('exposes themeable aspect-ratio and object-fit custom properties', async () =
       style="--lr-flag-aspect-ratio: 2 / 1; --lr-flag-object-fit: contain"
     ></lr-flag>
   `)) as LyraFlag;
+  // `<img>` is one of three mutually exclusive branches -- the error branch renders
+  // `[part="error"]` and no image at all -- so wait for it rather than assuming it won the race.
+  await waitUntil(
+    () => !!el.shadowRoot!.querySelector('img'),
+    'the flag never committed an <img> to measure',
+  );
   const image = el.shadowRoot!.querySelector('img') as HTMLImageElement;
   expect(getComputedStyle(el).aspectRatio).to.equal('2 / 1');
   expect(getComputedStyle(image).objectFit).to.equal('contain');
@@ -623,6 +629,13 @@ it('contains long localized error copy at narrow LTR/RTL widths for both shapes'
         </div>
       `);
       const flag = wrapper.querySelector('lr-flag') as LyraFlag;
+      // The blocked-scheme rejection lands the error branch asynchronously, so wait for it the
+      // same way every other error-state test here does. Reading straight through leaves a
+      // getComputedStyle(null) TypeError on whichever engine loses the race.
+      await waitUntil(
+        () => !!flag.shadowRoot!.querySelector('[part="error"]'),
+        'the flag never rendered its error branch',
+      );
       const error = flag.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
       const wrapperRect = wrapper.getBoundingClientRect();
       const errorRect = error.getBoundingClientRect();

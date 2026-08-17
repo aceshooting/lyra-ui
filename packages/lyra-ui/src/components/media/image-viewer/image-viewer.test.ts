@@ -1594,9 +1594,16 @@ describe("active-state cssprop escape hatches", () => {
       ></lr-image-viewer>
     </div>`)) as HTMLElement;
     const el = wrapper.querySelector("lr-image-viewer") as LyraImageViewer;
+    // Highlights only paint once the viewer has committed and measured its <img>, so stub the load
+    // rather than racing it -- Edge lost that race while every other engine won it, leaving a
+    // getComputedStyle(null) TypeError instead of a readable assertion failure.
+    await stubImageLoad(el);
     const box = el.shadowRoot!.querySelector(
       '[part="highlight"]'
     ) as HTMLElement;
+    expect(box != null, "the success-tone highlight box renders").to.equal(
+      true
+    );
     expect(getComputedStyle(box).borderTopColor).to.equal("rgb(0, 51, 102)");
   });
 
