@@ -883,15 +883,20 @@ test('release script pins its repository and pushes release refs atomically', ()
     'run manifest',
     'run component-metadata',
     'run manifest',
-    'run lint',
-    'run build',
-    'run component-quality',
-    'run test',
+    // llms must regenerate before lint: lint's own check-llms-freshness.mjs/
+    // check-llms-artifacts.mjs verify llms/ against the manifest and package-metadata-embedded
+    // version this loop just regenerated above, so running llms generation after lint (the
+    // order this test used to encode as correct) meant every release that changed manifest
+    // content or bumped the version failed lint on stale llms/ output.
     'run default-string-slices',
     'run framework-types',
     'run design-tokens',
     'run generate-editor-data',
     'run llms',
+    'run lint',
+    'run build',
+    'run component-quality',
+    'run test',
   ]) {
     const commandIndex = publishScript.indexOf(command, gateCursor + 1);
     assert.ok(
