@@ -533,6 +533,34 @@ it('clamps a non-finite index to a valid in-range image instead of rendering not
   el.open = false;
 });
 
+it('caps a long caption instead of letting it starve the stage', async () => {
+  const longCaption = 'word '.repeat(200).trim();
+  const el = (await fixture(html`
+    <lr-lightbox
+      open
+      style="position: static; inset: auto; inline-size: 320px; block-size: 500px;"
+      .images=${[{ src: image.src, alt: image.alt, caption: longCaption }]}
+    ></lr-lightbox>
+  `)) as LyraLightbox;
+  await el.updateComplete;
+
+  const captionBox = el.shadowRoot!
+    .querySelector('[part="caption"]')!
+    .getBoundingClientRect();
+  const stageBox = el.shadowRoot!
+    .querySelector('[part="stage"]')!
+    .getBoundingClientRect();
+
+  expect(
+    captionBox.height,
+    'the caption is capped, not floored at its full many-line content height'
+  ).to.be.lessThan(150);
+  expect(
+    stageBox.height,
+    'the stage keeps a usable amount of the host height'
+  ).to.be.greaterThan(100);
+});
+
 // -- Live-region announcement (see willUpdate()'s doc for why liveText is derived there, not in
 // updated()) --------------------------------------------------------------------------------
 

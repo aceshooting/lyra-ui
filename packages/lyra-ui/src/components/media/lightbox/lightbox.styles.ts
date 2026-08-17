@@ -195,6 +195,8 @@ export const styles = css`
     flex: 0 0 auto;
     margin: 0;
     max-inline-size: 100%;
+    max-block-size: var(--lr-size-8rem);
+    overflow-y: auto;
     align-self: center;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius);
