@@ -881,26 +881,39 @@ describe('active-state cssprops', () => {
 
   async function pressedPaint(target: HTMLElement): Promise<ActivePaint> {
     try {
-      await sendMouse({ type: 'move', position: centerOf(target) });
-      await sendMouse({ type: 'down' });
       // Polled, not asserted once: WebKit does not always have :active applied by the time the
       // synthetic mousedown promise resolves (observed failing exactly here on the safari lane while
       // passing on Chromium and Firefox in the same run). Same treatment slider.test.ts's thumb and
       // time-range.test.ts's handle paint assertions already carry. open-wc's waitUntil() default
-      // timeout (1000ms) has since been observed too tight for this same wait under a loaded
-      // full-engine-suite webkit shard -- widened first to 15000ms (the figure that stabilized
-      // image-viewer.test.ts's and av-player.test.ts's equivalent forced-colors/hover waits), then
-      // to 25000ms after that also proved too tight once under a since-loaded run; unlike three
-      // other WebKit-shard failures diagnosed the same day (image-viewer, poll-status, map), this
-      // one reproduces 0/3 locally under repeated runs, consistent with genuine CI-load-only
-      // timing rather than a JS-level ordering bug worth chasing further. Each call site below
-      // raises its own mocha this.timeout() so the suite's 6000ms default doesn't cut the wait off
-      // first.
-      await waitUntil(
-        () => target.matches(':active'),
-        'the physical pointer puts the card action in its active state',
-        { timeout: 25000 },
-      );
+      // timeout (1000ms) has since been observed too tight -- widened first to 15000ms, then to
+      // 25000ms, both since observed insufficient on a loaded full-engine-suite WebKit shard; this
+      // reproduces 0/3 locally under repeated runs (unlike three other WebKit-shard failures
+      // diagnosed the same day -- image-viewer, poll-status, map -- all genuine JS-level ordering
+      // races once investigated), consistent with an occasional dropped/lost synthetic pointer
+      // event at the OS/compositor level rather than a bug a longer wait alone can fix. Retry the
+      // whole move+down sequence, not just the wait, up to 3 times: a fresh mousedown after
+      // resetMouse() gives the input pipeline a clean attempt instead of continuing to wait on one
+      // that may never arrive. Each call site below raises its own mocha this.timeout() for the
+      // full retry budget.
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await resetMouse();
+        await sendMouse({ type: 'move', position: centerOf(target) });
+        await sendMouse({ type: 'down' });
+        try {
+          await waitUntil(
+            () => target.matches(':active'),
+            'the physical pointer puts the card action in its active state',
+            { timeout: 8000 },
+          );
+          lastError = undefined;
+          break;
+        } catch (error) {
+          lastError = error;
+          await sendMouse({ type: 'up' });
+        }
+      }
+      if (lastError) throw lastError;
       const style = getComputedStyle(target);
       return { borderTopColor: style.borderTopColor, backgroundColor: style.backgroundColor };
     } finally {
@@ -926,7 +939,7 @@ describe('active-state cssprops', () => {
   }
 
   it('keeps the prior token-derived active paint when no component property is supplied', async function () {
-    // pressedPaint()'s wait can run up to 25000ms under a loaded CI runner; mocha's own
+    // pressedPaint() can now run up to 3 retry attempts at 8000ms each; mocha's own
     // suite-wide 6000ms default (see web-test-runner.config.js) would otherwise cut it off first.
     this.timeout(35000);
     const card = (await fixture(html`
@@ -943,10 +956,10 @@ describe('active-state cssprops', () => {
   });
 
   it('inherits pressed border and background properties from an ancestor for image and file actions', async function () {
-    // Two cards each call pressedPaint() in the loop below, each able to run up to 25000ms under a
-    // loaded CI runner; mocha's own suite-wide 6000ms default (see web-test-runner.config.js)
-    // would otherwise cut this off long before either could finish.
-    this.timeout(60000);
+    // Two cards each call pressedPaint() in the loop below, each now up to 3 retry attempts at
+    // 8000ms; mocha's own suite-wide 6000ms default (see web-test-runner.config.js) would
+    // otherwise cut this off long before either could finish.
+    this.timeout(70000);
     const wrapper = await fixture<HTMLElement>(html`
       <div style="
         --lr-media-card-active-border-color: rgb(10, 20, 30);
