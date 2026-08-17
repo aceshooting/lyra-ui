@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -242,7 +242,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
 
   private stopPlacing?: () => void;
   private stopAnchorIdentityObservation?: () => void;
-  private anchorPositioned = false;
+  @state() private anchorPositioned = false;
   private placingAnchorIdentity?: object;
   private positionedAnchorIdentity?: object;
   private resolvedPlacement: Placement = 'top';
@@ -455,11 +455,6 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
 
   private setPositioned(positioned: boolean): void {
     this.anchorPositioned = positioned;
-    const paints = this.active && positioned;
-    const awaitsPosition = this.active && !positioned;
-    this.popup?.toggleAttribute('data-active', paints);
-    this.popup?.toggleAttribute('data-awaits-position', awaitsPosition);
-    this.hoverBridgeElement?.toggleAttribute('data-active', paints);
   }
 
   private readonly onAnchorSlotChange = (): void => {

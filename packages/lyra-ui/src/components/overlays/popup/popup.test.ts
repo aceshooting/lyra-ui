@@ -47,6 +47,19 @@ it('exposes the positioned popup and consumes the mapped transition aliases', as
   expect(getComputedStyle(el.popup).visibility).to.equal('hidden');
 });
 
+it('keeps data-active reactive to anchorPositioned without relying on updated() to self-heal', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active><button slot="anchor">Anchor</button><div>Content</div></lr-popup>
+  `);
+  await waitUntil(() => el.popup.hasAttribute('data-active'));
+
+  el.active = false;
+  await el.updateComplete;
+
+  expect(el.popup.hasAttribute('data-active')).to.equal(false);
+  expect(getComputedStyle(el.popup).pointerEvents).to.equal('none');
+});
+
 it('accepts popup writes without replacing the shadow-owned positioning node', async () => {
   const el = await fixture<LyraPopup>(html`
     <lr-popup active><button slot="anchor">Anchor</button><div>Content</div></lr-popup>
