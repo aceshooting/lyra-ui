@@ -1492,15 +1492,26 @@ it('does not query the choropleth fill layer on click before it has been added t
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
-  // Set choropleth immediately — before the map's 'load' event has fired — so
-  // applyChoropleth() hasn't run yet and the `-fill` layer doesn't exist.
-  el.choropleth = choropleth('early-choropleth', [
+  el.choropleth = choropleth('vanishing-choropleth', [
     [0, '#000000'],
     [10, '#ffffff'],
   ]);
   await el.updateComplete;
-  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-  expect(el.map!.getLayer('early-choropleth-fill') == null).to.be.true;
+  await waitUntilMapLoaded(el);
+  await waitUntil(() => el.map!.getLayer('vanishing-choropleth-fill') != null, 'layer never added', {
+    timeout: 2000,
+  });
+  // Deterministically reproduces "the click handler's own _appliedFillLayerId bookkeeping still
+  // names a layer, but that id no longer exists in the live style" -- previously this test tried
+  // to observe that same state by reading el.map before its real async 'load' event (and
+  // therefore applyChoropleth()) had fired, racing real browser/GL timing. That race was the
+  // actual cause of two separate CI failures (a WebKit full-engine shard, then Safari's "Test All
+  // Browsers" job): on a fast runner 'load' can win before any poll notices, so the layer already
+  // existed by the time the old assertion ran. Removing the real maplibre-gl layer directly, once
+  // it has genuinely been added, exercises the exact same click-handler branch
+  // (candidate!.getLayer(fillLayerId) ? query : []) with no timing dependency at all.
+  el.map!.removeLayer('vanishing-choropleth-fill');
+  expect(el.map!.getLayer('vanishing-choropleth-fill') == null).to.be.true;
 
   let queried = false;
   const original = el.map!.queryRenderedFeatures.bind(el.map);

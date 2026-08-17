@@ -25685,7 +25685,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2367,
+              "line": 2378,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -25696,7 +25696,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2612,
+              "line": 2623,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25713,7 +25713,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2606,
+              "line": 2617,
               "kind": "320px allocation test signal"
             }
           ]
