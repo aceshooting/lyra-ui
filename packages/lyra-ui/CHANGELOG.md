@@ -1,5 +1,128 @@
 # Changelog
 
+## 9.1.0
+
+### Minor Changes
+
+- b027f44: Re-export `LyraNodeTypeStyle` from every component module whose public API types a property
+  against it (`lr-graph`, `lr-knowledge-graph-explorer`, `lr-drilldown-panel`, `lr-agent-trace`,
+  `lr-entity-dossier`, `lr-entity-card`, `lr-memory-panel`, `lr-provenance-panel`,
+  `lr-graph-legend`). The type was previously only reachable from the package root barrel
+  (`@aceshooting/lyra-ui`'s `LyraNodeTypeStyle` export); a consumer importing one of these
+  components from its own granular subpath, as this library's own examples do, had no local type
+  to import against and had to either duplicate the shape by hand or reach into the disallowed
+  `internal/` path.
+- d8fe77e: Restore `./components/viewers/archive-viewer/archive-viewer-register.js` and
+  `./components/viewers/ebook-viewer/ebook-viewer-register.js` as importable package subpaths. Both
+  files register a `<lr-document-viewer>` renderer (`application/zip`/`.zip` and
+  `application/epub+zip`/`.epub` respectively) and are genuinely opt-in for a granular consumer not
+  using the `all.js` compatibility bundle. Neither had an entry in `package.json`'s `exports` map, so
+  the documented import pattern (matching `flag-peer.js`'s precedent) hit
+  `ERR_PACKAGE_PATH_NOT_EXPORTED` even though both files ship in `dist/` and are correctly declared in
+  `sideEffects` — the same defect class as the historical `flag-peer.js` `sideEffects` omission, this
+  time in the exports map instead.
+
+### Patch Changes
+
+- c9a9303: Document `<lr-heatmap>`'s flat-property-to-`data` replacement, a 9.0.0 breaking change that shipped
+  without a changelog entry.
+  
+  9.0.0 replaced ten independent top-level `<lr-heatmap>` members with a single discriminated-union
+  `data` property. The removed members are `mode`, `days`, `rowLabels`, `colLabels`, `values`,
+  `firstDayOfWeek`, `columnX`, `rowY`, `weekdayLabelText`, and `monthLabelText`. They are now fields on
+  one of the two `data` branches — `HeatmapMatrixData` (`{ kind: 'matrix', rowLabels, colLabels,
+  values }`) or `HeatmapCalendarData` (`{ kind: 'calendar', days, firstDayOfWeek?, columnX?, rowY?,
+  weekdayLabelText?, monthLabelText? }`) — united as `HeatmapData` and exported from the package root.
+  
+  There are no runtime aliases, and assigning a removed member is silent: Lit accepts it as an
+  unobserved instance property, so the component keeps rendering its default empty grid instead of
+  erroring. That silence is why this entry exists — the 9.0.0 notes omitted the change entirely, so a
+  consumer grepping the changelog for `HeatmapMatrixData`, `HeatmapCalendarData`, `HeatmapData`, or any
+  of the removed member names found nothing and had no way to learn the API had moved.
+  
+  The `data` shape itself is unchanged and intentional; only the changelog record was missing.
+  `llms/data.md`'s "9.0 migration" note already carries the full recipe, including the related removal
+  of the magic `value-label="value"` localization sentinel:
+  
+  ```js
+  // removed in 9.0.0
+  el.mode = 'matrix';
+  el.rowLabels = ['Mon', 'Tue'];
+  el.colLabels = ['00h', '06h'];
+  el.values = [
+    [1, 2],
+    [3, 4],
+  ];
+  
+  // 9.0.0 and later
+  el.data = {
+    kind: 'matrix',
+    rowLabels: ['Mon', 'Tue'],
+    colLabels: ['00h', '06h'],
+    values: [
+      [1, 2],
+      [3, 4],
+    ],
+  };
+  ```
+- 3f294c1: Fix `<lr-lite-chart>`'s first category label colliding with the bottom y-axis tick.
+  
+  A line chart centres its first category label on `plotX`, so that label always reaches left into the
+  y-axis tick column — a measured 5.7px horizontal overlap on both Chromium and Firefox. The only thing
+  holding the two apart is the vertical gap between the label row and the bottom tick, which is
+  `dominant-baseline="middle"` on the plot floor and therefore hangs half its line box below that floor
+  into the label row.
+  
+  That gap was 1.3px on Chromium and **-0.7px on Firefox**, whose line box for the same 10px
+  `system-ui` font is 16px against Chromium's 14px. Firefox therefore painted the first x-axis label
+  overlapping the `0` tick. Raising `CATEGORY_LABEL_OFFSET` 18 → 24 and `PAD_BOTTOM` 24 → 30 together
+  leaves ~5px clear on both engines, comfortably past that 2px cross-engine variation.
+  
+  Because both constants moved by the same amount, the category-label row does not shift: the plot
+  floor rises instead, so a chart's labels stay where they were and its plot area is 6px shorter. Charts
+  with an `x-label` axis title are unaffected beyond that, since `AXIS_TITLE_SPACE` is measured from
+  `padBottom`.
+  
+  Note the truncation width model is unchanged: `displayCategoryLabel()` still estimates fit from
+  `APPROX_LABEL_CHARACTER_WIDTH`, so a label's *horizontal* extent remains an approximation rather than
+  a measurement. This change makes the label row robust to that approximation being wrong rather than
+  making the approximation exact.
+- 7ae8930: Document `<lr-tab-group>`'s removed `slot`/`label` child model, a 9.0.0 breaking change that shipped
+  without a changelog entry.
+  
+  9.0.0 removed the pre-9.0 attribute child model, in which a direct `<div slot="x" label="…">` child
+  became a tab captioned by its `label` with its own content as the panel, and a sibling
+  `slot="x-icon"` child supplied that tab's leading icon. `<lr-tab-group>` now builds its tab list
+  only from `<lr-tab panel="x">` descriptors paired with `<lr-tab-panel name="x">` panels; any other
+  child element is skipped regardless of its `slot`/`label` attributes, so markup still written in the
+  old shape renders an empty tab strip with no console warning.
+  
+  The removal itself is unchanged and intentional — this entry only records it, because the 9.0.0 notes
+  omitted it while `README.md` continued to state that the `slot`/`label` shape "still works
+  unchanged". Both README claims are corrected (the 7.x → 8.0.0 rename table and the component/mirror
+  table), which also clears the same stale claim from three generated `llms/migration.md` rows
+  (`<wa-tab>`, `<wa-tab-panel>`, `<sl-tab-panel>`) and the packaged skill reference. `llms/layout.md`
+  already described the removal correctly and is unchanged.
+  
+  To migrate, rewrite each former child as one descriptor plus one panel, folding any former
+  `slot="x-icon"` sibling's content into the `<lr-tab>`'s own default slot:
+  
+  ```html
+  <!-- removed in 9.0.0 -->
+  <lr-tab-group>
+    <div slot="general" label="General">General settings</div>
+  </lr-tab-group>
+  
+  <!-- 9.0.0 and later -->
+  <lr-tab-group>
+    <lr-tab panel="general">General</lr-tab>
+    <lr-tab-panel name="general">General settings</lr-tab-panel>
+  </lr-tab-group>
+  ```
+  
+  A regression test now asserts a plain `slot`/`label` child produces no tab and no rendered panel, so
+  the behavior cannot drift back into being documented as supported.
+
 ## 9.0.0
 
 ### Major Changes
