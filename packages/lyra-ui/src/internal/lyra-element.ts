@@ -12,6 +12,7 @@ import {
 import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
+import { warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 import {
   observeInheritedContext,
   beginInheritedContextUpdate,
@@ -1073,6 +1074,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     this.hydratingServerShadow ??=
       typeof Node === 'undefined' || (!this.hasUpdated && this.shadowRoot !== null);
     super.connectedCallback();
+    warnUnknownAttributes(
+      this,
+      (this.constructor as typeof LyraElement).observedAttributes
+    );
     recordLyraOwnerDocumentConnection(this);
     // A reconnected element may sit under a different `lang`/`dir` ancestor,
     // and Lit schedules no update for a pure DOM move — the memo from the

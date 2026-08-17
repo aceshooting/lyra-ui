@@ -28,6 +28,15 @@ class Demo extends LyraElement {
 }
 customElements.define(tag("demo-base"), Demo);
 
+class WarnDemo extends LyraElement {
+  @property({ reflect: true, attribute: 'chart-axis' }) chartAxis = '';
+
+  render() {
+    return html`<span>warn-demo</span>`;
+  }
+}
+customElements.define(tag('warn-demo'), WarnDemo);
+
 interface DemoCollectionEntry {
   readonly label: string;
   readonly nested: Readonly<{ values: readonly number[] }>;
@@ -1777,4 +1786,48 @@ it("still coalesces same-key scheduleAfterUpdate callbacks to one run", async ()
   );
 
   expect(el.ran).to.deep.equal(["first"]);
+});
+
+describe('dev-mode unknown-attribute warning wiring', () => {
+  let restoreWarn: () => void;
+  let calls: string[][];
+
+  beforeEach(() => {
+    (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings = new Set();
+    const original = console.warn;
+    calls = [];
+    console.warn = (...args: unknown[]) => {
+      calls.push(args.map(String));
+    };
+    restoreWarn = () => {
+      console.warn = original;
+    };
+  });
+
+  afterEach(() => {
+    restoreWarn();
+    delete (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  });
+
+  it('warns on connect for an attribute the component does not observe', async () => {
+    const el = document.createElement(tag('warn-demo'));
+    el.setAttribute('chart-axsi', '');
+    document.body.append(el);
+    await (el as WarnDemo).updateComplete;
+    el.remove();
+
+    expect(calls).to.have.length(1);
+    expect(calls[0][0]).to.contain('chart-axsi');
+    expect(calls[0][0]).to.contain("did you mean 'chart-axis'");
+  });
+
+  it('does not warn for a real observed attribute', async () => {
+    const el = document.createElement(tag('warn-demo'));
+    el.setAttribute('chart-axis', 'x');
+    document.body.append(el);
+    await (el as WarnDemo).updateComplete;
+    el.remove();
+
+    expect(calls).to.have.length(0);
+  });
 });
