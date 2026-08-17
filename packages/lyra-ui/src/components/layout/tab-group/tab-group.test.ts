@@ -213,6 +213,21 @@ it("an unpaired panel never produces a tab or rendered panel", async () => {
   expect(el.defaultSlot.hidden).to.equal(true);
 });
 
+it("a plain slot/label child produces no tab and no rendered panel", async () => {
+  // The pre-9.0 `<div slot="x" label="…">` attribute model was removed in 9.0.0; only
+  // `<lr-tab>`/`<lr-tab-panel>` pairs build tabs. This locks that truth so the removal cannot
+  // drift back into being documented as supported (README once promised it still worked).
+  const el = (await fixture(html`
+    <lr-tab-group>
+      <div slot="general" label="General">General settings</div>
+      <div slot="danger" label="Danger">Danger zone</div>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  expect(tabButtons(el).length).to.equal(0);
+  expect(panels(el).length).to.equal(0);
+  await expect(el).to.be.accessible();
+});
+
 it("only the active panel is visible; the others are hidden", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   const [input, preview, settings] = panels(el);
