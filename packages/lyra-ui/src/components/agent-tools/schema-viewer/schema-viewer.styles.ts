@@ -33,8 +33,8 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='node-trigger']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
-  [part='name'] { min-inline-size: 0; overflow-wrap: anywhere; }
-  [part='description'], [part='issue'] { margin: var(--lr-space-2xs) var(--lr-space-xs); font-size: var(--lr-font-size-sm); overflow-wrap: anywhere; }
+  [part='name'] { min-inline-size: 0; overflow-wrap: break-word; }
+  [part='description'], [part='issue'] { margin: var(--lr-space-2xs) var(--lr-space-xs); font-size: var(--lr-font-size-sm); overflow-wrap: break-word; }
   [part='description'] { color: var(--lr-color-text-quiet); }
   [part='issue'] {
     padding: var(--lr-space-xs);

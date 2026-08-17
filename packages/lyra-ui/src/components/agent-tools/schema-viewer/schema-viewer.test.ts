@@ -230,3 +230,12 @@ it('allows selected and issue states to be rethemed independently', async () => 
   expect(getComputedStyle(selected).borderInlineStartColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(issue).borderInlineStartColor).to.equal('rgb(4, 5, 6)');
 });
+
+it('uses break-word, not anywhere, on name/description/issue text', async () => {
+  const el = (await fixture(
+    html`<lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`,
+  )) as LyraJsonSchemaViewer;
+  await el.updateComplete;
+  const name = el.shadowRoot!.querySelector('[part="name"]') as HTMLElement;
+  expect(getComputedStyle(name).overflowWrap).to.equal('break-word');
+});
