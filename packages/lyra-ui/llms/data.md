@@ -1456,7 +1456,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."
   description to the host's own `aria-label`, and adds localized selected wording to the keyboard
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
-  `<lr-lite-chart>`'s `selectedIndex`, this component never mutates it itself. Unset (the default,
+  `<lr-lite-chart>`'s `selectedIndices`, this component never mutates it itself. Unset (the default,
   `null`) reproduces today's exact output.
 - `accessibleCells: boolean = false` (attribute `accessible-cells`) — renders `[part="cells"]` with
   at most 400 `[part="cell"]` native buttons around the active cell. The semantic grid exposes the
