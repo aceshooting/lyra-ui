@@ -3,6 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
+    max-inline-size: 100%;
     /* Component-local geometry knobs (defined on :host so each instance can
        tune its own geometry) — a fully-rounded pill/thumb
        needs a radius well past --lr-radius's small 0.375rem default, so
@@ -28,6 +29,7 @@ export const styles = css`
     gap: var(--lr-switch-gap, var(--lr-space-s));
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    max-inline-size: 100%;
   }
   .switch-owner {
     display: inline-flex;
@@ -216,6 +218,6 @@ export const styles = css`
   [part="error"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 `;

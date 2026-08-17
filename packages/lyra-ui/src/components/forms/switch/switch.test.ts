@@ -19,6 +19,54 @@ it("contains long label and hint content at 320px in LTR and RTL", async () => {
   }
 });
 
+it('protects a two-word label from an outer flex row squeezing it below its longest word, avoiding a mid-syllable break', async () => {
+  // Regression test for the reported defect: overflow-wrap: anywhere collapsed the
+  // label's min-content contribution to near nothing, so when lr-switch sits as a
+  // flex item in an outer row next to a non-shrinking sibling (the report's own
+  // repro: a settings panel row), the outer flex-shrink algorithm dumped nearly the
+  // entire deficit onto the switch -- squeezing its label well below the width of
+  // its own longest word ("Streaming", ~68px unconstrained) and forcing a
+  // mid-syllable break.
+  //
+  // [part="label"] is a flex item, so it is blockified to display: block --
+  // getClientRects() always returns exactly one rect for a block box no matter how
+  // many internal text lines it wraps to (unlike an inline box, which contributes
+  // one rect per line fragment), so line count has to be read from height instead,
+  // against a dynamically measured single-line reference (never a hardcoded pixel
+  // count).
+  const label = 'Streaming enabled';
+
+  const reference = (await fixture(html`
+    <lr-switch style="inline-size: 400px;">${label}</lr-switch>
+  `)) as LyraSwitch;
+  await reference.updateComplete;
+  const lineHeight = reference.shadowRoot!
+    .querySelector<HTMLElement>('[part="label"]')!
+    .getBoundingClientRect().height;
+
+  // A 250px outer flex row with a non-shrinking 150px sibling leaves the switch
+  // only ~100px of "fair share" -- well below what its longest word needs. A fix
+  // that keeps the switch's automatic minimum content-based (rather than 0) makes
+  // it refuse to shrink past that point, at the cost of a little row overflow, so
+  // the label still wraps cleanly at the space (2 lines) instead of splitting a
+  // word across 3+ lines.
+  const wrapper = (await fixture(html`
+    <div style="display: flex; inline-size: 250px;">
+      <lr-switch>${label}</lr-switch>
+      <div style="flex: 0 0 150px;">sibling</div>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector('lr-switch') as LyraSwitch;
+  await el.updateComplete;
+  const labelPart = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const lineCount = Math.round(labelPart.getBoundingClientRect().height / lineHeight);
+
+  expect(
+    lineCount,
+    'wraps at the space between the two words, not mid-syllable inside one'
+  ).to.equal(2);
+});
+
 it("themes the track-to-label gap through a component-scoped hook", async () => {
   const el = (await fixture(html`
     <lr-switch style="--lr-switch-gap: 13px">Label</lr-switch>
