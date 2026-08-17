@@ -3224,10 +3224,15 @@ it("transitions collapseState across both breakpoints (wide -> rail -> floating)
     await elementUpdated(el);
 
     const [panelA, panelB] = [...el.children] as HTMLElement[];
-    expect(panelA.style.position).to.equal("absolute");
+    // position/inset-* are stylesheet-owned now (see multi-split.styles.ts's
+    // `::slotted([data-collapse-state='floating'])` rule), not inline -- assert
+    // the rendered result, not implementation.
+    const computedA = getComputedStyle(panelA);
+    expect(computedA.position).to.equal("absolute");
     // The browser normalizes a bare `0` length to `0px` in CSSOM.
-    expect(panelA.style.insetInlineStart).to.equal("0px");
-    expect(panelA.style.insetBlock).to.equal("0px");
+    expect(computedA.insetInlineStart).to.equal("0px");
+    expect(computedA.insetBlockStart).to.equal("0px");
+    expect(computedA.insetBlockEnd).to.equal("0px");
     // The other pane takes the full split width once the collapsing pane is
     // lifted out of the flex flow entirely.
     expect(panelB.style.flex).to.include("1 0%");
@@ -3235,7 +3240,7 @@ it("transitions collapseState across both breakpoints (wide -> rail -> floating)
     fireCollapseResize(spy.callbacks[0], 800); // back to wide
     await elementUpdated(el);
     expect(el.collapseState).to.equal("wide");
-    expect(panelA.style.position).to.equal("");
+    expect(computedA.position).to.equal("static");
     expect(panelA.style.flex).to.include("%");
   } finally {
     spy.restore();
@@ -3466,11 +3471,64 @@ it('anchors the floating overlay to inset-inline-end for collapse="end" (vs. ins
     await elementUpdated(el);
 
     const [panelA, panelB] = [...el.children] as HTMLElement[];
-    expect(panelA.style.position).to.equal("");
-    expect(panelB.style.position).to.equal("absolute");
-    expect(panelB.style.insetInlineEnd).to.equal("0px");
-    expect(panelB.style.insetInlineStart).to.equal("");
+    // position/inset-* are stylesheet-owned now (see multi-split.styles.ts), not
+    // inline -- assert the rendered result, not implementation.
+    expect(getComputedStyle(panelA).position).to.equal("static");
+    const computedB = getComputedStyle(panelB);
+    expect(computedB.position).to.equal("absolute");
+    expect(computedB.insetInlineEnd).to.equal("0px");
+    // inset-inline-start is never set (only the "end" edge is pinned for
+    // collapse="end") -- getComputedStyle reports the browser's resolved used
+    // value for the un-set (auto) inset on an absolutely positioned box, not
+    // the literal keyword, so assert it's NOT also pinned to the start edge
+    // rather than a specific resolved pixel value.
+    expect(computedB.insetInlineStart).to.not.equal("0px");
   } finally {
+    spy.restore();
+  }
+});
+
+it('lets a consumer override the floating drawer\'s position/inset geometry with an ordinary (no !important) light-DOM rule', async () => {
+  // Regression test for the reported defect: position/inset-block/inset-inline-*
+  // used to be applied as owned inline styles, so a consumer's own plain
+  // stylesheet rule -- lower cascade priority than any inline style, regardless
+  // of specificity -- could never win without !important. They're stylesheet-
+  // owned now (see multi-split.styles.ts), so an ordinary rule targeting the
+  // panel wins at normal specificity.
+  const spy = installResizeObserverSpy();
+  const style = document.createElement("style");
+  style.textContent = `
+    [data-floating-override] { inset-block: 12px 34px; inset-inline-start: 56px; }
+  `;
+  document.head.append(style);
+  try {
+    const el = (await fixture(html`
+      <lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+        ><div data-floating-override>A</div>
+        <div>B</div></lr-multi-split
+      >
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    el.open = true;
+    await elementUpdated(el);
+
+    const [panelA] = [...el.children] as HTMLElement[];
+    expect(panelA.style.insetBlock, "no owned inline style to fight").to.equal(
+      ""
+    );
+    expect(panelA.style.insetInlineStart, "no owned inline style to fight").to.equal(
+      ""
+    );
+    const computed = getComputedStyle(panelA);
+    expect(computed.position).to.equal("absolute");
+    expect(computed.insetBlockStart).to.equal("12px");
+    expect(computed.insetBlockEnd).to.equal("34px");
+    expect(computed.insetInlineStart).to.equal("56px");
+  } finally {
+    style.remove();
     spy.restore();
   }
 });
@@ -3787,7 +3845,9 @@ it("reveals the floating pane and renders a backdrop once open is set to true", 
 
     const [panelA] = [...el.children] as HTMLElement[];
     expect(panelA.hidden).to.be.false;
-    expect(panelA.style.position).to.equal("absolute");
+    // position is stylesheet-owned now (see multi-split.styles.ts) -- assert the
+    // rendered result, not implementation.
+    expect(getComputedStyle(panelA).position).to.equal("absolute");
     expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
       false
     );
@@ -3946,7 +4006,9 @@ it("restores the still-active floating overlay and its scroll lock across a disc
       false
     );
     const [panelA] = [...el.children] as HTMLElement[];
-    expect(panelA.style.position).to.equal("absolute");
+    // position is stylesheet-owned now (see multi-split.styles.ts) -- assert the
+    // rendered result, not implementation.
+    expect(getComputedStyle(panelA).position).to.equal("absolute");
 
     // Escape still dismisses it post-reconnect, proving the overlay's document-level listener was
     // actually restored (not just the DOM/style state).

@@ -155,7 +155,7 @@ export const styles = css`
   ::slotted([slot="header"]) {
     flex: 1 1 auto;
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part="actions"] {
     display: flex;
@@ -171,7 +171,7 @@ export const styles = css`
     padding: var(--spacing, var(--padding, var(--lr-space-m)));
     flex: 1 1 auto;
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part="footer"] {
     display: flex;

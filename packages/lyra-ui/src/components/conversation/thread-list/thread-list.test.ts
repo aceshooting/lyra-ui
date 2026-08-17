@@ -1791,6 +1791,42 @@ it("exports the real viewport and hook wrappers as externally styleable parts", 
   );
 });
 
+it("centers row-start/row-actions on a flex line instead of the default inline text baseline", async () => {
+  // row-start/row-actions are plain <span>s (see thread-list.class.ts), which default to
+  // display: inline -- an ordinary text baseline box that adds descender strut height above
+  // and below slotted adornment content instead of vertically centering it. Regression test
+  // for the reported defect: without an explicit flex layout, a renderStart/renderActions
+  // control sits off-center in the row.
+  const el = (await fixture(html`
+    <lr-thread-list
+      style="block-size:400px"
+      grouping="none"
+      .threads=${threads.slice(0, 1)}
+      .renderStart=${() => html`<lr-chip variant="brand">Purpose</lr-chip>`}
+      .renderActions=${() => html`<button type="button">Action</button>`}
+    ></lr-thread-list>
+  `)) as LyraThreadList;
+  await el.updateComplete;
+  await nextFrame();
+  const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
+  const start = list.shadowRoot!.querySelector(
+    '[part~="row-start"]'
+  ) as HTMLElement;
+  const actions = list.shadowRoot!.querySelector(
+    '[part~="row-actions"]'
+  ) as HTMLElement;
+
+  for (const part of [start, actions]) {
+    const computed = getComputedStyle(part);
+    // Both parts are themselves flex items of the row, so the specified inline-flex
+    // blockifies to a computed "flex" (CSS Display: an inline-level box that is itself a
+    // flex item computes to its block-level equivalent) -- either establishes the flex
+    // formatting context the fix relies on.
+    expect(["flex", "inline-flex"]).to.include(computed.display);
+    expect(computed.alignItems).to.equal("center");
+  }
+});
+
 it("provides date-group context to the unified string label callback", async () => {
   const el = (await fixture(
     html`<lr-thread-list

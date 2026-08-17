@@ -140,6 +140,15 @@ export const styles = css`
   lr-virtual-list::part(row-actions) {
     min-inline-size: 0;
   }
+  /* row-start/row-actions (see thread-list.class.ts) are plain <span>s, so they default to
+     display: inline -- an ordinary text baseline box with descender strut height. Their
+     content is adornments (icon/avatar, action buttons), not text, so center them on a flex
+     line instead; row-content/row-meta hold real text and keep their own inline/block flow. */
+  lr-virtual-list::part(row-start),
+  lr-virtual-list::part(row-actions) {
+    display: inline-flex;
+    align-items: center;
+  }
   lr-virtual-list::part(row-action) {
     display: inline-flex;
     align-items: center;

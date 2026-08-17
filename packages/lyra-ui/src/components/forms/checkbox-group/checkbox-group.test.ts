@@ -764,6 +764,36 @@ it('reconciles controllers, disablement, form state, and event ownership when a 
   expect(new FormData(form).getAll('topics')).to.deep.equal(['updated']);
 });
 
+it('stops a child checkbox\'s own lr-change from also reaching a listener bound before the group connects (Lit @lr-change= binding order)', async () => {
+  // Lit's `@lr-change=${...}` template binding adds the listener to the element while it is
+  // still a disconnected DOM fragment -- before connectedCallback ever runs. onChildEvent's
+  // stopImmediatePropagation() only protects a listener that runs AFTER it; a bubble-phase
+  // internal listener added in connectedCallback runs after any listener a consumer bound
+  // pre-connection, since same-node/same-phase listeners fire in registration order. That
+  // ordering, not the checkbox or the group itself, is the reported defect: the consumer's
+  // handler saw the checkbox's own raw (unstopped) `lr-change` first, then the group's real
+  // `{value: string[]}`-shaped one -- two events instead of one, the first checkbox-shaped.
+  const group = document.createElement('lr-checkbox-group') as LyraCheckboxGroup;
+  const events: CustomEvent[] = [];
+  group.addEventListener('lr-change', (event) => events.push(event as CustomEvent));
+  const box = document.createElement('lr-checkbox') as LyraCheckbox;
+  box.value = 'a';
+  group.append(box);
+
+  document.body.append(group);
+  try {
+    await group.updateComplete;
+    box.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!.click();
+    await group.updateComplete;
+
+    expect(events.length, 'exactly one lr-change reaches an ancestor listener').to.equal(1);
+    expect(events[0].target === group, 'the surviving event targets the group itself').to.be.true;
+    expect(events[0].detail).to.deep.equal({ value: ['a'] });
+  } finally {
+    group.remove();
+  }
+});
+
 it('does not consume or translate events emitted by a nested checkbox group', async () => {
   const outer = (await fixture(html`
     <lr-checkbox-group>

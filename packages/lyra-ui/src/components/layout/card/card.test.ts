@@ -50,6 +50,45 @@ describe("lr-card", () => {
     expect(anchor.getAttribute("href")).to.equal("/x");
   });
 
+  it('protects the body and slotted header from wrapping mid-word when squeezed by a sibling, avoiding overflow-wrap: anywhere (same defect class as lr-switch/lr-callout)', async () => {
+    // [part="body"] and ::slotted([slot="header"]) are both flex items, so they are
+    // blockified to display: block -- getClientRects() always returns exactly one rect
+    // for a block box no matter how many internal text lines it wraps to (unlike an
+    // inline box, which contributes one rect per line fragment), so line count has to
+    // be read from height instead, against a dynamically measured single-line reference.
+    const label = 'Streaming enabled';
+
+    const reference = (await fixture(html`
+      <lr-card style="inline-size: 400px;">${label}</lr-card>
+    `)) as LyraCard;
+    await reference.updateComplete;
+    const lineHeight = reference.shadowRoot!
+      .querySelector<HTMLElement>('[part="body"]')!
+      .getBoundingClientRect().height;
+
+    // A 250px outer flex row with a non-shrinking 150px sibling leaves the card only
+    // ~100px of "fair share" -- well below what its longest word ("Streaming", ~68px
+    // unconstrained) needs. min-inline-size: 0 (already present) still lets the card
+    // shrink past its content minimum, so the fix is overflow-wrap: break-word instead
+    // of overflow-wrap: anywhere -- the label still wraps at the space (2 lines)
+    // instead of splitting a word across 3+ lines.
+    const wrapper = (await fixture(html`
+      <div style="display: flex; inline-size: 250px;">
+        <lr-card>${label}</lr-card>
+        <div style="flex: 0 0 150px;">sibling</div>
+      </div>
+    `)) as HTMLDivElement;
+    const el = wrapper.querySelector('lr-card') as LyraCard;
+    await el.updateComplete;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const lineCount = Math.round(body.getBoundingClientRect().height / lineHeight);
+
+    expect(
+      lineCount,
+      'wraps the body at the space between the two words, not mid-syllable inside one'
+    ).to.equal(2);
+  });
+
   it('does not inspect an unavailable render root during the server-side first update', () => {
     const el = document.createElement('lr-card') as LyraCard;
     el.actionable = true;

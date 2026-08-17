@@ -106,15 +106,13 @@ interface ConstraintResolution {
   issue?: LyraMultiSplitConstraintIssueDetail;
 }
 
-const OWNED_PANEL_STYLE_PROPERTIES = [
-  'flex',
-  'order',
-  'position',
-  'inset-block',
-  'inset-inline-start',
-  'inset-inline-end',
-  'inline-size',
-] as const;
+// `position`/`inset-block`/`inset-inline-start`/`inset-inline-end` used to be owned here too, but
+// their floating-state value is always the same fixed literal ('absolute', '0') rather than
+// per-render computed data -- see multi-split.styles.ts's `::slotted([data-collapse-state='floating'])`
+// rule, which now owns them as ordinary (overridable) stylesheet rules instead. Only genuinely
+// live, per-render-computed properties stay here: `inline-size` mirrors the panel's own live,
+// draggable `sizes[i]` percent (by design, so there's no visual jump un-floating -- see updated()).
+const OWNED_PANEL_STYLE_PROPERTIES = ['flex', 'order', 'inline-size'] as const;
 
 type OwnedPanelStyleProperty = (typeof OWNED_PANEL_STYLE_PROPERTIES)[number];
 
@@ -1998,23 +1996,17 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       const constraint = constraintResolution.usePanelConstraints
         ? this.panelConstraints[i]
         : undefined;
-      // Collapse-only inline styles are always cleared first, then
-      // re-applied below only for the panel(s) that need them this pass —
-      // simpler than diffing which of the 5 properties changed.
-      for (const property of [
-        'position',
-        'inset-block',
-        'inset-inline-start',
-        'inset-inline-end',
+      // Collapse-only inline style is always cleared first, then re-applied
+      // below only for the panel that needs it this pass. `position`/`inset-*`
+      // no longer go through this owned-inline path at all — see
+      // multi-split.styles.ts's `::slotted([data-collapse-state='floating'])`
+      // rule, which owns their (always-fixed) floating-state value instead.
+      this.applyOwnedPanelStyle(
+        panel,
+        snapshot,
         'inline-size',
-      ] as const) {
-        this.applyOwnedPanelStyle(
-          panel,
-          snapshot,
-          property,
-          snapshot.styles.get(property)!
-        );
-      }
+        snapshot.styles.get('inline-size')!
+      );
       this.applyOwnedPanelHidden(panel, snapshot, snapshot.hidden);
 
       if (collapsingIndex === i && this.collapseState === 'rail') {
@@ -2043,19 +2035,15 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         // `this.open` is true here. Lifted out of the flex flow entirely as
         // an overlay card, anchored to its own logical start/end edge,
         // spanning the full cross-axis extent — [part="base"] carries
-        // `position: relative` for this to anchor against (see
-        // multi-split.styles.ts). Sized at its own normal percent width (i.e. what
-        // it would render at in the `'wide'` state), so there's no visual
-        // size jump the moment it un-floats.
+        // `position: relative` for this to anchor against, and
+        // multi-split.styles.ts's `::slotted([data-collapse-state='floating'])`
+        // rule (keyed off `collapse`, already reflected onto the host) owns
+        // `position`/`inset-block`/the edge inset as ordinary, overridable CSS.
+        // Sized here at its own normal percent width (i.e. what it would render
+        // at in the `'wide'` state), so there's no visual size jump the moment
+        // it un-floats — this one stays inline since it's genuinely live,
+        // synced to the same draggable `sizes[i]` the `'wide'` state uses.
         this.applyOwnedPanelStyleValue(panel, snapshot, 'flex', 'none');
-        this.applyOwnedPanelStyleValue(panel, snapshot, 'position', 'absolute');
-        this.applyOwnedPanelStyleValue(panel, snapshot, 'inset-block', '0');
-        this.applyOwnedPanelStyleValue(
-          panel,
-          snapshot,
-          collapsingIndex === 0 ? 'inset-inline-start' : 'inset-inline-end',
-          '0'
-        );
         this.applyOwnedPanelStyleValue(
           panel,
           snapshot,

@@ -466,9 +466,18 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener('input', this.onChildEvent);
-    this.addEventListener('change', this.onChildEvent);
-    this.addEventListener('lr-change', this.onChildEvent);
+    // Capture phase, not the default bubble phase: a bubble-phase listener here would only
+    // out-race a *bubble-phase* listener a consumer registers on this same node, and same-
+    // node/same-phase listeners fire in registration order -- a Lit `@lr-change=${...}`
+    // template binding attaches its listener while the element is still a disconnected
+    // fragment, i.e. before this connectedCallback ever runs, so it would see the checkbox's
+    // own raw (unstopped) event first. Capture always runs before any bubble-phase listener
+    // on the same node regardless of registration order, so onChildEvent's
+    // stopImmediatePropagation() reliably intercepts the child's event before it can ever
+    // reach an ancestor listener -- this group's own, or one further up the tree.
+    this.addEventListener('input', this.onChildEvent, { capture: true });
+    this.addEventListener('change', this.onChildEvent, { capture: true });
+    this.addEventListener('lr-change', this.onChildEvent, { capture: true });
     // Initialize light-DOM-derived state before the first render. Doing this in firstUpdated()
     // schedules a redundant follow-up update and triggers Lit's change-in-update warning.
     this.onSlotChange();
@@ -508,9 +517,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   override disconnectedCallback(): void {
     this.releaseRequiredDescription();
-    this.removeEventListener('input', this.onChildEvent);
-    this.removeEventListener('change', this.onChildEvent);
-    this.removeEventListener('lr-change', this.onChildEvent);
+    this.removeEventListener('input', this.onChildEvent, { capture: true });
+    this.removeEventListener('change', this.onChildEvent, { capture: true });
+    this.removeEventListener('lr-change', this.onChildEvent, { capture: true });
     this.resetChildObserver();
     for (const [box, controller] of this.childControllers) {
       box.removeController(controller);

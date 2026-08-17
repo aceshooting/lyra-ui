@@ -6185,35 +6185,35 @@
           "evidence": [
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 253,
+              "line": 292,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 260,
+              "line": 299,
               "test": "keeps a linked card's slotted controls independently operable",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 309,
+              "line": 348,
               "test": "keeps rich slotted content as a linked card's accessible name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 423,
+              "line": 462,
               "test": "an actionable card containing a slotted lr-button is still accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 787,
+              "line": 826,
               "test": "is accessible with every vertical action slot populated",
               "target": "el",
               "state": "populated"
@@ -6250,7 +6250,7 @@
           "evidence": [
             {
               "file": "src/components/layout/card/card.test.ts",
-              "line": 186,
+              "line": 225,
               "kind": "320px allocation test signal"
             }
           ]
@@ -7680,14 +7680,14 @@
             },
             {
               "file": "src/components/forms/checkbox-group/checkbox-group.test.ts",
-              "line": 1089,
+              "line": 1119,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/checkbox-group/checkbox-group.test.ts",
-              "line": 1166,
+              "line": 1196,
               "test": "defaults vertical, reflects orientation, and exports form-control-input on the options node",
               "target": "el",
               "state": "populated"
@@ -7707,7 +7707,7 @@
           "evidence": [
             {
               "file": "src/components/forms/checkbox-group/checkbox-group.test.ts",
-              "line": 1459,
+              "line": 1489,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -7724,7 +7724,7 @@
           "evidence": [
             {
               "file": "src/components/forms/checkbox-group/checkbox-group.test.ts",
-              "line": 1457,
+              "line": 1487,
               "kind": "320px allocation test signal"
             }
           ]
@@ -28582,14 +28582,14 @@
           "evidence": [
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 4284,
+              "line": 4346,
               "test": "is accessible with a viewport-basis breakpoint set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
-              "line": 4675,
+              "line": 4737,
               "test": "is accessible in the rail state under viewport basis",
               "target": "el",
               "state": "populated"
@@ -44386,21 +44386,21 @@
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2078,
+              "line": 2114,
               "test": "is accessible with wrapped rows",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2239,
+              "line": 2275,
               "test": "is accessible with a part-styled dense row and a renderActions control",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "line": 2931,
+              "line": 2967,
               "test": "is accessible with a pinned group header",
               "target": "el",
               "state": "populated"

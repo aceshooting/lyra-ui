@@ -173,27 +173,47 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* The divider adjacent to a rail/floating-collapsed pane (see multi-split.class.ts's
-     isDividerDisabled()) — geometry (position/inset/inline-size) for the
-     collapsing panel itself is set inline by updated(), same as the
-     pre-existing flex/order styling; this only covers the divider's own
-     drag/hover affordance and the floating panel's elevation, which read
-     more naturally as stylesheet rules than one-off inline styles. */
+     isDividerDisabled()) — the collapsing panel's own live flex/order/inline-size
+     are set inline by updated() (see the floating rule below for why); this only
+     covers the divider's own drag/hover affordance and the floating panel's
+     elevation, which read more naturally as stylesheet rules than one-off inline
+     styles. */
   [part="divider"][aria-disabled="true"] {
     cursor: default;
     pointer-events: none;
   }
-  /* The 'floating' collapse state's overlay "card" look -- geometry
-     (position, the inset-* longhands, inline-size) is set inline by multi-split.class.ts's updated(),
-     matching how the ordinary flex/order styling is applied; only the
-     visual/stacking treatment lives here. z-index is above [part="backdrop"]
+  /* The 'floating' collapse state's overlay "card" look. inline-size (and
+     flex/order) stay inline, set by multi-split.class.ts's updated(): it's the
+     panel's own live, draggable sizes[i] percent -- the exact value it renders at
+     in the 'wide' state too, by design (see updated()'s comment), so there's no
+     visual size jump the moment it un-floats. position/inset-block/the
+     inset-inline-* edge below are a fixed, config-driven default -- always the
+     same literal values, never per-render computed data -- so they live here
+     instead, as ordinary stylesheet rules a consumer's own CSS can override at
+     normal specificity, no !important fight required. (Only inline-size is
+     genuinely live; a consumer wanting a different floating width should set
+     .sizes instead of overriding this rule -- overriding it here would fight
+     the live sync back on every drag/resize.) z-index is above [part="backdrop"]
      (below), so the drawer renders on top of its own scrim. */
   ::slotted([data-collapse-state="floating"]) {
+    position: absolute;
+    inset-block: 0;
     z-index: var(--lr-layer-content);
     background: var(--lr-color-surface);
     border-radius: var(--lr-radius);
     /* Modal step: this is a drawer rendered above its own scrim (see [part='backdrop'] below), not
        an anchored popup, so it takes the modal tier. */
     box-shadow: var(--lr-shadow-l);
+  }
+  /* Which edge the floating drawer anchors to mirrors collapse ('start'/'end'
+     LOGICAL positions -- see the collapse property doc), already reflected onto
+     the host, so it needs no separate per-panel marker. Exactly one of these two
+     ever matches at a time (collapse is never both). */
+  :host([collapse="start"]) ::slotted([data-collapse-state="floating"]) {
+    inset-inline-start: 0;
+  }
+  :host([collapse="end"]) ::slotted([data-collapse-state="floating"]) {
+    inset-inline-end: 0;
   }
   /* The 'floating' drawer's scrim -- only rendered while collapseState is
      'floating' and open (see multi-split.class.ts's render()). Scoped to [part="base"]
