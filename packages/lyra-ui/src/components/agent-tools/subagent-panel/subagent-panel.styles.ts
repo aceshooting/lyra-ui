@@ -20,7 +20,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='run-trigger']:focus-visible, [part='cancel']:focus-visible, [part='retry']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
-  [part='label'], [part='task'], [part='model'] { min-inline-size: 0; overflow-wrap: anywhere; }
+  [part='label'], [part='task'], [part='model'] { min-inline-size: 0; overflow-wrap: break-word; }
   [part='task'], [part='model'] { grid-column: 1 / -1; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='progress'] {
     grid-column: 1 / -1;

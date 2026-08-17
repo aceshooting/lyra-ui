@@ -475,3 +475,12 @@ it('allows selected and progress states to be rethemed independently', async () 
   expect(getComputedStyle(selected).borderTopColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(fill).backgroundColor).to.equal('rgb(4, 5, 6)');
 });
+
+it('uses break-word, not anywhere, on label/task text', async () => {
+  const el = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const task = el.shadowRoot!.querySelector('[part="task"]') as HTMLElement;
+  expect(getComputedStyle(label).overflowWrap).to.equal('break-word');
+  expect(getComputedStyle(task).overflowWrap).to.equal('break-word');
+});
