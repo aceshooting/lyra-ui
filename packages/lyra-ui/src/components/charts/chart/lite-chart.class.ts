@@ -109,8 +109,22 @@ const DEFAULT_PALETTE = [
 const PAD_LEFT = 36;
 const PAD_RIGHT = 8;
 const PAD_TOP = 8;
-const PAD_BOTTOM = 24;
-const CATEGORY_LABEL_OFFSET = 18;
+/** Reserves the category-label row below the plot, including room for the tallest engine's line box
+ *  under `CATEGORY_LABEL_OFFSET`'s baseline. Raised with that offset so descenders never clip. */
+const PAD_BOTTOM = 30;
+/** Baseline offset of the category-label row below the plot floor.
+ *
+ *  This must clear the bottom y-axis tick, which is `dominant-baseline="middle"` on the plot floor
+ *  and so hangs half its line box *below* that floor, into this row -- and the first category label
+ *  of a line chart is centred on `plotX`, so it always reaches left into the tick column (measured
+ *  overlap: 5.7px on both Chromium and Firefox). Horizontal overlap alone is therefore not
+ *  separable here; the only thing keeping the two boxes apart is this vertical gap.
+ *
+ *  At the previous 18px the gap was 1.3px on Chromium and *-0.7px* on Firefox, whose line box for
+ *  the same 10px `system-ui` font is 16px against Chromium's 14px -- so the labels genuinely
+ *  collided there. 24px keeps ~5px clear on both, comfortably past that 2px cross-engine variation,
+ *  at the cost of 6px of plot height. */
+const CATEGORY_LABEL_OFFSET = 24;
 const AXIS_TITLE_SPACE = 14;
 const TICK_COUNT = 4;
 const BAR_GROUP_GAP = 0.2; // fraction of a category slot left as gap between categories
