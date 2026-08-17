@@ -557,10 +557,10 @@ describe("region highlights", () => {
   });
 
   it("scrollToAnchor resolves true for a region anchor and false for an unsupported kind", async function () {
-    // The genuine-success call below widens the mixin's default 5000ms/250ms retry budget
-    // further still (see the comment at that call); mocha's own suite-wide 6000ms default (see
-    // web-test-runner.config.js) would leave too tight a margin under a loaded CI runner.
-    this.timeout(30000);
+    // The genuine-success call below can retry across several full internal deadline cycles (see
+    // the comment at that call); mocha's own suite-wide 6000ms default (see
+    // web-test-runner.config.js) would leave far too tight a margin under a loaded CI runner.
+    this.timeout(60000);
     const el = (await fixture(
       html`<lr-image-viewer
         src=${PNG_SRC}
@@ -571,14 +571,27 @@ describe("region highlights", () => {
     await el.updateComplete;
     // The genuine-success case still needs the retry loop's *real* timers (each attempt measures
     // rendered geometry via getBoundingClientRect/getClientRects, so a fake-timer short-circuit
-    // would prove nothing) -- but a shared 5000ms deadline has itself been observed too tight for
-    // scrollToAnchor("h1") to resolve on a loaded CI runner's WebKit shard: a CPU-starved runner
-    // can suspend the browser process for long enough that Date.now() jumps past the deadline
-    // after only one or two of the retry loop's 250ms-interval attempts, well before the target's
-    // layout has actually settled. Widen just this call's deadline generously; the mixin's real
-    // default (ANCHOR_TIMEOUT_MS = 5000) stays the production value.
+    // would prove nothing). A single widened deadline was itself observed too fragile on a loaded
+    // CI runner's WebKit shard: a CPU-starved runner can suspend the browser process for long
+    // enough that Date.now() jumps past even a 15000ms deadline after only a couple of the retry
+    // loop's 250ms-interval attempts, well before the target's layout has actually settled -- and
+    // a single stall of that severity can outlast any one bounded deadline. Rather than widen the
+    // deadline further, retry the *whole* scrollToAnchor("h1") call at the test level: each
+    // attempt gets its own full internal retry budget, so the test survives one bad stall as long
+    // as a later attempt runs on a recovered runner. The mixin's real default
+    // (ANCHOR_TIMEOUT_MS = 5000) stays the production value; only the test widens per-attempt to
+    // 15000ms and layers 3 such attempts (waitUntil's outer 45000ms budget) on top.
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 15000;
-    expect(await el.scrollToAnchor("h1")).to.be.true;
+    let resolvedTrue = false;
+    await waitUntil(
+      async () => {
+        resolvedTrue = await el.scrollToAnchor("h1");
+        return resolvedTrue;
+      },
+      'scrollToAnchor("h1") never resolved true across repeated attempts',
+      { timeout: 45000, interval: 500 }
+    );
+    expect(resolvedTrue).to.be.true;
     // Shrink the retry loop's real-timer thresholds so the unsupported-kind case (which never
     // succeeds and only resolves once the retry loop times out) doesn't take the mixin's default
     // 5s before settling to false.
