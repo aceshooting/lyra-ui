@@ -612,8 +612,14 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
         const becamePositioned = !this.anchorPositioned || this.positionedAnchor !== anchor;
         this.positionedAnchor = anchor;
         this.anchorPositioned = true;
-        if (this.open && this.resolveAnchor() === anchor) {
-          if (becamePositioned) this.onPopupPositioned();
+        if (becamePositioned) {
+          // onPopupPositioned()'s whole contract is "the popup is no longer visibility-hidden" --
+          // true the instant this callback ran when data-hidden was removed imperatively here, but
+          // anchorPositioned reactively driving that removal now defers it to Lit's own update.
+          // Wait for that update to actually commit before handing off to focus-dependent callers.
+          void this.updateComplete.then(() => {
+            if (this.open && this.resolveAnchor() === anchor) this.onPopupPositioned();
+          });
         }
         const side = applyOverlayArrow(arrowElement, {
           placement,
