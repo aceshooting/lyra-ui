@@ -22803,14 +22803,14 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1415,
+              "line": 1420,
               "test": "is accessible with highlights and annotation on",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1649,
+              "line": 1654,
               "test": "is accessible with every active-state prop themed",
               "target": "el",
               "state": "populated"
@@ -22824,7 +22824,7 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 626,
+              "line": 631,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -22852,7 +22852,7 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "line": 1713,
+              "line": 1718,
               "kind": "320px allocation test signal"
             }
           ]
