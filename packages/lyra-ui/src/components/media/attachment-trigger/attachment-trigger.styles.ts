@@ -5,7 +5,7 @@ export const styles = css`
      visible/clickable surface is entirely the rendered button (or, in the
      multi-capability case, lr-dropdown's trigger wrapper
      around that same button), so this host never contributes a stray box a
-     composer's leading slot would otherwise have to fight with margin/
+     composer's start slot would otherwise have to fight with margin/
      inline-block quirks to line up against the textarea. */
   :host {
     display: contents;
@@ -37,7 +37,7 @@ export const styles = css`
     box-sizing: border-box;
     /* Compact per the class doc -- capped well below the library's general
        --lr-icon-button-size (meant for a standalone icon-only button) so
-       this sits comfortably inside a composer's leading slot alongside a
+       this sits comfortably inside a composer's start slot alongside a
        textarea, matching lr-combobox's clear-button / lr-select's
        toggle sizing convention. */
     min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));

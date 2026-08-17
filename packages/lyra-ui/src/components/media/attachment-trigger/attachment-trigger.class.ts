@@ -157,7 +157,7 @@ export interface LyraAttachmentTriggerEventMap {
 }
 /**
  * `<lr-attachment-trigger>` — a compact attach affordance designed for a
- * chat composer's leading slot (see `<lr-chat-composer>`'s own `leading`
+ * chat composer's start slot (see `<lr-chat-composer>`'s own `start`
  * slot, which this drops straight into, though this component has no code
  * dependency on it). Its shape adapts to how many attachment `capabilities`
  * are configured:
