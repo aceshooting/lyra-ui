@@ -787,7 +787,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /**
    * The single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
    * calendar mode. Purely a controlled, consumer-owned visual/accessibility marker, mirroring
-   * `<lr-lite-chart>`'s `selectedIndex` -- this component never mutates it itself; a consumer
+   * `<lr-lite-chart>`'s `selectedIndices` -- this component never mutates it itself; a consumer
    * wires it up from `lr-cell-click` (or any other source) to build a toggle-select
    * interaction. Unset (the default, `null`) draws no selection ring, adds no selected-cell text
    * to the host's `aria-label`, and adds no selected suffix to the keyboard announcement,
