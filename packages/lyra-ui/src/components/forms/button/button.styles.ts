@@ -249,7 +249,7 @@ export const styles = css`
   [part~="start"],
   [part~="end"] {
     display: inline-flex;
-    flex: 0 1 40%;
+    flex: 0 0 auto;
     min-inline-size: 0;
     max-inline-size: 40%;
     align-items: center;

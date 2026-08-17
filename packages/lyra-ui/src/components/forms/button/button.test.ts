@@ -1055,6 +1055,54 @@ describe("lr-button", () => {
     });
   });
 
+  describe("start/end adornment flex-basis", () => {
+    it("does not let a small start-slot icon squeeze the label into ellipsizing", async () => {
+      const el = (await fixture(html`
+        <lr-button style="inline-size: 173px;">
+          <svg slot="start" width="16" height="16" viewBox="0 0 16 16"><circle r="8" cx="8" cy="8"/></svg>
+          New workspace
+        </lr-button>
+      `)) as LyraButton;
+      await el.updateComplete;
+
+      const startBox = el.shadowRoot!
+        .querySelector('[part~="start"]')!
+        .getBoundingClientRect();
+      const labelPart = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+
+      expect(
+        startBox.width,
+        'the start wrapper is sized to its 16px icon, not a 40%-of-row basis'
+      ).to.be.lessThan(30);
+      expect(
+        labelPart.scrollWidth,
+        'the label is not clipped below its own content width'
+      ).to.be.at.most(labelPart.clientWidth + 1);
+    });
+
+    it("still caps an oversized start-slot adornment at 40% of the control", async () => {
+      const el = (await fixture(html`
+        <lr-button style="inline-size: 200px;">
+          <span slot="start" style="display: inline-block; inline-size: 300px;">wide</span>
+          Label
+        </lr-button>
+      `)) as LyraButton;
+      await el.updateComplete;
+
+      const startBox = el.shadowRoot!
+        .querySelector('[part~="start"]')!
+        .getBoundingClientRect();
+      const baseBox = el.shadowRoot!
+        .querySelector('[part~="base"]')!
+        .getBoundingClientRect();
+
+      expect(
+        startBox.width,
+        'a genuinely oversized adornment is still capped at 40% of the control'
+      ).to.be.at.most(baseBox.width * 0.4 + 1);
+    });
+  });
+
   describe('appearance="outlined" fill', () => {
     it("stays transparent when --lr-button-outlined-fill is unset", async () => {
       const el = (await fixture(
