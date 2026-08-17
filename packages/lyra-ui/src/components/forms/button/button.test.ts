@@ -2629,3 +2629,44 @@ it("treats missing light-DOM collections as empty during nested SSR state seedin
   expect(() => internals.syncAdornmentSlots()).to.not.throw();
   expect(internals.hasIconOnlyDefaultContent()).to.be.false;
 });
+
+it("keeps [part~='base'] border-box -- and sized to a fixed host width -- even when a light-DOM reset gives the host content-box (bug)", async () => {
+  // A common global reset ("* { box-sizing: content-box }" or similar) targets the host element
+  // directly -- lr-button is a normal light-DOM node, so such a selector does reach :host's own
+  // computed box-sizing. [part~='base'] lives in a separate shadow root and declares a literal
+  // "box-sizing: border-box" (not "inherit"), so it stays immune regardless: box-sizing is not an
+  // inherited CSS property, and a shadow tree only inherits genuinely-inherited properties from
+  // :host's computed values in the first place. An explicit host width makes the distinction
+  // observable: under content-box a border/padding-bearing host would render wider than its
+  // declared width, so this only proves the fix if [part~='base'] (100% of that width) still
+  // fits the host's actual rendered box rather than the declared number alone.
+  const styleOverride = document.createElement("style");
+  styleOverride.textContent =
+    "lr-button.content-box-host { box-sizing: content-box; inline-size: 150px; border: 3px solid; padding: 10px; }";
+  document.head.append(styleOverride);
+  try {
+    const el = (await fixture(
+      html`<lr-button class="content-box-host">Click</lr-button>`
+    )) as LyraButton;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(getComputedStyle(el).boxSizing, "host box-sizing").to.equal(
+      "content-box"
+    );
+    expect(getComputedStyle(base).boxSizing, "base box-sizing").to.equal(
+      "border-box"
+    );
+    const hostRect = el.getBoundingClientRect();
+    const baseRect = base.getBoundingClientRect();
+    expect(hostRect.width, "content-box host renders wider than its declared 150px").to.be.greaterThan(
+      150
+    );
+    expect(baseRect.width, "base must not exceed the host's own rendered box").to.be.at.most(
+      hostRect.width + 0.5
+    );
+    expect(baseRect.height, "base must not exceed the host's own rendered box").to.be.at.most(
+      hostRect.height + 0.5
+    );
+  } finally {
+    styleOverride.remove();
+  }
+});
