@@ -1057,8 +1057,22 @@ describe("lr-button", () => {
 
   describe("start/end adornment flex-basis", () => {
     it("does not let a small start-slot icon squeeze the label into ellipsizing", async () => {
+      // The label's natural (unconstrained) width is a font-metric-dependent measurement --
+      // different engines/environments substitute a different fallback font for the same
+      // text, so a hardcoded container width tuned against one environment's metrics can sit
+      // right at (or past) the edge of what a wider fallback font needs, flaking cross-
+      // environment. Measure it live instead, same self-referential pattern as the switch/card
+      // overflow-wrap regression tests, and size the container with real headroom above it.
+      const reference = (await fixture(
+        html`<lr-button>New workspace</lr-button>`
+      )) as LyraButton;
+      await reference.updateComplete;
+      const naturalLabelWidth = reference.shadowRoot!
+        .querySelector('[part="label"]')!
+        .getBoundingClientRect().width;
+
       const el = (await fixture(html`
-        <lr-button style="inline-size: 173px;">
+        <lr-button style="inline-size: ${Math.ceil(naturalLabelWidth) + 60}px;">
           <svg slot="start" width="16" height="16" viewBox="0 0 16 16"><circle r="8" cx="8" cy="8"/></svg>
           New workspace
         </lr-button>
@@ -2447,21 +2461,34 @@ describe("lr-button — mapped Shoelace and Web Awesome surface", () => {
   });
 
   it("keeps only canonical native submitter attributes", async () => {
-    const el = (await fixture(html`
-      <lr-button
-        form-action="/legacy"
-        form-enctype="multipart/form-data"
-        form-method="post"
-        form-no-validate
-        form-target="legacy-result"
-        >Submit</lr-button
-      >
-    `)) as LyraButton;
+    // Deliberately the non-canonical, hyphenated spelling Lit's own default attribute-name
+    // conversion would produce for a camelCase property with no explicit `attribute:` override
+    // -- exactly what the dev-mode unknown-attribute diagnostic is designed to flag, so it's
+    // expected here, not silenced as an oversight.
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    let el: LyraButton;
+    try {
+      el = (await fixture(html`
+        <lr-button
+          form-action="/legacy"
+          form-enctype="multipart/form-data"
+          form-method="post"
+          form-no-validate
+          form-target="legacy-result"
+          >Submit</lr-button
+        >
+      `)) as LyraButton;
+    } finally {
+      console.warn = originalWarn;
+    }
     expect(el.formAction).to.be.undefined;
     expect(el.formEnctype).to.be.undefined;
     expect(el.formMethod).to.be.undefined;
     expect(el.formNoValidate).to.be.false;
     expect(el.formTarget).to.be.undefined;
+    expect(warnings.length).to.be.greaterThan(0);
   });
 
   it("exposes synchronous required/custom validity and state restoration without changing submitter semantics", async () => {

@@ -5313,49 +5313,49 @@
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1141,
+              "line": 1155,
               "test": "is accessible with a tinted outlined fill and a pinned height",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1348,
+              "line": 1362,
               "test": "is accessible as a link button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1611,
+              "line": 1625,
               "test": "is accessible as a pill button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1722,
+              "line": 1736,
               "test": "is accessible as a caret-bearing dropdown trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1765,
+              "line": 1779,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2233,
+              "line": 2247,
               "test": "is accessible in its new default appearance, and as a pill textarea-adjacent control",
               "target": "inline fixture",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2233,
+              "line": 2247,
               "test": "is accessible in its new default appearance, and as a pill textarea-adjacent control",
               "target": "inline fixture",
               "state": "populated"
@@ -5375,7 +5375,7 @@
           "evidence": [
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1705,
+              "line": 1719,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -5392,7 +5392,7 @@
           "evidence": [
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2634,
+              "line": 2661,
               "kind": "320px allocation test signal"
             }
           ]
@@ -12110,7 +12110,7 @@
           "evidence": [
             {
               "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
-              "line": 2465,
+              "line": 2468,
               "test": "is accessible with populated, draggable, and resizable cells",
               "target": "el",
               "state": "populated"
@@ -12135,7 +12135,7 @@
           "evidence": [
             {
               "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
-              "line": 1035,
+              "line": 1038,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -12152,7 +12152,7 @@
           "evidence": [
             {
               "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
-              "line": 2343,
+              "line": 2346,
               "kind": "320px allocation test signal"
             }
           ]

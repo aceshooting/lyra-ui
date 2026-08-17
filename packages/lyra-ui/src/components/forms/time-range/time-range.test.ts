@@ -3201,7 +3201,6 @@ it("exposes the native label and validation surface of its form association", as
       <label id="window-label" for="window">Window</label>
       <lr-time-range
         id="window"
-        name="window"
         min="0"
         max="100"
         start="10"

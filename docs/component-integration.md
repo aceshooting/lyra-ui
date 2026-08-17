@@ -823,7 +823,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `dompurify`, `katex`, `marked`, `shiki`
 - Direct Lyra dependencies: `lr-empty`, `lr-widget`, `lr-widget-renderer`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 112.3 KiB (114953 bytes; bundle SHA-256 `8e38648583eb35150ef55f7ae892aef6d46a9fc140ee7493b6744961909a8a66`)
+- Standalone gzip: 112.3 KiB (114960 bytes; bundle SHA-256 `8c1a52b5dcd2a439586c90c6054d175509e13b6435ff0c601b51f8bb89aba8dd`)
 
 </details>
 

@@ -532,18 +532,24 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     const ownedById = new Map<string, Element[]>();
 
     for (const child of Array.from(this.children)) {
-      const cellId = child.getAttribute('cell-id');
       if (this.ownedDefaultCells.has(child)) {
-        if (!cellId) {
+        // A library default cell carries its cellId as `data-cell-id`, not the public `cell-id`
+        // attribute (see createDefaultCell()) -- it's this component's own internal bookkeeping,
+        // not an author-facing attribute an arbitrary child element (like <lr-widget> here) needs
+        // to recognize, so it goes through the universally dev-mode-exempt `data-*` prefix instead
+        // of triggering the unknown-attribute diagnostic on a foreign concern.
+        const ownedCellId = child.getAttribute('data-cell-id');
+        if (!ownedCellId) {
           child.remove();
           continue;
         }
-        const matches = ownedById.get(cellId) ?? [];
+        const matches = ownedById.get(ownedCellId) ?? [];
         matches.push(child);
-        ownedById.set(cellId, matches);
+        ownedById.set(ownedCellId, matches);
         continue;
       }
 
+      const cellId = child.getAttribute('cell-id');
       if (cellId && ids.has(cellId) && !authoredById.has(cellId)) {
         authoredById.set(cellId, child);
         this.warnedUnmatchedCells.delete(child);
@@ -601,7 +607,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private createDefaultCell(cell: LyraDashboardCell): Element {
     const ownerDocument = this.ownerDocument;
     const widget = ownerDocument.createElement(tag('widget')) as DefaultCellEl;
-    widget.setAttribute('cell-id', cell.cellId);
+    widget.setAttribute('data-cell-id', cell.cellId);
     widget.setAttribute('data-dashboard-grid-default-cell', '');
     widget.setAttribute('slot', `cell-${cell.cellId}`);
     this.ownedDefaultCells.add(widget);

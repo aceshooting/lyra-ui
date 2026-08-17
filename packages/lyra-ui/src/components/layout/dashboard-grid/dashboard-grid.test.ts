@@ -328,7 +328,7 @@ describe("grid placement", () => {
         cell.getAttribute("data-cell-id")
       )
     ).to.deep.equal(["a", "tail"]);
-    expect(el.querySelectorAll('[cell-id="a"]')).to.have.length(1);
+    expect(el.querySelectorAll('[data-cell-id="a"]')).to.have.length(1);
   });
 
   it("normalizes foreign property and attribute collision values to reject", async () => {
@@ -426,7 +426,7 @@ describe("default cell composition", () => {
       },
     ];
     await el.updateComplete;
-    const widget = el.querySelector('[cell-id="a"]') as HTMLElement;
+    const widget = el.querySelector('[data-cell-id="a"]') as HTMLElement;
     expect(widget !== null).to.be.true;
     expect(widget.tagName.toLowerCase()).to.equal("lr-widget");
     expect(widget.getAttribute("slot")).to.equal("cell-a");
@@ -478,7 +478,9 @@ describe("default cell composition", () => {
       frameDocument.body.append(el);
       await el.updateComplete;
 
-      const widget = el.querySelector<HTMLElement>('[cell-id="realm-cell"]');
+      const widget = el.querySelector<HTMLElement>(
+        '[data-cell-id="realm-cell"]'
+      );
       const renderer = widget?.querySelector<HTMLElement>(
         tag("widget-renderer")
       );
@@ -499,14 +501,15 @@ describe("default cell composition", () => {
     )) as LyraDashboardGrid;
     el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "First" }];
     await el.updateComplete;
-    const widget = el.querySelector('[cell-id="a"]') as HTMLElement;
+    const widget = el.querySelector('[data-cell-id="a"]') as HTMLElement;
     el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1, label: "Renamed" }];
     await el.updateComplete;
-    expect(el.querySelectorAll('[cell-id="a"]').length).to.equal(1);
+    expect(el.querySelectorAll('[data-cell-id="a"]').length).to.equal(1);
     expect(
-      (el.querySelector('[cell-id="a"]') as unknown as { label: string }).label
+      (el.querySelector('[data-cell-id="a"]') as unknown as { label: string })
+        .label
     ).to.equal("Renamed");
-    expect(el.querySelector('[cell-id="a"]') === widget).to.be.true;
+    expect(el.querySelector('[data-cell-id="a"]') === widget).to.be.true;
   });
 
   it("routes a user-authored child into its wrapper by cell-id instead of creating a default cell", async () => {
@@ -550,10 +553,10 @@ describe("default cell composition", () => {
     )) as LyraDashboardGrid;
     el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
-    expect(el.querySelector('[cell-id="a"]') !== null).to.be.true;
+    expect(el.querySelector('[data-cell-id="a"]') !== null).to.be.true;
     el.layout = [];
     await el.updateComplete;
-    expect(el.querySelector('[cell-id="a"]') === null).to.be.true;
+    expect(el.querySelector('[data-cell-id="a"]') === null).to.be.true;
   });
 
   it("reconciles late authored insertion/removal and restores authored slot ownership across reconnect", async () => {
@@ -562,7 +565,7 @@ describe("default cell composition", () => {
     )) as LyraDashboardGrid;
     el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
-    const initialDefault = el.querySelector('[cell-id="a"]')!;
+    const initialDefault = el.querySelector('[data-cell-id="a"]')!;
 
     const authored = document.createElement("div");
     authored.setAttribute("cell-id", "a");
@@ -584,7 +587,7 @@ describe("default cell composition", () => {
 
     authored.remove();
     await settleChildReconciliation(el);
-    const restoredDefault = el.querySelector('[cell-id="a"]')!;
+    const restoredDefault = el.querySelector('[data-cell-id="a"]')!;
     expect(restoredDefault !== null).to.be.true;
     expect(restoredDefault !== authored).to.be.true;
     expect(restoredDefault.hasAttribute("data-dashboard-grid-default-cell")).to
@@ -627,7 +630,7 @@ describe("default cell composition", () => {
     expect(el.querySelector('[cell-id="b"]') === second).to.be.true;
     expect(
       el
-        .querySelector('[cell-id="a"]')
+        .querySelector('[data-cell-id="a"]')
         ?.hasAttribute("data-dashboard-grid-default-cell")
     ).to.be.true;
   });
@@ -644,7 +647,7 @@ describe("default cell composition", () => {
     try {
       frameDocument.body.append(el);
       await settleChildReconciliation(el);
-      const defaultCell = el.querySelector('[cell-id="a"]')!;
+      const defaultCell = el.querySelector('[data-cell-id="a"]')!;
       const authored = frameDocument.createElement("div");
       authored.setAttribute("cell-id", "a");
       el.append(authored);
@@ -3038,7 +3041,7 @@ describe("defensive edge cases", () => {
 
     expect(plain.hasAttribute("slot")).to.be.false;
     expect(plain.hasAttribute("cell-id")).to.be.false;
-    expect(el.querySelector('[cell-id="a"]') !== null).to.be.true;
+    expect(el.querySelector('[data-cell-id="a"]') !== null).to.be.true;
   });
 
   it("safely no-ops focusing a cell that disappears before its scheduled focus microtask runs", async () => {
