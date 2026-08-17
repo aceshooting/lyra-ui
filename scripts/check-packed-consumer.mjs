@@ -94,6 +94,13 @@ const coreRawBudget = {
   // per-entry gzip budget remained green, so this is broad, real implementation weight -- built up
   // across many prior commits before this term was added -- rather than a dependency leak.
   crossFamilyRemediationSweepAllowanceBytes: 610_000,
+  // Post-9.0.0 finalization plus the new dev-mode unknown-attribute-warning diagnostic (wired once
+  // into the shared `LyraElement` base every component extends, piggybacking on Lit's own
+  // `litIssuedWarnings` dev-mode signal) increased the measured bundle to 4546.2 KiB raw, about
+  // 12.9 KiB beyond the preceding 4533.3 KiB ceiling. This run's own peer-exclusion graph reported
+  // zero eager and zero bundled optional peers, and the button canary plus every granular per-entry
+  // gzip budget stayed green, so this is shared implementation weight rather than a dependency leak.
+  devModeDiagnosticsAllowanceBytes: 20_000,
 };
 
 const bundleEntries = {
@@ -188,7 +195,8 @@ const bundleEntries = {
       coreRawBudget.accessibilityStyleCorrectionAllowanceBytes +
       coreRawBudget.featureCapabilityAllowanceBytes +
       coreRawBudget.overlayHydrationContractAllowanceBytes +
-      coreRawBudget.crossFamilyRemediationSweepAllowanceBytes,
+      coreRawBudget.crossFamilyRemediationSweepAllowanceBytes +
+      coreRawBudget.devModeDiagnosticsAllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to

@@ -153,7 +153,13 @@ export const styles = css`
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
+  }
+  :host([message-role='user']) [part='actions'] {
     margin-inline-start: auto;
+  }
+  :host([message-role='assistant']) [part='actions'],
+  :host([message-role='system']) [part='actions'] {
+    margin-inline-end: auto;
   }
   :host([actions-position='outside']) [part='actions'] {
     margin-block-start: var(--lr-space-2xs);

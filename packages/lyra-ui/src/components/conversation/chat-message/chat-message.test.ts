@@ -560,6 +560,51 @@ it("keeps the footer hidden for outside actions when there is no status/timestam
   expect(actions.hasAttribute("hidden")).to.be.false;
 });
 
+it("aligns a user turn's actions to the inline end, matching its own end-aligned bubble", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message message-role="user"
+      ><button slot="actions">Copy</button>hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector(
+    '[part="actions"]'
+  ) as HTMLElement;
+  const footerRect = footer.getBoundingClientRect();
+  const actionsRect = actions.getBoundingClientRect();
+  expect(actionsRect.right).to.be.closeTo(footerRect.right, 1);
+});
+
+it("aligns an assistant turn's actions to the inline start, matching its own start-aligned bubble", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message message-role="assistant"
+      ><button slot="actions">Copy</button>hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector(
+    '[part="actions"]'
+  ) as HTMLElement;
+  const footerRect = footer.getBoundingClientRect();
+  const actionsRect = actions.getBoundingClientRect();
+  expect(actionsRect.left).to.be.closeTo(footerRect.left, 1);
+});
+
+it("aligns a system turn's actions to the inline start, matching its own start-aligned bubble", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message message-role="system"
+      ><button slot="actions">Copy</button>hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector(
+    '[part="actions"]'
+  ) as HTMLElement;
+  const footerRect = footer.getBoundingClientRect();
+  const actionsRect = actions.getBoundingClientRect();
+  expect(actionsRect.left).to.be.closeTo(footerRect.left, 1);
+});
+
 it("shows attachments once slotted", async () => {
   const el = (await fixture(
     html`<lr-chat-message

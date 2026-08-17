@@ -236,6 +236,27 @@ function parseRgbString(
   return [Number(match[1]), Number(match[2]), Number(match[3]), a];
 }
 
+/** Resolves the color `ctx.fillStyle` currently holds to concrete `[r, g, b, a]` bytes by
+ *  rendering and reading back a single pixel, the same `getImageData(0, 0, 1, 1)` idiom
+ *  `theme.ts`/`shiki-dark-theme.ts`/`color-core.ts` already use elsewhere in this library. Unlike
+ *  string-matching the canvas's read-back serialization, this resolves any CSS color syntax the
+ *  canvas accepts -- including `oklch()`, `lab()`, and `color(display-p3 ...)`, which canvas
+ *  round-trips through `ctx.fillStyle` using their own literal syntax rather than normalizing to
+ *  a form `hexToRgb`/`parseRgbString` recognize -- without hand-implementing each color space's
+ *  conversion math. Returns `null` if `getImageData` itself throws (e.g. a tainted canvas). */
+function resolveViaPixelReadback(
+  ctx: CanvasRenderingContext2D
+): [number, number, number, number] | null {
+  try {
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillRect(0, 0, 1, 1);
+    const [r = 0, g = 0, b = 0, a = 0] = ctx.getImageData(0, 0, 1, 1).data;
+    return [r, g, b, a / 255];
+  } catch {
+    return null;
+  }
+}
+
 /** Formats an `[r, g, b, a]` quadruple as the shortest equivalent CSS color —
  *  `rgb(r, g, b)` when fully opaque (matching every pre-alpha-support call
  *  site's output exactly), `rgba(r, g, b, a)` otherwise. */
@@ -376,7 +397,12 @@ export function resolveRgb(
     return fallback;
   }
   const normalized = ctx.fillStyle;
-  return hexToRgb(normalized) ?? parseRgbString(normalized) ?? fallback;
+  return (
+    hexToRgb(normalized) ??
+    parseRgbString(normalized) ??
+    resolveViaPixelReadback(ctx) ??
+    fallback
+  );
 }
 
 /** Linearly interpolates between two already-resolved `[r, g, b, a]` quadruples at `t` in `[0, 1]`,

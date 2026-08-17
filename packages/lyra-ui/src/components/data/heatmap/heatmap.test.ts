@@ -1526,6 +1526,52 @@ describe("resolveRgb", () => {
     expect(resolveRgb("red", "#000000")).to.deep.equal([255, 0, 0, 1]);
   });
 
+  it("resolves color-mix()/oklch()/lab()/color(display-p3) values instead of silently falling back to the default ramp", () => {
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      // Chromium normalizes each of these through its 2D canvas fillStyle
+      // read-back to the `color(srgb r g b [/ a])` form (values in [0, 1]),
+      // which neither the hex nor rgb()/rgba() parser recognizes -- the
+      // reported bug was that this silently degraded to the fallback with
+      // no warning rather than resolving the actual mixed/converted color.
+      const mixed = resolveRgb(
+        "color-mix(in srgb, #34d399 20%, #141a25)",
+        "#cde2fb"
+      );
+      expect(mixed).to.not.deep.equal(hexToRgb("#cde2fb"));
+
+      const oklch = resolveRgb("oklch(70% 0.15 160)", "#cde2fb");
+      expect(oklch).to.not.deep.equal(hexToRgb("#cde2fb"));
+
+      const lab = resolveRgb("lab(50% 40 59.5)", "#cde2fb");
+      expect(lab).to.not.deep.equal(hexToRgb("#cde2fb"));
+
+      const displayP3 = resolveRgb("color(display-p3 0.2 0.6 0.4)", "#cde2fb");
+      expect(displayP3).to.not.deep.equal(hexToRgb("#cde2fb"));
+    } finally {
+      console.warn = originalWarn;
+    }
+    // None of these are genuinely invalid, so the silent-fallback warning
+    // must never fire for them.
+    expect(warnings).to.have.length(0);
+  });
+
+  it("round-trips a translucent color-mix()/oklch() alpha channel instead of resolving to opaque", () => {
+    const [, , , mixedAlpha] = resolveRgb(
+      "color-mix(in srgb, rgb(52 211 153 / 0.4) 100%, transparent)",
+      "#000000"
+    );
+    expect(mixedAlpha).to.be.closeTo(0.4, 0.05);
+
+    const [, , , oklchAlpha] = resolveRgb(
+      "oklch(70% 0.15 160 / 0.5)",
+      "#000000"
+    );
+    expect(oklchAlpha).to.be.closeTo(0.5, 0.05);
+  });
+
   it("preserves a translucent rgba()/hsla() alpha channel instead of silently resolving to opaque (gap #65)", () => {
     // The exact alpha may be quantized to 8 bits by the browser's canvas
     // fillStyle serializer (e.g. Chromium: .028 -> 7/255 ~= 0.027), so this

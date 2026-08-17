@@ -32,6 +32,7 @@ test('models the raw core ceiling as the established baseline plus capability al
     featureCapabilityAllowanceBytes: 40_000,
     overlayHydrationContractAllowanceBytes: 25_000,
     crossFamilyRemediationSweepAllowanceBytes: 610_000,
+    devModeDiagnosticsAllowanceBytes: 20_000,
   });
   assert.equal(
       terms.establishedBaselineBytes +
@@ -42,12 +43,13 @@ test('models the raw core ceiling as the established baseline plus capability al
       terms.accessibilityStyleCorrectionAllowanceBytes +
       terms.featureCapabilityAllowanceBytes +
       terms.overlayHydrationContractAllowanceBytes +
-      terms.crossFamilyRemediationSweepAllowanceBytes,
-    4_655_000,
+      terms.crossFamilyRemediationSweepAllowanceBytes +
+      terms.devModeDiagnosticsAllowanceBytes,
+    4_675_000,
   );
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.establishedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.crossComponentContractAllowanceBytes\s*\+\s*coreRawBudget\.boundedDataResilienceAllowanceBytes\s*\+\s*coreRawBudget\.interactionAccessibilityAllowanceBytes\s*\+\s*coreRawBudget\.accessibilityStyleCorrectionAllowanceBytes\s*\+\s*coreRawBudget\.featureCapabilityAllowanceBytes\s*\+\s*coreRawBudget\.overlayHydrationContractAllowanceBytes\s*\+\s*coreRawBudget\.crossFamilyRemediationSweepAllowanceBytes\s*,/u,
+    /maxRawBytes:\s*coreRawBudget\.establishedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.crossComponentContractAllowanceBytes\s*\+\s*coreRawBudget\.boundedDataResilienceAllowanceBytes\s*\+\s*coreRawBudget\.interactionAccessibilityAllowanceBytes\s*\+\s*coreRawBudget\.accessibilityStyleCorrectionAllowanceBytes\s*\+\s*coreRawBudget\.featureCapabilityAllowanceBytes\s*\+\s*coreRawBudget\.overlayHydrationContractAllowanceBytes\s*\+\s*coreRawBudget\.crossFamilyRemediationSweepAllowanceBytes\s*\+\s*coreRawBudget\.devModeDiagnosticsAllowanceBytes\s*,/u,
     'the core bundle entry must use every named term instead of a second unexplained ceiling',
   );
 });
