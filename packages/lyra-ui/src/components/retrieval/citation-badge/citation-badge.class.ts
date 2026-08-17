@@ -8,7 +8,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './citation-badge.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_citationUnverified, LYRA_DEFAULT_citationVerified, LYRA_DEFAULT_citationWithCustomLabel, LYRA_DEFAULT_citationWithStatus, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_citationUnverified, LYRA_DEFAULT_citationVerified, LYRA_DEFAULT_citationWithCustomLabel, LYRA_DEFAULT_citationWithStatus, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type CitationBadgeStatus =
@@ -156,6 +156,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    popover: LYRA_DEFAULT_popover,
     progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
