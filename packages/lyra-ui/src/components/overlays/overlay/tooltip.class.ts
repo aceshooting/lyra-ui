@@ -248,7 +248,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private namedTriggerMode = true;
   @state() private interactiveContent = false;
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'top';
-  private anchorPositioned = false;
+  @state() private anchorPositioned = false;
   private positionedAnchor?: Element | VirtualAnchor;
   private observedDirectAnchor?: Element;
   private observedDirectAnchorWasConnected = false;
@@ -727,12 +727,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (!this.open || !anchor || !popup) {
       this.positionedAnchor = undefined;
       this.anchorPositioned = false;
-      popup?.setAttribute('data-hidden', '');
       return;
     }
     if (anchor !== this.positionedAnchor) {
       this.anchorPositioned = false;
-      popup.setAttribute('data-hidden', '');
     }
     if (this.open && anchor && popup) {
       const arrowPadding = Math.max(0, finiteNumber(this.arrowPadding, 0));
@@ -746,7 +744,6 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         onPlaced: ({ placement, arrow }) => {
           this.positionedAnchor = anchor;
           this.anchorPositioned = true;
-          if (this.open && this.resolveAnchor() === anchor) popup.removeAttribute('data-hidden');
           const side = applyOverlayArrow(arrowElement, {
             placement,
             coords: arrow,

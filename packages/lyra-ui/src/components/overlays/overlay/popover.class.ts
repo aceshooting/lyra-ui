@@ -214,7 +214,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private trigger?: HTMLElement;
   private slottedTrigger?: HTMLElement;
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
-  private anchorPositioned = false;
+  @state() private anchorPositioned = false;
   private positionedAnchor?: Element | VirtualAnchor;
   private observedDirectAnchor?: Element;
   private observedDirectAnchorWasConnected = false;
@@ -595,12 +595,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (!this.open || !anchor || !popup) {
       this.positionedAnchor = undefined;
       this.anchorPositioned = false;
-      popup?.setAttribute('data-hidden', '');
       return;
     }
     if (anchor !== this.positionedAnchor) {
       this.anchorPositioned = false;
-      popup.setAttribute('data-hidden', '');
     }
     this.cleanup = place(anchor, popup, {
       placement: rtlAwarePlacement(this.placement, this),
@@ -615,7 +613,6 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
         this.positionedAnchor = anchor;
         this.anchorPositioned = true;
         if (this.open && this.resolveAnchor() === anchor) {
-          popup.removeAttribute('data-hidden');
           if (becamePositioned) this.onPopupPositioned();
         }
         const side = applyOverlayArrow(arrowElement, {

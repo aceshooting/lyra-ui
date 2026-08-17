@@ -473,6 +473,27 @@ it('repositions an open popover to its slotted fallback when a direct anchor is 
   expect(surface.hasAttribute('data-hidden')).to.equal(false);
 });
 
+it('restores data-hidden on the popup after a full open-then-close cycle', async () => {
+  const el = await fixture<LyraPopover>(html`
+    <lr-popover placement="bottom-start" distance="0" style="--show-duration: 0ms; --hide-duration: 0ms">
+      <button slot="trigger">Trigger</button>
+      <p>Details</p>
+    </lr-popover>
+  `);
+  const surface = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  await el.show();
+  await waitUntil(() => !surface.hasAttribute('data-hidden'));
+
+  await el.hide();
+  await waitUntil(() => !el.open);
+
+  expect(
+    surface.hasAttribute('data-hidden'),
+    'data-hidden is restored once the popover has fully closed'
+  ).to.equal(true);
+  expect(getComputedStyle(surface).pointerEvents).to.equal('none');
+});
+
 it('repositions an open tooltip to its for fallback when a direct anchor is removed', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div>
@@ -503,6 +524,27 @@ it('repositions an open tooltip to its for fallback when a direct anchor is remo
   await waitUntil(() => Math.abs(surface.getBoundingClientRect().left - anchoredLeft) > 100);
   expect(el.open).to.equal(true);
   expect(fallback.hasAttribute('aria-describedby')).to.equal(true);
+});
+
+it('restores data-hidden on the tooltip popup after a full open-then-close cycle', async () => {
+  const el = await fixture<LyraTooltip>(html`
+    <lr-tooltip placement="top-start" distance="0" style="--lr-transition-fast: 0ms">
+      <button slot="trigger" style="position: fixed; left: 10px; top: 400px">Trigger</button>
+      Helpful description
+    </lr-tooltip>
+  `);
+  const surface = el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+  await el.show();
+  await waitUntil(() => !surface.hasAttribute('data-hidden'));
+
+  await el.hide();
+  await waitUntil(() => !el.open);
+
+  expect(
+    surface.hasAttribute('data-hidden'),
+    'data-hidden is restored once the tooltip has fully closed'
+  ).to.equal(true);
+  expect(getComputedStyle(surface).pointerEvents).to.equal('none');
 });
 
 it('repositions an open popover to its slotted fallback when its direct anchor property becomes unavailable', async () => {
