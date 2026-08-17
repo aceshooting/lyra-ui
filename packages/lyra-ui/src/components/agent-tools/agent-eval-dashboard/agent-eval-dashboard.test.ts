@@ -237,3 +237,14 @@ it('normalizes duplicate metric and run ids first-wins across cards, chart, and 
   expect(el.shadowRoot!.querySelectorAll('[part="run"]')).to.have.length(1);
   expect(el.shadowRoot!.querySelector('[part="run"]')!.textContent).to.contain('First run');
 });
+
+it('uses break-word, not anywhere, on heading and run-label text', async () => {
+  const el = (await fixture(html`
+    <lr-agent-eval-dashboard .runs=${[{ id: 'r', label: 'Run one', status: 'done' }]}></lr-agent-eval-dashboard>
+  `)) as LyraAgentEvalDashboard;
+  await el.updateComplete;
+  const heading = el.shadowRoot!.querySelector('[part="runs-heading"]') as HTMLElement;
+  const runLabel = el.shadowRoot!.querySelector('[part="run-label"]') as HTMLElement;
+  expect(getComputedStyle(heading).overflowWrap).to.equal('break-word');
+  expect(getComputedStyle(runLabel).overflowWrap).to.equal('break-word');
+});
