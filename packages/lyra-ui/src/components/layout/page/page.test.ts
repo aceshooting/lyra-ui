@@ -1433,13 +1433,23 @@ describe('Page state cssprops', () => {
     skip.style.transition = 'none';
 
     try {
+      // Enter from a known pointer state. This test only ever failed inside the full-suite run and
+      // never in isolation, which is the signature of a button left pressed by an earlier test
+      // file: the `down` below is then a no-op and `:active` never applies, so the pressed read
+      // returns the hover fill instead. The `finally` already resets on the way out; this resets on
+      // the way in, so the test cannot inherit another file's pointer state.
+      await resetMouse();
+
       await sendMouse({ type: 'move', position: centreOf(skip) });
       expect(getComputedStyle(skip).backgroundColor).to.equal(
         'rgb(0, 51, 102)'
       );
       expect(getComputedStyle(skip).color).to.equal('rgb(255, 255, 255)');
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(skip).backgroundColor).to.equal('rgb(0, 30, 60)');
+      await waitUntil(
+        () => getComputedStyle(skip).backgroundColor === 'rgb(0, 30, 60)',
+        'the skip link never painted its pressed background',
+      );
       expect(getComputedStyle(skip).color).to.equal('rgb(255, 255, 0)');
       await sendMouse({ type: 'up' });
       skip.style.pointerEvents = 'none';
@@ -1450,8 +1460,11 @@ describe('Page state cssprops', () => {
       );
       expect(getComputedStyle(toggle).color).to.equal('rgb(255, 255, 255)');
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(toggle).backgroundColor).to.equal(
-        'rgb(0, 40, 70)'
+      // Poll rather than read straight through: a pointer-driven :active paint is racy per engine
+      // (AGENTS.md), and this is the assertion Firefox failed under full-suite load.
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor === 'rgb(0, 40, 70)',
+        'the navigation toggle never painted its pressed background',
       );
       expect(getComputedStyle(toggle).color).to.equal('rgb(255, 255, 0)');
       await sendMouse({ type: 'up' });
