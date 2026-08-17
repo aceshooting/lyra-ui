@@ -15,8 +15,8 @@ export const styles = css`
   /* 'after' renders the slotted label in flow next to the spinner; 'none' keeps it sr-only
      (still hit by the [hidden] attribute set in spinner.class.ts, but scoping the clip here too
      keeps this rule self-consistent if that attribute is ever dropped). */
-  :host([label-placement='after']) [part='label'] { display: inline-flex; flex: 1 1 auto; align-items: center; min-inline-size: 0; max-inline-size: 100%; overflow: hidden; overflow-wrap: anywhere; margin-inline-start: var(--lr-space-2xs); color: var(--lr-color-text); font-size: var(--lr-font-size-sm); }
-  :host([label-placement='after']) [part='label'] ::slotted(*) { min-inline-size: 0; max-inline-size: 100%; overflow-wrap: anywhere; }
+  :host([label-placement='after']) [part='label'] { display: inline-flex; flex: 1 1 auto; align-items: center; min-inline-size: 0; max-inline-size: 100%; overflow: hidden; overflow-wrap: break-word; margin-inline-start: var(--lr-space-2xs); color: var(--lr-color-text); font-size: var(--lr-font-size-sm); }
+  :host([label-placement='after']) [part='label'] ::slotted(*) { min-inline-size: 0; max-inline-size: 100%; overflow-wrap: break-word; }
   :host([label-placement='none']) [part='label'] { position: absolute; inline-size: var(--lr-size-1px); block-size: var(--lr-size-1px); overflow: hidden; clip-path: inset(50%); }
   @keyframes lr-spin { to { transform: rotate(1turn); } }
   @media (prefers-reduced-motion: reduce) { [part~='spinner-indicator'] { animation: none; } }

@@ -377,3 +377,12 @@ it('inherits the shared ambient timing token unless its component duration is ov
   expect(getComputedStyle(spinner).animationDuration).to.equal('3s');
   expect(getComputedStyle(spinner).animationTimingFunction).to.equal('linear');
 });
+
+it('uses break-word, not anywhere, on an after-placement label', async () => {
+  const el = (await fixture(
+    html`<lr-spinner label-placement="after">Loading data</lr-spinner>`,
+  )) as LyraSpinner;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(getComputedStyle(label).overflowWrap).to.equal('break-word');
+});
