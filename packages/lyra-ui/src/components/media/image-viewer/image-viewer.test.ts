@@ -556,42 +556,25 @@ describe("region highlights", () => {
     }
   });
 
-  it("scrollToAnchor resolves true for a region anchor and false for an unsupported kind", async function () {
-    // The genuine-success call below can retry across several full internal deadline cycles (see
-    // the comment at that call); mocha's own suite-wide 6000ms default (see
-    // web-test-runner.config.js) would leave far too tight a margin under a loaded CI runner.
-    this.timeout(60000);
+  it("scrollToAnchor resolves true for a region anchor and false for an unsupported kind", async () => {
+    // Uses LOADABLE_PNG, not PNG_SRC (see PNG_SRC's own doc comment above): this test awaits
+    // scrollToAnchor("h1"), which retries applyAnchor() in a loop -- exactly the "must keep the
+    // loaded frame's DOM alive across an await" case that comment warns about. With PNG_SRC, the
+    // real background fetch's eventual (DNS-failure-timed) `error` event can land mid-retry-loop,
+    // flip loadState back to 'error', and make hasOperableContent -- and therefore every
+    // subsequent applyAnchor() attempt -- false for the rest of the test, no matter how long or
+    // how many times the loop retries. That looked like a CI-load timing flake (intermittent,
+    // WebKit-shard-only, resistant to widening the deadline) but was actually this race; widening
+    // the deadline only gave the real error event more time to land mid-test and made it worse.
     const el = (await fixture(
       html`<lr-image-viewer
-        src=${PNG_SRC}
+        src=${LOADABLE_PNG}
         .highlights=${highlights}
       ></lr-image-viewer>`
     )) as LyraImageViewer;
     await stubImageLoad(el);
     await el.updateComplete;
-    // The genuine-success case still needs the retry loop's *real* timers (each attempt measures
-    // rendered geometry via getBoundingClientRect/getClientRects, so a fake-timer short-circuit
-    // would prove nothing). A single widened deadline was itself observed too fragile on a loaded
-    // CI runner's WebKit shard: a CPU-starved runner can suspend the browser process for long
-    // enough that Date.now() jumps past even a 15000ms deadline after only a couple of the retry
-    // loop's 250ms-interval attempts, well before the target's layout has actually settled -- and
-    // a single stall of that severity can outlast any one bounded deadline. Rather than widen the
-    // deadline further, retry the *whole* scrollToAnchor("h1") call at the test level: each
-    // attempt gets its own full internal retry budget, so the test survives one bad stall as long
-    // as a later attempt runs on a recovered runner. The mixin's real default
-    // (ANCHOR_TIMEOUT_MS = 5000) stays the production value; only the test widens per-attempt to
-    // 15000ms and layers 3 such attempts (waitUntil's outer 45000ms budget) on top.
-    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 15000;
-    let resolvedTrue = false;
-    await waitUntil(
-      async () => {
-        resolvedTrue = await el.scrollToAnchor("h1");
-        return resolvedTrue;
-      },
-      'scrollToAnchor("h1") never resolved true across repeated attempts',
-      { timeout: 45000, interval: 500 }
-    );
-    expect(resolvedTrue).to.be.true;
+    expect(await el.scrollToAnchor("h1")).to.be.true;
     // Shrink the retry loop's real-timer thresholds so the unsupported-kind case (which never
     // succeeds and only resolves once the retry loop times out) doesn't take the mixin's default
     // 5s before settling to false.

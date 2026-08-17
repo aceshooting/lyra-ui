@@ -424,18 +424,19 @@ describe('lr-poll-status', () => {
     expect(css).to.match(/\[part='pause-button'\]:hover:not\(:disabled\)\s*\{[^}]+\}/);
   });
 
-  it('recolors the due indicator dot from an ancestor --lr-poll-status-due-bg, not the bare shared --lr-color-success token', async function () {
-    // A real 10ms setTimeout (see armTicker() in poll-status.class.ts) firing lr-poll-due
-    // has been observed to occasionally miss mocha's own suite-wide 6000ms default (see
-    // web-test-runner.config.js) under a heavily loaded shared CI runner -- the same class of
-    // event-loop-scheduling gap already hardened elsewhere in this session (av-player's and
-    // image-viewer's forced-colors hover waits). Every other lr-poll-due wait in this file uses
-    // the same real-timer mechanism and has never reproduced this, so this widens only this
-    // specific test's own timeout rather than the shared suite default.
-    this.timeout(20000);
+  it('recolors the due indicator dot from an ancestor --lr-poll-status-due-bg, not the bare shared --lr-color-success token', async () => {
+    // This was the only test in the file using next-in-ms="10" -- every sibling test uses 40ms
+    // or more. armTicker() arms its real setTimeout the moment the element connects (inside
+    // fixture()'s own promise, before this line ever runs), so a delay that tight raced
+    // fixture()'s own async setup: once the browser's custom-element/stylesheet caches warm up
+    // partway through the file, fixture() started resolving in ~14-17ms -- *after* the 10ms
+    // ticker had already fired and set `due` -- so the oneEvent() listener attached below missed
+    // an event that had already dispatched and hung until mocha's own timeout. Matching the
+    // rest of the file's delay (comfortably above fixture()'s own overhead) removes the race
+    // rather than papering over it with a longer wait or a retry loop.
     const wrapper = (await fixture(
       html`<div style="--lr-poll-status-due-bg: rgb(0, 51, 102);">
-        <lr-poll-status next-in-ms="10"></lr-poll-status>
+        <lr-poll-status next-in-ms="40"></lr-poll-status>
       </div>`,
     )) as HTMLDivElement;
     const el = wrapper.querySelector('lr-poll-status') as LyraPollStatus;
