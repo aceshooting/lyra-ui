@@ -586,8 +586,13 @@ describe("region highlights", () => {
   });
 
   it("setting the anchor property declaratively resolves via scrollToAnchor", async () => {
+    // LOADABLE_PNG, not PNG_SRC, for exactly the reason the sibling scrollToAnchor test above
+    // documents: this test awaits an anchor resolution that retries applyAnchor(), so PNG_SRC's
+    // real background fetch can land its DNS-failure `error` event mid-resolution, flip loadState
+    // to 'error', and make hasOperableContent false -- which resolves lr-anchor-result as
+    // { found: false }. That is the intermittent WebKit-shard-only failure this test showed.
     const el = (await fixture(
-      html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`
+      html`<lr-image-viewer src=${LOADABLE_PNG}></lr-image-viewer>`
     )) as LyraImageViewer;
     await stubImageLoad(el);
     await el.updateComplete;
