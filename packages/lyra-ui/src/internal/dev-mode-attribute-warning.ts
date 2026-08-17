@@ -80,8 +80,7 @@ type LitWarningGlobal = { litIssuedWarnings?: Set<string> };
 
 /** Piggybacks on Lit's own dev-mode signal (`@lit/reactive-element`'s `development` build sets
  *  this global when a consumer's bundler resolves Lit into dev mode) rather than shipping a
- *  separate lyra-ui dev/prod build -- see
- *  docs/superpowers/specs/2026-08-17-dev-mode-unknown-attribute-warning-design.md. */
+ *  separate lyra-ui dev/prod build. */
 function litDevWarnings(): Set<string> | undefined {
   return (globalThis as LitWarningGlobal).litIssuedWarnings;
 }
