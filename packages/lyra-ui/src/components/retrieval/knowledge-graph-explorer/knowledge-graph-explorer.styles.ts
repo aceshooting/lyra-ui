@@ -83,6 +83,17 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
+  /* Type filters are a consumer-data-driven list (nodeTypes) with no library-imposed size limit --
+     without a cap it floors at its full content height (browser-default flex-item min-height:
+     auto) and starves 100% of the shrinkage onto [part='graph'] below, even though that part is
+     explicitly set up to be the one that shrinks. Same max-block-size + overflow-y pattern as
+     [part='search-results'] above. */
+  [part='legend'] {
+    flex: 0 1 auto;
+    max-block-size: var(--lr-size-12rem);
+    overflow-y: auto;
+    overflow-x: clip;
+  }
   /* The one flexible row: it takes whatever the toolbar, search results, pinned row and path strip
      leave over. flex-basis stays auto so an unsized host still gets the graph's intrinsic height,
      while min-block-size: 0 removes the automatic content-based flex minimum that would otherwise

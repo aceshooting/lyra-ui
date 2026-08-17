@@ -286,6 +286,40 @@ describe('lr-knowledge-graph-explorer', () => {
     ).to.be.greaterThan(100);
   });
 
+  it('caps a tall legend instead of letting it starve the graph pane', async () => {
+    // 100 entries, not fewer: the fixture body defaults to ~784px wide, wide enough that the
+    // legend's own internal flex-wrap keeps a shorter list within a few rows -- it takes this
+    // many entries for the wrapped legend to grow past the cap and visibly starve the graph pane
+    // below at the default viewport width this suite runs under.
+    const manyNodeTypes: LyraNodeTypeStyle[] = Array.from({ length: 100 }, (_, i) => ({
+      id: `type-${i}`,
+      label: `Type ${i}`,
+    }));
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        style="block-size: 30rem"
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${manyNodeTypes}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+
+    const legendBox = el.shadowRoot!
+      .querySelector('[part="legend"]')!
+      .getBoundingClientRect();
+    const graphBox = graphEl(el).getBoundingClientRect();
+
+    expect(
+      legendBox.height,
+      'the legend is capped, not floored at its full 100-entry content height'
+    ).to.be.lessThan(250);
+    expect(
+      graphBox.height,
+      'the graph pane keeps a usable amount of the host height'
+    ).to.be.greaterThan(100);
+  });
+
   it('still sizes itself from the graph when the host is left unsized', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
