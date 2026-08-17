@@ -27,7 +27,9 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/retrieval/graph/graph-loader.ts',
   'src/components/utility/export-button/csv.ts',
   'src/components/utility/icon/icon-library.ts',
+  'src/components/viewers/archive-viewer/archive-viewer-register.ts',
   'src/components/viewers/document-viewer/registry.ts',
+  'src/components/viewers/ebook-viewer/ebook-viewer-register.ts',
 ]);
 
 export const CURATED_UTILITY_MODULES = Object.freeze([

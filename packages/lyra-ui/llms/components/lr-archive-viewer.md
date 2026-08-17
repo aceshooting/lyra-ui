@@ -79,5 +79,10 @@ import. Opening a `.zip` through `<lr-document-viewer>` forwards `anchor`/`highl
 viewer, so a deep link into an entry name survives the registry hop. `.tar`, `.rar`, and other
 archive formats fall through to `<lr-document-preview>`'s generic download fallback.
 
+A granular consumer (not importing the `all.js` compatibility bundle) must import
+`@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer-register.js` once to install
+this registration; without it `<lr-document-viewer>` never recognizes `.zip` files and falls
+through to the generic download fallback described above.
+
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the entry listing.
