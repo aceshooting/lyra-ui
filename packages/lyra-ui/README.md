@@ -897,6 +897,13 @@ Build tools can import the published manifest directly through its explicit pack
 import manifest from '@aceshooting/lyra-ui/custom-elements.json' with { type: 'json' };
 ```
 
+A subclass declaration's `cssParts` is always fully flattened (everything inherited included), but
+`attributes`/`members`/`events`/`slots`/`cssProperties` list only a declaration's own entries plus
+any inherited entry it overrides — intentional, since a TypeScript/JS consumer already resolves the
+rest through the generated `.d.ts` `extends` chain. Reading `custom-elements.json` directly for
+those four kinds means walking each declaration's own `superclass` chain, or using the already-
+resolved `web-types.json`/`vscode-html-data.json` above instead.
+
 ## Components
 
 The catalog below lists all 284 tags in the current Custom Elements Manifest, grouped by
