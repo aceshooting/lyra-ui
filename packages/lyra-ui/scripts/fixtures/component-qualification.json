@@ -5313,49 +5313,49 @@
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1093,
+              "line": 1141,
               "test": "is accessible with a tinted outlined fill and a pinned height",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1300,
+              "line": 1348,
               "test": "is accessible as a link button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1563,
+              "line": 1611,
               "test": "is accessible as a pill button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1674,
+              "line": 1722,
               "test": "is accessible as a caret-bearing dropdown trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1717,
+              "line": 1765,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2185,
+              "line": 2233,
               "test": "is accessible in its new default appearance, and as a pill textarea-adjacent control",
               "target": "inline fixture",
               "state": "populated"
             },
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2185,
+              "line": 2233,
               "test": "is accessible in its new default appearance, and as a pill textarea-adjacent control",
               "target": "inline fixture",
               "state": "populated"
@@ -5375,7 +5375,7 @@
           "evidence": [
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 1657,
+              "line": 1705,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -5392,7 +5392,7 @@
           "evidence": [
             {
               "file": "src/components/forms/button/button.test.ts",
-              "line": 2586,
+              "line": 2634,
               "kind": "320px allocation test signal"
             }
           ]
@@ -15370,14 +15370,14 @@
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 959,
+              "line": 1001,
               "test": "is accessible, both closed and with its menu open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 959,
+              "line": 1001,
               "test": "is accessible, both closed and with its menu open",
               "target": "el",
               "state": "populated"
@@ -15419,7 +15419,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1464,
+              "line": 1506,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24453,14 +24453,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1209,
+              "line": 1243,
               "test": "renders correctly under dir=\"rtl\" and stays accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1241,
+              "line": 1275,
               "test": "is accessible with search results, a pinned node, a path, and an open details popover",
               "target": "el",
               "state": "populated"
@@ -24474,7 +24474,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1145,
+              "line": 1179,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -24485,7 +24485,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1210,
+              "line": 1244,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -24502,7 +24502,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts",
-              "line": 1227,
+              "line": 1261,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24838,7 +24838,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.test.ts",
-              "line": 661,
+              "line": 541,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32176,28 +32176,28 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1067,
+              "line": 1109,
               "test": "promotes actionable tooltip content to a focus-persistent dialog surface",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 2639,
+              "line": 2681,
               "test": "is accessible with an arrow rendered",
               "target": "popover",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 847,
+              "line": 889,
               "test": "opens a popover from its slotted trigger and wires dialog semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1546,
+              "line": 1588,
               "test": "opens a popover anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -32239,7 +32239,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1464,
+              "line": 1506,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32382,7 +32382,7 @@
             },
             {
               "file": "src/components/overlays/popup/popup.test.ts",
-              "line": 528,
+              "line": 541,
               "test": "is accessible while active, with content rendered",
               "target": "el",
               "state": "populated"
@@ -32402,7 +32402,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/popup/popup.test.ts",
-              "line": 84,
+              "line": 97,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -42197,35 +42197,35 @@
           "evidence": [
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 571,
+              "line": 619,
               "test": "exports wrapper/control and help-text aliases without replacing Lyra part names",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1407,
+              "line": 1455,
               "test": "is accessible in a checked, labeled, required state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1414,
+              "line": 1462,
               "test": "keeps interactive label content outside the switch and does not toggle through it",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1449,
+              "line": 1497,
               "test": "is accessible with a populated hint/errorText (the parts never rendered by the cases above)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1691,
+              "line": 1739,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -42239,7 +42239,7 @@
           "evidence": [
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 395,
+              "line": 443,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -46937,21 +46937,21 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 981,
+              "line": 1023,
               "test": "shows a tooltip after focus and describes the trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1067,
+              "line": 1109,
               "test": "promotes actionable tooltip content to a focus-persistent dialog surface",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1650,
+              "line": 1692,
               "test": "opens a tooltip anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -46993,7 +46993,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1464,
+              "line": 1506,
               "kind": "320px allocation test signal"
             }
           ]
