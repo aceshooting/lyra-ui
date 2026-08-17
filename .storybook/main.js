@@ -126,7 +126,9 @@ const config = {
     const defaultOnwarn = viteConfig.build.rollupOptions.onwarn;
     viteConfig.build.rollupOptions.onwarn = (warning, warn) => {
       const message = String(warning?.message ?? warning ?? '');
-      if (warning?.code === 'INEFFECTIVE_DYNAMIC_IMPORT' && /lyra\.ts|\.stories\.ts/.test(message)) {
+      // Keep this pattern in step with the registration barrel named above: it was `lyra.ts` before
+      // v8 moved registration to `all.ts`, and the stale name silently stopped matching.
+      if (warning?.code === 'INEFFECTIVE_DYNAMIC_IMPORT' && /src\/all\.ts|\.stories\.ts/.test(message)) {
         return;
       }
       if (defaultOnwarn) defaultOnwarn(warning, warn);
