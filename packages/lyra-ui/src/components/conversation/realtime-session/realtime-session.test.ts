@@ -372,3 +372,10 @@ it('treats a state write queued while detached as a silent reconnect baseline', 
   await el.updateComplete;
   expect(sinkTexts('polite'), 'the next connected transition still announces').to.deep.equal(['Connected']);
 });
+
+it('uses break-word, not anywhere, on the status text', async () => {
+  const el = (await fixture(html`<lr-realtime-session state="connected"></lr-realtime-session>`)) as LyraRealtimeSession;
+  await el.updateComplete;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  expect(getComputedStyle(status).overflowWrap).to.equal('break-word');
+});

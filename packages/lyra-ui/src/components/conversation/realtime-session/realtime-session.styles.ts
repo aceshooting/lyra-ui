@@ -5,7 +5,7 @@ export const styles = css`
   [part='base'] { display: flex; flex-direction: column; gap: var(--lr-space-m); }
   [part='header'] { display: grid; grid-template-columns: auto minmax(var(--lr-size-8rem), 1fr) auto; gap: var(--lr-space-s); align-items: center; }
   [part='activity'] { min-inline-size: 0; }
-  [part='status'] { min-inline-size: 0; max-inline-size: 100%; overflow-wrap: anywhere; }
+  [part='status'] { min-inline-size: 0; max-inline-size: 100%; overflow-wrap: break-word; }
   [part='controls'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-xs); }
   [part='controls'] button {
     min-block-size: var(--lr-icon-button-size); padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border);
