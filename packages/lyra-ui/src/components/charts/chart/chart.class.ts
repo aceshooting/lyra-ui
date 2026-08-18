@@ -2502,7 +2502,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               ),
             )
           : this.datasets.map((s, i) =>
-              this.seriesToDataset(s, i, palette, effectiveType, chartStyle),
+              this.seriesToDataset(s, i, palette, effectiveType, chartStyle, visualRows),
             ),
       },
       // `chartjs-plugin-datalabels` is registered PER-INSTANCE (only on charts

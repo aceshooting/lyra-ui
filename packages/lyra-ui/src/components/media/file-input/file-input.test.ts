@@ -3051,6 +3051,72 @@ it("reports one read rejection and accepts no partial prefix when a folder file 
   );
 });
 
+it("ignores a stale folder read result once a later drop supersedes it before the read resolves", async () => {
+  const el = await fixture<LyraFileInput>(
+    html`<lr-file-input multiple></lr-file-input>`
+  );
+  const dropzone = el.shadowRoot!.querySelector(
+    '[part~="dropzone"]'
+  ) as HTMLElement;
+  let deferredResolve: ((entries: unknown[]) => void) | undefined;
+  const staleFolder = {
+    isDirectory: true,
+    isFile: false,
+    name: "stale-folder",
+    createReader: () => ({
+      readEntries: (success: (entries: unknown[]) => void) => {
+        deferredResolve = success;
+      },
+    }),
+  };
+  const staleTransfer = {
+    files: [] as unknown as FileList,
+    items: [{ kind: "file", webkitGetAsEntry: () => staleFolder }],
+  };
+  const staleDrop = new DragEvent("drop", { bubbles: true, cancelable: true });
+  Object.defineProperty(staleDrop, "dataTransfer", { value: staleTransfer });
+  dropzone.dispatchEvent(staleDrop);
+  expect(typeof deferredResolve).to.equal("function");
+
+  // A second, unrelated drop supersedes the first (bumps dropToken) before its folder read ever
+  // settles.
+  const freshFile = makeFile("fresh.txt", "text/plain");
+  const result = oneEvent(el, "lr-files");
+  dropWith(dropzone, [freshFile]);
+  const emitted = await result;
+  expect(emitted.detail.files.map((file: File) => file.name)).to.deep.equal([
+    "fresh.txt",
+  ]);
+
+  // Resolving the stale folder read after being superseded must not retroactively add its file.
+  const nestedFromStaleFolder = makeFile("should-not-appear.txt", "text/plain");
+  deferredResolve?.([
+    {
+      isDirectory: false,
+      isFile: true,
+      name: nestedFromStaleFolder.name,
+      file: (successFile: (file: File) => void) => successFile(nestedFromStaleFolder),
+    },
+  ]);
+  await el.updateComplete;
+
+  expect(el.files.map((file) => file.name)).to.deep.equal(["fresh.txt"]);
+});
+
+it("rejects restored FormData state once entry traversal exceeds the bounded 10,000-entry ceiling", async () => {
+  const el = await fixture<LyraFileInput>(
+    html`<lr-file-input multiple></lr-file-input>`
+  );
+  const bundle = new FormData();
+  for (let i = 0; i <= 10_000; i++) {
+    bundle.append("file", makeFile(`f${i}.txt`, "text/plain"));
+  }
+  el.formStateRestoreCallback(bundle, "restore");
+  await el.updateComplete;
+
+  expect(el.files).to.deep.equal([]);
+});
+
 it("reports one read rejection when a directory reader fails", async () => {
   const el = await fixture<LyraFileInput>(
     html`<lr-file-input multiple></lr-file-input>`
@@ -3829,4 +3895,38 @@ describe("lr-file-input custom validators", () => {
     el.setCustomValidity("");
     expect(el.checkValidity()).to.be.true;
   });
+});
+
+it("fills a host stretched to a definite block size by an absolutely positioned ancestor", async () => {
+  // Regression test: used as a full-area drop overlay (host absolutely positioned with
+  // inset: 0 over a panel of known size), the dropzone must fill the host instead of
+  // collapsing to its own intrinsic content height. block-size: 100% has to chain through
+  // every block-level wrapper between the host and the dropzone button -- form-control,
+  // the dropzone grid, and the button itself -- or the fill breaks at whichever one is
+  // missing it and the visible drop surface shrinks to a content-sized band.
+  const wrapper = (await fixture(html`
+    <div style="position: relative; inline-size: 300px; block-size: 400px;">
+      <lr-file-input style="position: absolute; inset: 0;"></lr-file-input>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector("lr-file-input") as LyraFileInput;
+  await el.updateComplete;
+  const wrapperRect = wrapper.getBoundingClientRect();
+  const formControl = el.shadowRoot!.querySelector(
+    '[part="form-control"]'
+  ) as HTMLElement;
+  const dropzone = el.shadowRoot!.querySelector(".dropzone") as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  expect(
+    formControl.getBoundingClientRect().height,
+    "form-control"
+  ).to.be.closeTo(wrapperRect.height, 1);
+  expect(dropzone.getBoundingClientRect().height, "dropzone").to.be.closeTo(
+    wrapperRect.height,
+    1
+  );
+  expect(base.getBoundingClientRect().height, "dropzone button").to.be.closeTo(
+    wrapperRect.height,
+    1
+  );
 });

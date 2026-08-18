@@ -47,6 +47,12 @@ export const styles = css`
   [part="form-control"] {
     min-inline-size: 0;
     max-inline-size: 100%;
+    /* Percentage block-size against an auto-height ancestor resolves to auto, so this is a no-op
+       for the ordinary content-sized default -- it only takes effect when :host itself has a
+       definite block size (a consumer using this control as a full-area drop overlay, host
+       absolutely positioned with inset: 0 over a sized panel). The chain has to continue through
+       .dropzone and [part~="base"] below or the fill breaks at whichever one is missing it. */
+    block-size: 100%;
   }
   [part~="form-control-label"] {
     display: block;
@@ -69,10 +75,12 @@ export const styles = css`
     position: relative;
     display: grid;
     min-inline-size: 0;
+    block-size: 100%;
   }
   [part~="base"] {
     grid-area: 1 / 1;
     inline-size: 100%;
+    block-size: 100%;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     box-sizing: border-box;

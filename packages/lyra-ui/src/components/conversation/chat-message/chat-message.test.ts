@@ -605,6 +605,51 @@ it("aligns a system turn's actions to the inline start, matching its own start-a
   expect(actionsRect.left).to.be.closeTo(footerRect.left, 1);
 });
 
+it('aligns a user turn\'s outside actions content to the inline end, matching its own end-aligned bubble', async () => {
+  // Regression test: [part='actions'] becomes a full-width block-level flex row when
+  // actions-position="outside" (it is no longer a flex item of [part='footer'], so its own box
+  // always spans the message's full width regardless of role). The role-conditional auto margins
+  // that align it correctly in the default footer position have no effect there -- there is never
+  // spare space to distribute onto a box that already fills its container. The slotted content
+  // itself must be pushed to the inline end via justify-content instead.
+  const el = (await fixture(
+    html`<lr-chat-message message-role="user" actions-position="outside"
+      ><button slot="actions">Copy</button>hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  const button = el.querySelector('button[slot="actions"]') as HTMLElement;
+  const bubbleRect = bubble.getBoundingClientRect();
+  const buttonRect = button.getBoundingClientRect();
+  expect(buttonRect.right).to.be.closeTo(bubbleRect.right, 1);
+});
+
+it('aligns an assistant turn\'s outside actions content to the inline start, matching its own start-aligned bubble', async () => {
+  const el = (await fixture(
+    html`<lr-chat-message message-role="assistant" actions-position="outside"
+      ><button slot="actions">Copy</button>hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  const button = el.querySelector('button[slot="actions"]') as HTMLElement;
+  const bubbleRect = bubble.getBoundingClientRect();
+  const buttonRect = button.getBoundingClientRect();
+  expect(buttonRect.left).to.be.closeTo(bubbleRect.left, 1);
+});
+
+it('aligns a system turn\'s outside actions content to the inline start, matching its own start-aligned bubble', async () => {
+  const el = (await fixture(
+    html`<lr-chat-message message-role="system" actions-position="outside"
+      ><button slot="actions">Copy</button>hi</lr-chat-message
+    >`
+  )) as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  const button = el.querySelector('button[slot="actions"]') as HTMLElement;
+  const bubbleRect = bubble.getBoundingClientRect();
+  const buttonRect = button.getBoundingClientRect();
+  expect(buttonRect.left).to.be.closeTo(bubbleRect.left, 1);
+});
+
 it("shows attachments once slotted", async () => {
   const el = (await fixture(
     html`<lr-chat-message

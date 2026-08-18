@@ -145,6 +145,42 @@ describe('bounded chart surface regressions', () => {
     }
   });
 
+  it('ignores a stale reduced-motion change event that arrives after disconnect', () => {
+    const originalMatchMedia = window.matchMedia;
+    let listener: ((event: MediaQueryListEvent) => void) | undefined;
+    window.matchMedia = ((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener(_type: string, callback: EventListenerOrEventListenerObject) {
+        if (query === '(prefers-reduced-motion: reduce)') {
+          listener = callback as (event: MediaQueryListEvent) => void;
+        }
+      },
+      removeEventListener() {},
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+    try {
+      const el = document.createElement('lr-chart') as LyraChart;
+      let draws = 0;
+      (el as unknown as { drawIfVisible(): void }).drawIfVisible = () => { draws += 1; };
+      document.body.append(el);
+      expect(listener, 'the watcher must have registered a change listener while connected').to.be.a(
+        'function',
+      );
+      el.remove();
+      const before = draws;
+      listener?.({ matches: true, media: '(prefers-reduced-motion: reduce)' } as MediaQueryListEvent);
+      expect(draws, 'a stale listener firing after disconnect must not trigger a redraw').to.equal(
+        before,
+      );
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('ignores a stale visibility callback after reconnecting with a new observer', () => {
     const OriginalObserver = window.IntersectionObserver;
     const callbacks: IntersectionObserverCallback[] = [];
@@ -1831,6 +1867,18 @@ it('configures a fixed or auto-responsive legend position', async () => {
   expect((el as any).buildConfig().options.plugins.legend.position).to.equal('bottom');
 });
 
+it('accepts a per-scale legend position object and falls back to "top" for an invalid one', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.legendPosition = { x: 0.2, y: 40 };
+  expect((el as any).buildConfig().options.plugins.legend.position).to.deep.equal({ x: 0.2, y: 40 });
+
+  el.legendPosition = { x: 'not-a-number' } as unknown as typeof el.legendPosition;
+  expect((el as any).buildConfig().options.plugins.legend.position).to.equal('top');
+
+  el.legendPosition = 'not-a-real-position' as unknown as typeof el.legendPosition;
+  expect((el as any).buildConfig().options.plugins.legend.position).to.equal('top');
+});
+
 it('applies one valueFormatter to numeric ticks, tooltips, and legend values', async () => {
   const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['A', 'B'];
@@ -2728,6 +2776,97 @@ it('accepts a per-point pointRadius array', async () => {
   el.datasets = [{ label: 'S', data: [1, 2, 3], pointRadius: [2, 6, 2] }];
   const config = (el as any).buildConfig();
   expect(config.data.datasets[0].pointRadius).to.deep.equal([2, 6, 2]);
+});
+
+it('samples the shared labels array to the rendering budget for a very large single-series dataset', async () => {
+  const rowCount = 2000;
+  const labels = Array.from({ length: rowCount }, (_, i) => String(i));
+  const data = Array.from({ length: rowCount }, (_, i) => i);
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = labels;
+  el.datasets = [{ label: 'S', data }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const config = (el as any).buildConfig();
+  expect(config.data.labels.length).to.equal(1000);
+  expect(config.data.labels[0]).to.equal('0');
+  expect(config.data.labels[999]).to.equal('1999');
+});
+
+it("row-samples every series' own data/color/pointRadius arrays to match the sampled labels, even when the series dimension itself is within budget", async () => {
+  // Regression test: `buildConfig()`'s dataset branch (the `visualSeries ? ... : this.datasets.map(...)`
+  // fork) used to forward the computed `visualRows` sample into `seriesToDataset()` only when the
+  // *series* dimension also needed sampling. With few series and many rows -- the common case -- only
+  // `labels` got sampled down to the 1,000-record budget while each series' own `data`/`color`/
+  // `pointRadius`/`pointColors`/`segmentColors` arrays stayed at full source length, producing a
+  // `config.data.labels`/`config.data.datasets[i].data` length mismatch fed straight to Chart.js.
+  const rowCount = 2000;
+  const labels = Array.from({ length: rowCount }, (_, i) => String(i));
+  const dataA = Array.from({ length: rowCount }, (_, i) => i);
+  const dataB = Array.from({ length: rowCount }, (_, i) => rowCount - i);
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = labels;
+  el.datasets = [
+    { label: 'A', data: dataA, color: dataA.map(() => '#ff0000') },
+    { label: 'B', data: dataB },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const config = (el as any).buildConfig();
+  expect((el as any).visualDatasetSourceIndexes, 'series dimension stayed within budget').to.be
+    .undefined;
+  const sourceIndexes = (el as any).visualRowSourceIndexes as number[];
+  expect(sourceIndexes.length, 'row dimension must have been sampled').to.be.lessThan(rowCount);
+  expect(config.data.labels.length).to.equal(sourceIndexes.length);
+
+  const probe = Math.floor(sourceIndexes.length / 2);
+  expect(config.data.datasets[0].data.length, 'series A data').to.equal(sourceIndexes.length);
+  expect(config.data.datasets[0].data[probe]).to.equal(dataA[sourceIndexes[probe]!]);
+  expect(config.data.datasets[0].backgroundColor.length, 'series A colors').to.equal(
+    sourceIndexes.length,
+  );
+  expect(config.data.datasets[1].data.length, 'series B data').to.equal(sourceIndexes.length);
+  expect(config.data.datasets[1].data[probe]).to.equal(dataB[sourceIndexes[probe]!]);
+});
+
+it('maps a click on a row-sampled chart back to its original source row index/value in the emitted detail', async () => {
+  const rowCount = 2000;
+  const labels = Array.from({ length: rowCount }, (_, i) => String(i));
+  const data = Array.from({ length: rowCount }, (_, i) => i);
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = labels;
+  el.datasets = [{ label: 'S', data }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  (el as any).buildConfig(); // populates visualRowSourceIndexes as a side effect, like a real draw()
+
+  const sourceIndexes = (el as any).visualRowSourceIndexes as number[];
+  expect(sourceIndexes, 'row sampling must have activated for a 2000-row single series').to.be.an(
+    'array',
+  );
+  expect(sourceIndexes.length).to.equal(1000);
+  const originalRow = sourceIndexes[500]!;
+  expect(originalRow).to.not.equal(500);
+
+  const chart = (el as any).chart;
+  const original = chart.getElementsAtEventForMode;
+  chart.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 500 }];
+  try {
+    const onClick = (el as any).buildConfig().options.onClick;
+    let event: CustomEvent | undefined;
+    el.addEventListener('lr-point-click', (e) => (event = e as CustomEvent), { once: true });
+    onClick({} as never, [], chart);
+    expect(event!.detail).to.deep.equal({
+      datasetIndex: 0,
+      index: originalRow,
+      label: String(originalRow),
+      value: originalRow,
+    });
+  } finally {
+    chart.getElementsAtEventForMode = original;
+  }
 });
 
 it('maps segmentColors to Chart.js segment.borderColor', async () => {
@@ -4360,6 +4499,16 @@ describe('coverage: scale bounds and grid axis visibility', () => {
     config = (el as any).buildConfig();
     expect(config.options.scales.x.grid.display).to.equal(false);
     expect(config.options.scales.y.grid.display).to.equal(false);
+  });
+
+  it('parses the grid attribute from a plain HTML string, defaulting to "both" for an unrecognized value', async () => {
+    const el = (await fixture(html`<lr-chart type="bar" grid="x"></lr-chart>`)) as LyraChart;
+    expect(el.grid).to.equal('x');
+
+    const fallback = (await fixture(
+      html`<lr-chart type="bar" grid="not-a-real-grid-value"></lr-chart>`,
+    )) as LyraChart;
+    expect(fallback.grid).to.equal('both');
   });
 });
 

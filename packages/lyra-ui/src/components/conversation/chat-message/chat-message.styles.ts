@@ -164,6 +164,20 @@ export const styles = css`
   :host([actions-position='outside']) [part='actions'] {
     margin-block-start: var(--lr-space-2xs);
   }
+  /* Outside the footer, [part='actions'] is no longer a flex item of [part='footer'] -- it is a
+     sibling of [part='bubble'], and the display: flex rule above blockifies its own box to span
+     the full message width. The role-conditional auto margins a few rules up only move a flex item
+     within spare space in its container; a box that already fills its container has none to
+     distribute, so they are a no-op here. Aligning the slotted content itself via justify-content
+     reaches the same visual result: pinned to the same inline edge as the role-aligned bubble
+     above it. */
+  :host([actions-position='outside'][message-role='user']) [part='actions'] {
+    justify-content: flex-end;
+  }
+  :host([actions-position='outside'][message-role='assistant']) [part='actions'],
+  :host([actions-position='outside'][message-role='system']) [part='actions'] {
+    justify-content: flex-start;
+  }
   [part='timestamp'] {
     white-space: nowrap;
   }
