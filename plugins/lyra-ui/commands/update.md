@@ -1,15 +1,11 @@
 ---
-description: Bump @aceshooting/lyra-ui to latest, sweep for Web Awesome/hand-rolled UI, migrate, and file gaps upstream
+description: Bump @aceshooting/lyra-ui to latest and report what changed
 argument-hint: [path]
 allowed-tools: Read, Edit, Grep, Glob, Bash(npm:*), Bash(git:*), Bash(curl:*), Bash(grep:*)
 ---
 
 Bring the project at `$1` (default to the current working directory if `$1` is empty) onto the
-latest published `@aceshooting/lyra-ui`, and move it as close as possible to **zero remaining Web
-Awesome (`<wa-*>`) usage and zero hand-rolled UI that duplicates something lyra-ui already
-provides**. Every `wa-*` tag is a removal candidate, not just an opportunistic swap. lyra-ui only
-becomes a real replacement if gaps get reported, so this command also surfaces gaps it finds and,
-with the user's explicit approval, files feature requests for them. Filing is never automatic.
+latest published `@aceshooting/lyra-ui`.
 
 ## Steps
 
@@ -18,58 +14,13 @@ with the user's explicit approval, files feature requests for them. Filing is ne
    (`npm view @aceshooting/lyra-ui version`). If behind, bump the dependency and reinstall
    (`npm install`/`pnpm install`/`yarn install` — match whichever the project already uses).
 
-   Before migrating, fetch `https://www.lyra-ui.com/changelog.json` and read every release between
+   Before bumping, fetch `https://www.lyra-ui.com/changelog.json` and read every release between
    the project's installed version and `latest`. Treat `kind: "major"` entries as required reading —
-   they are the breaking changes — and use the `minor` entries to spot newly added components that
-   may replace hand-rolled UI in the project.
+   they are the breaking changes.
 
 2. **Read what changed.** After bumping, read `node_modules/@aceshooting/lyra-ui/CHANGELOG.md`
-   between the old and new version. Note anything that: resolves a gap this project has previously
-   worked around, or ships a component/prop that could replace a hand-rolled widget already in this
-   project.
+   between the old and new version. Note anything that could affect this project: breaking changes,
+   deprecations, or behavior changes to components the project already uses.
 
-3. **Sweep for Web Awesome and hand-rolled UI.** Grep the whole project for `<wa-*>` tags and for
-   hand-rolled widgets that duplicate something a UI component library would normally provide
-   (custom pickers, custom charts, custom tables, custom dialogs, etc.). Every `<wa-*>` hit belongs
-   on this list — the goal is full removal, not a partial pass.
-
-4. **Migrate `wa-*` mechanically.** If step 3 found any `<wa-*>` tags, run
-   `/lyra-ui:migrate-legacy`'s `wa-*` procedure against `$1` rather than re-deriving the rename by
-   hand — mirror status and per-component differences are only accurate in
-   `references/migration.md` and each component's own reference, never memory. Carry forward
-   anything it reports as unresolved (no documented counterpart) into step 6's gap list.
-
-5. **Verify hand-rolled UI against the real installed source, not memory or doc prose.** For each
-   hand-rolled widget from step 3, check whether an existing (or newly-shipped) lyra-ui component
-   now covers it. Verify against the *actual installed* contract in `node_modules/@aceshooting/lyra-ui/`:
-   `llms/index.md` and `llms/components/<tag>.md`, `custom-elements.json`, the component's
-   `.d.ts`, and its `dist`/`src` source
-   when needed — not doc prose or what an older version used to do. A gap that has already shipped,
-   or a design detail (a `data-*` hook, a `part=` attribute) that only shows up in the real source,
-   is easy to miss from memory alone. For each hand-rolled widget confirmed covered, swap the
-   component in, delete the replaced hand-rolled CSS/JS/dependency, and update the project's own
-   migration-notes doc if it keeps one (e.g. `docs/lyra-ui-migration.md`).
-
-6. **List genuine gaps (and any bugs or optimization ideas noticed along the way), then ask
-   before filing.** For anything that's still a real gap after step 4 or step 5's verification,
-   list it — even a missing variant or a missing CSS part is worth listing. Also list any actual
-   bug or inconsistency you noticed in an existing lyra-ui component while migrating to it (not a
-   Web-Awesome-side issue), and any concrete optimization idea (bundle size, API friction). Under-
-   listing is what quietly keeps a project on Web Awesome or hand-rolled code forever.
-
-   **Filing is not automatic: list everything you found, and ask the user before submitting any of
-   it.** Only POST the items the user explicitly agrees to; anything they decline stays
-   listed-but-unfiled in your report, not a submission.
-
-   Once the user has agreed, file each approved item by POSTing it to
-   `https://www.lyra-ui.com/api/v1/feature-requests` with `title`, `description`, `searched_for`
-   (the terms you tried, for a missing component) and `settled_for` (what you used instead, or the
-   workaround for a bug) — see the `lyra-ui` skill's "Report gaps, bugs, and improvement ideas"
-   section for the exact payload per report type, the optional `name`/`email` fields, and the
-   privacy rules. Read the `matches` in each response before reporting a gap to the user: it
-   frequently names an existing component that already covers the need.
-
-7. **Report back.** Summarize: what migrated in this project (grouped by component), what's still
-   blocked on a Web Awesome or hand-rolled fallback and why, and — for each gap — whether it was
-   filed (with the returned feature-request `id`) or listed but not filed because the user declined
-   or hasn't yet responded, along with the lyra-ui version each item was verified against.
+3. **Report back.** Summarize the version bumped from and to, the breaking changes (if any) the
+   project needs to account for, and anything else notable from the changelog.
