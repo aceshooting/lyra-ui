@@ -1130,3 +1130,20 @@ it('settles an anchor swap in a single render too', async () => {
   el.anchor = host.querySelector('#b') as HTMLElement;
   expect(await el.updateComplete, 'swapping the anchor scheduled a second render').to.be.true;
 });
+
+it('settles a virtualAnchor override in a single render, like the other anchor inputs', async () => {
+  // `resolveAnchor()` prefers virtualAnchor > anchor > for, so switching to a virtual rect changes
+  // which thing is placed against while `anchor` itself never changes -- the path that kept
+  // scheduling the extra render after the plain anchor swap was already fixed.
+  const wrapper = await fixture(html`
+    <div>
+      <button id="virtual-priority-anchor">Anchor</button>
+      <lr-popup active anchor="virtual-priority-anchor"><div>Content</div></lr-popup>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-popup') as LyraPopup;
+  await settle(el);
+
+  el.virtualAnchor = { x: 300, y: 220 };
+  expect(await el.updateComplete, 'a virtualAnchor override scheduled a second render').to.be.true;
+});

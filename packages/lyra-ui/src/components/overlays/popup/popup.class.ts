@@ -282,7 +282,14 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     // against, which flips the state after the update completed and buys a second render. Deriving
     // it here hides the popup in the *same* render that adopts the new anchor -- also the more
     // correct paint, since the old coordinates are already stale by then.
-    if (changed.has('anchor')) this.setPositioned(false);
+    //
+    // All three anchor inputs count, not just `anchor`: `resolveAnchor()` prefers `virtualAnchor`,
+    // then `anchor`, then `for`, so any of them can change which element is placed against while
+    // `anchor` itself never changes. Watching only `anchor` left the virtual-anchor path -- the
+    // documented way to point a popup at a bare rect -- still buying the extra render.
+    if (changed.has('anchor') || changed.has('for') || changed.has('virtualAnchor')) {
+      this.setPositioned(false);
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
