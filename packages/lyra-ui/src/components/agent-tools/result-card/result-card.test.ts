@@ -279,9 +279,16 @@ describe('frame', () => {
   });
 
   it('gives the superseded `appearance` attribute no effect at all -- the rename left no alias', async () => {
-    const el = (await fixture(
-      html`<lr-result-card appearance="plain" heading="x">body</lr-result-card>`,
-    )) as LyraResultCard;
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let el: LyraResultCard;
+    try {
+      el = (await fixture(
+        html`<lr-result-card appearance="plain" heading="x">body</lr-result-card>`,
+      )) as LyraResultCard;
+    } finally {
+      console.warn = originalWarn;
+    }
     expect(el.frame).to.equal('card');
     expect(base(el).borderTopWidth).to.equal('1px');
     expect(base(el).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');

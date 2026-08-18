@@ -796,12 +796,19 @@ describe("virtualization", () => {
 
     // The retired attribute is inert: it must not resurrect the old threshold through Lit's
     // attribute observation.
-    const stale = (await fixture(
-      html`<lr-ingestion-queue
-        virtualize-threshold="1"
-        .items=${two}
-      ></lr-ingestion-queue>`
-    )) as LyraIngestionQueue;
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let stale: LyraIngestionQueue;
+    try {
+      stale = (await fixture(
+        html`<lr-ingestion-queue
+          virtualize-threshold="1"
+          .items=${two}
+        ></lr-ingestion-queue>`
+      )) as LyraIngestionQueue;
+    } finally {
+      console.warn = originalWarn;
+    }
     expect(stale.virtualizeAt).to.equal(100);
     expect(
       stale.shadowRoot!.querySelectorAll("lr-virtual-list").length

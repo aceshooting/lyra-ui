@@ -70,9 +70,16 @@ it('reflects shape onto the host attribute and gives each shape a distinct borde
 });
 
 it('does not expose the removed variant property or let its former attribute select geometry', async () => {
-  const el = (await fixture(
-    html`<lr-skeleton variant="circle"></lr-skeleton>`,
-  )) as LyraSkeleton;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let el: LyraSkeleton;
+  try {
+    el = (await fixture(
+      html`<lr-skeleton variant="circle"></lr-skeleton>`,
+    )) as LyraSkeleton;
+  } finally {
+    console.warn = originalWarn;
+  }
   const indicator = el.shadowRoot!.querySelector<HTMLElement>('[part~="indicator"]')!;
 
   expect('variant' in el).to.equal(false);

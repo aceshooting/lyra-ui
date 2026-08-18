@@ -303,9 +303,16 @@ it('never forwards host click() while disabled (native disabled button semantics
 });
 
 it('is a pure icon action/link rather than a partial form submitter', async () => {
-  const form = (await fixture(html`
-    <form><lr-icon-button icon="close" aria-label="Dismiss" type="submit"></lr-icon-button></form>
-  `)) as HTMLFormElement;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let form: HTMLFormElement;
+  try {
+    form = (await fixture(html`
+      <form><lr-icon-button icon="close" aria-label="Dismiss" type="submit"></lr-icon-button></form>
+    `)) as HTMLFormElement;
+  } finally {
+    console.warn = originalWarn;
+  }
   const el = form.querySelector('lr-icon-button') as LyraIconButton;
   let submits = 0;
   form.addEventListener('submit', (event) => {

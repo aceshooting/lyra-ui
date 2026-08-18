@@ -400,9 +400,16 @@ it('drops border, background, padding and radius under frame="plain"', async () 
 // therefore render as an untouched card -- asserted on the rendered box, because a renamed
 // selector that still matched the old attribute would be invisible to every other assertion here.
 it('ignores a stale appearance="plain", leaving the card chrome intact', async () => {
-  const stale = (await fixture(
-    html`<lr-source-card appearance="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
-  )) as LyraSourceCard;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let stale: LyraSourceCard;
+  try {
+    stale = (await fixture(
+      html`<lr-source-card appearance="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
+    )) as LyraSourceCard;
+  } finally {
+    console.warn = originalWarn;
+  }
   expect(stale.frame).to.equal('card');
   const chrome = baseChrome(stale);
   expect(chrome.paddingTop).to.equal('8px'); // --lr-space-s, i.e. the untouched card padding

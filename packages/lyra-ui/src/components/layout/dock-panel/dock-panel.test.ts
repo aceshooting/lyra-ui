@@ -1323,9 +1323,16 @@ describe("aria-label localization", () => {
 });
 
 it("no longer answers to the pre-8.0.0 size/min-size/max-size attributes — extent replaced them outright", async () => {
-  const el = await dockedFixture(
-    'size="300px" min-size="24px" max-size="500px"'
-  );
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let el: LyraDockPanel;
+  try {
+    el = await dockedFixture(
+      'size="300px" min-size="24px" max-size="500px"'
+    );
+  } finally {
+    console.warn = originalWarn;
+  }
   await elementUpdated(el);
   // `size` was a CSS length on a property name the rest of the library reserves for a tier on the
   // six-step ladder; the rename is clean, with no alias, so the old spellings are inert.

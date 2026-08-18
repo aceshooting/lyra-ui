@@ -74,7 +74,13 @@ it('rebinds reduced-motion and DPR work to the adopted owner window and cleans u
     expect(parentMotion.listenerCount()).to.equal(1);
     expect(frameMotion.listenerCount()).to.equal(0);
 
-    frameDocument.body.append(frameDocument.adoptNode(el));
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      frameDocument.body.append(frameDocument.adoptNode(el));
+    } finally {
+      console.warn = originalWarn;
+    }
     await el.updateComplete;
     await aTimeout(0);
     expect(parentMotion.listenerCount()).to.equal(0);
@@ -188,7 +194,13 @@ it('reconciles playing against a reduced-motion preference that changed while de
 
     el.remove();
     motion.fire(true);
-    parent.append(el);
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      parent.append(el);
+    } finally {
+      console.warn = originalWarn;
+    }
     await el.updateComplete;
 
     expect(el.playing).to.be.false;
@@ -217,7 +229,13 @@ it('rebaselines detached play and unsafe-src writes without emitting on detach o
     expect(el.playing).to.be.true;
     expect(events, 'a detached update is state, not an observable transition').to.deep.equal([]);
 
-    parent.append(el);
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      parent.append(el);
+    } finally {
+      console.warn = originalWarn;
+    }
     await el.updateComplete;
     expect(el.playing).to.be.true;
     expect(el.hasAttribute('playing')).to.be.true;
