@@ -13,6 +13,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
   loadMaplibre,
+  type MapLibreGeoJsonDiff,
   type MapLibreGeoJsonSource,
   type MapLibreMapCapability,
   type MapLibreMarkerCapability,
@@ -351,7 +352,14 @@ export interface LyraMapInstance {
   setCenter(center: [number, number]): unknown;
   setZoom(zoom: number): unknown;
   resize(): unknown;
+  setMaxBounds?(bounds: LyraMapBounds | null): unknown;
 }
+
+/** A pan-constraining box, `[[west, south], [east, north]]`, in the order maplibre-gl takes. */
+export type LyraMapBounds = readonly [
+  readonly [number, number],
+  readonly [number, number],
+];
 
 // Defensive JS-side fallback for choroplethFillOpacity() below. The custom
 // property deliberately remains undeclared on :host so a value from any
@@ -444,6 +452,70 @@ function warnOnUntileableProperties(geojson: unknown, sourceLabel: string): void
       );
     }
   }
+}
+
+/** Ceiling on the features one property-diff pass inspects, matching the untileable-property scan:
+ *  past it, falling back to a whole-source replace is cheaper than the comparison itself. */
+const GEOJSON_DIFF_FEATURE_LIMIT = 10_000;
+
+/**
+ * Builds a maplibre-gl `updateData()` diff when `next` differs from `previous` only in feature
+ * properties, and returns `null` otherwise so the caller replaces the whole source instead.
+ *
+ * `setData()` unconditionally re-tiles and repaints an entire source with no diffing. That is
+ * invisible on a static map and expensive on an animated one: advancing a choropleth a step every
+ * few hundred milliseconds re-tiles every polygon each time, when all that changed were the values
+ * driving the colour ramp.
+ *
+ * Deliberately strict about what counts as "geometry unchanged": geometries must be the *same
+ * object*, not merely deep-equal. Structurally comparing polygon rings would cost on the order of
+ * the re-tile this exists to avoid, and a false positive here paints stale geometry -- a visibly
+ * wrong map -- whereas a false negative merely takes the old path. An animation that reuses its
+ * geometry across frames, which is the efficient way to build one anyway, hits the fast path.
+ */
+export function buildGeoJsonPropertyDiff(
+  previous: unknown,
+  next: unknown
+): MapLibreGeoJsonDiff | null {
+  const previousFeatures = (previous as { features?: unknown })?.features;
+  const nextFeatures = (next as { features?: unknown })?.features;
+  if (!Array.isArray(previousFeatures) || !Array.isArray(nextFeatures)) return null;
+  if (previousFeatures.length !== nextFeatures.length) return null;
+  if (nextFeatures.length > GEOJSON_DIFF_FEATURE_LIMIT) return null;
+
+  const update: {
+    id: string | number;
+    addOrUpdateProperties: { key: string; value: unknown }[];
+    removeProperties: string[];
+  }[] = [];
+
+  for (let index = 0; index < nextFeatures.length; index += 1) {
+    const before = previousFeatures[index] as
+      | { id?: unknown; geometry?: unknown; properties?: Record<string, unknown> | null }
+      | undefined;
+    const after = nextFeatures[index] as
+      | { id?: unknown; geometry?: unknown; properties?: Record<string, unknown> | null }
+      | undefined;
+    if (!before || !after) return null;
+    // No id means maplibre-gl cannot address the feature in a diff at all.
+    const id = after.id;
+    if ((typeof id !== 'string' && typeof id !== 'number') || before.id !== id) return null;
+    if (before.geometry !== after.geometry) return null;
+
+    const beforeProperties = before.properties ?? {};
+    const afterProperties = after.properties ?? {};
+    const addOrUpdateProperties: { key: string; value: unknown }[] = [];
+    for (const [key, value] of Object.entries(afterProperties)) {
+      if (!Object.is(beforeProperties[key], value)) addOrUpdateProperties.push({ key, value });
+    }
+    const removeProperties = Object.keys(beforeProperties).filter(
+      (key) => !(key in afterProperties)
+    );
+    if (addOrUpdateProperties.length === 0 && removeProperties.length === 0) continue;
+    update.push({ id, addOrUpdateProperties, removeProperties });
+  }
+
+  return { update };
 }
 
 export interface LyraMapEventMap {
@@ -586,6 +658,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ type: Array }) center: readonly [number, number] = [0, 0];
   /** Initial and controlled map zoom level. */
   @property({ type: Number }) zoom = 2;
+
+  /**
+   * Box the map may not pan outside, `[[west, south], [east, north]]`, or `null` for unconstrained.
+   *
+   * Exists because reaching for `map.setMaxBounds()` through the `.map` escape hatch can wedge
+   * maplibre-gl: at a sub-1 fractional zoom in a wide container, constraining to the full world box
+   * has been observed to leave `getZoom()` returning `null` permanently, after which every frame
+   * throws from inside the peer's own matrix math and the canvas never paints again -- a blank map,
+   * with nothing thrown at the call site to attribute it to. Going through this property applies
+   * the same call, then checks the camera survived it and reverts if it did not, so the worst case
+   * is an unconstrained map plus a dev-mode warning rather than a blank one.
+   */
+  @property({ attribute: false }) maxBounds: LyraMapBounds | null = null;
   /** Required MapLibre style URL or peer-neutral style specification. No provider is contacted
    * unless a consumer assigns this property. */
   @property({ attribute: false }) mapStyle?: Readonly<LyraMapStyleSpecification> | string;
@@ -714,6 +799,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // generated ids prevent a base style from being updated or removed merely because it happens to
   // use the same id as one of this component's data layers.
   private _appliedDataLayerIds = new Map<string, string>();
+  /** Last GeoJSON applied per resolved source id, so an update can be diffed against it rather
+   *  than replacing the whole source. Holds a reference, not a copy -- it is only ever compared. */
+  private _appliedGeoJson = new Map<string, unknown>();
   private _nextDataLayerId = 0;
   // Cached once connectedCallback's loadMaplibre().then() resolves, and always
   // set before `_map` itself is (see that closure) -- so any code path gated
@@ -754,6 +842,75 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * install the optional peer may explicitly narrow this value to its full `Map` type. */
   get map(): LyraMapInstance | undefined {
     return this._map as unknown as LyraMapInstance | undefined;
+  }
+
+  /** Pushes `geojson` into an existing source, preferring an incremental property update over a
+   *  whole-source replace. `setData()` always re-tiles everything; `updateData()` (maplibre-gl 3+)
+   *  does not, which is the difference between a smooth animated choropleth and a heavy one. */
+  private pushGeoJson(
+    source: MapLibreGeoJsonSource,
+    resolvedSourceId: string,
+    geojson: unknown
+  ): void {
+    const previous = this._appliedGeoJson.get(resolvedSourceId);
+    const diff =
+      typeof source.updateData === 'function' && previous !== undefined
+        ? buildGeoJsonPropertyDiff(previous, geojson)
+        : null;
+    if (diff === null || typeof source.updateData !== 'function') source.setData(geojson);
+    else if (diff.update.length > 0) source.updateData(diff);
+    this._appliedGeoJson.set(resolvedSourceId, geojson);
+  }
+
+  /** Normalized `maxBounds`, or `null` when unset or unusable. Rejects rather than clamps a
+   *  malformed box: a silently corrected constraint is harder to debug than none at all. */
+  private get safeMaxBounds(): LyraMapBounds | null {
+    const bounds = this.maxBounds;
+    if (!Array.isArray(bounds) || bounds.length !== 2) return null;
+    const [southWest, northEast] = bounds as [unknown, unknown];
+    if (!Array.isArray(southWest) || !Array.isArray(northEast)) return null;
+    const [west, south] = southWest as [unknown, unknown];
+    const [east, north] = northEast as [unknown, unknown];
+    const values = [west, south, east, north].map(Number);
+    if (!values.every((value) => Number.isFinite(value))) return null;
+    const [w, s, e, n] = values as [number, number, number, number];
+    if (w >= e || s >= n) return null;
+    if (w < -180 || e > 180 || s < -90 || n > 90) return null;
+    return [
+      [w, s],
+      [e, n],
+    ];
+  }
+
+  /**
+   * Applies `maxBounds`, then verifies the peer's camera survived it.
+   *
+   * maplibre-gl constrains the camera when bounds are set, and that constrain pass can leave the
+   * transform in a state where `getZoom()` returns a non-number; from then on the map throws every
+   * frame from inside its own matrix math and never paints. There is no exception at the call site
+   * to catch, so the only reliable signal is to read the camera back afterwards. If it did not
+   * survive, drop the constraint and restore the camera -- an unconstrained map is a far smaller
+   * defect than a blank one -- and say so once, naming the property.
+   */
+  private applyMaxBounds(): void {
+    const map = this._map;
+    if (!map || typeof map.setMaxBounds !== 'function') return;
+    const bounds = this.safeMaxBounds;
+    const zoomBefore = map.getZoom();
+    const centerBefore = map.getCenter();
+    map.setMaxBounds(bounds);
+    if (bounds === null) return;
+    if (Number.isFinite(map.getZoom())) return;
+    map.setMaxBounds(null);
+    if (Number.isFinite(zoomBefore)) map.setZoom(zoomBefore);
+    if (centerBefore) map.setCenter([centerBefore.lng, centerBefore.lat]);
+    devWarnOnce(
+      'lyra-map-max-bounds-rejected',
+      '<lr-map>: maxBounds left maplibre-gl without a usable zoom, so it was dropped and the '
+        + 'camera restored. This is a peer limitation, not a bad value -- it shows up at sub-1 '
+        + 'fractional zooms in wide containers. Raise the zoom, narrow the box, or leave maxBounds '
+        + 'unset.'
+    );
   }
 
   /** `zoom` normalized to a finite value clamped into `[0, 22]` -- maplibre-gl's own default
@@ -894,6 +1051,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._appliedChoroplethSourceId = undefined;
     this._appliedFillLayerId = undefined;
     this._appliedDataLayerIds.clear();
+    this._appliedGeoJson.clear();
   }
 
   override adoptedCallback(): void {
@@ -1068,6 +1226,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           try {
             this._styleLoaded = true;
             this._appliedDataLayerIds.clear(); // a style change wipes every layer/source maplibre-gl knows about
+            this._appliedGeoJson.clear();
             this.applyChoropleth();
             this.applyDataLayers();
           } catch {
@@ -1102,6 +1261,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     if (changed.has('center') && this._map) this._map.setCenter(this.safeCenter);
     if (changed.has('zoom') && this._map) this._map.setZoom(this.safeZoom);
+    if (changed.has('maxBounds') && this._map) this.applyMaxBounds();
     if (changed.has('markers') && this._map) this.applyMarkers();
     this.syncMapSemantics();
   }
@@ -1163,7 +1323,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (existingSource) {
       // Re-apply the data even if the color expression below ends up skipped:
       // `geojson` may have changed even though `sourceId`/`stops` didn't.
-      existingSource.setData(geojson);
+      this.pushGeoJson(existingSource, sourceId, geojson);
     } else {
       // No `promoteId` -- maplibre-gl falls back to its own default id
       // resolution (the standard top-level GeoJSON `Feature.id`, when
@@ -1175,6 +1335,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // added later it should be driven by an explicit, documented
       // `LyraMapChoroplethLayer` option (e.g. `idField`), not a silent default.
       this._map.addSource(sourceId, { type: 'geojson', data: geojson });
+      this._appliedGeoJson.set(sourceId, geojson);
     }
     this._appliedChoroplethSourceId = sourceId;
 
@@ -1233,6 +1394,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (this._map.getSource(this._appliedChoroplethSourceId)) {
       this._map.removeSource(this._appliedChoroplethSourceId);
     }
+    // Forget the tracked GeoJSON too: a re-added source starts from whatever `addSource` was given,
+    // so diffing a later update against the torn-down source's data would skip real changes.
+    this._appliedGeoJson.delete(this._appliedChoroplethSourceId);
     this._appliedChoroplethSourceId = undefined;
     this._appliedFillLayerId = undefined;
   }
@@ -1257,9 +1421,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       warnOnUntileableProperties(geojson, publicSourceId);
       const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
       if (existingSource) {
-        existingSource.setData(geojson);
+        this.pushGeoJson(existingSource, sourceId, geojson);
       } else {
         this._map.addSource(sourceId, { type: 'geojson', data: geojson });
+        this._appliedGeoJson.set(sourceId, geojson);
       }
       const color = dataLayerColor(this, tone);
       const fillId = `${sourceId}-fill`;
@@ -1329,6 +1494,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     if (this._map.getSource(sourceId)) this._map.removeSource(sourceId);
     this._appliedDataLayerIds.delete(publicSourceId);
+    this._appliedGeoJson.delete(sourceId);
   }
 
   // Deliberately synchronous (no `await loadMaplibre()`): `_maplibreModule` is

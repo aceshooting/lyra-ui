@@ -5,6 +5,17 @@ import {
 
 export interface MapLibreGeoJsonSource {
   setData(data: unknown): void;
+  /** maplibre-gl 3+ incremental update. Optional because older peers lack it. */
+  updateData?(diff: MapLibreGeoJsonDiff): void;
+}
+
+/** The subset of maplibre-gl's GeoJSON diff this component emits: per-feature property updates. */
+export interface MapLibreGeoJsonDiff {
+  readonly update: readonly {
+    readonly id: string | number;
+    readonly addOrUpdateProperties: readonly { readonly key: string; readonly value: unknown }[];
+    readonly removeProperties: readonly string[];
+  }[];
 }
 
 export interface MapLibrePopupCapability {
@@ -31,6 +42,8 @@ export interface MapLibreMapCapability {
   setCenter(center: [number, number]): unknown;
   setZoom(zoom: number): unknown;
   resize(): unknown;
+  /** Optional: absent on peers predating it, and the caller feature-detects before use. */
+  setMaxBounds?(bounds: readonly [readonly [number, number], readonly [number, number]] | null): unknown;
   remove(): void;
   on(type: 'error', listener: (event: { error?: unknown }) => void): this;
   on(type: 'load', listener: () => void): this;

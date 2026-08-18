@@ -2,6 +2,7 @@ import { aTimeout, fixture, fixtureCleanup, expect, html, waitUntil } from '@ope
 import type { PropertyValues } from 'lit';
 import './map.js';
 import { LyraMap } from './map.js';
+import { buildGeoJsonPropertyDiff } from './map.class.js';
 import { loadMaplibre } from './map-loader.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -3181,5 +3182,69 @@ describe('lr-map-click across choropleth and dataLayers', () => {
     expect(detail!.feature).to.equal(undefined);
     expect(detail!.origin).to.equal(undefined);
     expect(detail!.sourceId).to.equal(undefined);
+  });
+});
+
+// setData() unconditionally re-tiles a whole source. For an animated choropleth -- advancing a step
+// every few hundred milliseconds -- that re-tiles every polygon each frame when only the values
+// driving the colour ramp changed.
+describe('incremental GeoJSON updates', () => {
+  const geometry = { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] };
+  const collection = (value: number, geom: unknown = geometry) => ({
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', id: 'a', geometry: geom, properties: { value } }],
+  });
+
+  it('emits a property-only diff when geometry is reused', () => {
+    const diff = buildGeoJsonPropertyDiff(collection(1), collection(2));
+    expect(diff).to.not.equal(null);
+    expect(diff!.update).to.have.length(1);
+    expect(diff!.update[0]!.id).to.equal('a');
+    expect(diff!.update[0]!.addOrUpdateProperties).to.deep.equal([{ key: 'value', value: 2 }]);
+  });
+
+  it('reports no updates when nothing changed, so the caller can skip the call entirely', () => {
+    const diff = buildGeoJsonPropertyDiff(collection(1), collection(1));
+    expect(diff!.update).to.have.length(0);
+  });
+
+  it('refuses the fast path when the geometry object differs', () => {
+    // Deliberately strict: a deep compare would cost about what the re-tile costs, and a false
+    // positive would paint stale geometry -- a visibly wrong map.
+    const moved = { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] };
+    expect(buildGeoJsonPropertyDiff(collection(1), collection(1, moved))).to.equal(null);
+  });
+
+  it('refuses the fast path when a feature has no addressable id', () => {
+    const withoutId = {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', geometry, properties: { value: 1 } }],
+    };
+    expect(buildGeoJsonPropertyDiff(withoutId, withoutId)).to.equal(null);
+  });
+
+  it('refuses the fast path when the feature count changes', () => {
+    const two = {
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', id: 'a', geometry, properties: { value: 1 } },
+        { type: 'Feature', id: 'b', geometry, properties: { value: 2 } },
+      ],
+    };
+    expect(buildGeoJsonPropertyDiff(collection(1), two)).to.equal(null);
+  });
+
+  it('reports removed properties so a stale key cannot survive the update', () => {
+    const before = {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', id: 'a', geometry, properties: { value: 1, stale: true } }],
+    };
+    const diff = buildGeoJsonPropertyDiff(before, collection(1));
+    expect(diff!.update[0]!.removeProperties).to.deep.equal(['stale']);
+  });
+
+  it('refuses non-collections rather than guessing', () => {
+    expect(buildGeoJsonPropertyDiff(null, collection(1))).to.equal(null);
+    expect(buildGeoJsonPropertyDiff(collection(1), undefined)).to.equal(null);
   });
 });
