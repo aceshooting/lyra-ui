@@ -11,14 +11,27 @@ permissions:
 jobs:
   # release-qualification: matrix
   full-engine:
-    name: ${{ matrix.browser }} / shard ${{ matrix.shard }}/4
+    name: ${{ matrix.browser }} / shard ${{ matrix.shard }}/8
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
+      # 8 shards per engine (was 4). Unlike ci.yml's platform-contracts matrix -- where finer
+      # sharding lost to fixed per-job overhead because test:platform is only 26 files -- this
+      # workflow runs the COMPLETE suite (~490 files), so 8 shards still leave ~60 files per leg:
+      # coarse enough that checkout/install/browser-setup stays a small fraction of each leg, while
+      # halving the critical path. Shards run in parallel, so wall time is one shard, not the sum.
+      #
+      # Deliberately more shards rather than more concurrency inside each shard: raising a lane's
+      # WTR_CONCURRENCY was measured to break lr-span-waterfall's and lr-test-results' hover
+      # assertions, which pass again at the tuned value. Pointer and paint timing degrades under
+      # CPU contention, so every wtr process must keep CI's per-process shape.
+      #
+      # scripts/test.sh mirrors this via TEST_SH_ENGINE_SHARDS, so a failing shard here reproduces
+      # locally as the identically-numbered shard.
       matrix:
         browser: [firefox, webkit]
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -50,5 +63,5 @@ jobs:
           WTR_STRICT_CONSOLE: '1'
           WTR_COVERAGE: '0'
           WTR_SHARD_INDEX: ${{ matrix.shard }}
-          WTR_SHARD_TOTAL: '4'
+          WTR_SHARD_TOTAL: '8'
         run: pnpm --filter @aceshooting/lyra-ui test:full-engine-shard

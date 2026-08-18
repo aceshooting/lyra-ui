@@ -25,6 +25,15 @@
 #   ./scripts/test.sh                # run every lane in parallel (default)
 #   ./scripts/test.sh --serial       # run lanes one at a time (lower-core machines)
 #   TEST_SH_SKIP_INSTALL=1 ./scripts/test.sh   # skip install + browser download
+#   TEST_SH_ENGINE_SHARDS=4 ./scripts/test.sh  # split each engine lane into 4 parallel shards
+#
+# Sharding (TEST_SH_ENGINE_SHARDS, default 1 = unchanged behavior) is the ONLY safe way to spend
+# spare cores here. Raising a lane's own WTR_CONCURRENCY instead was measured to break
+# lr-span-waterfall's and lr-test-results' hover assertions, which pass again at the tuned 4:
+# pointer and paint timing degrades under CPU contention no matter how many cores the host has.
+# Sharding adds processes that each behave exactly like CI's, rather than fatter processes that
+# change timing. It mirrors full-engine.yml's own shard matrix, so a shard that fails locally is
+# reproducible as the identically-numbered CI shard.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -144,14 +153,57 @@ lane_workspace() {
   pnpm --filter '!@aceshooting/lyra-ui' -r test
 }
 
-LANE_ORDER=(chromium firefox webkit visual workspace)
+ENGINE_SHARDS="${TEST_SH_ENGINE_SHARDS:-1}"
+if [[ ! "$ENGINE_SHARDS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "TEST_SH_ENGINE_SHARDS must be a positive integer; received: $ENGINE_SHARDS" >&2
+  exit 2
+fi
+
+# One wtr process per engine shard. Ports stay deterministic and distinct for the same
+# EADDRINUSE reason the three base lanes do.
+engine_shard_lane() { # browser index
+  local browser=$1 index=$2 base
+  case "$browser" in
+    firefox) base=18100 ;;
+    webkit) base=18140 ;;
+    *) echo "unknown engine lane: $browser" >&2; return 2 ;;
+  esac
+  WTR_PORT="$((base + index))" \
+    WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[$browser]}" \
+    WTR_BROWSER="$browser" WTR_STRICT_CONSOLE=1 \
+    WTR_SHARD_INDEX="$index" WTR_SHARD_TOTAL="$ENGINE_SHARDS" \
+    pnpm --filter @aceshooting/lyra-ui test:full-engine-shard
+}
+
+# Lane names are plain strings so they can carry a shard suffix; this resolves one to its work.
+run_lane() {
+  local lane=$1
+  case "$lane" in
+    firefox:*) engine_shard_lane firefox "${lane#firefox:}" ;;
+    webkit:*) engine_shard_lane webkit "${lane#webkit:}" ;;
+    *) "lane_$lane" ;;
+  esac
+}
+
+# A log filename cannot carry the ':' separator.
+lane_log() { echo "$LOG_DIR/${1//:/-}.log"; }
+
+LANE_ORDER=(chromium)
+if [[ "$ENGINE_SHARDS" == "1" ]]; then
+  LANE_ORDER+=(firefox webkit)
+else
+  for shard_index in $(seq 1 "$ENGINE_SHARDS"); do
+    LANE_ORDER+=("firefox:$shard_index" "webkit:$shard_index")
+  done
+fi
+LANE_ORDER+=(visual workspace)
 declare -A LANE_PIDS=()
 declare -A LANE_STATUS=()
 
 if [[ "$SERIAL" == "1" ]]; then
   for lane in "${LANE_ORDER[@]}"; do
     step "lane: $lane (serial)"
-    if ( set -euo pipefail; "lane_$lane" ) 2>&1 | tee "$LOG_DIR/$lane.log"; then
+    if ( set -euo pipefail; run_lane "$lane" ) 2>&1 | tee "$(lane_log "$lane")"; then
       LANE_STATUS[$lane]=0
     else
       LANE_STATUS[$lane]=1
@@ -160,7 +212,7 @@ if [[ "$SERIAL" == "1" ]]; then
 else
   for lane in "${LANE_ORDER[@]}"; do
     step "starting lane: $lane"
-    ( set -euo pipefail; "lane_$lane" ) >"$LOG_DIR/$lane.log" 2>&1 &
+    ( set -euo pipefail; run_lane "$lane" ) >"$(lane_log "$lane")" 2>&1 &
     LANE_PIDS[$lane]=$!
   done
 
@@ -188,7 +240,7 @@ if [[ "$overall" != "0" ]]; then
   for lane in "${LANE_ORDER[@]}"; do
     if [[ "${LANE_STATUS[$lane]}" == "1" ]]; then
       printf '\n\033[1;31m-- tail of %s log (%s/%s.log) --\033[0m\n' "$lane" "$LOG_DIR" "$lane"
-      tail -n 60 "$LOG_DIR/$lane.log"
+      tail -n 60 "$(lane_log "$lane")"
     fi
   done
   exit 1

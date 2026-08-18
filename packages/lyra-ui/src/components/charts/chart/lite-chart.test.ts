@@ -3429,3 +3429,84 @@ describe('exportData', () => {
     }
   });
 });
+
+describe('scale="logarithmic"', () => {
+  const build = async (scale: string, type: string, data: (number | null)[]) => {
+    const el = (await fixture(html`<lr-lite-chart
+      type=${type}
+      scale=${scale}
+      style="inline-size: 600px; block-size: 300px"
+      .labels=${data.map((_, index) => `p${index}`)}
+      .datasets=${[{ label: 'series', data }]}
+    ></lr-lite-chart>`)) as LyraLiteChart;
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  };
+
+  const barTops = (el: LyraLiteChart) =>
+    Array.from(el.shadowRoot!.querySelectorAll('[part="bar"]')).map((bar) =>
+      Number.parseFloat(bar.getAttribute('y') ?? 'NaN')
+    );
+
+  const gapsOf = (ys: number[]) => ys.slice(1).map((y, index) => ys[index]! - y);
+
+  it('leaves the linear default crushing the low decades, as before', async () => {
+    const el = await build('linear', 'bar', [1, 10, 100, 1000]);
+    await aTimeout(0);
+    expect(el.scale, 'unset default').to.equal('linear');
+    const gaps = gapsOf(barTops(el));
+    // The top decade takes almost the whole plot; 1 -> 10 is a rounding error beside it. This is
+    // exactly the reported problem, asserted so the log mode below is measured against it.
+    expect(gaps.at(-1)!, 'the top decade dominates').to.be.greaterThan(gaps[0]! * 20);
+  });
+
+  it('gives every decade the same height on a logarithmic axis', async () => {
+    const el = await build('logarithmic', 'bar', [1, 10, 100, 1000]);
+    await aTimeout(0);
+    expect(el.scale).to.equal('logarithmic');
+    const gaps = gapsOf(barTops(el));
+    expect(gaps).to.have.length(3);
+    for (const gap of gaps) {
+      expect(gap, 'each decade occupies comparable height').to.be.closeTo(gaps[0]!, 2);
+    }
+  });
+
+  it('spans the data decades rather than collapsing onto one', async () => {
+    // Regression guard for the floor: `beginAtZero` defaults true, so the linear `lo` is 0 and has
+    // no logarithm. Deriving the floor from the smallest positive datum is what keeps 1..1000 as
+    // three decades instead of pinning everything below the maximum to the baseline.
+    const el = await build('logarithmic', 'bar', [1, 10, 100, 1000]);
+    await aTimeout(0);
+    const ys = barTops(el);
+    const distinct = new Set(ys.map((y) => Math.round(y)));
+    expect(distinct.size, 'every value gets its own height').to.equal(4);
+  });
+
+  it('keeps geometry finite for non-positive values, which have no logarithm', async () => {
+    const el = await build('logarithmic', 'bar', [0, -5, 10, 100]);
+    await aTimeout(0);
+    expect(
+      barTops(el).every((y) => Number.isFinite(y)),
+      'log(0)/log(-5) never reach the SVG as -Infinity'
+    ).to.be.true;
+  });
+
+  it('applies to line series and their gridlines, not only bars', async () => {
+    // A log axis whose lines or gridlines stayed linear would be actively misleading.
+    const el = await build('logarithmic', 'line', [1, 10, 100, 1000]);
+    await aTimeout(0);
+    const cys = Array.from(el.shadowRoot!.querySelectorAll('[part="point"]')).map((point) =>
+      Number.parseFloat(point.getAttribute('cy') ?? 'NaN')
+    );
+    expect(cys, 'points render').to.have.length(4);
+    for (const gap of gapsOf(cys)) {
+      expect(gap, 'lines follow the same decades as bars').to.be.closeTo(gapsOf(cys)[0]!, 2);
+    }
+    const gridYs = Array.from(el.shadowRoot!.querySelectorAll('[part="grid-line"]')).map((line) =>
+      Number.parseFloat(line.getAttribute('y1') ?? 'NaN')
+    );
+    expect(gridYs.length, 'gridlines render').to.be.greaterThan(1);
+    expect(gridYs.every((y) => Number.isFinite(y)), 'no NaN gridline geometry').to.be.true;
+  });
+});

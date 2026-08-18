@@ -61,7 +61,7 @@ function normalizeLiteChartType(value: unknown): LyraLiteChartType {
 /** `type="bar"` only: `'linear'` (default) maps a bar's value to height via the standard
  *  `niceDomain`-based fraction; `'sqrt'` compresses via `Math.sqrt(value / domainMax)`. See the
  *  `scale` property's own doc comment below for the full rationale. */
-export type LyraLiteChartScale = 'linear' | 'sqrt';
+export type LyraLiteChartScale = 'linear' | 'sqrt' | 'logarithmic';
 
 /**
  * `'fit'` (default) squeezes the whole plot into the measured host width,
@@ -148,6 +148,31 @@ function niceStep(span: number, count: number): number {
   const residual = rough / magnitude;
   const niceResidual = residual < 1.5 ? 1 : residual < 3 ? 2 : residual < 7 ? 5 : 10;
   return niceResidual * magnitude;
+}
+
+/**
+ * Position of `value` on a base-10 logarithmic value axis spanning `lo`..`hi`, as a `[0, 1]`
+ * fraction.
+ *
+ * A log axis cannot place zero or a negative (`log(0)` is `-Infinity`), so the domain floor is the
+ * smallest positive bound available and anything at or below it pins to `0` rather than flying off
+ * the plot -- the SVG renderer has no Chart.js-style "drop the point" behavior to fall back on, and
+ * an -Infinity coordinate would blank the whole series. Degenerate domains fall back to the linear
+ * fraction, so a mis-set axis degrades instead of producing NaN geometry.
+ */
+function logDomainFraction(value: number, lo: number, hi: number): number {
+  const top = Math.max(hi, 0);
+  if (!Number.isFinite(top) || top <= 0) return domainFraction(value, lo, hi);
+  // A zero/negative lower bound has no logarithm; fall back to a decade below the maximum so the
+  // axis still spans a sensible range instead of collapsing.
+  const bottom = lo > 0 ? lo : top / 10;
+  if (!Number.isFinite(bottom) || bottom <= 0 || bottom >= top) {
+    return domainFraction(value, lo, hi);
+  }
+  if (!Number.isFinite(value) || value <= bottom) return 0;
+  if (value >= top) return 1;
+  const fraction = (Math.log10(value) - Math.log10(bottom)) / (Math.log10(top) - Math.log10(bottom));
+  return Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
 }
 
 function domainFraction(value: number, lo: number, hi: number): number {
@@ -1085,7 +1110,43 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       const frac = Math.sqrt(Math.min(domainMax, Math.max(0, value)) / domainMax);
       return plotY + plotH - frac * plotH;
     }
-    return plotY + plotH - domainFraction(value, lo, hi) * plotH;
+    return plotY + plotH - this.valueFraction(value, lo, hi) * plotH;
+  }
+
+  /**
+   * The `[0, 1]` axis fraction for `value` under the active `scale`.
+   *
+   * `'logarithmic'` routes through `logDomainFraction`; everything else keeps the plain linear
+   * `domainFraction`. Deliberately does NOT fold in `'sqrt'`: that mode compresses bars only, and
+   * has never moved gridlines or line points, so pulling it in here would silently change existing
+   * output. Bars reach this through `barValueToY()`, which applies sqrt before calling in.
+   */
+  private valueFraction(value: number, lo: number, hi: number): number {
+    return this.scale === 'logarithmic'
+      ? logDomainFraction(value, this.logDomainFloor(lo, hi), hi)
+      : domainFraction(value, lo, hi);
+  }
+
+  /**
+   * The lower bound of a logarithmic axis.
+   *
+   * Deliberately NOT the linear `lo`: `beginAtZero` defaults to true, so `lo` is normally `0`, and
+   * zero has no logarithm. Using the smallest POSITIVE datum instead is what makes the axis span
+   * the data's real decades — otherwise a 1..1000 series collapses onto a single decade and every
+   * value below the top one pins to the baseline. Falls back to a decade below the maximum when no
+   * positive datum exists, which keeps the geometry finite for a degenerate series.
+   */
+  private logDomainFloor(lo: number, hi: number): number {
+    if (lo > 0) return lo;
+    let smallest = Number.POSITIVE_INFINITY;
+    for (const series of this.datasets) {
+      for (const value of series.data) {
+        if (value == null || !Number.isFinite(value) || value <= 0) continue;
+        if (value < smallest) smallest = value;
+      }
+    }
+    if (Number.isFinite(smallest)) return smallest;
+    return hi > 0 ? hi / 10 : 1;
   }
 
   /** Normalizes `minBarHeight` to a non-negative pixel floor, or `undefined` when left unset -- a
@@ -1236,7 +1297,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private renderGrid(plotX: number, plotY: number, plotW: number, plotH: number, ticks: number[], lo: number, hi: number) {
     const rtl = this.effectiveDirection === 'rtl';
     return ticks.map((t) => {
-      const y = plotY + plotH - domainFraction(t, lo, hi) * plotH;
+      const y = plotY + plotH - this.valueFraction(t, lo, hi) * plotH;
       return svg`
         <line part="grid-line" x1=${plotX} y1=${y} x2=${plotX + plotW} y2=${y}></line>
         <text
@@ -1551,7 +1612,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   ) {
     const n = this.recordCount();
     const xFor = (i: number) => plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
-    const yFor = (v: number) => plotY + plotH - domainFraction(v, lo, hi) * plotH;
+    const yFor = (v: number) => plotY + plotH - this.valueFraction(v, lo, hi) * plotH;
     const markIndexes = this.markIndexMap();
     const activeMarkIndex = this.normalizedMarkIndex();
     // Hoisted out of the per-point loop for the same reason as renderBars(): the whole SVG

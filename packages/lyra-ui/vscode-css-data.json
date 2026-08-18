@@ -13232,6 +13232,13 @@
       }
     },
     {
+      "name": "--lr-timeline-time-extent",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline>`** (default: `var(--lr-size-20rem)`) — Distance the `scale=\"time\"` axis distributes items along: `block-size` when vertical, `inline-size` when horizontal. Time-scaled items are absolutely positioned, and a percentage offset against an auto-sized track resolves to zero, so the axis needs a definite extent. Ignored in the default `scale=\"flow\"`."
+      }
+    },
+    {
       "name": "--lr-toast-accent-color",
       "description": {
         "kind": "markdown",

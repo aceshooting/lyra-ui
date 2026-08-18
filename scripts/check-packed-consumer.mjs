@@ -894,6 +894,7 @@ export default defineConfig({
     theme: `import '@aceshooting/lyra-ui/theme.css';\nexport const loaded = true;\n`,
     nativeStyles: `import '@aceshooting/lyra-ui/native.css';\nexport const loaded = true;\n`,
     utilitiesStyles: `import '@aceshooting/lyra-ui/utilities.css';\nexport const loaded = true;\n`,
+    reservationStyles: `import '@aceshooting/lyra-ui/reservations.css';\nexport const loaded = true;\n`,
     locale: `import '@aceshooting/lyra-ui/translations/fa.js';
 import '@aceshooting/lyra-ui/translations/fr.js';
 import '@aceshooting/lyra-ui/translations/he.js';
@@ -1073,17 +1074,20 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
       violations.push('the bare theme.css import emitted no retained Lyra theme asset');
     }
   }
-  if (entry === 'nativeStyles' || entry === 'utilitiesStyles') {
+  if (entry === 'nativeStyles' || entry === 'utilitiesStyles' || entry === 'reservationStyles') {
     const cssFiles = output.files.filter((file) => file.endsWith('.css'));
     const css = (await Promise.all(cssFiles.map((file) => readFile(file, 'utf8')))).join('\n');
-    const expected =
-      entry === 'nativeStyles'
-        ? ['.lr-native', '--lr-native-control-min-block-size']
-        : ['.lr-stack', '--lr-layout-gap'];
+    const expectedByEntry = {
+      nativeStyles: ['.lr-native', '--lr-native-control-min-block-size'],
+      utilitiesStyles: ['.lr-stack', '--lr-layout-gap'],
+      // Reservations only ever style `:not(:defined)` inside their own cascade layer, so those two
+      // markers are what prove the sheet survived bundling rather than being tree-shaken to
+      // nothing.
+      reservationStyles: ['lr-reservations', ':not(:defined)'],
+    };
+    const expected = expectedByEntry[entry] ?? [];
     if (cssFiles.length === 0 || expected.some((marker) => !css.includes(marker))) {
-      violations.push(
-        `the bare ${entry === 'nativeStyles' ? 'native.css' : 'utilities.css'} import emitted no retained Lyra styles`,
-      );
+      violations.push(`the bare ${entry} import emitted no retained Lyra styles`);
     }
   }
   if (config.maxRawBytes != null && output.rawBytes > config.maxRawBytes) {
@@ -1164,6 +1168,7 @@ async function main() {
         './theme.css',
         './design-tokens.css',
         './native.css',
+        './reservations.css',
         './utilities.css',
         '--format',
         'table',

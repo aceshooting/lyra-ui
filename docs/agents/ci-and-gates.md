@@ -205,9 +205,19 @@ uses `package.json#packageManager` (`pnpm@11.22.0`). The package's supported eng
 
 `.github/workflows/full-engine.yml` complements the fast pull-request matrix with the complete
 non-coverage `src/**/*.test.ts` suite in Firefox and WebKit. It runs weekly and can also be started
-with `workflow_dispatch`. Each browser is split into four deterministic round-robin shards under
+with `workflow_dispatch`. Each browser is split into eight deterministic round-robin shards under
 Node 22. The runner discovers and lexically sorts the live test inventory, so every test file runs
-exactly once across the four shards without maintaining a second allowlist.
+exactly once across the eight shards without maintaining a second allowlist.
+
+Eight rather than four, and deliberately *more shards* rather than more concurrency inside each
+one. The two levers are not equivalent: raising a lane's `WTR_CONCURRENCY` from 4 to 10 was
+measured to break `lr-span-waterfall`'s and `lr-test-results`' hover assertions, both of which pass
+again at 4 — pointer and paint timing degrades under CPU contention regardless of how many cores
+the host has, which is the same reason `scripts/test.sh` pins its lane concurrency. Adding shards
+adds processes that each keep CI's per-process shape, so the critical path halves without changing
+any test's timing characteristics. This also differs from `platform-contracts`' deliberately
+*coarser* matrix: that job runs the 26-file `test:platform` subset, where finer splits lost to
+fixed per-job overhead, whereas the complete suite is ~490 files and still leaves ~60 per shard.
 
 Every shard builds first because `package-entrypoints.test.ts` imports the package's built `dist/`
 targets. The package's `pretest` lifecycle provides the same build-first guarantee for a clean
@@ -277,7 +287,13 @@ interleave on the terminal; a failing lane's log is printed in full at the end.
 
 The `firefox`/`webkit` lanes run `test:full-engine-shard` with `WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1`
 -- the shard math in `scripts/full-engine-shard.mjs` assigns every discovered file to shard 1 of 1,
-so this is the complete suite in one process, not an actual shard. `test:platform`'s 26-file subset
+so this is the complete suite in one process, not an actual shard. Set
+`TEST_SH_ENGINE_SHARDS=<n>` to split each engine lane into `n` parallel shard lanes instead,
+mirroring `full-engine.yml`'s own matrix (use `8` to match it exactly, so a failing CI shard
+reproduces locally as the identically-numbered one). Each shard lane keeps the tuned per-lane
+concurrency and gets its own deterministic port; the default of `1` leaves behavior unchanged.
+On a many-core host this is the lever to reach for -- raising `WTR_LANE_CONCURRENCY` instead
+reintroduces the hover/paint flakiness described above. `test:platform`'s 26-file subset
 is a strict subset of this run, so it is not run separately here.
 
 Because it's heavy (three full browser-engine sweeps), it is meant to run before publishing a

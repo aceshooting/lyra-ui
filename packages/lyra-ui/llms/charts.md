@@ -531,11 +531,21 @@ passthrough). Not a subclass of `LyraChart`.
 - `valueAxisGutter?: number` (attribute `value-axis-gutter`) — value-axis gutter width.
 - `barGapRatio?: number` (attribute `bar-gap-ratio`) — overrides the internal 0.2 `BAR_GROUP_GAP`
   fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2.
-- `scale: 'linear' | 'sqrt' = 'linear'` (bar type only) — `'sqrt'` maps a bar's value to height via
-  `Math.sqrt(value / domainMax)` instead of the standard linear `niceDomain` fraction (mirroring
-  `lr-heatmap`'s matrix-mode `sqrt` scale), so a skewed dataset's smaller bars aren't washed out
-  by one dominant value; gridlines/tick labels stay on the linear domain either way, and `type="line"`
-  ignores it entirely.
+- `scale: 'linear' | 'sqrt' | 'logarithmic' = 'linear'` — `'sqrt'` (**bar type only**) maps a bar's
+  value to height via `Math.sqrt(value / domainMax)` instead of the standard linear `niceDomain`
+  fraction (mirroring `lr-heatmap`'s matrix-mode `sqrt` scale), so a skewed dataset's smaller bars
+  aren't washed out by one dominant value; under `'sqrt'` gridlines/tick labels stay on the linear
+  domain and `type="line"` ignores it entirely.
+  `'logarithmic'` is the base-10 value axis for data spanning several orders of magnitude, where a
+  linear axis collapses everything below the maximum into the baseline. Unlike `'sqrt'` it applies
+  to **bars, line points and gridlines alike**, since a log axis whose gridlines stayed linear
+  would misrepresent the plot. Its lower bound is the smallest *positive* datum rather than the
+  linear `lo`: `beginAtZero` defaults to true, so `lo` is normally `0`, which has no logarithm —
+  deriving the floor from the data is what makes a 1…1000 series span three even decades instead of
+  collapsing onto one. Values at or below that floor (including zero and negatives, which have no
+  real logarithm) pin to the axis floor rather than producing `-Infinity` geometry, and a degenerate
+  domain falls back to the linear fraction. `lr-chart`'s own `scaleType` is the Chart.js-backed
+  equivalent for the full charts.
 - `withoutValueAxis: boolean = false` (attribute `without-value-axis`) — suppresses gridlines and
   value-axis tick labels; x-axis category labels remain.
 - `selectedIndices: readonly number[] = []` (attribute: false) — applies to every interactive data mark for

@@ -116,10 +116,12 @@ its baseline in all three engines; see
   red check names the specific job to reproduce instead of "build-test". A separate
   `platform-contracts` matrix job runs the fast `test:platform` subset on Firefox and Safari
   (WebKit) under Node 20/22, with Chromium, Chrome, and Edge also covered under Node 22.
-  `.github/workflows/full-engine.yml` runs the complete non-coverage suite in four
+  `.github/workflows/full-engine.yml` runs the complete non-coverage suite in eight
   deterministic shards per browser on a weekly schedule and by manual dispatch; releases require
-  the push CI and all eight dispatched shards to succeed for the exact main commit before any
-  release tag is created.
+  the push CI and all sixteen dispatched shards to succeed for the exact main commit before any
+  release tag is created. `scripts/test.sh` mirrors that split through
+  `TEST_SH_ENGINE_SHARDS` (default `1`), so a failing CI shard reproduces locally as the
+  identically-numbered shard.
 - `./scripts/test.sh` runs the COMPLETE test suite (not `test:platform`'s curated subset) on
   Chromium, Firefox, and WebKit, plus SSR/hydration/visual/workspace tests, in parallel lanes —
   the same coverage `full-engine.yml` gives weekly in CI, on demand and locally. It's heavy (three

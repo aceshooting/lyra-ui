@@ -39,7 +39,8 @@ property).
 - `annotations: readonly LyraChartAnnotation[] = []` (attribute: false) — declarative reference
   lines and shaded bands: a threshold, an event year, a regime change, a highlighted period.
   `LyraChartAnnotation { axis?: 'x' | 'y'; value?: number; from?: number; to?: number; label?:
-  string; tone?: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' }`. A finite `value` renders
+  string; tone?: LyraVariant }` — `tone` is the shared `LyraVariant` vocabulary
+  (`'neutral' | 'brand' | 'success' | 'warning' | 'danger'`), not a chart-local copy. A finite `value` renders
   a reference line on that axis; a finite `from`/`to` pair renders a band bounded on that axis and
   spanning the other. `axis` defaults to `'y'`. An entry with neither (or non-finite numbers) is
   dropped rather than handed to Chart.js; a reversed range is normalized. Labelled entries are
