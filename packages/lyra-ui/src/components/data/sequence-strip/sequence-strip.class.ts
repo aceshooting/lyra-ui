@@ -39,6 +39,17 @@ const MAX_RENDERED_ITEMS = 200;
 const MAX_RENDERED_CATEGORIES = 200;
 const MAX_SEQUENCE_COLLECTION_ENTRIES = 10_000;
 
+/** Detail of `lr-item-activate`: which strip item the user picked. */
+export interface LyraSequenceStripActivateDetail {
+  readonly index: number;
+  readonly id: string;
+  readonly item: SequenceStripItem;
+}
+
+export interface LyraSequenceStripEventMap {
+  'lr-item-activate': CustomEvent<LyraSequenceStripActivateDetail>;
+}
+
 /**
  * `<lr-sequence-strip>` — a compact, one-thin-cell-per-item strip visualizing a sequence of
  * categorical states, with an optional secondary per-cell marker. Pure CSS/flex, no chart.js/SVG/
@@ -60,6 +71,10 @@ const MAX_SEQUENCE_COLLECTION_ENTRIES = 10_000;
  * collection after changing it.
  *
  * @customElement lr-sequence-strip
+ * @event lr-item-activate - Fired when a cell is clicked, or activated with Enter/Space on the
+ *   roving-tabindex focus. `detail: { index, id, item }` identifies the picked item. Not
+ *   cancelable, and it does not move `selectedIndex` on its own -- the selection is controlled,
+ *   so the consumer stays the single source of truth for a playback index this strip does not own.
  * @csspart base - The root strip wrapper (`role="list"`).
  * @csspart cell - Each named, roving-focus item cell, background-colored by its category.
  * @csspart marker - The small bottom marker on a cell whose item sets `marker: true`.
@@ -83,7 +98,7 @@ const MAX_SEQUENCE_COLLECTION_ENTRIES = 10_000;
  * @status stable
  * @since 4.0.0
  */
-export class LyraSequenceStrip extends LyraElement {
+export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -157,6 +172,43 @@ export class LyraSequenceStrip extends LyraElement {
    *  computes the summary from `items`/`categories`; an explicitly empty string renders as an
    *  empty label rather than falling back to the auto-generated summary. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
+
+  /**
+   * Index of the currently selected item, or `-1` (the default) for none — the controlled selection
+   * this strip's natural companion, `lr-sequence-playback`, scrubs through. Mirrors the shape
+   * `lr-lite-chart`'s `selectedIndices` and `lr-heatmap`'s `selectedCell` already establish.
+   *
+   * Controlled, not self-managing: activating a cell emits `lr-item-activate` and does **not**
+   * move the selection on its own, so the consumer stays the single source of truth and the
+   * component cannot drift from a playback index it does not own. An out-of-range or non-integer
+   * value selects nothing rather than throwing.
+   */
+  // numeric-guard-exempt: isSelected() below rejects anything that is not an in-range integer
+  // before this value is used, so a non-finite or fractional write selects nothing rather than
+  // reaching layout, Intl, canvas or timer math.
+  @property({ type: Number, attribute: 'selected-index' }) selectedIndex = -1;
+
+  /** Whether `index` is the selected one, guarding a non-integer or out-of-range value. */
+  private isSelected(index: number): boolean {
+    return (
+      Number.isInteger(this.selectedIndex) &&
+      this.selectedIndex >= 0 &&
+      this.selectedIndex < this.items.length &&
+      this.selectedIndex === index
+    );
+  }
+
+  /**
+   * Emits `lr-item-activate` for `index`.
+   *
+   * Not cancelable: nothing in this component branches on `defaultPrevented`, and the library's
+   * contract reserves cancelable events for real veto points.
+   */
+  private activateItem(index: number): void {
+    const item = this.items[index];
+    if (!item) return;
+    this.emit('lr-item-activate', { index, id: item.id, item });
+  }
   /** Renders a static `[part="legend"]` key of every `categories` entry below the strip, so the
    *  color-to-category mapping is readable without hovering each cell. Deliberately
    *  non-interactive: unlike `<lr-graph-legend>` this toggles nothing and emits nothing — the
@@ -304,6 +356,13 @@ export class LyraSequenceStrip extends LyraElement {
   }
 
   private onCellKeyDown(e: KeyboardEvent, index: number): void {
+    // A focused cell has to be activatable from the keyboard, not only the pointer -- the cells
+    // already carry a roving tabindex, so without this they were reachable but inert.
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.activateItem(index);
+      return;
+    }
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) || this.items.length === 0) return;
     e.preventDefault();
     const forwardKey = isRtl(this) ? 'ArrowLeft' : 'ArrowRight';
@@ -406,6 +465,9 @@ export class LyraSequenceStrip extends LyraElement {
               @pointerleave=${() => this.onCellLeave()}
               @focus=${() => this.onCellFocus(index)}
               @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, index)}
+              @click=${() => this.activateItem(index)}
+              aria-current=${this.isSelected(index) ? 'true' : nothing}
+              ?data-selected=${this.isSelected(index)}
             >
               ${item.marker ? html`<span part="marker"></span>` : nothing}
               ${index === tooltipIndex

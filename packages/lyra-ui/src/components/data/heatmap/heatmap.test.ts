@@ -7167,3 +7167,88 @@ describe("signed data: domain and midpoint", () => {
     expect(cellPixel(untouched, 0, 1)).to.equal(cellPixel(baseline, 0, 1));
   });
 });
+
+describe("legendStops / colorSteps mismatch diagnostic", () => {
+  const captureWarnings = async (run: () => Promise<void>): Promise<string[]> => {
+    const seen: string[] = [];
+    const original = console.warn;
+    // Lit's dev-mode dedupe store is page-global and keyed, so clear our key first or a second
+    // test in the same file would find it already warned.
+    (globalThis as unknown as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete(
+      "lyra-heatmap-legend-ramp-mismatch"
+    );
+    console.warn = (...args: unknown[]) => {
+      seen.push(args.map(String).join(" "));
+    };
+    try {
+      await run();
+    } finally {
+      console.warn = original;
+    }
+    return seen;
+  };
+
+  it("warns when legendStops describes colours the cells are not painted from", async () => {
+    const warnings = await captureWarnings(async () => {
+      const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+      el.colorSteps = ["#0000ff", "#ffffff", "#ff0000"];
+      el.legendStops = [{ value: 0, color: "#00ff00" }, { value: 1, color: "#123456" }];
+      setMatrixData(el, { rowLabels: ["r"], colLabels: ["c"], values: [[1]] });
+      await el.updateComplete;
+      await aTimeout(0);
+    });
+    expect(
+      warnings.some((message) => message.includes("legendStops")),
+      "the disagreement is made audible instead of silently misdescribing the ramp"
+    ).to.be.true;
+  });
+
+  it("stays silent when the two agree", async () => {
+    const warnings = await captureWarnings(async () => {
+      const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+      el.colorSteps = ["#0000ff", "#ffffff", "#ff0000"];
+      el.legendStops = [
+        { value: 0, color: "#0000ff" },
+        { value: 1, color: "#ffffff" },
+        { value: 2, color: "#ff0000" },
+      ];
+      setMatrixData(el, { rowLabels: ["r"], colLabels: ["c"], values: [[1]] });
+      await el.updateComplete;
+      await aTimeout(0);
+    });
+    expect(
+      warnings.some((message) => message.includes("legendStops")),
+      "a matching key is not a defect"
+    ).to.be.false;
+  });
+
+  it("stays silent for caption-only stops, which describe no colour", async () => {
+    const warnings = await captureWarnings(async () => {
+      const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+      el.colorSteps = ["#0000ff", "#ff0000"];
+      // The documented "less ▢▢▢▢ more" shape: captions with no colour of their own.
+      el.legendStops = [{ value: 0, label: "less" }, { value: 1, label: "more" }];
+      setMatrixData(el, { rowLabels: ["r"], colLabels: ["c"], values: [[1]] });
+      await el.updateComplete;
+      await aTimeout(0);
+    });
+    expect(
+      warnings.some((message) => message.includes("legendStops")),
+      "a caption-only key claims nothing about colour"
+    ).to.be.false;
+  });
+
+  it("stays silent when only one of the two is supplied", async () => {
+    const warnings = await captureWarnings(async () => {
+      const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+      el.colorSteps = ["#0000ff", "#ff0000"];
+      setMatrixData(el, { rowLabels: ["r"], colLabels: ["c"], values: [[1]] });
+      await el.updateComplete;
+      await aTimeout(0);
+    });
+    expect(
+      warnings.some((message) => message.includes("legendStops")),
+      "colorSteps alone already drives the built-in gradient key"
+    ).to.be.false;
+  });
+});

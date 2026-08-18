@@ -1054,6 +1054,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     for (const dataset of effective.datasets) {
       rowCount = Math.max(rowCount, this.datasetValues(dataset).length);
     }
+    const exportCell = (value: unknown): unknown => {
+      if (typeof value !== 'number' || !Number.isFinite(value)) return value ?? '';
+      return this.formatExportValue(value) ?? value;
+    };
     const rows = Array.from({ length: rowCount }, (_, index) => {
       const firstPoint = effective.datasets
         .map((dataset) => this.datasetValues(dataset)[index])
@@ -1063,14 +1067,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         label,
         ...columns.flatMap((column) => {
           const value = this.datasetValues(column.dataset)[index];
-          if (!column.point) return [value ?? ''];
+          // Every numeric cell goes through the 'export' surface, so a consumer's unit formatting
+          // reaches the CSV -- the place it matters most, and what <lr-lite-chart> has always done.
+          // exportCell() leaves a cell untouched when no formatter is installed, keeping the
+          // default output the raw machine-readable number.
+          if (!column.point) return [exportCell(value)];
           if (!isChartPoint(value)) {
             return ['', '', ...(column.radius ? [''] : []), ...(column.pointLabel ? [''] : [])];
           }
           return [
-            value.x,
-            value.y,
-            ...(column.radius ? [value.r ?? ''] : []),
+            exportCell(value.x),
+            exportCell(value.y),
+            ...(column.radius ? [value.r == null ? '' : exportCell(value.r)] : []),
             ...(column.pointLabel ? [value.label ?? ''] : []),
           ];
         }),
@@ -2384,7 +2392,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               (value as { r?: unknown }).r ??
               (value as { x?: unknown }).x)
           : Number(value);
-    return Number.isFinite(numeric) ? getNumberFormat(this.effectiveLocale).format(numeric) : String(value);
+    return Number.isFinite(numeric) ? this.formatSpokenValue(numeric) : String(value);
   }
 
   private datumAnnouncement(datum: ChartDatum, position: number, total: number): string {
@@ -2942,6 +2950,28 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private formatTableValue(value: number): string {
     return this.formatter?.({ value, surface: 'table' }) ??
       this.valueFormatter?.(value, 'table') ??
+      this.formatSummaryValue(value);
+  }
+
+  /**
+   * The `'export'` surface, for CSV cells. `LyraChartFormatSurface` has always declared it and
+   * `<lr-lite-chart>` has always emitted it, but this component never did -- so one formatter
+   * written against the documented contract behaved differently depending on which chart rendered
+   * it, silently, in exactly the place unit formatting matters most.
+   *
+   * Deliberately NOT falling back to `formatSummaryValue()`: with no formatter installed a CSV cell
+   * must stay the raw machine-readable number, not a locale-grouped string a spreadsheet would
+   * misparse. `undefined` means "leave the cell as it was".
+   */
+  private formatExportValue(value: number): string | undefined {
+    return this.formatter?.({ value, surface: 'export' }) ??
+      this.valueFormatter?.(value, 'table');
+  }
+
+  /** The `'spoken'` surface, for the live announcement a keyboard user hears. Falls back to the
+   *  locale number format, which is what it always used. */
+  private formatSpokenValue(value: number): string {
+    return this.formatter?.({ value, surface: 'spoken' }) ??
       this.formatSummaryValue(value);
   }
 

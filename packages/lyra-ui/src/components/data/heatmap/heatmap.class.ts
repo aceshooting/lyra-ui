@@ -29,6 +29,7 @@ import {
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
@@ -1029,6 +1030,41 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private cachedCalendarCellsByPos = new Map<string, CalendarCell>();
   private cachedCalendarCellsByDate = new Map<string, CalendarCell>();
   private cachedAnnotations: readonly HeatmapAnnotation[] = [];
+  /**
+   * Dev-mode-only: warns when `legendStops` describes colors the cells are not actually painted
+   * from.
+   *
+   * `colorSteps` supplies the cell ramp and `legendStops` supplies the key, deliberately without
+   * feeding back into each other -- that independence is what lets a `cellColor` consumer describe
+   * a ramp the grid no longer uses. The cost is that a consumer building a diverging ramp supplies
+   * both by hand and nothing checks they agree, so a legend can confidently label colors that never
+   * appear. A wrong legend is worse than no legend, because the reader trusts it, and the mismatch
+   * is invisible both in review and at runtime.
+   *
+   * Warning rather than deriving one from the other: deriving would silently change what an
+   * existing `colorSteps`-only consumer sees, and would also break the deliberate `cellColor`
+   * escape hatch. This keeps every current behavior and only makes the disagreement audible.
+   * Compares only the stops that carry a color -- a caption-only stop describes no color at all.
+   */
+  private warnOnLegendRampMismatch(): void {
+    const rampColors = this.cachedColorSteps.map((color) => sanitizeCssColor(color) ?? color);
+    if (rampColors.length === 0) return;
+    const legendColors = this.cachedLegendStops
+      .filter((stop) => Boolean(stop.color))
+      .map((stop) => sanitizeCssColor(stop.color ?? '') ?? stop.color ?? '');
+    if (legendColors.length === 0) return;
+    const sameLength = legendColors.length === rampColors.length;
+    const sameOrder = sameLength && legendColors.every((color, index) => color === rampColors[index]);
+    if (sameOrder) return;
+    devWarnOnce(
+      'lyra-heatmap-legend-ramp-mismatch',
+      `<${this.localName}>: legendStops describes ${legendColors.length} colour(s) that do not ` +
+        `match the ${rampColors.length} colorSteps the cells are painted from, so the legend may ` +
+        'misdescribe the ramp. Supply legendStops built from the same array as colorSteps, or ' +
+        'omit it to keep the built-in gradient key.'
+    );
+  }
+
   private cachedLegendStops: readonly HeatmapLegendStop[] = [];
   private cachedColorSteps: readonly string[] = [];
   private cachedCalendarAnnotationDates = new Set<string>();
@@ -1465,6 +1501,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       0,
       MAX_HEATMAP_DECORATIONS
     );
+    this.warnOnLegendRampMismatch();
     this.cachedCalendarAnnotationDates = new Set(
       this.cachedAnnotations.flatMap((annotation) =>
         annotation.date == null ? [] : [annotation.date]

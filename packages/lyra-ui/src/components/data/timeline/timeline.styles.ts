@@ -57,6 +57,24 @@ export const styles = css`
     inset-inline-start: 0;
     inline-size: 100%;
   }
+  /* collision="stack": coincident items step along the CROSS axis (inline when the timeline runs
+     vertically) so they stop covering one another. The lane index is written per item by
+     applyCollisionLanes(); the step is tokenized so a consumer can widen it for larger markers.
+     Only the inline start moves -- the item keeps its own inline size minus the indent, so a
+     stacked run stays inside the host instead of overflowing it. */
+  :host([scale='time'][collision='stack']) ::slotted(*) {
+    --_lr-timeline-lane-indent: calc(
+      var(--_lr-timeline-item-lane, 0) * var(--lr-timeline-collision-offset, var(--lr-space-l))
+    );
+    inset-inline-start: var(--_lr-timeline-lane-indent);
+    inline-size: calc(100% - var(--_lr-timeline-lane-indent));
+  }
+  /* Horizontal timelines run along the inline axis, so their cross axis is the block axis. */
+  :host([scale='time'][collision='stack'][orientation='horizontal']) ::slotted(*) {
+    inset-inline-start: var(--_lr-timeline-item-offset, 0%);
+    inset-block-start: var(--_lr-timeline-lane-indent);
+    inline-size: auto;
+  }
   /* Horizontal runs along the inline axis instead, so the offset moves to inset-inline-start. That
      is a logical property, so an RTL timeline reverses for free -- the same reasoning the
      orientation custom properties above rely on. */

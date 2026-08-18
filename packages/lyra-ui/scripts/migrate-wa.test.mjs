@@ -2152,6 +2152,7 @@ test('the checked-in inventory rewrites a Pro chart deep import with its granula
     new Set(result.warnings.map((entry) => `${entry.warningCode}|${entry.target}`)),
     new Set([
       'OPTIONAL_PEER_REQUIRED|chart.js',
+      'OPTIONAL_PEER_REQUIRED|chartjs-plugin-annotation',
       'OPTIONAL_PEER_REQUIRED|chartjs-plugin-datalabels',
       'OPTIONAL_PEER_REQUIRED|chartjs-plugin-zoom',
     ]),
@@ -2185,6 +2186,7 @@ test('the checked-in inventory grants a Pro chart target its granular registrati
       new Set([
         'OPTIONAL_PEER_REQUIRED|dompurify',
         'OPTIONAL_PEER_REQUIRED|chart.js',
+        'OPTIONAL_PEER_REQUIRED|chartjs-plugin-annotation',
         'OPTIONAL_PEER_REQUIRED|chartjs-plugin-datalabels',
         'OPTIONAL_PEER_REQUIRED|chartjs-plugin-zoom',
       ]),

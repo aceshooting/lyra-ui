@@ -271,9 +271,10 @@ assert.match(
   /\| `--lr-color-surface` \| `--lr-theme-color-surface-default` \| `#fff` \| dark: `var\(--lr-theme-color-surface-default, #1a1a1a\)`<br>forcedColors: `Canvas` \|/,
 );
 
-assert.match(peers, /All 28 peers are \*\*optional\*\*/);
+// 29 since chartjs-plugin-annotation joined as lr-chart's optional annotations peer.
+assert.match(peers, /All 29 peers are \*\*optional\*\*/);
 assert.match(peers, /\*\*Framework declaration peers \(3\)\.\*\*/);
-assert.match(peers, /\*\*Component-loaded peers \(25\)\.\*\*/);
+assert.match(peers, /\*\*Component-loaded peers \(26\)\.\*\*/);
 
 for (const [peer, entry] of Object.entries(TYPE_ONLY_DECLARATION_PEERS)) {
   const row = peers

@@ -13197,6 +13197,13 @@
       }
     },
     {
+      "name": "--lr-timeline-collision-offset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline>`** (default: `var(--lr-space-l)`) — Cross-axis step between items stacked by `collision=\"stack\"`. Each collision lane is indented one step further, so a wider marker can claim more room without the lanes overlapping again. Ignored unless both `scale=\"time\"` and `collision=\"stack\"` are set."
+      }
+    },
+    {
       "name": "--lr-timeline-gap",
       "description": {
         "kind": "markdown",

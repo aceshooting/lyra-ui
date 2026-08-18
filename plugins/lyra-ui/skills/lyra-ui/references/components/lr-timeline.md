@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 1 part, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-timeline-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -37,7 +37,15 @@ proportion of the range, so a gap of weeks and a gap of decades stop looking ide
 needs a definite extent to distribute along — `--lr-timeline-time-extent` (default
 `var(--lr-size-20rem)`), applied as `block-size` when vertical and `inline-size` when horizontal —
 because items are absolutely positioned and a percentage against an auto-sized track resolves to
-zero. `rangeStart` / `rangeEnd` (`Date | string | number`, attribute: false) pin the axis instead of
+zero. `collision: 'overlap' | 'stack' = 'overlap'` (attribute `collision`, type `LyraTimelineCollision`)
+chooses what `scale="time"` does with items landing on nearly the same position: `'overlap'` leaves
+them stacked on one another, `'stack'` steps each colliding item one lane along the **cross** axis
+(indent per lane: `--lr-timeline-collision-offset`, default `var(--lr-space-l)`), which is what a
+dense chronology needs — items within 1.5% of the axis of each other count as colliding, and an
+isolated item returns to lane 0 rather than inheriting a preceding run's depth. There is
+deliberately no `'cluster'` mode: collapsing coincident items into one expandable marker needs a
+selection model and click events this passive component does not have.
+`rangeStart` / `rangeEnd` (`Date | string | number`, attribute: false) pin the axis instead of
 deriving it from the earliest/latest item; a reversed or non-finite pair falls back to the derived
 range. An item with no parseable `timestamp` (including one supplied only through the `timestamp`
 slot, which carries no machine-readable instant) keeps document order and is spread evenly, so a

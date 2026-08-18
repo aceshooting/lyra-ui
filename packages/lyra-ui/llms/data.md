@@ -1770,16 +1770,30 @@ readonly color, readonly label? }`; `color`
   per-category only. The marker count is reported as its own clause rather than folded into any
   category's count. Unset (the default) changes nothing: no extra legend row, no extra summary clause
 
+- `selectedIndex: number = -1` (attribute `selected-index`) — the currently selected item, or `-1`
+  for none. **Controlled:** activating a cell emits `lr-item-activate` and does *not* move the
+  selection itself, so the consumer stays the single source of truth and the strip cannot drift from
+  a playback index it does not own (its natural companion is `lr-sequence-playback`). Mirrors the
+  shape `lr-lite-chart`'s `selectedIndices` and `lr-heatmap`'s `selectedCell` already establish. An
+  out-of-range or non-integer value selects nothing. The selected cell carries `aria-current="true"`
+  and `data-selected`; the selection is drawn as a ring rather than a background change, because a
+  cell's background is data (its category colour) and tinting it would misreport the category
+
 The single-member `orientation: 'horizontal'` property was **removed in 9.0.0**: nothing read it and
 the stylesheet never mentioned it, so the reflected attribute styled nothing. Delete the attribute;
 the strip has always laid out horizontally.
 
-**Events:** none.
+**Events:** `lr-item-activate` — `detail: { index: number; id: string; item: SequenceStripItem }`,
+fired when a cell is clicked or activated with Enter/Space on the roving-tabindex focus. Not
+cancelable: nothing in the component branches on `defaultPrevented`. Bubbles and composed, like every
+library event.
 
 **Slots:** none.
 
 **CSS parts:** `base` (the root strip, `role="list"`), `cell` (each item's `role="listitem"` cell,
-background-colored by its category and carrying the roving `tabindex`), `marker` (the small bottom
+background-colored by its category, carrying the roving `tabindex`, and activatable by click or
+Enter/Space — it has a pointer cursor plus paired hover/press treatments, and `[data-selected]` when
+it is `selectedIndex`), `marker` (the small bottom
 marker on a cell whose item sets `marker: true`), `tooltip` (the detail tooltip showing the active
 item's label, hidden until a cell is hovered or focused),
 `legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
@@ -2841,7 +2855,15 @@ proportion of the range, so a gap of weeks and a gap of decades stop looking ide
 needs a definite extent to distribute along — `--lr-timeline-time-extent` (default
 `var(--lr-size-20rem)`), applied as `block-size` when vertical and `inline-size` when horizontal —
 because items are absolutely positioned and a percentage against an auto-sized track resolves to
-zero. `rangeStart` / `rangeEnd` (`Date | string | number`, attribute: false) pin the axis instead of
+zero. `collision: 'overlap' | 'stack' = 'overlap'` (attribute `collision`, type `LyraTimelineCollision`)
+chooses what `scale="time"` does with items landing on nearly the same position: `'overlap'` leaves
+them stacked on one another, `'stack'` steps each colliding item one lane along the **cross** axis
+(indent per lane: `--lr-timeline-collision-offset`, default `var(--lr-space-l)`), which is what a
+dense chronology needs — items within 1.5% of the axis of each other count as colliding, and an
+isolated item returns to lane 0 rather than inheriting a preceding run's depth. There is
+deliberately no `'cluster'` mode: collapsing coincident items into one expandable marker needs a
+selection model and click events this passive component does not have.
+`rangeStart` / `rangeEnd` (`Date | string | number`, attribute: false) pin the axis instead of
 deriving it from the earliest/latest item; a reversed or non-finite pair falls back to the derived
 range. An item with no parseable `timestamp` (including one supplied only through the `timestamp`
 slot, which carries no machine-readable instant) keeps document order and is spread evenly, so a
@@ -3570,6 +3592,11 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 - **`components-data-sequence-strip-sequence-strip-contracts`** — Supporting data types and helpers for this component family.
+  `LyraSequenceStripActivateDetail {
+  index: unknown;
+  id: unknown;
+  item: unknown;
+}`
   `SequenceStripCategory {
   id: unknown;
   color: unknown;

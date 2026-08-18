@@ -21683,7 +21683,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 1682,
+              "line": 1719,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25794,7 +25794,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 728,
+              "line": 754,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38856,7 +38856,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 215,
+              "line": 267,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

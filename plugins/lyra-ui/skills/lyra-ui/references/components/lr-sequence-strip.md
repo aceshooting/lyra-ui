@@ -85,16 +85,30 @@ readonly color, readonly label? }`; `color`
   per-category only. The marker count is reported as its own clause rather than folded into any
   category's count. Unset (the default) changes nothing: no extra legend row, no extra summary clause
 
+- `selectedIndex: number = -1` (attribute `selected-index`) — the currently selected item, or `-1`
+  for none. **Controlled:** activating a cell emits `lr-item-activate` and does *not* move the
+  selection itself, so the consumer stays the single source of truth and the strip cannot drift from
+  a playback index it does not own (its natural companion is `lr-sequence-playback`). Mirrors the
+  shape `lr-lite-chart`'s `selectedIndices` and `lr-heatmap`'s `selectedCell` already establish. An
+  out-of-range or non-integer value selects nothing. The selected cell carries `aria-current="true"`
+  and `data-selected`; the selection is drawn as a ring rather than a background change, because a
+  cell's background is data (its category colour) and tinting it would misreport the category
+
 The single-member `orientation: 'horizontal'` property was **removed in 9.0.0**: nothing read it and
 the stylesheet never mentioned it, so the reflected attribute styled nothing. Delete the attribute;
 the strip has always laid out horizontally.
 
-**Events:** none.
+**Events:** `lr-item-activate` — `detail: { index: number; id: string; item: SequenceStripItem }`,
+fired when a cell is clicked or activated with Enter/Space on the roving-tabindex focus. Not
+cancelable: nothing in the component branches on `defaultPrevented`. Bubbles and composed, like every
+library event.
 
 **Slots:** none.
 
 **CSS parts:** `base` (the root strip, `role="list"`), `cell` (each item's `role="listitem"` cell,
-background-colored by its category and carrying the roving `tabindex`), `marker` (the small bottom
+background-colored by its category, carrying the roving `tabindex`, and activatable by click or
+Enter/Space — it has a pointer cursor plus paired hover/press treatments, and `[data-selected]` when
+it is `selectedIndex`), `marker` (the small bottom
 marker on a cell whose item sets `marker: true`), `tooltip` (the detail tooltip showing the active
 item's label, hidden until a cell is hovered or focused),
 `legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,

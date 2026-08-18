@@ -76,6 +76,7 @@ import type { LyraFlowCanvasEventMap } from './components/data/flow-canvas/flow-
 import type { LyraGraphQueryBuilderEventMap } from './components/data/graph-query-builder/graph-query-builder.class.js';
 import type { LyraHeatmapEventMap } from './components/data/heatmap/heatmap.class.js';
 import type { LyraPaginationEventMap } from './components/data/pagination/pagination.class.js';
+import type { LyraSequenceStripEventMap } from './components/data/sequence-strip/sequence-strip.class.js';
 import type { LyraTableEventMap } from './components/data/table/table.class.js';
 import type { LyraTreeItemEventMap } from './components/data/tree/tree-item.class.js';
 import type { LyraTreeEventMap } from './components/data/tree/tree.class.js';
@@ -1610,6 +1611,13 @@ export type LyraInvalidEvent =
   | LyraTokenInputEventMap['lr-invalid']
   | LyraToolParamFormEventMap['lr-invalid']
   | LyraVoicePickerEventMap['lr-invalid'];
+
+/**
+ * `lr-item-activate` — dispatched by `<lr-sequence-strip>`.
+ *
+ * Detail type: `LyraSequenceStripEventMap['lr-item-activate']`.
+ */
+export type LyraItemActivateEvent = LyraSequenceStripEventMap['lr-item-activate'];
 
 /**
  * `lr-layout-change` — dispatched by 2 components: `<lr-dashboard-grid>`, `<lr-flow-canvas>`.
@@ -3578,6 +3586,7 @@ export interface LyraGlobalEventMap {
   'lr-intersect': LyraIntersectEvent;
   'lr-intersection': LyraIntersectionEvent;
   'lr-invalid': LyraInvalidEvent;
+  'lr-item-activate': LyraItemActivateEvent;
   'lr-layout-change': LyraLayoutChangeEvent;
   'lr-lazy-change': LyraLazyChangeEvent;
   'lr-lazy-load': LyraLazyLoadEvent;

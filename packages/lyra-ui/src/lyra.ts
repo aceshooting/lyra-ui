@@ -295,6 +295,11 @@ export type {
 } from './components/utility/random-content/random-content.class.js';
 export { LyraTimeline } from './components/data/timeline/timeline.class.js';
 export type { LyraTimelineScale } from './components/data/timeline/timeline.class.js';
+export type { LyraTimelineCollision } from './components/data/timeline/timeline.class.js';
+export type {
+  LyraSequenceStripActivateDetail,
+  LyraSequenceStripEventMap,
+} from './components/data/sequence-strip/sequence-strip.class.js';
 export { LyraTimelineItem } from './components/data/timeline/timeline-item.class.js';
 export { LyraTour } from './components/utility/tour/tour.class.js';
 export type {
@@ -581,6 +586,7 @@ export type { LyraNodeTypeStyle } from './internal/node-type-style.js';
 export { LyraMap } from './components/media/map/map.class.js';
 export type {
   LyraMapLegendEntry,
+  LyraMapChoroplethInterpolation,
   LyraMapLegendGradientStop,
   LyraMapLegendPattern,
   LyraMapLegendProjection,

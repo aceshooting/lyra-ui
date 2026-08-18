@@ -20,6 +20,22 @@ export type LyraTimelineScale = 'flow' | 'time';
 const normalizeTimelineScale = (value: unknown): LyraTimelineScale =>
   value === 'time' ? 'time' : 'flow';
 
+/** How `scale="time"` handles items that land on (nearly) the same position. */
+export type LyraTimelineCollision = 'overlap' | 'stack';
+
+const normalizeTimelineCollision = (value: unknown): LyraTimelineCollision =>
+  value === 'stack' ? 'stack' : 'overlap';
+
+/**
+ * Two time-scaled items collide when their axis offsets are within this fraction of the axis.
+ *
+ * Expressed against the axis rather than in pixels because the axis extent is a themeable token
+ * (`--lr-timeline-time-extent`) the component never measures; a pixel threshold would silently mean
+ * something different at every extent. 1.5% of a 20rem axis is ~5px, close enough that two markers
+ * genuinely overlap.
+ */
+const TIMELINE_COLLISION_THRESHOLD = 0.015;
+
 /**
  * Epoch milliseconds for one item's `timestamp`, or `null` when it has none this component can
  * place. Accepts the same `Date | string | number` union `<lr-timeline-item>` itself takes, so a
@@ -64,6 +80,10 @@ function itemEpochMs(element: Element): number | null {
  *   timeline's main axis; also the length each item's own rail visually bridges to reach the next
  *   item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own
  *   stylesheet, via ordinary CSS custom-property inheritance across the slot boundary.
+ * @cssprop [--lr-timeline-collision-offset=var(--lr-space-l)] - Cross-axis step between items
+ *   stacked by `collision="stack"`. Each collision lane is indented one step further, so a wider
+ *   marker can claim more room without the lanes overlapping again. Ignored unless both
+ *   `scale="time"` and `collision="stack"` are set.
  * @cssprop [--lr-timeline-time-extent=var(--lr-size-20rem)] - Distance the `scale="time"` axis
  *   distributes items along: `block-size` when vertical, `inline-size` when horizontal. Time-scaled
  *   items are absolutely positioned, and a percentage offset against an auto-sized track resolves
@@ -139,6 +159,35 @@ export class LyraTimeline extends LyraElement {
     this.requestUpdate('scale', previous);
   }
 
+  /**
+   * What `scale="time"` does with items that land on (nearly) the same position.
+   *
+   * `'overlap'` (the default, and the only previous behavior) leaves them stacked on top of one
+   * another. `'stack'` offsets each colliding item along the **cross** axis instead, so a dense
+   * chronology stays readable — with ~1,800 events over ~330 years, same-period collisions are the
+   * common case rather than the exception. Ignored unless `scale="time"`.
+   *
+   * There is deliberately no `'cluster'` mode. Collapsing coincident items into one marker with a
+   * count that expands on interaction needs a selection model and click events, and this component
+   * is documented as passive with neither; adding them here would change what `lr-timeline` is
+   * rather than extend it.
+   */
+  private _collision: LyraTimelineCollision = 'overlap';
+  @property({ reflect: true })
+  get collision(): LyraTimelineCollision {
+    return this._collision;
+  }
+  set collision(value: LyraTimelineCollision) {
+    const normalized = normalizeTimelineCollision(value);
+    const previous = this._collision;
+    if (previous === normalized) {
+      if (value !== normalized) this.requestUpdate('collision', previous);
+      return;
+    }
+    this._collision = normalized;
+    this.requestUpdate('collision', previous);
+  }
+
   /** Pins the axis start instead of deriving it from the earliest item. Ignored unless
    *  `scale="time"`; a non-finite or reversed pair falls back to the derived range. */
   @property({ attribute: false }) rangeStart?: Date | string | number;
@@ -185,7 +234,12 @@ export class LyraTimeline extends LyraElement {
     if (changed.has('orientation') && this.getAttribute('orientation') !== this.orientation) {
       this.setAttribute('orientation', this.orientation);
     }
-    if (changed.has('scale') || changed.has('rangeStart') || changed.has('rangeEnd')) {
+    if (
+      changed.has('scale') ||
+      changed.has('collision') ||
+      changed.has('rangeStart') ||
+      changed.has('rangeEnd')
+    ) {
       this.applyTimeScale();
     }
   }
@@ -252,12 +306,16 @@ export class LyraTimeline extends LyraElement {
   private applyTimeScale(): void {
     const items = this.timelineItems();
     if (this.scale !== 'time') {
-      for (const item of items) item.style.removeProperty('--_lr-timeline-item-offset');
+      for (const item of items) {
+        item.style.removeProperty('--_lr-timeline-item-offset');
+        item.style.removeProperty('--_lr-timeline-item-lane');
+      }
       return;
     }
     const stamps = items.map((item) => itemEpochMs(item));
     const range = this.timeRange(stamps);
     const lastIndex = Math.max(1, items.length - 1);
+    const offsets = new Array<number>(items.length).fill(0);
     items.forEach((item, index) => {
       const stamp = stamps[index] ?? null;
       // An unparseable/absent timestamp keeps document order and is spread evenly, so a partially
@@ -267,7 +325,44 @@ export class LyraTimeline extends LyraElement {
           ? (stamp - range[0]) / (range[1] - range[0])
           : index / lastIndex;
       const clamped = Math.min(1, Math.max(0, ratio));
+      offsets[index] = clamped;
       item.style.setProperty('--_lr-timeline-item-offset', `${clamped * 100}%`);
+    });
+    this.applyCollisionLanes(items, offsets);
+  }
+
+  /**
+   * Assigns each time-scaled item a cross-axis lane so coincident items stop covering each other.
+   *
+   * Walks items in ascending offset order and gives each the lowest lane not already taken by a
+   * still-colliding earlier item, so a run of three same-year events occupies lanes 0/1/2 while an
+   * isolated event later on returns to lane 0 rather than inheriting the run's depth. Lane 0 is
+   * written as well as the others, so switching back to `'overlap'` (or leaving `'stack'` unset)
+   * clears every lane rather than leaving stale offsets on some children.
+   */
+  private applyCollisionLanes(items: readonly HTMLElement[], offsets: readonly number[]): void {
+    if (this.collision !== 'stack') {
+      for (const item of items) item.style.removeProperty('--_lr-timeline-item-lane');
+      return;
+    }
+    const order = items
+      .map((_, index) => index)
+      .sort((a, b) => (offsets[a] ?? 0) - (offsets[b] ?? 0));
+    // Lane -> the offset of the last item placed in it. An item may reuse a lane once the previous
+    // occupant is far enough away to no longer overlap.
+    const laneTails: number[] = [];
+    const lanes = new Array<number>(items.length).fill(0);
+    for (const index of order) {
+      const offset = offsets[index] ?? 0;
+      let lane = laneTails.findIndex(
+        (tail) => offset - tail >= TIMELINE_COLLISION_THRESHOLD,
+      );
+      if (lane === -1) lane = laneTails.length;
+      laneTails[lane] = offset;
+      lanes[index] = lane;
+    }
+    items.forEach((item, index) => {
+      item.style.setProperty('--_lr-timeline-item-lane', String(lanes[index] ?? 0));
     });
   }
 

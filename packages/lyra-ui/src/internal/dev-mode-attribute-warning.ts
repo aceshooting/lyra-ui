@@ -86,6 +86,20 @@ function litDevWarnings(): Set<string> | undefined {
 }
 
 /**
+ * Dev-mode-only: emits `message` at most once per `key` for the page. Shares the exact gate and
+ * dedupe store `warnUnknownAttributes` uses below, so a diagnostic added by a component behaves
+ * like the attribute diagnostic: silent in production, silent when Lit itself is not in dev mode,
+ * and never repeated for the same key however many instances exist.
+ */
+export function devWarnOnce(key: string, message: string): void {
+  const warnings = litDevWarnings();
+  if (!warnings) return;
+  if (warnings.has(key)) return;
+  warnings.add(key);
+  console.warn(message);
+}
+
+/**
  * Dev-mode-only: warns once per (tag, attribute-name) when `host` carries an attribute that
  * isn't in `observedAttributes` and isn't in the always-exempt global/data/aria set. No-op when
  * Lit's own dev-mode signal isn't present (production, or a dev environment where Lit itself

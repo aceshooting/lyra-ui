@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './sequence-strip.js';
 import type { LyraSequenceStrip } from './sequence-strip.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -798,5 +798,94 @@ describe('marker legend entry', () => {
   it('is accessible with the marker legend row shown', async () => {
     const el = await strip(html`<lr-sequence-strip show-legend marker-label="Subagent"></lr-sequence-strip>`);
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('item activation and selection', () => {
+  const build = async () => {
+    const el = (await fixture(
+      html`<lr-sequence-strip style="inline-size: 400px"></lr-sequence-strip>`
+    )) as LyraSequenceStrip;
+    el.categories = categories;
+    el.items = [
+      { id: 'a', categoryId: 'text' },
+      { id: 'b', categoryId: 'tool' },
+      { id: 'c', categoryId: 'text' },
+    ];
+    await el.updateComplete;
+    return el;
+  };
+
+  const cellAt = (el: LyraSequenceStrip, index: number) =>
+    el.shadowRoot!.querySelector<HTMLElement>(`[part="cell"][data-index="${index}"]`)!;
+
+  it('emits lr-item-activate on click, carrying the index and id', async () => {
+    const el = await build();
+    const listener = oneEvent(el, 'lr-item-activate');
+    cellAt(el, 1).click();
+    const event = await listener;
+    expect(event.detail.index).to.equal(1);
+    expect(event.detail.id).to.equal('b');
+    expect(event.detail.item.categoryId).to.equal('tool');
+  });
+
+  it('activates a focused cell from the keyboard, not only the pointer', async () => {
+    // The cells already carried a roving tabindex, so without this they were reachable but inert.
+    for (const key of ['Enter', ' ']) {
+      const el = await build();
+      const listener = oneEvent(el, 'lr-item-activate');
+      cellAt(el, 2).dispatchEvent(
+        new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true })
+      );
+      const event = await listener;
+      expect(event.detail.index, `activated with ${JSON.stringify(key)}`).to.equal(2);
+    }
+  });
+
+  it('bubbles and crosses the shadow boundary, like every library event', async () => {
+    const el = await build();
+    const seen: number[] = [];
+    document.addEventListener('lr-item-activate', ((event: CustomEvent) => {
+      seen.push(event.detail.index as number);
+    }) as EventListener, { once: true });
+    cellAt(el, 0).click();
+    expect(seen, 'reached a document-level listener').to.deep.equal([0]);
+  });
+
+  it('marks the controlled selection without recolouring the category', async () => {
+    const el = await build();
+    el.selectedIndex = 1;
+    await el.updateComplete;
+    expect(cellAt(el, 1).getAttribute('aria-current'), 'announced as current').to.equal('true');
+    expect(cellAt(el, 1).hasAttribute('data-selected'), 'and styleable').to.be.true;
+    expect(cellAt(el, 0).hasAttribute('data-selected'), 'siblings unaffected').to.be.false;
+  });
+
+  it('does not move the selection itself, leaving the consumer in control', async () => {
+    // Controlled on purpose: the strip must not drift from a playback index it does not own.
+    const el = await build();
+    el.selectedIndex = 0;
+    await el.updateComplete;
+    cellAt(el, 2).click();
+    await el.updateComplete;
+    expect(el.selectedIndex, 'unchanged until the consumer sets it').to.equal(0);
+  });
+
+  it('selects nothing for an out-of-range or non-integer index', async () => {
+    const el = await build();
+    for (const value of [-1, 99, 1.5, Number.NaN]) {
+      el.selectedIndex = value;
+      await el.updateComplete;
+      expect(
+        el.shadowRoot!.querySelectorAll('[part="cell"][data-selected]').length,
+        `selectedIndex=${value}`
+      ).to.equal(0);
+    }
+  });
+
+  it('defaults to no selection', async () => {
+    const el = await build();
+    expect(el.selectedIndex).to.equal(-1);
+    expect(el.shadowRoot!.querySelectorAll('[part="cell"][data-selected]')).to.have.length(0);
   });
 });

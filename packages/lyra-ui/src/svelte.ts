@@ -99,7 +99,7 @@ import type { LyraGauge } from './components/data/gauge/gauge.class.js';
 import type { LyraGraphQueryBuilder, LyraGraphQueryBuilderEventMap } from './components/data/graph-query-builder/graph-query-builder.class.js';
 import type { LyraHeatmap, LyraHeatmapEventMap } from './components/data/heatmap/heatmap.class.js';
 import type { LyraPagination, LyraPaginationEventMap } from './components/data/pagination/pagination.class.js';
-import type { LyraSequenceStrip } from './components/data/sequence-strip/sequence-strip.class.js';
+import type { LyraSequenceStrip, LyraSequenceStripEventMap } from './components/data/sequence-strip/sequence-strip.class.js';
 import type { LyraSparkline } from './components/data/sparkline/sparkline.class.js';
 import type { LyraStat } from './components/data/stat/stat.class.js';
 import type { LyraTable, LyraTableEventMap } from './components/data/table/table.class.js';
@@ -8523,11 +8523,12 @@ export type LyraSequenceStripSvelteProps = LyraSvelteElementProps<
   | 'items'
   | 'locale'
   | 'markerLabel'
+  | 'selectedIndex'
   | 'showLegend'
   | 'strings',
   {},
-  {},
-never,
+  LyraSequenceStripEventMap,
+  | 'lr-item-activate',
   | '--lr-sequence-strip-height'
   | '--lr-sequence-strip-legend-marker-bg'
   | '--lr-sequence-strip-legend-swatch-size'
@@ -8535,6 +8536,7 @@ never,
   {
     'accessible-label'?: LyraSequenceStrip['accessibleLabel'];
     'marker-label'?: LyraSequenceStrip['markerLabel'];
+    'selected-index'?: LyraSequenceStrip['selectedIndex'];
     'show-legend'?: LyraSequenceStrip['showLegend'];
   }
 >;
@@ -9771,6 +9773,7 @@ export type LyraTimeRangeSvelteProps = LyraSvelteElementProps<
 export type LyraTimelineSvelteProps = LyraSvelteElementProps<
   LyraTimeline,
   | 'accessibleLabel'
+  | 'collision'
   | 'locale'
   | 'orientation'
   | 'rangeEnd'
@@ -9781,6 +9784,7 @@ export type LyraTimelineSvelteProps = LyraSvelteElementProps<
   {},
 never,
   | '--lr-scroll-fade-size'
+  | '--lr-timeline-collision-offset'
   | '--lr-timeline-gap'
   | '--lr-timeline-time-extent',
   {

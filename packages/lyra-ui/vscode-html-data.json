@@ -22378,6 +22378,13 @@
           }
         },
         {
+          "name": "selected-index",
+          "description": {
+            "kind": "markdown",
+            "value": "Index of the currently selected item, or `-1` (the default) for none — the controlled selection\nthis strip's natural companion, `lr-sequence-playback`, scrubs through. Mirrors the shape\n`lr-lite-chart`'s `selectedIndices` and `lr-heatmap`'s `selectedCell` already establish.\n\nControlled, not self-managing: activating a cell emits `lr-item-activate` and does **not**\nmove the selection on its own, so the consumer stays the single source of truth and the\ncomponent cannot drift from a playback index it does not own. An out-of-range or non-integer\nvalue selects nothing rather than throwing.\n\nType: `number`  \nDefault: `-1`"
+          }
+        },
+        {
           "name": "show-legend",
           "description": {
             "kind": "markdown",
@@ -25772,7 +25779,7 @@
       "name": "lr-timeline",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-timeline>` — an ordered, connected sequence of past-event rows (an audit trail, an agent\naction history, a changelog) composed from `<lr-timeline-item>` light-DOM children, joined by a\ncontinuous connecting rail. First-party invention: no Web Awesome/Shoelace counterpart exists, so\nthis follows the library's own established conventions rather than mirroring an upstream API.\n\nA pure, read-only, declarative display component — same zero-event shape as `<lr-badge>`/\n`<lr-avatar>`/`<lr-skeleton>`. It never mutates its own children and fires no events; a\nconsumer who needs to react to item count changes already owns the mutation (they're the one\nadding/removing `<lr-timeline-item>` children) and can listen to the native `slotchange` event\ndirectly if truly needed.\n\nNo keyboard navigation, roving-tabindex, or selection model of any kind — a deliberate scope\ndecision, not an oversight. A timeline is a passive record display, not a navigable widget; see\n`<lr-timeline-item>`'s class doc for the full reasoning behind dropping an earlier\n\"interactive row\" design. Not a form-associated control — no value to submit, no label/hint/error\nchrome.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-timeline-item>` children, in display order. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. `role=\"list\"` lives here directly (a timeline isn't a navigation landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction: column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`, `overflow-y: hidden`, and an edge-fade `mask-image` applied only while the strip actually overflows) in `horizontal` orientation. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-scroll-fade-size` (default: `2rem`) — Inline size of each edge fade while a horizontal timeline overflows. Forced-colors mode disables the masks while retaining native scrolling.\n- `--lr-timeline-gap` (default: `var(--lr-space-l)`) — Spacing between consecutive items along the timeline's main axis; also the length each item's own rail visually bridges to reach the next item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own stylesheet, via ordinary CSS custom-property inheritance across the slot boundary.\n- `--lr-timeline-time-extent` (default: `var(--lr-size-20rem)`) — Distance the `scale=\"time\"` axis distributes items along: `block-size` when vertical, `inline-size` when horizontal. Time-scaled items are absolutely positioned, and a percentage offset against an auto-sized track resolves to zero, so the axis needs a definite extent. Ignored in the default `scale=\"flow\"`."
+        "value": "`<lr-timeline>` — an ordered, connected sequence of past-event rows (an audit trail, an agent\naction history, a changelog) composed from `<lr-timeline-item>` light-DOM children, joined by a\ncontinuous connecting rail. First-party invention: no Web Awesome/Shoelace counterpart exists, so\nthis follows the library's own established conventions rather than mirroring an upstream API.\n\nA pure, read-only, declarative display component — same zero-event shape as `<lr-badge>`/\n`<lr-avatar>`/`<lr-skeleton>`. It never mutates its own children and fires no events; a\nconsumer who needs to react to item count changes already owns the mutation (they're the one\nadding/removing `<lr-timeline-item>` children) and can listen to the native `slotchange` event\ndirectly if truly needed.\n\nNo keyboard navigation, roving-tabindex, or selection model of any kind — a deliberate scope\ndecision, not an oversight. A timeline is a passive record display, not a navigable widget; see\n`<lr-timeline-item>`'s class doc for the full reasoning behind dropping an earlier\n\"interactive row\" design. Not a form-associated control — no value to submit, no label/hint/error\nchrome.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-timeline-item>` children, in display order. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. `role=\"list\"` lives here directly (a timeline isn't a navigation landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction: column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`, `overflow-y: hidden`, and an edge-fade `mask-image` applied only while the strip actually overflows) in `horizontal` orientation. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-scroll-fade-size` (default: `2rem`) — Inline size of each edge fade while a horizontal timeline overflows. Forced-colors mode disables the masks while retaining native scrolling.\n- `--lr-timeline-collision-offset` (default: `var(--lr-space-l)`) — Cross-axis step between items stacked by `collision=\"stack\"`. Each collision lane is indented one step further, so a wider marker can claim more room without the lanes overlapping again. Ignored unless both `scale=\"time\"` and `collision=\"stack\"` are set.\n- `--lr-timeline-gap` (default: `var(--lr-space-l)`) — Spacing between consecutive items along the timeline's main axis; also the length each item's own rail visually bridges to reach the next item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own stylesheet, via ordinary CSS custom-property inheritance across the slot boundary.\n- `--lr-timeline-time-extent` (default: `var(--lr-size-20rem)`) — Distance the `scale=\"time\"` axis distributes items along: `block-size` when vertical, `inline-size` when horizontal. Time-scaled items are absolutely positioned, and a percentage offset against an auto-sized track resolves to zero, so the axis needs a definite extent. Ignored in the default `scale=\"flow\"`."
       },
       "attributes": [
         {
@@ -25781,6 +25788,21 @@
             "kind": "markdown",
             "value": "Host-level `aria-label` override for the list's accessible name — wins over the localized\ndefault `\"Timeline\"`. Needed because the `role=\"list\"` element lives in the shadow root and\nnever inherits a host attribute automatically — same reasoning as `<lr-breadcrumb>`'s\nidentical property. Unset falls back to the localized default; an explicitly empty\n`aria-label` stays empty.\n\nType: `string | undefined`"
           }
+        },
+        {
+          "name": "collision",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `LyraTimelineCollision`"
+          },
+          "values": [
+            {
+              "name": "overlap"
+            },
+            {
+              "name": "stack"
+            }
+          ]
         },
         {
           "name": "locale",

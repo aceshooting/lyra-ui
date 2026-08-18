@@ -4836,7 +4836,7 @@ describe("scaleType: logarithmic value axis", () => {
       html`<lr-chart scale-type="logarithmic"></lr-chart>`
     )) as LyraChart;
     el.labels = ["a", "b", "c", "d"];
-    el.series = [{ label: "latency", data: [1, 100, 10_000, 1_000_000] }];
+    el.datasets = [{ label: "latency", data: [1, 100, 10_000, 1_000_000] }];
     await el.updateComplete;
     await aTimeout(0);
     expect(
@@ -4928,7 +4928,7 @@ describe("declarative annotations", () => {
   it("includes labelled annotations in the accessible description", async () => {
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     el.labels = ["a", "b"];
-    el.series = [{ label: "s", data: [1, 2] }];
+    el.datasets = [{ label: "s", data: [1, 2] }];
     el.annotations = [{ axis: "y", value: 80, label: "SLO threshold" }];
     await el.updateComplete;
     await aTimeout(0);
@@ -4951,7 +4951,7 @@ describe("declarative annotations", () => {
 
     const plain = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     plain.labels = ["a", "b"];
-    plain.series = [{ label: "s", data: [1, 2] }];
+    plain.datasets = [{ label: "s", data: [1, 2] }];
     await plain.updateComplete;
     await aTimeout(0);
     expect(
@@ -4964,5 +4964,69 @@ describe("declarative annotations", () => {
       plain.shadowRoot!.querySelector("canvas"),
       "and still renders normally"
     ).to.exist;
+  });
+});
+
+describe("formatter surfaces: export and spoken", () => {
+  it("routes CSV cells through the 'export' surface, as lr-lite-chart already did", async () => {
+    const seen: string[] = [];
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = ["a", "b"];
+    el.datasets = [{ label: "s", data: [1000, 2000] }];
+    el.formatter = ({ value, surface }) => {
+      seen.push(surface as string);
+      return surface === "export" ? `${value} kg` : String(value);
+    };
+    await el.updateComplete;
+    await aTimeout(0);
+
+    const csv = el.exportData("csv");
+    expect(seen, "the export surface actually reaches the formatter").to.include("export");
+    expect(csv, "and its return value reaches the cell").to.contain("1000 kg");
+  });
+
+  it("leaves CSV cells as raw numbers when no formatter is installed", async () => {
+    // A spreadsheet must still parse the default output, so the export surface must not introduce
+    // locale grouping of its own.
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = ["a"];
+    el.datasets = [{ label: "s", data: [1000] }];
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(el.exportData("csv"), "unchanged default").to.contain("1000");
+    expect(el.exportData("csv"), "no thousands separator introduced").to.not.contain("1,000");
+  });
+
+  it("routes the live announcement through the 'spoken' surface", async () => {
+    const seen: string[] = [];
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = ["a", "b"];
+    el.datasets = [{ label: "s", data: [5, 6] }];
+    el.formatter = ({ value, surface }) => {
+      seen.push(surface as string);
+      return surface === "spoken" ? `${value} degrees` : String(value);
+    };
+    await el.updateComplete;
+    await aTimeout(0);
+
+    const spoken = (
+      el as unknown as { datumDisplayValue: (value: unknown) => string }
+    ).datumDisplayValue(5);
+    expect(seen, "the spoken surface actually reaches the formatter").to.include("spoken");
+    expect(spoken, "and its return value is what gets announced").to.equal("5 degrees");
+  });
+
+  it("still announces the locale number format when no formatter is installed", async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = ["a"];
+    el.datasets = [{ label: "s", data: [1234] }];
+    await el.updateComplete;
+    await aTimeout(0);
+    const spoken = (
+      el as unknown as { datumDisplayValue: (value: unknown) => string }
+    ).datumDisplayValue(1234);
+    expect(spoken, "unchanged default").to.equal(
+      new Intl.NumberFormat(el.effectiveLocale).format(1234)
+    );
   });
 });

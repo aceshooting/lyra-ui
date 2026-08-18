@@ -6263,6 +6263,29 @@
     },
     {
       "module": "src/components/data/sequence-strip/sequence-strip.class.ts",
+      "exportName": "LyraSequenceStripActivateDetail",
+      "kind": "interface",
+      "fingerprint": "6f870345289f6516bdfe",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/index.ts",
+        "src/components/data/sequence-strip/sequence-strip.class.ts",
+        "src/components/data/sequence-strip/sequence-strip.ts",
+        "src/components/lr-sequence-strip.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-sequence-strip-sequence-strip-contracts",
+        "declaration": "LyraSequenceStripActivateDetail"
+      }
+    },
+    {
+      "module": "src/components/data/sequence-strip/sequence-strip.class.ts",
       "exportName": "SequenceStripCategory",
       "kind": "interface",
       "fingerprint": "f12c332fb866b336498b",
@@ -9359,7 +9382,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapChoroplethLayer",
       "kind": "interface",
-      "fingerprint": "b358a807ca2b8b873fcf",
+      "fingerprint": "efefc26912170f7e129d",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -13189,7 +13212,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "1d58a9981f13264c2575",
+      "fingerprint": "39bbb81de659353b22e0",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14774,7 +14797,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "24d17dfa6a927790c7ad",
+      "fingerprint": "95616c4740493917703a",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15209,7 +15232,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "cb24fb34c737efd2371f",
+      "fingerprint": "4896eb32e614662a7f52",
       "routes": [
         "src/vue.ts"
       ],

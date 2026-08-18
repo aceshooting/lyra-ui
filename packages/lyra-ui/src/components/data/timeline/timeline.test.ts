@@ -422,3 +422,83 @@ it('actually offsets the rendered items, not just the custom property', async ()
   expect(b! - hostTop, 'midpoint event lands mid-axis').to.be.closeTo(200, 8);
   expect(c! - hostTop, 'last event lands at the far end').to.be.closeTo(400, 8);
 });
+
+describe('collision="stack"', () => {
+  const lanes = (el: LyraTimeline): number[] =>
+    Array.from(el.querySelectorAll('lr-timeline-item')).map((item) =>
+      Number.parseFloat(
+        (item as HTMLElement).style.getPropertyValue('--_lr-timeline-item-lane') || 'NaN'
+      )
+    );
+
+  // Three events in the same year, then one far later: the reported shape, where same-period
+  // collisions are the common case rather than the exception.
+  const DENSE = html`
+    <lr-timeline scale="time" collision="stack" style="--lr-timeline-time-extent: 400px">
+      <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}>A</lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2000-01-02T00:00:00Z')}>B</lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2000-01-03T00:00:00Z')}>C</lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}>D</lr-timeline-item>
+    </lr-timeline>
+  `;
+
+  it('defaults to overlap, writing no lane at all', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time">
+        <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}>A</lr-timeline-item>
+        <lr-timeline-item .timestamp=${new Date('2000-01-02T00:00:00Z')}>B</lr-timeline-item>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await el.updateComplete;
+    expect(el.collision, 'unset default').to.equal('overlap');
+    expect(lanes(el).every((lane) => Number.isNaN(lane)), 'no lane property written').to.be.true;
+  });
+
+  it('gives colliding items their own cross-axis lane', async () => {
+    const el = (await fixture(DENSE)) as LyraTimeline;
+    await el.updateComplete;
+    const [a, b, c] = lanes(el);
+    expect([a, b, c], 'the three coincident events step apart').to.deep.equal([0, 1, 2]);
+  });
+
+  it('returns a distant item to lane 0 rather than inheriting the run depth', async () => {
+    const el = (await fixture(DENSE)) as LyraTimeline;
+    await el.updateComplete;
+    expect(lanes(el)[3], 'a century later is not a collision').to.equal(0);
+  });
+
+  it('actually offsets the rendered items, not just the custom property', async () => {
+    // Silently-inert CSS is invisible to every other kind of check, so assert real geometry.
+    const el = (await fixture(DENSE)) as LyraTimeline;
+    await el.updateComplete;
+    const xs = Array.from(el.querySelectorAll('lr-timeline-item')).map(
+      (item) => item.getBoundingClientRect().left
+    );
+    expect(xs[1]!, 'lane 1 is indented past lane 0').to.be.greaterThan(xs[0]!);
+    expect(xs[2]!, 'lane 2 further still').to.be.greaterThan(xs[1]!);
+    expect(xs[3]!, 'the distant item is back at the start').to.be.closeTo(xs[0]!, 1);
+  });
+
+  it('clears every lane when switched back to overlap', async () => {
+    const el = (await fixture(DENSE)) as LyraTimeline;
+    await el.updateComplete;
+    expect(lanes(el).some((lane) => lane > 0), 'stacked first').to.be.true;
+
+    el.collision = 'overlap';
+    await el.updateComplete;
+    expect(
+      lanes(el).every((lane) => Number.isNaN(lane)),
+      'no stale lane is left on any child'
+    ).to.be.true;
+  });
+
+  it('normalizes an unknown collision mode to overlap', async () => {
+    const el = (await fixture(
+      html`<lr-timeline scale="time" collision="cluster"></lr-timeline>`
+    )) as LyraTimeline;
+    await el.updateComplete;
+    // 'cluster' is deliberately not implemented: it needs a selection model and click events this
+    // passive component does not have.
+    expect(el.collision).to.equal('overlap');
+  });
+});

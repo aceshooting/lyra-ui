@@ -220,7 +220,33 @@ export interface LyraMapChoroplethLayer {
    * layer, if any, is left as-is) rather than applied.
    */
   readonly stops: readonly (readonly [number, string])[];
+  /**
+   * How the fill color is interpolated between `stops`. `'linear'` (the default, and the only
+   * previous behavior) spaces the ramp evenly in value; `'logarithmic'` compresses it, which is
+   * what a heavy-tailed quantity — price, population, income — needs. On a linear ramp every value
+   * below the maximum falls into the first color band, so the map reads as one flat color plus a
+   * couple of outliers.
+   *
+   * This exposes an existing maplibre-gl capability rather than adding one: it emits
+   * `['interpolate', ['exponential', base], …]`, whose sub-1 base yields the logarithmic-style
+   * compression. Crucially, `stops` stay in the data's own units either way, so the legend keeps
+   * reading in real values instead of log units.
+   */
+  readonly interpolation?: LyraMapChoroplethInterpolation;
 }
+
+/** How a choropleth's fill color is interpolated between its stops. */
+export type LyraMapChoroplethInterpolation = 'linear' | 'logarithmic';
+
+/**
+ * Exponential base for `'logarithmic'` choropleth interpolation.
+ *
+ * maplibre-gl has no `['log']` interpolation type; `['exponential', base]` with a base below 1 is
+ * the documented way to weight the ramp toward the low end of the domain, which is the visual
+ * effect a log scale is wanted for. 0.25 spreads a heavy-tailed distribution's mass across the
+ * palette without collapsing the top of the range into a single band.
+ */
+const CHOROPLETH_LOG_INTERPOLATION_BASE = 0.25;
 
 /** One GeoJSON source rendered as three layers (`${sourceId}-fill` for polygons, `${sourceId}-line`
  *  for lines/outlines, `${sourceId}-circle` for points). Colors resolve from `--lr-*` tokens at
@@ -1073,7 +1099,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // exists (if any) untouched until `stops` is non-empty again.
     if (stops.length === 0) return;
 
-    const colorExpr: unknown[] = ['interpolate', ['linear'], ['get', field]];
+    // `stops` stay in the data's own units under either interpolation, so a consumer never has to
+    // pre-transform values to log10 and then hand-relabel the legend back into real units.
+    const interpolationExpr =
+      this.choropleth.interpolation === 'logarithmic'
+        ? ['exponential', CHOROPLETH_LOG_INTERPOLATION_BASE]
+        : ['linear'];
+    const colorExpr: unknown[] = ['interpolate', interpolationExpr, ['get', field]];
     for (const [value, color] of stops) colorExpr.push(value, color);
 
     if (this._map.getLayer(fillLayerId)) {

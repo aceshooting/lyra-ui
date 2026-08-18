@@ -102997,6 +102997,16 @@
             "hasDefault": false
           },
           {
+            "name": "selected-index",
+            "property": "selectedIndex",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": -1
+          },
+          {
             "name": "show-legend",
             "property": "showLegend",
             "type": "boolean",
@@ -103055,6 +103065,16 @@
             "hasDefault": false
           },
           {
+            "name": "selectedIndex",
+            "attribute": "selected-index",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": -1
+          },
+          {
             "name": "showLegend",
             "attribute": "show-legend",
             "type": "boolean",
@@ -103066,7 +103086,14 @@
           }
         ],
         "slots": [],
-        "events": [],
+        "events": [
+          {
+            "name": "lr-item-activate",
+            "type": "CustomEvent<LyraSequenceStripActivateDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
         "parts": [
           {
             "name": "base",
@@ -118394,6 +118421,15 @@
             "hasDefault": false
           },
           {
+            "name": "collision",
+            "property": "collision",
+            "type": "LyraTimelineCollision",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -118429,6 +118465,15 @@
             "type": "string | undefined",
             "readonly": false,
             "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "collision",
+            "attribute": "collision",
+            "type": "LyraTimelineCollision",
+            "readonly": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": false
           },
@@ -118507,6 +118552,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "2rem"
+          },
+          {
+            "name": "--lr-timeline-collision-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-l)"
           },
           {
             "name": "--lr-timeline-gap",

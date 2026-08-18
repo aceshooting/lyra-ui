@@ -58,10 +58,20 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   projection renders a localized visible `1–N of M items` summary rather than silently claiming
   the bounded rows are complete.
 - `choropleth?: LyraMapChoroplethLayer` (attribute: false) — `LyraMapChoroplethLayer { sourceId:
-string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
+string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][]; interpolation?:
+'linear' | 'logarithmic' }` (interpolated
   fill-color expression from `field`'s value against `stops`; `stops` must contain at least one
   `[value, color]` pair — an empty array is ignored, leaving whatever fill layer already exists, if
-  any, untouched, rather than being applied)
+  any, untouched, rather than being applied).
+  `interpolation` (type `LyraMapChoroplethInterpolation`, default `'linear'`) chooses how the colour
+  is interpolated between stops. `'logarithmic'` compresses the ramp, which is what a heavy-tailed
+  quantity — price, population, income — needs: on a linear ramp every value below the maximum falls
+  into the first colour band, so the map reads as one flat colour plus a couple of outliers. It
+  emits maplibre's own `['interpolate', ['exponential', 0.25], …]`, exposing an existing capability
+  rather than adding one (maplibre has no `['log']` interpolation type; a sub-1 exponential base is
+  the documented way to weight a ramp toward the low end). **`stops` stay in the data's own units
+  under either mode**, so the legend keeps reading in real values instead of log units — no
+  pre-transforming to log10 and hand-relabelling the legend back
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
 [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
   trimmed and must be nonempty, and the first marker for an explicit ID wins. Markers are reconciled

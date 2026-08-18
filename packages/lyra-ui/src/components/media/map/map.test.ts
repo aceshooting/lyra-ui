@@ -2981,3 +2981,66 @@ describe('continuous choropleth legend', () => {
     ).to.deep.equal(['custom']);
   });
 });
+
+describe('choropleth interpolation', () => {
+  const GEOJSON = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: { population: 5 },
+        geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] },
+      },
+    ],
+  } as never;
+
+  const paintExprFor = async (interpolation?: string) => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const applied: unknown[] = [];
+    // Stand in for the maplibre instance: applyChoropleth() only needs the handful of methods it
+    // calls, and this keeps the assertion on the emitted expression rather than on a real GL context.
+    (el as unknown as { _map: unknown })._map = {
+      getSource: () => undefined,
+      addSource: () => {},
+      getLayer: () => undefined,
+      addLayer: (spec: { paint?: Record<string, unknown> }) => {
+        applied.push(spec.paint?.['fill-color']);
+      },
+      setPaintProperty: () => {},
+      getStyle: () => ({ layers: [] }),
+    };
+    el.choropleth = {
+      sourceId: 'regions',
+      geojson: GEOJSON,
+      field: 'population',
+      stops: [[0, '#eee'], [100, '#036']],
+      ...(interpolation ? { interpolation } : {}),
+    } as never;
+    (el as unknown as { applyChoropleth: () => void }).applyChoropleth();
+    return applied[0] as unknown[];
+  };
+
+  it('interpolates linearly by default, unchanged', async () => {
+    const expr = await paintExprFor();
+    expect(expr[0]).to.equal('interpolate');
+    expect(expr[1], 'the unset default stays linear').to.deep.equal(['linear']);
+  });
+
+  it('emits an exponential interpolation for logarithmic, compressing a heavy tail', async () => {
+    // maplibre has no ['log'] interpolation; ['exponential', base<1] is the documented way to
+    // weight the ramp toward the low end, which is the effect a log scale is wanted for.
+    const expr = await paintExprFor('logarithmic');
+    expect(expr[0]).to.equal('interpolate');
+    expect((expr[1] as unknown[])[0]).to.equal('exponential');
+    expect((expr[1] as unknown[])[1], 'a sub-1 base').to.be.lessThan(1);
+  });
+
+  it('keeps stops in the data own units under either interpolation', async () => {
+    // The whole point: a consumer must not have to pre-transform to log10 and then hand-relabel
+    // the legend back into real units.
+    const linear = await paintExprFor();
+    const log = await paintExprFor('logarithmic');
+    expect(linear.slice(3), 'linear stop values').to.deep.equal([0, '#eee', 100, '#036']);
+    expect(log.slice(3), 'identical stop values under log').to.deep.equal([0, '#eee', 100, '#036']);
+  });
+});

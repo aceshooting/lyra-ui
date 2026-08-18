@@ -25,13 +25,29 @@ export const styles = css`
     align-items: flex-end;
     justify-content: center;
   }
-  /* no-pressed-state: a cell is a role="listitem" span with no activation of any kind -- it takes a
-     roving tabindex and reacts to pointerenter/focus purely to move the tooltip, and there is no
-     click handler and no lr-* event behind it. Nothing happens on press, so a pressed treatment
-     would be promising an action the strip does not have. */
+  /* A cell is activatable: it emits lr-item-activate on click and on Enter/Space, so it carries a
+     pointer cursor and a real pressed treatment. Both the hover ring and the press are paired, per
+     the library's every-:focus-visible-part-needs-:hover rule. */
+  [part='cell'] {
+    cursor: pointer;
+  }
   [part='cell']:hover,
   [part='cell']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
+  /* Pressed reads as a heavier ring, not a tint. A cell's background IS data (its category
+     colour), so darkening it would misreport the category -- and a filter would multiply every
+     channel across the whole subtree, the exact mistake the switch's own styles record from
+     before 8.0.0. */
+  [part='cell']:active {
+    outline: var(--lr-focus-ring-width) solid var(--lr-color-text);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
+  /* The controlled selection reads as a persistent ring rather than a colour change: a cell's own
+     background is data (its category colour), so tinting it would misreport the category. */
+  [part='cell'][data-selected] {
+    outline: var(--lr-focus-ring-width) solid var(--lr-color-text);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   /* Round the strip's own outer ends via the first/last cell, not overflow:hidden on [part='base'] --
