@@ -895,12 +895,19 @@ describe('status="error"', () => {
   // 9.0.0 renamed `errorMessage`/`error-message` -> `errorText`/`error-text`, the spelling every
   // other component carrying caller-supplied failure copy already uses.
   it("exposes the failure copy only as errorText; the removed error-message spelling is inert", async () => {
-    const el = (await fixture(html`
-      <lr-document-preview
-        status="error"
-        error-message="Legacy failure"
-      ></lr-document-preview>
-    `)) as LyraDocumentPreview;
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let el: LyraDocumentPreview;
+    try {
+      el = (await fixture(html`
+        <lr-document-preview
+          status="error"
+          error-message="Legacy failure"
+        ></lr-document-preview>
+      `)) as LyraDocumentPreview;
+    } finally {
+      console.warn = originalWarn;
+    }
     expect("errorMessage" in el).to.equal(false);
     const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(error.textContent).to.equal("Something went wrong.");

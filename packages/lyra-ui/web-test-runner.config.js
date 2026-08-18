@@ -267,6 +267,14 @@ const testRunnerHtml = (testRunnerImport) => `
       const originalError = console.error;
       console.warn = (...args) => {
         originalWarn(...args);
+        // Shiki's own module-level highlighter-count tracker persists for the whole browser
+        // session (one page load here), so a run instantiating many isolated <lr-code-block>
+        // fixtures -- each intentionally WeakMap-cached per distinct \`languages\` object, so
+        // instances stay collectible rather than accumulating forever in a real app -- can
+        // legitimately cross its "10 instances" advisory threshold. That's an artifact of the
+        // test session's fixture count, not a real per-instance leak; never let it trip strict
+        // console (or spend the one-shot trip on it before a real violation).
+        if (typeof args[0] === 'string' && args[0].startsWith('[Shiki]')) return;
         if (strictConsoleTripped) return;
         strictConsoleTripped = true;
         throw new Error('Unexpected browser console.warn: ' + args.map(String).join(' '));

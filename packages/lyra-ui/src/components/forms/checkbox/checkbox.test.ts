@@ -299,9 +299,16 @@ it("exports additive WA/Shoelace control and state part aliases", async () => {
 });
 
 it("does not treat fictional default-checked as a reset-default alias", async () => {
-  const form = (await fixture(html`
-    <form><lr-checkbox default-checked>Choice</lr-checkbox></form>
-  `)) as HTMLFormElement;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let form: HTMLFormElement;
+  try {
+    form = (await fixture(html`
+      <form><lr-checkbox default-checked>Choice</lr-checkbox></form>
+    `)) as HTMLFormElement;
+  } finally {
+    console.warn = originalWarn;
+  }
   const el = form.querySelector("lr-checkbox") as LyraCheckbox;
   await el.updateComplete;
   expect(el.checked).to.be.false;

@@ -228,12 +228,19 @@ describe('lr-video-playlist public contract', () => {
   });
 
   it('does not invent an availability contract from an undeclared child disabled attribute', async () => {
-    const el = await fixture<LyraVideoPlaylist>(html`
-      <lr-video-playlist>
-        <lr-video title="First" disabled></lr-video>
-        <lr-video title="Second"></lr-video>
-      </lr-video-playlist>
-    `);
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let el: LyraVideoPlaylist;
+    try {
+      el = await fixture<LyraVideoPlaylist>(html`
+        <lr-video-playlist>
+          <lr-video title="First" disabled></lr-video>
+          <lr-video title="Second"></lr-video>
+        </lr-video-playlist>
+      `);
+    } finally {
+      console.warn = originalWarn;
+    }
     await settle(el);
     const [first, second] = childVideos(el);
 

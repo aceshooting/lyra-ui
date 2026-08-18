@@ -1740,9 +1740,19 @@ describe("frame", () => {
   });
 
   it('exposes no `appearance` property, and a stale appearance="plain" keeps the card chrome', async () => {
-    const el = (await fixture(
-      html`<lr-chat-composer appearance="plain"></lr-chat-composer>`
-    )) as LyraChatComposer;
+    // A stale appearance="plain" is deliberately an unrecognized attribute here (dev mode warns
+    // about it via warnUnknownAttributes) -- stub console.warn around fixture creation so that
+    // expected warning doesn't trip WTR_STRICT_CONSOLE.
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let el: LyraChatComposer;
+    try {
+      el = (await fixture(
+        html`<lr-chat-composer appearance="plain"></lr-chat-composer>`
+      )) as LyraChatComposer;
+    } finally {
+      console.warn = originalWarn;
+    }
     expect("appearance" in el, "appearance is gone from the instance").to.be
       .false;
     const chrome = baseChrome(el);

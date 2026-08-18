@@ -924,7 +924,7 @@ it('ignores pointerdown/click when both the screen transform and the fallback bo
     svg.dispatchEvent(new MouseEvent('click', { clientX: 10, clientY: 10, bubbles: true, composed: true }));
     await el.updateComplete;
     expect(fired).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="focus-ring"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="focus-ring"]') == null).to.be.true;
   } finally {
     svg.getScreenCTM = originalCtm;
     svg.getBoundingClientRect = originalRect;
@@ -1062,7 +1062,7 @@ it('shows only a legend-limit disclosure (no legend list) when every explicit le
   el.legend = [null, 'not-a-record', { label: 123 }] as never;
   await el.updateComplete;
   expect(el.legend).to.deep.equal([]);
-  expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part="legend-limit"]')).to.exist;
 });
 

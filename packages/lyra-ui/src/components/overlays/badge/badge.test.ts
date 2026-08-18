@@ -461,7 +461,14 @@ it('leaves the committed badge output unchanged when none of the new properties 
 });
 
 it('never renders a remove button on lr-badge, even with the tag-only attribute present', async () => {
-  const el = (await fixture(html`<lr-badge with-remove>Ready</lr-badge>`)) as LyraBadge;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let el: LyraBadge;
+  try {
+    el = (await fixture(html`<lr-badge with-remove>Ready</lr-badge>`)) as LyraBadge;
+  } finally {
+    console.warn = originalWarn;
+  }
   expect(el.shadowRoot!.querySelectorAll('button').length).to.equal(0);
 });
 

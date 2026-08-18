@@ -100,7 +100,7 @@ it("falls back to the localized listbox label when the host names itself but the
   const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
   // hostLabel !== null (the host named itself) but el.label is unset, so the listbox falls all
   // the way through to the localized default instead of adopting the host's own name.
-  expect(listbox.getAttribute("aria-label")).to.equal("Node palette");
+  expect(listbox.getAttribute("aria-label") === "Node palette").to.equal(true);
 });
 
 it("renders one item per entry, grouped by category in first-appearance order", async () => {

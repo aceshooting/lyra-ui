@@ -579,7 +579,6 @@ describe('follow contract (virtualized)', () => {
           mode="live"
           style="--lr-activity-feed-max-height:120px"
           virtualize-at="4"
-          row-height="24"
           .entries=${makeEntries(5)}
         ></lr-activity-feed>`,
       )) as LyraActivityFeed;

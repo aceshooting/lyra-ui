@@ -65,9 +65,19 @@ it('defaults to connection-state="idle" and stallThresholdMs=10000, overridable 
 });
 
 it('normalizes invalid connection-state writes and exposes phase as getter-only', async () => {
-  const el = (await fixture(
-    html`<lr-stream-status connection-state="unknown" phase="stalled"></lr-stream-status>`,
-  )) as LyraStreamStatus;
+  // A stray phase="stalled" attribute is deliberately an unrecognized attribute here (phase is
+  // getter-only and dev mode warns about it via warnUnknownAttributes) -- stub console.warn
+  // around fixture creation so that expected warning doesn't trip WTR_STRICT_CONSOLE.
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let el: LyraStreamStatus;
+  try {
+    el = (await fixture(
+      html`<lr-stream-status connection-state="unknown" phase="stalled"></lr-stream-status>`,
+    )) as LyraStreamStatus;
+  } finally {
+    console.warn = originalWarn;
+  }
   expect(el.connectionState).to.equal('idle');
   expect(el.phase, 'the removed phase attribute cannot install a stall').to.equal('idle');
 

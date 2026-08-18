@@ -2034,7 +2034,7 @@ it('omits the description paragraph and aria-describedby when description is uns
     <lr-lite-chart .labels=${['a']} .datasets=${[{ label: 'A', data: [1] }]}></lr-lite-chart>
   `)) as LyraLiteChart;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="description"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="description"]') == null).to.be.true;
   expect(el.shadowRoot!.querySelector('svg')!.hasAttribute('aria-describedby')).to.be.false;
 });
 

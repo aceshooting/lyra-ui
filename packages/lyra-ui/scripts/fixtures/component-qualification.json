@@ -85,14 +85,14 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 805,
+              "line": 812,
               "test": "is accessible with populated and expanded content",
               "target": "accordion",
               "state": "populated"
             },
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 978,
+              "line": 985,
               "test": "keeps interactive icon content visible but inert beneath the sole trigger",
               "target": "item",
               "state": "populated"
@@ -106,7 +106,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 392,
+              "line": 399,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -117,7 +117,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 695,
+              "line": 702,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -128,7 +128,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1221,
+              "line": 1228,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -139,7 +139,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1174,
+              "line": 1181,
               "kind": "320px allocation test signal"
             }
           ]
@@ -276,28 +276,28 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 805,
+              "line": 812,
               "test": "is accessible with populated and expanded content",
               "target": "accordion",
               "state": "populated"
             },
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 941,
+              "line": 948,
               "test": "keeps a slotted label decorative while its text names the sole trigger",
               "target": "item",
               "state": "populated"
             },
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 978,
+              "line": 985,
               "test": "keeps interactive icon content visible but inert beneath the sole trigger",
               "target": "item",
               "state": "populated"
             },
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1241,
+              "line": 1248,
               "test": "localizes the fallback label and is accessible in its own populated expanded state",
               "target": "item",
               "state": "populated"
@@ -311,7 +311,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 392,
+              "line": 399,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -322,7 +322,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 695,
+              "line": 702,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -333,7 +333,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1221,
+              "line": 1228,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -344,7 +344,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1174,
+              "line": 1181,
               "kind": "320px allocation test signal"
             }
           ]
@@ -471,14 +471,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 701,
+              "line": 700,
               "test": "is accessible in the ${label} path",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 748,
+              "line": 747,
               "test": "is accessible expanded, with entries, icons, variants, and timestamps",
               "target": "el",
               "state": "populated"
@@ -3436,42 +3436,42 @@
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 175,
+              "line": 182,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 283,
+              "line": 290,
               "test": "is accessible with icon-only content and a label",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 341,
+              "line": 348,
               "test": "lets a consumer override --lr-avatar-font-size at any tier",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 350,
+              "line": 357,
               "test": "is accessible at every tier with initials rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 430,
+              "line": 437,
               "test": "is accessible in the rounded shape",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/avatar/avatar.test.ts",
-              "line": 559,
+              "line": 566,
               "test": "names the icon-slot fallback through label",
               "target": "el",
               "state": "populated"
@@ -7472,28 +7472,28 @@
             },
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1419,
+              "line": 1426,
               "test": "is accessible in a checked, labeled, required state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1426,
+              "line": 1433,
               "test": "is accessible in an indeterminate, labeled state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1433,
+              "line": 1440,
               "test": "keeps interactive label content outside the checkbox semantic owner",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1658,
+              "line": 1665,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -7518,7 +7518,7 @@
           "evidence": [
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1951,
+              "line": 1958,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -7535,7 +7535,7 @@
           "evidence": [
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1949,
+              "line": 1956,
               "kind": "320px allocation test signal"
             }
           ]
@@ -13073,7 +13073,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 392,
+              "line": 399,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -13084,7 +13084,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 695,
+              "line": 702,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -13095,7 +13095,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1221,
+              "line": 1228,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -13106,7 +13106,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/accordion.test.ts",
-              "line": 1174,
+              "line": 1181,
               "kind": "320px allocation test signal"
             }
           ]
@@ -14276,35 +14276,35 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-preview/document-preview.test.ts",
-              "line": 1025,
+              "line": 1032,
               "test": "is accessible with a populated text preview",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/document-preview/document-preview.test.ts",
-              "line": 1045,
+              "line": 1052,
               "test": "is accessible in the converting state with progress",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/document-preview/document-preview.test.ts",
-              "line": 1056,
+              "line": 1063,
               "test": "is accessible in the error state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/document-preview/document-preview.test.ts",
-              "line": 1067,
+              "line": 1074,
               "test": "is accessible in the generic download fallback state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/document-preview/document-preview.test.ts",
-              "line": 1749,
+              "line": 1756,
               "test": "is accessible with the active-region prop themed",
               "target": "el",
               "state": "populated"
@@ -14324,7 +14324,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-preview/document-preview.test.ts",
-              "line": 1469,
+              "line": 1476,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -14335,7 +14335,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-preview/document-preview.test.ts",
-              "line": 963,
+              "line": 970,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -15370,14 +15370,14 @@
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1001,
+              "line": 1013,
               "test": "is accessible, both closed and with its menu open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1001,
+              "line": 1013,
               "test": "is accessible, both closed and with its menu open",
               "target": "el",
               "state": "populated"
@@ -15419,7 +15419,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1506,
+              "line": 1518,
               "kind": "320px allocation test signal"
             }
           ]
@@ -16578,21 +16578,21 @@
             },
             {
               "file": "src/components/retrieval/entity-card/entity-card.test.ts",
-              "line": 274,
+              "line": 281,
               "test": "is accessible in the populated compact and plain states",
               "target": "compactEl",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/entity-card/entity-card.test.ts",
-              "line": 274,
+              "line": 281,
               "test": "is accessible in the populated compact and plain states",
               "target": "plainEl",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/entity-card/entity-card.test.ts",
-              "line": 333,
+              "line": 340,
               "test": "uses caller type colors only as an accent and retains semantic foreground contrast",
               "target": "el",
               "state": "populated"
@@ -18533,7 +18533,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 370,
+              "line": 377,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -18553,7 +18553,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 618,
+              "line": 625,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -21539,35 +21539,35 @@
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 3429,
+              "line": 3425,
               "test": "is accessible with a selected cell",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4778,
+              "line": 4774,
               "test": "stays accessible with legendStops set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4903,
+              "line": 4899,
               "test": "stays accessible with a caption-only legend stop",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5242,
+              "line": 5238,
               "test": "stays accessible with both clamps applied",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5459,
+              "line": 5455,
               "test": "stays accessible with a date-driven cellText on the accessible-cell overlay",
               "target": "el",
               "state": "populated"
@@ -32182,28 +32182,28 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1109,
+              "line": 1121,
               "test": "promotes actionable tooltip content to a focus-persistent dialog surface",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 2681,
+              "line": 2693,
               "test": "is accessible with an arrow rendered",
               "target": "popover",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 889,
+              "line": 901,
               "test": "opens a popover from its slotted trigger and wires dialog semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1588,
+              "line": 1600,
               "test": "opens a popover anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -32245,7 +32245,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1506,
+              "line": 1518,
               "kind": "320px allocation test signal"
             }
           ]
@@ -36953,21 +36953,21 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1045,
+              "line": 1052,
               "test": "is accessible with a populated, selectable, metadata-carrying result set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1193,
+              "line": 1200,
               "test": "is accessible while grouped and virtualized",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1431,
+              "line": 1438,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -36987,7 +36987,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1234,
+              "line": 1241,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -37004,7 +37004,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1247,
+              "line": 1254,
               "kind": "320px allocation test signal"
             }
           ]
@@ -41208,14 +41208,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/stream-status/stream-status.test.ts",
-              "line": 600,
+              "line": 610,
               "test": "is accessible while stalled with slotted message and actions",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/stream-status/stream-status.test.ts",
-              "line": 623,
+              "line": 633,
               "test": "inherits dot color and opacity from an ancestor in a phase with its own defaults",
               "target": "el",
               "state": "populated"
@@ -41247,7 +41247,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/stream-status/stream-status.test.ts",
-              "line": 720,
+              "line": 730,
               "kind": "320px allocation test signal"
             }
           ]
@@ -42213,28 +42213,28 @@
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1455,
+              "line": 1462,
               "test": "is accessible in a checked, labeled, required state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1462,
+              "line": 1469,
               "test": "keeps interactive label content outside the switch and does not toggle through it",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1497,
+              "line": 1504,
               "test": "is accessible with a populated hint/errorText (the parts never rendered by the cases above)",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/switch/switch.test.ts",
-              "line": 1739,
+              "line": 1746,
               "test": "is accessible at a non-default tier",
               "target": "el",
               "state": "populated"
@@ -46131,7 +46131,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-param-form/tool-param-form.test.ts",
-              "line": 1330,
+              "line": 1336,
               "test": "is accessible in a populated state with a required, unfilled field revealed",
               "target": "el",
               "state": "populated"
@@ -46163,7 +46163,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-param-form/tool-param-form.test.ts",
-              "line": 1375,
+              "line": 1381,
               "kind": "320px allocation test signal"
             }
           ]
@@ -46946,21 +46946,21 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1023,
+              "line": 1035,
               "test": "shows a tooltip after focus and describes the trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1109,
+              "line": 1121,
               "test": "promotes actionable tooltip content to a focus-persistent dialog surface",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1692,
+              "line": 1704,
               "test": "opens a tooltip anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -47002,7 +47002,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1506,
+              "line": 1518,
               "kind": "320px allocation test signal"
             }
           ]
@@ -48636,7 +48636,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.test.ts",
-              "line": 1060,
+              "line": 1067,
               "test": "gives host aria-label precedence, handles 320px long titles, RTL, and populated axe",
               "target": "el",
               "state": "populated"
@@ -48661,7 +48661,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.test.ts",
-              "line": 1012,
+              "line": 1019,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -48678,7 +48678,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.test.ts",
-              "line": 1060,
+              "line": 1067,
               "kind": "320px allocation test signal"
             }
           ]

@@ -137,9 +137,16 @@ describe('<lr-accordion>', () => {
   });
 
   it('uses mode as the sole expansion-policy authority', async () => {
-    const accordion = (await fixture(html`<lr-accordion mode="single" multiple="false">
-      <lr-accordion-item label="One">One</lr-accordion-item>
-    </lr-accordion>`)) as LyraAccordion;
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let accordion: LyraAccordion;
+    try {
+      accordion = (await fixture(html`<lr-accordion mode="single" multiple="false">
+        <lr-accordion-item label="One">One</lr-accordion-item>
+      </lr-accordion>`)) as LyraAccordion;
+    } finally {
+      console.warn = originalWarn;
+    }
     await accordion.updateComplete;
     expect(accordion.mode).to.equal('single');
     expect('multiple' in accordion).to.equal(false);

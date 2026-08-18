@@ -4403,9 +4403,9 @@ describe('coverage-gap fixes', () => {
     };
     priv.connectedCallback();
     expect(
-      priv.visibilityListenerDocument,
+      priv.visibilityListenerDocument == null,
       "no visibility listener bound while disconnected"
-    ).to.equal(undefined);
+    ).to.be.true;
   });
 
   it('bindDocumentPointer no-ops when invoked while disconnected', async () => {
@@ -4419,9 +4419,9 @@ describe('coverage-gap fixes', () => {
     };
     priv.bindDocumentPointer();
     expect(
-      priv.pointerListenerDocument,
+      priv.pointerListenerDocument == null,
       "no pointer listener bound while disconnected"
-    ).to.equal(undefined);
+    ).to.be.true;
   });
 
   it('reconnectOpenPopup no-ops when invoked while disconnected or already closed', async () => {

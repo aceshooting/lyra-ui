@@ -234,12 +234,19 @@ it("renders a neutral error message and announces only later errors from light D
 // 9.0.0 renamed `error` -> `errorText`/`error-text`, matching the sibling `<lr-retrieval-search>`
 // (and the 25 other components that already spell this member that way).
 it("exposes caller-supplied failure text only as errorText; the removed `error` spelling is inert", async () => {
-  const el = (await fixture(
-    html`<lr-retrieval-results
-      error="Legacy failure"
-      .chunks=${chunks}
-    ></lr-retrieval-results>`
-  )) as LyraRetrievalResults;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let el: LyraRetrievalResults;
+  try {
+    el = (await fixture(
+      html`<lr-retrieval-results
+        error="Legacy failure"
+        .chunks=${chunks}
+      ></lr-retrieval-results>`
+    )) as LyraRetrievalResults;
+  } finally {
+    console.warn = originalWarn;
+  }
   await el.updateComplete;
   expect("error" in el).to.equal(false);
   expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);

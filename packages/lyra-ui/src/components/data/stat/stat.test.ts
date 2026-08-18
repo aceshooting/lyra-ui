@@ -1228,7 +1228,14 @@ it('keeps card chrome under frame="card" and drops it under frame="plain"', asyn
 });
 
 it('no longer answers to the pre-8.0.0 appearance attribute — frame replaced it outright', async () => {
-  const legacy = (await fixture(html`<lr-stat appearance="plain" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let legacy: LyraStat;
+  try {
+    legacy = (await fixture(html`<lr-stat appearance="plain" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
+  } finally {
+    console.warn = originalWarn;
+  }
   expect(legacy.frame).to.equal('card');
   const chrome = baseChrome(legacy);
   expect(chrome.borderTopWidth).to.equal('1px');

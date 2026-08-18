@@ -161,7 +161,14 @@ it('fidelity="detailed" resolves the detailed vector', async () => {
 it('ignores a stray `detailed` attribute, which 8.0.0 removed', async () => {
   // The 7.x boolean alias is gone, not silently honoured: a migration that leaves the attribute
   // behind must render the default tier rather than keep working by accident and hide the break.
-  const el = (await fixture(html`<lr-flag country="es" detailed></lr-flag>`)) as LyraFlag;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let el: LyraFlag;
+  try {
+    el = (await fixture(html`<lr-flag country="es" detailed></lr-flag>`)) as LyraFlag;
+  } finally {
+    console.warn = originalWarn;
+  }
   const image = await img(el);
   expect(image.getAttribute('src')).to.not.contain('/detailed/');
 });

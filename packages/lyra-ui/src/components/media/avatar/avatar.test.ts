@@ -159,7 +159,14 @@ describe('lr-avatar', () => {
   it('recolors the rendered circle from `variant`, not from `tone`', async () => {
     const neutral = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
     const brand = (await fixture(html`<lr-avatar initials="AB" variant="brand"></lr-avatar>`)) as LyraAvatar;
-    const stale = (await fixture(html`<lr-avatar initials="AB" tone="brand"></lr-avatar>`)) as LyraAvatar;
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let stale: LyraAvatar;
+    try {
+      stale = (await fixture(html`<lr-avatar initials="AB" tone="brand"></lr-avatar>`)) as LyraAvatar;
+    } finally {
+      console.warn = originalWarn;
+    }
     const background = (el: LyraAvatar): string =>
       getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;
     expect(background(brand), 'variant="brand" repaints the circle').to.not.equal(background(neutral));

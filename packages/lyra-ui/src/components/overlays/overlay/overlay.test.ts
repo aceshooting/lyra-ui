@@ -354,11 +354,23 @@ it('keeps an open popover on its direct anchor when its slotted trigger is remov
     </div>
   `);
   const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
-  el.anchor = wrapper.querySelector('#anchor');
-  await el.updateComplete;
+  // Reassigning the direct anchor re-triggers Floating UI's async position computation, which
+  // resolves after this update cycle and schedules a follow-on update on the popover and its
+  // internally composed tooltip/dropdown primitives -- Lit's dev-mode "scheduled an update after
+  // an update completed" warning. Stub console.warn and flush a frame so that expected follow-on
+  // update settles inside this test instead of bleeding into whichever test runs next.
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    el.anchor = wrapper.querySelector('#anchor');
+    await el.updateComplete;
 
-  el.querySelector('[slot="trigger"]')!.remove();
-  await el.updateComplete;
+    el.querySelector('[slot="trigger"]')!.remove();
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+  } finally {
+    console.warn = originalWarn;
+  }
   expect(el.open).to.equal(true);
 });
 

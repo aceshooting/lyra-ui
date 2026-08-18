@@ -643,14 +643,21 @@ it("exports wrapper/control and help-text aliases without replacing Lyra part na
 });
 
 it("accepts a Shoelace help-text slot but ignores fictional default-checked", async () => {
-  const form = (await fixture(html`
-    <form>
-      <lr-switch default-checked>
-        Choice
-        <span slot="help-text">Slotted help</span>
-      </lr-switch>
-    </form>
-  `)) as HTMLFormElement;
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let form: HTMLFormElement;
+  try {
+    form = (await fixture(html`
+      <form>
+        <lr-switch default-checked>
+          Choice
+          <span slot="help-text">Slotted help</span>
+        </lr-switch>
+      </form>
+    `)) as HTMLFormElement;
+  } finally {
+    console.warn = originalWarn;
+  }
   const el = form.querySelector("lr-switch") as LyraSwitch;
   await el.updateComplete;
   expect(el.checked).to.be.false;

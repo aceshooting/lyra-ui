@@ -3073,7 +3073,6 @@ describe("cellColor resolves CSS custom properties for canvas fillStyle", () => 
   it("resolves a var(...) cellColor to its computed value instead of leaving canvas fillStyle black", async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="matrix"
         style="--test-heatmap-color: rgb(10, 20, 30);"
         .cellColor=${() => "var(--test-heatmap-color)"}
         .data=${{
@@ -3104,7 +3103,6 @@ describe("cellColor resolves CSS custom properties for canvas fillStyle", () => 
   it("falls back to the no-data fill for an unresolvable cellColor value instead of solid black", async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="matrix"
         .cellColor=${() =>
           // Missing the required `--` custom-property prefix, so the browser rejects this
           // string outright (unlike an *unresolved* var() reference, e.g. var(--undefined-token),
@@ -3137,7 +3135,6 @@ describe("cellColor resolves CSS custom properties for canvas fillStyle", () => 
   it("still applies a literal, already-resolved cellColor unchanged (fast path)", async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="matrix"
         .cellColor=${() => "rgb(9, 9, 9)"}
         .data=${{
           kind: "matrix",
@@ -3166,7 +3163,6 @@ describe("cellColor resolves CSS custom properties for canvas fillStyle", () => 
   it("falls back for an invalid literal instead of reusing the previous cell fillStyle", async () => {
     const el = (await fixture(html`
       <lr-heatmap
-        mode="matrix"
         style="--lr-heatmap-no-data-fill: rgb(128, 128, 128);"
         .cellColor=${(_pos: MatrixCellPos, value: number) =>
           value === 1 ? "rgb(255, 0, 0)" : "not-a-color"}

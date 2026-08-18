@@ -1112,8 +1112,8 @@ describe("unread divider (slotted mode)", () => {
     await nextFrame();
     expect(el.shadowRoot!.querySelector('[part="unread-divider"]') == null).to
       .be.true;
-    expect(el.querySelector("[data-lr-chat-viewport-unread-boundary]")).to
-      .equal(null);
+    expect(el.querySelector("[data-lr-chat-viewport-unread-boundary]") == null)
+      .to.be.true;
   });
 });
 

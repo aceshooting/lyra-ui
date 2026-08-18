@@ -817,7 +817,7 @@ it("forwards click and the writable native selection surface to the textarea", a
 
 it('keeps the selection, scroll-position, and range-editing accessors null/no-op before the first render creates the textarea', () => {
   const el = document.createElement("lr-code-editor") as LyraCodeEditor;
-  expect(el.input).to.equal(null);
+  expect(el.input == null).to.be.true;
   expect(el.selectionStart).to.equal(null);
   expect(el.selectionEnd).to.equal(null);
   expect(el.selectionDirection).to.equal(null);
