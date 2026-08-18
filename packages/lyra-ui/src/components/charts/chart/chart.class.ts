@@ -30,6 +30,7 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { resolveCanvasColor, seriesPalette, translucentAreaColor } from './chart-colors.js';
+import type { LyraVariant } from '../../../internal/variants.js';
 import {
   createForcedColorPattern,
   forcedColorEncoding,
@@ -105,9 +106,6 @@ export type LyraChartIndexAxis = 'x' | 'y';
 /** Scale type for a chart's value axis. The categorical axis is never affected. */
 export type LyraChartScaleType = 'linear' | 'logarithmic';
 
-/** Tone of a chart annotation's line/band, resolved from the library's own semantic colors. */
-export type LyraChartAnnotationTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
-
 /**
  * One declarative chart annotation: a reference line (`value`) or a shaded band (`from`/`to`) on
  * the named axis.
@@ -122,7 +120,7 @@ export interface LyraChartAnnotation {
   readonly from?: number;
   readonly to?: number;
   readonly label?: string;
-  readonly tone?: LyraChartAnnotationTone;
+  readonly tone?: LyraVariant;
 }
 export type LyraChartLayoutPosition =
   | 'left'
@@ -1957,7 +1955,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /** Resolves an annotation tone to a canvas-ready color, through the same
    *  `getComputedStyle`-then-`resolveCanvasColor` path every other chart color takes — canvas
    *  silently ignores an unparseable `strokeStyle`/`fillStyle`. */
-  private annotationColor(tone: LyraChartAnnotationTone | undefined): string {
+  private annotationColor(tone: LyraVariant | undefined): string {
     const token = `--lr-color-${tone ?? 'neutral'}`;
     const raw = this.computedStyle().getPropertyValue(token).trim();
     return resolveCanvasColor(this, raw, FALLBACK_TICK_COLOR);

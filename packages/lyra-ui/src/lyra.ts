@@ -540,7 +540,6 @@ export type {
   LyraChartIndexAxis,
   LyraChartScaleType,
   LyraChartAnnotation,
-  LyraChartAnnotationTone,
   LyraChartLayoutPosition,
   LyraChartLegendPosition,
   LyraChartExportFormat,

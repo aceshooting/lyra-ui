@@ -3218,7 +3218,7 @@
       "module": "src/components/charts/chart/chart.class.ts",
       "exportName": "LyraChartAnnotation",
       "kind": "interface",
-      "fingerprint": "f69a723b51fbb0054ef2",
+      "fingerprint": "c1e568fb52dec4c657a8",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
