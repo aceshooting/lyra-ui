@@ -4163,6 +4163,7 @@ never,
 export type LyraFlagVueProps = LyraVueCustomElement<
   LyraFlag,
   | 'country'
+  | 'fallback'
   | 'fidelity'
   | 'label'
   | 'language'

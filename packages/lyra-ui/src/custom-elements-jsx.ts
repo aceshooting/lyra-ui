@@ -4168,6 +4168,7 @@ never,
 export type LyraFlagReactProps = LyraReactElementProps<
   LyraFlag,
   | 'country'
+  | 'fallback'
   | 'fidelity'
   | 'label'
   | 'language'

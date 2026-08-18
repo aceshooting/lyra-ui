@@ -4170,6 +4170,7 @@ never,
 export type LyraFlagSvelteProps = LyraSvelteElementProps<
   LyraFlag,
   | 'country'
+  | 'fallback'
   | 'fidelity'
   | 'label'
   | 'language'
