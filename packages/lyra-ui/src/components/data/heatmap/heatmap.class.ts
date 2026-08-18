@@ -11,6 +11,8 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import {
   linearAlpha,
   linearBucket,
+  midpointAlpha,
+  midpointBucket,
   minMax,
   sqrtStep,
 } from './heatmap-scale.js';
@@ -686,6 +688,61 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    */
   @property() scale: HeatmapScale = 'linear';
   /**
+   * Pins the color ramp's input domain to `[min, max]` instead of deriving it from the data's own
+   * extremes. Unset (the default) keeps today's behavior exactly: the ramp spans the data's own
+   * min-max, so two heatmaps of comparable data each normalize to their own extremes and cannot be
+   * read against each other. Setting it also opts the component into **signed data** (see
+   * `signedDomain`), because declaring a domain is what disambiguates a negative value from the
+   * no-data sentinel. A reversed or degenerate pair falls back to the derived range.
+   */
+  @property({ attribute: false }) domain?: [number, number];
+  /**
+   * Anchors a diverging ramp's neutral color on this value rather than at the middle of the
+   * domain, scaling the two halves independently (`lo`->0, `midpoint`->0.5, `hi`->1). Unset (the
+   * default) leaves the plain min-max normalization untouched. Like `domain`, setting it opts into
+   * signed data. A midpoint outside the resolved domain degrades to plain normalization rather
+   * than distorting the ramp.
+   */
+  @property({ type: Number }) midpoint?: number;
+
+  /**
+   * Whether the consumer has declared signed data, by pinning `domain` or anchoring `midpoint`.
+   *
+   * This gates the negative-value contract. By default a negative value is no-data, matching the
+   * long-documented `-1` sentinel -- a matrix of counts has no meaningful negative and consumers
+   * rely on that. A consumer who supplies a domain or midpoint has explicitly said the data is
+   * signed, at which point silently dropping the whole negative half (32.7% of cells in the report
+   * that prompted this) is the defect, not the feature. In signed mode only a non-finite value is
+   * no-data; an absent matrix cell reads as `NaN`, so it stays no-data in both modes.
+   */
+  private get signedDomain(): boolean {
+    return this.domain !== undefined || this.midpoint !== undefined;
+  }
+
+  /** Ramp position in `[0, 1]` for `value`, midpoint-anchored when `midpoint` is set. Every fill
+   *  path goes through this pair so the diverging anchor can never apply to some cells and not
+   *  others. */
+  private rampAlpha(value: number, lo: number, hi: number): number {
+    const anchor = this.midpoint;
+    return anchor === undefined
+      ? linearAlpha(value, lo, hi)
+      : midpointAlpha(value, lo, hi, anchor);
+  }
+
+  /** `rampAlpha`'s discrete twin, for a `colorSteps` ramp. */
+  private rampBucket(value: number, lo: number, hi: number, steps: number): number {
+    const anchor = this.midpoint;
+    return anchor === undefined
+      ? linearBucket(value, lo, hi, steps)
+      : midpointBucket(value, lo, hi, anchor, steps);
+  }
+
+  /** Whether `value` paints as no-data, honoring the signed-domain contract above. */
+  private isNoData(value: number): boolean {
+    if (!Number.isFinite(value)) return true;
+    return value < 0 && !this.signedDomain;
+  }
+  /**
    * When set, `cellSize` is derived from the host's measured `clientWidth`
    * on every draw (including ResizeObserver-triggered redraws) instead of
    * the fixed `cell-size` attribute, so the grid actually fills the
@@ -1240,7 +1297,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       );
       this.cachedCalendarSortedValues = this.cachedCalendarGrid.cells
         .map((cell) => cell.value)
-        .filter((value) => Number.isFinite(value) && value >= 0)
+        .filter((value) => !this.isNoData(value))
         .sort((a, b) => a - b);
       this.cachedCalendarCellsByPos = new Map(
         this.cachedCalendarGrid.cells.map((cell) => [
@@ -1487,7 +1544,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const values = Array.from({ length: rowCount }, (_, row) =>
       Array.from(
         { length: colCount },
-        (_, col) => source.values[row]?.[col] ?? -1
+        // Default mode keeps the documented `-1` no-data sentinel, which `valueAt()` and the
+        // `lr-cell-click` payload both surface. In signed mode `-1` is legitimate data, so an
+        // absent cell has to be non-finite instead -- a consumer with signed data spells no-data
+        // as NaN/null, not -1.
+        (_, col) =>
+          source.values[row]?.[col] ?? (this.signedDomain ? Number.NaN : -1)
       )
     );
     this.cachedMatrixData = {
@@ -1543,11 +1605,20 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * suffices instead of one per consumer.
    */
   private computeValueRange(): [number, number] | null {
+    // An explicit domain wins outright -- that is the point of pinning it, and it is what lets two
+    // comparable heatmaps share a scale instead of each normalizing to its own extremes.
+    const pinned = this.domain;
+    if (pinned) {
+      const [lo, hi] = pinned;
+      if (Number.isFinite(lo) && Number.isFinite(hi) && lo !== hi) {
+        return lo < hi ? [lo, hi] : [hi, lo];
+      }
+    }
     const source =
       this.effectiveMode === 'calendar'
         ? this.cachedCalendarGrid.cells.map((cell) => cell.value)
         : this.matrixValues.flat();
-    return minMax(source.filter((v) => Number.isFinite(v) && v >= 0));
+    return minMax(source.filter((v) => !this.isNoData(v)));
   }
 
   private localizedValueLabel(): string {
@@ -2203,13 +2274,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         );
         if (override != null) {
           ctx.fillStyle = this.resolveCanvasColor(override, cs);
-        } else if (value < 0 || !Number.isFinite(value)) {
+        } else if (this.isNoData(value)) {
           ctx.fillStyle = noDataFill;
         } else if (this.scale === 'sqrt') {
           const step = sqrtStep(value, hi, ramp.length);
           ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
         } else if (this.cachedColorSteps.length >= 2) {
-          const step = linearBucket(value, lo, hi, ramp.length);
+          const step = this.rampBucket(value, lo, hi, ramp.length);
           ctx.fillStyle = ramp[step]!;
         } else {
           ctx.fillStyle =
@@ -2321,24 +2392,24 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     rampData: ReturnType<LyraHeatmap['colorRamp']>,
     noDataFill: string
   ): void {
-    const value = this.matrixValues[row]?.[col] ?? -1;
+    const value = this.matrixValues[row]?.[col] ?? Number.NaN;
     const bounds = this.cachedValueRange;
     const lo = bounds ? bounds[0] : 0;
     const hi = bounds ? bounds[1] : 1;
     const override = this.cellColor?.({ row, col }, value);
     if (override != null) ctx.fillStyle = this.resolveCanvasColor(override, cs);
-    else if (value < 0 || !Number.isFinite(value)) ctx.fillStyle = noDataFill;
+    else if (this.isNoData(value)) ctx.fillStyle = noDataFill;
     else if (this.scale === 'sqrt') {
       const step = sqrtStep(value, hi, rampData.colors.length);
       ctx.fillStyle = step < 0 ? noDataFill : rampData.colors[step]!;
     } else if (this.cachedColorSteps.length >= 2) {
       ctx.fillStyle =
-        rampData.colors[linearBucket(value, lo, hi, rampData.colors.length)]!;
+        rampData.colors[this.rampBucket(value, lo, hi, rampData.colors.length)]!;
     } else {
       ctx.fillStyle = mixRgb(
         rampData.loRgb,
         rampData.hiRgb,
-        linearAlpha(value, lo, hi)
+        this.rampAlpha(value, lo, hi)
       );
     }
     ctx.fillRect(
@@ -2442,12 +2513,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const hi = bounds ? bounds[1] : 1;
     const override = this.cellColor?.(this.calendarPos(week, weekday), value);
     if (override != null) ctx.fillStyle = this.resolveCanvasColor(override, cs);
-    else if (value < 0 || !Number.isFinite(value)) ctx.fillStyle = noDataFill;
+    else if (this.isNoData(value)) ctx.fillStyle = noDataFill;
     else if (this.scale === 'sqrt') {
       const step = sqrtStep(value, hi, ramp.length);
       ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
     } else if (this.cachedColorSteps.length >= 2) {
-      ctx.fillStyle = ramp[linearBucket(value, lo, hi, ramp.length)]!;
+      ctx.fillStyle = ramp[this.rampBucket(value, lo, hi, ramp.length)]!;
     } else {
       ctx.fillStyle =
         ramp[
@@ -2594,17 +2665,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        const v = this.matrixValues[r]?.[c] ?? -1;
+        const v = this.matrixValues[r]?.[c] ?? Number.NaN;
         const x = PAD_LEFT + c * cellSize;
         const y = PAD_TOP + r * cellSize;
         const override = this.cellColor?.({ row: r, col: c }, v);
         if (override != null) {
           ctx.fillStyle = this.resolveCanvasColor(override, cs);
-        } else if (v < 0 || !Number.isFinite(v)) {
-          // `v < 0` alone is false for NaN, which would otherwise fall through to
-          // the ramp branches below, compute an unparsable rgb(NaN, NaN, NaN)
-          // fillStyle, and silently paint with whatever color the previous cell
-          // left in `ctx.fillStyle` (canvas ignores unparsable assignments).
+        } else if (this.isNoData(v)) {
+          // isNoData() keeps the non-finite half of this guard unconditional, which matters here:
+          // `v < 0` alone is false for NaN, which would otherwise fall through to the ramp
+          // branches below, compute an unparsable rgb(NaN, NaN, NaN) fillStyle, and silently paint
+          // with whatever color the previous cell left in `ctx.fillStyle` (canvas ignores
+          // unparsable assignments).
           ctx.fillStyle = noDataFill;
         } else if (this.scale === 'sqrt') {
           // ramp.length (not the RAMP_STEPS constant) so a colorSteps-driven ramp's
@@ -2612,14 +2684,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           const step = sqrtStep(v, hi, ramp.length);
           ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
         } else if (this.cachedColorSteps.length >= 2) {
-          const step = linearBucket(v, lo, hi, ramp.length);
+          const step = this.rampBucket(v, lo, hi, ramp.length);
           ctx.fillStyle = ramp[step]!;
         } else {
           // linearAlpha() returns a 0.1-1.0 ramp position; reused here as a
           // mix ratio between the two ramp-endpoint colors (rather than as a
           // literal canvas alpha channel) so the 'linear' scale also respects
           // --lr-heatmap-scale-lo/-hi.
-          const t = linearAlpha(v, lo, hi);
+          const t = this.rampAlpha(v, lo, hi);
           ctx.fillStyle = mixRgb(loRgb, hiRgb, t);
         }
         ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
@@ -2899,8 +2971,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         n: this.formatCount(pos.col + 1),
       });
     const v = this.matrixValues[pos.row]?.[pos.col];
+    // Tracks the painted contract, so a signed-domain negative announces its value rather than
+    // "no data" -- see isNoData().
     const valueText =
-      v == null || v < 0 || !Number.isFinite(v)
+      v == null || this.isNoData(v)
         ? this.localize('heatmapNoDataValue')
         : this.formatNumericValue(v);
     return this.localize('heatmapMatrixCellLabel', undefined, {
@@ -2920,10 +2994,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         timeZone: 'UTC',
       }
     );
-    const valueText =
-      value < 0 || !Number.isFinite(value)
-        ? this.localize('heatmapNoDataValue')
-        : this.formatNumericValue(value);
+    // Must track the painted contract exactly: a signed-domain cell that renders on the ramp has
+    // to be announced with its value, not as "no data".
+    const valueText = this.isNoData(value)
+      ? this.localize('heatmapNoDataValue')
+      : this.formatNumericValue(value);
     return this.localize('heatmapCalendarCellLabel', undefined, {
       date: label,
       value: valueText,

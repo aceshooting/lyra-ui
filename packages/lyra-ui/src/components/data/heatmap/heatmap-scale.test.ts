@@ -1,5 +1,14 @@
 import { expect } from '@open-wc/testing';
-import { linearAlpha, linearBucket, minMax, sqrtStep } from './heatmap-scale.js';
+import {
+  linearAlpha,
+  linearBucket,
+  midpointAlpha,
+  midpointBucket,
+  midpointRatio,
+  minMax,
+  sqrtStep,
+} from './heatmap-scale.js';
+import { finiteRatio } from '../../../internal/numbers.js';
 
 it('linearAlpha maps the value range to a 0.1-1.0 alpha ramp', () => {
   expect(linearAlpha(0, 0, 10)).to.equal(0.1);
@@ -75,4 +84,39 @@ describe('minMax', () => {
     const values = Array.from({ length: 150_000 }, (_, i) => i);
     expect(minMax(values)).to.deep.equal([0, 149_999]);
   });
+});
+
+it('anchors a diverging ramp on midpoint rather than the data midpoint', () => {
+  // The reported case: data running -4.93..28.8 with a blue->neutral->red ramp. Under plain
+  // min-max normalization zero lands at ~15% of the range, so the "no change" color is applied to
+  // a substantial decrease.
+  const lo = -4.93;
+  const hi = 28.8;
+  expect(midpointRatio(0, lo, hi, 0)).to.be.closeTo(0.5, 1e-9);
+  expect(finiteRatio(0, lo, hi)).to.be.closeTo(0.146, 0.01);
+
+  expect(midpointRatio(lo, lo, hi, 0), 'the low end still maps to 0').to.equal(0);
+  expect(midpointRatio(hi, lo, hi, 0), 'the high end still maps to 1').to.equal(1);
+  expect(midpointRatio(-2.465, lo, hi, 0), 'halfway down the negative half').to.be.closeTo(0.25, 1e-9);
+  expect(midpointRatio(14.4, lo, hi, 0), 'halfway up the positive half').to.be.closeTo(0.75, 1e-9);
+});
+
+it('degrades a midpoint outside the domain to plain normalization', () => {
+  expect(midpointRatio(5, 0, 10, 20)).to.equal(finiteRatio(5, 0, 10));
+  expect(midpointRatio(5, 0, 10, -5)).to.equal(finiteRatio(5, 0, 10));
+  expect(midpointRatio(5, 0, 10, Number.NaN)).to.equal(finiteRatio(5, 0, 10));
+});
+
+it('keeps midpointAlpha on the same 0.1-1.0 floor as linearAlpha', () => {
+  expect(midpointAlpha(-5, -5, 5, 0)).to.be.closeTo(0.1, 1e-9);
+  expect(midpointAlpha(0, -5, 5, 0)).to.be.closeTo(0.55, 1e-9);
+  expect(midpointAlpha(5, -5, 5, 0)).to.be.closeTo(1, 1e-9);
+});
+
+it('buckets a diverging ramp symmetrically around the midpoint', () => {
+  // 4 steps, midpoint 0 in a symmetric domain: the two negative buckets and the two positive ones.
+  expect(midpointBucket(-5, -5, 5, 0, 4)).to.equal(0);
+  expect(midpointBucket(-1, -5, 5, 0, 4)).to.equal(1);
+  expect(midpointBucket(1, -5, 5, 0, 4)).to.equal(2);
+  expect(midpointBucket(5, -5, 5, 0, 4)).to.equal(3);
 });

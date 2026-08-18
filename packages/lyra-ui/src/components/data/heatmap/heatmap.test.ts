@@ -7046,3 +7046,128 @@ describe("coverage: additional edge-path gaps", () => {
     expect(canvas.height).to.be.greaterThan(0);
   });
 });
+
+describe("signed data: domain and midpoint", () => {
+  const CELL = 20;
+
+  const build = async (
+    values: number[][],
+    patch: { domain?: [number, number]; midpoint?: number } = {}
+  ): Promise<LyraHeatmap> => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.cellSize = CELL;
+    el.minCellSize = CELL;
+    el.maxCellSize = CELL;
+    setMatrixData(el, {
+      rowLabels: values.map((_, index) => `r${index}`),
+      colLabels: values[0]!.map((_, index) => `c${index}`),
+      values,
+    });
+    if (patch.domain !== undefined) el.domain = patch.domain;
+    if (patch.midpoint !== undefined) el.midpoint = patch.midpoint;
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  };
+
+  // Samples a few px into the cell's own box, matching the existing no-data-fill test's idiom
+  // (PAD_LEFT 60 / PAD_TOP 20, read at +5/+5).
+  const cellPixel = (el: LyraHeatmap, row: number, col: number): string => {
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    const ctx = canvas.getContext("2d")!;
+    const dpr = window.devicePixelRatio || 1;
+    const x = Math.round((60 + col * CELL + 5) * dpr);
+    const y = Math.round((20 + row * CELL + 5) * dpr);
+    return Array.from(ctx.getImageData(x, y, 1, 1).data).join(",");
+  };
+
+  it("still treats a negative as no-data by default, preserving the -1 sentinel", async () => {
+    const el = await build([[-5, 10]]);
+    expect(
+      (el as unknown as { signedDomain: boolean }).signedDomain,
+      "no domain or midpoint means signed data was never declared"
+    ).to.be.false;
+    const negative = cellPixel(el, 0, 0);
+    const sentinel = await build([[-1, 10]]);
+    expect(
+      negative,
+      "an arbitrary negative paints exactly like the documented -1 sentinel"
+    ).to.equal(cellPixel(sentinel, 0, 0));
+  });
+
+  it("renders the negative half as real data once a domain is declared", async () => {
+    // Reported defect: 145 of 444 legitimately-negative cells rendered as holes,
+    // indistinguishable from genuinely missing ones.
+    const plain = await build([[-5, 10]]);
+    const signed = await build([[-5, 10]], { domain: [-10, 10] });
+    expect(
+      cellPixel(signed, 0, 0),
+      "the negative cell now paints from the ramp, not the no-data fill"
+    ).to.not.equal(cellPixel(plain, 0, 0));
+  });
+
+  it("keeps a structurally absent cell as no-data in signed mode, where -1 is real data", async () => {
+    const el = await build([[-5, 10]], { domain: [-10, 10] });
+    setMatrixData(el, { values: [[-5]] }); // col 1 now has no entry at all
+    await el.updateComplete;
+    await aTimeout(0);
+    const absent = cellPixel(el, 0, 1);
+    const plain = await build([[-5, 10]]);
+    expect(
+      absent,
+      "an absent cell still paints as no-data, unlike the negative beside it"
+    ).to.equal(cellPixel(plain, 0, 0));
+  });
+
+  it("pins the ramp to an explicit domain so two heatmaps can share a scale", async () => {
+    // 50 against a pinned 0..100 domain must paint identically in both charts, even though one's
+    // own maximum is 50 and the other's is 100. Without `domain` each normalizes to its own max.
+    const a = await build([[0, 50]], { domain: [0, 100] });
+    const b = await build([[50, 100]], { domain: [0, 100] });
+    expect(
+      cellPixel(a, 0, 1),
+      "same value, same colour across two charts sharing a domain"
+    ).to.equal(cellPixel(b, 0, 0));
+  });
+
+  it("anchors a diverging ramp's neutral colour on midpoint", async () => {
+    const anchored = await build([[-10, 0, 10]], { domain: [-10, 10], midpoint: 0 });
+    const plain = await build([[-10, 0, 10]], { domain: [-10, 10] });
+    // Zero sits at the domain's own middle here, so the anchored and unanchored ramps agree at
+    // the midpoint itself; the asymmetric case below is what the anchor actually changes.
+    const low = cellPixel(anchored, 0, 0);
+    const mid = cellPixel(anchored, 0, 1);
+    const high = cellPixel(anchored, 0, 2);
+    expect(low, "low end differs from the neutral midpoint").to.not.equal(mid);
+    expect(high, "high end differs from the neutral midpoint").to.not.equal(mid);
+    expect(low, "the two extremes differ from each other").to.not.equal(high);
+    expect(mid, "a centred midpoint matches plain normalization").to.equal(
+      cellPixel(plain, 0, 1)
+    );
+  });
+
+  it("moves the neutral colour to midpoint on an asymmetric domain", async () => {
+    // The reported case: data running -4.93..28.8, where zero lands at ~15% of the range under
+    // plain normalization, so "no change" is painted onto a substantial decrease.
+    const anchored = await build([[-4.93, 0, 28.8]], {
+      domain: [-4.93, 28.8],
+      midpoint: 0,
+    });
+    const plain = await build([[-4.93, 0, 28.8]], { domain: [-4.93, 28.8] });
+    expect(
+      cellPixel(anchored, 0, 1),
+      "zero is repositioned to the ramp's centre instead of 15% along it"
+    ).to.not.equal(cellPixel(plain, 0, 1));
+  });
+
+  it("leaves rendering untouched when neither domain nor midpoint is set", async () => {
+    // Explicit unset-regression guard: both new properties must be inert by default.
+    const baseline = await build([[1, 9]]);
+    const untouched = await build([[1, 9]]);
+    untouched.domain = undefined;
+    untouched.midpoint = undefined;
+    await untouched.updateComplete;
+    await aTimeout(0);
+    expect(cellPixel(untouched, 0, 1)).to.equal(cellPixel(baseline, 0, 1));
+  });
+});

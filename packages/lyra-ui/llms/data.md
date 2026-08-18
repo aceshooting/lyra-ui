@@ -1443,6 +1443,23 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
   same `sqrtStep()` magnitude compression as matrix mode, so one heavy day doesn't wash out the rest
+- `domain?: [number, number]` (attribute: false) — pins the color ramp's input domain instead of
+  deriving it from the data's own extremes, so two heatmaps of comparable data can share a scale
+  rather than each normalizing to its own min/max. A reversed pair is normalized; a degenerate or
+  non-finite one falls back to the derived range
+- `midpoint?: number` — anchors a diverging ramp's neutral color on this value rather than at the
+  middle of the domain, scaling the two halves independently (`lo`→0, `midpoint`→0.5, `hi`→1). A
+  midpoint outside the resolved domain degrades to plain normalization rather than distorting the
+  ramp
+- **Signed data.** Setting either `domain` or `midpoint` opts the component into signed data, where
+  only a **non-finite** value is no-data. With neither set (the default), a negative value is
+  no-data — matching the long-documented `-1` sentinel, since a matrix of counts has no meaningful
+  negative. Declaring a domain or midpoint is what disambiguates "a real negative" from "the
+  sentinel", so signed datasets render their negative half instead of dropping it. In signed mode a
+  structurally absent matrix cell reads as `NaN` so it stays no-data while a real `-1` beside it
+  renders on the ramp; in default mode an absent cell still resolves to `-1`, keeping `valueAt()`
+  and the `lr-cell-click` payload unchanged. `scale="sqrt"` rejects negatives in both modes — a
+  square root of a negative has no meaning
 - `bucketCount: number = 5` (attribute `bucket-count` — calendar mode only; non-finite values fall
   back to 5, while finite values are floored and clamped to 2–256 before the color-ramp allocation)
 - `annotations: readonly HeatmapAnnotation[] = []` (attribute: false) — `HeatmapAnnotation { row?: number;

@@ -57,3 +57,56 @@ export function linearBucket(value: number, lo: number, hi: number, steps: numbe
   const t = finiteRatio(value, lo, hi);
   return Math.min(steps - 1, Math.floor(t * steps));
 }
+
+/**
+ * Normalizes `value` to `[0, 1]` around an anchored `midpoint` rather than the plain `lo`-`hi`
+ * span, so a diverging ramp's neutral color lands exactly on `midpoint` instead of wherever the
+ * data's own midpoint happens to fall.
+ *
+ * The two halves are scaled independently: `lo`->0, `midpoint`->0.5, `hi`->1. That deliberately
+ * does NOT preserve a single units-per-pixel ratio across the whole range — with data running
+ * -4.93 to +28.8 around a zero midpoint, an equal color distance means "equally far from
+ * neutral in its own direction", which is the entire point of a diverging ramp. A caller wanting
+ * a symmetric ramp passes a symmetric `domain` (e.g. `[-28.8, 28.8]`).
+ *
+ * Falls back to `finiteRatio`'s plain normalization when `midpoint` sits outside `[lo, hi]` or
+ * any input is non-finite, so a mis-set midpoint degrades to today's behavior rather than
+ * producing a a division by zero.
+ */
+export function midpointRatio(
+  value: number,
+  lo: number,
+  hi: number,
+  midpoint: number
+): number {
+  if (!Number.isFinite(value) || !Number.isFinite(midpoint)) return finiteRatio(value, lo, hi);
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return finiteRatio(value, lo, hi);
+  if (!(midpoint > lo) || !(midpoint < hi)) return finiteRatio(value, lo, hi);
+  if (value <= lo) return 0;
+  if (value >= hi) return 1;
+  return value <= midpoint
+    ? 0.5 * ((value - lo) / (midpoint - lo))
+    : 0.5 + 0.5 * ((value - midpoint) / (hi - midpoint));
+}
+
+/** `linearAlpha`'s midpoint-anchored twin, keeping the same 0.1-1.0 floor. */
+export function midpointAlpha(
+  value: number,
+  lo: number,
+  hi: number,
+  midpoint: number
+): number {
+  return 0.1 + 0.9 * midpointRatio(value, lo, hi, midpoint);
+}
+
+/** `linearBucket`'s midpoint-anchored twin. */
+export function midpointBucket(
+  value: number,
+  lo: number,
+  hi: number,
+  midpoint: number,
+  steps: number
+): number {
+  const t = midpointRatio(value, lo, hi, midpoint);
+  return Math.min(steps - 1, Math.floor(t * steps));
+}
