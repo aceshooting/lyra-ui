@@ -1165,6 +1165,314 @@ describe("lr-pptx-viewer", () => {
       restore();
     }
   });
+
+  it('fails closed when the peer search returns a non-array result', async () => {
+    const fake = fakeModule();
+    fake.viewer.searchText = () => null as unknown as PptxTextSearchResult[];
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      const diagnostic = oneEvent(el, 'lr-viewer-diagnostic');
+      const changed = oneEvent(el, 'lr-search-change');
+      expect(await el.search('x')).to.equal(0);
+      expect((await diagnostic).detail.diagnostic).to.deep.include({
+        code: 'pptx-search-error',
+        fatal: false,
+        source: 'pptx-renderer',
+      });
+      expect((await changed).detail).to.deep.equal({
+        query: 'x',
+        matchCount: 0,
+        matchCountExact: false,
+        activeIndex: -1,
+      });
+      // A non-fatal search diagnostic must not tear down the mounted presentation.
+      expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
+    } finally {
+      restore();
+    }
+  });
+
+  it('filters malformed search candidates while retaining well-formed ones', async () => {
+    const valid: PptxTextSearchResult = { slideIndex: 1, nodeId: 'n1', matchStart: 0, matchEnd: 2, text: 'ok' };
+    const invalidCandidates: unknown[] = [
+      null,
+      'not-an-object',
+      { slideIndex: 1.5, nodeId: 'a', matchStart: 0, matchEnd: 1, text: 'x' }, // non-integer slideIndex
+      { slideIndex: -1, nodeId: 'a', matchStart: 0, matchEnd: 1, text: 'x' }, // negative slideIndex
+      { slideIndex: 5, nodeId: 'a', matchStart: 0, matchEnd: 1, text: 'x' }, // slideIndex >= slideCount
+      { slideIndex: 0, nodeId: 42, matchStart: 0, matchEnd: 1, text: 'x' }, // non-string nodeId
+      { slideIndex: 0, nodeId: 'a', matchStart: 0, matchEnd: 1, text: 7 }, // non-string text
+      { slideIndex: 0, nodeId: 'a', matchStart: 0.5, matchEnd: 1, text: 'x' }, // non-integer matchStart
+      { slideIndex: 0, nodeId: 'a', matchStart: 0, matchEnd: 1.5, text: 'x' }, // non-integer matchEnd
+      { slideIndex: 0, nodeId: 'a', matchStart: -1, matchEnd: 1, text: 'x' }, // negative matchStart
+      { slideIndex: 0, nodeId: 'a', matchStart: 2, matchEnd: 1, text: 'x' }, // matchEnd < matchStart
+      { slideIndex: 0, nodeId: 'a', matchStart: 0, matchEnd: 99, text: 'x' }, // matchEnd > text.length
+    ];
+    const fake = fakeModule(2, [...invalidCandidates, valid] as unknown as PptxTextSearchResult[]);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      expect(await el.search('x')).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('reports a non-fatal diagnostic when navigating to a search match fails', async () => {
+    const matches: PptxTextSearchResult[] = [
+      { slideIndex: 1, nodeId: 'n', matchStart: 0, matchEnd: 1, text: 'x' },
+    ];
+    const fake = fakeModule(2, matches);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      const boom = new Error('nav failed');
+      fake.viewer.goToSlide = async () => {
+        throw boom;
+      };
+      const diagnostic = oneEvent(el, 'lr-viewer-diagnostic');
+      expect(await el.search('x')).to.equal(1);
+      expect((await diagnostic).detail.diagnostic).to.deep.include({
+        code: 'pptx-search-error',
+        fatal: false,
+        source: 'pptx-renderer',
+        cause: boom,
+        page: 2,
+      });
+      // Non-fatal: the mounted presentation must remain up.
+      expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
+    } finally {
+      restore();
+    }
+  });
+
+  it('wraps forward and backward through search matches, focusing each one', async () => {
+    const matches: PptxTextSearchResult[] = [0, 1, 2].map((index) => ({
+      slideIndex: index,
+      nodeId: `n${index}`,
+      matchStart: 0,
+      matchEnd: 1,
+      text: 'x',
+    }));
+    const fake = fakeModule(3, matches);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      expect(await el.search('x')).to.equal(3);
+
+      expect(await el.searchNext()).to.be.true;
+      expect(fake.viewer.currentSlideIndex).to.equal(1);
+      expect(await el.searchNext()).to.be.true;
+      expect(fake.viewer.currentSlideIndex).to.equal(2);
+      expect(await el.searchNext()).to.be.true; // wraps forward to the first match
+      expect(fake.viewer.currentSlideIndex).to.equal(0);
+
+      expect(await el.searchPrevious()).to.be.true; // wraps backward to the last match
+      expect(fake.viewer.currentSlideIndex).to.equal(2);
+    } finally {
+      restore();
+    }
+  });
+
+  it('searchNext/searchPrevious are no-ops without a mounted viewer or active matches', async () => {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    expect(await el.searchNext()).to.be.false;
+    expect(await el.searchPrevious()).to.be.false;
+  });
+
+  it('clearSearch resets active search state, disposes highlights, and emits a reset change', async () => {
+    const matches: PptxTextSearchResult[] = [
+      { slideIndex: 0, nodeId: 'n', matchStart: 0, matchEnd: 1, text: 'x' },
+    ];
+    const fake = fakeModule(2, matches);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      expect(await el.search('x')).to.equal(1);
+      const clearHighlightsBefore = fake.calls.clearSearchHighlights;
+
+      const changed = oneEvent(el, 'lr-search-change');
+      el.clearSearch();
+      expect((await changed).detail).to.deep.equal({
+        query: '',
+        matchCount: 0,
+        matchCountExact: true,
+        activeIndex: -1,
+      });
+      expect(fake.calls.clearSearchHighlights).to.equal(clearHighlightsBefore + 1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('rejects additional invalid thumbnail requests: no viewer, non-integer page, out-of-range page, non-positive width', async () => {
+    const fake = fakeModule(2);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      const target = el.ownerDocument.createElement('div');
+      el.parentElement!.append(target);
+      // No viewer mounted yet.
+      expect(await el.renderPageThumbnailToContainer(1, target)).to.be.false;
+
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      expect(await el.renderPageThumbnailToContainer(1.5, target)).to.be.false;
+      expect(await el.renderPageThumbnailToContainer(3, target)).to.be.false; // beyond slideCount
+      expect(await el.renderPageThumbnailToContainer(1, target, { width: 0 })).to.be.false;
+      expect(await el.renderPageThumbnailToContainer(1, target, { width: -10 })).to.be.false;
+      expect(fake.calls.renderThumbnail).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('returns false when the renderer declines to hand back a thumbnail handle', async () => {
+    const fake = fakeModule(2);
+    fake.viewer.renderThumbnailToContainer = () => false as unknown as ReturnType<typeof fake.viewer.renderThumbnailToContainer>;
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const target = el.ownerDocument.createElement('div');
+      el.parentElement!.append(target);
+
+      expect(await el.renderPageThumbnailToContainer(1, target)).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it("disposes and returns false when a thumbnail's async setup rejects", async () => {
+    const fake = fakeModule(2);
+    let disposed = 0;
+    fake.viewer.renderThumbnailToContainer = (_index, container) => {
+      const preview = document.createElement('div');
+      container.append(preview);
+      return {
+        ready: Promise.reject(new Error('thumbnail render failed')),
+        dispose() {
+          disposed++;
+          preview.remove();
+        },
+      };
+    };
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const target = el.ownerDocument.createElement('div');
+      el.parentElement!.append(target);
+
+      expect(await el.renderPageThumbnailToContainer(1, target)).to.be.false;
+      expect(disposed).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('clamps out-of-range page assignments both before and after mount', async () => {
+    const fake = fakeModule(3);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.page = 999;
+      await el.updateComplete;
+      expect(el.page).to.equal(1); // no slideCount yet -> clamps to the floor
+      el.page = -5;
+      await el.updateComplete;
+      expect(el.page).to.equal(1);
+
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      el.page = 999;
+      await el.updateComplete;
+      expect(el.page).to.equal(3); // clamps to the mounted slide count
+    } finally {
+      restore();
+    }
+  });
+
+  it('re-runs the active search after an effective locale change', async () => {
+    const matches: PptxTextSearchResult[] = [
+      { slideIndex: 0, nodeId: 'n', matchStart: 0, matchEnd: 1, text: 'x' },
+    ];
+    const fake = fakeModule(2, matches);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      expect(await el.search('x')).to.equal(1);
+      const searchesBefore = fake.calls.searchText;
+
+      el.locale = 'fr';
+      await waitUntil(() => fake.calls.searchText > searchesBefore);
+      expect(fake.calls.searchText).to.equal(searchesBefore + 1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('fails closed and destroys the peer viewer when it does not expose the required capabilities', async () => {
+    const restore = stubFetch();
+    let destroyCalls = 0;
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () =>
+        ({
+          PptxViewer: {
+            open: async () => ({
+              // Missing goToSlide/searchText/etc. -> adaptPptxViewer() must reject this as null.
+              slideCount: 2,
+              currentSlideIndex: 0,
+              destroy: () => {
+                destroyCalls++;
+              },
+            }),
+          },
+          RECOMMENDED_ZIP_LIMITS: {},
+        } as never);
+      const listener = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/deck.pptx';
+      const event = (await listener) as CustomEvent<{ error: unknown }>;
+      expect(event.detail.error).to.exist;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent)
+        .to.equal('Failed to render this presentation.');
+      expect(destroyCalls).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe("styling", () => {

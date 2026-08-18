@@ -5,6 +5,7 @@ import {
   observeInheritedContext,
   recordInheritedDirectionRead,
 } from "./inherited-context-observer.js";
+import { registerLyraLocale } from './localization-runtime.js';
 import { LyraElement } from "./lyra-element.js";
 import { tag } from "./prefix.js";
 
@@ -88,11 +89,62 @@ class DemoLocale extends LyraElement {
   get exposedDirection() {
     return this.effectiveDirection;
   }
+  exposeLocalize(
+    key: string,
+    fallback?: string,
+    values?: Record<string, string | number>
+  ): string {
+    return this.localize(key, fallback, values);
+  }
   render() {
     return html`<span>${this.localize("cancel")}</span>`;
   }
 }
 customElements.define(tag("demo-locale"), DemoLocale);
+
+class DemoHydration extends LyraElement {
+  renderCalls = 0;
+  seedCallsAtRender: number[] = [];
+  secondSeedRan = false;
+  presenceAtRender: boolean[] = [];
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.seedFirstRenderState(() => {
+      this.seedCallsAtRender.push(this.renderCalls);
+    });
+    this.seedFirstRenderState(() => {
+      this.secondSeedRan = true;
+    });
+  }
+
+  render() {
+    this.renderCalls += 1;
+    this.presenceAtRender.push(this.renderSlotPresence(false));
+    return html`<span>hydration</span>`;
+  }
+}
+customElements.define(tag("demo-hydration"), DemoHydration);
+
+class DemoHydrationThrow extends LyraElement {
+  shouldThrow = true;
+  seedRan = false;
+  renderCalls = 0;
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.seedFirstRenderState(() => {
+      this.seedRan = true;
+    });
+  }
+
+  render() {
+    this.renderCalls += 1;
+    if (this.shouldThrow) throw new Error("hydration boom");
+    return html`<span>ok</span>`;
+  }
+}
+customElements.define(tag("demo-hydration-throw"), DemoHydrationThrow);
 
 class DemoDirection extends LyraElement {
   renderCalls = 0;
@@ -1786,6 +1838,180 @@ it("still coalesces same-key scheduleAfterUpdate callbacks to one run", async ()
   );
 
   expect(el.ran).to.deep.equal(["first"]);
+});
+
+it('localize() prefers a per-instance strings override, then an explicit fallback, then the raw key', async () => {
+  const el = await fixture<DemoLocale>(`<lr-demo-locale></lr-demo-locale>`);
+
+  expect(el.exposeLocalize('lyra-element-test-key')).to.equal(
+    'lyra-element-test-key'
+  );
+  expect(
+    el.exposeLocalize('lyra-element-test-key', 'Hello {name}', {
+      name: 'Ada',
+    })
+  ).to.equal('Hello Ada');
+
+  el.strings = { 'lyra-element-test-key': 'Overridden {name}' };
+  expect(
+    el.exposeLocalize('lyra-element-test-key', 'Hello {name}', {
+      name: 'Ada',
+    })
+  ).to.equal('Overridden Ada');
+});
+
+it('strings setter snapshots the assigned overrides and schedules a re-render', async () => {
+  const el = await fixture<DemoLocale>(`<lr-demo-locale></lr-demo-locale>`);
+  await el.updateComplete;
+  const before = el.strings;
+
+  el.strings = { cancel: 'Never mind' };
+  expect(el.strings).to.not.equal(before);
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('Never mind');
+});
+
+it('requests an update on reconnect when the locale catalog changed while disconnected', async () => {
+  const locale = `x-catalog-${Date.now().toString(36)}`;
+  const el = await fixture<DemoLocale>(
+    html`<lr-demo-locale locale=${locale}></lr-demo-locale>`
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('cancel');
+
+  el.remove();
+  registerLyraLocale(locale, { cancel: 'Updated cancel text' });
+
+  let updateRequests = 0;
+  const requestUpdate = el.requestUpdate.bind(el);
+  el.requestUpdate = (...args: Parameters<DemoLocale['requestUpdate']>) => {
+    updateRequests += 1;
+    requestUpdate(...args);
+  };
+
+  document.body.append(el);
+  expect(
+    updateRequests,
+    'reconnect must detect the stale catalog version synchronously'
+  ).to.be.greaterThan(0);
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('Updated cancel text');
+
+  el.remove();
+});
+
+it('seedFirstRenderState runs its seed synchronously before the first render of a browser-only mount', async () => {
+  const el = await fixture<DemoHydration>(
+    `<lr-demo-hydration></lr-demo-hydration>`
+  );
+
+  expect(el.seedCallsAtRender).to.deep.equal([0]);
+  expect(el.secondSeedRan).to.be.true;
+  expect(el.presenceAtRender).to.deep.equal([false]);
+  expect(el.renderCalls).to.equal(1);
+});
+
+it('defers every seedFirstRenderState seed past a hydrating first render, then corrects exactly once', async () => {
+  const el = document.createElement(tag('demo-hydration')) as DemoHydration;
+  // Attaching a shadow root before the element ever connects reproduces what declarative
+  // shadow DOM leaves behind for a server-rendered element: connectedCallback sees a
+  // pre-existing shadow root on an element that has never updated.
+  el.attachShadow({ mode: 'open' });
+  document.body.append(el);
+  await el.updateComplete;
+
+  expect(
+    el.seedCallsAtRender,
+    'both seeds registered during the hydrating render must be deferred'
+  ).to.deep.equal([]);
+  expect(el.secondSeedRan).to.be.false;
+  expect(
+    el.presenceAtRender,
+    'slot presence stays optimistic while hydration is unresolved'
+  ).to.deep.equal([true]);
+  expect(el.renderCalls).to.equal(1);
+
+  // The corrective render is scheduled from a task queued after updateComplete resolves, not
+  // another microtask -- give it a generously margined real timeout rather than reaching for
+  // fake timers.
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await el.updateComplete;
+
+  expect(
+    el.seedCallsAtRender,
+    'both seeds run exactly once, after the hydrating render'
+  ).to.deep.equal([1]);
+  expect(el.secondSeedRan).to.be.true;
+  expect(
+    el.renderCalls,
+    'coalescing multiple seed registrations still produces exactly one corrective render'
+  ).to.equal(2);
+  expect(
+    el.presenceAtRender.at(-1),
+    'presence resolves normally once hydration is complete'
+  ).to.equal(false);
+
+  el.remove();
+});
+
+it('drops the hydrating flag after a failed first update so a later update seeds normally', async () => {
+  const el = document.createElement(
+    tag('demo-hydration-throw')
+  ) as DemoHydrationThrow;
+  el.attachShadow({ mode: 'open' });
+  document.body.append(el);
+
+  let rejected: unknown;
+  try {
+    await el.updateComplete;
+  } catch (error) {
+    rejected = error;
+  }
+  expect(rejected instanceof Error).to.be.true;
+  expect(
+    el.seedRan,
+    'a failed hydrating update must not have run the deferred seed'
+  ).to.be.false;
+
+  el.shouldThrow = false;
+  el.requestUpdate();
+  await el.updateComplete;
+
+  expect(
+    el.seedRan,
+    'a later successful update seeds immediately once the hydration flag is cleared'
+  ).to.be.true;
+
+  el.remove();
+});
+
+it('holds a scheduleAfterUpdate callback that comes due while disconnected and replays it once reconnected', async () => {
+  const el = (await fixture(
+    html`<lr-demo-after-update></lr-demo-after-update>`
+  )) as DemoAfterUpdate;
+  await el.updateComplete;
+  el.ran = [];
+
+  el.remove();
+  el.scheduleTwoDistinct();
+  await new Promise<void>((r) =>
+    queueMicrotask(() => queueMicrotask(() => r()))
+  );
+  expect(
+    el.ran,
+    'a callback due while disconnected must not run yet'
+  ).to.deep.equal([]);
+
+  document.body.append(el);
+  await new Promise<void>((r) =>
+    queueMicrotask(() => queueMicrotask(() => r()))
+  );
+  expect(
+    el.ran.slice().sort(),
+    'reconnecting replays every held callback exactly once'
+  ).to.deep.equal(['load', 'search']);
+
+  el.remove();
 });
 
 describe('dev-mode unknown-attribute warning wiring', () => {

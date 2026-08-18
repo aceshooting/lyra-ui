@@ -458,6 +458,55 @@ it('requires object-form routing options to match the region it is called on', a
   expect(item.textContent).to.contain('Correct region');
 });
 
+it('rejects create() when ownerDocument does not match the region owner document', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    const outcome = await region
+      .create({ message: 'Wrong document', ownerDocument: frame.contentDocument! })
+      .then(() => 'resolved', (error) => String(error));
+    expect(outcome).to.include('ownerDocument must match');
+  } finally {
+    frame.remove();
+  }
+});
+
+it('accepts a plain string icon and imports (rather than mutates) a cross-document icon node', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const stringIconItem = await region.create({ message: 'String icon', duration: 0, icon: '★' });
+  expect(stringIconItem.querySelector('[slot="icon"]')?.textContent).to.equal('★');
+
+  const otherDocument = document.implementation.createHTMLDocument('other');
+  const foreignNode = otherDocument.createElement('span');
+  foreignNode.textContent = 'foreign';
+  const nodeIconItem = await region.create({ message: 'Node icon', duration: 0, icon: foreignNode });
+  const importedIcon = nodeIconItem.querySelector('[slot="icon"]')?.firstElementChild;
+  expect(importedIcon?.textContent).to.equal('foreign');
+  expect(importedIcon?.ownerDocument === document, 'the imported clone must belong to the region document').to.equal(
+    true,
+  );
+  expect(importedIcon === foreignNode, 'importNode() clones rather than moving the original node').to.equal(false);
+  expect(
+    foreignNode.ownerDocument === otherDocument,
+    'the original foreign node must be left unmutated in its own document',
+  ).to.equal(true);
+});
+
+it('rejects and forgets an item whose initial show is vetoed', async () => {
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  const item = await region.create({ message: 'Vetoed toast', duration: 0 });
+  let showEventCount = 0;
+  item.addEventListener('lr-show', (event) => {
+    showEventCount += 1;
+    event.preventDefault();
+  });
+  await waitUntil(() => !item.isConnected, 'a vetoed initial show must be rejected and removed', {
+    timeout: 500,
+  });
+  expect(showEventCount).to.equal(1);
+});
+
 it('shares canonical icon/action options across region.create() and toast()', async () => {
   const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
   let actionItem: LyraToastItem | undefined;

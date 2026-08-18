@@ -146,4 +146,214 @@ describe("widget-renderer immutable registries", () => {
       ])
     ).to.throw(TypeError);
   });
+
+  it("supports slot allowlists and rejects invalid or duplicate slot names", () => {
+    const registry = createWidgetTypeRegistry([
+      [
+        "card",
+        {
+          tag: "lr-card",
+          interaction: "none",
+          slots: ["header", "footer"],
+        },
+      ],
+    ]);
+    expect(registry.get("card")?.slots).to.deep.equal(["header", "footer"]);
+    expect(Object.isFrozen(registry.get("card")?.slots)).to.equal(true);
+    expect(() =>
+      createWidgetTypeRegistry([
+        ["bad", { tag: "lr-card", interaction: "none", slots: "header" as never }],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        ["bad", { tag: "lr-card", interaction: "none", slots: [" header "] }],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        ["bad", { tag: "lr-card", interaction: "none", slots: [""] }],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        ["bad", { tag: "lr-card", interaction: "none", slots: [1 as never] }],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        ["bad", { tag: "lr-card", interaction: "none", slots: ["dup", "dup"] }],
+      ])
+    ).to.throw(TypeError);
+  });
+
+  it("rejects empty, whitespace-padded, or non-string widget type keys", () => {
+    expect(() =>
+      createWidgetTypeRegistry([["", { tag: "lr-card", interaction: "none" }]])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        [" card ", { tag: "lr-card", interaction: "none" }],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        [1 as never, { tag: "lr-card", interaction: "none" }],
+      ])
+    ).to.throw(TypeError);
+  });
+
+  it("rejects empty or whitespace-padded action event names", () => {
+    expect(() =>
+      createWidgetTypeRegistry([
+        [
+          "button",
+          { tag: "lr-button", interaction: "control", action: { event: "" } },
+        ],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        [
+          "button",
+          {
+            tag: "lr-button",
+            interaction: "control",
+            action: { event: " click " },
+          },
+        ],
+      ])
+    ).to.throw(TypeError);
+  });
+
+  it("rejects invalid property-name patterns, event-handler-shaped names, and every forbidden property name", () => {
+    for (const name of ["__proto__", "constructor", "prototype", "outerHTML"]) {
+      expect(
+        () =>
+          createWidgetTypeRegistry([
+            [
+              "x",
+              {
+                tag: "lr-card",
+                interaction: "none",
+                forcedProps: { [name]: 1 },
+              },
+            ],
+          ]),
+        name
+      ).to.throw(TypeError);
+    }
+    expect(() =>
+      createWidgetTypeRegistry([
+        [
+          "x",
+          { tag: "lr-card", interaction: "none", forcedProps: { onClick: 1 } },
+        ],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        [
+          "x",
+          { tag: "lr-card", interaction: "none", forcedProps: { "1bad": 1 } },
+        ],
+      ])
+    ).to.throw(TypeError);
+  });
+
+  it("rejects non-object props, forcedProps, and bindings collections", () => {
+    expect(() =>
+      createWidgetTypeRegistry([
+        ["x", { tag: "lr-card", interaction: "none", props: [] as never }],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        [
+          "x",
+          {
+            tag: "lr-card",
+            interaction: "none",
+            props: { bad: "symbol" as never },
+          },
+        ],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        [
+          "x",
+          { tag: "lr-card", interaction: "none", forcedProps: [] as never },
+        ],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        [
+          "x",
+          {
+            tag: "lr-input",
+            interaction: "control",
+            props: { value: "string" },
+            bindings: [] as never,
+          },
+        ],
+      ])
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetTypeRegistry([
+        [
+          "x",
+          {
+            tag: "lr-input",
+            interaction: "control",
+            props: { value: "string" },
+            bindings: { value: "not-an-object" as never },
+          },
+        ],
+      ])
+    ).to.throw(TypeError);
+  });
+
+  it("rejects a non-object widget type definition and an invalid interaction value", () => {
+    expect(() => createWidgetTypeRegistry([["x", null as never]])).to.throw(
+      TypeError
+    );
+    expect(() => createWidgetTypeRegistry([["x", [] as never]])).to.throw(
+      TypeError
+    );
+    expect(() =>
+      createWidgetTypeRegistry([
+        ["x", { tag: "lr-card", interaction: "weird" as never }],
+      ])
+    ).to.throw(TypeError);
+  });
+
+  it("exposes entries(), keys(), forEach() and Symbol.iterator alongside get/has", () => {
+    const registry = createWidgetTypeRegistry([
+      ["card", { tag: "lr-card", interaction: "none" as const }],
+      ["badge", { tag: "lr-badge", interaction: "none" as const }],
+    ]);
+    expect([...registry.keys()]).to.deep.equal(["card", "badge"]);
+    expect([...registry.entries()].map(([key]) => key)).to.deep.equal([
+      "card",
+      "badge",
+    ]);
+    expect([...registry].map(([key]) => key)).to.deep.equal(["card", "badge"]);
+
+    const seen: string[] = [];
+    const thisArg = { tag: "marker" };
+    registry.forEach(function (this: typeof thisArg, _value, key) {
+      expect(this).to.equal(thisArg);
+      seen.push(key);
+    }, thisArg);
+    expect(seen).to.deep.equal(["card", "badge"]);
+  });
+
+  it("rejects null, primitives and plain objects lacking the registry brand", () => {
+    expect(isWidgetTypeRegistry(null)).to.equal(false);
+    expect(isWidgetTypeRegistry(undefined)).to.equal(false);
+    expect(isWidgetTypeRegistry("registry")).to.equal(false);
+    expect(isWidgetTypeRegistry({})).to.equal(false);
+  });
 });

@@ -367,6 +367,42 @@ describe('reorderable', () => {
     expect((region.shadowRoot!.textContent ?? '').trim()).to.equal('');
   });
 
+  it('rejects a pending reorder without throwing when the requested node is removed from data before confirmation', async () => {
+    const el = (await fixture(html`<lr-tree reorderable></lr-tree>`)) as LyraTree;
+    el.data = [
+      { id: 'a', label: 'Alpha' },
+      { id: 'b', label: 'Beta' },
+      { id: 'c', label: 'Gamma' },
+    ];
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await region.updateComplete;
+    const alpha = el.querySelector('lr-tree-item') as LyraTreeItem;
+    alpha.focus();
+    el.addEventListener(
+      'lr-reorder',
+      () => {
+        // Removes the requested node entirely instead of reordering it -- findRenderedSiblings()
+        // can no longer locate it among its former parent's rendered children.
+        el.data = [
+          { id: 'b', label: 'Beta' },
+          { id: 'c', label: 'Gamma' },
+        ];
+      },
+      { once: true },
+    );
+
+    modArrow(alpha, 'ArrowDown');
+    await el.updateComplete;
+
+    expect((region.shadowRoot!.textContent ?? '').trim()).to.equal('');
+    expect(
+      [...el.querySelectorAll('lr-tree-item')].map((n) => (n as unknown as LyraTreeItem).item?.id),
+    ).to.deep.equal(['b', 'c']);
+  });
+
   it('honors a .strings override for the treeNodeMoved announcement', async () => {
     const el = (await fixture(html`<lr-tree reorderable></lr-tree>`)) as LyraTree;
     el.strings = { treeNodeMoved: 'Déplacé {label} en position {index} sur {total}' };

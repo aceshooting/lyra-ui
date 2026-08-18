@@ -249,6 +249,13 @@ it('leaves Enter/Tab unconsumed when there is no active row to commit (no matche
   expect(el.open).to.be.true;
 });
 
+it('lets an unhandled key fall through untouched', async () => {
+  const el = await openWithItems();
+  const evt = new KeyboardEvent('keydown', { key: 'a', cancelable: true });
+  expect(el.handleKeyDown(evt)).to.be.false;
+  expect(evt.defaultPrevented).to.be.false;
+});
+
 it('closes and fires lr-mention-close on Escape, without a select event', async () => {
   const el = await openWithItems();
   let selectFired = false;
@@ -448,6 +455,123 @@ it('owns and restores the anchor combobox relationship across close, replacement
   }
 });
 
+it('swallows a restoration failure on detach on a partial AOM implementation, still restoring the plain attributes', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea') as HTMLTextAreaElement & {
+    ariaControlsElements?: unknown;
+    ariaActiveDescendantElement?: unknown;
+  };
+  textarea.setAttribute('role', 'searchbox');
+  document.body.appendChild(textarea);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+
+    // Force the *restoration* assignment (which only runs later, at detach time) to throw --
+    // simulating a partial AOM implementation that accepts installing the reflection but rejects
+    // restoring it back to its prior value.
+    Object.defineProperty(textarea, 'ariaActiveDescendantElement', {
+      configurable: true,
+      get: () => null,
+      set: () => {
+        throw new Error('cannot restore');
+      },
+    });
+    Object.defineProperty(textarea, 'ariaControlsElements', {
+      configurable: true,
+      get: () => null,
+      set: () => {
+        throw new Error('cannot restore');
+      },
+    });
+
+    el.anchor = undefined;
+    await el.updateComplete;
+
+    // The plain-attribute restoration below the swallowed throw remains authoritative.
+    expect(textarea.getAttribute('role')).to.equal('searchbox');
+  } finally {
+    textarea.remove();
+  }
+});
+
+it('falls back to removing aria-activedescendant when the reflection setter itself throws', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea') as HTMLTextAreaElement & {
+    ariaActiveDescendantElement?: unknown;
+  };
+  textarea.setAttribute('aria-activedescendant', 'preexisting-idref');
+  document.body.appendChild(textarea);
+  Object.defineProperty(textarea, 'ariaActiveDescendantElement', {
+    configurable: true,
+    get: () => null,
+    set: () => {
+      throw new Error('rejected');
+    },
+  });
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    expect(textarea.hasAttribute('aria-activedescendant')).to.be.false;
+  } finally {
+    textarea.remove();
+  }
+});
+
+it('falls back to removing aria-controls when the reflection setter itself throws while installing it', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea') as HTMLTextAreaElement & {
+    ariaControlsElements?: unknown;
+  };
+  textarea.setAttribute('aria-controls', 'preexisting-idref');
+  document.body.appendChild(textarea);
+  Object.defineProperty(textarea, 'ariaControlsElements', {
+    configurable: true,
+    get: () => null,
+    set: () => {
+      throw new Error('rejected');
+    },
+  });
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    expect(textarea.hasAttribute('aria-controls')).to.be.false;
+  } finally {
+    textarea.remove();
+  }
+});
+
+it('falls back to a plain aria-controls removal when the platform lacks ariaControlsElements entirely', async () => {
+  const probe = document.createElement('textarea') as HTMLTextAreaElement & { ariaControlsElements?: unknown };
+  let owner: object | null = null;
+  for (let proto: object | null = Object.getPrototypeOf(probe); proto; proto = Object.getPrototypeOf(proto)) {
+    if (Object.prototype.hasOwnProperty.call(proto, 'ariaControlsElements')) {
+      owner = proto;
+      break;
+    }
+  }
+  const descriptor = owner ? Object.getOwnPropertyDescriptor(owner, 'ariaControlsElements') : undefined;
+  if (owner) delete (owner as Record<string, unknown>)['ariaControlsElements'];
+
+  try {
+    const el = await openWithItems();
+    const textarea = document.createElement('textarea');
+    textarea.setAttribute('aria-controls', 'preexisting-idref');
+    document.body.appendChild(textarea);
+    try {
+      el.anchor = textarea;
+      await el.updateComplete;
+      // A string idref cannot cross from the owner tree into this shadow root, whether the
+      // platform lacks the reflection API entirely (this test) or rejects it (a sibling test).
+      expect(textarea.hasAttribute('aria-controls')).to.be.false;
+    } finally {
+      textarea.remove();
+    }
+  } finally {
+    if (owner && descriptor) Object.defineProperty(owner, 'ariaControlsElements', descriptor);
+  }
+});
+
 it('focuses the active fallback option when nested inside another shadow root', async () => {
   const harness = await fixture<MentionPopoverShadowHarness>(
     html`<mention-popover-shadow-harness></mention-popover-shadow-harness>`,
@@ -467,6 +591,34 @@ it('focuses the active fallback option when nested inside another shadow root', 
     expect(active.tabIndex).to.equal(-1);
     expect(await el.focusActiveOption()).to.be.true;
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('alice');
+  } finally {
+    textarea.remove();
+  }
+});
+
+it('resolves false immediately from focusActiveOption when the popover is not open', async () => {
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
+  el.items = ITEMS;
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(await el.focusActiveOption()).to.equal(false);
+});
+
+it('resolves false and never moves focus when the ownsFocus predicate throws', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  document.body.appendChild(textarea);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    textarea.focus();
+    const result = await el.focusActiveOption({
+      ownsFocus: () => {
+        throw new Error('boom');
+      },
+    });
+    expect(result).to.equal(false);
+    expect(document.activeElement === textarea).to.be.true;
   } finally {
     textarea.remove();
   }
@@ -551,6 +703,98 @@ it('keeps the fallback open when the host blur contract recognizes focus enterin
     await el.updateComplete;
     expect(movedIntoPopover).to.be.true;
     expect(el.open).to.be.true;
+  } finally {
+    textarea.remove();
+  }
+});
+
+it('drops fallback focus ownership on the next update once real focus has already left the shadow tree by any other means', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  document.body.appendChild(textarea);
+  const outside = document.createElement('button');
+  document.body.appendChild(outside);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    expect(await el.focusActiveOption()).to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(1);
+
+    // Focus leaves the shadow tree directly (not via blur/query/items/filter/open/disconnect --
+    // e.g. some unrelated script on the page moving focus), so none of the other guarded paths
+    // ever get a chance to notice.
+    outside.focus();
+
+    // A benign update that doesn't itself touch open/anchor/candidates-emptying.
+    el.query = 'a';
+    await el.updateComplete;
+
+    expect(
+      el.shadowRoot!.querySelectorAll('[tabindex="0"]').length,
+      'ownership must have been dropped since focus already left the shadow tree',
+    ).to.equal(0);
+  } finally {
+    textarea.remove();
+    outside.remove();
+  }
+});
+
+it('falls back to focusing the listbox itself when candidates empty out while the anchor is no longer connected', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  document.body.appendChild(textarea);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    expect(await el.focusActiveOption()).to.be.true;
+
+    // Disconnect the anchor without closing the popover or touching candidates yet, so
+    // willUpdate's own anchor-connected empty-candidates guard can no longer apply once
+    // candidates do empty out below.
+    textarea.remove();
+    el.items = [];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement === listbox(el)).to.be.true;
+  } finally {
+    // textarea already removed above
+  }
+});
+
+it('falls back to focusing the anchor when a non-idempotent filter predicate empties results only by render time, with the anchor still connected', async () => {
+  // willUpdate() pre-emptively hands focus back to the anchor whenever a query/items/filter
+  // change makes filteredItems empty -- but it decides that by calling the `filter` predicate
+  // itself, once, for every item. A filter that isn't idempotent (returns a different answer on
+  // a second pass over the same items) can make willUpdate's own check see a non-empty result
+  // while render()'s later, separate pass over the same items sees an empty one -- landing on
+  // updated()'s own independent "no active row rendered, but the anchor is still connected"
+  // fallback instead, which is what this covers.
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  document.body.appendChild(textarea);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    expect(await el.focusActiveOption()).to.be.true;
+    // Settle the trailing requestUpdate() focusActiveOption() itself schedules before starting
+    // the call-counted filter below, so that scheduled cycle can't be mistaken for one of the
+    // two passes this test is deliberately choreographing.
+    await el.updateComplete;
+
+    // A non-empty query is required for filteredItems to ever consult `filter` at all -- its own
+    // empty-query fast path returns `items` verbatim without calling the predicate.
+    el.query = 'a';
+    await el.updateComplete;
+
+    let calls = 0;
+    const total = el.items.length;
+    el.filter = () => {
+      calls += 1;
+      return calls <= total;
+    };
+    await el.updateComplete;
+
+    expect(document.activeElement === textarea).to.be.true;
   } finally {
     textarea.remove();
   }
@@ -681,6 +925,40 @@ it('anchors caret-precisely against a real <textarea>, tracking selectionStart a
   const secondLeft = parseFloat(listbox(el).style.left);
 
   expect(secondLeft).to.not.equal(firstLeft);
+});
+
+it('cleans up the virtual caret anchor when a new text-control anchor lives in a different document', async () => {
+  const textarea = document.createElement('textarea');
+  textarea.style.cssText = 'position:absolute; width:300px; height:80px; font:16px monospace;';
+  document.body.appendChild(textarea);
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  const frameTextarea = frameDocument.createElement('textarea');
+  frameTextarea.style.cssText = 'position:absolute; width:300px; height:80px; font:16px monospace;';
+  frameDocument.body.append(frameTextarea);
+
+  const el = await openWithItems();
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    const firstVirtual = (el as unknown as { virtualAnchor: HTMLDivElement | null }).virtualAnchor;
+    expect(firstVirtual !== null).to.be.true;
+    expect(firstVirtual!.ownerDocument === document).to.equal(true);
+    expect(firstVirtual!.isConnected).to.be.true;
+
+    el.anchor = frameTextarea;
+    await el.updateComplete;
+
+    // The stale main-document virtual anchor must be detached, not merely orphaned in place.
+    expect(firstVirtual!.isConnected).to.be.false;
+    const secondVirtual = (el as unknown as { virtualAnchor: HTMLDivElement | null }).virtualAnchor;
+    expect(secondVirtual !== firstVirtual).to.be.true;
+    expect(secondVirtual!.ownerDocument === frameDocument).to.equal(true);
+  } finally {
+    textarea.remove();
+    frame.remove();
+  }
 });
 
 it('creates caret measurement and virtual-anchor nodes in the adopted anchor document', async () => {

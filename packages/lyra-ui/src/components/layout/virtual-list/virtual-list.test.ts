@@ -532,6 +532,157 @@ it("uses a row's rendered height when a ResizeObserver entry omits borderBoxSize
   }
 });
 
+it("uses a group marker's rendered height when a ResizeObserver entry omits borderBoxSize", async () => {
+  interface ResizeRecord {
+    callback: ResizeObserverCallback;
+    observer: ResizeObserver;
+  }
+
+  const originalResizeObserver = window.ResizeObserver;
+  const records: ResizeRecord[] = [];
+  class TestResizeObserver {
+    readonly record: ResizeRecord;
+
+    constructor(callback: ResizeObserverCallback) {
+      this.record = {
+        callback,
+        observer: this as unknown as ResizeObserver,
+      };
+      records.push(this.record);
+    }
+
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (
+    window as unknown as { ResizeObserver: typeof ResizeObserver }
+  ).ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+
+  try {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${["a", "b"]}
+        .groups=${[{ key: "first", label: "First", startIndex: 0 }]}
+        .renderItem=${renderText}
+      ></lr-virtual-list>`
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    const marker = el.shadowRoot!.querySelector(
+      '[part="group"]'
+    ) as HTMLElement;
+    expect(marker !== null, "group marker is present").to.equal(true);
+    Object.defineProperty(marker, "getBoundingClientRect", {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 64),
+    });
+    const groupObserver = (
+      el as unknown as { groupResizeObserver?: ResizeObserver }
+    ).groupResizeObserver;
+    const record = records.find(
+      (candidate) => candidate.observer === groupObserver
+    );
+    expect(
+      record !== undefined,
+      "group measurement observer is present"
+    ).to.equal(true);
+
+    record!.callback(
+      [{ target: marker } as unknown as ResizeObserverEntry],
+      record!.observer
+    );
+    await el.updateComplete;
+
+    // Fixed row-height=40 for row 0, plus the group marker's own measured height (64, replacing
+    // the DEFAULT_GROUP_ESTIMATE_PX=32 estimate) contributed ahead of it.
+    expect(el.offsetForIndex(1)).to.equal(64 + 40);
+  } finally {
+    (
+      window as unknown as { ResizeObserver: typeof ResizeObserver }
+    ).ResizeObserver = originalResizeObserver;
+  }
+});
+
+it("adjusts an indexed source's offset by real measured deltas from earlier auto-height rows", async () => {
+  interface ResizeRecord {
+    callback: ResizeObserverCallback;
+    observer: ResizeObserver;
+  }
+
+  const originalResizeObserver = window.ResizeObserver;
+  const records: ResizeRecord[] = [];
+  class TestResizeObserver {
+    readonly record: ResizeRecord;
+
+    constructor(callback: ResizeObserverCallback) {
+      this.record = {
+        callback,
+        observer: this as unknown as ResizeObserver,
+      };
+      records.push(this.record);
+    }
+
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (
+    window as unknown as { ResizeObserver: typeof ResizeObserver }
+  ).ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+
+  try {
+    const source: LyraVirtualListIndexedSource<number> = {
+      count: 10,
+      itemAt: (index) => index,
+      keyAt: (index) => index,
+    };
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        .source=${source}
+        .renderItem=${renderText}
+      ></lr-virtual-list>`
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    const beforeOffset = el.offsetForIndex(5);
+
+    const row = el.renderedRows[0]!;
+    Object.defineProperty(row, "getBoundingClientRect", {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 96),
+    });
+    const rowObserver = (
+      el as unknown as { rowResizeObserver?: ResizeObserver }
+    ).rowResizeObserver;
+    const record = records.find(
+      (candidate) => candidate.observer === rowObserver
+    );
+    expect(
+      record !== undefined,
+      "row measurement observer is present"
+    ).to.equal(true);
+
+    record!.callback(
+      [{ target: row } as unknown as ResizeObserverEntry],
+      record!.observer
+    );
+    await el.updateComplete;
+
+    const afterOffset = el.offsetForIndex(5);
+    // Row 0 grew from the DEFAULT_ROW_ESTIMATE_PX=48 estimate to a real measured 96px, and every
+    // later index's offset must fold in exactly that delta.
+    expect(afterOffset - beforeOffset).to.equal(96 - 48);
+  } finally {
+    (
+      window as unknown as { ResizeObserver: typeof ResizeObserver }
+    ).ResizeObserver = originalResizeObserver;
+  }
+});
+
 it("wraps ordinary long row content and measures its auto height at 320px in LTR and RTL", async () => {
   const longToken = "x".repeat(128);
 
@@ -1759,6 +1910,76 @@ it("measures group markers as virtual entries before their indexed rows", async 
   expect(rows[2]!.getBoundingClientRect().top).to.be.gte(
     groups[1]!.getBoundingClientRect().bottom - 0.5
   );
+});
+
+it("stops observing a group marker once its group is removed from groups", async () => {
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${["a", "b", "c"]}
+      .groups=${[{ key: "g", label: "Group", startIndex: 0 }]}
+      .renderItem=${renderText}
+    ></lr-virtual-list>`
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  expect(el.shadowRoot!.querySelectorAll('[part="group"]').length).to.equal(
+    1
+  );
+  const internals = el as unknown as {
+    observedGroups: Map<number, HTMLElement>;
+  };
+  expect(internals.observedGroups.size).to.equal(1);
+
+  el.groups = [];
+  await el.updateComplete;
+  await nextFrame();
+
+  expect(el.shadowRoot!.querySelectorAll('[part="group"]').length).to.equal(
+    0
+  );
+  expect(internals.observedGroups.size).to.equal(0);
+});
+
+it("keeps a pending scroll correction alive in fixed-row-height mode while an unmeasured group precedes the target", async () => {
+  // A stub ResizeObserver that never delivers keeps the group marker permanently unmeasured --
+  // the real ResizeObserver would otherwise race this assertion by measuring it before the
+  // synchronous scrollToIndex() call below runs.
+  const originalResizeObserver = window.ResizeObserver;
+  class NonDeliveringResizeObserver {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (
+    window as unknown as { ResizeObserver: typeof ResizeObserver }
+  ).ResizeObserver =
+    NonDeliveringResizeObserver as unknown as typeof ResizeObserver;
+
+  try {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height="40"
+        .items=${Array.from({ length: 20 }, (_, i) => i)}
+        .groups=${[{ key: "g", label: "Group", startIndex: 0 }]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>`
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    const internals = el as unknown as { pendingScrollCorrection?: unknown };
+    el.scrollToIndex(15, { align: "start", behavior: "auto" });
+    // Row heights are fixed, but the group marker ahead of index 15 has never been measured, so
+    // the correction transaction must stay armed until a real group-marker measurement arrives.
+    expect(internals.pendingScrollCorrection === undefined).to.equal(false);
+  } finally {
+    (
+      window as unknown as { ResizeObserver: typeof ResizeObserver }
+    ).ResizeObserver = originalResizeObserver;
+  }
 });
 
 it("reflows variable-height group markers without covering their first rows", async () => {

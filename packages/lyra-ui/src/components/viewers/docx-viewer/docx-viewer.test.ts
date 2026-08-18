@@ -635,6 +635,24 @@ describe('scrollToAnchor (fragment)', () => {
     }
   });
 
+  it('resolves false for an empty fragment id instead of matching the first heading', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1>');
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    try {
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: '' })).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves false for any anchor before a document has ever loaded (no content root)', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    expect(await el.scrollToAnchor({ kind: 'fragment', id: 'title' })).to.be.false;
+  });
+
   it('reports its supported anchor kinds', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     expect(el.anchorKinds).to.deep.equal(['fragment', 'text-quote']);
@@ -1397,6 +1415,30 @@ describe('search', () => {
     } finally {
       restore();
     }
+  });
+
+  it('recomputes an active search and repaints highlights when the effective locale changes on a loaded document', async () => {
+    const { el, restore } = await loadWithMarkup('<p>İSTANBUL bright spot</p>');
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'bright spot' } }];
+      await el.updateComplete;
+      expect(highlightPainted(el)).to.be.true;
+
+      // Under the default (non-Turkish) locale, a plain-ASCII 'istanbul' should not fold-match
+      // the dotted-capital-İ text -- establishing the "before" state the locale change must move.
+      expect(await el.search('istanbul')).to.equal(0);
+
+      const eventPromise = oneEvent(el, 'lr-search-change');
+      el.lang = 'tr';
+      const event = await eventPromise as CustomEvent<{ query: string; matchCount: number }>;
+      await el.updateComplete;
+      expect(event.detail.query).to.equal('istanbul');
+      expect(event.detail.matchCount).to.equal(1);
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(1);
+      // The locale change also re-triggers repaintHighlights(); the earlier highlight must
+      // still be painted, not dropped by the recompute.
+      expect(highlightPainted(el)).to.be.true;
+    } finally { restore(); }
   });
 
   it('case-folds with the effective locale', async () => {

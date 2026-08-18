@@ -7,6 +7,7 @@ import {
 } from "./resolve.js";
 import {
   readWidgetPointer,
+  WIDGET_MAX_DEPTH,
   WIDGET_MAX_NODES,
   WIDGET_MAX_PROPS_PER_NODE,
   WIDGET_MAX_WARNINGS,
@@ -97,6 +98,52 @@ describe("createWidgetDocument", () => {
         TypeError
       );
     }
+  });
+
+  it("rejects an invalid slot or actionId on a document node", () => {
+    expect(() =>
+      createWidgetDocument({ type: "row", slot: " bad " } as LyraWidgetNode)
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetDocument({ type: "row", actionId: "" } as LyraWidgetNode)
+    ).to.throw(TypeError);
+  });
+
+  it("caps admitted document props and fails closed on a throwing prop getter", () => {
+    const props: Record<string, unknown> = {};
+    for (let index = 0; index < WIDGET_MAX_PROPS_PER_NODE + 5; index++) {
+      props[`p${index}`] = index;
+    }
+    const document = createWidgetDocument({ type: "row", props });
+    expect(Object.keys(document.root.props ?? {})).to.have.lengthOf(
+      WIDGET_MAX_PROPS_PER_NODE
+    );
+
+    const hostileProps: Record<string, unknown> = {};
+    Object.defineProperty(hostileProps, "bad", {
+      enumerable: true,
+      get(): never {
+        throw new Error("hostile prop");
+      },
+    });
+    expect(() =>
+      createWidgetDocument({ type: "row", props: hostileProps })
+    ).to.throw(TypeError);
+  });
+
+  it("silently drops document descendants beyond the depth cap rather than throwing", () => {
+    let deep: LyraWidgetNode = { type: "row" };
+    for (let index = 0; index <= WIDGET_MAX_DEPTH + 2; index++) {
+      deep = { type: "row", children: [deep] };
+    }
+    const document = createWidgetDocument(deep);
+    let depth = 0;
+    let node: LyraWidgetNode | undefined = document.root;
+    while (node?.children && node.children.length > 0) {
+      depth += 1;
+      node = node.children[0] as LyraWidgetNode;
+    }
+    expect(depth).to.equal(WIDGET_MAX_DEPTH);
   });
 });
 
@@ -504,6 +551,65 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       );
       expect(resolved?.props).to.deep.equal({});
     });
+  });
+
+  it("resolves a builtin column and drops an unlisted row/col enum value", () => {
+    const resolved = resolveTree(
+      { type: "col", props: { gap: "xl", align: "center" } },
+      ctx()
+    );
+    expect(resolved?.kind).to.equal("builtin-col");
+    expect(resolved?.props).to.deep.equal({ align: "center" });
+  });
+
+  it("converts a numeric bound text value to a string", () => {
+    const resolved = resolveTree({ type: "text", props: { value: 42 } }, ctx());
+    expect(resolved?.props).to.deep.equal({ value: "42" });
+  });
+
+  it("drops a mapped prop whose resolved value does not match the allowlisted primitive type", () => {
+    const warnings: string[] = [];
+    const registry = createWidgetTypeRegistry([
+      [
+        "card",
+        {
+          tag: "lr-card",
+          interaction: "none",
+          props: { appearance: "string" },
+        },
+      ],
+    ]);
+    const resolved = resolveTree(
+      { type: "card", props: { appearance: 42 } },
+      ctx(registry, warnings)
+    );
+    expect(resolved?.props).to.deep.equal({});
+    expect(warnings.some((warning) => warning.includes("mistyped"))).to.equal(
+      true
+    );
+  });
+
+  it("falls back to console.warn when the context supplies no warn callback", () => {
+    const original = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      calls.push(args);
+    };
+    try {
+      const resolved = resolveTree(
+        { type: "evil-widget" },
+        {
+          registry: createWidgetTypeRegistry(),
+          bindingState: undefined,
+          warned: new Set(),
+        }
+      );
+      expect(resolved).to.be.null;
+      expect(calls).to.have.lengthOf(1);
+      expect(String(calls[0]?.[0])).to.include("evil-widget");
+    } finally {
+      console.warn = original;
+    }
   });
 
   it("contains no raw HTML or browser-DOM creation path", async () => {

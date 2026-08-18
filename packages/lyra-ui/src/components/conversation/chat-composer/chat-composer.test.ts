@@ -1404,6 +1404,40 @@ describe("native textarea surface", () => {
     expect(prefixedInputs).to.equal(0);
   });
 
+  it("ignores a synthetic input/change dispatch while effectively disabled, leaving the value unchanged", async () => {
+    const el = (await fixture(
+      html`<lr-chat-composer value="stable" disabled></lr-chat-composer>`
+    )) as LyraChatComposer;
+    const textarea = textareaOf(el);
+    let nativeInputs = 0;
+    let nativeChanges = 0;
+    el.addEventListener("input", () => nativeInputs++);
+    el.addEventListener("change", () => nativeChanges++);
+    textarea.value = "attempted edit";
+    textarea.dispatchEvent(
+      new InputEvent("input", { data: "x", bubbles: true, composed: true })
+    );
+    textarea.dispatchEvent(
+      new Event("change", { bubbles: true, composed: true })
+    );
+    expect(el.value).to.equal("stable");
+    expect(nativeInputs).to.equal(0);
+    expect(nativeChanges).to.equal(0);
+  });
+
+  it("stops a synthetic focus dispatch from bubbling out while effectively disabled", async () => {
+    const el = (await fixture(
+      html`<lr-chat-composer disabled></lr-chat-composer>`
+    )) as LyraChatComposer;
+    const textarea = textareaOf(el);
+    let focused = false;
+    el.addEventListener("focus", () => (focused = true));
+    textarea.dispatchEvent(
+      new FocusEvent("focus", { bubbles: true, composed: true })
+    );
+    expect(focused).to.be.false;
+  });
+
   it("exposes focus, blur, selection, and range editing while keeping the form value synchronized", async () => {
     const form = (await fixture(html`
       <form>
@@ -1436,6 +1470,21 @@ describe("native textarea surface", () => {
     expect(el.selectionEnd).to.equal(el.value.length);
     el.blur();
     expect(el.shadowRoot!.activeElement === null).to.equal(true);
+  });
+
+  it("renders and sizes normally when the owner realm has no ResizeObserver support", async () => {
+    const original = window.ResizeObserver;
+    (window as unknown as { ResizeObserver?: unknown }).ResizeObserver =
+      undefined;
+    try {
+      const el = (await fixture(
+        html`<lr-chat-composer></lr-chat-composer>`
+      )) as LyraChatComposer;
+      expect(el.input).to.not.equal(null);
+      expect(textareaOf(el).style.height).to.not.equal("");
+    } finally {
+      window.ResizeObserver = original;
+    }
   });
 
   it("forwards host click() to the textarea unless effectively disabled", async () => {

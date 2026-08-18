@@ -440,6 +440,19 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
   await el.updateComplete;
 });
 
+it('skips renormalization when an already-owned normalized collection is reassigned to itself', async () => {
+  const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
+  el.rates = [1, 1, Number.NaN, 2];
+  const normalizedRates = el.rates;
+  el.rates = normalizedRates;
+  expect(el.rates).to.equal(normalizedRates);
+
+  el.peaks = [0.25, Number.NaN, 2];
+  const normalizedPeaks = el.peaks;
+  el.peaks = normalizedPeaks;
+  expect(el.peaks).to.equal(normalizedPeaks);
+});
+
 describe('playback controls', () => {
   it('play()/pause()/toggle() proxy the native media element and emit lr-play/lr-pause', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
@@ -1707,6 +1720,36 @@ describe('waveform', () => {
       expect(calls.some(([, , , barHeight]) => barHeight === 10)).to.equal(true);
       expect(calls[calls.length - 1]![3]).to.equal(3);
       expect(calls.every((args) => args.every(Number.isFinite))).to.equal(true);
+    } finally {
+      context.fillRect = originalFillRect;
+      if (originalDpr) Object.defineProperty(window, 'devicePixelRatio', originalDpr);
+      else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    }
+  });
+
+  it('paints a single physical waveform column from only the final peak sample when the canvas is too narrow to decimate (barCount=1)', async () => {
+    const peaks = [0.9, 0.9, 0.9, 0.1];
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${peaks}></lr-av-player>`)) as LyraAvPlayer;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const context = canvas.getContext('2d')!;
+    const originalFillRect = context.fillRect.bind(context);
+    const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    const calls: Array<[number, number, number, number]> = [];
+
+    Object.defineProperty(window, 'devicePixelRatio', { value: 1, configurable: true });
+    Object.defineProperty(canvas, 'clientWidth', { value: 1, configurable: true });
+    Object.defineProperty(canvas, 'clientHeight', { value: 10, configurable: true });
+    context.fillRect = (...args: [number, number, number, number]) => {
+      calls.push(args);
+    };
+    try {
+      window.dispatchEvent(new Event('resize'));
+
+      expect(canvas.width).to.equal(1);
+      expect(calls.length).to.equal(1);
+      // Only the FINAL peak (0.1) determines the single bar's height, never the max across every
+      // sample -- which would wrongly paint the tall 0.9 spikes into a canvas too narrow to show them.
+      expect(calls[0]![3]).to.equal(1);
     } finally {
       context.fillRect = originalFillRect;
       if (originalDpr) Object.defineProperty(window, 'devicePixelRatio', originalDpr);

@@ -251,6 +251,35 @@ describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => 
       expect(error!.message).to.contain('id');
     }
   });
+
+  it('rejects a completely non-object-like candidate, not just a malformed object shape', async () => {
+    const chart = fakeChartModule();
+    for (const nonObjectCandidate of [null, 42, 'not-a-plugin']) {
+      const { result, warnings } = await captureWarnings(() =>
+        loadChartAndZoom(
+          () => Promise.resolve(chart),
+          () => Promise.resolve(nonObjectCandidate as never),
+          true,
+        ),
+      );
+      expect(result!.zoomPlugin, String(nonObjectCandidate)).to.equal(undefined);
+      const error = warnings.flat().find((value) => value instanceof Error) as Error | undefined;
+      expect(error instanceof Error, String(nonObjectCandidate)).to.be.true;
+      expect(error!.message, String(nonObjectCandidate)).to.contain('chartjs-plugin-zoom');
+      expect(error!.message, String(nonObjectCandidate)).to.contain('id');
+    }
+  });
+
+  it('accepts a function-shaped plugin capability, not just a plain object, when it carries a non-empty id', async () => {
+    const chart = fakeChartModule();
+    const callablePlugin = Object.assign(() => undefined, { id: 'callable-zoom-plugin' });
+    const result = await loadChartAndZoom(
+      () => Promise.resolve(chart),
+      () => Promise.resolve(callablePlugin as never),
+      true,
+    );
+    expect(result!.zoomPlugin).to.equal(callablePlugin);
+  });
 });
 
 describe('tagged feature-load results', () => {
@@ -363,6 +392,24 @@ describe('loadChartJsWithZoomResult (memoized page-wide zoom-plugin load)', () =
     expect(zoomImportCount).to.equal(1);
     expect(mod).to.equal(result.mod);
   });
+
+  it('still resolves the chart.js module through the fully memoized public zoom adapter when the zoom plugin fails to load — feature-unavailable results intentionally still resolve the module', async () => {
+    const { loadChartJsWithZoom: loadZoomInFreshRealm } = await import(
+      './chart-feature-loader.js?coverage-zoom-feature-unavailable'
+    );
+    const warn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    let mod: Awaited<ReturnType<typeof loadZoomInFreshRealm>>;
+    try {
+      mod = await loadZoomInFreshRealm(() => Promise.reject(new Error('zoom adapter boom')));
+    } finally {
+      console.warn = warn;
+    }
+    expect(mod).to.not.equal(null);
+    expect(typeof mod?.Chart).to.equal('function');
+    expect(warnings.flat().some((value) => value instanceof Error)).to.be.true;
+  });
 });
 
 describe('loadChartJsWithDataLabelsResult (memoized page-wide data-labels plugin load)', () => {
@@ -439,6 +486,25 @@ describe('loadChartJsWithDataLabelsResult (memoized page-wide data-labels plugin
       expect(error!.message).to.contain('chartjs-plugin-datalabels');
       expect(error!.message).to.contain('id');
     }
+  });
+
+  it('still resolves the chart.js module (with plugin left undefined) through the fully memoized public data-labels adapter when data-labels fails to load', async () => {
+    const { loadChartJsWithDataLabels: loadInFreshRealm } = await import(
+      './chart-feature-loader.js?coverage-data-labels-feature-unavailable'
+    );
+    const warn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    let combined: Awaited<ReturnType<typeof loadInFreshRealm>>;
+    try {
+      combined = await loadInFreshRealm(() => Promise.reject(new Error('datalabels adapter boom')));
+    } finally {
+      console.warn = warn;
+    }
+    expect(combined).to.not.equal(null);
+    expect(typeof combined?.mod.Chart).to.equal('function');
+    expect(combined?.plugin).to.equal(undefined);
+    expect(warnings.flat().some((value) => value instanceof Error)).to.be.true;
   });
 });
 

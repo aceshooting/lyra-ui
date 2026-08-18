@@ -1,8 +1,11 @@
 import { expect } from '@open-wc/testing';
 import type { ReactiveControllerHost } from 'lit';
 import {
+  captureFormInternals,
   EXTERNAL_LABEL_HOST_SEMANTICS,
   ExternalLabelController,
+  resolveExternalLabels,
+  resolveExternalLabelText,
   type ExternalLabelHostSemanticOperation,
   type ExternalLabelHost,
 } from './form-control-labels.js';
@@ -1108,6 +1111,73 @@ describe('external FACE label contract', () => {
       expect(host.externalName).to.equal(null);
     } finally {
       controller.hostDisconnected();
+      label.remove();
+      host.remove();
+    }
+  });
+
+  it('does not treat a control as implicitly associated when an earlier labelable sibling shares the same wrapping label', async () => {
+    const container = document.createElement('div');
+    const label = document.createElement('label');
+    const earlier = document.createElement('input');
+    const control = document.createElement(tag('input')) as TestControl;
+    control.id = `external-label-control-${++nextFixtureId}`;
+    label.append('Shared wrapper label ', earlier, control);
+    container.append(label);
+    document.body.append(container);
+    try {
+      await settle(control);
+      const semantic = composedElements(control).find(
+        (element) => element !== control && element.tagName === 'INPUT',
+      );
+      // The label's native `.control` resolves to `earlier`, the first labelable descendant, so
+      // the wrapped `lr-input` is not the implicitly associated control and keeps its own
+      // generated fallback name instead of inheriting the wrapper's text.
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Text');
+    } finally {
+      container.remove();
+    }
+  });
+
+  it('drops whitespace-only labels from the joined external name', () => {
+    const blank = document.createElement('label');
+    blank.textContent = '   ';
+    const real = document.createElement('label');
+    real.textContent = '  Real label  ';
+    const another = document.createElement('label');
+    another.textContent = 'Second';
+    expect(resolveExternalLabelText([blank, real, another])).to.equal('Real label Second');
+    expect(resolveExternalLabelText([blank])).to.equal('');
+  });
+
+  it('excludes the host subtree from an implicit label text while keeping surrounding text', () => {
+    const label = document.createElement('label');
+    const host = document.createElement('div');
+    host.textContent = 'Yes';
+    label.append('Remember me ', host, ' please');
+    expect(resolveExternalLabelText([label], host)).to.equal('Remember me  please');
+    expect(resolveExternalLabelText([label])).to.equal('Remember me Yes please');
+  });
+
+  it('trusts a captured native internals labels list exclusively, even when it is empty', () => {
+    // resolveExternalLabels() only falls back to closest('label')/querySelectorAll('label[for]')
+    // when no internals were ever captured for the host. Once ANY internals record exists, its
+    // (possibly stale/empty) `.labels` list is authoritative -- a real `<label for>` in the DOM is
+    // never independently rediscovered.
+    const label = document.createElement('label');
+    const host = document.createElement('div');
+    host.id = 'empty-native-labels-host';
+    label.htmlFor = host.id;
+    label.textContent = 'Real DOM label';
+    document.body.append(label, host);
+
+    try {
+      captureFormInternals(host, {
+        labels: document.querySelectorAll('.nonexistent-empty-set'),
+      } as ElementInternals);
+
+      expect(resolveExternalLabels(host as ExternalLabelHost)).to.deep.equal([]);
+    } finally {
       label.remove();
       host.remove();
     }

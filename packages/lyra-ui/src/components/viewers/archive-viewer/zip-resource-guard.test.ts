@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import type { default as JSZipType } from 'jszip';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import {
+  assertZipArchiveMetadataWithinLimits,
   assertZipArchiveWithinLimits,
   createXmlComplexityInspectorFactory,
   type ZipArchiveGuardOptions,
@@ -253,6 +254,166 @@ describe('ZIP resource guard', () => {
     } catch (error) {
       expect((error as Error).name).to.equal('AbortError');
     }
+  });
+
+  it('accepts a genuinely empty ZIP (an end-of-central-directory record with zero entries)', async () => {
+    // A valid empty ZIP has no local-file record at all -- byte zero is the end-of-central-
+    // directory signature itself, a special case parseZipArchiveMetadata()'s own doc comment
+    // calls out. Built directly (22-byte EOCD record) rather than via JSZip, since JSZip always
+    // adds at least the caller's own files.
+    const buffer = new ArrayBuffer(22);
+    const view = new DataView(buffer);
+    view.setUint32(0, END_SIGNATURE, true);
+    view.setUint16(4, 0, true);
+    view.setUint16(6, 0, true);
+    view.setUint16(8, 0, true);
+    view.setUint16(10, 0, true);
+    view.setUint32(12, 0, true);
+    view.setUint32(16, 0, true);
+    view.setUint16(20, 0, true);
+    await assertZipArchiveWithinLimits(buffer, options);
+    const metadata = assertZipArchiveMetadataWithinLimits(buffer, options);
+    expect(metadata!.entries).to.have.lengthOf(0);
+    expect(metadata!.totalUncompressedBytes).to.equal(0);
+  });
+
+  it('rejects a prefixed/polyglot payload carrying a ZIP signature after byte zero, even under allowNonZip', () => {
+    // A ZIP signature at byte zero is the explicit non-ZIP passthrough; the same signature
+    // appearing later is a disguised/polyglot ZIP and must still be rejected, not silently
+    // treated as a permitted non-ZIP payload.
+    const source = new Uint8Array([0, 0, 0, 0, 0x50, 0x4b, 0x03, 0x04]).buffer;
+    expect(() => assertZipArchiveMetadataWithinLimits(source, { ...options, allowNonZip: true }))
+      .to.throw(LyraResourceLimitError, /malformed/);
+  });
+
+  it('accepts exactly maxEntries entries and rejects one entry beyond it', async () => {
+    const module = (await import('jszip')) as unknown as { default: new () => JSZipType };
+    const atLimit = new module.default();
+    for (let index = 0; index < 4; index++) atLimit.file(`f${index}.xml`, 'x');
+    const atLimitBytes = await atLimit.generateAsync({ type: 'uint8array', compression: 'STORE' });
+    const atLimitBuffer = atLimitBytes.buffer.slice(atLimitBytes.byteOffset, atLimitBytes.byteOffset + atLimitBytes.byteLength) as ArrayBuffer;
+    await assertZipArchiveWithinLimits(atLimitBuffer, { ...options, maxEntries: 4 });
+
+    const overLimit = new module.default();
+    for (let index = 0; index < 5; index++) overLimit.file(`f${index}.xml`, 'x');
+    const overLimitBytes = await overLimit.generateAsync({ type: 'uint8array', compression: 'STORE' });
+    const overLimitBuffer = overLimitBytes.buffer.slice(overLimitBytes.byteOffset, overLimitBytes.byteOffset + overLimitBytes.byteLength) as ArrayBuffer;
+    await expectLimit(overLimitBuffer, /too many entries/, { maxEntries: 4 });
+  });
+
+  it('accepts declared uncompressed size exactly at maxUncompressedBytes and rejects one byte over', async () => {
+    await assertZipArchiveWithinLimits(await buildZip('12345'), { ...options, maxUncompressedBytes: 5 });
+    await expectLimit(await buildZip('12345'), /expanded test archive is too large/, { maxUncompressedBytes: 4 });
+  });
+
+  it('SECURITY GAP: accepts a path-traversal entry name ("../../etc/passwd") without rejecting it', async () => {
+    // SECURITY GAP: parseZipArchiveMetadata()'s entry-name validation (zip-resource-guard.ts,
+    // the `if (!name || name.includes('\0'))` check) only rejects an empty name or one containing
+    // an embedded null byte -- it never rejects `../`-style path-traversal sequences or absolute
+    // paths. In this repository's current consumer (archive-viewer.class.ts) entry.name is only
+    // ever rendered as flat display text and used as a virtual-list Map key -- never as a
+    // filesystem path or a DOM id -- so this is not directly exploitable as classic zip-slip
+    // today. But this guard is shared verbatim by the docx/pptx/xlsx/epub resource guards too, and
+    // any current or future consumer that ever resolves an entry name against a real path or URL
+    // (e.g. an EPUB manifest href) would get no protection from this shared boundary. Documented
+    // here as the guard's actual (permissive) behavior rather than a defect this repo's current
+    // call sites can exploit.
+    const module = (await import('jszip')) as unknown as { default: new () => JSZipType };
+    const zip = new module.default();
+    zip.file('../../etc/passwd', 'pwned');
+    const bytes = await zip.generateAsync({ type: 'uint8array', compression: 'STORE' });
+    const source = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+
+    // JSZip auto-creates one directory entry per path segment (its own client-side convenience,
+    // not a guard behavior) -- so the file entry itself, not necessarily entries[0], is what
+    // carries the untouched traversal path through to the guard's own output unrejected.
+    const metadata = assertZipArchiveMetadataWithinLimits(source, options);
+    const fileEntry = metadata!.entries.find((entry) => !entry.dir)!;
+    expect(fileEntry.name).to.equal('../../etc/passwd');
+  });
+
+  it('SECURITY GAP: accepts an absolute-path entry name ("/etc/passwd") without rejecting it', async () => {
+    // SECURITY GAP: see the sibling test above -- the same missing check applies to a leading `/`.
+    const module = (await import('jszip')) as unknown as { default: new () => JSZipType };
+    const zip = new module.default();
+    zip.file('/etc/passwd', 'pwned');
+    const bytes = await zip.generateAsync({ type: 'uint8array', compression: 'STORE' });
+    const source = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+
+    const metadata = assertZipArchiveMetadataWithinLimits(source, options);
+    const fileEntry = metadata!.entries.find((entry) => !entry.dir)!;
+    expect(fileEntry.name).to.equal('/etc/passwd');
+  });
+});
+
+describe('assertZipArchiveMetadataWithinLimits()', () => {
+  function expectMetadataLimit(
+    source: ArrayBuffer,
+    message: RegExp,
+    overrides: Partial<ZipArchiveGuardOptions> = {},
+  ): void {
+    try {
+      assertZipArchiveMetadataWithinLimits(source, { ...options, ...overrides });
+      expect.fail('expected the ZIP metadata guard to reject the archive');
+    } catch (error) {
+      expect(error).to.be.instanceOf(LyraResourceLimitError);
+      expect((error as Error).message).to.match(message);
+    }
+  }
+
+  it('returns frozen, bounded metadata for a valid archive, including a directory entry', async () => {
+    const module = (await import('jszip')) as unknown as { default: new () => JSZipType };
+    const zip = new module.default();
+    zip.folder('sub');
+    zip.file('sub/nested.xml', 'hello');
+    const bytes = await zip.generateAsync({ type: 'uint8array', compression: 'STORE' });
+    const source = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+
+    const metadata = assertZipArchiveMetadataWithinLimits(source, options);
+    expect(metadata).to.not.equal(null);
+    expect(Object.isFrozen(metadata)).to.equal(true);
+    expect(Object.isFrozen(metadata!.entries)).to.equal(true);
+    const names = metadata!.entries.map((entry) => entry.name).sort();
+    expect(names).to.deep.equal(['sub/', 'sub/nested.xml']);
+    const dirEntry = metadata!.entries.find((entry) => entry.name === 'sub/')!;
+    expect(dirEntry.dir).to.equal(true);
+    const fileEntry = metadata!.entries.find((entry) => entry.name === 'sub/nested.xml')!;
+    expect(fileEntry.dir).to.equal(false);
+    expect(fileEntry.uncompressedBytes).to.equal(5);
+    expect(metadata!.totalUncompressedBytes).to.equal(5);
+  });
+
+  it('rejects a malformed local header', async () => {
+    const source = await buildZip();
+    new DataView(source).setUint32(offsets(source).local, 0, true);
+    expectMetadataLimit(source, /malformed/);
+  });
+
+  it('rejects an encrypted entry', async () => {
+    const source = await buildZip();
+    const { central } = offsets(source);
+    new DataView(source).setUint16(central + 8, 1, true);
+    expectMetadataLimit(source, /Encrypted/);
+  });
+
+  it('rejects an unsupported or inconsistent compression method', async () => {
+    const source = await buildZip();
+    const { central, local } = offsets(source);
+    const view = new DataView(source);
+    view.setUint16(central + 10, 99, true);
+    view.setUint16(local + 8, 99, true);
+    expectMetadataLimit(source, /unsupported or inconsistent compression/);
+  });
+
+  it('rejects an entry whose declared data extends past the central directory', async () => {
+    const source = await buildZip();
+    const { local } = offsets(source);
+    new DataView(source).setUint16(local + 26, 0xffff, true);
+    expectMetadataLimit(source, /malformed/);
+  });
+
+  it('passes through a permitted non-ZIP payload as null, mirroring the async guard', () => {
+    expect(assertZipArchiveMetadataWithinLimits(new Uint8Array([1, 2]).buffer, { ...options, allowNonZip: true })).to.equal(null);
   });
 });
 

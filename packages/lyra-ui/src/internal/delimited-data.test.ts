@@ -362,3 +362,258 @@ it('aborts when parser diagnostics exceed the retained error budget', () => {
   expect(produced).to.equal(3);
   expect(aborted).to.be.true;
 });
+
+it('detects a bare CR newline dialect when no LF is present', () => {
+  const grid = parseDelimitedGrid(realParser, 'a,b\r1,2\r3,4');
+  expect(grid.data).to.deep.equal([
+    ['a', 'b'],
+    ['1', '2'],
+    ['3', '4'],
+  ]);
+  expect(grid.errors).to.deep.equal([]);
+});
+
+it('prefers a later delimiter candidate with a strictly higher average field count on a delta tie', () => {
+  const grid = parseDelimitedGrid(realParser, 'a,b;c;d\n1,2;3;4\n5,6;7;8');
+  expect(grid.data).to.deep.equal([
+    ['a,b', 'c', 'd'],
+    ['1,2', '3', '4'],
+    ['5,6', '7', '8'],
+  ]);
+  expect(grid.errors).to.deep.equal([]);
+});
+
+it('unescapes doubled quotes inside a quoted field without truncating the row', () => {
+  const grid = parseDelimitedGrid(realParser, '"a""b",c\n"only""",tail');
+  expect(grid.data).to.deep.equal([
+    ['a"b', 'c'],
+    ['only"', 'tail'],
+  ]);
+  expect(grid.errors).to.deep.equal([]);
+});
+
+it('rejects header/row field-count mismatches from the preflight scan alone, before invoking PapaParse', () => {
+  let parseCalls = 0;
+  const parser: PapaParseApi = {
+    parse() {
+      parseCalls++;
+      return { data: [], errors: [], meta: {} };
+    },
+  };
+  const text = 'h1,h2\nx\ny\nz';
+
+  expect(() => parseDelimitedRecords(parser, text, { maxErrors: 2 })).to.throw(LyraResourceLimitError);
+  expect(parseCalls).to.equal(0);
+});
+
+it('rejects a record row whose __parsed_extra entries push it past the column budget in the streaming callback', () => {
+  let parseCalls = 0;
+  const parser: PapaParseApi = {
+    parse(_text, options) {
+      parseCalls++;
+      const step = options?.['step'] as ((result: unknown, handle: { abort(): void }) => void) | undefined;
+      if (!step) throw new Error('Expected a streaming step callback.');
+      step(
+        { data: { a: '1', b: '2', __parsed_extra: ['x', 'y'] }, meta: { fields: ['a', 'b'] }, errors: [] },
+        parserHandle(() => {}),
+      );
+      return { data: [], meta: { fields: ['a', 'b'] }, errors: [] };
+    },
+  };
+
+  expect(() => parseDelimitedRecords(parser, 'a,b\n1,2', { maxColumns: 3 })).to.throw(LyraResourceLimitError);
+  expect(parseCalls).to.equal(1);
+});
+
+it('rejects a peer that reports non-string header fields', () => {
+  const parser: PapaParseApi = {
+    parse(_text, options) {
+      const step = options?.['step'] as ((result: unknown, handle: { abort(): void }) => void) | undefined;
+      if (!step) throw new Error('Expected a streaming step callback.');
+      step(
+        { data: { a: '1' }, meta: { fields: ['a', 42] }, errors: [] },
+        parserHandle(() => {}),
+      );
+      return { data: [], meta: { fields: ['a', 42] }, errors: [] };
+    },
+  };
+
+  expect(() => parseDelimitedRecords(parser, 'a,b\n1,2')).to.throw(TypeError, 'PapaParse returned invalid fields.');
+});
+
+it('rejects a peer that reports a non-array grid row', () => {
+  const parser: PapaParseApi = {
+    parse(_text, options) {
+      const step = options?.['step'] as ((result: unknown, handle: { abort(): void }) => void) | undefined;
+      if (!step) throw new Error('Expected a streaming step callback.');
+      step({ data: 'not-a-row', meta: {}, errors: [] }, parserHandle(() => {}));
+      return { data: [], meta: {}, errors: [] };
+    },
+  };
+
+  expect(() => parseDelimitedGrid(parser, 'a,b')).to.throw(TypeError, 'PapaParse returned an invalid row.');
+});
+
+it('rejects a peer that silently ignores the streaming callback for non-empty input', () => {
+  let parseCalls = 0;
+  const parser: PapaParseApi = {
+    parse() {
+      parseCalls++;
+      return { data: [['a', 'b']], meta: {}, errors: [] };
+    },
+  };
+
+  expect(() => parseDelimitedGrid(parser, 'a,b\n1,2')).to.throw(
+    TypeError,
+    'PapaParse did not honor streaming row callbacks.',
+  );
+  expect(parseCalls).to.equal(1);
+});
+
+it('does not let a throwing abort() handle mask the resource-limit error', () => {
+  let aborted = false;
+  const parser: PapaParseApi = {
+    parse(_text, options) {
+      const step = options?.['step'] as ((result: unknown, handle: { abort(): void }) => void) | undefined;
+      if (!step) throw new Error('Expected a streaming step callback.');
+      const handle = {
+        abort: () => {
+          aborted = true;
+          throw new Error('peer abort() is broken');
+        },
+      };
+      step({ data: ['a'], meta: {}, errors: [] }, handle);
+      step({ data: ['b'], meta: {}, errors: [] }, handle);
+      step({ data: ['c'], meta: {}, errors: [] }, handle);
+      return { data: [], meta: {}, errors: [] };
+    },
+  };
+
+  expect(() => parseDelimitedGrid(parser, 'a\nb', { maxRows: 2 })).to.throw(LyraResourceLimitError);
+  expect(aborted).to.be.true;
+});
+
+it('propagates a peer parse error unrelated to any resource limit unchanged', () => {
+  const parser: PapaParseApi = {
+    parse() {
+      throw new Error('peer exploded');
+    },
+  };
+
+  let caught: unknown;
+  try {
+    parseDelimitedGrid(parser, 'a,b\n1,2');
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught instanceof Error && caught.message).to.equal('peer exploded');
+});
+
+it('prefers the resource-limit outcome when the peer also throws after being aborted', () => {
+  const parser: PapaParseApi = {
+    parse(_text, options) {
+      const step = options?.['step'] as ((result: unknown, handle: { abort(): void }) => void) | undefined;
+      if (!step) throw new Error('Expected a streaming step callback.');
+      const handle = parserHandle(() => {});
+      step({ data: ['a'], meta: {}, errors: [] }, handle);
+      step({ data: ['b'], meta: {}, errors: [] }, handle);
+      step({ data: ['c'], meta: {}, errors: [] }, handle);
+      throw new Error('peer rethrew after abort');
+    },
+  };
+
+  expect(() => parseDelimitedGrid(parser, 'a\nb', { maxRows: 2 })).to.throw(LyraResourceLimitError);
+});
+
+it('falls back to defaults for non-positive or non-finite limit overrides', () => {
+  const limits: DelimitedParseLimits = {
+    maxRows: 0,
+    maxColumns: -1,
+    maxCells: Number.NaN,
+    maxErrors: Number.POSITIVE_INFINITY,
+  };
+  const result = parseDelimitedGrid(realParser, 'a,b,c\n1,2,3', limits);
+  expect(result.data).to.deep.equal([
+    ['a', 'b', 'c'],
+    ['1', '2', '3'],
+  ]);
+});
+
+it('detects a bare LF dialect when the first line ending precedes a later CRLF pair', () => {
+  const grid = parseDelimitedGrid(realParser, 'a,b\nc,d\r\ne,f');
+  expect(grid.data).to.deep.equal([
+    ['a', 'b'],
+    ['c', 'd\r'],
+    ['e', 'f'],
+  ]);
+  expect(grid.errors).to.deep.equal([]);
+});
+
+it('rejects a streamed header wider than the column budget even when the preflight scan saw a narrow header', () => {
+  let parseCalls = 0;
+  const parser: PapaParseApi = {
+    parse(_text, options) {
+      parseCalls++;
+      const step = options?.['step'] as ((result: unknown, handle: { abort(): void }) => void) | undefined;
+      if (!step) throw new Error('Expected a streaming step callback.');
+      step(
+        { data: { a: '1', b: '2' }, meta: { fields: ['a', 'b'] }, errors: [] },
+        parserHandle(() => {}),
+      );
+      return { data: [], meta: { fields: ['a', 'b'] }, errors: [] };
+    },
+  };
+
+  expect(() => parseDelimitedRecords(parser, 'a\n1', { maxColumns: 1 })).to.throw(LyraResourceLimitError);
+  expect(parseCalls).to.equal(1);
+});
+
+it('rejects a streamed header alone exceeding the aggregate cell budget', () => {
+  let parseCalls = 0;
+  const parser: PapaParseApi = {
+    parse(_text, options) {
+      parseCalls++;
+      const step = options?.['step'] as ((result: unknown, handle: { abort(): void }) => void) | undefined;
+      if (!step) throw new Error('Expected a streaming step callback.');
+      step(
+        { data: { a: '1', b: '2', c: '3' }, meta: { fields: ['a', 'b', 'c'] }, errors: [] },
+        parserHandle(() => {}),
+      );
+      return { data: [], meta: { fields: ['a', 'b', 'c'] }, errors: [] };
+    },
+  };
+
+  expect(() => parseDelimitedRecords(parser, 'a\n1', { maxColumns: 5, maxCells: 2 })).to.throw(
+    LyraResourceLimitError,
+  );
+  expect(parseCalls).to.equal(1);
+});
+
+it('floors a fractional maxRows override before comparing against the row budget', () => {
+  const text = 'a\nb\nc';
+  expect(() => parseDelimitedGrid(realParser, text, { maxRows: 2.9 })).to.throw(LyraResourceLimitError);
+  expect(() => parseDelimitedGrid(realParser, text, { maxRows: 3.9 })).to.not.throw();
+});
+
+it('reports zero columns for an empty row set and stringifies non-nullish cell values', () => {
+  expect(delimitedColumnCount([])).to.equal(0);
+  expect(delimitedCellText(undefined)).to.equal('');
+  expect(delimitedCellText(42)).to.equal('42');
+});
+
+it('floors a fractional maxErrors override before comparing against the parser error budget', () => {
+  const parser: PapaParseApi = {
+    parse(_text, options) {
+      const step = options?.['step'] as ((result: unknown, handle: { abort(): void }) => void) | undefined;
+      if (!step) throw new Error('Expected a streaming step callback.');
+      const handle = parserHandle(() => {});
+      step({ data: ['a', 'x'], meta: {}, errors: [{ code: 'one' }] }, handle);
+      step({ data: ['b', 'y'], meta: {}, errors: [{ code: 'two' }] }, handle);
+      step({ data: ['c', 'z'], meta: {}, errors: [{ code: 'three' }] }, handle);
+      return { data: [], meta: {}, errors: [] };
+    },
+  };
+
+  expect(() => parseDelimitedGrid(parser, 'a,x\nb,y\nc,z', { maxErrors: 2.9 })).to.throw(LyraResourceLimitError);
+  expect(() => parseDelimitedGrid(parser, 'a,x\nb,y\nc,z', { maxErrors: 3.9 })).to.not.throw();
+});

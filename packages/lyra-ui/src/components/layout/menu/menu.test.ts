@@ -12,6 +12,7 @@ import './menu-item.js';
 import './menu-label.js';
 import type { LyraMenu } from './menu.js';
 import type { LyraMenuItem } from './menu-item.js';
+import type { ContainedMenuOwner } from './menu-shared.js';
 
 const basic = () => html`
   <lr-menu label="Row actions">
@@ -626,4 +627,368 @@ it('is accessible in populated and nested-open states', async () => {
   await expect(menu).to.be.accessible();
   await byId<LyraMenuItem>(menu, 'share').openSubmenu('first');
   await expect(menu).to.be.accessible();
+});
+
+it('no-ops Arrow/Home/End navigation when every item is disabled', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="a" value="a" disabled>A</lr-menu-item>
+      <lr-menu-item id="b" value="b" disabled>B</lr-menu-item>
+    </lr-menu>
+  `);
+  const [first, second] = ownItems(menu);
+  expect([first.tabIndex, second.tabIndex]).to.deep.equal([-1, -1]);
+  for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End']) {
+    const event = press(first, key);
+    expect(event.defaultPrevented, key).to.equal(true);
+  }
+  expect([first.tabIndex, second.tabIndex]).to.deep.equal([-1, -1]);
+});
+
+it('closes the private submenu surface when Tab leaves it with nothing following', async () => {
+  const menu = await fixture<LyraMenu>(nested());
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('first');
+  const email = byId<LyraMenuItem>(child, 'email');
+  email.focus();
+  press(email, 'Tab');
+  await settle(menu, child);
+  expect(share.submenuOpen).to.equal(false);
+});
+
+it('keeps the private submenu open when Tab moves forward into a present footer', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="share" value="share">
+        Share
+        <lr-menu slot="submenu" id="share-menu">
+          <lr-menu-item id="email" value="email">Email</lr-menu-item>
+          <button slot="footer" type="button">Apply</button>
+        </lr-menu>
+      </lr-menu-item>
+    </lr-menu>
+  `);
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('first');
+  const email = byId<LyraMenuItem>(child, 'email');
+  email.focus();
+  press(email, 'Tab');
+  await settle(menu, child);
+  expect(share.submenuOpen).to.equal(true);
+});
+
+it('keeps the private submenu open when Shift+Tab moves backward into a present header', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="share" value="share">
+        Share
+        <lr-menu slot="submenu" id="share-menu">
+          <input slot="header" aria-label="Filter" />
+          <lr-menu-item id="email" value="email">Email</lr-menu-item>
+        </lr-menu>
+      </lr-menu-item>
+    </lr-menu>
+  `);
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('first');
+  const email = byId<LyraMenuItem>(child, 'email');
+  email.focus();
+  press(email, 'Tab', { shiftKey: true });
+  await settle(menu, child);
+  expect(share.submenuOpen).to.equal(true);
+});
+
+it('closes the private submenu when Shift+Tab moves backward out of an empty header', async () => {
+  const menu = await fixture<LyraMenu>(nested());
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('first');
+  const email = byId<LyraMenuItem>(child, 'email');
+  email.focus();
+  press(email, 'Tab', { shiftKey: true });
+  await settle(menu, child);
+  expect(share.submenuOpen).to.equal(false);
+});
+
+it('always closes when Tab moves forward out of the last footer stop', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="share" value="share">
+        Share
+        <lr-menu slot="submenu" id="share-menu">
+          <lr-menu-item id="email" value="email">Email</lr-menu-item>
+          <button id="apply" slot="footer" type="button">Apply</button>
+        </lr-menu>
+      </lr-menu-item>
+    </lr-menu>
+  `);
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('first');
+  const apply = byId<HTMLButtonElement>(child, 'apply');
+  apply.focus();
+  press(apply, 'Tab');
+  await settle(menu, child);
+  expect(share.submenuOpen).to.equal(false);
+});
+
+it('always closes when Shift+Tab moves backward out of the first header stop', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="share" value="share">
+        Share
+        <lr-menu slot="submenu" id="share-menu">
+          <input id="filter" slot="header" aria-label="Filter" />
+          <lr-menu-item id="email" value="email">Email</lr-menu-item>
+        </lr-menu>
+      </lr-menu-item>
+    </lr-menu>
+  `);
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('first');
+  const filter = byId<HTMLInputElement>(child, 'filter');
+  filter.focus();
+  press(filter, 'Tab', { shiftKey: true });
+  await settle(menu, child);
+  expect(share.submenuOpen).to.equal(false);
+});
+
+it('drives a contained dropdown owner through focus, escape, and selection dismissal', async () => {
+  const events: string[] = [];
+  const owner: ContainedMenuOwner = {
+    open: false,
+    show(): void {
+      events.push('show');
+      owner.open = true;
+    },
+    hide(options?: { focusTrigger?: boolean }): void {
+      events.push(`hide:${options?.focusTrigger ?? false}`);
+      owner.open = false;
+    },
+  };
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu
+      label="Actions"
+      .dropdownContained=${true}
+      .dropdownOwner=${owner}
+    >
+      <lr-menu-item id="a" value="a">A</lr-menu-item>
+      <lr-menu-item id="b" value="b">B</lr-menu-item>
+    </lr-menu>
+  `);
+
+  menu.focusContained('first');
+  expect(events).to.deep.equal(['show']);
+
+  menu.focusContained('first');
+  expect(events).to.deep.equal(['show']);
+  expect(byId<LyraMenuItem>(menu, 'a').tabIndex).to.equal(0);
+
+  press(byId(menu, 'a'), 'Escape');
+  expect(events).to.deep.equal(['show', 'hide:true']);
+
+  byId<LyraMenuItem>(menu, 'a').select();
+  expect(events).to.deep.equal(['show', 'hide:true', 'hide:true']);
+});
+
+it('leaves a contained dropdown open on select when dropdownStayOpenOnSelect is set', async () => {
+  const events: string[] = [];
+  const owner: ContainedMenuOwner = {
+    open: true,
+    show(): void {
+      events.push('show');
+    },
+    hide(options?: { focusTrigger?: boolean }): void {
+      events.push(`hide:${options?.focusTrigger ?? false}`);
+    },
+  };
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu
+      label="Actions"
+      .dropdownContained=${true}
+      .dropdownOwner=${owner}
+      .dropdownOpen=${true}
+      .dropdownStayOpenOnSelect=${true}
+    >
+      <lr-menu-item id="a" value="a">A</lr-menu-item>
+    </lr-menu>
+  `);
+  byId<LyraMenuItem>(menu, 'a').select();
+  expect(events).to.deep.equal([]);
+});
+
+it('rehomes zero-survivor focus through a contained dropdown owner', async () => {
+  const events: string[] = [];
+  const owner: ContainedMenuOwner = {
+    open: true,
+    show(): void {
+      events.push('show');
+    },
+    hide(options?: { focusTrigger?: boolean }): void {
+      events.push(`hide:${options?.focusTrigger ?? false}`);
+    },
+  };
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu
+      label="Actions"
+      .dropdownContained=${true}
+      .dropdownOwner=${owner}
+      .dropdownOpen=${true}
+    >
+      <lr-menu-item id="a" value="a">A</lr-menu-item>
+    </lr-menu>
+  `);
+  const item = byId<LyraMenuItem>(menu, 'a');
+  expect(document.activeElement === item).to.equal(true);
+  item.disabled = true;
+  await item.updateComplete;
+  await menu.updateComplete;
+  expect(events).to.deep.equal(['hide:true']);
+});
+
+it('parks focus on the list itself when the last navigable item is removed while open', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="a" value="a">A</lr-menu-item>
+    </lr-menu>
+  `);
+  const item = byId<LyraMenuItem>(menu, 'a');
+  item.focus();
+  item.remove();
+  await nextFrame();
+  const listPart = list(menu);
+  expect(menu.shadowRoot!.activeElement === listPart).to.equal(true);
+  expect(listPart.tabIndex).to.equal(-1);
+});
+
+it('propagates dropdownSize to owned items, including ones added after mount', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions" .dropdownSize=${'small'}>
+      <lr-menu-item id="a" value="a">A</lr-menu-item>
+    </lr-menu>
+  `);
+  expect(byId<LyraMenuItem>(menu, 'a').size).to.equal('small');
+  const extra = document.createElement('lr-menu-item') as LyraMenuItem;
+  extra.id = 'b';
+  extra.value = 'b';
+  extra.textContent = 'B';
+  menu.append(extra);
+  await nextFrame();
+  expect(byId<LyraMenuItem>(menu, 'b').size).to.equal('small');
+});
+
+it('resets the typeahead buffer after the timeout so a repeated key searches fresh', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="apple" value="apple">Apple</lr-menu-item>
+      <lr-menu-item id="apricot" value="apricot">Apricot</lr-menu-item>
+      <lr-menu-item id="banana" value="banana">Banana</lr-menu-item>
+    </lr-menu>
+  `);
+  byId(menu, 'banana').focus();
+  press(byId(menu, 'banana'), 'a');
+  expect(document.activeElement?.id).to.equal('apple');
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  press(byId(menu, 'apple'), 'a');
+  expect(document.activeElement?.id).to.equal('apricot');
+});
+
+it('resyncs items from the slot on reconnect when membership changed while detached', async () => {
+  const menu = await fixture<LyraMenu>(basic());
+  const parent = menu.parentNode!;
+  menu.remove();
+  const extra = document.createElement('lr-menu-item') as LyraMenuItem;
+  extra.id = 'extra';
+  extra.value = 'extra';
+  extra.textContent = 'Extra';
+  menu.append(extra);
+  parent.appendChild(menu);
+  expect(ownItems(menu).length).to.equal(4);
+  await nextFrame();
+  expect(byId<LyraMenuItem>(menu, 'extra').tabIndex).to.equal(-1);
+});
+
+it('keeps a nested branch open when dropdownStayOpenOnSelect is set on the root', async () => {
+  const menu = await fixture<LyraMenu>(nested());
+  menu.dropdownStayOpenOnSelect = true;
+  await menu.updateComplete;
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  await share.openSubmenu('first');
+  byId<LyraMenuItem>(child, 'email').select();
+  await Promise.resolve();
+  await settle(menu, child);
+  expect(share.submenuOpen).to.equal(true);
+});
+
+it('keeps an open submenu when the pointer leaves but keyboard focus is still inside it', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="share" value="share"
+        >Share
+        <lr-menu slot="submenu" id="level-2">
+          <lr-menu-item id="more" value="more"
+            >More
+            <lr-menu slot="submenu" id="level-3">
+              <lr-menu-item id="embed" value="embed">Embed</lr-menu-item>
+            </lr-menu>
+          </lr-menu-item>
+        </lr-menu>
+      </lr-menu-item>
+    </lr-menu>
+  `);
+  const more = byId<LyraMenuItem>(menu, 'more');
+  const level2 = byId<LyraMenu>(menu, 'level-2');
+  await byId<LyraMenuItem>(menu, 'share').openSubmenu('first');
+  await more.openSubmenu('first');
+  expect(document.activeElement?.id).to.equal('embed');
+
+  submenuSurface(level2).dispatchEvent(
+    new PointerEvent('pointerleave', { bubbles: true, composed: true })
+  );
+  await new Promise((resolve) => setTimeout(resolve, 380));
+  await settle(menu, level2, byId(menu, 'level-3'));
+  expect(more.submenuOpen).to.equal(true);
+});
+
+it('closes a submenu after a pointerleave delay once focus has moved elsewhere', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Actions">
+      <lr-menu-item id="share" value="share"
+        >Share
+        <lr-menu slot="submenu" id="level-2">
+          <lr-menu-item id="more" value="more"
+            >More
+            <lr-menu slot="submenu" id="level-3">
+              <lr-menu-item id="embed" value="embed">Embed</lr-menu-item>
+            </lr-menu>
+          </lr-menu-item>
+        </lr-menu>
+      </lr-menu-item>
+    </lr-menu>
+  `);
+  const more = byId<LyraMenuItem>(menu, 'more');
+  const level2 = byId<LyraMenu>(menu, 'level-2');
+  await byId<LyraMenuItem>(menu, 'share').openSubmenu('first');
+  await more.openSubmenu('first');
+
+  const outside = document.createElement('button');
+  document.body.append(outside);
+  try {
+    outside.focus();
+    submenuSurface(level2).dispatchEvent(
+      new PointerEvent('pointerleave', { bubbles: true, composed: true })
+    );
+    await waitUntil(
+      () => more.submenuOpen === false,
+      'submenu never closed after pointerleave',
+      { timeout: 1000 }
+    );
+  } finally {
+    outside.remove();
+  }
 });

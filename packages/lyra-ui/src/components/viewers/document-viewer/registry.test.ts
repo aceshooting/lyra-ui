@@ -75,6 +75,15 @@ describe('matches() shape-based fallback dispatch', () => {
     registerDocumentRenderer('lyra:second', second);
     expect(findDocumentRenderer(CSV_FILE)?.render?.(CSV_FILE)).to.equal('first');
   });
+
+  it('returns undefined when a non-empty registry has no exact key or matches() hit', () => {
+    const def: DocumentRendererDefinition = {
+      matches: (file) => file.name.toLowerCase().endsWith('.csv'),
+      render: () => 'csv-output',
+    };
+    registerDocumentRenderer('lyra:csv', def);
+    expect(findDocumentRenderer(PDF_FILE)).to.be.undefined;
+  });
 });
 
 describe('a custom registry (not the module-level default)', () => {
@@ -113,6 +122,27 @@ describe('a custom registry (not the module-level default)', () => {
     expect(() => createDocumentRendererRegistry([
       ['application/x-invalid', { render: () => 'x', load: async () => ({ render: () => 'y' }) } as never],
     ])).to.throw(TypeError);
+  });
+
+  it('exposes the full ReadonlyMap surface (keys/values/entries/forEach/iteration)', () => {
+    const registry = createDocumentRendererRegistry([
+      ['application/pdf', { render: () => 'pdf' }],
+      ['text/csv', { render: () => 'csv' }],
+    ]);
+    expect(registry.size).to.equal(2);
+    expect([...registry.keys()].sort()).to.deep.equal(['application/pdf', 'text/csv']);
+    expect([...registry.values()]).to.have.length(2);
+    expect([...registry.entries()].map(([key]) => key).sort()).to.deep.equal(['application/pdf', 'text/csv']);
+
+    const seenViaForEach: string[] = [];
+    registry.forEach((_definition, key) => {
+      seenViaForEach.push(key);
+    });
+    expect(seenViaForEach.sort()).to.deep.equal(['application/pdf', 'text/csv']);
+
+    const seenViaIteration: string[] = [];
+    for (const [key] of registry) seenViaIteration.push(key);
+    expect(seenViaIteration.sort()).to.deep.equal(['application/pdf', 'text/csv']);
   });
 });
 
@@ -178,6 +208,17 @@ describe('loadDocumentRenderer()', () => {
     expect(callCount).to.equal(2);
     expect(resolved.render!(PDF_FILE)).to.equal('x');
   });
+
+  it('rejects when load() resolves to another lazy (non-direct) definition', async () => {
+    const def: DocumentRendererDefinition = {
+      load: () => Promise.resolve({ load: () => Promise.resolve({ render: () => 'never reached' }) } as never),
+    };
+    let rejection: unknown;
+    await loadDocumentRenderer(def).catch((error: unknown) => {
+      rejection = error;
+    });
+    expect(rejection).to.be.instanceOf(TypeError);
+  });
 });
 
 describe('clearDocumentRenderers()', () => {
@@ -212,6 +253,100 @@ describe('DocumentFile/DocumentRendererDefinition widening', () => {
       capabilities: { anchors: ['page', 'text-quote'], textSelect: true },
     };
     expect(def.capabilities?.anchors).to.deep.equal(['page', 'text-quote']);
+  });
+});
+
+describe('payload and definition validation guards', () => {
+  it('rejects a non-object payload', () => {
+    expect(() => snapshotLyraDocumentRendererPayload(null as never)).to.throw(TypeError);
+    expect(() => snapshotLyraDocumentRendererPayload('x' as never)).to.throw(TypeError);
+  });
+
+  it('rejects a payload with an unsupported kind', () => {
+    expect(() => snapshotLyraDocumentRendererPayload({
+      kind: 'bogus',
+      file: PDF_FILE,
+    } as never)).to.throw(TypeError);
+  });
+
+  it('rejects a payload file that is missing required string fields', () => {
+    expect(() => snapshotLyraDocumentRendererPayload({
+      kind: 'document',
+      file: null,
+    } as never)).to.throw(TypeError);
+    expect(() => snapshotLyraDocumentRendererPayload({
+      kind: 'document',
+      file: { name: 'report.pdf' },
+    } as never)).to.throw(TypeError);
+  });
+
+  it('rejects an invalid capabilities declaration on a direct renderer', () => {
+    expect(() => createDocumentRendererRegistry([
+      ['application/x-invalid', {
+        render: () => 'x',
+        capabilities: { anchors: 'not-an-array' },
+      } as never],
+    ])).to.throw(TypeError);
+    expect(() => createDocumentRendererRegistry([
+      ['application/x-invalid', {
+        render: () => 'x',
+        capabilities: { anchors: [1, 2] },
+      } as never],
+    ])).to.throw(TypeError);
+    expect(() => createDocumentRendererRegistry([
+      ['application/x-invalid', {
+        render: () => 'x',
+        capabilities: { search: 'yes' },
+      } as never],
+    ])).to.throw(TypeError);
+    expect(() => createDocumentRendererRegistry([
+      ['application/x-invalid', {
+        render: () => 'x',
+        capabilities: { textSelect: 'yes' },
+      } as never],
+    ])).to.throw(TypeError);
+  });
+
+  it('rejects a matches declaration that is not a function', () => {
+    expect(() => createDocumentRendererRegistry([
+      ['application/x-invalid', { render: () => 'x', matches: 'not-a-function' } as never],
+    ])).to.throw(TypeError);
+  });
+
+  it('rejects a non-object definition', () => {
+    expect(() => registerDocumentRenderer('application/x-invalid', 'not-an-object' as never)).to.throw(TypeError);
+  });
+
+  it('rejects an adapter-shaped value not created via createDocumentRendererAdapter()', () => {
+    expect(() => createDocumentRendererRegistry([
+      ['application/x-invalid', { adapter: { kind: 'document', adapt: () => {}, capabilities: () => {}, render: () => {} } } as never],
+    ])).to.throw(TypeError);
+  });
+
+  it('createDocumentRendererAdapter() rejects an invalid adapter definition', () => {
+    const valid = {
+      kind: 'document' as const,
+      adapt: (file: DocumentFile) => ({ kind: 'document' as const, file }),
+      capabilities: () => undefined,
+      render: () => 'x',
+    };
+    expect(() => createDocumentRendererAdapter({ ...valid, kind: 'bogus' } as never)).to.throw(TypeError);
+    expect(() => createDocumentRendererAdapter({ ...valid, adapt: 'not-a-function' } as never)).to.throw(TypeError);
+    expect(() => createDocumentRendererAdapter({ ...valid, capabilities: 'not-a-function' } as never)).to.throw(TypeError);
+    expect(() => createDocumentRendererAdapter({ ...valid, render: 'not-a-function' } as never)).to.throw(TypeError);
+  });
+
+  it('adaptDocumentRenderer() rejects a still-lazy (load-only) definition', () => {
+    const lazy: DocumentRendererDefinition = { load: () => Promise.resolve({ render: () => 'x' }) };
+    expect(() => adaptDocumentRenderer(lazy as never, PDF_FILE)).to.throw(TypeError);
+  });
+
+  it('adaptDocumentRenderer() defaults an unsupplied payload to a document-kind snapshot of the file', () => {
+    const definition: DocumentRendererDefinition = { render: (file) => file.name };
+    const adapted = adaptDocumentRenderer(definition, PDF_FILE);
+    expect(adapted.payload.kind).to.equal('document');
+    expect(adapted.payload.file.name).to.equal(PDF_FILE.name);
+    expect(Object.isFrozen(adapted.payload)).to.equal(true);
   });
 });
 

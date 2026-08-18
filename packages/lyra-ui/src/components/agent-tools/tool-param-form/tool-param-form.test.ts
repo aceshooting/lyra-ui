@@ -207,6 +207,43 @@ it('emits lr-input on an explicit boolean selection', async () => {
   expect(ev.detail.value.notify).to.be.true;
 });
 
+it('resets a boolean field to unset via its empty select option, removing it from value entirely', async () => {
+  const el = (await fixture(
+    html`<lr-tool-param-form .schema=${basicSchema} .value=${{ notify: true }}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+  expect(el.value.notify).to.be.true;
+  const select = field(el, 'notify').querySelector('lr-select') as HTMLElement & { value: string };
+
+  setTimeout(() => {
+    select.value = '';
+    select.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true }));
+  });
+  const ev = await oneEvent(el, 'lr-input');
+
+  expect(Object.prototype.hasOwnProperty.call(ev.detail.value, 'notify')).to.be.false;
+  expect(Object.prototype.hasOwnProperty.call(el.value, 'notify')).to.be.false;
+});
+
+it('ignores a boolean-select unset (empty-option) event while effectively disabled', async () => {
+  const schema: FlatToolParamSchema = {
+    type: 'object',
+    properties: { confirm: { type: 'boolean' } },
+  };
+  const el = (await fixture(
+    html`<lr-tool-param-form disabled .schema=${schema} .value=${{ confirm: true }}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+  const select = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { value: string };
+  let inputFired = false;
+  el.addEventListener('lr-input', () => (inputFired = true));
+
+  select.value = '';
+  select.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  expect(inputFired, 'the unset branch must no-op while effectively disabled').to.be.false;
+  expect(el.value).to.deep.equal({ confirm: true });
+});
+
 it('bridges a string field\'s native focus/blur out through the shadow boundary as host focus/blur events', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const input = field(el, 'city').querySelector('input') as HTMLInputElement;
@@ -329,6 +366,18 @@ it('does not render an inline error until the field has been visited (focusout)'
   field(el, 'city').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(field(el, 'city').querySelector('[part="error"]')!.textContent).to.equal('This field is required.');
+});
+
+it('joins description and touched-error ids into aria-describedby on a native control', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const cityField = field(el, 'city');
+  const input = cityField.querySelector('input') as HTMLInputElement;
+  expect(input.getAttribute('aria-describedby')).to.equal(`${input.id}-desc`);
+
+  cityField.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  expect(input.getAttribute('aria-describedby')).to.equal(`${input.id}-desc ${input.id}-err`);
 });
 
 it('retints only an invalid native control border through its component CSS property and restores the resting border', async () => {
@@ -1236,6 +1285,27 @@ it('temporarily disables every field through a fieldset without overwriting auth
   expect(explicitlyDisabled.disabled, 'an explicit disabled state survives the fieldset cycle').to.be.true;
   expect(explicitlyDisabled.effectiveDisabled).to.be.true;
   expect(new FormData(form).get('always-disabled')).to.equal(null);
+});
+
+it('click() focuses the first enabled control, skips one force-disabled from outside, and no-ops while the whole form is disabled', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const cityInput = field(el, 'city').querySelector('input') as HTMLInputElement;
+  const unitsSelect = field(el, 'units').querySelector('lr-select') as HTMLElement;
+
+  cityInput.disabled = true;
+  el.click();
+  expect(el.shadowRoot!.activeElement === unitsSelect).to.be.true;
+
+  unitsSelect.blur();
+  cityInput.disabled = false;
+  el.click();
+  expect(el.shadowRoot!.activeElement === cityInput).to.be.true;
+
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement == null, 'disabling the input force-blurs it').to.be.true;
+  el.click();
+  expect(el.shadowRoot!.activeElement == null, 'click() must no-op while effectively disabled').to.be.true;
 });
 
 it('is accessible in the empty-schema default state', async () => {

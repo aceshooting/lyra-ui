@@ -847,3 +847,268 @@ it('defaults to English "word"/"words" when no strings override is set', async (
   await el.updateComplete;
   expect(svgEl(el).getAttribute('aria-label')).to.equal(`Word cloud of ${WORDS.length} words`);
 });
+
+it('requests an update (not a relayout) for a palette-only theme invalidation', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`);
+  await el.updateComplete;
+  const viewBoxBefore = el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox');
+  let refreshes = 0;
+  const originalRefresh = el.refreshTheme.bind(el);
+  el.refreshTheme = () => {
+    refreshes += 1;
+    originalRefresh();
+  };
+  try {
+    el.style.setProperty('--lr-word-cloud-color-1', 'rgb(9, 9, 9)');
+    invalidateLyraTheme(el);
+    await aTimeout(0);
+    await el.updateComplete;
+    expect(refreshes).to.equal(0);
+    expect(el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox')).to.equal(viewBoxBefore);
+    const word = el.shadowRoot!.querySelector('[part="word"]') as SVGTextElement;
+    expect(word.getAttribute('fill')).to.equal('rgb(9, 9, 9)');
+  } finally {
+    el.refreshTheme = originalRefresh;
+  }
+});
+
+it('falls back to bounding-rect hit testing when the SVG has no screen transform', async () => {
+  const el = (await fixture(
+    html`<lr-word-cloud style="inline-size: 320px; block-size: 192px" .words=${WORDS}></lr-word-cloud>`
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  const svg = svgEl(el);
+  const original = svg.getScreenCTM;
+  svg.getScreenCTM = () => null;
+  try {
+    const rect = svg.getBoundingClientRect();
+    const eventPromise = oneEvent(el, 'lr-word-activate');
+    svg.dispatchEvent(
+      new MouseEvent('click', {
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+        bubbles: true,
+        composed: true,
+      })
+    );
+    const event = await eventPromise;
+    expect(WORDS.map((w) => w.text)).to.include((event as CustomEvent).detail.text);
+  } finally {
+    svg.getScreenCTM = original;
+  }
+});
+
+it('ignores pointerdown/click when both the screen transform and the fallback bounding rect are unusable', async () => {
+  const el = (await fixture(
+    html`<lr-word-cloud style="inline-size: 320px; block-size: 192px" .words=${WORDS}></lr-word-cloud>`
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  const svg = svgEl(el);
+  const originalCtm = svg.getScreenCTM;
+  const originalRect = svg.getBoundingClientRect;
+  svg.getScreenCTM = () => null;
+  svg.getBoundingClientRect = () => new DOMRect(0, 0, 0, 0);
+  try {
+    let fired = false;
+    el.addEventListener('lr-word-activate', () => (fired = true), { once: true });
+    svg.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        clientX: 10,
+        clientY: 10,
+        pointerId: 1,
+        bubbles: true,
+        composed: true,
+        buttons: 1,
+      })
+    );
+    svg.dispatchEvent(new MouseEvent('click', { clientX: 10, clientY: 10, bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(fired).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="focus-ring"]')).to.not.exist;
+  } finally {
+    svg.getScreenCTM = originalCtm;
+    svg.getBoundingClientRect = originalRect;
+  }
+});
+
+it('marks the pointer-hovered word via data-hovered, and clears it on pointerleave', async () => {
+  const el = (await fixture(
+    html`<lr-word-cloud style="inline-size: 320px; block-size: 192px" .words=${WORDS}></lr-word-cloud>`
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  const point = wordClientPoint(el, 'beta');
+  svgEl(el).dispatchEvent(
+    new PointerEvent('pointermove', { ...point, pointerId: 1, bubbles: true, composed: true })
+  );
+  await el.updateComplete;
+  const betaNode = Array.from(el.shadowRoot!.querySelectorAll('[part="word"]')).find(
+    (n) => n.textContent === 'beta'
+  )!;
+  expect(betaNode.hasAttribute('data-hovered')).to.be.true;
+
+  svgEl(el).dispatchEvent(new PointerEvent('pointerleave', { pointerId: 1, bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(betaNode.hasAttribute('data-hovered')).to.be.false;
+});
+
+it('clears the pressed cue on pointercancel', async () => {
+  const el = (await fixture(
+    html`<lr-word-cloud style="inline-size: 320px; block-size: 192px" .words=${WORDS}></lr-word-cloud>`
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  pointerDownWord(el, 'beta');
+  await el.updateComplete;
+  let ring = el.shadowRoot!.querySelector('[part="focus-ring"]') as SVGRectElement;
+  expect(ring.hasAttribute('data-pressed')).to.be.true;
+
+  svgEl(el).dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, bubbles: true, composed: true }));
+  await el.updateComplete;
+  ring = el.shadowRoot!.querySelector('[part="focus-ring"]') as SVGRectElement;
+  expect(ring.hasAttribute('data-pressed')).to.be.false;
+});
+
+it('resets transient interaction state (focus/hover/press/live text) on disconnect', async () => {
+  const el = (await fixture(
+    html`<lr-word-cloud style="inline-size: 320px; block-size: 192px" .words=${WORDS}></lr-word-cloud>`
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  keydown(el, 'ArrowRight');
+  pointerDownWord(el, 'beta');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="focus-ring"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.not.equal('');
+
+  const parent = el.parentNode!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('[part="focus-ring"]')) == null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('');
+});
+
+it('drops a word record whose text field is not a string, keeping valid neighbors', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+  el.words = [{ text: 123, weight: 1 }, { text: 'valid', weight: 2 }] as never;
+  await el.updateComplete;
+  expect(el.words.map((w) => w.text)).to.deep.equal(['valid']);
+});
+
+it('drops a legend entry whose label is blank/whitespace-only, keeping valid neighbors', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
+  el.legend = [{ label: '   ', color: '#123456' }, { label: 'Valid', color: '#654321' }];
+  await el.updateComplete;
+  expect(el.legend.map((item) => item.label)).to.deep.equal(['Valid']);
+});
+
+it('drops entirely any word once the aggregate word-text character budget is exhausted', async () => {
+  const words = Array.from({ length: 100 }, (_, i) => ({ text: 'x'.repeat(256), weight: i + 1 }));
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+  el.words = words;
+  await el.updateComplete;
+  // MAX_TOTAL_WORD_TEXT (16,384) / 256 chars per word caps well below the 100 supplied.
+  expect(el.words.length).to.be.lessThan(100);
+  expect(el.words.length).to.be.at.most(64);
+});
+
+it('drops (not truncates) an optional color field once the aggregate word-text budget hits exactly zero', async () => {
+  const MAX_TOTAL_WORD_TEXT = 16_384; // mirrors the internal budget in word-cloud.class.ts
+  const fillerCount = Math.floor((MAX_TOTAL_WORD_TEXT - 2) / 256);
+  const remainderLen = MAX_TOTAL_WORD_TEXT - 2 - fillerCount * 256;
+  const words: { text: string; weight: number; color?: string }[] = Array.from(
+    { length: fillerCount },
+    (_, i) => ({ text: 'x'.repeat(256), weight: i + 1 })
+  );
+  if (remainderLen > 0) words.push({ text: 'y'.repeat(remainderLen), weight: 999 });
+  words.push({ text: 'ab', weight: 1000, color: 'blue' });
+
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+  el.words = words;
+  await el.updateComplete;
+
+  const last = el.words[el.words.length - 1]!;
+  expect(last.text).to.equal('ab');
+  expect(last.color).to.equal(undefined);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')).to.exist;
+});
+
+it('retains later valid palette entries when a hostile indexed getter throws', async () => {
+  const hostilePalette: unknown[] = ['rgb(1, 2, 3)', undefined, 'rgb(4, 5, 6)'];
+  Object.defineProperty(hostilePalette, '1', {
+    get: () => {
+      throw new Error('hostile palette entry');
+    },
+  });
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+  el.palette = hostilePalette as never;
+  await el.updateComplete;
+  expect(el.palette).to.deep.equal(['rgb(1, 2, 3)', 'rgb(4, 5, 6)']);
+});
+
+it('falls back to the default palette tokens when palette is assigned a revoked proxy', async () => {
+  const { proxy, revoke } = Proxy.revocable([], {});
+  revoke();
+  const el = await fixture<LyraWordCloud>(
+    html`<lr-word-cloud .words=${[{ text: 'alpha', weight: 1 }]}></lr-word-cloud>`
+  );
+  el.palette = proxy as never;
+  await el.updateComplete;
+  expect(el.palette).to.equal(undefined);
+  const word = el.shadowRoot!.querySelector('[part="word"]')!;
+  expect(word.getAttribute('fill')).to.not.equal(null);
+});
+
+it('shows only a legend-limit disclosure (no legend list) when every explicit legend entry is invalid', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend .words=${WORDS}></lr-word-cloud>`);
+  el.legend = [null, 'not-a-record', { label: 123 }] as never;
+  await el.updateComplete;
+  expect(el.legend).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="legend-limit"]')).to.exist;
+});
+
+it('relayouts when scale changes on a mounted element without reassigning words', async () => {
+  const words = [
+    { text: 'alpha', weight: 100 },
+    { text: 'mid', weight: 50 },
+    { text: 'gamma', weight: 1 },
+  ];
+  const el = (await fixture(
+    html`<lr-word-cloud .words=${words} min-font-size="10" max-font-size="40"></lr-word-cloud>`
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  const midNode = () =>
+    Array.from(el.shadowRoot!.querySelectorAll('[part="word"]')).find((n) => n.textContent === 'mid')!;
+  const linearSize = Number(midNode().getAttribute('font-size'));
+
+  el.scale = 'sqrt';
+  await el.updateComplete;
+  expect(el.scale).to.equal('sqrt');
+  const sqrtSize = Number(midNode().getAttribute('font-size'));
+  expect(sqrtSize).to.not.equal(linearSize);
+});
+
+it('requests an update for a redundant scale/wordRotation assignment that still normalizes to the current value', async () => {
+  const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+  expect(el.scale).to.equal('linear');
+  expect(el.wordRotation).to.equal('none');
+
+  let updateCount = 0;
+  const originalRequestUpdate = el.requestUpdate.bind(el);
+  el.requestUpdate = ((...args: Parameters<typeof originalRequestUpdate>) => {
+    updateCount++;
+    return originalRequestUpdate(...args);
+  }) as typeof el.requestUpdate;
+  try {
+    el.scale = 'bogus' as never;
+    expect(el.scale).to.equal('linear');
+    expect(updateCount).to.be.greaterThan(0);
+
+    updateCount = 0;
+    el.wordRotation = 'bogus' as never;
+    expect(el.wordRotation).to.equal('none');
+    expect(updateCount).to.be.greaterThan(0);
+  } finally {
+    el.requestUpdate = originalRequestUpdate;
+  }
+});

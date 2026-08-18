@@ -449,6 +449,41 @@ describe('autoloader', () => {
     expect(customElements.get(tag)).to.be.a('function');
   });
 
+  it('propagates only the first of several concurrent definition failures', async () => {
+    const tagA = 'lr-rating';
+    const tagB = 'lr-card';
+    const errorA = new Error('first concurrent failure');
+    const errorB = new Error('second concurrent failure');
+    override(tagA, async () => {
+      throw errorA;
+    });
+    override(tagB, async () => {
+      throw errorB;
+    });
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: registry,
+    });
+    shadow.append(document.createElement(tagA), document.createElement(tagB));
+
+    try {
+      let error: unknown;
+      try {
+        await discover(host);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error === errorA || error === errorB).to.equal(true);
+      expect(typeof registry.get(tagA)).to.equal('undefined');
+      expect(typeof registry.get(tagB)).to.equal('undefined');
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
   it('rejects when a loader throws undefined', async () => {
     const tag = 'lr-rating';
     override(tag, async () => {
@@ -823,7 +858,8 @@ describe('autoloader', () => {
 
   it('rejects malformed optional-peer policies before observing or loading', async () => {
     const root = await fixture<HTMLElement>(html`<div></div>`);
-    for (const optionalPeers of [[''], [' dompurify'], 1] as unknown[]) {
+    const missingIterator = { has: () => true };
+    for (const optionalPeers of [[''], [' dompurify'], [123], missingIterator, 1] as unknown[]) {
       let message = '';
       try {
         await discover(root, { optionalPeers: optionalPeers as never });
@@ -966,6 +1002,8 @@ describe('autoloader', () => {
       { maxDepth: Number.POSITIVE_INFINITY },
       { maxWork: 1.5 },
       { maxConcurrency: 0 },
+      { maxConcurrency: 1.5 },
+      { maxConcurrency: Number.NaN },
     ]) {
       let error: unknown;
       try {
@@ -1014,6 +1052,93 @@ describe('autoloader', () => {
     root.append(document.createElement(tag));
     await customElements.whenDefined(tag);
     expect(loads).to.equal(1);
+  });
+
+  it('skips an element whose scoped registry throws from get() without failing the whole batch', async () => {
+    const hostileTag = 'lr-rating';
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const hostileRegistry = {
+      get(name: string): CustomElementConstructor | undefined {
+        if (name === hostileTag) throw new Error('hostile registry.get');
+        return undefined;
+      },
+      define() {},
+      whenDefined() {
+        return new Promise<CustomElementConstructor>(() => {});
+      },
+    } as unknown as CustomElementRegistry;
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: hostileRegistry,
+    });
+    shadow.append(document.createElement(hostileTag));
+
+    try {
+      expect(await discover(host)).to.deep.equal([]);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('keeps observing a surviving shadow root after pruning an unrelated detached one', async () => {
+    const removedTag = 'lr-alert';
+    const laterTag = 'lr-avatar';
+    let removedLoads = 0;
+    let laterLoads = 0;
+    override(removedTag, async () => {
+      removedLoads += 1;
+      return constructorForTag();
+    });
+    override(laterTag, async () => {
+      laterLoads += 1;
+      return constructorForTag();
+    });
+    const root = await fixture<HTMLElement>(html`<div><section id="a"></section><section id="b"></section></div>`);
+    const hostA = root.querySelector('#a')!;
+    const hostB = root.querySelector('#b')!;
+    const shadowA = hostA.attachShadow({ mode: 'open' });
+    const shadowB = hostB.attachShadow({ mode: 'open' });
+
+    await start(root);
+    shadowA.append(document.createElement(removedTag));
+    await customElements.whenDefined(removedTag);
+    expect(removedLoads).to.equal(1);
+
+    hostA.remove();
+    await aTimeout(0);
+    shadowA.append(document.createElement(removedTag));
+    await aTimeout(20);
+    expect(removedLoads, 'a pruned shadow root must not still be observed').to.equal(1);
+
+    shadowB.append(document.createElement(laterTag));
+    await customElements.whenDefined(laterTag);
+    expect(laterLoads, 'a surviving shadow root must still be observed after pruning').to.equal(1);
+  });
+
+  it('falls back to the ambient MutationObserver constructor when the owner document has no browsing context', async () => {
+    const tag = 'lr-badge';
+    let loads = 0;
+    override(tag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    const detachedDocument = document.implementation.createHTMLDocument('autoloader-ambient-observer');
+    const registry = createScopedRegistry();
+    Object.defineProperty(detachedDocument, 'customElements', {
+      configurable: true,
+      value: registry,
+    });
+    expect(detachedDocument.defaultView).to.equal(null);
+
+    try {
+      await start(detachedDocument);
+      detachedDocument.body.append(detachedDocument.createElement(tag));
+      await registry.whenDefined(tag);
+      expect(loads).to.equal(1);
+    } finally {
+      delete (detachedDocument as unknown as Record<string, unknown>)['customElements'];
+    }
   });
 
   it('bypasses hostile added-node type and parent getters without blocking a valid sibling', async () => {

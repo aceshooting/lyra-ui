@@ -508,6 +508,494 @@ it('enforces the aggregate retained-byte budget while preserving the accepted pr
   expect(rejected.error?.code).to.equal('stream_limit_exceeded');
 });
 
+it('clamps a configured snapshot budget down to the retained-byte ceiling', () => {
+  const state = createAgentStreamState({ maxSnapshotBytes: 10_000, maxRetainedBytes: 500 });
+  expect(state.limits.maxSnapshotBytes).to.equal(500);
+  expect(state.limits.maxRetainedBytes).to.equal(500);
+});
+
+it('fails closed on a malformed or oversized event envelope before inspecting its type', () => {
+  const state = createAgentStreamState();
+  const notARecord = reduceAgentStream(state, null as unknown as AgentStreamEvent);
+  expect(notARecord.error?.code).to.equal('invalid_stream_event');
+  const notARecordEither = reduceAgentStream(state, [] as unknown as AgentStreamEvent);
+  expect(notARecordEither.error?.code).to.equal('invalid_stream_event');
+
+  const missingCursor = reduceAgentStream(state, { type: 'reset' } as unknown as AgentStreamEvent);
+  expect(missingCursor.error?.code).to.equal('invalid_stream_event');
+  const negativeGeneration = reduceAgentStream(state, {
+    type: 'reset',
+    generation: -1,
+    sequence: 1,
+  } as unknown as AgentStreamEvent);
+  expect(negativeGeneration.error?.code).to.equal('invalid_stream_event');
+
+  const tinyBudget = createAgentStreamState({ maxSnapshotBytes: 16 });
+  const oversized = reduceAgentStream(tinyBudget, {
+    type: 'reset',
+    generation: 1,
+    sequence: 1,
+  } as AgentStreamEvent);
+  expect(oversized.error?.code).to.equal('stream_limit_exceeded');
+});
+
+it('rejects a run-start or run-status event with an invalid shape', () => {
+  const state = createAgentStreamState();
+  const missingRunId = reduceAgentStream(state, {
+    type: 'run-start',
+    generation: 1,
+    sequence: 1,
+  } as AgentStreamEvent);
+  expect(missingRunId.error?.code).to.equal('invalid_stream_event');
+  // failEvent() always reports the failure through status too, distinct from a run's own
+  // 'idle'/'running' progression.
+  expect(missingRunId.status.kind).to.equal('error');
+
+  const missingStatusKind = reduceAgentStream(state, {
+    type: 'run-status',
+    generation: 0,
+    sequence: 1,
+    status: {},
+  } as unknown as AgentStreamEvent);
+  expect(missingStatusKind.error?.code).to.equal('invalid_stream_event');
+
+  const invalidRunId = reduceAgentStream(state, {
+    type: 'run-status',
+    generation: 0,
+    sequence: 1,
+    status: { kind: 'running' },
+    runId: '',
+  } as unknown as AgentStreamEvent);
+  expect(invalidRunId.error?.code).to.equal('invalid_stream_event');
+});
+
+it('rejects a messages-snapshot event that is malformed, too large, or contains an invalid/duplicate entry', () => {
+  const tinyCap = createAgentStreamState({ maxMessages: 1 });
+  const notAnArray = reduceAgentStream(tinyCap, {
+    type: 'messages-snapshot',
+    generation: 0,
+    sequence: 1,
+    messages: 'nope',
+  } as unknown as AgentStreamEvent);
+  expect(notAnArray.error?.code).to.equal('stream_limit_exceeded');
+
+  const tooMany = reduceAgentStream(tinyCap, {
+    type: 'messages-snapshot',
+    generation: 0,
+    sequence: 1,
+    messages: [
+      { id: 'a', role: 'user' },
+      { id: 'b', role: 'user' },
+    ],
+  } as AgentStreamEvent);
+  expect(tooMany.error?.code).to.equal('stream_limit_exceeded');
+
+  const invalidEntry = reduceAgentStream(createAgentStreamState(), {
+    type: 'messages-snapshot',
+    generation: 0,
+    sequence: 1,
+    messages: [{ id: 'a', role: 'not-a-role' }],
+  } as unknown as AgentStreamEvent);
+  expect(invalidEntry.error?.code).to.equal('invalid_stream_event');
+
+  const duplicateEntry = reduceAgentStream(createAgentStreamState(), {
+    type: 'messages-snapshot',
+    generation: 0,
+    sequence: 1,
+    messages: [
+      { id: 'dup', role: 'user' },
+      { id: 'dup', role: 'assistant' },
+    ],
+  } as AgentStreamEvent);
+  expect(duplicateEntry.error?.code).to.equal('invalid_stream_event');
+});
+
+it('rejects a message with an unrecognized role', () => {
+  const rejected = reduceAgentStream(createAgentStreamState(), {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: { id: 'm1', role: 'bot' },
+  } as unknown as AgentStreamEvent);
+  expect(rejected.error?.code).to.equal('invalid_stream_event');
+  expect(rejected.messages).to.deep.equal([]);
+});
+
+it('validates message-level attachments through validDocument, accepting and rejecting appropriately', () => {
+  const state = createAgentStreamState();
+  const valid = reduceAgentStream(state, {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: {
+      id: 'm1',
+      role: 'assistant',
+      attachments: [{ id: 'doc-1', name: 'spec.pdf', mimeType: 'application/pdf' }],
+    },
+  } as AgentStreamEvent);
+  expect(valid.error).to.equal(undefined);
+  expect(valid.messages[0]?.attachments).to.have.lengthOf(1);
+
+  const invalidEntry = reduceAgentStream(state, {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: { id: 'm2', role: 'assistant', attachments: [{ id: 'doc-1' }] },
+  } as unknown as AgentStreamEvent);
+  expect(invalidEntry.error?.code).to.equal('invalid_stream_event');
+
+  const notAnArray = reduceAgentStream(state, {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: { id: 'm3', role: 'assistant', attachments: 'nope' },
+  } as unknown as AgentStreamEvent);
+  expect(notAnArray.error?.code).to.equal('invalid_stream_event');
+});
+
+it('validates every documented message-part variant, accepting the valid shape and rejecting the invalid one', () => {
+  const cases: Array<{ part: unknown; valid: boolean }> = [
+    {
+      part: { id: 'p', type: 'tool-call', invocation: { id: 'c1', name: 'search', args: {}, status: 'running' } },
+      valid: true,
+    },
+    {
+      part: { id: 'p', type: 'tool-call', invocation: { id: 'c1', name: 'search', args: {}, status: 'bogus' } },
+      valid: false,
+    },
+    { part: { id: 'p', type: 'tool-result', invocationId: 'c1', result: { hits: 1 } }, valid: true },
+    { part: { id: 'p', type: 'tool-result', invocationId: 'c1', error: 'failed' }, valid: true },
+    { part: { id: 'p', type: 'tool-result', invocationId: 'c1' }, valid: false },
+    { part: { id: 'p', type: 'tool-result', result: { hits: 1 } }, valid: false },
+    { part: { id: 'p', type: 'citation', citation: { id: 'source-1' } }, valid: true },
+    { part: { id: 'p', type: 'citation', citation: {} }, valid: false },
+    {
+      part: { id: 'p', type: 'attachment', document: { id: 'doc-1', name: 'report.pdf', mimeType: 'application/pdf' } },
+      valid: true,
+    },
+    { part: { id: 'p', type: 'attachment', document: { id: 'doc-1' } }, valid: false },
+    { part: { id: 'p', type: 'data', data: { rows: 1 } }, valid: true },
+    { part: { id: 'p', type: 'data', widget: 'chart' }, valid: true },
+    { part: { id: 'p', type: 'data', data: { rows: 1 }, widget: 'chart' }, valid: false },
+    { part: { id: 'p', type: 'data' }, valid: false },
+    { part: { id: 'p', type: 'audio', src: 'https://example.com/a.mp3' }, valid: true },
+    { part: { id: 'p', type: 'audio', src: 42 }, valid: false },
+    { part: { id: 'p', type: 'unrecognized-part-type' }, valid: false },
+  ];
+  for (const [index, { part, valid }] of cases.entries()) {
+    const result = reduceAgentStream(createAgentStreamState(), {
+      type: 'message-part-upsert',
+      generation: 0,
+      sequence: 1,
+      messageId: `message-${index}`,
+      part,
+    } as unknown as AgentStreamEvent);
+    if (valid) {
+      expect(result.error, JSON.stringify(part)).to.equal(undefined);
+      expect(result.messages[0]?.parts?.[0]?.id).to.equal('p');
+    } else {
+      expect(result.error?.code, JSON.stringify(part)).to.equal('invalid_stream_event');
+    }
+  }
+});
+
+it('rejects and caps a message-part-upsert event', () => {
+  const state = createAgentStreamState();
+  const invalidTarget = reduceAgentStream(state, {
+    type: 'message-part-upsert',
+    generation: 0,
+    sequence: 1,
+    messageId: '',
+    part: { id: 'p1', type: 'text', text: 'hi' },
+  } as unknown as AgentStreamEvent);
+  expect(invalidTarget.error?.code).to.equal('invalid_stream_event');
+
+  const invalidRole = reduceAgentStream(state, {
+    type: 'message-part-upsert',
+    generation: 0,
+    sequence: 1,
+    messageId: 'm1',
+    role: 'bot',
+    part: { id: 'p1', type: 'text', text: 'hi' },
+  } as unknown as AgentStreamEvent);
+  expect(invalidRole.error?.code).to.equal('invalid_stream_event');
+
+  const capped = createAgentStreamState({ maxMessages: 1 });
+  const withOne = reduceAgentStream(capped, {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: { id: 'existing', role: 'assistant' },
+  } as AgentStreamEvent);
+  const newMessageRejected = reduceAgentStream(withOne, {
+    type: 'message-part-upsert',
+    generation: 0,
+    sequence: 2,
+    messageId: 'brand-new',
+    part: { id: 'p1', type: 'text', text: 'hi' },
+  } as AgentStreamEvent);
+  expect(newMessageRejected.error?.code).to.equal('stream_limit_exceeded');
+
+  const partCapped = createAgentStreamState({ maxPartsPerMessage: 1 });
+  const withOnePart = reduceAgentStream(partCapped, {
+    type: 'message-part-upsert',
+    generation: 0,
+    sequence: 1,
+    messageId: 'm1',
+    part: { id: 'p1', type: 'text', text: 'first' },
+  } as AgentStreamEvent);
+  const secondPartRejected = reduceAgentStream(withOnePart, {
+    type: 'message-part-upsert',
+    generation: 0,
+    sequence: 2,
+    messageId: 'm1',
+    part: { id: 'p2', type: 'text', text: 'second' },
+  } as AgentStreamEvent);
+  expect(secondPartRejected.error?.code).to.equal('stream_limit_exceeded');
+  expect(secondPartRejected.messages[0]?.parts).to.have.lengthOf(1);
+});
+
+it('rejects and caps a message-part-delta event across its validation and limit checks', () => {
+  const state = createAgentStreamState();
+  const invalidShape = reduceAgentStream(state, {
+    type: 'message-part-delta',
+    generation: 0,
+    sequence: 1,
+    messageId: 'm1',
+    partId: 'p1',
+    partType: 'markdown',
+    delta: 'x',
+  } as unknown as AgentStreamEvent);
+  expect(invalidShape.error?.code).to.equal('invalid_stream_event');
+
+  const capped = createAgentStreamState({ maxMessages: 1 });
+  const withOne = reduceAgentStream(capped, {
+    type: 'message-start',
+    generation: 0,
+    sequence: 1,
+    message: { id: 'existing', role: 'assistant' },
+  } as AgentStreamEvent);
+  const newMessageRejected = reduceAgentStream(withOne, {
+    type: 'message-part-delta',
+    generation: 0,
+    sequence: 2,
+    messageId: 'brand-new',
+    partId: 'p1',
+    partType: 'text',
+    delta: 'x',
+  } as AgentStreamEvent);
+  expect(newMessageRejected.error?.code).to.equal('stream_limit_exceeded');
+
+  const withToolPart = reduceAgentStream(createAgentStreamState(), {
+    type: 'message-part-upsert',
+    generation: 0,
+    sequence: 1,
+    messageId: 'm1',
+    part: {
+      id: 'call-1',
+      type: 'tool-call',
+      invocation: { id: 'call-1', name: 'search', args: {}, status: 'running' },
+    },
+  } as AgentStreamEvent);
+  const nonTextTarget = reduceAgentStream(withToolPart, {
+    type: 'message-part-delta',
+    generation: 0,
+    sequence: 2,
+    messageId: 'm1',
+    partId: 'call-1',
+    partType: 'text',
+    delta: 'oops',
+  } as AgentStreamEvent);
+  expect(nonTextTarget.error?.code).to.equal('invalid_stream_event');
+
+  const partCapped = createAgentStreamState({ maxPartsPerMessage: 1 });
+  const withOnePart = reduceAgentStream(partCapped, {
+    type: 'message-part-delta',
+    generation: 0,
+    sequence: 1,
+    messageId: 'm1',
+    partId: 'p1',
+    partType: 'text',
+    delta: 'first',
+  } as AgentStreamEvent);
+  const secondPartRejected = reduceAgentStream(withOnePart, {
+    type: 'message-part-delta',
+    generation: 0,
+    sequence: 2,
+    messageId: 'm1',
+    partId: 'p2',
+    partType: 'text',
+    delta: 'second',
+  } as AgentStreamEvent);
+  expect(secondPartRejected.error?.code).to.equal('stream_limit_exceeded');
+
+  const textCapped = createAgentStreamState({ maxTextCharactersPerPart: 5 });
+  const started = reduceAgentStream(textCapped, {
+    type: 'message-part-delta',
+    generation: 0,
+    sequence: 1,
+    messageId: 'm1',
+    partId: 'p1',
+    partType: 'text',
+    delta: 'hello',
+  } as AgentStreamEvent);
+  const overflow = reduceAgentStream(started, {
+    type: 'message-part-delta',
+    generation: 0,
+    sequence: 2,
+    messageId: 'm1',
+    partId: 'p1',
+    partType: 'text',
+    delta: '!',
+  } as AgentStreamEvent);
+  expect(overflow.error?.code).to.equal('stream_limit_exceeded');
+});
+
+it('rejects a message-complete event with an invalid target id', () => {
+  const invalid = reduceAgentStream(createAgentStreamState(), {
+    type: 'message-complete',
+    generation: 0,
+    sequence: 1,
+    messageId: '',
+  } as unknown as AgentStreamEvent);
+  expect(invalid.error?.code).to.equal('invalid_stream_event');
+});
+
+it('rejects and caps a tool-upsert event', () => {
+  const invalidShape = reduceAgentStream(createAgentStreamState(), {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 1,
+    invocation: { id: 'call-1', name: 'search', args: {}, status: 'not-a-status' },
+  } as unknown as AgentStreamEvent);
+  expect(invalidShape.error?.code).to.equal('invalid_stream_event');
+
+  const capped = createAgentStreamState({ maxTools: 1 });
+  const withOne = reduceAgentStream(capped, {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 1,
+    invocation: { id: 'call-1', name: 'search', args: {}, status: 'running' },
+  } as AgentStreamEvent);
+  const secondRejected = reduceAgentStream(withOne, {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 2,
+    invocation: { id: 'call-2', name: 'search', args: {}, status: 'running' },
+  } as AgentStreamEvent);
+  expect(secondRejected.error?.code).to.equal('stream_limit_exceeded');
+  expect(secondRejected.tools).to.have.lengthOf(1);
+});
+
+it('rejects an error event with an invalid shape', () => {
+  const state = createAgentStreamState({ maxStatusMessageCharacters: 5 });
+  const missingMessage = reduceAgentStream(state, {
+    type: 'error',
+    generation: 0,
+    sequence: 1,
+  } as unknown as AgentStreamEvent);
+  expect(missingMessage.error?.code).to.equal('invalid_stream_event');
+
+  const tooLong = reduceAgentStream(state, {
+    type: 'error',
+    generation: 0,
+    sequence: 1,
+    message: 'too long for the configured limit',
+  } as AgentStreamEvent);
+  expect(tooLong.error?.code).to.equal('invalid_stream_event');
+});
+
+it('fails closed on an unrecognized event type', () => {
+  const rejected = reduceAgentStream(createAgentStreamState(), {
+    type: 'agent-thinking-really-hard',
+    generation: 0,
+    sequence: 1,
+  } as unknown as AgentStreamEvent);
+  expect(rejected.error?.code).to.equal('invalid_stream_event');
+});
+
+it('recomputes retained usage (including tools) for a state object bypassing the cache', () => {
+  const limited = createAgentStreamState({ maxRetainedBytes: 400, maxSnapshotBytes: 400 });
+  const withTool = reduceAgentStream(limited, {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 1,
+    invocation: { id: 'call-1', name: 'search', args: { q: 'x'.repeat(100) }, status: 'running' },
+  } as AgentStreamEvent);
+  expect(withTool.error).to.equal(undefined);
+
+  // A plain object spread produces a state the module's WeakMap cache has never seen, forcing
+  // usageFor() to recompute retained usage from scratch on the next reduction -- including its
+  // tools loop, which every other test leaves unexercised because commit()/failEvent() always
+  // populate the cache for the state objects they themselves return.
+  const uncached = { ...withTool };
+  const secondTool = reduceAgentStream(uncached, {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 2,
+    invocation: { id: 'call-2', name: 'search', args: { q: 'y'.repeat(100) }, status: 'running' },
+  } as AgentStreamEvent);
+  expect(secondTool.tools).to.have.lengthOf(2);
+
+  const thirdTool = reduceAgentStream({ ...secondTool }, {
+    type: 'tool-upsert',
+    generation: 0,
+    sequence: 3,
+    invocation: { id: 'call-3', name: 'search', args: { q: 'z'.repeat(100) }, status: 'running' },
+  } as AgentStreamEvent);
+  expect(thirdTool.error?.code).to.equal('stream_limit_exceeded');
+  expect(thirdTool.tools).to.have.lengthOf(2);
+});
+
+it('walks through an array element as an intermediate patch-path segment', () => {
+  const original = { list: [{ nested: 1 }], primitive: 'text' };
+
+  // Successful descent through a valid, in-range array index to reach a nested object.
+  expect(applySharedStatePatch(original, [{ op: 'replace', path: '/list/0/nested', value: 2 }]))
+    .to.deep.equal({ list: [{ nested: 2 }], primitive: 'text' });
+
+  // A non-numeric intermediate segment against an array parent is a no-op.
+  expect(applySharedStatePatch(original, [{ op: 'replace', path: '/list/not-an-index/nested', value: 2 }]))
+    .to.deep.equal(original);
+
+  // An out-of-range intermediate array index is a no-op.
+  expect(applySharedStatePatch(original, [{ op: 'replace', path: '/list/9/nested', value: 2 }]))
+    .to.deep.equal(original);
+
+  // Descending *through* a primitive (neither array nor record) as a non-final path segment is a
+  // no-op -- distinct from targeting a primitive as the final segment, which a sibling test above
+  // already covers via '/primitive/value'.
+  expect(applySharedStatePatch(original, [{ op: 'replace', path: '/primitive/a/b', value: 2 }]))
+    .to.deep.equal(original);
+});
+
+it('drops a stale error code when a new run-status error reports a different message', () => {
+  const failed = reduceAgentStream(createAgentStreamState(), {
+    type: 'error',
+    generation: 0,
+    sequence: 1,
+    message: 'first failure',
+    code: 'first_code',
+  } as AgentStreamEvent);
+  const changedMessage = reduceAgentStream(failed, {
+    type: 'run-status',
+    generation: 0,
+    sequence: 2,
+    status: { kind: 'error', message: 'a completely different failure' },
+  } as AgentStreamEvent);
+  // The new message no longer matches the retained error's message, so its code must not be
+  // carried over onto an unrelated failure.
+  expect(changedMessage.error).to.deep.equal({ message: 'a completely different failure' });
+
+  const noMessageOrPriorError = reduceAgentStream(createAgentStreamState(), {
+    type: 'run-status',
+    generation: 0,
+    sequence: 1,
+    status: { kind: 'error' },
+  } as AgentStreamEvent);
+  expect(noMessageOrPriorError.error).to.deep.equal({ message: 'Agent run failed' });
+});
+
 it('keeps run status and error recovery coherent for every non-error transition', () => {
   const failed = reduceAgentStream(createAgentStreamState(), {
     type: 'error',

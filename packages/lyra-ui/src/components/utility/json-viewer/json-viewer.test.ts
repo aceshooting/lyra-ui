@@ -393,6 +393,64 @@ it("classifies a rejected clipboard write as denied without rendering the raw er
   }
 });
 
+it("reports a 'failed' outcome when serializing the value itself throws, never reaching the clipboard", async () => {
+  const poison = {
+    toJSON(): never {
+      throw new Error("cannot serialize");
+    },
+  };
+  const el = await withData({ poison });
+  el.copyable = true;
+  el.strings = { copyFailed: "JSON copy failed" };
+  await el.updateComplete;
+
+  let successes = 0;
+  el.addEventListener("lr-copy", () => successes++);
+  const errored = oneEvent(el, "lr-error");
+  const failed = oneEvent(el, "lr-copy-error");
+  (
+    el.shadowRoot!.querySelector(
+      '[part="toolbar"] [part="copy-button"]'
+    ) as HTMLButtonElement
+  ).click();
+  const [, failedEvent] = await Promise.all([errored, failed]);
+
+  expect(failedEvent.detail).to.include({ ok: false, reason: "failed" });
+  expect(failedEvent.detail.error).to.be.instanceOf(Error);
+  expect(successes).to.equal(0);
+  expect(
+    document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)
+      ?.textContent
+  ).to.contain("JSON copy failed");
+});
+
+it("never reports a serialization failure once the element has already disconnected", async () => {
+  let el!: LyraJsonViewer;
+  const poison = {
+    toJSON(): never {
+      el.remove();
+      throw new Error("cannot serialize");
+    },
+  };
+  el = await withData({ poison });
+  el.copyable = true;
+  await el.updateComplete;
+
+  let errors = 0;
+  let failures = 0;
+  el.addEventListener("lr-error", () => errors++);
+  el.addEventListener("lr-copy-error", () => failures++);
+  (
+    el.shadowRoot!.querySelector(
+      '[part="toolbar"] [part="copy-button"]'
+    ) as HTMLButtonElement
+  ).click();
+  // The synchronous toJSON already ran (and disconnected the element) by the time click()
+  // returns, since copy()'s stringify step has no await before the catch block.
+  expect(errors).to.equal(0);
+  expect(failures).to.equal(0);
+});
+
 it('copies the literal string "undefined" when the root data is undefined', async () => {
   const el = await withData(undefined);
   el.copyable = true;
@@ -561,6 +619,28 @@ it("bounds valid acyclic deep rendering and reports the localized resource limit
     )} nesting levels.`
   );
   expect(limit.hasAttribute("role")).to.be.false;
+});
+
+it("bounds rendering mid-sibling when the node budget runs out partway through a container's own entries", async () => {
+  // Three sibling arrays, each individually far under the 5000-node budget (so entriesOf()
+  // never truncates any one of them on its own), but whose combined leaf count blows the
+  // shared render budget partway through the root's own entries loop -- this is the render
+  // loop's own `budget.remaining <= 0` mid-iteration break, distinct from entriesOf()'s
+  // per-container truncation exercised elsewhere.
+  const data = {
+    a: Array.from({ length: 3000 }, (_, index) => index),
+    b: Array.from({ length: 3000 }, (_, index) => index),
+    c: Array.from({ length: 3000 }, (_, index) => index),
+  };
+  const el = (await fixture(
+    html`<lr-json-viewer .data=${data}></lr-json-viewer>`
+  )) as LyraJsonViewer;
+  const rows = el.shadowRoot!.querySelectorAll(".row");
+  // 1 (root) + 3 (a/b/c) + 9000 (leaves) = 9004 possible rows -- rendering must stop short, and
+  // in fact never even starts rendering "c" at all (the root's own entries loop runs out of
+  // budget checking the third sibling, before recursing into it).
+  expect(rows.length).to.be.lessThan(9004);
+  expect(el.shadowRoot!.querySelector('[part="limit"]') !== null).to.be.true;
 });
 
 it("bounds broad search traversal instead of matching beyond the node budget", async () => {

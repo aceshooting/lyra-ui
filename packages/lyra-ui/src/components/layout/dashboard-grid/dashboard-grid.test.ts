@@ -445,6 +445,28 @@ describe("default cell composition", () => {
     expect(renderer.shadowRoot!.querySelector("lr-stat") !== null).to.be.true;
   });
 
+  it("removes and recreates an owned default cell that has lost its data-cell-id bookkeeping attribute", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const defaultCell = el.querySelector('[data-cell-id="a"]') as HTMLElement;
+    expect(defaultCell !== null).to.be.true;
+    // Simulate the internal data-cell-id bookkeeping attribute being lost while the element
+    // remains identity-tracked in ownedDefaultCells -- syncDefaultCells() can no longer recognize
+    // which cell it belongs to, so it must be discarded and a fresh one created in its place.
+    defaultCell.removeAttribute("data-cell-id");
+
+    el.columns = 6;
+    await el.updateComplete;
+
+    expect(el.contains(defaultCell)).to.be.false;
+    const replacement = el.querySelector('[data-cell-id="a"]');
+    expect(replacement !== null).to.be.true;
+    expect(replacement === defaultCell).to.be.false;
+  });
+
   it("creates default cells in the adopted grid's owner realm", async () => {
     const { iframe, frameDocument, frameWindow } = createRealmFrame();
     const FrameHTMLElement = frameWindow.HTMLElement;
@@ -2074,6 +2096,61 @@ describe("pointer drag", () => {
     expect(el.shadowRoot!.querySelector('[part="resize-handle"]') === null).to
       .be.true;
   });
+
+  it('clears (rather than sets) the collision-preview outline while dragging under collision="overlap"', async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid
+        cells-draggable
+        collision="overlap"
+        row-height="50"
+        gap="8"
+      ></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "b", x: 0, y: 2, w: 1, h: 1 },
+    ];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[data-cell-id="a"]'
+    ) as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    // A stale marker from some earlier state -- the "overlap" branch must actively clear it, not
+    // merely never set it.
+    wrapper.setAttribute("data-collision", "");
+    wrapper.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        isPrimary: true,
+        pointerId: 501,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 501,
+        clientX: 0,
+        clientY: 116,
+      })
+    );
+    let collisionDetail: { accepted: boolean } | undefined;
+    el.addEventListener(
+      "lr-collision",
+      (e) => (collisionDetail = (e as CustomEvent).detail)
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointerup", {
+        pointerId: 501,
+        clientX: 0,
+        clientY: 116,
+      })
+    );
+    // Landed on cell "b" -- a real overlap -- but collision="overlap" clears the marker instead
+    // of computing/toggling it.
+    expect(wrapper.hasAttribute("data-collision")).to.be.false;
+    expect(collisionDetail!.accepted).to.be.true;
+  });
 });
 
 describe("pointer resize", () => {
@@ -2340,6 +2417,88 @@ describe("pointer resize", () => {
       expect(wrapper.hasAttribute("data-resizing"), testCase.name).to.be.false;
       expect(releasedPointerId, testCase.name).to.equal(pointerId);
     }
+  });
+
+  it('clears (rather than sets) the collision-preview outline while resizing under collision="overlap"', async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid
+        cells-resizable
+        collision="overlap"
+        row-height="50"
+        gap="8"
+      ></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [
+      { cellId: "a", x: 0, y: 0, w: 1, h: 1 },
+      { cellId: "b", x: 0, y: 1, w: 1, h: 1 },
+    ];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[data-cell-id="a"]'
+    ) as HTMLElement;
+    const handle = el.shadowRoot!.querySelector(
+      '[part="resize-handle"]'
+    ) as HTMLElement;
+    handle.setPointerCapture = () => {};
+    wrapper.setAttribute("data-collision", "");
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        isPrimary: true,
+        pointerId: 503,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      })
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointermove", {
+        pointerId: 503,
+        clientX: 0,
+        clientY: 116,
+      })
+    );
+    let collisionDetail: { accepted: boolean } | undefined;
+    el.addEventListener(
+      "lr-collision",
+      (e) => (collisionDetail = (e as CustomEvent).detail)
+    );
+    window.dispatchEvent(
+      new PointerEvent("pointerup", {
+        pointerId: 503,
+        clientX: 0,
+        clientY: 116,
+      })
+    );
+    // Growing "a" downward by two rows overlaps cell "b", but collision="overlap" clears the
+    // marker instead of computing/toggling it.
+    expect(wrapper.hasAttribute("data-collision")).to.be.false;
+    expect(collisionDetail!.accepted).to.be.true;
+  });
+
+  it("commits nothing on pointerup when no pointermove ever preceded it (preview never applied)", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const handle = el.shadowRoot!.querySelector(
+      '[part="resize-handle"]'
+    ) as HTMLElement;
+    handle.setPointerCapture = () => {};
+    let resizes = 0;
+    el.addEventListener("lr-cell-resize", () => resizes++);
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        isPrimary: true,
+        pointerId: 504,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      })
+    );
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 504 }));
+    expect(resizes).to.equal(0);
+    expect(el.layout).to.deep.equal([{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }]);
   });
 });
 
@@ -3027,6 +3186,127 @@ describe("defensive edge cases", () => {
       window.dispatchEvent(new PointerEvent("pointercancel", { pointerId: 7 }))
     ).to.not.throw();
     expect(wrapper.hasAttribute("data-dragging")).to.be.false;
+  });
+
+  it("cancels a pending preview animation frame when a drag is aborted before the frame ever flushes", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid
+        cells-draggable
+        row-height="50"
+        gap="8"
+      ></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector(
+      '[part="cell"]'
+    ) as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    const originalRequest = window.requestAnimationFrame;
+    const originalCancel = window.cancelAnimationFrame;
+    const pending = new Set<number>();
+    let nextFrame = 700;
+    window.requestAnimationFrame = ((_callback: FrameRequestCallback) => {
+      const frame = nextFrame++;
+      pending.add(frame);
+      return frame;
+    }) as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((frame: number) => {
+      pending.delete(frame);
+    }) as typeof window.cancelAnimationFrame;
+    try {
+      wrapper.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          isPrimary: true,
+          pointerId: 601,
+          clientX: 0,
+          clientY: 0,
+          bubbles: true,
+        })
+      );
+      window.dispatchEvent(
+        new PointerEvent("pointermove", {
+          pointerId: 601,
+          clientX: 0,
+          clientY: 116,
+        })
+      );
+      expect(pending.size).to.equal(1);
+      // Revoking draggability makes canDragCell() false immediately (a synchronous read, no
+      // update cycle needed); the following pointerup aborts the gesture before its already-
+      // queued frame ever flushes, so the frame must be canceled, not merely abandoned.
+      el.cellsDraggable = false;
+      window.dispatchEvent(
+        new PointerEvent("pointerup", {
+          pointerId: 601,
+          clientX: 0,
+          clientY: 116,
+        })
+      );
+      expect(pending.size).to.equal(0);
+    } finally {
+      window.requestAnimationFrame = originalRequest;
+      window.cancelAnimationFrame = originalCancel;
+    }
+  });
+
+  it("cancels a pending preview animation frame when a resize is aborted before the frame ever flushes", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid
+        cells-resizable
+        row-height="50"
+        gap="8"
+      ></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [{ cellId: "a", x: 0, y: 0, w: 1, h: 1 }];
+    await el.updateComplete;
+    const handle = el.shadowRoot!.querySelector(
+      '[part="resize-handle"]'
+    ) as HTMLElement;
+    handle.setPointerCapture = () => {};
+    const originalRequest = window.requestAnimationFrame;
+    const originalCancel = window.cancelAnimationFrame;
+    const pending = new Set<number>();
+    let nextFrame = 800;
+    window.requestAnimationFrame = ((_callback: FrameRequestCallback) => {
+      const frame = nextFrame++;
+      pending.add(frame);
+      return frame;
+    }) as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((frame: number) => {
+      pending.delete(frame);
+    }) as typeof window.cancelAnimationFrame;
+    try {
+      handle.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          isPrimary: true,
+          pointerId: 602,
+          clientX: 0,
+          clientY: 0,
+          bubbles: true,
+        })
+      );
+      window.dispatchEvent(
+        new PointerEvent("pointermove", {
+          pointerId: 602,
+          clientX: 0,
+          clientY: 116,
+        })
+      );
+      expect(pending.size).to.equal(1);
+      el.cellsResizable = false;
+      window.dispatchEvent(
+        new PointerEvent("pointerup", {
+          pointerId: 602,
+          clientX: 0,
+          clientY: 116,
+        })
+      );
+      expect(pending.size).to.equal(0);
+    } finally {
+      window.requestAnimationFrame = originalRequest;
+      window.cancelAnimationFrame = originalCancel;
+    }
   });
 
   it("ignores a light-DOM child with no cell-id attribute while syncing default cells", async () => {

@@ -281,6 +281,40 @@ describe("mapped numeric and form contract", () => {
     el.resetValidity();
     expect(el.reportValidity()).to.be.true;
   });
+
+  it('exposes the implicit ancestor form through the form getter without an explicit override', async () => {
+    const form = (await fixture(html`
+      <form id="implicit-slider-form"><lr-slider name="gain"></lr-slider></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-slider') as LyraSlider;
+    expect(el.form?.id).to.equal('implicit-slider-form');
+    expect(el.getForm()?.id).to.equal('implicit-slider-form');
+  });
+
+  it('publishes a WA-compatible static validators catalog observing the intrinsic constraint attributes', async () => {
+    const el = (await fixture(
+      html`<lr-slider aria-label="Volume" required></lr-slider>`
+    )) as LyraSlider;
+    const catalog = (customElements.get('lr-slider') as typeof LyraSlider)
+      .validators;
+    expect(catalog).to.have.lengthOf(1);
+    expect(catalog[0].observedAttributes).to.deep.equal([
+      'required',
+      'disabled',
+      'value',
+      'min',
+      'max',
+      'step',
+    ]);
+    // The catalog entry's own checkValidity reads the live element's current
+    // ValidityState, matching el.checkValidity()/el.validity exactly.
+    expect(catalog[0].checkValidity(el).isValid).to.equal(el.checkValidity());
+    el.setCustomValidity('Nope');
+    const result = catalog[0].checkValidity(el);
+    expect(result.isValid).to.be.false;
+    expect(result.invalidKeys).to.deep.equal(['customError']);
+    expect(result.message).to.equal('Nope');
+  });
 });
 
 describe("mapped presentation surface", () => {
@@ -1241,6 +1275,35 @@ it("clicking the track (not the thumb) jumps the thumb to that point and continu
   expect(changeDetail!.value).to.equal(50);
 });
 
+it('still begins a continuable drag from a track click that lands exactly on the current value', async () => {
+  const el = (await fixture(
+    html`<lr-slider min="0" max="100" value="50" step="1"></lr-slider>`
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  thumb.setPointerCapture = () => {};
+  mockTrackWidth(el, 200);
+
+  let inputs = 0;
+  el.addEventListener('lr-input', () => inputs++);
+  // x=100 on a 200px track is exactly the current value's own 50% position,
+  // so the jump-to-click assignment is a no-op (setValueFor returns false,
+  // emitting no lr-input) -- but the drag itself must still arm so the
+  // gesture can continue seamlessly as soon as the pointer actually moves.
+  track.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 3, clientX: 100 })
+  );
+  expect(inputs).to.equal(0);
+  expect(el.valueAsNumber).to.equal(50);
+
+  window.dispatchEvent(
+    new PointerEvent('pointermove', { pointerId: 3, clientX: 150 })
+  );
+  expect(inputs).to.equal(1);
+  expect(el.valueAsNumber).to.equal(75);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 3 }));
+});
+
 it("maps zero-area track geometry to stable domain endpoints", async () => {
   const horizontal = (await fixture(
     html`<lr-slider min="0" max="100" value="55" step="1"></lr-slider>`
@@ -1501,6 +1564,40 @@ it("removes the window pointermove/pointerup listeners on disconnect so a detach
   expect(el.valueAsNumber).to.equal(before);
 });
 
+it('tolerates releasePointerCapture throwing while aborting a drag on disconnect', async () => {
+  // A real UA can already have released capture on its own (element removed,
+  // gesture interrupted) by the time abortActiveDrags() gets to call
+  // releasePointerCapture() itself -- that call is documented (see the
+  // catch's own comment in the source) as allowed to throw, and must not
+  // prevent the rest of teardown from completing.
+  const el = (await fixture(
+    html`<lr-slider value="20" step="1"></lr-slider>`
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  thumb.setPointerCapture = () => {};
+  thumb.hasPointerCapture = () => true;
+  thumb.releasePointerCapture = () => {
+    throw new DOMException('already released', 'InvalidStateError');
+  };
+
+  thumb.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 1,
+      clientX: 40,
+    })
+  );
+  expect(() => el.remove()).to.not.throw();
+
+  // Teardown still completed: a stray pointermove for the aborted gesture's
+  // id no longer moves the (now-detached) value.
+  const before = el.valueAsNumber;
+  window.dispatchEvent(
+    new PointerEvent('pointermove', { pointerId: 1, clientX: 180 })
+  );
+  expect(el.valueAsNumber).to.equal(before);
+});
+
 it("stops an in-progress drag without mutating value once disabled mid-drag", async () => {
   const el = (await fixture(
     html`<lr-slider min="0" max="100" value="20" step="1"></lr-slider>`
@@ -1722,6 +1819,31 @@ it("rounds exponential step values without collapsing them to zero", async () =>
   expect(el.value).to.equal(1e-7);
 });
 
+it('falls back to the unrounded stepped candidate when its own rounding precision factor would overflow', async () => {
+  // clampValue()'s step-rounding path multiplies the stepped candidate by
+  // 10**decimalPlaces(step) to round back to the step's own decimal
+  // precision. With a huge domain and a step whose decimal-place count
+  // implies a much finer precision than the step's own magnitude
+  // (5e-15 -> 15 decimal places -> a 1e15 factor), that multiplication can
+  // itself overflow to Infinity even though the candidate value is a
+  // perfectly ordinary finite number -- the guard must fall back to the
+  // unrounded candidate instead of poisoning the value with Infinity/NaN.
+  const form = (await fixture(html`
+    <form>
+      <lr-slider name="huge" min="0" max="1e300" step="5e-15"></lr-slider>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-slider') as LyraSlider;
+  el.valueAsNumber = 5e293;
+  await elementUpdated(el);
+  expect(Number.isFinite(el.valueAsNumber)).to.be.true;
+  expect(el.valueAsNumber).to.be.closeTo(5e293, 1e280);
+  const submitted = new FormData(form).get('huge') as string;
+  expect(submitted).to.not.equal('Infinity');
+  expect(submitted).to.not.equal('NaN');
+  expect(Number.isFinite(Number(submitted))).to.be.true;
+});
+
 it('does not render invalid CSS or an aria-valuenow="Infinity" when max is Infinity', async () => {
   // No `value` attribute: the default still has to remain finite against a hostile domain.
   const el = (await fixture(
@@ -1807,6 +1929,57 @@ it("sanitizes and submits a declared default synchronously during form.reset()",
   expect(el.value).to.equal(80);
   expect(el.valueAsNumber).to.equal(80);
   expect(new FormData(form).get("temperature")).to.equal("80");
+});
+
+it('clears the interacted flag but preserves a custom validity error across form.reset()', async function () {
+  // formResetCallback() restores the declared default and clears the
+  // dirty/interacted flags, but a setCustomValidity() error is a separate
+  // consumer-supplied layer (AnchoredValidityController) that deliberately
+  // survives a reset -- native reset semantics, matching every other
+  // form-associated control in this library.
+  let supported = false;
+  try {
+    supported =
+      typeof CustomStateSet === 'function' &&
+      document.createElement('div').matches(':state(x)') === false;
+  } catch {
+    supported = false;
+  }
+  if (!supported) this.skip();
+
+  const form = (await fixture(html`
+    <form><lr-slider name="gain" value="30"></lr-slider></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-slider') as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+
+  el.setCustomValidity('Rejected by server.');
+  thumb.dispatchEvent(
+    new FocusEvent('focusout', { bubbles: true, composed: true })
+  );
+  await elementUpdated(el);
+  expect(
+    el.matches(':state(user-invalid)'),
+    'interacted while invalid marks user-invalid'
+  ).to.be.true;
+
+  el.valueAsNumber = 90;
+  form.reset();
+  await elementUpdated(el);
+
+  expect(el.value, 'value restores to the declared default').to.equal(30);
+  expect(el.validity.customError, 'the custom error survives the reset').to.be
+    .true;
+  expect(el.validationMessage).to.equal('Rejected by server.');
+  expect(el.checkValidity()).to.be.false;
+  expect(
+    el.matches(':state(user-invalid)'),
+    'the interacted flag is cleared by reset even though the error persists'
+  ).to.be.false;
+  expect(
+    el.matches(':state(invalid)'),
+    'still invalid -- just no longer counted as user-interacted-with'
+  ).to.be.true;
 });
 
 it("formDisabledCallback disables the control via a fieldset", async () => {

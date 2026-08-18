@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import type { PropertyValues } from "lit";
 import "./time-range.js";
-import type { LyraTimeRange } from "./time-range.js";
+import type { LyraTimeRange, TimeRangePreset } from "./time-range.js";
 import { styles } from "./time-range.styles.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
@@ -131,6 +131,17 @@ it("forwards host focus()/blur() to the start handle", async () => {
   expect(el.shadowRoot!.activeElement === startHandle).to.be.true;
   el.blur();
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
+});
+
+it('no-ops blur() safely when no handle currently has focus (falls back to the start handle)', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`
+  )) as LyraTimeRange;
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
+  // Nothing owns focus here, so blur() takes its fallback branch (querying `[part="handle-start"]`
+  // directly) instead of the `activeElementIn(this.shadowRoot)` match used above.
+  expect(() => el.blur()).to.not.throw();
+  expect(el.shadowRoot!.activeElement === null).to.be.true;
 });
 
 it("relays each handle focus/blur as one native pair, and never lr-focus/lr-blur", async () => {
@@ -567,6 +578,73 @@ it("stops an in-progress drag without mutating start/end once disabled mid-drag"
   expect(changeFired).to.be.false;
 });
 
+it('aborts a still-tracked drag on the next pointermove when :disabled starts matching before formDisabledCallback updates the cached state', async () => {
+  const el = (await fixture(
+    html`<lr-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      step="1"
+    ></lr-time-range>`
+  )) as LyraTimeRange;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector(
+    '[part="handle-start"]'
+  ) as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 0,
+      width: 200,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    } as DOMRect);
+
+  startHandle.dispatchEvent(
+    new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, clientX: 40 })
+  );
+  // liveDisabled ORs in a raw `this.matches(':disabled')` specifically to cover the UA's
+  // synchronous fieldset :disabled cascade landing before formDisabledCallback runs (see that
+  // getter's own doc comment). Neither `el.disabled = true` nor `formDisabledCallback()` alone
+  // reaches onPointerMove's liveDisabled branch, since both already call abortActiveGestures()
+  // themselves before any further pointermove can arrive. Stub matches() to force exactly that
+  // window instead, the same way other tests here stub getBoundingClientRect/setPointerCapture.
+  const originalMatches = el.matches.bind(el);
+  el.matches = (selectors: string): boolean =>
+    selectors === ":disabled" ? true : originalMatches(selectors);
+
+  let inputFired = false;
+  el.addEventListener("lr-input", () => (inputFired = true));
+  const startBeforeMove = el.start;
+  try {
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId: 1, clientX: 100 })
+    );
+  } finally {
+    el.matches = originalMatches;
+  }
+
+  expect(inputFired, "the drag must abort instead of mutating start/end").to.be
+    .false;
+  expect(el.start).to.equal(startBeforeMove);
+
+  // The drag must also be fully torn down: with matches() restored (liveDisabled false again), a
+  // further pointermove must still be a no-op because the drag entry itself is already gone.
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 150 })
+  );
+  expect(inputFired).to.be.false;
+  expect(el.start).to.equal(startBeforeMove);
+});
+
 it("does not commit an already-changed drag when directly disabled before pointerup", async () => {
   const el = (await fixture(
     html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`
@@ -601,6 +679,36 @@ it("does not commit an already-changed drag when fieldset-disabled before pointe
   fieldset.disabled = true;
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 102 }));
   expect(changes).to.deep.equal([]);
+});
+
+it('refuses to start a brand-new drag from a direct handle pointerdown while already disabled', async () => {
+  const el = (await fixture(
+    html`<lr-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      step="1"
+      disabled
+    ></lr-time-range>`
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector(
+    '[part="handle-start"]'
+  ) as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  // The handle's own pointerdown listener is unconditional -- only beginDrag() itself gates on
+  // liveDisabled -- so this exercises that guard directly rather than onBasePointerDown's separate
+  // top-of-function check (covered by the click-to-seek "ignores a track click while disabled" test).
+  startHandle.dispatchEvent(
+    new PointerEvent("pointerdown", { bubbles: true, pointerId: 5, clientX: 40 })
+  );
+  let inputFired = false;
+  el.addEventListener("lr-input", () => (inputFired = true));
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 5, clientX: 100 })
+  );
+  expect(inputFired, "no drag was ever armed").to.be.false;
+  expect(el.start).to.equal(20);
 });
 
 it("drags the start handle with pointer events and emits lr-input then lr-change on release", async () => {
@@ -840,6 +948,48 @@ it("pointer-maps the midpoint of the full finite number range without overflowin
   );
   expect(el.start).to.equal(0);
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 71 }));
+});
+
+it('maps a pointer position to the domain minimum instead of NaN when the track snapshot has zero width', async () => {
+  const el = (await fixture(
+    html`<lr-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      step="1"
+    ></lr-time-range>`
+  )) as LyraTimeRange;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector(
+    '[part="handle-start"]'
+  ) as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  // A zero-width rect, snapshotted at drag start, makes valueAtPointer()'s
+  // (clientX - rect.left) / rect.width divide by zero; it must fall back to a raw ratio of 0
+  // (the domain minimum) rather than propagating NaN into start/end.
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    } as DOMRect);
+
+  startHandle.dispatchEvent(
+    new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, clientX: 40 })
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 100 })
+  );
+  expect(el.start).to.equal(0);
 });
 
 it("keeps live values but suppresses lr-change and tears down on pointercancel/lostpointercapture", async () => {
@@ -1468,6 +1618,112 @@ it("tracks concurrent drags by pointerId so a second pointer cannot hijack the f
     new PointerEvent("pointermove", { pointerId: 2, clientX: 190 })
   );
   expect(el.end).to.equal(95);
+});
+
+it('ignores a stray pointermove for an already-ended pointerId while a second concurrent drag is still live', async () => {
+  const el = (await fixture(
+    html`<lr-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      step="1"
+    ></lr-time-range>`
+  )) as LyraTimeRange;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector(
+    '[part="handle-start"]'
+  ) as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector(
+    '[part="handle-end"]'
+  ) as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  endHandle.setPointerCapture = () => {};
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 0,
+      width: 200,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    } as DOMRect);
+
+  // Two concurrent drags, then only the first (pointerId 1) is released -- the window-level
+  // pointermove listener stays attached because pointerId 2's drag is still active, so a further
+  // pointermove for the now-untracked pointerId 1 actually reaches onPointerMove() (unlike ending
+  // the only drag, which tears the listener down entirely) and must find no tracked entry there.
+  startHandle.dispatchEvent(
+    new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, clientX: 40 })
+  );
+  endHandle.dispatchEvent(
+    new PointerEvent("pointerdown", { bubbles: true, pointerId: 2, clientX: 160 })
+  );
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
+
+  const startAfterRelease = el.start;
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 180 })
+  );
+  expect(el.start, "pointerId 1 no longer owns a drag").to.equal(
+    startAfterRelease
+  );
+
+  // pointerId 2's own drag is unaffected.
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 2, clientX: 190 })
+  );
+  expect(el.end).to.equal(95);
+});
+
+it('ignores a pointerup for an untracked pointerId without disturbing an active drag', async () => {
+  const el = (await fixture(
+    html`<lr-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      step="1"
+    ></lr-time-range>`
+  )) as LyraTimeRange;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector(
+    '[part="handle-start"]'
+  ) as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 0,
+      width: 200,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    } as DOMRect);
+
+  startHandle.dispatchEvent(
+    new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, clientX: 40 })
+  );
+  // A pointerup for a pointerId that never started a drag on this element (e.g. a second, unrelated
+  // pointer lifting elsewhere) must be a pure no-op -- endDrag() finds no tracked entry for it and
+  // must not disturb the real in-progress drag.
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 999 }));
+
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 100 })
+  );
+  expect(el.start, "the real drag is still live").to.equal(50);
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
 
 it("does not poison start/end with NaN when step is 0", async () => {
@@ -2111,6 +2367,30 @@ it("jumps to the full domain bound with Home/End when unconstrained by the sibli
   expect(el.end).to.equal(100);
 });
 
+it('does not mark the keyboard gesture changed when End is pressed while already at the reachable maximum', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="50" end="50"></lr-time-range>`
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector(
+    '[part="handle-start"]'
+  ) as HTMLElement;
+  const events: string[] = [];
+  for (const type of ["lr-input", "lr-change"]) {
+    el.addEventListener(type, () => events.push(type));
+  }
+  // reachableBounds('start').max is the sibling's own value (50), and start is already there --
+  // setValue() returns false, so the `|| this.keyboardChanged` fallback on the End branch must
+  // leave keyboardChanged exactly as it already was instead of forcing it true.
+  startHandle.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "End", bubbles: true })
+  );
+  startHandle.dispatchEvent(
+    new KeyboardEvent("keyup", { key: "End", bubbles: true })
+  );
+  expect(el.start).to.equal(50);
+  expect(events, "no value changed, so nothing was emitted").to.deep.equal([]);
+});
+
 it("moves by a larger increment with PageUp/PageDown than a single ArrowUp/ArrowDown step", async () => {
   const el = (await fixture(
     html`<lr-time-range
@@ -2193,6 +2473,45 @@ it("owns a bounded readonly snapshot of assigned preset rows", async () => {
   expect(
     el.shadowRoot!.querySelectorAll('[part="preset-button"]')
   ).to.have.lengthOf(1);
+});
+
+it('drops malformed preset rows while keeping the well-formed ones, in their original relative order', async () => {
+  const malformed: unknown[] = [
+    { label: "Good one", start: 0, end: 10 },
+    null,
+    "not an object",
+    { label: 42, start: 0, end: 10 },
+    { label: "Missing end", start: 0 },
+    { label: "Another good one", start: 20, end: 30 },
+  ];
+  const el = (await fixture(
+    html`<lr-time-range
+      .presets=${malformed as TimeRangePreset[]}
+    ></lr-time-range>`
+  )) as LyraTimeRange;
+  expect(el.presets).to.deep.equal([
+    { label: "Good one", start: 0, end: 10 },
+    { label: "Another good one", start: 20, end: 30 },
+  ]);
+  expect(
+    el.shadowRoot!.querySelectorAll('[part="preset-button"]')
+  ).to.have.lengthOf(2);
+});
+
+it('invalidates only the one preset row whose property getter throws, keeping later rows reachable', async () => {
+  const hostile = {
+    label: "Hostile",
+    start: 0,
+    get end(): number {
+      throw new Error("boom");
+    },
+  };
+  const el = (await fixture(
+    html`<lr-time-range
+      .presets=${[hostile, { label: "Safe", start: 5, end: 15 }]}
+    ></lr-time-range>`
+  )) as LyraTimeRange;
+  expect(el.presets).to.deep.equal([{ label: "Safe", start: 5, end: 15 }]);
 });
 
 it('renders a [part="presets"] row of [part="preset-button"] buttons when presets is non-empty', async () => {
@@ -2446,6 +2765,31 @@ it("does not let a disabled preset button be clicked", async () => {
   button.click();
   await el.updateComplete;
   expect(el.start).to.equal(20);
+  expect(el.end).to.equal(80);
+});
+
+it("still refuses to apply a preset when the button's disabled attribute has not re-rendered yet (sync disable / async render gap)", async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`
+  )) as LyraTimeRange;
+  el.presets = PRESETS;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[part="preset-button"]'
+  )!;
+  expect(button.disabled, "not yet disabled").to.be.false;
+
+  // Disabling flips `_disabled` synchronously (see the `disabled` setter's own doc comment), but
+  // the button's `?disabled=${effectiveDisabled}` binding only re-renders on the next (async) Lit
+  // update -- a click delivered in exactly this window still reaches the native, still-enabled
+  // button's click handler, so applyPreset() has to refuse it on its own rather than relying on
+  // the button already being disabled in the DOM.
+  el.disabled = true;
+  expect(button.disabled, "the DOM has not re-rendered yet").to.be.false;
+
+  button.click();
+  await el.updateComplete;
+  expect(el.start, "the preset must not have applied").to.equal(20);
   expect(el.end).to.equal(80);
 });
 
@@ -2740,6 +3084,31 @@ it("keeps near-overflow domains and tiny steps finite during keyboard interactio
   expect(start.getAttribute("style")).to.not.contain("Infinity");
 });
 
+it('keeps a step-rounded value finite by falling back to the raw candidate when candidate*factor itself overflows', async () => {
+  const el = (await fixture(
+    html`<lr-time-range></lr-time-range>`
+  )) as LyraTimeRange;
+  el.min = 0;
+  el.max = Number.MAX_VALUE;
+  el.start = 0;
+  el.end = 9e307;
+  el.step = 0.7;
+  await el.updateComplete;
+  const startHandle = el.shadowRoot!.querySelector(
+    '[part="handle-start"]'
+  ) as HTMLElement;
+  // End jumps start straight to the sibling's value (9e307). Rounding that to step's own decimal
+  // precision needs `candidate * factor` (factor=10 for a one-decimal-place step), which itself
+  // overflows to Infinity at this magnitude -- clamp() must fall back to the raw, unrounded
+  // candidate instead of letting that intermediate overflow poison the result.
+  startHandle.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "End", bubbles: true })
+  );
+  await el.updateComplete;
+  expect(Number.isFinite(el.start)).to.be.true;
+  expect(el.start).to.equal(9e307);
+});
+
 it("keeps endpoint hit geometry inside a 320px allocation", async () => {
   const el = (await fixture(html`
     <lr-time-range
@@ -2900,6 +3269,40 @@ describe("lr-time-range setCustomValidity()", () => {
     expect(el.validity.customError, "custom error cleared").to.be.false;
     expect(el.checkValidity()).to.be.true;
     expect(el.validationMessage).to.equal("");
+  });
+
+  it('treats a non-string (null/undefined) message the same as an empty string, for a caller that violates the TS signature', async () => {
+    const el = (await fixture(
+      html`<lr-time-range
+        min="0"
+        max="100"
+        start="20"
+        end="80"
+      ></lr-time-range>`
+    )) as LyraTimeRange;
+    el.setCustomValidity("Server says no");
+    expect(el.checkValidity()).to.be.false;
+
+    (el.setCustomValidity as (message: unknown) => void)(null);
+    expect(el.validity.customError, "a nullish message clears like ''").to.be
+      .false;
+    expect(el.checkValidity()).to.be.true;
+    expect(el.validationMessage).to.equal("");
+  });
+
+  it('resolves a null validity anchor without throwing when setCustomValidity() runs before the first render', async () => {
+    const el = document.createElement("lr-time-range") as LyraTimeRange;
+    // Before the element is connected, render() has not run yet, so [VALIDITY_ANCHOR]() finds no
+    // [part="handle-start"] in the (still-empty) shadow root and falls through to null.
+    expect(() => el.setCustomValidity("Server says no")).to.not.throw();
+    document.body.append(el);
+    await el.updateComplete;
+    try {
+      expect(el.validationMessage).to.equal("Server says no");
+      expect(el.validity.customError).to.be.true;
+    } finally {
+      el.remove();
+    }
   });
 
   it("drives the valid/invalid custom states", async function () {
@@ -3219,6 +3622,23 @@ it("exposes the native label and validation surface of its form association", as
   expect(el.validity.valid).to.equal(true);
 });
 
+it('reflects the writable `form` IDL through the `form` content attribute (string id, element, and null)', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`
+  )) as LyraTimeRange;
+  const otherForm = document.createElement("form");
+  otherForm.id = "external-form";
+
+  el.form = "external-form";
+  expect(el.getAttribute("form")).to.equal("external-form");
+
+  el.form = otherForm;
+  expect(el.getAttribute("form")).to.equal("external-form");
+
+  el.form = null;
+  expect(el.hasAttribute("form")).to.be.false;
+});
+
 describe("ElementInternals fallback", () => {
   /** A consumer test environment such as happy-dom may not implement form association, but the
    * public range and validity APIs must still be safe to use. */
@@ -3392,6 +3812,24 @@ describe("click-to-seek on the track", () => {
     expect(el.start).to.equal(30);
   });
 
+  it('breaks a tie between equidistant handles toward the handle that can actually travel toward the click', async () => {
+    const el = (await fixture(
+      html`<lr-time-range
+        min="0"
+        max="100"
+        start="30"
+        end="70"
+        step="1"
+      ></lr-time-range>`
+    )) as LyraTimeRange;
+    // value 50 is exactly as far from start (30) as from end (70).
+    seek(el, 100);
+    expect(el.end, "the tie goes to end since 50 is not less than start").to.equal(
+      50
+    );
+    expect(el.start).to.equal(30);
+  });
+
   it("picks the end handle when the click lands nearer to it", async () => {
     const el = (await fixture(
       html`<lr-time-range
@@ -3405,6 +3843,45 @@ describe("click-to-seek on the track", () => {
     seek(el, 180); // value 90
     expect(el.end).to.equal(90);
     expect(el.start).to.equal(40);
+  });
+
+  it("breaks a tied nearest-handle distance toward the end handle, matching lr-slider's tie rule", async () => {
+    const el = (await fixture(
+      html`<lr-time-range
+        min="0"
+        max="100"
+        start="50"
+        end="50"
+        step="1"
+      ></lr-time-range>`
+    )) as LyraTimeRange;
+    // Both handles rest on the same value (50), and the click lands exactly there too, so the
+    // distance to each handle is tied (0). The tie-break picks 'end' whenever the target is not
+    // strictly less than 'start' -- see nearestHandle()'s own doc comment.
+    seek(el, 100); // 50% of a 200px track -> value 50
+    const active = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(active?.getAttribute("part")).to.equal("handle-end");
+  });
+
+  it('breaks a tied nearest-handle distance toward the start handle when the click lands to its left', async () => {
+    const el = (await fixture(
+      html`<lr-time-range
+        min="0"
+        max="100"
+        start="50"
+        end="50"
+        step="1"
+      ></lr-time-range>`
+    )) as LyraTimeRange;
+    // Same co-located tie as the "toward the end handle" test above, but the click this time lands
+    // strictly LEFT of the shared value -- the other arm of nearestHandle()'s `target < start ?
+    // 'start' : 'end'` tie-break ternary, which the "target === start" case above cannot reach
+    // since a tied target that is not strictly less than start always falls through to 'end'.
+    seek(el, 60); // 30% of a 200px track -> value 30, tied between the two co-located handles
+    const active = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(active?.getAttribute("part")).to.equal("handle-start");
+    expect(el.start).to.equal(30);
+    expect(el.end).to.equal(50);
   });
 
   it("moves focus to the handle it jumped, so arrow keys continue the same gesture", async () => {
@@ -3482,6 +3959,73 @@ describe("click-to-seek on the track", () => {
     expect(el.end).to.equal(60);
   });
 
+  it('ignores a track click when the track has collapsed to zero width', async () => {
+    const el = (await fixture(
+      html`<lr-time-range
+        min="0"
+        max="100"
+        start="40"
+        end="60"
+        step="1"
+      ></lr-time-range>`
+    )) as LyraTimeRange;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const track = el.shadowRoot!.querySelector(
+      '[part="track"]'
+    ) as HTMLElement;
+    base.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+        toJSON() {
+          return {};
+        },
+      } as DOMRect);
+    track.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        composed: true,
+        pointerId: 1,
+        clientX: 20,
+      })
+    );
+    expect(el.start).to.equal(40);
+    expect(el.end).to.equal(60);
+  });
+
+  it("does not mark the gesture changed when a track click lands exactly on the nearer handle's current value", async () => {
+    const el = (await fixture(
+      html`<lr-time-range
+        min="0"
+        max="100"
+        start="40"
+        end="60"
+        step="1"
+      ></lr-time-range>`
+    )) as LyraTimeRange;
+    let inputs = 0;
+    let changes = 0;
+    el.addEventListener("lr-input", () => inputs++);
+    el.addEventListener("lr-change", () => changes++);
+    seek(el, 80); // 40% of a 200px track -> value 40, exactly the current start
+    expect(el.start).to.equal(40);
+    expect(
+      inputs,
+      "setValue() returned false, so no move was recorded"
+    ).to.equal(0);
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
+    expect(
+      changes,
+      "an unchanged gesture commits nothing on release"
+    ).to.equal(0);
+  });
+
   it("unset-regression: a pointerdown that starts on a handle is still a plain handle drag", async () => {
     const el = (await fixture(
       html`<lr-time-range
@@ -3516,5 +4060,65 @@ describe("click-to-seek on the track", () => {
     );
     expect(el.end).to.equal(70);
     expect(base.getBoundingClientRect().width).to.equal(200);
+  });
+
+  it('refuses a track click that would start a second drag from a different window while one is already active', async () => {
+    const el = (await fixture(
+      html`<lr-time-range
+        min="0"
+        max="100"
+        start="40"
+        end="60"
+        step="1"
+      ></lr-time-range>`
+    )) as LyraTimeRange;
+    const base = pinTrack(el);
+    const startHandle = el.shadowRoot!.querySelector(
+      '[part="handle-start"]'
+    ) as HTMLElement;
+
+    // A first drag begins normally, from the real window -- beginDrag() records `this.dragWindow`
+    // from it.
+    startHandle.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, clientX: 40 })
+    );
+
+    // beginDrag()'s cross-window guard (`!firstDrag && this.dragWindow !== dragWindow`) exists to
+    // refuse a second concurrent drag arriving from a different window than the one already
+    // tracked. In real usage that can only happen after an iframe adoption, but adoptedCallback()
+    // itself always clears `this.drags` first (see its own doc comment) -- so with a real adoption
+    // `firstDrag` is back to `true` by the time any new pointerdown arrives, and the guard never
+    // actually engages. Forcing `[part="base"]`'s reported owner window to differ, without an actual
+    // adoption in between, is the only way to exercise this belt-and-suspenders check directly.
+    const fakeWindow = {} as unknown as Window;
+    Object.defineProperty(base, "ownerDocument", {
+      configurable: true,
+      get: () => ({ defaultView: fakeWindow }),
+    });
+
+    let inputs = 0;
+    el.addEventListener("lr-input", () => inputs++);
+    const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+    track.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        composed: true,
+        pointerId: 2,
+        clientX: 100,
+      })
+    );
+
+    // onBasePointerDown's own `if (!drag) return;` must refuse the click just as beginDrag() does
+    // internally -- neither handle moves and nothing is emitted for the rejected second pointer.
+    expect(el.start).to.equal(40);
+    expect(el.end).to.equal(60);
+    expect(inputs).to.equal(0);
+
+    // The first (real-window) drag is completely unaffected by the refused second one.
+    window.dispatchEvent(
+      new PointerEvent("pointermove", { pointerId: 1, clientX: 100 })
+    );
+    expect(el.start).to.equal(50);
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
   });
 });

@@ -339,6 +339,140 @@ describe("custom filters", () => {
     }).format(["Ada", "Lin"]);
     expect(chip.textContent!.trim()).to.equal(`Reviewers: ${display}`);
   });
+
+  it("formats a custom filter with no formatValue and a boolean value via String()", async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: "flag",
+        label: "Flag",
+        type: "custom",
+        custom: {
+          adapter: { valueFromEvent: () => true, clearValue: false },
+          render: () => html`<span></span>`,
+        },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    el.value = { flag: true };
+    await el.updateComplete;
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    expect(chip.textContent!.trim()).to.equal("Flag: true");
+  });
+
+  it("drops a stale custom control write after its filter schema has been superseded", async () => {
+    let capturedSetValue: ((value: string) => void) | undefined;
+    const buildFilters = (): LyraFilterBarFilterDefinition[] => [
+      {
+        filterId: "flag",
+        label: "Flag",
+        type: "custom",
+        custom: {
+          adapter: { valueFromEvent: () => undefined, clearValue: "" },
+          render: (context) => {
+            capturedSetValue = context.setValue;
+            return html`<span></span>`;
+          },
+        },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${buildFilters()}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    expect(capturedSetValue).to.exist;
+    const staleSetValue = capturedSetValue!;
+
+    // Reassigning filters deep-clones fresh definitions and bumps the schema generation,
+    // superseding the closure captured by the first render above.
+    el.filters = buildFilters();
+    await el.updateComplete;
+
+    let fired = false;
+    el.addEventListener("lr-input", () => (fired = true));
+    staleSetValue("late");
+    await el.updateComplete;
+
+    expect(fired, "a superseded custom context must not commit a value").to.be.false;
+    expect(el.value).to.deep.equal({});
+  });
+
+  it("ignores a stale custom control focusout event superseded by a schema change, but honors a fresh one", async () => {
+    let staleOnFocusout: (() => void) | undefined;
+    let freshOnFocusout: (() => void) | undefined;
+    const buildFilters = (): LyraFilterBarFilterDefinition[] => [
+      {
+        filterId: "flag",
+        label: "Flag",
+        type: "custom",
+        required: true,
+        custom: {
+          adapter: { valueFromEvent: () => "", clearValue: "" },
+          render: (context) => {
+            if (!staleOnFocusout) staleOnFocusout = context.onFocusout;
+            freshOnFocusout = context.onFocusout;
+            return html`<span data-error-text=${context.errorText}></span>`;
+          },
+        },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${buildFilters()}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    expect(staleOnFocusout).to.exist;
+
+    el.filters = buildFilters();
+    await el.updateComplete;
+    expect(freshOnFocusout).to.exist;
+    expect(freshOnFocusout).to.not.equal(staleOnFocusout);
+
+    staleOnFocusout!();
+    await el.updateComplete;
+    expect(
+      control(el, "flag").querySelector("span")!.getAttribute("data-error-text"),
+      "a superseded closure must not reveal the current control's error"
+    ).to.equal("");
+
+    freshOnFocusout!();
+    await el.updateComplete;
+    expect(
+      control(el, "flag").querySelector("span")!.getAttribute("data-error-text")
+    ).to.equal("This field is required.");
+  });
+
+  it("renews the schema abort signal on reconnect so a re-attached custom control is not permanently aborted", async () => {
+    let latestSignal: AbortSignal | undefined;
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: "flag",
+        label: "Flag",
+        type: "custom",
+        custom: {
+          adapter: { valueFromEvent: () => "", clearValue: "" },
+          render: (context) => {
+            latestSignal = context.signal;
+            return html`<span></span>`;
+          },
+        },
+      },
+    ];
+    const container = await fixture<HTMLDivElement>(html`<div>
+      <lr-filter-bar .filters=${filters}></lr-filter-bar>
+    </div>`);
+    const el = container.querySelector("lr-filter-bar") as LyraFilterBar;
+    await el.updateComplete;
+    const firstSignal = latestSignal;
+    expect(firstSignal?.aborted).to.be.false;
+
+    el.remove();
+    expect(firstSignal?.aborted, "disconnect aborts the in-flight schema signal").to.be.true;
+
+    container.append(el);
+    await el.updateComplete;
+
+    expect(latestSignal, "reconnect re-renders with a fresh signal").to.not.equal(firstSignal);
+    expect(latestSignal?.aborted).to.be.false;
+  });
 });
 
 it("forwards each filter definition's label to its composed control's own label prop", async () => {
@@ -391,6 +525,79 @@ it("keeps the first unique, nonempty, whitespace-stable filterId", async () => {
       field.getAttribute("data-filter-id")
     )
   ).to.deep.equal(["status"]);
+});
+
+describe("filters setter validation", () => {
+  it("treats a non-array truthy filters value as empty rather than throwing", async () => {
+    const el = (await fixture(html`<lr-filter-bar></lr-filter-bar>`)) as LyraFilterBar;
+    el.filters = ({ not: "an array" } as unknown) as LyraFilterBarFilterDefinition[];
+    await el.updateComplete;
+    expect(el.filters).to.deep.equal([]);
+  });
+
+  it("drops a select/combobox definition whose options is not an array, keeping well-formed ones", async () => {
+    const filters = [
+      { filterId: "bad-select", label: "Bad select", type: "select" },
+      { filterId: "bad-combo", label: "Bad combo", type: "combobox", options: "not-an-array" },
+      { filterId: "good", label: "Good", type: "select", options: [{ value: "a", label: "A" }] },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    );
+    expect(el.filters.map((f) => f.filterId)).to.deep.equal(["good"]);
+  });
+
+  it("drops a custom definition with no adapter, keeping well-formed ones", async () => {
+    const filters = [
+      {
+        filterId: "bad-custom",
+        label: "Bad custom",
+        type: "custom",
+        custom: { render: () => html`<span></span>` },
+      },
+      { filterId: "good", label: "Good", type: "select", options: [] },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    );
+    expect(el.filters.map((f) => f.filterId)).to.deep.equal(["good"]);
+  });
+
+  it("deduplicates a circular reference inside a filter definition instead of recursing forever", async () => {
+    const circular: Record<string, unknown> = { tone: "urgent" };
+    circular["self"] = circular;
+    const filters = [
+      {
+        filterId: "status",
+        label: "Status",
+        type: "select",
+        options: [{ value: "open", label: "Open" }],
+        meta: circular,
+      },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    );
+    expect(el.filters.length).to.equal(1);
+    const stored = el.filters[0] as unknown as { meta: { tone: string; self: unknown } };
+    expect(stored.meta.tone).to.equal("urgent");
+    expect(stored.meta.self === stored.meta).to.be.true;
+  });
+});
+
+it("falls back to rendering lr-select for an unrecognized filter type", async () => {
+  const filters = [
+    {
+      filterId: "weird",
+      label: "Weird",
+      type: "unknown-type",
+      options: [{ value: "a", label: "A" }],
+    },
+  ] as unknown as LyraFilterBarFilterDefinition[];
+  const el = await fixture<LyraFilterBar>(
+    html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+  );
+  expect(control(el, "weird").localName).to.equal("lr-select");
 });
 
 describe("value getter/setter (URL/state serialization contract)", () => {
@@ -859,6 +1066,60 @@ describe("active-filter chips", () => {
     expect(
       controlAfterSoleRemoval.shadowRoot!.activeElement?.localName
     ).to.equal("button");
+  });
+
+  it("supersedes an in-flight focus repair when a second removal starts before the first settles", async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: "first",
+        label: "First",
+        type: "select",
+        options: [{ value: "yes", label: "Yes" }],
+      },
+      {
+        filterId: "second",
+        label: "Second",
+        type: "select",
+        options: [{ value: "yes", label: "Yes" }],
+      },
+      {
+        filterId: "third",
+        label: "Third",
+        type: "select",
+        options: [{ value: "yes", label: "Yes" }],
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    el.value = { first: "yes", second: "yes", third: "yes" };
+    await el.updateComplete;
+
+    const chipFor = (filterId: string) =>
+      el.shadowRoot!.querySelector(
+        `[part="chip"][value="${filterId}"]`
+      ) as HTMLElement & { updateComplete: Promise<unknown> };
+    await Promise.all([chipFor("first").updateComplete, chipFor("second").updateComplete]);
+
+    const focusAndRemove = (filterId: string): void => {
+      const chip = chipFor(filterId);
+      chip.focus();
+      const remove = chip.shadowRoot!.querySelector(
+        '[part="remove-button"]'
+      ) as HTMLButtonElement;
+      remove.click();
+    };
+
+    // Both removals fire synchronously, before either's `updateComplete`-chained focus repair
+    // has a chance to run -- the second must win, and the first (now stale) must be a no-op.
+    focusAndRemove("first");
+    focusAndRemove("second");
+    await el.updateComplete;
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal({ third: "yes" });
+    expect(el.shadowRoot!.activeElement?.localName).to.equal("lr-chip");
+    expect(el.shadowRoot!.activeElement?.getAttribute("value")).to.equal("third");
   });
 
   it("moves a sole custom-filter chip's focus to its rendered control after removal", async () => {

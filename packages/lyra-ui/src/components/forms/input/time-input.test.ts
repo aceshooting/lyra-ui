@@ -252,6 +252,29 @@ describe('lr-time-input segmented field', () => {
     expect(el.validity.stepMismatch).to.equal(true);
   });
 
+  it('publishes a WA-compatible static validators catalog observing the intrinsic constraint attributes', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input required></lr-time-input>`);
+    const ctor = customElements.get('lr-time-input') as unknown as {
+      validators: Array<{
+        observedAttributes?: string[];
+        checkValidity: (element: LyraTimeInput) => { isValid: boolean; message: string; invalidKeys: string[] };
+      }>;
+    };
+    const catalog = ctor.validators;
+    expect(catalog).to.have.lengthOf(1);
+    expect(catalog[0]!.observedAttributes).to.deep.equal(['required', 'disabled', 'readonly', 'value', 'min', 'max', 'step']);
+
+    let result = catalog[0]!.checkValidity(el);
+    expect(result.isValid).to.equal(false);
+    expect(result.invalidKeys).to.include('valueMissing');
+    expect(result.message).to.equal(el.validationMessage);
+
+    el.value = '09:30';
+    result = catalog[0]!.checkValidity(el);
+    expect(result.isValid).to.equal(true);
+    expect(result.message).to.equal('');
+  });
+
   it('matches native time step-base precedence through live values, invalid bases, and reset', async () => {
     const form = await fixture<HTMLFormElement>(html`
       <form>
@@ -401,6 +424,45 @@ describe('lr-time-input popup and actions', () => {
     expect(el.shadowRoot!.activeElement === segment(el, 'minute')).to.be.true;
   });
 
+  it('roves a popup column backward with ArrowUp, wrapping from the first option to the last', async () => {
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" value="10:05"></lr-time-input>`);
+    await el.show();
+    await el.updateComplete;
+    const selected = el.shadowRoot!
+      .querySelector<HTMLButtonElement>('[data-column="minute"][aria-selected="true"]')!;
+    selected.focus();
+    key(selected, 'ArrowUp');
+    const previous = el.shadowRoot!.activeElement as HTMLButtonElement;
+    expect(previous.dataset['value']).to.equal('4');
+
+    key(previous, 'Home');
+    const first = el.shadowRoot!.activeElement as HTMLButtonElement;
+    key(first, 'ArrowUp');
+    const wrapped = el.shadowRoot!.activeElement as HTMLButtonElement;
+    expect(wrapped.dataset['value'], 'ArrowUp from the first option wraps to the last').to.equal('59');
+  });
+
+  it('ignores popup column keydowns while disabled and for keys outside the roving set', async () => {
+    const disabled = await fixture<LyraTimeInput>(
+      html`<lr-time-input disabled hour-format="24" value="10:05"></lr-time-input>`,
+    );
+    const option = disabled.shadowRoot!.querySelector<HTMLButtonElement>('[role="option"]')!;
+    key(option, 'ArrowDown');
+    expect(disabled.shadowRoot!.activeElement === null, 'no focus change while disabled').to.equal(true);
+
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" value="10:05"></lr-time-input>`);
+    await el.show();
+    await el.updateComplete;
+    const selected = el.shadowRoot!
+      .querySelector<HTMLButtonElement>('[data-column="minute"][aria-selected="true"]')!;
+    selected.focus();
+    key(selected, 'a');
+    expect(
+      el.shadowRoot!.activeElement === selected,
+      'a key outside Arrow/Home/End leaves focus and the roving tab stop untouched',
+    ).to.equal(true);
+  });
+
   it('derives offset, hourly, multi-hour, and overnight popup options from the full valid grid', async () => {
     const offset = await fixture<LyraTimeInput>(html`
       <lr-time-input hour-format="24" step="600" min="00:05" value="00:05"></lr-time-input>
@@ -434,6 +496,48 @@ describe('lr-time-input popup and actions', () => {
     `);
     expect(optionValues(overnight, 'minute')).to.deep.equal([30]);
     expect(optionValues(overnight, 'hour')).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 22, 23]);
+  });
+
+  it('derives the picker grid from a sub-second-precision step by keeping only genuinely whole-second candidates', async () => {
+    const optionValues = (el: LyraTimeInput, name: string): number[] =>
+      [...el.shadowRoot!.querySelectorAll<HTMLElement>(`[data-column="${name}"]`)]
+        .map((option) => Number(option.dataset['value']));
+
+    // stepMilliseconds >= 1000 but not an exact multiple of 1000 (1.5s): half the raw grid points
+    // land at a half-second offset, forcing the wholeSecond check's second OR operand (closeness to
+    // the *next* whole second, evaluated only once the first operand is false) to actually run
+    // instead of always short-circuiting on the first.
+    const coarse = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" step="1.5"></lr-time-input>`);
+    await coarse.show();
+    await coarse.updateComplete;
+    const coarseSeconds = optionValues(coarse, 'second');
+    expect(coarseSeconds.every((value) => value % 3 === 0), 'only every third whole second lands on a 1.5s grid').to
+      .equal(true);
+    expect(coarseSeconds).to.include(0);
+    expect(coarseSeconds).to.not.include(1);
+
+    // stepMilliseconds < 1000 (300ms) walks the day one whole second at a time instead, still
+    // finding only the whole seconds that happen to fall exactly on the sub-second step.
+    const fine = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" step="0.3"></lr-time-input>`);
+    await fine.show();
+    await fine.updateComplete;
+    const fineSeconds = optionValues(fine, 'second');
+    expect(fineSeconds.every((value) => value % 3 === 0), 'only every third whole second lands on a 300ms grid').to
+      .equal(true);
+    expect(fineSeconds).to.include(0);
+    expect(fineSeconds).to.not.include(1);
+  });
+
+  it('produces an empty picker grid when a sub-second min base puts every whole second off the 1s step', async () => {
+    // `min`'s sub-second remainder (500ms) means no whole-second value ever lands on a 1-second
+    // step grid, so both operands of the offset-from-either-edge check run and the picker
+    // legitimately has zero options in every column -- not a crash, just nothing selectable.
+    const el = await fixture<LyraTimeInput>(
+      html`<lr-time-input hour-format="24" step="1" min="00:00:00.500"></lr-time-input>`,
+    );
+    await el.show();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[role="option"]').length).to.equal(0);
   });
 
   it('projects disabled state to every popup option and removes all option tab stops', async () => {
@@ -527,6 +631,40 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     expect(el.open).to.equal(false);
   });
 
+  it('hands focus-return duty to the next open picker when a non-topmost instance is light-dismissed', async () => {
+    // Two simultaneously open pickers register as separate stacked overlay entries. Dismissing the
+    // non-topmost one via an outside pointerdown asks the overlay manager to resolve *its own*
+    // captured restore target first; when that lookup instead falls through to handing focus to
+    // whatever overlay is now on top, the manager resolves that entry's own popup panel to find a
+    // focusable target inside it.
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-time-input id="lower" hour-format="24" value="09:00"></lr-time-input>
+        <lr-time-input id="upper" hour-format="24" value="10:00"></lr-time-input>
+      </div>
+    `);
+    const lower = wrapper.querySelector('#lower') as LyraTimeInput;
+    const upper = wrapper.querySelector('#upper') as LyraTimeInput;
+    await lower.show();
+    await lower.updateComplete;
+    await upper.show();
+    await upper.updateComplete;
+    expect(lower.open).to.equal(true);
+    expect(upper.open).to.equal(true);
+
+    // Lands inside lower's own row (so lower stays open) but outside upper (so upper light-dismisses).
+    const lowerRow = lower.shadowRoot!.querySelector('[part~="time-input"]')!;
+    lowerRow.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await upper.updateComplete;
+
+    expect(upper.open, 'the outside click only dismisses the instance it landed outside of').to.equal(false);
+    expect(lower.open, 'the still-open lower picker is untouched').to.equal(true);
+    expect(
+      lower.shadowRoot!.activeElement?.getAttribute('role'),
+      'focus lands inside the remaining open picker instead of nowhere',
+    ).to.equal('option');
+  });
+
   it('clips cross-axis column overflow instead of creating a phantom horizontal scrollbar', async () => {
     const el = await fixture<LyraTimeInput>(html`
       <lr-time-input value="10:00" style="--column-width: 1rem"></lr-time-input>
@@ -560,6 +698,24 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     await el.updateComplete;
     await el.show();
     expect(el.open).to.equal(true);
+  });
+
+  it('force-closes an open popup through willUpdate when a fieldset cascade disables the control', async () => {
+    // Distinct from the direct-`disabled`-setter case above: `formDisabledCallback` sets
+    // `_fieldsetDisabled` straight on the FormAssociated mixin, bypassing this class's own
+    // `disabled` setter override (and its own `forceClose` call) entirely. Only `willUpdate`'s
+    // `this.open && this.effectiveDisabled` guard closes the popup on this path.
+    const form = await fixture<HTMLFormElement>(html`
+      <form><fieldset><lr-time-input value="09:00"></lr-time-input></fieldset></form>
+    `);
+    const el = form.querySelector('lr-time-input') as LyraTimeInput;
+    await el.show();
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+
+    (form.querySelector('fieldset') as HTMLFieldSetElement).disabled = true;
+    await el.updateComplete;
+    expect(el.open, 'the fieldset cascade closes the popup without touching the own disabled setter').to.equal(false);
   });
 
   it('refuses to open while disabled', async () => {
@@ -687,6 +843,19 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     const disabled = await fixture<LyraTimeInput>(html`<lr-time-input disabled value="10:00"></lr-time-input>`);
     disabled.click();
     expect((disabled.shadowRoot!.activeElement) === (null)).to.equal(true);
+  });
+
+  it('recomputes to a valid segment when focus() is called with a stale internal active segment', async () => {
+    // `focus()` itself recomputes `activeSegmentFor(order)` and only reassigns `this.activeSegment`
+    // when that recompute actually disagrees with the stored value -- distinct from the
+    // format-change auto-rehome path (which runs through `willUpdate`/`updated`, not `focus()`).
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" value="10:00"></lr-time-input>`);
+    (el as unknown as { activeSegment: string }).activeSegment = 'dayPeriod'; // absent from the 24-hour order
+    el.focus();
+    expect(
+      (el.shadowRoot!.activeElement) === (segment(el, 'hour')),
+      'falls back to the first surviving segment',
+    ).to.equal(true);
   });
 
   it('keeps focus transitions and relayed FocusEvents in an adopted owner realm', async () => {
@@ -971,6 +1140,17 @@ describe('lr-time-input segment editing edge cases', () => {
     expect(el.value).to.equal('09:30');
   });
 
+  it('treats a paste event with no clipboardData as empty text instead of throwing', async () => {
+    // A plain `Event` (rather than the `paste` helper's synthetic `ClipboardEvent`-shaped object)
+    // has no `clipboardData` at all, exercising the `event.clipboardData?.getData(...) ?? ''`
+    // optional-chain/nullish fallback.
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" value="09:30"></lr-time-input>`);
+    const bare = new Event('paste', { bubbles: true, composed: true, cancelable: true });
+    expect(() => segment(el, 'hour').dispatchEvent(bare)).to.not.throw();
+    expect(bare.defaultPrevented, 'empty pasted text is a no-op, never preventDefault').to.equal(false);
+    expect(el.value).to.equal('09:30');
+  });
+
   it('falls back to insertReplacementText when the autofill input event carries no inputType', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input></lr-time-input>`);
     const native = el.shadowRoot!.querySelector<HTMLInputElement>('input[data-autofill]')!;
@@ -981,6 +1161,44 @@ describe('lr-time-input segment editing edge cases', () => {
     await el.updateComplete;
     expect(el.value).to.equal('08:15');
     expect(seenInputType).to.equal('insertReplacementText');
+  });
+
+  it('falls back to a zero-padded segment display when Intl.NumberFormat construction throws', async () => {
+    // A fresh, never-before-used locale/options pair in this file guarantees a cache miss in
+    // getNumberFormat()'s shared memo, so the forced-throwing constructor actually runs instead of
+    // returning a formatter some earlier test already cached.
+    const original = Intl.NumberFormat;
+    Intl.NumberFormat = function () {
+      throw new RangeError('forced failure for coverage');
+    } as unknown as typeof Intl.NumberFormat;
+    try {
+      const el = await fixture<LyraTimeInput>(
+        html`<lr-time-input locale="de-DE" hour-format="24" value="07:04"></lr-time-input>`,
+      );
+      expect(segment(el, 'hour').textContent?.trim()).to.equal('07');
+      expect(segment(el, 'minute').textContent?.trim()).to.equal('04');
+    } finally {
+      Intl.NumberFormat = original;
+    }
+  });
+
+  it('rejects a non-ASCII digit key without throwing when the active locale formatter is unavailable', async () => {
+    const original = Intl.NumberFormat;
+    Intl.NumberFormat = function () {
+      throw new RangeError('forced failure for coverage');
+    } as unknown as typeof Intl.NumberFormat;
+    try {
+      const el = await fixture<LyraTimeInput>(html`<lr-time-input locale="ja-JP" hour-format="24"></lr-time-input>`);
+      expect(() => key(segment(el, 'hour'), '٣')).to.not.throw();
+      await el.updateComplete;
+      expect(segment(el, 'hour').textContent?.trim(), 'a locale digit is silently rejected, not accepted as 3').to.equal('--');
+
+      key(segment(el, 'hour'), '2');
+      await el.updateComplete;
+      expect(segment(el, 'hour').textContent?.trim(), 'plain ASCII digits remain unaffected').to.equal('2');
+    } finally {
+      Intl.NumberFormat = original;
+    }
   });
 
   it('treats a duck-typed non-Node related target as outside the input group without throwing', async () => {
@@ -1037,6 +1255,34 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
       expect(sawShow, 'no announced show event before the element ever connected/updated').to.equal(false);
     } finally {
       detached.remove();
+    }
+  });
+
+  it('announces show/after-show when the open property is assigned directly on an already-mounted control', async () => {
+    // Unlike the pre-connect direct-assignment case above, this element is already connected and
+    // has already completed its first update, so the `open` setter's own
+    // `this.isConnected && this.hasUpdated` announce guard evaluates true here.
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input value="10:00"></lr-time-input>`);
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.open = true;
+    await afterShow;
+    expect(el.open).to.equal(true);
+  });
+
+  it('skips overlay activation when the host reports disconnected at update-flush time', async () => {
+    // `activatePopup()` guards on `this.isConnected` to avoid wiring a positioner/light-dismiss
+    // listener for a host that is no longer in the document by the time its scheduled update
+    // flushes. Overriding the accessor (rather than actually removing the element, which would
+    // also run disconnectedCallback's own forceClose) isolates that one guard.
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input value="10:00"></lr-time-input>`);
+    Object.defineProperty(el, 'isConnected', { configurable: true, get: () => false });
+    try {
+      await el.show();
+      expect(el.open, 'the open flag itself still flips').to.equal(true);
+      const popup = el.shadowRoot!.querySelector('[part="popup"]')!;
+      expect(popup.hasAttribute('data-hidden'), 'render still reflects the open state').to.equal(false);
+    } finally {
+      delete (el as unknown as { isConnected?: unknown }).isConnected;
     }
   });
 
@@ -1224,6 +1470,11 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
       .querySelector<HTMLButtonElement>('[part="now-button"]')!
       .dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
     expect(disabled.value).to.equal('09:30');
+
+    disabled.shadowRoot!
+      .querySelector<HTMLButtonElement>('[part="expand-button"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    expect(disabled.open, 'a forced click on the expand button never opens a disabled control').to.equal(false);
   });
 });
 
@@ -1252,6 +1503,21 @@ describe('lr-time-input validity, value coercion, and slots', () => {
     expect(el.validity.rangeOverflow).to.equal(true);
     expect(el.validationMessage.length).to.be.greaterThan(0);
     expect(el.validationMessage).to.not.equal(underflowMessage);
+  });
+
+  it('renders a seconds-precision min/max constraint through the same locale pattern in range messages', async () => {
+    // `displayTime()` derives `includeSeconds` from the *constraint* value's own parsed precision,
+    // not from the component's visible-seconds state -- exercising its `second` pattern-part arm.
+    const el = await fixture<LyraTimeInput>(
+      html`<lr-time-input hour-format="24" min="09:00:30" max="17:00:45"></lr-time-input>`,
+    );
+    el.value = '08:00:00';
+    expect(el.validity.rangeUnderflow).to.equal(true);
+    expect(el.validationMessage).to.include('30');
+
+    el.value = '18:00:00';
+    expect(el.validity.rangeOverflow).to.equal(true);
+    expect(el.validationMessage).to.include('45');
   });
 
   it('tracks dynamic label/hint/error/start/end slot content and updates aria-describedby', async () => {

@@ -199,6 +199,200 @@ describe("lr-segmented", () => {
     expect(el.value).to.equal("month"); // 'week' is disabled, skipped
   });
 
+  it("selects on ArrowLeft (backward) and wraps cyclically at the start", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    buttons[0]!.focus();
+    buttons[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowLeft",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.value).to.equal("month"); // wrapped backward from the first item to the last
+  });
+
+  it("ArrowLeft from the unselected, first-tabbable state selects the last item", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    buttons[0]!.focus();
+    buttons[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowLeft",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.value).to.equal("month");
+  });
+
+  it("ignores a keydown entirely when every item is disabled", async () => {
+    const allDisabled = items().map((item) => ({ ...item, disabled: true }));
+    const el = (await fixture(
+      html`<lr-segmented .items=${allDisabled}></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const event = new KeyboardEvent("keydown", {
+      key: "ArrowRight",
+      bubbles: true,
+      cancelable: true,
+    });
+    base.dispatchEvent(event);
+    await el.updateComplete;
+    expect(el.value).to.equal("");
+    expect(event.defaultPrevented).to.equal(false);
+    expect(buttons.every((button) => button.getAttribute("aria-checked") === "false")).to.equal(
+      true
+    );
+  });
+
+  it("does not re-emit lr-change when clicking the already-selected segment", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    let changeCount = 0;
+    el.addEventListener("lr-change", () => changeCount++);
+    buttons[1]!.click();
+    await el.updateComplete;
+    expect(el.value).to.equal("week");
+    expect(changeCount).to.equal(0);
+  });
+
+  it("selects the first navigable item on Home, regardless of current selection", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="month"></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    buttons[2]!.focus();
+    buttons[2]!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Home",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.value).to.equal("day");
+    expect(el.shadowRoot!.activeElement === segmentButtons(el)[0]).to.equal(
+      true
+    );
+  });
+
+  it("selects the last navigable item on End, regardless of current selection", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    buttons[0]!.focus();
+    buttons[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "End",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.value).to.equal("month");
+    expect(el.shadowRoot!.activeElement === segmentButtons(el)[2]).to.equal(
+      true
+    );
+  });
+
+  it("ignores an unrelated key: no selection change and no preventDefault", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    buttons[1]!.focus();
+    const event = new KeyboardEvent("keydown", {
+      key: "a",
+      bubbles: true,
+      cancelable: true,
+    });
+    buttons[1]!.dispatchEvent(event);
+    await el.updateComplete;
+    expect(el.value).to.equal("week");
+    expect(event.defaultPrevented).to.equal(false);
+  });
+
+  it("swaps Arrow key semantics under dir=\"rtl\": ArrowLeft moves forward, ArrowRight moves backward", async () => {
+    const el = (await fixture(
+      html`<lr-segmented dir="rtl" .items=${items()} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    buttons[0]!.focus();
+    buttons[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowLeft",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.value, "ArrowLeft is forward under rtl").to.equal("week");
+
+    const buttonsAfter = segmentButtons(el);
+    buttonsAfter[1]!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.value, "ArrowRight is backward under rtl").to.equal("day");
+  });
+
+  it("falls back to the currently focused segment as keyboard origin when the event target isn't a segment button", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="day"></lr-segmented>`
+    )) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    buttons[1]!.focus();
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // Dispatched directly on the base wrapper, not the focused button, so composedPath() carries
+    // no [part="segment"] element -- keyboardOriginIndex must fall back to the focused element.
+    base.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.value).to.equal("month"); // advanced from the focused "week" segment, not from value="day"
+  });
+
+  it("selects the first navigable item when a keydown has neither a segment event target nor a focused segment", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    outside.focus();
+    expect(document.activeElement === outside).to.equal(true);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+    expect(el.value).to.equal("day");
+    outside.remove();
+  });
+
   it("lets a forwarded host aria-label win on the radiogroup while retaining the label prop fallback", async () => {
     const labeled = (await fixture(
       html`<lr-segmented label="View" .items=${items()}></lr-segmented>`
@@ -354,6 +548,66 @@ describe("lr-segmented", () => {
     await el.updateComplete;
     expect(el.items).to.have.length(256);
     expect(segmentButtons(el)).to.have.length(256);
+  });
+
+  it("treats a revoked Proxy assigned to items as empty instead of throwing (Array.isArray itself throws)", async () => {
+    const { proxy, revoke } = Proxy.revocable([{ value: "a", label: "A" }], {});
+    revoke();
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    el.items = proxy as unknown as readonly { value: string; label: string }[];
+    await el.updateComplete;
+    expect(el.items).to.deep.equal([]);
+    expect(segmentButtons(el)).to.have.length(0);
+  });
+
+  it("treats a source whose .length getter throws as empty instead of throwing", async () => {
+    const hostileLength = new Proxy([{ value: "a", label: "A" }], {
+      get(target, prop, receiver) {
+        if (prop === "length") throw new Error("hostile length");
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    el.items = hostileLength as unknown as readonly {
+      value: string;
+      label: string;
+    }[];
+    await el.updateComplete;
+    expect(el.items).to.deep.equal([]);
+    expect(segmentButtons(el)).to.have.length(0);
+  });
+
+  it("treats a wholly non-array items value as empty instead of throwing", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    el.items = { value: "day", label: "Day" } as unknown as readonly {
+      value: string;
+      label: string;
+    }[];
+    await el.updateComplete;
+    expect(el.items).to.deep.equal([]);
+    expect(segmentButtons(el)).to.have.length(0);
+  });
+
+  it("skips null/undefined/primitive entries within an otherwise valid items array", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    el.items = [
+      null,
+      undefined,
+      "not-an-object",
+      42,
+      { value: "kept", label: "Kept" },
+    ] as unknown as readonly { value: string; label: string }[];
+    await el.updateComplete;
+    expect(el.items).to.deep.equal([{ value: "kept", label: "Kept" }]);
+    expect(segmentButtons(el)).to.have.length(1);
   });
 
   it("reconciles and rehomes focus when the selected item is disabled in place", async () => {
@@ -1087,6 +1341,32 @@ describe("lr-segmented auto-reveal", () => {
     el.scrollToValue("week");
     const behavior = (calls[0] as ScrollIntoViewOptions).behavior;
     expect(["auto", "smooth"]).to.include(behavior);
+  });
+
+  it("forces behavior:auto by stubbing matchMedia to report prefers-reduced-motion: reduce", async () => {
+    const el = (await fixture(
+      html`<lr-segmented value="day" .items=${items()}></lr-segmented>`
+    )) as LyraSegmented;
+    await el.updateComplete;
+    const calls = spyScroll(el);
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) =>
+      ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }) as MediaQueryList) as typeof window.matchMedia;
+    try {
+      el.scrollToValue("week");
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+    expect((calls[0] as ScrollIntoViewOptions).behavior).to.equal("auto");
   });
 });
 

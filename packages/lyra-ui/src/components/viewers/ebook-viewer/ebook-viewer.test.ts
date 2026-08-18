@@ -808,6 +808,95 @@ describe("lr-ebook-viewer", () => {
     }
   });
 
+  it("skips a selection rectangle with non-finite geometry instead of emitting garbage coordinates", async () => {
+    // boundedSelectionRects() itself already coerces a non-finite DOMRect field to 0 before
+    // translateSelectionRects() ever sees it, so a non-finite value can't reach this guard through
+    // the public selected-event pipeline; call the private method directly (same pattern the
+    // showSearchMatch()/resolveHighlightFill() tests below use) to prove this defensive filter.
+    const el = (await fixture(
+      html`<lr-ebook-viewer></lr-ebook-viewer>`
+    )) as LyraEbookViewer;
+    const translate = (
+      el as unknown as {
+        translateSelectionRects(
+          rects: readonly { x: number; y: number; width: number; height: number }[],
+          sourceWindow?: Window,
+        ): unknown[];
+      }
+    ).translateSelectionRects.bind(el);
+    expect(
+      translate([{ x: Number.NaN, y: 0, width: 10, height: 10 }], window)
+    ).to.have.lengthOf(0);
+  });
+
+  it("skips a selection rectangle when reading the source window's frameElement throws (cross-origin-like)", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "hello world" });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer
+          src="https://example.test/book.epub"
+        ></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await aTimeout(20);
+      const rect = { x: 0, y: 0, width: 10, height: 10 } as DOMRect;
+      const node = document.createTextNode("world");
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      Object.defineProperty(range, "getClientRects", { value: () => [rect] });
+      const throwingWindow = {
+        getSelection: () => ({ rangeCount: 1, getRangeAt: () => range }),
+      } as unknown as Window;
+      Object.defineProperty(throwingWindow, "frameElement", {
+        get(): never {
+          throw new Error("cross-origin frame access denied");
+        },
+      });
+      const listener = oneEvent(el, "lr-text-select");
+      fake.select("epubcfi(/6/2!/4)", { window: throwingWindow });
+      const event = (await listener) as CustomEvent<{ rects: DOMRect[] }>;
+      expect(event.detail.rects).to.have.lengthOf(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it("skips a selection rectangle whose containing frame has not been laid out (zero border box)", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "hello world" });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    const hidden = document.createElement("iframe");
+    hidden.style.display = "none";
+    document.body.append(hidden);
+    const sourceWindow = hidden.contentWindow!;
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer
+          src="https://example.test/book.epub"
+        ></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await aTimeout(20);
+      const rect = new sourceWindow.DOMRect(0, 0, 10, 10);
+      const node = sourceWindow.document.createTextNode("world");
+      sourceWindow.document.body.append(node);
+      const range = sourceWindow.document.createRange();
+      range.selectNodeContents(node);
+      Object.defineProperty(range, "getClientRects", { value: () => [rect] });
+      Object.defineProperty(sourceWindow, "getSelection", {
+        configurable: true,
+        value: () => ({ rangeCount: 1, getRangeAt: () => range }),
+      });
+      const listener = oneEvent(el, "lr-text-select");
+      fake.select("epubcfi(/6/2!/4)", { window: sourceWindow });
+      const event = (await listener) as CustomEvent<{ rects: DOMRect[] }>;
+      expect(event.detail.rects).to.have.lengthOf(0);
+    } finally {
+      hidden.remove();
+      restore();
+    }
+  });
+
   it("is accessible and supports component-specific localized navigation labels", async () => {
     const el = await fixture(html`
       <lr-ebook-viewer
@@ -1652,6 +1741,91 @@ describe("lr-ebook-viewer search", () => {
       expect(
         el.shadowRoot!.querySelectorAll('[part="announcer"]').length
       ).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it("re-runs the active search after an effective locale change", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "the treasure map" });
+    let findCalls = 0;
+    const originalFind = fake.book.spine.spineItems[0].find;
+    fake.book.spine.spineItems[0].find = (query: string) => {
+      findCalls++;
+      return originalFind(query);
+    };
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer
+          src="https://example.test/book.epub"
+        ></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await aTimeout(20);
+      expect(await el.search("treasure")).to.equal(1);
+      const callsBefore = findCalls;
+
+      el.locale = "fr";
+      await waitUntil(() => findCalls > callsBefore);
+      expect(findCalls).to.equal(callsBefore + 1);
+    } finally {
+      restore();
+    }
+  });
+
+  it("handles a rejected search-match display as a localized render failure instead of throwing", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "the treasure map" });
+    const boom = new Error("display rejected");
+    fake.rendition.display = (target?: string) =>
+      target === "epubcfi(/6/2!/4/ch1.xhtml)"
+        ? Promise.reject(boom)
+        : Promise.resolve();
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`
+        <lr-ebook-viewer
+          src="https://example.test/book.epub"
+          .strings=${{ ebookViewerLoadError: "Localized search-display failure." }}
+        ></lr-ebook-viewer>
+      `)) as LyraEbookViewer;
+      await aTimeout(20);
+      const errorPromise = oneEvent(el, "lr-render-error");
+      expect(await el.search("treasure")).to.equal(1);
+      await errorPromise;
+      await el.updateComplete;
+      expect(
+        el.shadowRoot!.querySelector('[part="error"]')?.textContent
+      ).to.equal("Localized search-display failure.");
+    } finally {
+      restore();
+    }
+  });
+
+  it("handles a throwing search-match annotation as a localized render failure instead of throwing", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "the treasure map" });
+    const boom = new Error("highlight failed");
+    fake.rendition.annotations.highlight = () => {
+      throw boom;
+    };
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`
+        <lr-ebook-viewer
+          src="https://example.test/book.epub"
+          .strings=${{ ebookViewerLoadError: "Localized annotation failure." }}
+        ></lr-ebook-viewer>
+      `)) as LyraEbookViewer;
+      await aTimeout(20);
+      const errorPromise = oneEvent(el, "lr-render-error");
+      expect(await el.search("treasure")).to.equal(1);
+      await errorPromise;
+      await el.updateComplete;
+      expect(
+        el.shadowRoot!.querySelector('[part="error"]')?.textContent
+      ).to.equal("Localized annotation failure.");
     } finally {
       restore();
     }

@@ -1,6 +1,86 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { acquireAriaOwnership } from './aria-ownership.js';
 
+it('filters non-aria-prefixed keys and null/undefined values out of the attribute contribution', async () => {
+  const target = await fixture<HTMLButtonElement>(html`<button>Go</button>`);
+  const lease = acquireAriaOwnership(target, {
+    attributes: {
+      'data-foo': 'x',
+      'aria-label': null,
+      'aria-expanded': 'true',
+    },
+  });
+
+  expect(target.getAttribute('aria-expanded')).to.equal('true');
+  expect(target.hasAttribute('data-foo')).to.equal(false);
+  expect(target.hasAttribute('aria-label')).to.equal(false);
+
+  lease.release();
+  expect(target.hasAttribute('aria-expanded')).to.equal(false);
+});
+
+it('accepts a null initial target and applies its contribution once retargeted', () => {
+  const lease = acquireAriaOwnership(null, { attributes: { 'aria-label': 'Generated' } });
+  expect(lease.target).to.equal(null);
+
+  const target = document.createElement('button');
+  document.body.append(target);
+  try {
+    lease.update(target, { attributes: { 'aria-label': 'Generated' } });
+    expect(target.getAttribute('aria-label')).to.equal('Generated');
+    lease.release();
+    expect(target.hasAttribute('aria-label')).to.equal(false);
+  } finally {
+    target.remove();
+  }
+});
+
+it('releases the controls relationship while keeping the attribute contribution when controls is dropped from an update', async function () {
+  if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
+  const root = await fixture<HTMLElement>(html`
+    <div><button></button><section id="dropped-control"></section></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const control = root.querySelector<HTMLElement>('#dropped-control')!;
+  const lease = acquireAriaOwnership(target, {
+    attributes: { 'aria-expanded': 'true' },
+    controls: [control],
+  });
+
+  expect(target.getAttribute('aria-expanded')).to.equal('true');
+  expect(target.getAttribute('aria-controls')).to.equal('dropped-control');
+
+  lease.update(target, { attributes: { 'aria-expanded': 'true' } });
+
+  expect(target.getAttribute('aria-expanded')).to.equal('true');
+  expect(target.hasAttribute('aria-controls')).to.equal(false);
+
+  lease.release();
+  expect(target.hasAttribute('aria-expanded')).to.equal(false);
+});
+
+it('releases the description relationship while keeping other contributions when descriptions is dropped from an update', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div><button></button><span id="dropped-description">Details</span></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const description = root.querySelector<HTMLElement>('#dropped-description')!;
+  const lease = acquireAriaOwnership(target, {
+    attributes: { 'aria-expanded': 'true' },
+    descriptions: [description],
+  });
+
+  expect(target.getAttribute('aria-describedby')).to.equal('dropped-description');
+
+  lease.update(target, { attributes: { 'aria-expanded': 'true' } });
+
+  expect(target.hasAttribute('aria-describedby')).to.equal(false);
+  expect(target.getAttribute('aria-expanded')).to.equal('true');
+
+  lease.release();
+  expect(target.hasAttribute('aria-expanded')).to.equal(false);
+});
+
 it('preserves non-ASCII IDREF tokens and reflects controls whose ids contain ASCII whitespace', async function () {
   if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
   const root = await fixture<HTMLElement>(html`

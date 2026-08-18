@@ -1305,6 +1305,40 @@ describe("data mode", () => {
       );
     });
 
+    it("does not announce a match count when the search field is cleared back to empty", async () => {
+      const el = (await fixture(
+        html`<lr-thread-list
+          style="block-size:400px"
+          searchable
+          .threads=${threads}
+        ></lr-thread-list>`
+      )) as LyraThreadList;
+      await el.updateComplete;
+      const liveRegion = el.shadowRoot!.querySelector(
+        "lr-live-region"
+      ) as HTMLElement & { announce: (message: string) => void };
+      const calls: string[] = [];
+      const originalAnnounce = liveRegion.announce.bind(liveRegion);
+      liveRegion.announce = (message: string) => {
+        calls.push(message);
+        originalAnnounce(message);
+      };
+      const input = el.shadowRoot!.querySelector(
+        '[part="search-input"]'
+      ) as HTMLInputElement;
+
+      input.value = "today";
+      input.dispatchEvent(new Event("input"));
+      await el.updateComplete;
+      expect(calls).to.have.lengthOf(1);
+
+      input.value = "";
+      input.dispatchEvent(new Event("input"));
+      await el.updateComplete;
+      expect(calls, "clearing the query back to empty must not announce").to
+        .have.lengthOf(1);
+    });
+
     it("supports a custom filter override", async () => {
       const el = (await fixture(
         html`<lr-thread-list
@@ -1456,6 +1490,63 @@ describe("data mode", () => {
     );
     expect(document.activeElement != null).to.equal(true); // focus moved somewhere inside the shadow tree
     expect(rows[1].shadowRoot!.activeElement === secondOption).to.equal(true);
+  });
+
+  it("ArrowUp roves focus to the previous rendered row", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="block-size:400px"
+        .threads=${threads}
+        grouping="none"
+      ></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const rows = dataRows(el);
+    const secondOption = rows[1].shadowRoot!.querySelector(
+      '[part="select-button"]'
+    ) as HTMLElement;
+    secondOption.focus();
+
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowUp",
+        bubbles: true,
+        composed: true,
+      })
+    );
+    await nextFrame();
+    const firstOption = rows[0].shadowRoot!.querySelector(
+      '[part="select-button"]'
+    );
+    expect(rows[0].shadowRoot!.activeElement === firstOption).to.equal(true);
+  });
+
+  it("ArrowUp with no row focused jumps to the last rendered row", async () => {
+    const el = (await fixture(
+      html`<lr-thread-list
+        style="block-size:400px"
+        .threads=${threads}
+        grouping="none"
+      ></lr-thread-list>`
+    )) as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    const rows = dataRows(el);
+
+    el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowUp",
+        bubbles: true,
+        composed: true,
+      })
+    );
+    await nextFrame();
+    const lastRow = rows[rows.length - 1];
+    const lastOption = lastRow.shadowRoot!.querySelector(
+      '[part="select-button"]'
+    );
+    expect(lastRow.shadowRoot!.activeElement === lastOption).to.equal(true);
   });
 
   it("skips a row whose wrapRow ancestor is inert instead of stranding arrow focus", async () => {

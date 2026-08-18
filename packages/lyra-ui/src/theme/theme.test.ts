@@ -172,6 +172,25 @@ describe('theme runtime', () => {
     expect(getLyraTheme().mode).to.equal('unset');
   });
 
+  it('persists an accent without a visual ramp when mode is unset, since there is no known surface to contrast against', () => {
+    setLyraTheme({ mode: 'unset', accent: '#e63950' });
+    expect(getLyraTheme()).to.deep.equal({ mode: 'unset', accent: '#e63950' });
+    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
+    for (const property of BRAND_RAMP_PROPERTIES) {
+      expect(document.documentElement.style.getPropertyValue(property), property).to.equal('');
+    }
+  });
+
+  it('rejects CSS-wide keywords and var() references through the runtime accent validator', () => {
+    // The bootstrap's own regex-based rejection of these is covered separately below; this
+    // exercises the same class of value through setLyraTheme()/normalizeAccent() directly.
+    for (const accent of ['inherit', 'initial', 'revert', 'revert-layer', 'unset', 'var(--brand)']) {
+      setLyraTheme({ mode: 'light', accent });
+      expect(getLyraTheme().accent, accent).to.equal(null);
+      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent'), accent).to.equal('');
+    }
+  });
+
   it('turns a valid accent into a complete contrast-checked semantic brand ramp', () => {
     setLyraTheme({ mode: 'light', accent: '#e63950' });
     const rootStyle = document.documentElement.style;
@@ -231,6 +250,38 @@ describe('theme runtime', () => {
       expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
       expect(getLyraTheme().accent).to.equal(null);
       expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
+    } finally {
+      CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
+    }
+  });
+
+  it('still applies mode and fails accent closed when a 2D canvas context is unavailable', () => {
+    // Distinct from the getImageData-throws case above: here canvas 2D context creation itself
+    // fails (parseResolvedRgb's `!context` guard), before getImageData is ever reached.
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
+    try {
+      expect(() => setLyraTheme({ mode: 'light', accent: '#e63950' })).to.not.throw();
+      expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
+      expect(getLyraTheme().accent).to.equal(null);
+      expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('');
+    } finally {
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
+  });
+
+  it('treats missing canvas pixel channels as zero instead of throwing', () => {
+    const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+    CanvasRenderingContext2D.prototype.getImageData = (() =>
+      ({ data: new Uint8ClampedArray(0) })) as typeof CanvasRenderingContext2D.prototype.getImageData;
+    try {
+      expect(() => setLyraTheme({ mode: 'light', accent: '#e63950' })).to.not.throw();
+      // A fully-empty pixel resolves every channel (including alpha) to 0 via the `?? 0`
+      // fallback, so the "resolved" accent degrades to the mode's own background color instead
+      // of throwing or leaving a stale ramp.
+      expect(
+        document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud'),
+      ).to.equal('rgb(255 255 255)');
     } finally {
       CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
     }
@@ -343,6 +394,31 @@ describe('theme runtime', () => {
       expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
     } finally {
       Storage.prototype.setItem = originalSetItem;
+      setLyraTheme({ mode: 'auto', accent: null });
+    }
+  });
+
+  it('does not throw when the corrective persistence write after an accent correction itself fails', () => {
+    setLyraTheme({ mode: 'auto', accent: null });
+    const originalSetItem = Storage.prototype.setItem;
+    const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+    Storage.prototype.setItem = () => {
+      throw new Error('unavailable');
+    };
+    CanvasRenderingContext2D.prototype.getImageData = () => {
+      throw new DOMException('Canvas pixels are unavailable', 'SecurityError');
+    };
+    try {
+      // The first persistence attempt fails (setItem always throws), and the canvas failure then
+      // corrects the accent to null, triggering a second, corrective localStorage.setItem call
+      // that must also fail closed without throwing.
+      expect(() => setLyraTheme({ mode: 'light', accent: '#e63950' })).to.not.throw();
+      expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
+      // Storage is fully unreachable, so the getter falls back to what was actually applied.
+      expect(getLyraTheme()).to.deep.equal({ mode: 'light', accent: null });
+    } finally {
+      Storage.prototype.setItem = originalSetItem;
+      CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
       setLyraTheme({ mode: 'auto', accent: null });
     }
   });

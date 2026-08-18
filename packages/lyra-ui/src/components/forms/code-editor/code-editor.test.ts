@@ -42,6 +42,73 @@ it("falls back from an invalid runtime resize value without injecting declaratio
   expect(textarea.style.resize).to.equal("horizontal");
 });
 
+it('auto-grows the textarea\'s block size to fit its content while resize is "auto"', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor resize="auto" value="one"></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector("textarea") as HTMLTextAreaElement;
+  expect(textarea.style.resize).to.equal("none");
+  expect(textarea.style.overflowY).to.equal("hidden");
+  const firstBlockSize = parseFloat(textarea.style.blockSize);
+  expect(firstBlockSize).to.be.greaterThan(0);
+
+  el.value = "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten";
+  await el.updateComplete;
+  const grownBlockSize = parseFloat(textarea.style.blockSize);
+  expect(grownBlockSize).to.be.greaterThan(firstBlockSize);
+});
+
+it('skips the auto-grow measurement without throwing when getComputedStyle is unavailable', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor resize="auto" value="one"></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector(
+    "textarea"
+  ) as HTMLTextAreaElement;
+  const originalGetComputedStyle = window.getComputedStyle;
+  try {
+    window.getComputedStyle = (() =>
+      undefined) as unknown as typeof window.getComputedStyle;
+    expect(() => {
+      el.value = "one\ntwo\nthree\nfour";
+    }).to.not.throw();
+    await el.updateComplete;
+  } finally {
+    window.getComputedStyle = originalGetComputedStyle;
+  }
+  // `fitToContent()` resets blockSize to 'auto' before measuring, then bails out of the
+  // border-aware recompute -- so it never advances past that reset.
+  expect(textarea.style.blockSize).to.equal("auto");
+});
+
+it('treats an unparseable border measurement as zero while auto-growing', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor resize="auto" value="one"></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector(
+    "textarea"
+  ) as HTMLTextAreaElement;
+  const originalGetComputedStyle = window.getComputedStyle;
+  try {
+    window.getComputedStyle = ((target: Element, pseudo?: string | null) => {
+      if (target === textarea) {
+        return {
+          borderBlockStartWidth: "not-a-number",
+          borderBlockEndWidth: "not-a-number",
+        } as unknown as CSSStyleDeclaration;
+      }
+      return originalGetComputedStyle(target, pseudo ?? undefined);
+    }) as typeof window.getComputedStyle;
+    el.value = "one\ntwo\nthree";
+    await el.updateComplete;
+  } finally {
+    window.getComputedStyle = originalGetComputedStyle;
+  }
+  // An unparseable border width must fall back to 0, not poison the sum into "NaNpx" (which the
+  // CSSOM silently rejects, leaving the stale 'auto' reset in place instead of a real size).
+  expect(textarea.style.blockSize).to.match(/^\d+(\.\d+)?px$/);
+});
+
 it("keeps scrolling on the editor frame instead of creating a nested textarea scrollbar", () => {
   expect(styles.cssText).to.contain("grid-template-columns: auto max-content");
   expect(styles.cssText).to.contain("inline-size: max-content");
@@ -300,6 +367,29 @@ it("releases the next Tab for native forward focus traversal after Escape", asyn
   expect(el.value).to.equal("one");
 });
 
+it('ignores a Tab keydown while disabled or readonly instead of inserting spaces', async () => {
+  const disabledEl = (await fixture(
+    html`<lr-code-editor value="one" disabled></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const disabledTextarea = disabledEl.shadowRoot!.querySelector("textarea")!;
+  disabledTextarea.setSelectionRange(0, 0);
+  disabledTextarea.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true })
+  );
+  expect(disabledEl.value).to.equal("one");
+
+  const readonlyEl = (await fixture(
+    html`<lr-code-editor value="one" readonly></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const readonlyTextarea = readonlyEl.shadowRoot!.querySelector("textarea")!;
+  readonlyTextarea.focus();
+  readonlyTextarea.setSelectionRange(0, 0);
+  readonlyTextarea.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true })
+  );
+  expect(readonlyEl.value).to.equal("one");
+});
+
 it("re-arms Tab indentation after the Escape bypass is cancelled by typing or by leaving the editor", async () => {
   const el = (await fixture(
     html`<lr-code-editor value="one" tab-size="2"></lr-code-editor>`
@@ -554,6 +644,19 @@ it("uses a .strings override for the default accessible-name fallback", async ()
   expect(textarea.getAttribute("aria-label")).to.equal("Éditeur de code");
 });
 
+it('lets a host aria-label attribute win over the accessible-name fallback chain', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor
+      aria-label="Custom name"
+      label="Visible label"
+    ></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector(
+    "textarea"
+  ) as HTMLTextAreaElement;
+  expect(textarea.getAttribute("aria-label")).to.equal("Custom name");
+});
+
 describe("lineNumbers", () => {
   it("renders the gutter by default", async () => {
     const el = (await fixture(
@@ -582,6 +685,76 @@ describe("lineNumbers", () => {
       0
     );
   });
+});
+
+it("shifts the rendered gutter window in step with the editor's scroll position", async () => {
+  const value = Array.from({ length: 500 }, (_, index) => String(index)).join(
+    "\n"
+  );
+  const el = (await fixture(
+    html`<lr-code-editor .value=${value}></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  const textarea = el.shadowRoot!.querySelector(
+    "textarea"
+  ) as HTMLTextAreaElement;
+  expect(editor.scrollHeight).to.be.greaterThan(editor.clientHeight);
+  const firstLineBefore =
+    el.shadowRoot!.querySelector(".gutter-line")!.textContent;
+  expect(firstLineBefore).to.equal("1");
+
+  const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+  editor.scrollTop = lineHeight * 100;
+  editor.dispatchEvent(new Event("scroll"));
+  await el.updateComplete;
+
+  const firstLineAfter =
+    el.shadowRoot!.querySelector(".gutter-line")!.textContent;
+  expect(Number(firstLineAfter)).to.be.greaterThan(1);
+});
+
+it('ignores editor scroll while the gutter is disabled, leaving no window shift behind', async () => {
+  const value = Array.from({ length: 500 }, (_, index) => String(index)).join(
+    "\n"
+  );
+  const el = (await fixture(
+    html`<lr-code-editor .value=${value} .lineNumbers=${false}></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  editor.scrollTop = 5000;
+  editor.dispatchEvent(new Event("scroll"));
+  await el.updateComplete;
+
+  // Re-enabling the gutter afterward proves the scroll was ignored while it was off: a shifted
+  // window would start past line 1 instead.
+  el.lineNumbers = true;
+  await el.updateComplete;
+  const firstLine = el.shadowRoot!.querySelector(".gutter-line")!.textContent;
+  expect(firstLine).to.equal("1");
+});
+
+it('bails out of the scroll-sync recompute without throwing when getComputedStyle is unavailable', async () => {
+  const value = Array.from({ length: 50 }, (_, index) => String(index)).join(
+    "\n"
+  );
+  const el = (await fixture(
+    html`<lr-code-editor .value=${value}></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;
+  const originalGetComputedStyle = window.getComputedStyle;
+  try {
+    window.getComputedStyle = (() =>
+      undefined) as unknown as typeof window.getComputedStyle;
+    editor.scrollTop = 500;
+    expect(() => editor.dispatchEvent(new Event("scroll"))).to.not.throw();
+  } finally {
+    window.getComputedStyle = originalGetComputedStyle;
+  }
+  await el.updateComplete;
+  // The unresolvable line-height bailed the recompute out before touching the window, so the
+  // gutter still starts from line 1.
+  const firstLine = el.shadowRoot!.querySelector(".gutter-line")!.textContent;
+  expect(firstLine).to.equal("1");
 });
 
 it("gives the editor frame hover feedback matching the keyboard focus-visible cue", () => {
@@ -640,6 +813,21 @@ it("forwards click and the writable native selection surface to the textarea", a
   expect(textarea.selectionStart).to.equal(1);
   expect(textarea.selectionEnd).to.equal(4);
   expect(textarea.selectionDirection).to.equal("backward");
+});
+
+it('keeps the selection, scroll-position, and range-editing accessors null/no-op before the first render creates the textarea', () => {
+  const el = document.createElement("lr-code-editor") as LyraCodeEditor;
+  expect(el.input).to.equal(null);
+  expect(el.selectionStart).to.equal(null);
+  expect(el.selectionEnd).to.equal(null);
+  expect(el.selectionDirection).to.equal(null);
+  expect(el.scrollPosition()).to.equal(undefined);
+  expect(() => {
+    el.selectionStart = 3;
+    el.selectionEnd = 3;
+    el.selectionDirection = "forward";
+    el.setRangeText("x");
+  }).to.not.throw();
 });
 
 it("forwards the complete native focus, selection, and range-editing surface", async () => {
@@ -741,6 +929,126 @@ it("relays one native input/change and emits typed Lyra value aliases", async ()
   expect(changeDetails).to.deep.equal([{ value: "const answer = 42;" }]);
 });
 
+it('stops propagation and skips value/relay updates for input, change, and focus events reaching a disabled textarea', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor value="one" disabled></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector(
+    "textarea"
+  ) as HTMLTextAreaElement;
+  const hostEvents: string[] = [];
+  el.addEventListener("input", () => hostEvents.push("input"));
+  el.addEventListener("change", () => hostEvents.push("change"));
+  el.addEventListener("focus", () => hostEvents.push("focus"));
+
+  textarea.value = "two";
+  textarea.dispatchEvent(
+    new InputEvent("input", { bubbles: true, composed: true })
+  );
+  textarea.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+  textarea.dispatchEvent(
+    new FocusEvent("focus", { bubbles: true, composed: true })
+  );
+
+  expect(hostEvents).to.deep.equal([]);
+  expect(el.value).to.equal("one");
+});
+
+it('normalizes a null value/defaultValue assignment to an empty string', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor value="one"></lr-code-editor>`
+  )) as LyraCodeEditor;
+  el.value = null;
+  expect(el.value).to.equal("");
+  el.defaultValue = null;
+  expect(el.defaultValue).to.equal("");
+});
+
+it("force-resyncs the native textarea's value when an external mutation diverges from the reactive value", async () => {
+  const el = (await fixture(
+    html`<lr-code-editor value="one"></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector(
+    "textarea"
+  ) as HTMLTextAreaElement;
+  // Simulate an outside actor (browser autofill, an extension, ...) writing straight to the
+  // native control without going through the component's `value` setter. Lit's own
+  // `.value=${this.value}` template binding dirty-checks against the *last committed JS value*,
+  // which hasn't changed, so it would not notice or repair this divergence on its own -- only the
+  // component's own explicit resync in `updated()` does.
+  textarea.value = "externally mutated";
+  el.required = true; // any unrelated property change is enough to trigger a re-render
+  await el.updateComplete;
+  expect(textarea.value).to.equal("one");
+});
+
+it("falls back to the live value when the realm's FormData constructor throws while hard-wrapping", async () => {
+  const el = (await fixture(
+    html`<lr-code-editor
+      wrap="hard"
+      cols="10"
+      value="abcdefghijklmnop"
+    ></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const originalFormData = window.FormData;
+  try {
+    window.FormData = function () {
+      throw new Error("boom");
+    } as unknown as typeof FormData;
+    el.value = "abcdefghijklmnopqrstuvwxyz";
+    await el.updateComplete;
+  } finally {
+    window.FormData = originalFormData;
+  }
+  expect(el.value).to.equal("abcdefghijklmnopqrstuvwxyz");
+});
+
+it('falls back to the live value directly when the realm has no FormData constructor while hard-wrapping', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor
+      wrap="hard"
+      cols="10"
+      value="abcdefghijklmnop"
+    ></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const originalFormData = window.FormData;
+  let result: string;
+  try {
+    // Deliberately remove the constructor entirely (not just make it throw) to exercise the
+    // `!view?.FormData` guard, distinct from the throwing-constructor path above.
+    window.FormData = undefined as unknown as typeof FormData;
+    result = (
+      el as unknown as { submissionValue(): string }
+    ).submissionValue();
+  } finally {
+    window.FormData = originalFormData;
+  }
+  expect(result).to.equal(el.value);
+});
+
+it("falls back to the live value when the realm's FormData entry is not a string while hard-wrapping", async () => {
+  const el = (await fixture(
+    html`<lr-code-editor
+      wrap="hard"
+      cols="10"
+      value="abcdefghijklmnop"
+    ></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const originalFormData = window.FormData;
+  let result: string;
+  try {
+    window.FormData = function () {
+      return { get: () => null };
+    } as unknown as typeof FormData;
+    result = (
+      el as unknown as { submissionValue(): string }
+    ).submissionValue();
+  } finally {
+    window.FormData = originalFormData;
+  }
+  expect(result).to.equal(el.value);
+});
+
 it("normalizes every public/default/restored line ending to the native LF representation", async () => {
   const form = await fixture<HTMLFormElement>(html`
     <form>
@@ -782,6 +1090,34 @@ abcdefghijklmnopqrstuvwxyz</textarea
   expect(data.get("editor")).to.equal(data.get("native"));
   expect(el.value).to.equal("abcdefghijklmnopqrstuvwxyz");
   expect(el.input!.value).to.equal("abcdefghijklmnopqrstuvwxyz");
+});
+
+it('falls back to "off" wrap for any value other than the documented soft/hard tokens', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor wrap="justify"></lr-code-editor>`
+  )) as LyraCodeEditor;
+  expect(el.wrap).to.equal("off");
+  const textarea = el.shadowRoot!.querySelector(
+    "textarea"
+  ) as HTMLTextAreaElement;
+  expect(textarea.getAttribute("wrap")).to.equal("off");
+});
+
+it('exposes matching lowercase inputmode/enterkeyhint aliases for the camelCase IDL properties', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor></lr-code-editor>`
+  )) as LyraCodeEditor;
+  el.inputmode = "decimal";
+  expect(el.inputMode).to.equal("decimal");
+  expect(el.inputmode).to.equal("decimal");
+  el.enterkeyhint = "search";
+  expect(el.enterKeyHint).to.equal("search");
+  expect(el.enterkeyhint).to.equal("search");
+
+  el.inputmode = null as unknown as string;
+  expect(el.inputMode).to.equal("");
+  el.enterkeyhint = null as unknown as string;
+  expect(el.enterKeyHint).to.equal("");
 });
 
 it("forwards the native editing attributes and exposes the owned input and scroll position", async () => {

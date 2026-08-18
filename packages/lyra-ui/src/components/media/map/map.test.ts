@@ -439,6 +439,27 @@ it('renders a visible, accessible error state instead of a blank container when 
   }
 });
 
+it('classifies a rejected optional-peer import the same as an unavailable module', async () => {
+  const el = document.createElement('lr-map') as unknown as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+    Promise.reject(new Error('network import failure'));
+  el.strings = { mapMissingLibrary: 'Map peer is unavailable' };
+  document.body.appendChild(el);
+  try {
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="error"]') != null,
+      'error state never rendered after a rejected peer import',
+      { timeout: 2000 },
+    );
+    const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(errorEl.textContent!.trim()).to.equal('Map peer is unavailable');
+    expect(assertiveAnnouncements()).to.deep.equal([errorEl.textContent!.trim()]);
+    expect(el.map == null).to.be.true;
+  } finally {
+    el.remove();
+  }
+});
+
 it('requires explicit mapStyle without constructing a peer map or making an implicit provider choice', async () => {
   let constructorCalls = 0;
   class NeverConstructedMap {
@@ -602,6 +623,56 @@ it('classifies an initial peer style error and disposes the published candidate 
     Object.defineProperty(window, 'IntersectionObserver', {
       configurable: true,
       value: OriginalIntersectionObserver,
+    });
+  }
+});
+
+it('logs a post-load runtime map error via console.error instead of failing an already-loaded map', async () => {
+  const originalIntersectionObserver = window.IntersectionObserver;
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+    function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+      if (contextId === 'webgl2') return {};
+      return originalGetContext.call(this, contextId as never, ...(rest as []));
+    };
+  const handlers: Record<string, ((event: unknown) => void) | undefined> = {};
+  class RuntimeErrorMap {
+    private readonly canvas = document.createElement('canvas');
+    on(name: string, callback: (event: unknown) => void): this {
+      handlers[name] = callback;
+      return this;
+    }
+    getCanvas(): HTMLCanvasElement { return this.canvas; }
+    remove(): void {}
+  }
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+    Map: RuntimeErrorMap,
+  });
+  el.mapStyle = RASTER_STYLE;
+  document.body.append(el);
+  const originalConsoleError = console.error;
+  const calls: unknown[][] = [];
+  console.error = (...args: unknown[]) => { calls.push(args); };
+  try {
+    await waitUntil(() => el.map != null, 'fake map never initialized');
+    handlers.load?.(undefined);
+    const runtimeError = new Error('runtime tile error');
+    handlers.error?.({ error: runtimeError });
+
+    expect(el.map != null).to.be.true;
+    expect(calls.length).to.equal(1);
+    expect(calls[0]?.[0]).to.equal('lr-map:');
+    expect((calls[0]?.[1] as Error)?.message).to.equal('runtime tile error');
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+  } finally {
+    console.error = originalConsoleError;
+    el.remove();
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: originalIntersectionObserver,
     });
   }
 });
@@ -959,6 +1030,36 @@ it('bounds labels and contains malformed or hostile legend records', async () =>
   expect(el.legendProjection.omittedCount).to.equal(2);
   expect(el.legendProjection.truncatedLabelCount).to.equal(1);
   expect(el.legendProjection.truncated).to.be.true;
+});
+
+it('normalizes a legend assignment that fails Array.isArray (a revoked Proxy) to empty instead of throwing', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const { proxy, revoke } = Proxy.revocable([], {});
+  revoke();
+  el.legend = proxy as never;
+  await el.updateComplete;
+
+  expect(el.legend.length).to.equal(0);
+  expect(el.legendProjection.inputCount).to.equal(0);
+  expect(el.legendProjection.renderedCount).to.equal(0);
+  expect(el.legendProjection.omittedCount).to.equal(0);
+  expect(el.legendProjection.truncated).to.be.false;
+});
+
+it('normalizes a legend assignment whose own length getter throws to empty instead of throwing', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const hostileLength = new Proxy([{ color: '#f00', label: 'Unreachable', pattern: 'solid' }], {
+    get(target, prop, receiver) {
+      if (prop === 'length') throw new Error('hostile length getter');
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+  el.legend = hostileLength as never;
+  await el.updateComplete;
+
+  expect(el.legend.length).to.equal(0);
+  expect(el.legendProjection.inputCount).to.equal(0);
+  expect(el.legendProjection.renderedCount).to.equal(0);
 });
 
 it('keeps every legend category pattern distinct in forced colors', async () => {

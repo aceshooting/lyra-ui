@@ -4124,6 +4124,80 @@ describe("search", () => {
     expect(span.childNodes.length).to.equal(1);
     expect(source.data.length).to.equal(1_000_001);
   });
+
+  it("re-runs the active search and invalidates cached text indexes after an effective locale change", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="toolbar"]');
+      let getPageTextCalls = 0;
+      (
+        el as unknown as { getPageText: (page: number) => Promise<string> }
+      ).getPageText = (page: number) => {
+        getPageTextCalls++;
+        return Promise.resolve(page === 1 ? "the cat sat" : "");
+      };
+      expect(await el.search("cat")).to.equal(1);
+      const callsBefore = getPageTextCalls;
+
+      el.locale = "fr";
+      await waitUntil(() => getPageTextCalls > callsBefore);
+      expect(getPageTextCalls).to.equal(callsBefore + 1);
+      const state = el as unknown as { searchMatches: unknown[] };
+      expect(state.searchMatches).to.have.lengthOf(1); // the re-run search still finds the match
+    } finally {
+      restore();
+    }
+  });
+
+  it("does not re-run an empty search after a locale change", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="toolbar"]');
+      let getPageTextCalls = 0;
+      (
+        el as unknown as { getPageText: (page: number) => Promise<string> }
+      ).getPageText = (page: number) => {
+        getPageTextCalls++;
+        return Promise.resolve(page === 1 ? "the cat sat" : "");
+      };
+      el.locale = "fr";
+      await el.updateComplete;
+      await aTimeout(20);
+      expect(getPageTextCalls, "no active query -> locale change must not trigger a scan").to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it("aborts a stale search scan when a newer search() call supersedes it", async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(2));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="toolbar"]');
+      (
+        el as unknown as { getPageText: (page: number) => Promise<string> }
+      ).getPageText = (page: number) =>
+        Promise.resolve(page === 1 ? "apple pie" : "banana bread");
+      const stale = el.search("apple");
+      const fresh = await el.search("banana");
+      await stale;
+      expect(fresh).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe("registry registration", () => {

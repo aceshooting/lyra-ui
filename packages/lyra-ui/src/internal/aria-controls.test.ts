@@ -11,6 +11,11 @@ type Reflected = HTMLElement & { ariaDescribedByElements?: Element[] | null };
 
 const supportsElementReferences = 'ariaDescribedByElements' in HTMLElement.prototype;
 
+it('syncAriaControlsElements is a no-op when no control is supplied', async () => {
+  const root = await fixture<HTMLElement>(html`<div><span id="dangling"></span></div>`);
+  expect(() => syncAriaControlsElements(root, undefined, 'dangling')).to.not.throw();
+});
+
 it('tokenizes reflected IDREFs with ASCII whitespace only', async function () {
   if (!supportsElementReferences || !('ariaControlsElements' in HTMLElement.prototype)) this.skip();
   const root = await fixture<HTMLElement>(html`<div><button></button><span>Description</span></div>`);
@@ -26,6 +31,52 @@ it('tokenizes reflected IDREFs with ASCII whitespace only', async function () {
   expect((target.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([
     'one\u00a0reference',
   ]);
+});
+
+it('syncAriaControlsElements clears an assigned element-reference list back to empty when controls becomes falsy', async function () {
+  if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
+  const root = await fixture<HTMLElement>(html`<div><button></button><span id="clear-controls-target">Panel</span></div>`);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const reference = root.querySelector<HTMLElement>('#clear-controls-target')!;
+
+  syncAriaControlsElements(root, target, reference.id);
+  expect((target.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([
+    'clear-controls-target',
+  ]);
+
+  syncAriaControlsElements(root, target, null);
+  expect(target.ariaControlsElements).to.deep.equal([]);
+});
+
+it('syncAriaDescribedByElements clears an assigned element-reference list to null when describedBy becomes falsy', async function () {
+  if (!supportsElementReferences) this.skip();
+  const root = await fixture<HTMLElement>(html`
+    <div><button></button><span id="clear-described-first">First</span></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const description = root.querySelector<HTMLElement>('#clear-described-first')!;
+
+  expect(syncAriaDescribedByElements(root, target, description.id)).to.equal(true);
+  expect((target.ariaDescribedByElements ?? []).map((element) => element.id)).to.deep.equal([
+    'clear-described-first',
+  ]);
+
+  expect(syncAriaDescribedByElements(root, target, null)).to.equal(false);
+  expect(target.ariaDescribedByElements).to.equal(null);
+});
+
+it('resolves no id references when the host is its own root (a detached element, not a Document/ShadowRoot)', () => {
+  // A standalone, never-appended element is its own getRootNode() result -- a plain Element, which
+  // (unlike Document/DocumentFragment/ShadowRoot) implements no NonElementParentNode.getElementById.
+  const host = document.createElement('div');
+  const target = document.createElement('button');
+  const reference = document.createElement('span');
+  reference.id = 'detached-reference';
+  host.append(target, reference);
+
+  expect(host.getRootNode() === host).to.equal(true);
+  expect(syncAriaDescribedByElements(host, target, reference.id)).to.equal(false);
+  expect(target.hasAttribute('aria-describedby')).to.equal(false);
 });
 
 it('uses element reflection when an owned description id is not one serializable IDREF token', async function () {

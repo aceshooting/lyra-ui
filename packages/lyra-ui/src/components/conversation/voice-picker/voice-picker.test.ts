@@ -268,6 +268,23 @@ it('a value not present in catalog renders as a synthetic stale row with the not
   expect(stale.querySelector('[part="option-badge"]')!.textContent).to.equal('not in catalog');
 });
 
+it('renders a malformed (blank-id) catalog row as an inert trailing option instead of dropping it silently', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker
+      .catalog=${[...OBJECT_CATALOG, { id: '   ', label: 'Ghost voice' }]}
+      value="aria"
+    ></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  el.open = true;
+  await el.updateComplete;
+  const optionRows = Array.from(rows(el));
+  const malformedRow = optionRows.find((row) => row.getAttribute('data-value') === '');
+  expect(malformedRow === undefined).to.be.false;
+  expect(malformedRow!.textContent).to.contain('Ghost voice');
+  expect(malformedRow!.getAttribute('aria-selected')).to.equal('false');
+  expect(malformedRow!.hasAttribute('data-synthetic')).to.be.false;
+});
+
 describe('open and synthetic stale-row theme cssprops', () => {
   it('inherits independent open and synthetic stale-row longhands from an ancestor', async () => {
     const wrapper = (await fixture(html`
@@ -681,6 +698,36 @@ it('keeps a rejected pending play silent and never exposes a false playing state
     expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
   } finally {
+    restore();
+  }
+});
+
+it('publishes a start immediately followed by a stop when a genuine audio error arrives before play() settles', async () => {
+  let resolvePlay: (() => void) | undefined;
+  const restore = stubMediaPlay(
+    () =>
+      new Promise<void>((resolve) => {
+        resolvePlay = resolve;
+      }),
+  );
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const sequence: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => sequence.push(event.detail.voiceId));
+
+    previewButton(el).click();
+    await el.updateComplete;
+    const audio = (el as unknown as { audioEl?: HTMLAudioElement }).audioEl;
+    expect(audio === undefined).to.be.false;
+    audio!.dispatchEvent(new Event('error'));
+
+    expect(sequence).to.deep.equal(['aria', null]);
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+  } finally {
+    resolvePlay?.();
     restore();
   }
 });

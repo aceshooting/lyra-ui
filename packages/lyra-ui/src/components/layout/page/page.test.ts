@@ -229,6 +229,29 @@ it('showNavigation(), hideNavigation(), and toggleNavigation() keep navOpen and 
   expect(page.navOpen).to.be.false;
 });
 
+it('no-ops a redundant showNavigation()/hideNavigation() call that would not change navOpen, emitting no event', async () => {
+  const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+  let events = 0;
+  page.addEventListener('lr-nav-toggle', () => events++);
+
+  // navOpen already false: hideNavigation() must be a pure no-op.
+  page.hideNavigation();
+  await page.updateComplete;
+  expect(page.navOpen).to.be.false;
+  expect(events).to.equal(0);
+
+  page.showNavigation();
+  await page.updateComplete;
+  expect(page.navOpen).to.be.true;
+  expect(events).to.equal(1);
+
+  // navOpen already true: a second showNavigation() must also be a no-op.
+  page.showNavigation();
+  await page.updateComplete;
+  expect(page.navOpen).to.be.true;
+  expect(events).to.equal(1);
+});
+
 it('emits a cancelable lr-nav-toggle before mutating navOpen, honoring a prevented request', async () => {
   const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
   const order: Array<{
@@ -822,6 +845,57 @@ it('uses and tears down the window resize fallback when ResizeObserver is unavai
   }
 });
 
+it('falls back to the first ResizeObserver entry and to contentRect.width, and ignores an invalid measurement', async () => {
+  const originalResizeObserver = window.ResizeObserver;
+  let capturedCallback: ResizeObserverCallback | undefined;
+  class StubResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      capturedCallback = callback;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  Reflect.set(window, 'ResizeObserver', StubResizeObserver);
+  try {
+    const page = (await fixture(
+      html`<lr-page mobile-breakpoint="700px"></lr-page>`
+    )) as LyraPage;
+    await page.updateComplete;
+    expect(typeof capturedCallback).to.equal('function');
+
+    const fakeTarget = document.createElement('div');
+    // Neither entry targets `this`, and contentBoxSize is unavailable, so this exercises both the
+    // entries.find() ?? entries[0] fallback and the contentBoxSize ?? contentRect.width fallback.
+    capturedCallback!(
+      [
+        {
+          target: fakeTarget,
+          contentRect: { width: 320 } as DOMRectReadOnly,
+        } as unknown as ResizeObserverEntry,
+      ],
+      {} as ResizeObserver
+    );
+    await page.updateComplete;
+    expect(page.view).to.equal('mobile');
+
+    // A negative measurement must be ignored rather than reclassifying the view.
+    capturedCallback!(
+      [
+        {
+          target: page,
+          contentRect: { width: -5 } as DOMRectReadOnly,
+        } as unknown as ResizeObserverEntry,
+      ],
+      {} as ResizeObserver
+    );
+    await page.updateComplete;
+    expect(page.view).to.equal('mobile');
+  } finally {
+    Reflect.set(window, 'ResizeObserver', originalResizeObserver);
+  }
+});
+
 it('keeps the exact slotted navigation node and focus while crossing desktop/mobile views', async () => {
   const page = (await fixture(html`
     <lr-page style="inline-size:900px"
@@ -874,6 +948,128 @@ it('uses the shared mobile overlay lifecycle for Escape, scroll lock, and focus 
   expect(document.documentElement.style.overflow).to.equal('');
   expect(page.shadowRoot!.activeElement?.getAttribute('part')).to.contain(
     'navigation-toggle'
+  );
+});
+
+it('keeps restoring focus to the original opening custom trigger after an unrelated re-render re-syncs an already-open overlay', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px">
+      <button slot="navigation-toggle">Custom</button>
+      <button slot="navigation">Inside</button>
+    </lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  const custom = page.querySelector(
+    '[slot="navigation-toggle"]'
+  ) as HTMLButtonElement;
+  custom.focus();
+  custom.click();
+  await page.updateComplete;
+  expect(page.navOpen).to.be.true;
+
+  // Force another update cycle with no property actually changing -- updated() still runs
+  // syncOverlay() unconditionally, and since the handle is already active and the same custom
+  // trigger is still slotted (so navigationTriggerOwner survives syncCustomToggle()'s resync),
+  // this re-applies the restore-focus target instead of recreating the overlay.
+  page.requestUpdate();
+  await page.updateComplete;
+  expect(page.navOpen).to.be.true;
+
+  document.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+  );
+  await page.updateComplete;
+  expect(page.navOpen).to.be.false;
+  expect(document.activeElement === custom).to.equal(true);
+});
+
+it('activates the mobile overlay via a fresh syncOverlay() on reconnect when navOpen changed while fully detached', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px"></lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  expect(page.view).to.equal('mobile');
+  const overflowBefore = document.documentElement.style.overflow;
+
+  const wrapper = page.parentElement!;
+  page.remove();
+  page.navOpen = true;
+  await page.updateComplete;
+  // Still detached: the drawer template reflects navOpen, but the shared overlay lifecycle
+  // (scroll lock, focus trap) never actually engaged since isConnected was false throughout --
+  // no overlay handle exists yet by the time this component reconnects.
+  expect(document.documentElement.style.overflow).to.equal(overflowBefore);
+
+  wrapper.append(page);
+  await page.updateComplete;
+
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+  expect(byPart(page, 'drawer').getAttribute('aria-modal')).to.equal('true');
+
+  page.hideNavigation();
+  await page.updateComplete;
+  expect(document.documentElement.style.overflow).to.equal(overflowBefore);
+});
+
+it('falls back to the built-in toggle for restore focus when the opening custom trigger is gone by close time', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px">
+      <button slot="navigation-toggle">Custom</button>
+      <button slot="navigation">Inside</button>
+    </lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  const custom = page.querySelector(
+    '[slot="navigation-toggle"]'
+  ) as HTMLButtonElement;
+  custom.focus();
+  custom.click();
+  await page.updateComplete;
+  expect(page.navOpen).to.be.true;
+
+  custom.remove();
+  await page.updateComplete;
+
+  document.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+  );
+  await page.updateComplete;
+  expect(page.navOpen).to.be.false;
+  expect(page.shadowRoot!.activeElement?.getAttribute('part')).to.contain(
+    'navigation-toggle'
+  );
+});
+
+it('falls back further to the main landmark for restore focus when both the trigger and the built-in toggle are unavailable', async () => {
+  const page = (await fixture(html`
+    <lr-page style="inline-size:320px" disable-navigation-toggle>
+      <button slot="navigation-toggle">Custom</button>
+      <button slot="navigation">Inside</button>
+    </lr-page>
+  `)) as LyraPage;
+  access(page).applyMeasuredInlineSize(320);
+  await page.updateComplete;
+  const custom = page.querySelector(
+    '[slot="navigation-toggle"]'
+  ) as HTMLButtonElement;
+  custom.focus();
+  custom.click();
+  await page.updateComplete;
+  expect(page.navOpen).to.be.true;
+
+  custom.remove();
+  await page.updateComplete;
+
+  document.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+  );
+  await page.updateComplete;
+  expect(page.navOpen).to.be.false;
+  expect(page.shadowRoot!.activeElement?.getAttribute('part')).to.equal(
+    'main'
   );
 });
 
@@ -1178,6 +1374,25 @@ it('preserves authored fragment identity and focusability from construction thro
   expect(page.tabIndex).to.equal(2);
   expect(byPart(page, 'skip-to-content').getAttribute('href')).to.equal(
     '#authored-page'
+  );
+});
+
+it('regenerates its fragment id/tabindex when an author removes them after mount', async () => {
+  const page = (await fixture(
+    html`<lr-page id="authored-page" tabindex="2"></lr-page>`
+  )) as LyraPage;
+  await page.updateComplete;
+  expect(page.id).to.equal('authored-page');
+  expect(page.tabIndex).to.equal(2);
+
+  page.removeAttribute('id');
+  page.removeAttribute('tabindex');
+  await page.updateComplete;
+
+  expect(page.id).to.match(/^lr-page-skip-target-/);
+  expect(page.tabIndex).to.equal(-1);
+  expect(byPart(page, 'skip-to-content').getAttribute('href')).to.equal(
+    `#${page.id}`
   );
 });
 

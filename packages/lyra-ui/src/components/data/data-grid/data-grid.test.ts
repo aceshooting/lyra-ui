@@ -595,6 +595,52 @@ it('canonicalizes row and column identities while retaining mirrored state alias
   expect(reorderedIds[0]).to.equal(actionIdentity);
 });
 
+it('skips a column definition whose id accessor throws, keeping valid neighbors', async () => {
+  const poisoned = {
+    get id(): string {
+      throw new Error('boom');
+    },
+    label: 'Poisoned',
+  };
+  const element = await dataGrid();
+  element.columns = [
+    { field: 'name', label: 'Name' },
+    poisoned as unknown as DataGridColumn<Person>,
+    { field: 'team', label: 'Team' },
+  ];
+  await element.updateComplete;
+  const columnIds = [
+    ...element.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[part~="header-cell"][data-column-id]'
+    ),
+  ].map((cell) => cell.dataset.columnId);
+  expect(columnIds).to.deep.equal(['name', 'team']);
+});
+
+it('treats a primitive (non-object, non-function) row as having no identity, without throwing', async () => {
+  const element = await dataGrid();
+  element.data = ['just a string', 42, true] as unknown as Person[];
+  expect(() => element.getVisibleRows()).to.not.throw();
+  expect(element.getVisibleRows().length).to.equal(0);
+});
+
+it('falls back to no identity when the rowKey path accessor throws on the row', async () => {
+  const poisoned = {
+    get id(): string {
+      throw new Error('boom');
+    },
+    name: 'Poisoned',
+    team: 'Runtime',
+    score: 1,
+  };
+  const element = await dataGrid();
+  element.rowKey = 'id';
+  element.data = [poisoned as unknown as Person, rows[0]!];
+  await element.updateComplete;
+  expect(() => element.getVisibleRows()).to.not.throw();
+  expect(element.getVisibleRows().map((row) => row.name)).to.deep.equal(['Ada']);
+});
+
 it("reflects the documented attribute surface and treats a bare selectable as multiple", async () => {
   const element = await dataGrid(html`
     <lr-data-grid
@@ -2136,6 +2182,69 @@ it("serializes, validates, applies, and resets view state without losing page or
   expect(element.getState().order).to.deep.equal([]);
 });
 
+it("falls back to declaration order when columnOrder is assigned a non-array value", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.columnOrder = "not-an-array" as unknown as readonly string[];
+  await element.updateComplete;
+  expect(element.getState().order).to.deep.equal([]);
+});
+
+it("falls back to no grouping when groupBy is assigned neither a string nor an array", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.groupBy = 42 as unknown as string;
+  await element.updateComplete;
+  expect(element.groupBy).to.equal(null);
+});
+
+it("skips a sort entry whose id accessor throws, keeping valid neighbors", async () => {
+  const poisoned = {
+    get id(): string {
+      throw new Error("boom");
+    },
+    desc: true,
+  };
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.sort = [poisoned as unknown as { id: string; desc?: boolean }, { id: "name", desc: false }];
+  await element.updateComplete;
+  expect(element.sort).to.deep.equal([{ id: "name", desc: false }]);
+});
+
+it("clone-owns a plain array filter value as a frozen array, and skips a filter whose id accessor throws", async () => {
+  const poisoned = {
+    get id(): string {
+      throw new Error("boom");
+    },
+    value: "ignored",
+  };
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.filters = [
+    poisoned as unknown as { id: string; value: unknown },
+    { id: "team", value: ["Compiler", "Runtime"] },
+  ];
+  await element.updateComplete;
+  expect(element.filters).to.deep.equal([{ id: "team", value: ["Compiler", "Runtime"] }]);
+  expect(Object.isFrozen(element.filters[0]!.value)).to.equal(true);
+});
+
+it("falls back to null for a filter value that cannot be serialized (circular reference)", async () => {
+  const circular: Record<string, unknown> = { name: "self" };
+  circular["self"] = circular;
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  element.filters = [{ id: "team", value: circular }];
+  await element.updateComplete;
+  expect(element.getState().filters).to.deep.equal([{ id: "team", value: null }]);
+});
+
 it("virtualizes 80+ rows, scrolls to an index, and reconciles a dynamic shrink", async () => {
   const manyRows: Person[] = Array.from({ length: 100 }, (_value, index) => ({
     id: index,
@@ -3105,6 +3214,28 @@ it("re-applies the current page and search term through the public handlers", as
   await element.updateComplete;
   expect(element.searchTerm).to.equal("ada");
   expect(element.page).to.equal(0);
+});
+
+it("derives the requested page from an input-like event's currentTarget value", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      paginate
+      page-size="1"
+      .columns=${columns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const internals = element as unknown as {
+    applyPageChange(value: number | Event): void;
+  };
+  const input = document.createElement("input");
+  input.value = "2";
+  const pageChange = oneEvent(element, "lr-page-change");
+  internals.applyPageChange({ currentTarget: input } as unknown as Event);
+  const { detail } = await pageChange;
+  expect(detail.page).to.equal(2);
+  expect(element.page).to.equal(2);
 });
 
 it("reorders columns through header drag and drop", async () => {
@@ -4452,6 +4583,26 @@ it("resolves descendant selection state when a childRows callback returns a fres
   expect((await cascade).detail.selectedKeys).to.include(1);
 });
 
+it("treats a row as childless instead of throwing when the childRows callback itself throws", async () => {
+  const parent: Person = { id: 1, name: "Parent", team: "Tree", score: 1 };
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Hostile children"
+      row-key="id"
+      .childRows=${() => {
+        throw new Error("boom");
+      }}
+      .columns=${columns}
+      .data=${[parent]}
+      .expandedKeys=${[1]}
+    ></lr-data-grid>
+  `);
+  expect(() => element.shadowRoot!.textContent).to.not.throw();
+  expect(element.shadowRoot!.textContent).to.contain("Parent");
+  const toggles = element.shadowRoot!.querySelectorAll('[part~="row"] [aria-expanded]');
+  expect(toggles.length).to.equal(0);
+});
+
 it("counts a child row shared by two parents only once toward selectable descendants", async () => {
   const sharedChild: Person = { id: 3, name: "Shared", team: "Tree", score: 3 };
   const parentA: Person = {
@@ -5712,6 +5863,79 @@ it("exposes a complete keyboard-adjustable separator and normalizes inverted wid
   await expect(element).to.be.accessible();
 });
 
+it("uses a 0px grid-template minimum for an unsized column that only declares a maxWidth", async () => {
+  const boundedColumns: DataGridColumn<Person>[] = [
+    { field: "name", label: "Name", maxWidth: 100 },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" .columns=${boundedColumns} .data=${rows}></lr-data-grid>
+  `);
+  expect(
+    element.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!.style
+      .getPropertyValue("--data-grid-columns")
+  ).to.contain("minmax(0px, 100px)");
+});
+
+it("cancels an active resize on the very next pointermove once its column can no longer resize, without waiting for pointerup", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const handle = element.shadowRoot!.querySelector<HTMLElement>(
+    '[part="resize-handle"]'
+  )!;
+  const details: Array<{ width: number; finished: boolean }> = [];
+  element.addEventListener("lr-column-resize", (event) => {
+    details.push((event as CustomEvent).detail);
+  });
+  handle.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 900, clientX: 10, bubbles: true }));
+  handle.dispatchEvent(new PointerEvent("pointermove", { pointerId: 900, clientX: 40, bubbles: true }));
+  expect(details.length).to.be.greaterThan(0);
+  const movesBeforeRevoke = details.length;
+
+  element.resizable = false;
+  // No await here -- the resize session's own columnCanResize() re-check on the very next
+  // pointermove must retire it immediately, before Lit's willUpdate ever runs. Retiring an
+  // already-moved session emits one more rollback event (always finished: false, like every
+  // resize rollback) and reverts the width.
+  handle.dispatchEvent(new PointerEvent("pointermove", { pointerId: 900, clientX: 70, bubbles: true }));
+  expect(details.length).to.equal(movesBeforeRevoke + 1);
+  expect(details.at(-1)?.finished).to.equal(false);
+  expect(element.getState().widths).to.deep.equal({});
+
+  // A further pointermove after the session has been retired must be a true no-op.
+  const countAfterRevoke = details.length;
+  handle.dispatchEvent(new PointerEvent("pointermove", { pointerId: 900, clientX: 100, bubbles: true }));
+  expect(details.length).to.equal(countAfterRevoke);
+
+  handle.dispatchEvent(new PointerEvent("pointerup", { pointerId: 900, clientX: 100, bubbles: true }));
+  await element.updateComplete;
+  expect(details.length).to.equal(countAfterRevoke);
+});
+
+it("allows a drop by preventing default on dragover only while both the dragged and hovered columns remain movable", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const nameHeader = element.shadowRoot!.querySelector<HTMLElement>(
+    '[data-column-id="name"]'
+  )!;
+  const teamHeader = element.shadowRoot!.querySelector<HTMLElement>(
+    '[data-column-id="team"]'
+  )!;
+  const dataTransfer = new DataTransfer();
+  nameHeader.dispatchEvent(
+    new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer })
+  );
+  const over = new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer });
+  teamHeader.dispatchEvent(over);
+  expect(over.defaultPrevented).to.equal(true);
+
+  nameHeader.dispatchEvent(new DragEvent("dragend", { bubbles: true }));
+  const overAfterEnd = new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer });
+  teamHeader.dispatchEvent(overAfterEnd);
+  expect(overAfterEnd.defaultPrevented, "no active drag session left to allow a drop").to.equal(false);
+});
+
 it("gives the page-size control a distinct localized purpose and represents an unlisted current size", async () => {
   const element = await dataGrid(html`
     <lr-data-grid
@@ -5882,6 +6106,62 @@ it("rolls back an active resize when its governing capability is revoked", async
   expect(element.getState().widths).to.deep.equal({});
 });
 
+it("rolls back an active resize when the resized column itself is removed from a reassigned columns collection", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" resizable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const handle = element.shadowRoot!.querySelector<HTMLElement>(
+    '[part="resize-handle"]'
+  )!;
+  const details: Array<{ width: number; finished: boolean }> = [];
+  element.addEventListener("lr-column-resize", (event) => {
+    details.push((event as CustomEvent).detail);
+  });
+  handle.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 812, clientX: 10, bubbles: true }));
+  handle.dispatchEvent(new PointerEvent("pointermove", { pointerId: 812, clientX: 40, bubbles: true }));
+  expect(details.some((detail) => detail.finished)).to.equal(false);
+  const movesBeforeRemoval = details.length;
+
+  // Reassigning columns (not resizable/reorderable) while a resize is mid-gesture must be caught by
+  // willUpdate's own cleanup, since the gesture never gets a pointerup to trigger the direct path.
+  // The rollback emits one more event (always finished: false, like every resize rollback).
+  element.columns = columns.filter((column) => column.field !== "name");
+  await element.updateComplete;
+  expect(details.length).to.equal(movesBeforeRemoval + 1);
+  expect(details.at(-1)?.finished).to.equal(false);
+  expect(element.getState().widths).to.deep.equal({});
+
+  handle.dispatchEvent(new PointerEvent("pointerup", { pointerId: 812, clientX: 70, bubbles: true }));
+  await element.updateComplete;
+  expect(element.getState().widths).to.deep.equal({});
+});
+
+it("retires an active column drag when the dragged column itself is removed from a reassigned columns collection", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" reorderable .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const nameHeader = element.shadowRoot!.querySelector<HTMLElement>(
+    '[data-column-id="name"]'
+  )!;
+  const dataTransfer = new DataTransfer();
+  nameHeader.dispatchEvent(
+    new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer })
+  );
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]') === null).to.equal(false);
+
+  element.columns = columns.filter((column) => column.field !== "name");
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('[part="drag-ghost"]') === null).to.equal(true);
+
+  const teamHeader = element.shadowRoot!.querySelector<HTMLElement>(
+    '[data-column-id="team"]'
+  )!;
+  const over = new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer });
+  teamHeader.dispatchEvent(over);
+  expect(over.defaultPrevented, "the drag session was cleared, so nothing allows this drop").to.equal(false);
+});
+
 it("maps scrollToIndex from processed rows through grouped display items", async () => {
   const element = await dataGrid(html`
     <lr-data-grid
@@ -6012,6 +6292,54 @@ it("accounts for expanded detail rows in aria-rowindex and aria-rowcount", async
       "aria-rowcount"
     )
   ).to.equal("5");
+});
+
+it("evaluates the expanded-detail-row offset per pre-window item once virtualized, with nothing actually expanded", async () => {
+  // rowDetail + any *currently rendered* expanded row disables virtualization outright (see
+  // virtualWindow's own `expandedDetails` guard), so the only way to exercise the pre-window
+  // expanded-row offset scan with virtualization still active is to configure rowDetail while
+  // leaving expandedKeys empty -- the scan still runs over every pre-window item and evaluates
+  // arrayHasKey() for each one, it just never finds a hit.
+  const manyRows: Person[] = Array.from({ length: 100 }, (_value, index) => ({
+    id: index,
+    name: `Person ${index}`,
+    team: "Virtual",
+    score: index,
+  }));
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="Virtual people"
+      row-key="id"
+      style="--row-height: 40px; --max-height: 200px"
+      .rowDetail=${(row: Person) => `Details for ${row.name}`}
+      .columns=${columns}
+      .data=${manyRows}
+    ></lr-data-grid>
+  `);
+  const body = element.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  Object.defineProperty(body, "clientHeight", { configurable: true, value: 200 });
+  Object.defineProperty(body, "scrollTo", {
+    configurable: true,
+    value: (options: ScrollToOptions) => {
+      body.scrollTop = Number(options.top ?? 0);
+      body.dispatchEvent(new Event("scroll"));
+    },
+  });
+  element.scrollToIndex(50, { align: "start" });
+  await element.updateComplete;
+
+  const renderedRows = [
+    ...element.shadowRoot!.querySelectorAll<HTMLElement>('[role="row"][aria-rowindex]'),
+  ];
+  expect(renderedRows.length).to.be.lessThan(100);
+  const ariaRowIndex = Number(renderedRows[0]!.getAttribute("aria-rowindex"));
+  const visibleIndex = Number(renderedRows[0]!.dataset["visibleIndex"]);
+  // Virtualization is active (window.start > 0, so the pre-window slice this offset scan walks is
+  // non-empty and the scan actually ran) whenever the first rendered row isn't absolute index 0.
+  expect(visibleIndex).to.be.greaterThan(0);
+  // Nothing is actually expanded, so the offset the scan computes stays the plain `2 + window.start`
+  // -- it must still agree exactly with the row's own visible position, not just avoid throwing.
+  expect(ariaRowIndex).to.equal(visibleIndex + 2);
 });
 
 describe("data-grid processing helpers", () => {

@@ -3794,6 +3794,61 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
     el.remove();
   });
 
+  it("hands focus to a reconnected instance's own popup resolver when a stacked overlay above it closes", async () => {
+    // Reconnection registers its overlay entry through `reconnectOpenPopup()`'s own
+    // `panel` resolver rather than `updated()`'s (see the previous test). That resolver is only
+    // ever invoked by the overlay manager itself -- specifically when a later, stacked entry
+    // above this one deactivates with `restoreFocus: false` and focus falls through to whichever
+    // entry is now topmost. Two simultaneously open date-inputs on the same document reproduce
+    // that stack; the reconnected one must sit underneath so closing the other exercises its
+    // reconnect-sourced resolver instead of leaving it dead code.
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <lr-date-input
+          id="lower"
+          style="--show-duration: 1ms; --hide-duration: 1ms"
+        ></lr-date-input>
+        <lr-date-input
+          id="upper"
+          style="--show-duration: 1ms; --hide-duration: 1ms"
+        ></lr-date-input>
+      </div>
+    `);
+    const lower = wrapper.querySelector("#lower") as LyraDateInput;
+    const upper = wrapper.querySelector("#upper") as LyraDateInput;
+
+    await lower.show();
+    await lower.updateComplete;
+    expect(lower.open).to.be.true;
+
+    lower.remove();
+    expect(lower.open, "disconnect resets open").to.be.false;
+    (lower as unknown as { open: boolean }).open = true; // still-open state going into the reconnect
+    wrapper.appendChild(lower);
+    await new Promise((resolve) => queueMicrotask(resolve));
+    await lower.updateComplete;
+    expect(lower.open, "lower stays open across the reconnect").to.be.true;
+
+    await upper.show();
+    await upper.updateComplete;
+    expect(upper.open, "upper stacks above the already-reconnected lower").to
+      .be.true;
+
+    const afterHide = oneEvent(upper, "lr-after-hide");
+    void upper.hide();
+    await upper.updateComplete;
+    await afterHide;
+    expect(upper.open, "the topmost stacked instance closed").to.be.false;
+    expect(
+      lower.open,
+      "the reconnected instance underneath is untouched"
+    ).to.be.true;
+    expect(
+      lower.shadowRoot!.activeElement?.tagName.toLowerCase(),
+      "closing the entry above hands focus into the still-open reconnected popup"
+    ).to.equal("lr-date-picker");
+  });
+
   it("adoptedCallback tears down positioning, the overlay, and cross-document listeners", async () => {
     const el = (await fixture(
       html`<lr-date-input open></lr-date-input>`
@@ -3925,4 +3980,490 @@ it("contains an unbroken end adornment in a 320px LTR or RTL allocation", async 
       `${direction} input wrapper scroll width`
     ).to.be.at.most(inputWrapper.clientWidth);
   }
+});
+
+describe('coverage-gap fixes', () => {
+  it('clears the touched/data-invalid state on form.reset()', async () => {
+    const form = (await fixture(html`
+      <form><lr-date-input name="d" required value="2026-07-15"></lr-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector("lr-date-input") as LyraDateInput;
+    const input = el.shadowRoot!.querySelector(
+      '[part="input"]'
+    ) as HTMLInputElement;
+    el.value = "";
+    input.dispatchEvent(new FocusEvent("blur"));
+    await el.updateComplete;
+    expect(el.hasAttribute("data-invalid"), "blank required field is invalid and touched").to.be.true;
+
+    form.reset();
+    await el.updateComplete;
+    expect(el.value).to.equal("2026-07-15");
+    expect(
+      el.hasAttribute("data-invalid"),
+      "reset clears the touched flag along with restoring the default value"
+    ).to.be.false;
+  });
+
+  it('preserves a setCustomValidity() message across form.reset()', async () => {
+    const form = (await fixture(html`
+      <form><lr-date-input name="d" value="2026-07-15"></lr-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector("lr-date-input") as LyraDateInput;
+    el.setCustomValidity("No longer available");
+    expect(el.validity.customError).to.be.true;
+
+    el.value = "2026-08-01";
+    form.reset();
+    await el.updateComplete;
+    expect(el.value).to.equal("2026-07-15");
+    expect(
+      el.validity.customError,
+      "a custom validity error survives a native reset"
+    ).to.be.true;
+    expect(el.validationMessage).to.equal("No longer available");
+  });
+
+  it('recovers from a malformed runtime locale instead of throwing while normalizing typed digits', async () => {
+    const el = (await fixture(
+      html`<lr-date-input locale="!!not-a-locale!!"></lr-date-input>`
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector(
+      '[part="input"]'
+    ) as HTMLInputElement;
+    input.value = "2026-07-15";
+    setTimeout(() => input.dispatchEvent(new Event("change")));
+    await oneEvent(el, "change");
+    expect(el.value).to.equal("2026-07-15");
+  });
+
+  it('recovers when the locale-digit number formatter itself throws while normalizing typed text', async () => {
+    // The previous test proves a malformed `locale` attribute never reaches the formatter (it
+    // gets sanitized to a valid tag first). This one forces the formatter construction itself to
+    // throw, which is the only way to actually reach `normalizeLocalizedDateText()`'s own catch
+    // -- the same technique the sibling `Intl.DateTimeFormat` stubs below already use.
+    const el = (await fixture(
+      html`<lr-date-input></lr-date-input>`
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector(
+      '[part="input"]'
+    ) as HTMLInputElement;
+    const original = Object.getOwnPropertyDescriptor(
+      Intl.NumberFormat.prototype,
+      "format"
+    )!;
+    try {
+      Object.defineProperty(Intl.NumberFormat.prototype, "format", {
+        configurable: true,
+        get() {
+          return () => {
+            throw new Error("boom");
+          };
+        },
+      });
+      input.value = "2026-07-15";
+      setTimeout(() => input.dispatchEvent(new Event("change")));
+      await oneEvent(el, "change");
+      expect(
+        el.value,
+        "ASCII digits still parse when locale-digit normalization itself throws"
+      ).to.equal("2026-07-15");
+    } finally {
+      Object.defineProperty(Intl.NumberFormat.prototype, "format", original);
+    }
+  });
+
+  it('commits a single-endpoint valueAsRange assignment as a plain (non-range-separator) ISO value', async () => {
+    const el = (await fixture(
+      html`<lr-date-input mode="range"></lr-date-input>`
+    )) as LyraDateInput;
+    el.valueAsRange = { from: new Date(2026, 6, 20), to: null };
+    expect(el.value).to.equal("2026-07-20");
+  });
+
+  it('reports a null valueAsDate while in range mode', async () => {
+    const el = (await fixture(
+      html`<lr-date-input mode="range" value="2026-07-10/2026-07-15"></lr-date-input>`
+    )) as LyraDateInput;
+    expect(el.valueAsDate).to.equal(null);
+  });
+
+  it('disables a date solely through a numeric disabled-days-of-week token', async () => {
+    const el = (await fixture(
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`
+    )) as LyraDateInput;
+    const weekday = new Date(2026, 6, 15).getDay();
+    el.disabledDaysOfWeek = String(weekday);
+    await el.updateComplete;
+    expect(
+      el.validity.customError,
+      "the numeric weekday token disables the committed date"
+    ).to.be.true;
+  });
+
+  it('raises customError from isDateDisabled alone, with no disabledDates/disabledDaysOfWeek configured', async () => {
+    const el = (await fixture(
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`
+    )) as LyraDateInput;
+    el.isDateDisabled = (date) => date.getDate() === 15;
+    await el.updateComplete;
+    expect(el.validity.customError).to.be.true;
+  });
+
+  it('falls back to a manual dash-joined display when Intl formatRange itself throws', async () => {
+    const el = (await fixture(
+      html`<lr-date-input mode="range" value="2026-07-10/2026-07-15"></lr-date-input>`
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector(
+      '[part="input"]'
+    ) as HTMLInputElement;
+    const original = Intl.DateTimeFormat.prototype.formatRange;
+    try {
+      Intl.DateTimeFormat.prototype.formatRange = () => {
+        throw new Error("boom");
+      };
+      el.value = "2026-07-10/2026-07-16";
+      await el.updateComplete;
+      expect(input.value).to.include("–");
+    } finally {
+      Intl.DateTimeFormat.prototype.formatRange = original;
+    }
+  });
+
+  it('falls back to a dash range separator when Intl formatRangeToParts throws while parsing typed range text', async () => {
+    const el = (await fixture(
+      html`<lr-date-input mode="range"></lr-date-input>`
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector(
+      '[part="input"]'
+    ) as HTMLInputElement;
+    const original = Intl.DateTimeFormat.prototype.formatRangeToParts;
+    try {
+      Intl.DateTimeFormat.prototype.formatRangeToParts = () => {
+        throw new Error("boom");
+      };
+      input.value = "7/10/2026 – 7/15/2026";
+      setTimeout(() => input.dispatchEvent(new Event("change")));
+      await oneEvent(el, "change");
+      expect(el.value).to.equal("2026-07-10/2026-07-15");
+    } finally {
+      Intl.DateTimeFormat.prototype.formatRangeToParts = original;
+    }
+  });
+
+  it('falls back to a dash range separator when Intl formatRangeToParts reports no literal text between the two dates', async () => {
+    // A distinct gap from the throw-based fallback above: here `formatRangeToParts()` succeeds,
+    // but its parts contain nothing between the last `startRange` part and the first `endRange`
+    // part, so the computed separator is the empty string and the `|| '–'` fallback (not the
+    // catch block) is what has to supply the dash.
+    const el = (await fixture(
+      html`<lr-date-input mode="range"></lr-date-input>`
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector(
+      '[part="input"]'
+    ) as HTMLInputElement;
+    const original = Intl.DateTimeFormat.prototype.formatRangeToParts;
+    try {
+      Intl.DateTimeFormat.prototype.formatRangeToParts = () =>
+        [
+          { type: 'day', value: '10', source: 'startRange' },
+          { type: 'day', value: '15', source: 'endRange' },
+        ] as Intl.DateTimeRangeFormatPart[];
+      input.value = "7/10/2026–7/15/2026";
+      setTimeout(() => input.dispatchEvent(new Event("change")));
+      await oneEvent(el, "change");
+      expect(el.value).to.equal("2026-07-10/2026-07-15");
+    } finally {
+      Intl.DateTimeFormat.prototype.formatRangeToParts = original;
+    }
+  });
+
+  it('re-commits the identical displayed range text as-is without reparsing it', async () => {
+    const el = (await fixture(
+      html`<lr-date-input mode="range" value="2026-07-10/2026-07-15"></lr-date-input>`
+    )) as LyraDateInput;
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector(
+      '[part="input"]'
+    ) as HTMLInputElement;
+    const displayed = input.value;
+    // Re-type the exact same displayed text (a no-op edit) and commit it via
+    // blur/change rather than Enter, so it goes through onInputChange -> applyTypedText
+    // -> parseRangeText's own-text fast path instead of the enterCommittedText guard.
+    input.value = displayed;
+    input.dispatchEvent(new Event("change"));
+    await el.updateComplete;
+    expect(el.value).to.equal("2026-07-10/2026-07-15");
+  });
+
+  it('swallows a focus event that races the control becoming disabled', async () => {
+    const el = (await fixture(
+      html`<lr-date-input></lr-date-input>`
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector(
+      '[part="input"]'
+    ) as HTMLInputElement;
+    el.disabled = true;
+    await el.updateComplete;
+    let focusEvents = 0;
+    el.addEventListener("focus", () => {
+      focusEvents++;
+    });
+    input.dispatchEvent(
+      new FocusEvent("focus", { bubbles: true, composed: true })
+    );
+    expect(
+      focusEvents,
+      "a disabled control must not relay a raced focus event"
+    ).to.equal(0);
+  });
+
+  it('closes the popup when the expand button is clicked again while already open', async () => {
+    const el = (await fixture(
+      html`<lr-date-input style="--show-duration: 1ms; --hide-duration: 1ms"></lr-date-input>`
+    )) as LyraDateInput;
+    const expandButton = el.shadowRoot!.querySelector(
+      '[part="expand-button"]'
+    ) as HTMLButtonElement;
+    expandButton.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    const afterHide = oneEvent(el, "lr-after-hide");
+    expandButton.click();
+    await afterHide;
+    expect(el.open).to.be.false;
+  });
+
+  it('supersedes an in-flight show() transition when hide() is called before it settles', async () => {
+    const el = (await fixture(
+      html`<lr-date-input style="--show-duration: 1ms; --hide-duration: 1ms"></lr-date-input>`
+    )) as LyraDateInput;
+    const afterHide = oneEvent(el, "lr-after-hide");
+    const showPromise = el.show();
+    const hidePromise = el.hide();
+    await Promise.all([showPromise, hidePromise]);
+    await afterHide;
+    expect(el.open, "the later hide() call wins over the superseded show()").to.be.false;
+  });
+
+  it('drops the pending lr-after-show emission when hide() supersedes it while the open transition is still animating', async () => {
+    // The previous test supersedes show() before its settleTransition() even reaches its own
+    // animation-await phase (the stale-token check right after `updateComplete` already catches
+    // it). This one lets the show transition actually start animating first, so the *later*
+    // stale-token check -- taken only after `Promise.all(animations...)` settles -- is the one
+    // that has to catch it instead.
+    const el = (await fixture(
+      html`<lr-date-input style="--show-duration: 150ms; --hide-duration: 50ms"></lr-date-input>`
+    )) as LyraDateInput;
+    const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    let afterShowFired = false;
+    el.addEventListener('lr-after-show', () => {
+      afterShowFired = true;
+    });
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    const showPromise = el.show();
+    await waitUntil(
+      () => popup.getAnimations({ subtree: true }).length > 0,
+      'the show transition must start animating',
+      { timeout: 1000 }
+    );
+    const hidePromise = el.hide();
+    await Promise.all([showPromise, hidePromise]);
+    await afterHide;
+    expect(
+      afterShowFired,
+      'a later hide() must supersede the show transition even once its animation has already begun'
+    ).to.be.false;
+  });
+
+  it('does not double-bind the visibilitychange listener when connectedCallback re-fires while still connected', async () => {
+    const el = (await fixture(
+      html`<lr-date-input value="2026-07-14" disable-past></lr-date-input>`
+    )) as LyraDateInput;
+    const priv = el as unknown as {
+      connectedCallback(): void;
+      validityRevision: number;
+    };
+    const before = priv.validityRevision;
+    priv.connectedCallback();
+    el.ownerDocument.dispatchEvent(new Event("visibilitychange"));
+    await el.updateComplete;
+    expect(
+      priv.validityRevision,
+      "a redundant connect must not create a second listener that double-fires"
+    ).to.equal(before + 1);
+  });
+
+  it('ignores a non-array assumeInteractionOn from an untyped JS caller instead of throwing', async () => {
+    const el = (await fixture(
+      html`<lr-date-input></lr-date-input>`
+    )) as LyraDateInput;
+    await el.updateComplete;
+    const priv = el as unknown as {
+      interactionListeners: Map<string, EventListener>;
+    };
+    expect(priv.interactionListeners.has("input")).to.be.true;
+    el.assumeInteractionOn = null as unknown as string[];
+    await el.updateComplete;
+    expect(priv.interactionListeners.size).to.equal(0);
+  });
+
+  it('ignores a non-array validators value from an untyped JS caller instead of throwing', async () => {
+    const el = (await fixture(
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`
+    )) as LyraDateInput;
+    el.validators = null as unknown as LyraDateInput["validators"];
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('skips wiring an observedAttributes MutationObserver while disconnected', async () => {
+    const el = (await fixture(
+      html`<lr-date-input></lr-date-input>`
+    )) as LyraDateInput;
+    el.remove();
+    el.validators = [
+      {
+        checkValidity: () => ({ isValid: true, invalidKeys: [], message: "" }),
+        observedAttributes: ["data-flag"],
+      },
+    ];
+    await el.updateComplete;
+    const priv = el as unknown as { validatorAttributeObserver?: unknown };
+    expect(
+      priv.validatorAttributeObserver,
+      "no observer is created for a disconnected control"
+    ).to.equal(undefined);
+  });
+
+  it('tolerates a non-array invalidKeys and a non-string message from an untyped checkValidity() result', async () => {
+    const el = (await fixture(
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`
+    )) as LyraDateInput;
+    el.validators = [
+      {
+        checkValidity: () => ({
+          isValid: false,
+          invalidKeys: undefined as unknown as Exclude<
+            keyof ValidityState,
+            "valid"
+          >[],
+          message: undefined as unknown as string,
+        }),
+        message: "Fallback static message",
+      },
+    ];
+    expect(el.checkValidity()).to.be.false;
+    expect(
+      el.internals.validity.customError,
+      "no mapped invalidKeys synthesizes customError"
+    ).to.be.true;
+    expect(el.internals.validationMessage).to.equal("Fallback static message");
+  });
+
+  it('ignores a stale observedAttributes MutationObserver callback whose tracked binding changed underneath it', async () => {
+    const el = (await fixture(
+      html`<lr-date-input value="2026-07-15"></lr-date-input>`
+    )) as LyraDateInput;
+    el.validators = [
+      {
+        checkValidity: () => ({ isValid: true, invalidKeys: [], message: "" }),
+        observedAttributes: ["data-flag"],
+      },
+    ];
+    await el.updateComplete;
+    const priv = el as unknown as {
+      validatorAttributeObserver?: unknown;
+      validityRevision: number;
+    };
+    expect(priv.validatorAttributeObserver).to.not.equal(undefined);
+    const revisionBefore = priv.validityRevision;
+    // A differently-identitied binding with a real (no-op) observer, so the
+    // guard's `!==` check trips while fixture cleanup can still safely call
+    // `.observer.disconnect()` on it afterwards.
+    priv.validatorAttributeObserver = { observer: { disconnect() {} } };
+    el.setAttribute("data-flag", "go");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(
+      priv.validityRevision,
+      "a stale observer callback must not revalidate"
+    ).to.equal(revisionBefore);
+  });
+
+  it('bindVisibilityListener no-ops when invoked while disconnected', async () => {
+    const el = (await fixture(
+      html`<lr-date-input></lr-date-input>`
+    )) as LyraDateInput;
+    el.remove();
+    const priv = el as unknown as {
+      connectedCallback(): void;
+      visibilityListenerDocument?: Document;
+    };
+    priv.connectedCallback();
+    expect(
+      priv.visibilityListenerDocument,
+      "no visibility listener bound while disconnected"
+    ).to.equal(undefined);
+  });
+
+  it('bindDocumentPointer no-ops when invoked while disconnected', async () => {
+    const el = (await fixture(
+      html`<lr-date-input></lr-date-input>`
+    )) as LyraDateInput;
+    el.remove();
+    const priv = el as unknown as {
+      bindDocumentPointer(): void;
+      pointerListenerDocument?: Document;
+    };
+    priv.bindDocumentPointer();
+    expect(
+      priv.pointerListenerDocument,
+      "no pointer listener bound while disconnected"
+    ).to.equal(undefined);
+  });
+
+  it('reconnectOpenPopup no-ops when invoked while disconnected or already closed', async () => {
+    const el = (await fixture(
+      html`<lr-date-input></lr-date-input>`
+    )) as LyraDateInput;
+    const priv = el as unknown as {
+      reconnectOpenPopup(): void;
+      cleanupFn?: () => void;
+    };
+    // Closed, but still connected: the `!this.open` half of the guard.
+    priv.reconnectOpenPopup();
+    expect(priv.cleanupFn, "no reposition while closed").to.equal(undefined);
+
+    el.remove();
+    (el as unknown as { open: boolean }).open = true;
+    priv.reconnectOpenPopup();
+    expect(priv.cleanupFn, "no reposition while disconnected").to.equal(
+      undefined
+    );
+  });
+
+  it("reconnectOpenPopup no-ops when the popup/anchor parts have not rendered yet", async () => {
+    // Connected and open both pass, but this calls straight through to `reconnectOpenPopup()`
+    // before Lit's own microtask-scheduled first update has populated the shadow root, so
+    // `renderRoot.querySelector('[part=\"popup\"]')`/`'[part=\"input-wrapper\"]'` both still
+    // resolve to null. Under real usage this can never happen (the only caller,
+    // `connectedCallback()`, gates on `hasUpdated` first), so it is exercised the same
+    // direct-invocation way as the guard above.
+    const el = document.createElement(
+      "lr-date-input"
+    ) as unknown as LyraDateInput & {
+      reconnectOpenPopup(): void;
+      cleanupFn?: () => void;
+    };
+    document.body.appendChild(el);
+    (el as unknown as { open: boolean }).open = true;
+    el.reconnectOpenPopup();
+    expect(
+      el.cleanupFn,
+      "no reposition when the popup/anchor parts do not exist in the render root yet"
+    ).to.equal(undefined);
+    el.remove();
+  });
 });

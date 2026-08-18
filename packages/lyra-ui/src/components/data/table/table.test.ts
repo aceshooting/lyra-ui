@@ -31,6 +31,27 @@ if (!customElements.get('table-opaque-control')) {
   customElements.define('table-opaque-control', TableOpaqueControlElement);
 }
 
+/** An OPEN-shadow, non-interactive custom element -- unlike the closed-mode opaque control above,
+ *  clicking its inner span exposes its own ShadowRoot as a real entry in `event.composedPath()`,
+ *  which is not an Element (`nodeType === 11`, not `1`). */
+class TableOpenShellElement extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const span = document.createElement('span');
+    span.textContent = this.textContent ?? '';
+    root.append(span);
+  }
+
+  get innerSpan(): HTMLSpanElement {
+    return this.shadowRoot!.querySelector('span')!;
+  }
+}
+
+if (!customElements.get('table-open-shell')) {
+  customElements.define('table-open-shell', TableOpenShellElement);
+}
+
 function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
 }
@@ -2756,6 +2777,26 @@ it('lets an opaque custom control opt out of delegated row activation explicitly
   (el.shadowRoot!.querySelector('table-opaque-control') as TableOpaqueControlElement).activate();
 
   expect(activated).to.equal(0);
+});
+
+it('activates a row on a click from inside a non-interactive open-shadow custom element, skipping its ShadowRoot in the composed path', async () => {
+  const openShellColumns: TableColumn<Row>[] = [
+    {
+      key: 'name',
+      label: 'Name',
+      cell: (row) => html`<table-open-shell>${row.name}</table-open-shell>`,
+    },
+  ];
+  const el = (await fixture(
+    html`<lr-table .columns=${openShellColumns} .rows=${rows} .rowKey=${(row: Row) => row.id}></lr-table>`
+  )) as LyraTable<Row>;
+  let activated = 0;
+  el.addEventListener('lr-row-click', () => activated++);
+
+  const shell = el.shadowRoot!.querySelector('table-open-shell') as TableOpenShellElement;
+  shell.innerSpan.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+
+  expect(activated).to.equal(1);
 });
 
 it('keeps a numeric-key row and a string-key row distinct instead of colliding', async () => {
@@ -5819,6 +5860,49 @@ describe('grid keyboard navigation edges', () => {
     return event;
   };
 
+  it('clamps a lost roving row stop to the same list position, then to null once rows are fully empty', async () => {
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [
+      { id: 'a', name: 'Alpha', score: 1 },
+      { id: 'b', name: 'Beta', score: 2 },
+      { id: 'c', name: 'Gamma', score: 3 },
+    ];
+    el.rowKey = (row) => row.id;
+    await el.updateComplete;
+    const beta = el.shadowRoot!.querySelector<HTMLElement>('[data-row-key="string:b"]')!;
+    beta.focus();
+    expect(el.shadowRoot!.activeElement === beta).to.be.true;
+
+    // 'b' still exists after this reorder, so the roving stop must stay pinned to its own identity
+    // rather than its old numeric position (which now belongs to 'c').
+    el.rows = [
+      { id: 'c', name: 'Gamma', score: 3 },
+      { id: 'b', name: 'Beta', score: 2 },
+      { id: 'a', name: 'Alpha', score: 1 },
+    ];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[data-row-key="string:b"]')!.getAttribute('tabindex')).to.equal(
+      '0',
+    );
+
+    // 'b' (previously at position 1) is gone; 'd' now occupies that same array position. The roving
+    // stop must clamp to the position, landing on 'd', rather than defaulting back to the first row.
+    el.rows = [
+      { id: 'a', name: 'Alpha', score: 1 },
+      { id: 'd', name: 'Delta', score: 4 },
+    ];
+    await el.updateComplete;
+
+    const delta = el.shadowRoot!.querySelector<HTMLElement>('[data-row-key="string:d"]')!;
+    expect(delta.getAttribute('tabindex')).to.equal('0');
+    expect(el.shadowRoot!.querySelectorAll('[data-row-key][tabindex="0"]').length).to.equal(1);
+
+    el.rows = [];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[data-row-key]').length).to.equal(0);
+  });
+
   it('clamps header ArrowLeft at the first column and ArrowRight at the last', async () => {
     const el = await grid();
     const th = headers(el);
@@ -5980,6 +6064,33 @@ describe('grid keyboard navigation edges', () => {
     const r = await key(el, detachedRow, 'ArrowDown');
     expect(h.defaultPrevented, 'a detached header is inert').to.be.false;
     expect(r.defaultPrevented, 'a detached row is inert').to.be.false;
+  });
+
+  it('renders the no-columns empty state instead of throwing when columns is emptied with rows still present', async () => {
+    const el = await grid();
+    el.columns = [];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('th[data-col-key]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelector('lr-empty')?.localName).to.equal('lr-empty');
+  });
+
+  it('excludes a row whose rowKey callback throws instead of failing the whole render', async () => {
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [
+      { id: 'a', name: 'Alpha', score: 1 },
+      { id: 'poison', name: 'Poison', score: 2 },
+    ];
+    el.rowKey = (row) => {
+      if (row.id === 'poison') throw new Error('boom');
+      return row.id;
+    };
+    await el.updateComplete;
+
+    const keys = [...el.shadowRoot!.querySelectorAll('[data-row-key]')].map((r) =>
+      r.getAttribute('data-row-key'),
+    );
+    expect(keys).to.deep.equal(['string:a']);
   });
 
   it('does not move focus (no crash) on ArrowDown from a header when there are no real body rows yet (skeleton loading)', async () => {
@@ -6191,6 +6302,113 @@ describe('v9 bounded and transactional contracts', () => {
     expect(el.columns).to.deep.equal([columns[0]]);
     expect(el.columns[0] === columns[0]).to.equal(true);
     expect(Object.isFrozen(el.columns)).to.equal(true);
+  });
+
+  it('retains only the safe prefix already collected when the columns length descriptor itself throws', async () => {
+    const target: TableColumn<Row>[] = [columns[0]!, columns[1]!];
+    const hostile = new Proxy(target, {
+      getOwnPropertyDescriptor(t, prop) {
+        if (prop === 'length') throw new Error('boom');
+        return Reflect.getOwnPropertyDescriptor(t, prop);
+      },
+    });
+    const el = await fixture<LyraTable<Row>>(html`<lr-table></lr-table>`);
+
+    el.columns = hostile;
+
+    expect(el.columns).to.deep.equal([]);
+  });
+
+  it('skips one poisoned column position without losing the valid entries around it', async () => {
+    const target: TableColumn<Row>[] = [columns[0]!, columns[1]!, { key: 'third', label: 'Third', cell: () => '' }];
+    const hostile = new Proxy(target, {
+      getOwnPropertyDescriptor(t, prop) {
+        if (prop === '1') throw new Error('boom');
+        return Reflect.getOwnPropertyDescriptor(t, prop);
+      },
+    });
+    const el = await fixture<LyraTable<Row>>(html`<lr-table></lr-table>`);
+
+    el.columns = hostile;
+
+    expect(el.columns.map((c) => c.key)).to.deep.equal(['name', 'third']);
+  });
+
+  it('drops a column definition whose key accessor throws, keeping later valid definitions', async () => {
+    const poisoned = {
+      get key(): string {
+        throw new Error('boom');
+      },
+      label: 'Poisoned',
+      cell: () => '',
+    };
+    const el = await fixture<LyraTable<Row>>(html`<lr-table></lr-table>`);
+
+    el.columns = [poisoned as unknown as TableColumn<Row>, columns[0]!];
+
+    expect(el.columns.map((c) => c.key)).to.deep.equal(['name']);
+  });
+
+  it('retains only the safe prefix already collected when a custom rows iterator throws mid-iteration', async () => {
+    const source: Row[] = [rows[0]!, rows[1]!, { id: 'c', name: 'Gamma', score: 2 }];
+    const hostile: Row[] = [...source];
+    let calls = 0;
+    // Own-property override: still a real Array (Array.isArray stays true), but iterating it walks
+    // a custom generator that throws after the first value instead of the real elements.
+    Object.defineProperty(hostile, Symbol.iterator, {
+      value: function* (): Generator<Row> {
+        for (const row of source) {
+          calls++;
+          if (calls > 1) throw new Error('boom');
+          yield row;
+        }
+      },
+    });
+    const el = await fixture<LyraTable<Row>>(html`<lr-table></lr-table>`);
+
+    el.rows = hostile;
+
+    expect(el.rows).to.deep.equal([rows[0]]);
+    expect(Object.isFrozen(el.rows)).to.equal(true);
+  });
+
+  it('retains only the safe prefix already collected when a custom selectedRowKeys iterable throws mid-iteration', async () => {
+    let calls = 0;
+    const hostile = {
+      [Symbol.iterator](): Iterator<string> {
+        return {
+          next(): IteratorResult<string> {
+            calls++;
+            if (calls > 1) throw new Error('boom');
+            return { value: 'a', done: false };
+          },
+        };
+      },
+    };
+    const el = await fixture<LyraTable<Row>>(html`<lr-table></lr-table>`);
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (row) => row.id;
+
+    el.selectedRowKeys = hostile as unknown as Set<string | number>;
+
+    expect([...el.selectedRowKeys]).to.deep.equal(['a']);
+  });
+
+  it('exposes a standard Set-shaped forEach on the read facade returned by selectedRowKeys', async () => {
+    const el = await fixture<LyraTable<Row>>(html`<lr-table></lr-table>`);
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (row) => row.id;
+    el.selectedRowKeys = new Set(['a', 'b']);
+
+    const seen: Array<[unknown, unknown]> = [];
+    el.selectedRowKeys.forEach((value, value2) => seen.push([value, value2]));
+
+    expect(seen).to.deep.equal([
+      ['a', 'a'],
+      ['b', 'b'],
+    ]);
   });
 
   it('clone-owns readonly collection inputs and returns detached selection snapshots', async () => {
@@ -6422,5 +6640,177 @@ describe('v9 bounded and transactional contracts', () => {
     await el.updateComplete;
     expect(explicitCell.getAttribute('data-sticky')).to.equal('start');
     expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]').length).to.equal(1);
+  });
+});
+
+function hostileIterable<V>(items: readonly V[], throwAt: number): Iterable<V> {
+  return {
+    [Symbol.iterator]() {
+      let i = 0;
+      return {
+        next(): IteratorResult<V> {
+          if (i === throwAt) throw new Error('hostile iterable');
+          if (i >= items.length) return { done: true, value: undefined as never };
+          return { done: false, value: items[i++]! };
+        },
+      };
+    },
+  };
+}
+
+describe('coverage: hostile-input collection normalization', () => {
+  it('selectedRowKeys setter: retains the safe prefix when the supplied iterable throws mid-iteration', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.selectedRowKeys = hostileIterable(['a', 'b', 'c'], 1) as never;
+    await el.updateComplete;
+    expect([...el.selectedRowKeys]).to.deep.equal(['a']);
+  });
+
+  it('selectedRowKeys facade forEach(): forwards (value, value, facade) and the given thisArg', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.selectedRowKeys = new Set(['a', 'b']);
+    await el.updateComplete;
+    const seen: unknown[][] = [];
+    const thisArg = { tag: 'ctx' };
+    el.selectedRowKeys.forEach(function (this: unknown, value, value2, set) {
+      seen.push([value, value2, this]);
+      expect(set.has(value)).to.equal(true);
+    }, thisArg);
+    expect(seen).to.deep.equal([
+      ['a', 'a', thisArg],
+      ['b', 'b', thisArg],
+    ]);
+  });
+
+  it('rows setter: retains the safe prefix when a hostile indexed getter throws mid-iteration', async () => {
+    const hostileRows: Row[] = [
+      { id: 'a', name: 'Alpha', score: 1 },
+      { id: 'b', name: 'Beta', score: 2 },
+      { id: 'c', name: 'Gamma', score: 3 },
+    ];
+    Object.defineProperty(hostileRows, '1', {
+      get(): Row {
+        throw new Error('hostile row');
+      },
+    });
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.rows = hostileRows;
+    await el.updateComplete;
+    expect(el.rows.map((r) => r.id)).to.deep.equal(['a']);
+  });
+
+  it('columns setter: skips entirely when the array-like length itself is unreadable (hostile Proxy)', async () => {
+    const real: TableColumn<Row>[] = [...columns];
+    const hostile = new Proxy(real, {
+      getOwnPropertyDescriptor(target, prop) {
+        if (prop === 'length') throw new Error('hostile length');
+        return Object.getOwnPropertyDescriptor(target, prop);
+      },
+    });
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = hostile as never;
+    await el.updateComplete;
+    expect(el.columns.length).to.equal(0);
+  });
+
+  it('columns setter: skips only the index whose own property descriptor is unreadable, keeping valid neighbors (hostile Proxy)', async () => {
+    const real: TableColumn<Row>[] = [
+      { key: 'a', label: 'A', cell: () => '' },
+      { key: 'b', label: 'B', cell: () => '' },
+      { key: 'c', label: 'C', cell: () => '' },
+    ];
+    const hostile = new Proxy(real, {
+      getOwnPropertyDescriptor(target, prop) {
+        if (prop === '1') throw new Error('hostile index');
+        return Object.getOwnPropertyDescriptor(target, prop);
+      },
+    });
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = hostile as never;
+    await el.updateComplete;
+    expect(el.columns.map((c) => c.key)).to.deep.equal(['a', 'c']);
+  });
+
+  it('columns setter: skips a definition whose key getter throws, keeping valid neighbors', async () => {
+    const hostileColumn = { label: 'Hostile' } as unknown as TableColumn<Row>;
+    Object.defineProperty(hostileColumn, 'key', {
+      get(): string {
+        throw new Error('hostile key');
+      },
+    });
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = [{ key: 'a', label: 'A', cell: () => '' }, hostileColumn, { key: 'c', label: 'C', cell: () => '' }];
+    await el.updateComplete;
+    expect(el.columns.map((c) => c.key)).to.deep.equal(['a', 'c']);
+  });
+
+  it('keyOf(): omits a row entirely when the rowKey callback throws for it, keeping valid neighbors', async () => {
+    const throwingRowKey = (row: Row): string => {
+      if (row.id === 'b') throw new Error('hostile rowKey');
+      return row.id;
+    };
+    const el = (await fixture(
+      html`<lr-table .columns=${columns} .rows=${rows} .rowKey=${throwingRowKey}></lr-table>`
+    )) as LyraTable<Row>;
+    await el.updateComplete;
+    const rowEls = [...el.shadowRoot!.querySelectorAll<HTMLElement>('tbody tr[data-row-key]')];
+    // data-row-key is encodeKey()-encoded as `${typeof key}:${key}`.
+    expect(rowEls.map((tr) => tr.dataset['rowKey'])).to.deep.equal(['string:a']);
+  });
+
+  it('eventInteractiveTarget(): skips a non-Element composed-path entry (e.g. an open shadow root) instead of throwing', async () => {
+    // A click inside a nested OPEN-shadow custom control's own shadow tree puts that shadow root
+    // itself (nodeType 11, no `.matches()`) in the composed path ahead of the control's host
+    // element -- asElement() must skip it rather than throw, and the passive (non-interactive)
+    // host must still leave the click on the row's own activation surface.
+    class OpenPassiveElement extends HTMLElement {
+      connectedCallback(): void {
+        const root = this.attachShadow({ mode: 'open' });
+        const span = document.createElement('span');
+        span.textContent = this.textContent ?? '';
+        root.append(span);
+      }
+    }
+    if (!customElements.get('table-open-passive')) {
+      customElements.define('table-open-passive', OpenPassiveElement);
+    }
+    const openColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', cell: (row) => html`<table-open-passive>${row.name}</table-open-passive>` },
+    ];
+    const el = (await fixture(
+      html`<lr-table .columns=${openColumns} .rows=${rows} .rowKey=${(row: Row) => row.id}></lr-table>`
+    )) as LyraTable<Row>;
+    await el.updateComplete;
+    const innerSpan = el.shadowRoot!.querySelector('table-open-passive')!.shadowRoot!.querySelector('span')!;
+    let activated = 0;
+    el.addEventListener('lr-row-click', () => activated++);
+    innerSpan.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    expect(activated).to.equal(1);
+  });
+
+  it('retains the previously roving-focused row by key (not stale index) when a client-side sort reorders it', async () => {
+    const el = (await fixture(
+      html`<lr-table .columns=${columns} .rows=${rows} .rowKey=${(row: Row) => row.id}></lr-table>`
+    )) as LyraTable<Row>;
+    await el.updateComplete;
+    const rowEls = () => [...el.shadowRoot!.querySelectorAll<HTMLElement>('tbody tr[data-row-key]')];
+    // data-row-key is encodeKey()-encoded as `${typeof key}:${key}`.
+    const [firstRow, secondRow] = rowEls();
+    firstRow!.focus();
+    firstRow!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === secondRow).to.equal(true);
+    expect(secondRow!.dataset['rowKey']).to.equal('string:b');
+    expect(secondRow!.getAttribute('tabindex')).to.equal('0');
+
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+
+    const rowsAfter = rowEls();
+    // score asc moves Beta (score: 1) ahead of Alpha (score: 3).
+    expect(rowsAfter[0]!.dataset['rowKey']).to.equal('string:b');
+    const focusedNow = rowsAfter.find((tr) => tr.getAttribute('tabindex') === '0')!;
+    expect(focusedNow.dataset['rowKey']).to.equal('string:b');
   });
 });

@@ -295,6 +295,43 @@ it("normalizes foreign array members at every public value boundary", async () =
   expect(el.value).to.deep.equal(["default"]);
 });
 
+it('normalizes a non-array value write and clears the reflected default attribute when set to null', async () => {
+  const el = (await fixture(
+    html`<lr-token-input value='["alpha"]'></lr-token-input>`
+  )) as LyraTokenInput;
+  expect(el.getAttribute('value')).to.equal('["alpha"]');
+
+  (el as unknown as { value: unknown }).value = 'not-an-array';
+  expect(
+    el.value,
+    'a non-array value write must normalize to an empty list'
+  ).to.deep.equal([]);
+
+  (el as unknown as { defaultValue: unknown }).defaultValue = null;
+  expect(
+    el.hasAttribute('value'),
+    'assigning a null default must clear the reflected attribute'
+  ).to.equal(false);
+  expect(el.defaultValue).to.deep.equal([]);
+});
+
+it('falls back to an empty value when iterating a poisoned array throws mid-normalization', async () => {
+  const el = (await fixture(
+    html`<lr-token-input .value=${['alpha']}></lr-token-input>`
+  )) as LyraTokenInput;
+  const poisoned = new Proxy(['one', 'two'], {
+    get(target, prop, receiver) {
+      if (prop === '0') throw new Error('boom');
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+  (el as unknown as { value: unknown }).value = poisoned;
+  expect(
+    el.value,
+    'a throwing iterator must degrade to empty rather than propagate'
+  ).to.deep.equal([]);
+});
+
 it("owns readonly value snapshots and freezes emitted collection details", async () => {
   const source = ["alpha"];
   const el = (await fixture(
@@ -455,6 +492,36 @@ it("exposes native form validity/focus APIs and resets transient token state wit
   expect(el.reportValidity()).to.be.false;
 });
 
+it('associates with a remote form by id through the settable form property, and exposes native labels', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <form id="remote-form"></form>
+      <label for="remote-input">Recipients</label>
+      <lr-token-input id="remote-input"></lr-token-input>
+    </div>
+  `)) as HTMLDivElement;
+  const el = wrapper.querySelector('lr-token-input') as LyraTokenInput;
+  expect(el.form === null, 'not associated until the form attribute is set').to
+    .equal(true);
+  expect(el.labels.length, 'a matching <label for> is exposed').to.equal(1);
+  expect((el.labels[0] as HTMLElement).textContent).to.equal('Recipients');
+
+  (el as unknown as { form: string | HTMLFormElement | null }).form =
+    'remote-form';
+  expect(el.getAttribute('form')).to.equal('remote-form');
+  expect(
+    el.form?.id,
+    'the settable form property resolves the remote-by-id form owner'
+  ).to.equal('remote-form');
+
+  (el as unknown as { form: string | HTMLFormElement | null }).form = null;
+  expect(
+    el.hasAttribute('form'),
+    'assigning null clears the form association'
+  ).to.equal(false);
+  expect(el.form === null).to.equal(true);
+});
+
 it("forwards the native draft selection and range-editing APIs without emitting user events", async () => {
   const beforeRender = document.createElement(
     "lr-token-input"
@@ -525,6 +592,30 @@ it("forwards the native draft selection and range-editing APIs without emitting 
   ).to.deep.equal(["delta beta"]);
 });
 
+it('normalizes an explicit null selection direction argument to "none", distinct from omitting it', async () => {
+  const el = (await fixture(
+    html`<lr-token-input></lr-token-input>`
+  )) as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  typeInto(input, 'alpha beta');
+
+  // An explicit `null` bypasses the parameter default (defaults only apply to `undefined`), so
+  // this exercises the function body's own `selectionDirection ?? 'none'` fallback.
+  el.setSelectionRange(0, 5, null);
+  expect(el.selectionStart).to.equal(0);
+  expect(el.selectionEnd).to.equal(5);
+  expect(['none', 'forward', 'backward']).to.include(el.selectionDirection);
+});
+
+it('is a no-op for setRangeText before the draft input has ever rendered', () => {
+  const el = document.createElement('lr-token-input') as LyraTokenInput;
+  expect(() => el.setRangeText('x')).to.not.throw();
+  expect(() => el.setRangeText('x', 0, 1)).to.not.throw();
+  expect(el.selectionStart, 'never rendered, so nothing was mutated').to.equal(
+    null
+  );
+});
+
 it("is accessible", async () => {
   const el = await fixture(
     html`<lr-token-input label="Recipients"></lr-token-input>`
@@ -569,6 +660,24 @@ it("fires lr-remove as cancelable and removes the token when not prevented", asy
   expect(el.value).to.deep.equal(["beta"]);
 });
 
+it('ignores a stale remove-button click whose bound index no longer exists after a synchronous removal', async () => {
+  const el = (await fixture(
+    html`<lr-token-input .value=${['alpha']}></lr-token-input>`
+  )) as LyraTokenInput;
+  const removeBtn = removeButtons(el)[0]!;
+  let removeEvents = 0;
+  el.addEventListener('lr-remove', () => removeEvents++);
+
+  removeBtn.click(); // removes 'alpha' synchronously; Lit has not yet re-rendered the button out
+  removeBtn.click(); // same stale button, still bound to index 0, now out of range
+
+  expect(el.value).to.deep.equal([]);
+  expect(
+    removeEvents,
+    'a stale out-of-range index must not fire a second lr-remove for a token that is not there'
+  ).to.equal(1);
+});
+
 it("keeps the token in place when a host calls preventDefault() on lr-remove", async () => {
   const el = (await fixture(
     html`<lr-token-input .value=${["alpha", "beta"]}></lr-token-input>`
@@ -607,6 +716,24 @@ it("rejects a stale remove-button activation in the same task that disablement s
     "alpha",
     "beta",
   ]);
+});
+
+it('contains a stale native focus on the draft input in the same task that disablement starts', async () => {
+  const el = (await fixture(
+    html`<lr-token-input></lr-token-input>`
+  )) as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  let hostFocuses = 0;
+  el.addEventListener('focus', () => hostFocuses++);
+
+  // Synchronous disablement flips `effectiveDisabled` before Lit re-renders the native
+  // `disabled` attribute, so the input can still be focused directly in this same task.
+  el.disabled = true;
+  input.dispatchEvent(new FocusEvent('focus', { bubbles: true, composed: true }));
+  expect(
+    hostFocuses,
+    'a same-task disabled focus must not relay through the host'
+  ).to.equal(0);
 });
 
 it('defaults to size "m" and reflects a size attribute', async () => {
@@ -897,6 +1024,22 @@ it("normalizes boolean and string autocorrect writes through the lowercase nativ
   await el.updateComplete;
   expect(el.autocorrect).to.be.true;
   expect(draft.hasAttribute("autocorrect")).to.be.false;
+});
+
+it('renders the explicit "on" attribute vocabulary on both the draft input and an open token editor', async () => {
+  const el = (await fixture(html`
+    <lr-token-input editable autocorrect="on" .value=${['alpha']}></lr-token-input>
+  `)) as LyraTokenInput;
+  const draft = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  expect(el.autocorrect).to.be.true;
+  expect(
+    draft.getAttribute('autocorrect'),
+    'an explicit markup attribute must render the "on" value, not omit the attribute'
+  ).to.equal('on');
+
+  tokenLabels(el)[0].click();
+  await el.updateComplete;
+  expect(editor(el)!.getAttribute('autocorrect')).to.equal('on');
 });
 
 it("closes positional edit state rather than transferring it to a reordered replacement", async () => {
@@ -1817,6 +1960,29 @@ describe("editable tokens", () => {
     );
   });
 
+  it('falls back to the surviving remove action when the captured token-label surface stops existing because editable was turned off before the repair applied', async () => {
+    const el = (await fixture(html`
+      <lr-token-input editable .value=${['alpha', 'beta']}></lr-token-input>
+    `)) as LyraTokenInput;
+    tokenLabels(el)[1]!.focus();
+    expect(el.shadowRoot!.activeElement === tokenLabels(el)[1]).to.equal(true);
+
+    // Both synchronous, same task: the shrink captures a 'label' repair target, then editable
+    // turns off before that repair is applied in `updated()`, so no token-label part exists
+    // anywhere once the row re-renders.
+    el.value = ['alpha'];
+    el.editable = false;
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['alpha']);
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute(
+        'part'
+      ),
+      'focus must land on the remaining remove action instead of being lost to the body'
+    ).to.equal('remove');
+  });
+
   it('does not reclaim focus moved outside after a controlled shrink', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div>
@@ -2198,6 +2364,46 @@ describe("editable tokens", () => {
     expect(editor(el) === null).to.equal(true);
   });
 
+  it('discards a stale keyboard commit whose Enter lands in the same task disablement starts', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    typeInto(field, 'beta');
+    let emitted = 0;
+    for (const name of ['input', 'change', 'lr-token-edit'])
+      el.addEventListener(name, () => emitted++);
+
+    // Synchronous disablement; the stale editor is still rendered until the next Lit update.
+    el.disabled = true;
+    press(field, 'Enter');
+    expect(
+      el.value,
+      'a same-task disabled Enter must not commit the edit'
+    ).to.deep.equal(['alpha']);
+    expect(emitted).to.equal(0);
+  });
+
+  it('contains a stale native focus on the token editor in the same task that disablement starts', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    let hostFocuses = 0;
+    el.addEventListener('focus', () => hostFocuses++);
+
+    el.disabled = true;
+    field.dispatchEvent(new FocusEvent('focus', { bubbles: true, composed: true }));
+    expect(
+      hostFocuses,
+      'a same-task disabled editor focus must not relay through the host'
+    ).to.equal(0);
+  });
+
   it("localizes the token edit accessible name via .strings", async () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
@@ -2559,6 +2765,26 @@ describe("lr-token-input setCustomValidity()", () => {
     expect(el.matches(":state(valid)")).to.be.true;
     expect(el.matches(":state(user-valid)")).to.be.true;
     expect(el.matches(":state(user-invalid)")).to.be.false;
+  });
+
+  it('treats a nullish message the same as clearing the custom error with an empty string', async () => {
+    const el = (await fixture(
+      html`<lr-token-input label="Tags"></lr-token-input>`
+    )) as LyraTokenInput;
+    await el.updateComplete;
+    el.setCustomValidity("Rejected by the server.");
+    expect(el.validity.customError).to.be.true;
+
+    // A caller outside TypeScript's own guarantees may pass no message at all -- the public
+    // `setCustomValidity` a consumer actually calls, exactly like the native platform allows.
+    (
+      el as unknown as { setCustomValidity: (message?: string) => void }
+    ).setCustomValidity(undefined);
+    expect(
+      el.validity.customError,
+      "a nullish message must clear the custom error, not throw or set it to the literal string 'undefined'"
+    ).to.be.false;
+    expect(el.validationMessage).to.equal("");
   });
 });
 

@@ -1261,6 +1261,62 @@ it("restores the managed fallback after an external label is removed and keeps i
   expect(el.getAttribute("aria-label")).to.equal("Updated fallback");
 });
 
+it("restores the live default after an external label associated after mount is later removed", async () => {
+  const host = await fixture<HTMLElement>(html`
+    <div>
+      <lr-rating id="late-managed-rating"></lr-rating>
+    </div>
+  `);
+  const el = host.querySelector("lr-rating") as LyraRating;
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(el.getAttribute("aria-label")).to.equal("Rating");
+
+  const label = document.createElement("label");
+  label.setAttribute("for", "late-managed-rating");
+  label.textContent = "Late external score";
+  host.append(label);
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(el.getAttribute("aria-label")).to.equal("Late external score");
+
+  label.remove();
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(
+    el.getAttribute("aria-label"),
+    "removing a label associated after the default already settled must restore the live default"
+  ).to.equal("Rating");
+});
+
+it("clears the name attribute when the name property is set back to empty or null", async () => {
+  const el = (await fixture(
+    html`<lr-rating name="score"></lr-rating>`
+  )) as LyraRating;
+  expect(el.hasAttribute("name")).to.be.true;
+
+  el.name = "";
+  expect(el.hasAttribute("name")).to.be.false;
+
+  el.name = "score";
+  expect(el.getAttribute("name")).to.equal("score");
+  el.name = null as unknown as string;
+  expect(el.hasAttribute("name")).to.be.false;
+});
+
+it("the form property setter associates the element with an explicit form owner", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <form id="explicit-owner"></form>
+      <lr-rating></lr-rating>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-rating") as LyraRating;
+  const explicitForm = wrapper.querySelector("form") as HTMLFormElement;
+  el.form = explicitForm;
+  expect(el.form === explicitForm).to.equal(true);
+});
+
 // -- getSymbol ------------------------------------------------------------
 
 it("renders a consumer glyph per index through getSymbol, for both the empty and filled layer", async () => {

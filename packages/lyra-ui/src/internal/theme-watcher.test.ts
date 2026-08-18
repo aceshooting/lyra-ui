@@ -1011,6 +1011,70 @@ describe('ThemeWatcher', () => {
     }
   });
 
+  it('replaces a malformed pre-existing hub value at the shared registry key with a fresh valid hub', async () => {
+    const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow as Window;
+    // A configurable, ordinarily-assigned value (unlike the frozen-null case below) at the
+    // well-known key -- shaped nothing like a real hub, so hubFor()'s shape validation must
+    // reject adopting it and overwrite it with a freshly created one instead.
+    (frameWindow as unknown as Record<symbol, unknown>)[THEME_HUB_KEY] = { junk: true };
+    const watched = await makeHost(frameDocument);
+    let calls = 0;
+    new ThemeWatcher(watched.host, () => calls++);
+    try {
+      watched.connect();
+      const hub = hubForRealm(frameWindow);
+      expect(hub.installed).to.be.true;
+      expect(hub.patches.length).to.be.greaterThan(0);
+      watched.host.setAttribute('data-theme', 'dark');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      watched.disconnect();
+      iframe.remove();
+    }
+  });
+
+  it('conservatively invalidates for a mutation subject whose realm constructor is unavailable', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    let calls = 0;
+    const watcher = new ThemeWatcher(host, () => calls++);
+    connect();
+    const realmField = watcher as unknown as { realm?: unknown };
+    const originalRealm = realmField.realm;
+    // None of mutationCanAffectHost's known-constructor branches can match a CSSStyleDeclaration
+    // subject against a realm reference this bare -- the conservative "unknown platform object"
+    // fallback must still invalidate rather than silently dropping the mutation.
+    realmField.realm = {};
+    try {
+      host.style.setProperty('--lr-theme-test', 'value');
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      realmField.realm = originalRealm;
+      disconnect();
+    }
+  });
+
+  it('drops a change queued before a disconnect/reconnect cycle instead of firing against a stale generation', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    connect();
+    // invalidateLyraTheme() synchronously calls queueChange(), which captures the *current*
+    // generation and schedules a microtask before either disconnect() or the following connect()
+    // below has a chance to run.
+    invalidateLyraTheme(document);
+    disconnect();
+    connect();
+    await aTimeout(0);
+    // The microtask queued against the old generation must not fire onChange after the reconnect
+    // bumped the generation twice (once on disconnect, once on connect).
+    expect(calls).to.equal(0);
+    disconnect();
+  });
+
   it('keeps explicit invalidation working when a realm cannot store its shared hub', async () => {
     const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
     const frameDocument = iframe.contentDocument!;

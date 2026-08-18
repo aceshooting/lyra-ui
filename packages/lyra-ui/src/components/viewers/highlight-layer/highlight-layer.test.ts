@@ -183,6 +183,35 @@ describe('lr-highlight-layer', () => {
     expect(Object.isFrozen(el.items[0]!.rects[0])).to.be.true;
   });
 
+  it('bounds accepted items at 10,000, silently dropping the rest', async () => {
+    // Empty rects keep each item's node footprint minimal, so the shared cross-component
+    // collection-snapshot budget (a stricter, generic 50,000-node ceiling applied to every
+    // `ownedCollectionProperties` entry before this component's own setter ever runs) does not
+    // clip the list before snapshotItems()'s own 10,000-item cap gets a chance to.
+    const many: HighlightLayerItem[] = Array.from({ length: 10_005 }, (_unused, index) => ({
+      id: `item-${index}`,
+      rects: [],
+    }));
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
+    el.items = many;
+    await el.updateComplete;
+    expect(el.items).to.have.length(10_000);
+    expect(el.items[9_999]!.id).to.equal('item-9999');
+  });
+
+  it('skips a record whose id accessor throws, without dropping later valid items', async () => {
+    const poison = {} as HighlightLayerItem;
+    Object.defineProperty(poison, 'id', {
+      get(): string { throw new Error('boom'); },
+    });
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
+    el.items = [poison, { id: 'safe', rects: [{ x: 10, y: 20, width: 30, height: 40 }] }];
+    await el.updateComplete;
+    expect(el.items).to.have.length(1);
+    expect(el.items[0]!.id).to.equal('safe');
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]')).to.have.length(1);
+  });
+
   it('focuses an item whose public id contains selector metacharacters', async () => {
     const items: HighlightLayerItem[] = [
       { id: 'ordinary', rects: [{ x: 5, y: 5, width: 10, height: 5 }] },
@@ -260,6 +289,63 @@ describe('lr-highlight-layer', () => {
     const rects = itemActions(el);
     expect(rects[1].getAttribute('tabindex')).to.equal('0');
     expect(rects[0].getAttribute('tabindex')).to.equal('-1');
+  });
+
+  it('Home/End jump the roving tab stop to the first/last rendered rect', async () => {
+    const items: HighlightLayerItem[] = [
+      ...ITEMS,
+      { id: 'c', rects: [{ x: 10, y: 30, width: 20, height: 5 }] },
+    ];
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${items}></lr-highlight-layer>`);
+    const first = itemActions(el)[0]!;
+    first.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
+    let rects = itemActions(el);
+    expect(rects[2]!.getAttribute('tabindex')).to.equal('0');
+    expect(rects[0]!.getAttribute('tabindex')).to.equal('-1');
+
+    rects[2]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    await el.updateComplete;
+    rects = itemActions(el);
+    expect(rects[0]!.getAttribute('tabindex')).to.equal('0');
+    expect(rects[2]!.getAttribute('tabindex')).to.equal('-1');
+  });
+
+  it('does not move the roving tab stop or preventDefault past the last/first rect', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
+    const rects = itemActions(el);
+    const last = rects[1]!; // already the last rendered rect
+    last.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    const cancelled = !last.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(cancelled).to.equal(false);
+    expect(itemActions(el)[1]!.getAttribute('tabindex')).to.equal('0');
+    expect(itemActions(el)[0]!.getAttribute('tabindex')).to.equal('-1');
+  });
+
+  it('swaps ArrowLeft/ArrowRight semantics under inherited RTL for roving-tabindex navigation', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div dir="rtl"><lr-highlight-layer .items=${ITEMS}></lr-highlight-layer></div>
+    `);
+    const el = wrapper.querySelector('lr-highlight-layer') as LyraHighlightLayer;
+    await el.updateComplete;
+    const first = itemActions(el)[0]!;
+    first.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    // Under RTL, ArrowLeft is the "forward" (next) direction, mirroring ArrowDown under LTR.
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await el.updateComplete;
+    const rects = itemActions(el);
+    expect(rects[1]!.getAttribute('tabindex')).to.equal('0');
+    expect(rects[0]!.getAttribute('tabindex')).to.equal('-1');
+
+    rects[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    const rectsAfter = itemActions(el);
+    expect(rectsAfter[0]!.getAttribute('tabindex')).to.equal('0');
+    expect(rectsAfter[1]!.getAttribute('tabindex')).to.equal('-1');
   });
 
   it('transfers focus to the nearest surviving target when focused items shrink', async () => {

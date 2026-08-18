@@ -1188,6 +1188,7 @@ describe('lr-rubric-form', () => {
         await el.updateComplete;
         expect(el.shadowRoot!.querySelectorAll('[part="field"]').length).to.equal(KEYS.length);
         expect(() => el.checkValidity()).to.not.throw();
+        expect(() => el.reportValidity()).to.not.throw();
       } finally {
         (globalThis as { ElementInternals?: unknown }).ElementInternals = original;
       }
@@ -1211,6 +1212,7 @@ describe('lr-rubric-form', () => {
         await el.updateComplete;
         expect(el.shadowRoot!.querySelectorAll('[part="field"]').length).to.equal(KEYS.length);
         expect(() => el.checkValidity()).to.not.throw();
+        expect(() => el.reportValidity()).to.not.throw();
       } finally {
         HTMLElement.prototype.attachInternals = original;
       }
@@ -1686,5 +1688,262 @@ describe('canonical rubric schema/value model', () => {
     el.itemId = 'second';
     expect(el.matches(':state(user-invalid)'), 'new item is pristine synchronously').to.equal(false);
     expect(el.matches(':state(invalid)'), 'intrinsic requiredness remains').to.equal(true);
+  });
+
+  it('drops a non-array keys assignment to the safe empty list', async () => {
+    const el = await fixture<LyraRubricForm>(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`);
+    await el.updateComplete;
+    el.keys = 'not-an-array' as unknown as RubricKey[];
+    await el.updateComplete;
+    expect(el.keys).to.deep.equal([]);
+  });
+
+  it('drops null, non-object, and array candidates from a keys array before validating fields', async () => {
+    const el = await fixture<LyraRubricForm>(html`<lr-rubric-form></lr-rubric-form>`);
+    el.keys = [null, 'not-an-object', ['nested-array'], { key: 'ok', type: 'comment' }] as unknown as RubricKey[];
+    await el.updateComplete;
+    expect(el.keys.map((k) => k.key)).to.deep.equal(['ok']);
+  });
+
+  it('drops a candidate whose key field is missing or non-string', async () => {
+    const el = await fixture<LyraRubricForm>(html`<lr-rubric-form></lr-rubric-form>`);
+    el.keys = [{ type: 'comment' }, { key: 42, type: 'comment' }, { key: 'ok', type: 'comment' }] as unknown as RubricKey[];
+    await el.updateComplete;
+    expect(el.keys.map((k) => k.key)).to.deep.equal(['ok']);
+  });
+
+  it('keeps only the first occurrence of a duplicate key', async () => {
+    const el = await fixture<LyraRubricForm>(html`<lr-rubric-form></lr-rubric-form>`);
+    el.keys = [
+      { key: 'dup', type: 'comment', label: 'First' },
+      { key: 'dup', type: 'comment', label: 'Second' },
+    ];
+    await el.updateComplete;
+    expect(el.keys).to.have.lengthOf(1);
+    expect(el.keys[0]!.label).to.equal('First');
+  });
+
+  it('drops null, non-object, array, and missing-value option entries from a category key', async () => {
+    const el = await fixture<LyraRubricForm>(html`<lr-rubric-form></lr-rubric-form>`);
+    el.keys = [
+      {
+        key: 'category',
+        type: 'category',
+        options: [null, 'not-an-object', ['nested'], { label: 'no value field' }, { value: 'kept' }],
+      },
+    ] as unknown as RubricKey[];
+    await el.updateComplete;
+    const category = el.keys[0] as unknown as { options: { value: string }[] };
+    expect(category.options.map((o) => o.value)).to.deep.equal(['kept']);
+  });
+
+  it('falls back to an empty type string for a runtime key with no type property at all', async () => {
+    const el = (await fixture(
+      html`<lr-rubric-form .strings=${{ unsupportedFieldType: 'Type: "{type}".' }}></lr-rubric-form>`
+    )) as LyraRubricForm;
+    el.keys = [{ key: 'x' }] as unknown as RubricKey[];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="unsupported"]')!.textContent).to.equal('Type: "".');
+  });
+
+  it('normalizes a non-object (string or array) value assignment to the safe empty value', async () => {
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    el.value = 'not-an-object' as unknown as typeof el.value;
+    expect(el.value).to.deep.equal({});
+    el.value = [1, 2, 3] as unknown as typeof el.value;
+    expect(el.value).to.deep.equal({});
+  });
+
+  it('skips a value field whose access throws instead of propagating', async () => {
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    const throwing: Record<string, unknown> = {};
+    Object.defineProperty(throwing, 'accuracy', {
+      enumerable: true,
+      get(): number {
+        throw new Error('boom');
+      },
+    });
+    expect(() => {
+      el.value = throwing as unknown as typeof el.value;
+    }).to.not.throw();
+    expect(el.value).to.deep.equal({});
+  });
+
+  // `normalizeRubricKeys` always fills in `options: []` for a category key (never leaves it
+  // `undefined`), so `normalizeRubricValue`'s own `key.options ?? []` fallback is unreachable
+  // through the public `.keys`/`.value` setters -- this proves the *behavior* (no options means
+  // no selection survives normalization), not that literal fallback branch.
+  it('retains no selections for a multiple-category value when the key declares no options', async () => {
+    const el = (await fixture(html`
+      <lr-rubric-form
+        .keys=${[{ key: 'tags', type: 'category', multiple: true }] as RubricKey[]}
+        .value=${{ tags: ['a', 'b'] }}
+      ></lr-rubric-form>
+    `)) as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ tags: [] });
+  });
+
+  it('drops a multiple-category value that is not an array', async () => {
+    const keys: RubricKey[] = [{ key: 'tags', type: 'category', multiple: true, options: [{ value: 'a' }] }];
+    const el = (await fixture(html`
+      <lr-rubric-form .keys=${keys} .value=${{ tags: 'oops' } as unknown as Record<string, unknown>}></lr-rubric-form>
+    `)) as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({});
+  });
+
+  it('drops non-string candidates from a multiple-category array value', async () => {
+    const keys: RubricKey[] = [
+      { key: 'tags', type: 'category', multiple: true, options: [{ value: 'a' }, { value: 'b' }] },
+    ];
+    const el = (await fixture(html`
+      <lr-rubric-form
+        .keys=${keys}
+        .value=${{ tags: ['a', 42, null, 'b'] } as unknown as Record<string, unknown>}
+      ></lr-rubric-form>
+    `)) as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ tags: ['a', 'b'] });
+  });
+
+  it('set defaultValue does not overwrite an already-dirtied live value', async () => {
+    const el = (await fixture(html`
+      <lr-rubric-form .keys=${KEYS} .defaultValue=${{ accuracy: 1 }}></lr-rubric-form>
+    `)) as LyraRubricForm;
+    await el.updateComplete;
+    el.value = { accuracy: 5 };
+    await el.updateComplete;
+    el.defaultValue = { accuracy: 3 };
+    await el.updateComplete;
+    expect(el.value, 'live value stays at the explicit write').to.deep.equal({ accuracy: 5 });
+    expect(el.defaultValue, 'defaultValue itself still updates').to.deep.equal({ accuracy: 3 });
+  });
+
+  it('normalizes a nullish defaultValue assignment to the safe empty value', async () => {
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS} .defaultValue=${{ accuracy: 2 }}></lr-rubric-form>`
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    el.defaultValue = null as unknown as typeof el.defaultValue;
+    await el.updateComplete;
+    expect(el.defaultValue).to.deep.equal({});
+    expect(el.value, 'a pristine live value follows the reset default').to.deep.equal({});
+  });
+
+  it('setCustomValidity treats a nullish message the same as an empty string (runtime safety)', async () => {
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    el.setCustomValidity('Blocked');
+    expect(el.validity.customError).to.be.true;
+    (el.setCustomValidity as (message: string) => void)(null as unknown as string);
+    expect(el.validity.customError).to.be.false;
+  });
+
+  it('scoreValues() called directly for a non-segmented score key returns an empty array', () => {
+    const detached = document.createElement('lr-rubric-form') as LyraRubricForm;
+    const values = (
+      detached as unknown as { scoreValues(candidate: RubricKey): number[] }
+    ).scoreValues({ key: 'score', type: 'score', min: 0, max: 5, step: 0 });
+    expect(values).to.deep.equal([]);
+  });
+});
+
+describe('lr-rubric-form remaining public accessors and interaction paths', () => {
+  it('click() forwards focus to the first control (host click forwarding)', async () => {
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    const segmented = el.shadowRoot!.querySelector('[data-key="accuracy"] lr-segmented');
+    el.click();
+    expect(el.shadowRoot!.activeElement === segmented).to.be.true;
+  });
+
+  it('click() no-ops while disabled (host click forwarding guard)', async () => {
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS} disabled></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    el.click();
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+  });
+
+  it('getForm() delegates to the same ElementInternals form owner as the form getter', async () => {
+    const form = (await fixture(html`
+      <form><lr-rubric-form name="rubric" .keys=${KEYS}></lr-rubric-form></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.getForm() === form).to.equal(true);
+    expect(el.getForm() === el.form).to.equal(true);
+  });
+
+  it('the form setter reflects a string id or an element id onto the form attribute, and clears it for null', async () => {
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    el.form = 'external-form';
+    expect(el.getAttribute('form')).to.equal('external-form');
+
+    const namedForm = document.createElement('form');
+    namedForm.id = 'named-form';
+    document.body.append(namedForm);
+    try {
+      el.form = namedForm;
+      expect(el.getAttribute('form')).to.equal('named-form');
+      el.form = null;
+      expect(el.hasAttribute('form')).to.equal(false);
+    } finally {
+      namedForm.remove();
+    }
+  });
+
+  it('emits lr-input with the full value object when a non-segmented (slider) score control changes', async () => {
+    const keys: RubricKey[] = [{ key: 'wide', type: 'score', min: 0, max: 100, step: 1 }];
+    const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    const slider = el.shadowRoot!.querySelector('[data-key="wide"] lr-slider') as HTMLElement;
+    setTimeout(() => slider.dispatchEvent(new CustomEvent('lr-change', { detail: { value: 42 } })));
+    const ev = await oneEvent(el, 'lr-input');
+    expect(ev.detail.value.wide).to.equal(42);
+  });
+
+  it('emits lr-input with the full value object when a single-select category control changes', async () => {
+    const keys: RubricKey[] = [
+      { key: 'category', type: 'category', options: [{ value: 'hallucination' }, { value: 'tone' }] },
+    ];
+    const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    const select = el.shadowRoot!.querySelector('[data-key="category"] lr-select') as HTMLElement & {
+      value: string;
+    };
+    select.value = 'tone';
+    setTimeout(() => select.dispatchEvent(new Event('change')));
+    const ev = await oneEvent(el, 'lr-input');
+    expect(ev.detail.value.category).to.equal('tone');
+  });
+
+  it('renders the inline error span for a required comment field once revealed', async () => {
+    const keys: RubricKey[] = [{ key: 'comment', type: 'comment', label: 'Notes', required: true }];
+    const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    el.reportValidity();
+    await el.updateComplete;
+    const errorSpan = el.shadowRoot!.querySelector('[data-key="comment"] lr-textarea span[slot="error"]');
+    expect(errorSpan).to.exist;
+    expect(errorSpan!.textContent).to.equal(el.errors.comment);
+  });
+
+  it('renders the inline error span for a required category field (single and multiple) once revealed', async () => {
+    const keys: RubricKey[] = [
+      { key: 'single', type: 'category', required: true, options: [{ value: 'a' }] },
+      { key: 'multi', type: 'category', multiple: true, required: true, options: [{ value: 'a' }] },
+    ];
+    const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    el.reportValidity();
+    await el.updateComplete;
+    for (const key of ['single', 'multi']) {
+      const errorSpan = el.shadowRoot!.querySelector(`[data-key="${key}"] [slot="error"]`);
+      expect(errorSpan, key).to.exist;
+    }
   });
 });

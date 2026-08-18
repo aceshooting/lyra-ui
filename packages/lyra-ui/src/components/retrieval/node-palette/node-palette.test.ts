@@ -91,6 +91,18 @@ it("keeps explicit-empty and dynamic host naming distinct from the listbox label
   expect(listbox.getAttribute("aria-label")).to.equal("Workflow nodes");
 });
 
+it("falls back to the localized listbox label when the host names itself but the palette's own label stays unset", async () => {
+  const el = (await fixture(
+    html`<lr-node-palette aria-label="Host name" .items=${items}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  expect(el.label).to.be.undefined;
+  const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
+  // hostLabel !== null (the host named itself) but el.label is unset, so the listbox falls all
+  // the way through to the localized default instead of adopting the host's own name.
+  expect(listbox.getAttribute("aria-label")).to.equal("Node palette");
+});
+
 it("renders one item per entry, grouped by category in first-appearance order", async () => {
   const el = (await fixture(
     html`<lr-node-palette .items=${items}></lr-node-palette>`
@@ -182,6 +194,34 @@ it("ArrowUp from the first item returns focus to the search field", async () => 
   expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal("search");
 });
 
+it("ArrowUp from a non-first item moves real focus to its predecessor, not the search field", async () => {
+  const el = (await fixture(
+    html`<lr-node-palette .items=${items}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  // rovingIndex 1 -- "Transform", the second enabled row.
+  const second = el.shadowRoot!.querySelectorAll<HTMLElement>(
+    '[part="item"]'
+  )[1]!;
+  second.focus();
+  second.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "ArrowUp",
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  await waitUntil(
+    () =>
+      el.shadowRoot!.activeElement?.textContent?.includes("HTTP Request") ??
+      false
+  );
+  expect(el.shadowRoot!.activeElement?.textContent).to.include(
+    "HTTP Request"
+  );
+  expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal("item");
+});
+
 it("Enter on an item emits lr-palette-place and lr-select with the same type/item", async () => {
   const el = (await fixture(
     html`<lr-node-palette .items=${items}></lr-node-palette>`
@@ -206,6 +246,26 @@ it("Enter on an item emits lr-palette-place and lr-select with the same type/ite
   );
   expect(placeDetail).to.deep.equal({ type: "http-request" });
   expect(selectDetail?.item.type).to.equal("http-request");
+});
+
+it("Space on a focused item also places it, matching Enter", async () => {
+  const el = (await fixture(
+    html`<lr-node-palette .items=${items}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  let placeDetail: { type: string } | undefined;
+  el.addEventListener(
+    "lr-palette-place",
+    (e) => (placeDetail = (e as CustomEvent).detail)
+  );
+  (el.shadowRoot!.querySelector('[part="item"]') as HTMLElement).dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: " ",
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  expect(placeDetail).to.deep.equal({ type: "http-request" });
 });
 
 it("click on an item emits the same pair of events", async () => {
@@ -399,6 +459,100 @@ it("keeps roving state and real focus on a surviving item across reorder, then t
   ).to.deep.equal(["-1", "0"]);
 });
 
+it("preserves focus on the correct occurrence of a same-object duplicate across a reorder", async () => {
+  const dup: LyraPaletteItem = { type: "dup", label: "Dup" };
+  const other: LyraPaletteItem = { type: "other", label: "Other" };
+  const el = (await fixture(
+    html`<lr-node-palette .items=${[dup, dup, other]}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  const rows = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]'),
+  ];
+  rows[1]!.focus(); // the *second* occurrence of dup
+  await el.updateComplete;
+
+  el.items = [other, dup, dup];
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  // Focus must follow the second occurrence of dup (now at index 2), not just any dup.
+  const newRows = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]'),
+  ];
+  expect(newRows.indexOf(el.shadowRoot!.activeElement as HTMLElement)).to.equal(
+    2
+  );
+  expect(newRows.map((row) => row.getAttribute("tabindex"))).to.deep.equal([
+    "-1",
+    "-1",
+    "0",
+  ]);
+});
+
+it("moves focus to the search field when items shrink to none while an item has real focus", async () => {
+  const el = (await fixture(
+    html`<lr-node-palette .items=${items}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  const firstItem = el.shadowRoot!.querySelector(
+    '[part="item"]'
+  ) as HTMLElement;
+  firstItem.focus();
+  await el.updateComplete;
+
+  el.items = [];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal("INPUT");
+  expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal(
+    "search"
+  );
+});
+
+it("focuses the search field as an interim fallback when the preserved item cannot be found among the previous elements, then the roving-position follow-up takes over", async () => {
+  const original: LyraPaletteItem[] = [
+    { type: "a", label: "Alpha" },
+    { type: "b", label: "Beta" },
+    { type: "c", label: "Gamma" },
+  ];
+  const el = (await fixture(
+    html`<lr-node-palette .items=${original}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  const rows = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]'),
+  ];
+  rows[1]!.focus(); // "Beta"
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector("input") as HTMLInputElement;
+  let inputFocused = false;
+  input.addEventListener("focus", () => (inputFocused = true));
+
+  // A completely disjoint items array: nothing in the new roving list can be matched back to
+  // any previously-rendered DOM element, so the survivingOldElement lookup misses and the code
+  // falls back to focusing the search field as an interim step.
+  const disjoint: LyraPaletteItem[] = [
+    { type: "x", label: "Xi" },
+    { type: "y", label: "Yo" },
+    { type: "z", label: "Zed" },
+  ];
+  el.items = disjoint;
+  await el.updateComplete;
+
+  expect(inputFocused, "the search field is focused as a fallback").to.be
+    .true;
+  // The pendingFocusIndex follow-up in updated() then moves real focus on to the clamped roving
+  // position once the new DOM has actually committed.
+  const newRows = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]'),
+  ];
+  expect(newRows.indexOf(el.shadowRoot!.activeElement as HTMLElement)).to.equal(
+    1
+  );
+});
+
 it("hides arbitrary item icons from the accessible name", async () => {
   const el = (await fixture(
     html`<lr-node-palette
@@ -410,6 +564,20 @@ it("hides arbitrary item icons from the accessible name", async () => {
       .shadowRoot!.querySelector('[part="item-icon"]')!
       .getAttribute("aria-hidden")
   ).to.equal("true");
+});
+
+it("renders an item's optional description text", async () => {
+  const el = (await fixture(
+    html`<lr-node-palette
+      .items=${[
+        { type: "x", label: "Node", description: "Does a thing" },
+      ]}
+    ></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="item-description"]')!.textContent
+  ).to.equal("Does a thing");
 });
 
 it("dragstart on an enabled item writes the FLOW_PALETTE_MIME_TYPE payload plus a text/plain fallback", async () => {
@@ -644,6 +812,41 @@ it("releases and reacquires its shared announcement sink across disconnect and r
   expect(sinkElement() !== null).to.be.true;
   el.remove();
   expect(sinkElement() === null).to.be.true;
+});
+
+it("adoptedCallback re-arms the announcer's timer host in the new owner window", async () => {
+  const el = (await fixture(
+    html`<lr-node-palette .items=${items}></lr-node-palette>`
+  )) as LyraNodePalette;
+  await el.updateComplete;
+  const frame = document.createElement("iframe");
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+  try {
+    el.remove();
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    // The reconnect re-arms isMounting (see disconnectedCallback), so this first post-reconnect
+    // update stays silent by design, matching the "never announce on mount" contract -- spend it
+    // before checking that the *next* change announces normally, which is what actually proves
+    // adoptedCallback re-armed the announcer's timer host in the new window rather than leaving
+    // it silently broken.
+    el.items = [...items];
+    await el.updateComplete;
+
+    // If adoptedCallback failed to re-arm the announcer's timer host in the new window, this
+    // announcement would silently never flush.
+    const input = el.shadowRoot!.querySelector("input") as HTMLInputElement;
+    input.value = "API";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await el.updateComplete;
+    await new Promise((r) => setTimeout(r, 600));
+
+    const mirror = el.shadowRoot!.querySelector('[part="live-region"]')!;
+    expect(mirror.textContent?.trim()).to.include("1");
+  } finally {
+    el.remove();
+    frame.remove();
+  }
 });
 
 it("gives the search field a focus-visible ring and resets the native search-cancel glyph", () => {
@@ -885,5 +1088,29 @@ describe("reorderable", () => {
       "Send Email",
       "Webhook",
     ]);
+  });
+
+  it("clears a pending reorder without announcing a move when the pending item is removed instead of swapped", async () => {
+    const el = (await fixture(
+      html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    const before = sinkTexts().length;
+    const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement; // "HTTP Request"
+    first.focus();
+    pressReorder(first, "ArrowDown");
+    await el.updateComplete;
+
+    // The host removes the pending item outright instead of ever applying the requested swap --
+    // confirmPendingReorder must find it missing from its old category group and give up quietly
+    // rather than reporting a bogus position.
+    el.items = items.filter((item) => item.type !== "http-request");
+    await el.updateComplete;
+    await new Promise((r) => setTimeout(r, 600));
+
+    // Exactly one announcement fires -- the ordinary filtered-result-count one from the items
+    // change itself -- and it is never the reorder-confirmation text.
+    expect(sinkTexts().length - before).to.equal(1);
+    expect(sinkTexts().at(-1)).to.not.include("Moved");
   });
 });

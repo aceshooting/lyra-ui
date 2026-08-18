@@ -676,3 +676,127 @@ function deepActiveElement(root: Document | ShadowRoot = document): Element | nu
   const active = root.activeElement;
   return active?.shadowRoot?.activeElement ? deepActiveElement(active.shadowRoot) : active;
 }
+
+it('normalizeTreeData: skips a node whose id property read throws (hostile Proxy) without crashing', async () => {
+  const hostileNode = new Proxy(
+    { label: 'Hostile' },
+    {
+      getOwnPropertyDescriptor(target, prop) {
+        if (prop === 'id') throw new Error('hostile id read');
+        return Object.getOwnPropertyDescriptor(target, prop);
+      },
+    },
+  );
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [hostileNode, { id: 'valid', label: 'Valid' }] as never;
+  await el.updateComplete;
+  expect(el.data.map((n) => n.id)).to.deep.equal(['valid']);
+});
+
+it('normalizeTreeData: treats an unreadable children.length as zero (hostile Proxy) without crashing', async () => {
+  const hostileChildren = new Proxy([{ id: 'inner', label: 'Inner' }], {
+    get(target, prop, receiver) {
+      if (prop === 'length') throw new Error('hostile length');
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [{ id: 'parent', label: 'Parent', children: hostileChildren as never }];
+  await el.updateComplete;
+  const parent = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
+  expect(parent.hasChildren).to.equal(false);
+});
+
+it('data setter: normalizes a non-array value to an empty tree instead of throwing', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = { not: 'an array' } as never;
+  await el.updateComplete;
+  expect(el.data).to.deep.equal([]);
+  expect(el.querySelectorAll('lr-tree-item').length).to.equal(0);
+});
+
+it('data setter: skips a null/array-shaped node entry, keeping valid neighbors', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [null, [1, 2, 3], { id: 'valid', label: 'Valid' }] as never;
+  await el.updateComplete;
+  expect(el.data.map((n) => n.id)).to.deep.equal(['valid']);
+});
+
+it('leaf-multiple selection: treats a branch whose every child is disabled as unselected (no enabled leaves to derive from)', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.selection = 'leaf-multiple';
+  el.data = [
+    {
+      id: 'p',
+      label: 'Parent',
+      children: [
+        { id: 'c1', label: 'Child 1', disabled: true },
+        { id: 'c2', label: 'Child 2', disabled: true },
+      ],
+    },
+  ];
+  await el.updateComplete;
+  const parent = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
+  expect(parent.selected).to.equal(false);
+});
+
+it('resets activeId away from a node whose ancestor is disabled, even though the node itself is not (isEnabledReachableId)', async () => {
+  const el = (await fixture(
+    html`<lr-tree
+      .activeId=${'child'}
+      .data=${[
+        { id: 'parent', label: 'Parent', disabled: true, children: [{ id: 'child', label: 'Child' }] },
+        { id: 'other', label: 'Other' },
+      ]}
+    ></lr-tree>`,
+  )) as LyraTree;
+  await el.updateComplete;
+  expect(el.activeId).to.equal('other');
+});
+
+it('onKeyDown: ignores an unhandled key without side effects', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
+  (root as unknown as HTMLElement).focus();
+  const activeBefore = el.activeId;
+  const event = new KeyboardEvent('keydown', { key: 'a', bubbles: true, composed: true, cancelable: true });
+  root.dispatchEvent(event);
+  await el.updateComplete;
+  expect(event.defaultPrevented).to.equal(false);
+  expect(el.activeId).to.equal(activeBefore);
+});
+
+it('collapseAll() resets activeId to the first enabled root when the active node was a nested descendant', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
+  root.expand();
+  await el.updateComplete;
+  (root as unknown as HTMLElement).focus();
+  root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.activeId).to.equal('1.1');
+
+  await el.collapseAll();
+  await el.updateComplete;
+  expect(el.activeId).to.equal('1');
+});
+
+it('collapseAll() resets a dangling/non-existent activeId to the first enabled root', async () => {
+  // Unlike a nested descendant's ancestor collapsing (resynced via that node's own collapse()
+  // emitting lr-node-toggle -> onNodeActivate), a dangling id matches no real node, so nothing
+  // emits an event to resync it -- collapseAll()'s own explicit activeTopLevel fallback is the
+  // only thing that can recover it.
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  el.activeId = 'does-not-exist';
+  await el.updateComplete;
+
+  await el.collapseAll();
+  await el.updateComplete;
+  expect(el.activeId).to.equal('1');
+});

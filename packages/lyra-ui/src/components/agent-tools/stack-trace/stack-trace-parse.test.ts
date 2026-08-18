@@ -245,4 +245,56 @@ describe('parseStackTrace', () => {
     ].join('\n');
     expect(parseStackTrace(trace, [])).to.deep.equal([]);
   });
+
+  it('caps the number of groups at STACK_TRACE_LIMITS.groups and reports truncation', () => {
+    const lines = ['Error: g0', '    at f (/a.js:1:1)'];
+    for (let i = 1; i < STACK_TRACE_LIMITS.groups + 6; i++) {
+      lines.push(`Caused by: Error: g${i}`);
+    }
+    const result = parseStackTraceResult(lines.join('\n'), { internalPatterns: [] });
+
+    expect(result.groups).to.have.lengthOf(STACK_TRACE_LIMITS.groups);
+    expect(result.groups[0]!.message).to.equal('Error: g0');
+    expect(result.groups[STACK_TRACE_LIMITS.groups - 1]!.message).to.equal(
+      `Error: g${STACK_TRACE_LIMITS.groups - 1}`,
+    );
+    expect(result.truncated).to.equal(true);
+  });
+
+  it('caps the total frame count at STACK_TRACE_LIMITS.frames and drops any later group entirely once the budget is exhausted', () => {
+    const bulkFrames = Array.from(
+      { length: STACK_TRACE_LIMITS.frames },
+      (_, i) => `    at f${i} (/a.js:${i + 1}:1)`,
+    );
+    const trace = [
+      'Error: bulk',
+      ...bulkFrames,
+      'Caused by: Error: extra',
+      '    at extra (/e.js:1:1)',
+    ].join('\n');
+    const result = parseStackTraceResult(trace, { internalPatterns: [] });
+
+    // The second group's entire frame budget is already exhausted by the first group, so it is
+    // dropped rather than kept with zero frames.
+    expect(result.groups).to.have.lengthOf(1);
+    expect(result.groups[0]!.frames).to.have.lengthOf(STACK_TRACE_LIMITS.frames);
+    expect(result.truncated).to.equal(true);
+  });
+
+  it('does not treat an unrelated line containing "@" as a Firefox frame when whitespace precedes it', () => {
+    const trace = [
+      'doThing@https://example.com/app.js:12:3',
+      'prose mentioning user@example.com in the middle of a sentence',
+      'other@https://example.com/other.js:5:1',
+    ].join('\n');
+    const groups = parseStackTrace(trace, []);
+
+    expect(groups[0]!.frames).to.have.lengthOf(3);
+    expect(groups[0]!.frames[0]).to.deep.include({ functionName: 'doThing', file: 'https://example.com/app.js' });
+    expect(groups[0]!.frames[1]!.file).to.be.undefined;
+    expect(groups[0]!.frames[1]!.raw).to.equal(
+      'prose mentioning user@example.com in the middle of a sentence',
+    );
+    expect(groups[0]!.frames[2]).to.deep.include({ functionName: 'other', file: 'https://example.com/other.js' });
+  });
 });

@@ -83,6 +83,73 @@ it('renders supported composition and item branches while safely ignoring malfor
   expect(el.shadowRoot!.querySelectorAll('[part="issue"]').length).to.equal(1);
 });
 
+it('formats const/default/examples constraint values, including nested objects and bounded truncation', async () => {
+  const withValues: JsonSchemaNode = {
+    type: 'string',
+    const: 'locked-value',
+    default: { nested: { a: 1 } },
+    examples: ['one', 'two', 'three', 'four'],
+  };
+  const el = await fixture<LyraJsonSchemaViewer>(html`
+    <lr-json-schema-viewer .schema=${withValues}></lr-json-schema-viewer>
+  `);
+  const text = el.shadowRoot!.textContent ?? '';
+  expect(text).to.contain('const: "locked-value"');
+  expect(text).to.contain('default: {"nested": {"a": 1}}');
+  expect(text).to.contain('examples: ["one", "two", "three", "four"]');
+
+  const manyExamples: JsonSchemaNode = {
+    type: 'string',
+    examples: Array.from({ length: 52 }, (_, index) => `ex${index}`),
+  };
+  const truncated = await fixture<LyraJsonSchemaViewer>(html`
+    <lr-json-schema-viewer .schema=${manyExamples}></lr-json-schema-viewer>
+  `);
+  const truncatedText = truncated.shadowRoot!.textContent ?? '';
+  expect(truncatedText).to.contain('"ex49"');
+  expect(truncatedText).to.not.contain('"ex50"');
+  expect(truncatedText).to.contain(', …]');
+});
+
+it('renders [Circular] for a self-referencing constraint value and collapses an object nested past depth 3', async () => {
+  const circularDefault: Record<string, unknown> = {};
+  circularDefault['self'] = circularDefault;
+  const deep = { a: { b: { c: { d: 'too-deep' } } } };
+  const schemaWithHostileValues: JsonSchemaNode = {
+    type: 'object',
+    const: 10n as unknown,
+    default: circularDefault,
+    examples: [deep],
+  };
+  const el = await fixture<LyraJsonSchemaViewer>(html`
+    <lr-json-schema-viewer .schema=${schemaWithHostileValues}></lr-json-schema-viewer>
+  `);
+  const text = el.shadowRoot!.textContent ?? '';
+  expect(text).to.contain('const: 10n');
+  expect(text).to.contain('default: {"self": [Circular]}');
+  expect(text).to.contain('examples: [{"a": {"b": {"c": {…}}}}]');
+});
+
+it('infers an implicit object type badge from properties, joins a multi-type array badge, and omits the badge entirely for a typeless leaf', async () => {
+  const multiType: JsonSchemaNode = {
+    properties: {
+      id: { type: ['string', 'null'] },
+      freeform: {},
+    },
+  };
+  const el = await fixture<LyraJsonSchemaViewer>(html`
+    <lr-json-schema-viewer .schema=${multiType}></lr-json-schema-viewer>
+  `);
+  const rootButton = el.shadowRoot!.querySelector('[data-path=""]') as HTMLButtonElement;
+  expect(rootButton.querySelector('[part="type"]')!.textContent).to.equal('Type: object');
+
+  const idButton = el.shadowRoot!.querySelector('[data-path="/properties/id"]') as HTMLButtonElement;
+  expect(idButton.querySelector('[part="type"]')!.textContent).to.equal('Type: string | null');
+
+  const freeformButton = el.shadowRoot!.querySelector('[data-path="/properties/freeform"]') as HTMLButtonElement;
+  expect(freeformButton.querySelector('[part="type"]') === null).to.be.true;
+});
+
 it('distinguishes no selection from the empty JSON Pointer that selects the root', async () => {
   const el = await fixture<LyraJsonSchemaViewer>(html`
     <lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>

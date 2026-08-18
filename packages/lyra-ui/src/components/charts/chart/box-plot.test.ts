@@ -123,6 +123,26 @@ describe('box-plot family-contract regressions', () => {
     expect(order).to.deep.equal(['datum', 'legacy']);
     expect(detail).to.deep.include({ kind: 'box', datasetIndex: 0, index: 0 });
   });
+
+  it('formats the tooltip label callback through a per-instance formatter, and skips it for an invalid point', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.formatter = ({ value, surface }) => `${surface}:${value}`;
+    el.datasets = [{ label: 'Series', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    await el.updateComplete;
+    const label = (el as unknown as { buildConfig(): any }).buildConfig().options.plugins.tooltip
+      .callbacks.label as (context: { dataset?: { label?: unknown }; raw?: unknown }) => string | undefined;
+    expect(typeof label).to.equal('function');
+    expect(
+      label({ dataset: { label: 'Series' }, raw: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } }),
+    ).to.equal('Series: tooltip:3');
+    expect(
+      label({ dataset: { label: '' }, raw: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } }),
+    ).to.equal('tooltip:3');
+    expect(label({ dataset: { label: 'Series' }, raw: null })).to.equal(undefined);
+    expect(
+      label({ dataset: { label: 'Series' }, raw: { min: 5, q1: 4, median: 3, q3: 2, max: 1 } }),
+    ).to.equal(undefined);
+  });
 });
 
 it('normalizes and validates box-plot constructors before registering them', async () => {
@@ -177,6 +197,55 @@ it('fails closed with a clear Error for malformed named/default box-plot modules
   } finally {
     console.warn = originalWarn;
   }
+});
+
+it('rejects a completely non-object-like box-plot peer, not just a malformed object shape', async () => {
+  const chart = fakeChartModule(() => {
+    throw new Error('malformed capabilities must never be registered');
+  });
+  const originalWarn = console.warn;
+  const warnings: unknown[][] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  try {
+    for (const nonObjectCandidate of [null, 42, 'not-a-plugin']) {
+      warnings.length = 0;
+      const result = await loadBoxPlotAndRegister(
+        () => Promise.resolve(chart),
+        () => Promise.resolve(nonObjectCandidate),
+      );
+      expect(result === null, String(nonObjectCandidate)).to.be.true;
+      const error = warnings.flat().find((value) => value instanceof Error) as Error | undefined;
+      expect(error instanceof Error, String(nonObjectCandidate)).to.be.true;
+      expect(error!.message, String(nonObjectCandidate)).to.contain('module namespace');
+    }
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+it('resolves null without warning when chart.js itself fails to load, even though the box-plot peer would have loaded fine', async () => {
+  const fallback = fakeBoxPlotModule();
+  let boxPlotImportCalled = false;
+  const originalWarn = console.warn;
+  const warnings: unknown[][] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  let result: Awaited<ReturnType<typeof loadBoxPlotAndRegister>>;
+  try {
+    result = await loadBoxPlotAndRegister(
+      () => Promise.resolve(null),
+      () => {
+        boxPlotImportCalled = true;
+        return Promise.resolve(fallback);
+      },
+    );
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(result).to.equal(null);
+  // `Promise.all([loadChart(), importBoxPlot()])` starts both concurrently, so the peer import
+  // itself still runs even though its result is discarded once `chartMod` turns out falsy.
+  expect(boxPlotImportCalled).to.be.true;
+  expect(warnings, 'a falsy chart.js result is not a caught error, so it must not warn').to.deep.equal([]);
 });
 
 it('builds a boxplot Chart.js instance once both chart.js and the boxplot plugin load', async () => {
@@ -815,6 +884,40 @@ it('disables Chart.js animation when the user prefers reduced motion', async () 
   }
 });
 
+it('redraws the live chart with the current reduced-motion state when the media query change event fires', async () => {
+  let changeListener: (() => void) | undefined;
+  const fakeQuery = {
+    matches: false,
+    media: '(prefers-reduced-motion: reduce)',
+    addEventListener(type: string, listener: () => void): void {
+      if (type === 'change') changeListener = listener;
+    },
+    removeEventListener(): void {},
+  };
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) =>
+    query === '(prefers-reduced-motion: reduce)'
+      ? (fakeQuery as unknown as MediaQueryList)
+      : originalMatchMedia(query)) as typeof window.matchMedia;
+  try {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+    expect(changeListener, 'armReducedMotionWatcher() must register a change listener').to.be.a(
+      'function',
+    );
+    expect((el as any).chart.options.animation).to.not.equal(false);
+
+    fakeQuery.matches = true;
+    changeListener!();
+    expect((el as any).chart.options.animation).to.equal(false);
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
 it('refreshTheme() forces a redraw that re-reads out-of-band theme changes', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
@@ -1404,5 +1507,131 @@ describe('per-box interactivity', () => {
     expect(details).to.deep.equal([
       { datasetIndex: 0, index: 0, label: 'A', value: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } },
     ]);
+  });
+
+  it('ignores focus and keydown when there are no addressable boxes', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+    expect(politeTexts()).to.deep.equal([]);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    expect(politeTexts()).to.deep.equal([]);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(politeTexts()).to.deep.equal([]);
+    expect((el as any).keyboardDatumIndex).to.equal(0);
+  });
+
+  it('supports ArrowDown/ArrowUp as forward/backward aliases and ignores an unrecognized key', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['A', 'B'];
+    el.datasets = twoSeries();
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    const first = politeTexts().at(-1) ?? '';
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    const second = politeTexts().at(-1) ?? '';
+    expect(second, 'ArrowDown must move forward, like ArrowRight').to.not.equal(first);
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await el.updateComplete;
+    expect(politeTexts().at(-1), 'ArrowUp must move backward, like ArrowLeft').to.equal(first);
+
+    const countBeforeIgnoredKey = politeTexts().length;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    await el.updateComplete;
+    expect(politeTexts().length, 'an unrecognized key must not change the announcement').to.equal(
+      countBeforeIgnoredKey,
+    );
+  });
+
+  it('swaps Arrow key forward/backward semantics under RTL', async () => {
+    const wrapper = await fixture(html`<div dir="rtl"><lr-box-plot></lr-box-plot></div>`);
+    const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
+    el.labels = ['A', 'B'];
+    el.datasets = twoSeries();
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    const first = politeTexts().at(-1) ?? '';
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await el.updateComplete;
+    const second = politeTexts().at(-1) ?? '';
+    expect(second, 'ArrowLeft must move forward under RTL, mirroring ArrowRight under LTR').to.not.equal(
+      first,
+    );
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(politeTexts().at(-1), 'ArrowRight must move backward under RTL').to.equal(first);
+  });
+
+  it('falls back to a localized point-index label when a box has no corresponding labels entry', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['A'];
+    el.datasets = [
+      {
+        label: 'Latency',
+        data: [
+          { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+          { min: 2, q1: 3, median: 4, q3: 5, max: 6 },
+        ],
+      },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
+    expect(politeTexts().at(-1) ?? '').to.contain('Point 2');
+  });
+
+  it('skips a non-monotonic point when walking boxes with the keyboard, and excludes it from the total count', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['A', 'B', 'C'];
+    el.datasets = [
+      {
+        label: 'Latency',
+        data: [
+          { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+          { min: 5, q1: 4, median: 3, q3: 2, max: 1 },
+          { min: 2, q1: 3, median: 4, q3: 5, max: 6 },
+        ],
+      },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.focus();
+    await el.updateComplete;
+    expect(politeTexts().at(-1) ?? '', 'only the 2 valid points are addressable').to.contain('of 2');
+
+    const details: unknown[] = [];
+    el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(
+      (details[0] as { index: number }).index,
+      'the invalid middle point must be skipped entirely, landing on the third data point',
+    ).to.equal(2);
   });
 });

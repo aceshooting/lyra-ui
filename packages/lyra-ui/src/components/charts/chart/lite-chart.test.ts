@@ -207,6 +207,17 @@ it('renders a line path plus one point per value for type="line"', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(6);
 });
 
+it('falls back to type="bar" for an unrecognized type attribute value', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="not-a-real-chart-type"
+    .labels=${['A']}
+    .datasets=${[{ label: 'S', data: [1] }]}
+  ></lr-lite-chart>`);
+  expect(el.type).to.equal('bar');
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(0);
+});
+
 it('skips null values in a line series without throwing, and without a point for them', async () => {
   const el = await mount(html`<lr-lite-chart
     type="line"
@@ -403,6 +414,43 @@ it('adds localized, formatted row totals only for stacked bar tables when tableT
   expect(el.shadowRoot!.querySelectorAll('[part="data-table"] thead th')).to.have.length(3);
 });
 
+it('routes the unified formatter through the multi-series table (value and total cells alike), ahead of tableCellFormatter', async () => {
+  const calls: unknown[] = [];
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    stacked
+    .labels=${['Q1']}
+    .datasets=${[
+      { label: 'Revenue', data: [12.5] },
+      { label: 'Services', data: [7.5] },
+    ]}
+  ></lr-lite-chart>`);
+  el.tableTotals = true;
+  el.tableCellFormatter = () => 'must not be reached: formatter takes priority';
+  el.formatter = (context) => {
+    calls.push(context);
+    return `table:${context.value}`;
+  };
+  await el.updateComplete;
+
+  const cells = [...el.shadowRoot!.querySelectorAll('[part="data-table"] tbody td')].map((cell) =>
+    cell.textContent?.trim(),
+  );
+  expect(cells).to.deep.equal(['table:12.5', 'table:7.5', 'table:20']);
+  const tableCalls = calls.filter((call) => (call as { surface: string }).surface === 'table');
+  expect(tableCalls, 'a value cell and the total cell must both route through the table surface').to
+    .have.lengthOf(3);
+  expect(tableCalls).to.deep.include({
+    value: 20,
+    surface: 'table',
+    datasetIndex: undefined,
+    index: 0,
+    label: 'Q1',
+    seriesLabel: undefined,
+    statistic: 'total',
+  });
+});
+
 it('emits lr-point-click for a line point too, with the same detail shape', async () => {
   const el = await mount(html`<lr-lite-chart
     type="line"
@@ -580,6 +628,22 @@ it('appends legendText output next to each series label when set', async () => {
   ></lr-lite-chart>`);
   const texts = [...el.shadowRoot!.querySelectorAll('[part="legend-text"]')].map((n) => n.textContent);
   expect(texts).to.deep.equal([' (A:0)', ' (B:1)']);
+});
+
+it('sums only the finite values of a series into the legend total, skipping null/non-finite entries', async () => {
+  const el = await mount(html`<lr-lite-chart
+    legend
+    type="bar"
+    .labels=${['a', 'b', 'c']}
+    .datasets=${[{ label: 'A', data: [2, null, 3] }]}
+  ></lr-lite-chart>`);
+  const totals: unknown[] = [];
+  el.formatter = ({ value, surface }) => {
+    if (surface === 'legend') totals.push(value);
+    return `${surface}:${value}`;
+  };
+  await el.updateComplete;
+  expect(totals).to.deep.equal([5]);
 });
 
 it('uses tickFormat for y-axis labels when provided', async () => {
@@ -1946,6 +2010,32 @@ describe('accessibleLabel', () => {
     expect(el.getAttribute('role')).to.equal(null);
     expect(el.shadowRoot!.querySelectorAll('svg[role]')).to.have.length(1);
   });
+});
+
+it('renders a visually hidden description paragraph wired to the svg via aria-describedby, when set', async () => {
+  const el = (await fixture(html`
+    <lr-lite-chart
+      description="Quarterly revenue by product line."
+      .labels=${['a']}
+      .datasets=${[{ label: 'A', data: [1] }]}
+    ></lr-lite-chart>
+  `)) as LyraLiteChart;
+  await el.updateComplete;
+  const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement | null;
+  expect(description !== null).to.be.true;
+  expect(description!.textContent).to.equal('Quarterly revenue by product line.');
+  expect(description!.classList.contains('sr-only')).to.be.true;
+  const svg = el.shadowRoot!.querySelector('svg')!;
+  expect(svg.getAttribute('aria-describedby')).to.equal(description!.id);
+});
+
+it('omits the description paragraph and aria-describedby when description is unset', async () => {
+  const el = (await fixture(html`
+    <lr-lite-chart .labels=${['a']} .datasets=${[{ label: 'A', data: [1] }]}></lr-lite-chart>
+  `)) as LyraLiteChart;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="description"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('svg')!.hasAttribute('aria-describedby')).to.be.false;
 });
 
 describe('multi-series screen-reader data table', () => {

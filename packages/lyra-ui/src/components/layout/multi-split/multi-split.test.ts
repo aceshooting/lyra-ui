@@ -994,6 +994,37 @@ it("rejects invalid post-mount sizes and keeps the last valid public layout", as
   ).to.be.true;
 });
 
+it("resets to an empty layout when an invalid sizes assignment has no valid previous state to fall back to (zero panels)", async () => {
+  const el = (await fixture(
+    html`<lr-multi-split></lr-multi-split>`
+  )) as LyraMultiSplit;
+  await elementUpdated(el);
+  expect(el.sizes).to.deep.equal([]);
+
+  // With zero panels, [] itself never satisfies validLiveSizes (its sum can never reach ~100), so
+  // an invalid post-mount assignment has no valid previous layout to roll back to either -- unlike
+  // the two-panel case above, where the last valid layout is always available to restore.
+  el.sizes = [50, 50];
+  await elementUpdated(el);
+  expect(el.sizes).to.deep.equal([]);
+});
+
+it("re-checks an already-empty sizes array on any unrelated property update, not just a sizes assignment", async () => {
+  const el = (await fixture(
+    html`<lr-multi-split></lr-multi-split>`
+  )) as LyraMultiSplit;
+  await elementUpdated(el);
+  expect(el.sizes).to.deep.equal([]);
+
+  // Changing an unrelated property (not `sizes`) still runs willUpdate(); with zero panels the
+  // `ensureSizes()` re-check on an already-empty array is a no-op, but it must run without
+  // throwing and without changing `sizes`.
+  el.min = 20;
+  await elementUpdated(el);
+  expect(el.sizes).to.deep.equal([]);
+  expect(el.min).to.equal(20);
+});
+
 it("honors initialization-only properties assigned after connection but before the first update", async () => {
   const storageKey = "test-split-late-initialization-" + Math.random();
   localStorage.setItem(
@@ -2277,6 +2308,32 @@ it("commits sizes to localStorage exactly once on pointerup, not just via keyboa
     ],
   });
   expect(persistenceCommits).to.equal(1);
+});
+
+it("commits a resize without writing to localStorage when no storage-key is configured, even with valid panel-ids", async () => {
+  localStorage.clear();
+  const el = (await fixture(
+    html`<lr-multi-split
+      ><div panel-id="first">A</div>
+      <div panel-id="second">B</div></lr-multi-split
+    >`
+  )) as LyraMultiSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector(
+    '[part="divider"]'
+  ) as HTMLElement;
+  divider.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+  );
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.be.greaterThan(50);
+
+  const persistedKeys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("lr-multi-split:")) persistedKeys.push(key);
+  }
+  expect(persistedKeys).to.deep.equal([]);
 });
 
 it("suppresses resize events and persistence for clamped keyboard and pointer no-ops", async () => {
@@ -4840,6 +4897,40 @@ describe("ordered panel ownership", () => {
     expect(panelA.getAttribute("data-collapse-state")).to.equal("author-late");
   });
 
+  it("distributes an equal share when every panel identity is replaced at once, with no prior size to inherit", async () => {
+    const el = (await fixture(html`
+      <lr-multi-split
+        .sizes=${[30, 70]}
+        style="inline-size:400px; block-size:120px"
+      >
+        <div panel-id="a">A</div>
+        <div panel-id="b">B</div>
+      </lr-multi-split>
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+    expect(el.sizes).to.deep.equal([30, 70]);
+
+    const replacementC = el.ownerDocument.createElement("div");
+    replacementC.setAttribute("panel-id", "c");
+    replacementC.textContent = "C";
+    const replacementD = el.ownerDocument.createElement("div");
+    replacementD.setAttribute("panel-id", "d");
+    replacementD.textContent = "D";
+    const slot = el.shadowRoot!.querySelector("slot")!;
+    const slotChange = oneEvent(slot, "slotchange");
+    el.replaceChildren(replacementC, replacementD);
+    await slotChange;
+    await elementUpdated(el);
+
+    expect(
+      [...el.children].map((panel) => panel.getAttribute("panel-id"))
+    ).to.deep.equal(["c", "d"]);
+    // Neither "c" nor "d" existed in the previous identity set, so there is no retained size to
+    // scale from -- the reconciliation falls back to an equal split instead of a 0/0 or NaN result.
+    expect(el.sizes[0]).to.be.closeTo(50, 1e-6);
+    expect(el.sizes[1]).to.be.closeTo(50, 1e-6);
+  });
+
   it("releases and reacquires exact panel state across disconnect/reconnect", async () => {
     const el = (await fixture(html`
       <lr-multi-split .sizes=${[40, 60]}>
@@ -4997,5 +5088,63 @@ describe("effective collapse availability", () => {
     expect((el.ownerDocument.activeElement as HTMLElement | null)?.id).to.equal(
       "multi-split-remove-opener"
     );
+  });
+
+  it("ends an in-progress drag mid-gesture when a panel-count change makes its divider adjacent-disabled, without any collapse-state transition", async () => {
+    const el = (await fixture(
+      html`<lr-multi-split collapse="end" style="inline-size: 400px">
+        <div>A</div>
+        <div>B</div>
+        <div>C</div>
+        <div>D</div>
+      </lr-multi-split>`
+    )) as LyraMultiSplit;
+    await elementUpdated(el);
+    el.collapseState = "rail";
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal("rail");
+
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    mockWidth(base, 400);
+    const dividers = [
+      ...el.shadowRoot!.querySelectorAll('[part="divider"]'),
+    ] as HTMLElement[];
+    // 4 panels, collapse="end" -> collapsingIndex 3, adjacent (disabled) divider index 2.
+    expect(dividers[2]!.getAttribute("aria-disabled")).to.equal("true");
+    expect(dividers[1]!.getAttribute("aria-disabled")).to.equal("false");
+    dividers[1]!.setPointerCapture = () => {};
+
+    const pointerId = 5301;
+    pointerDown(dividers[1]!, pointerId, 100);
+    pointerMove(pointerId, 130);
+    expect(el.sizes.length).to.equal(4);
+
+    // Removing a panel keeps collapseState pinned at "rail" throughout (it was force-pinned
+    // above), so no wide<->rail transition fires and the transition-driven endDragGestures() call
+    // never runs -- yet the divider this drag is on (index 1) becomes the new adjacent-disabled
+    // divider once panelCount drops to 3 (adjacent = panelCount - 2).
+    const slot = el.shadowRoot!.querySelector("slot")!;
+    const slotChange = oneEvent(slot, "slotchange");
+    el.lastElementChild!.remove();
+    await slotChange;
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal("rail");
+    expect(el.children.length).to.equal(3);
+    const sizesAfterRemoval = [...el.sizes];
+
+    pointerMove(pointerId, 160);
+    await elementUpdated(el);
+    expect(
+      el.sizes,
+      "the divider became adjacent-disabled from the panel-count change alone, so this move must be a no-op"
+    ).to.deep.equal(sizesAfterRemoval);
+
+    // A further move on the same pointerId is also inert -- the gesture was fully torn down, not
+    // merely ignored once.
+    pointerMove(pointerId, 200);
+    await elementUpdated(el);
+    expect(el.sizes).to.deep.equal(sizesAfterRemoval);
+
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId }));
   });
 });

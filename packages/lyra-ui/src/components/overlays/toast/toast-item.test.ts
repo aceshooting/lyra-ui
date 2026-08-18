@@ -838,6 +838,28 @@ it('restores pre-toast focus when the only toast closes from its focused close b
   expect((document.activeElement) === (before)).to.equal(true);
 });
 
+it('repairs focus immediately on reconnect when a standalone visible item never entered an lr-toast region', async () => {
+  const el = (await fixture(html`
+    <lr-toast-item duration="0">
+      Standalone toast <button id="action">Undo</button>
+    </lr-toast-item>
+  `)) as LyraToastItem;
+  const parent = el.parentElement!;
+  await waitUntil(() => el.hasAttribute('data-visible'));
+  const action = el.querySelector('#action') as HTMLButtonElement;
+  action.focus();
+  expect(document.activeElement === action).to.equal(true);
+
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+
+  expect(
+    document.activeElement === action,
+    'a standalone item outside any lr-toast region must repair focus synchronously on reconnect, not wait for region promotion',
+  ).to.equal(true);
+});
+
 it('stays paused on pointerleave while focus still holds it paused', async () => {
   const el = (await fixture(html`<lr-toast-item duration="120">hi</lr-toast-item>`)) as LyraToastItem;
   await oneEvent(el, 'lr-show');
@@ -1027,6 +1049,52 @@ it('keeps the whole contextual label when grapheme segmentation is unavailable',
     `)) as LyraToastItem;
     const button = el.shadowRoot?.querySelector<HTMLElement>('[part="close-button"]');
     expect(button?.getAttribute('aria-label')).to.equal(`Dismiss [${message}]`);
+    el.remove();
+  } finally {
+    Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: originalSegmenter });
+  }
+});
+
+it('falls back to the default-locale segmenter when the effective-locale segmenter construction throws', async () => {
+  const originalSegmenter = Intl.Segmenter;
+  let calls = 0;
+  class ThrowingFirstSegmenter {
+    constructor(locale?: string | string[], options?: Intl.SegmenterOptions) {
+      calls += 1;
+      if (calls === 1) throw new RangeError('unsupported locale');
+      // eslint-disable-next-line constructor-super
+      return new originalSegmenter(locale, options);
+    }
+  }
+  Object.defineProperty(Intl, 'Segmenter', {
+    configurable: true,
+    value: ThrowingFirstSegmenter,
+  });
+  // A locale unused elsewhere in this file -- getSegmenter() caches per locale+options key, so a
+  // previously-warmed cache entry would return the cached real Segmenter without ever attempting
+  // (and failing) construction again, defeating the whole point of this test.
+  const prefix = 'x'.repeat(39);
+  const message = `${prefix}éy`;
+  const snippet = `${prefix}é`;
+  try {
+    const el = (await fixture(html`
+      <lr-toast-item
+        locale="fr"
+        duration="0"
+        .strings=${{
+          closeWithContext: 'Wrong template {snippet}',
+          closeWithTruncatedContext: 'Dismiss [{snippet}] (more)',
+        }}
+      >${message}</lr-toast-item>
+    `)) as LyraToastItem;
+    const button = el.shadowRoot?.querySelector<HTMLElement>('[part="close-button"]');
+    // Proves the RangeError-catch fallback path itself ran and produced a correct grapheme-aware
+    // truncation -- not just that some result rendered. The fallback getSegmenter(undefined, ...)
+    // call may hit an already-cached instance for the resolved default locale rather than
+    // constructing a fresh one (a legitimate cache hit, not a missed code path), so `calls` is not
+    // asserted beyond having attempted (and failed) construction at least once.
+    expect(calls, 'the effective-locale segmenter construction must have been attempted').to.be.at.least(1);
+    expect(button?.getAttribute('aria-label')).to.equal(`Dismiss [${snippet}] (more)`);
     el.remove();
   } finally {
     Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: originalSegmenter });
@@ -1407,6 +1475,34 @@ it('rebinds its observer, animation frame, and timers to the adopted owner realm
     frameWindow.clearTimeout = originalClearTimeout;
     if (observerDescriptor) Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
     else delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    frame.remove();
+  }
+});
+
+it('queues inertly then self-releases when its lr-toast parent never gets an upgraded region controller', async () => {
+  const frame = document.createElement('iframe');
+  const loaded = oneEvent(frame, 'load');
+  frame.srcdoc = '<!doctype html><html><body></body></html>';
+  document.body.append(frame);
+  await loaded;
+  const frameDocument = frame.contentDocument!;
+  try {
+    expect(frame.contentWindow!.customElements.get('lr-toast')).to.equal(undefined);
+    const item = (await fixture(
+      html`<lr-toast-item duration="0">Adopted item</lr-toast-item>`,
+    )) as LyraToastItem;
+    item.remove();
+    const region = frameDocument.createElement('lr-toast');
+    frameDocument.body.append(region);
+    region.append(frameDocument.adoptNode(item));
+    await item.updateComplete;
+
+    expect(item.hasAttribute('data-toast-queued'), 'queues inertly behind the unavailable parent').to.be
+      .true;
+    await waitUntil(() => !item.isConnected, 'an unavailable owner-realm controller must release the queued item', {
+      timeout: 300,
+    });
+  } finally {
     frame.remove();
   }
 });

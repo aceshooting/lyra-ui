@@ -723,6 +723,31 @@ describe('navigation lifecycle and theme sync', () => {
       }
     }
   });
+
+  it('resets theme-sync bookkeeping even when navigation already replaced the synced document before sync is disabled', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+    `);
+    const firstFrame = frameOf(el);
+    el.withThemeSync = true;
+    await el.updateComplete;
+    firstFrame.dispatchEvent(new Event('load'));
+    await el.updateComplete;
+    const state = (el as unknown as { themeSyncState?: { target: Node } }).themeSyncState;
+    expect(state?.target === firstFrame.contentDocument!.documentElement).to.be.true;
+
+    // Navigating replaces the iframe (keyed on navigationGeneration) before it ever fires its own
+    // 'load' event -- disabling sync in the same update batch must find restoreTheme()'s tracked
+    // target stale (it still points at the superseded frame's document) and bail out of every
+    // mutation loop without throwing, while its `finally` still resets the bookkeeping.
+    el.srcdoc = `${INLINE_DOCUMENT}<!-- second -->`;
+    el.withThemeSync = false;
+    await el.updateComplete;
+
+    expect(frameOf(el) === firstFrame).to.be.false;
+    const resetState = (el as unknown as { themeSyncState?: unknown }).themeSyncState;
+    expect(resetState === undefined).to.be.true;
+  });
 });
 
 it('is accessible with a populated inline document and visible controls', async () => {

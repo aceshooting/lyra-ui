@@ -67,4 +67,88 @@ describe('parseVCards', () => {
     expect(() => parseVCards(Array.from({ length: 251 }, () => CARD).join('\r\n')))
       .to.throw(LyraResourceLimitError);
   });
+  it('treats 8BIT encoding as a pass-through with no quoted-printable decoding', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:2.1', 'FN;ENCODING=8BIT:Plain=20Text', 'END:VCARD'].join('\r\n');
+    expect(parseVCards(source)[0].fn).to.equal('Plain=20Text');
+  });
+  it('rejects a non-UTF-8/US-ASCII CHARSET parameter without quoted-printable encoding', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:2.1', 'FN;CHARSET=ISO-8859-1:Test', 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(/requires quoted-printable encoding/);
+  });
+  it('rejects an unrecognized CHARSET label during quoted-printable decoding', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:2.1', 'FN;CHARSET=BOGUS-CHARSET;ENCODING=QUOTED-PRINTABLE:A', 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(/unsupported or invalid charset/);
+  });
+  it('rejects a parameter value with trailing characters after a closing quote', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:4.0', 'FN;X="ab"cd:value', 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(/unterminated quoted parameter/);
+  });
+  it('rejects a parameter name that is not a valid token', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:4.0', 'FN;1BAD=x:value', 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(/invalid parameter name/);
+  });
+  it('rejects an empty parameter slot between semicolons', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:4.0', 'FN;;TYPE=work:value', 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(/empty parameter/);
+  });
+  it('rejects an empty bare type token', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:2.1', 'TEL;"":+1', 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(/empty type parameter/);
+  });
+  it('rejects a TYPE parameter with no values', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:4.0', 'TEL;TYPE=:value', 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(/empty TYPE parameter/);
+  });
+  it('rejects a property name that is not a valid token', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:4.0', '1FN:value', 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(/invalid property name/);
+  });
+  it('strips a leading group label from a grouped property name', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:3.0', 'item1.TEL:+1-555-0100', 'item1.X-ABLabel:Mobile', 'END:VCARD'].join('\r\n');
+    const [contact] = parseVCards(source);
+    expect(contact.tel).to.deep.equal([{ value: '+1-555-0100', types: [] }]);
+  });
+  it('rejects a duplicate VERSION property', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:4.0', 'VERSION:3.0', 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(/duplicate VERSION/);
+  });
+  it('rejects a folded continuation line with no preceding property', () => {
+    const source = 'BEGIN:VCARD\r\n VERSION:4.0\r\nEND:VCARD';
+    expect(() => parseVCards(source)).to.throw(/orphan folded line/);
+  });
+  it('pads a structured N value that has fewer components than expected', () => {
+    const source = ['BEGIN:VCARD', 'VERSION:4.0', 'N:Doe', 'END:VCARD'].join('\r\n');
+    const [contact] = parseVCards(source);
+    expect(contact.n).to.deep.equal({
+      familyNames: 'Doe',
+      givenNames: '',
+      additionalNames: '',
+      honorificPrefixes: '',
+      honorificSuffixes: '',
+    });
+  });
+  it('rejects a single property line larger than the per-property character ceiling', () => {
+    const huge = `FN:${'a'.repeat(1_048_600)}`;
+    const source = ['BEGIN:VCARD', 'VERSION:4.0', huge, 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(LyraResourceLimitError);
+  });
+  it('rejects a document with more physical lines than the line ceiling', () => {
+    const source = Array.from({ length: 100_001 }, () => '').join('\n');
+    expect(() => parseVCards(source)).to.throw(LyraResourceLimitError);
+  });
+  it('rejects a contact with more properties than the per-contact ceiling', () => {
+    const lines = ['BEGIN:VCARD', 'VERSION:4.0', ...Array.from({ length: 10_001 }, () => 'X:1'), 'END:VCARD'];
+    expect(() => parseVCards(lines.join('\r\n'))).to.throw(LyraResourceLimitError);
+  });
+  it('rejects a card whose raw line count exceeds the block scanning ceiling before END is reached', () => {
+    const lines = ['BEGIN:VCARD', 'VERSION:4.0', ...Array.from({ length: 20_001 }, () => 'X:1')];
+    expect(() => parseVCards(lines.join('\r\n'))).to.throw(LyraResourceLimitError);
+  });
+  it('rejects a contact whose combined rendered text exceeds the per-contact character ceiling', () => {
+    const fn = `FN:${'a'.repeat(1_000_000)}`;
+    const org = `ORG:${'b'.repeat(1_000_000)}`;
+    const tel = `TEL:${'c'.repeat(200_000)}`;
+    const source = ['BEGIN:VCARD', 'VERSION:4.0', fn, org, tel, 'END:VCARD'].join('\r\n');
+    expect(() => parseVCards(source)).to.throw(LyraResourceLimitError);
+  });
 });

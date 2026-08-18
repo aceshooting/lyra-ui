@@ -683,6 +683,28 @@ it('uses the named host as the sole graph owner and restores the inner owner whe
   expect(svg.getAttribute('aria-label')).to.match(/2 nodes/);
 });
 
+it('remembers an author-set role and never overwrites it with the default group/aria-label-driven sync', async () => {
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  expect(el.hasAttribute('role')).to.equal(false);
+
+  el.setAttribute('role', 'presentation');
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('presentation');
+
+  // Giving the host an aria-label would normally flip the default sync to role="group" -- but an
+  // author-set role must never be overwritten by it.
+  el.setAttribute('aria-label', 'Citation relationships');
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('presentation');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('presentation');
+});
+
 it('shares one bounded description-first tooltip model across SVG titles and the data summary', async () => {
   const nodeDescription = `  Node   description ${'n'.repeat(700)}  `;
   const linkDescription = `  Link   description ${'l'.repeat(700)}  `;
@@ -825,6 +847,37 @@ it('keeps zero-width and fully transparent links non-operable while retaining to
     (el as unknown as { navigableLinks: () => unknown[] }).navigableLinks()
       .length
   ).to.equal(1);
+});
+
+it('treats a link as visible when the canvas-based paint-visibility probe itself throws', async () => {
+  // Stubbing CanvasRenderingContext2D.prototype.getImageData directly (rather than relying on
+  // how any engine happens to react to a specific color) deterministically forces the
+  // opacity-probe's own try/catch fallback -- an unreadable probe must not silently misclassify
+  // an otherwise-normal link as invisible/non-operable.
+  const proto = CanvasRenderingContext2D.prototype;
+  const originalGetImageData = proto.getImageData;
+  proto.getImageData = (() => {
+    throw new Error('readback unavailable');
+  }) as typeof proto.getImageData;
+  try {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = [{ id: 'probe-throws', source: 'a', target: 'b' }];
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    const link = el.shadowRoot!.querySelector('[part="link"]')!;
+    expect(link.getAttribute('role')).to.equal('button');
+    expect(
+      (el as unknown as { navigableLinks: () => unknown[] }).navigableLinks()
+        .length
+    ).to.equal(1);
+  } finally {
+    proto.getImageData = originalGetImageData;
+  }
 });
 
 it('uses the effective default link paint when deciding whether a link is operable', async () => {
@@ -7842,6 +7895,35 @@ describe('coverage: render()/buildCanvasScene position fallbacks and shape-branc
     expect(pathEl.hasAttribute('data-hovered')).to.be.true;
     pathEl.dispatchEvent(new MouseEvent('mouseleave'));
     expect(pathEl.hasAttribute('data-hovered')).to.be.false;
+  });
+
+  it('a path-shaped (square) node also activates via keyboard (Enter), same as a circle node', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    el.nodeTypes = [{ id: 'sq', label: 'Square', shape: 'square' }];
+    el.nodes = [{ id: 'a', label: 'A', type: 'sq' }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
+    const pathEl = el.shadowRoot!.querySelector(
+      '[part="node"]'
+    ) as SVGPathElement;
+    expect(pathEl.tagName).to.equal('path');
+
+    let detail: { nodeId: string } | undefined;
+    el.addEventListener(
+      'lr-node-click',
+      (e) => (detail = (e as CustomEvent).detail)
+    );
+    pathEl.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+    );
+    expect(detail?.nodeId).to.equal('a');
   });
 
   it('an SVG-rendered community hull applies its own sanitized color as a style override (fill true branch)', async () => {

@@ -364,4 +364,21 @@ describe('tree declarative child model', () => {
     await el.expandAll();
     await expect(el).to.be.accessible();
   });
+
+  it('collapseAll() resets a dangling/non-existent activeId to the first navigable authored item', async () => {
+    const el = (await fixture(html`
+      <lr-tree>
+        <lr-tree-item label="Alpha"></lr-tree-item>
+        <lr-tree-item label="Beta"></lr-tree-item>
+      </lr-tree>
+    `)) as LyraTree;
+    await el.updateComplete;
+    el.activeId = 'does-not-exist';
+    await el.updateComplete;
+
+    await el.collapseAll();
+    await el.updateComplete;
+    const alpha = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
+    expect(el.activeId).to.equal(alpha.nodeId);
+  });
 });

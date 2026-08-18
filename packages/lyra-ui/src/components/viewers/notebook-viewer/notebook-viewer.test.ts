@@ -4,6 +4,7 @@ import type { LyraNotebookViewer } from './notebook-viewer.js';
 import { __setNotebookSanitizerForTesting } from './dompurify-loader.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import type { LyraTextViewerTarget } from '../../../internal/text-viewer-target.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { styles } from './notebook-viewer.styles.js';
 
 /** The search half of the shared viewer contract -- `lr-notebook-viewer` resolves its own anchor
@@ -493,6 +494,34 @@ describe('parsing and rendering', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This notebook has too many cells to display.');
   });
+
+  it('accepts a valid notebook with zero cells, firing lr-load with cellCount 0 and rendering an empty virtualized list', async () => {
+    const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    const eventPromise = oneEvent(el, 'lr-load');
+    el.notebook = { nbformat: 4, nbformat_minor: 5, cells: [] };
+    const event = await eventPromise;
+    expect(event.detail).to.deep.equal({ cellCount: 0, language: '' });
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-virtual-list') !== null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    expect(rowRoot(el).querySelectorAll('[part~="cell"]').length).to.equal(0);
+  });
+
+  it('rejects a valid major with an unsupported minor version, interpolating the version into the localized message', async () => {
+    // The sibling "unsupported nbformat major version" test above always fails on the major-mismatch
+    // arm of `raw.nbformat !== SUPPORTED_MAJOR || !SUPPORTED_MINORS.includes(raw.nbformat_minor)`
+    // short-circuiting before the minor check ever runs -- this exercises the second arm directly,
+    // and also asserts the interpolated `{version}` text, which no existing test does.
+    const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    const eventPromise = oneEvent(el, 'lr-render-error');
+    el.notebook = { nbformat: 4, nbformat_minor: 99, cells: [] };
+    const event = await eventPromise;
+    expect(event.detail.error).to.exist;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+      'Notebook format 4.99 is not supported.',
+    );
+  });
 });
 
 describe('loading a notebook from src', () => {
@@ -724,6 +753,30 @@ describe('loading a notebook from src', () => {
       expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
     } finally { window.fetch = original; }
   });
+
+  it('resets to idle on disconnect and re-fetches from src on reconnect (a pure DOM move, unlike the inline-authority reconnect above)', async () => {
+    const original = window.fetch;
+    let fetches = 0;
+    window.fetch = (() => {
+      fetches++;
+      return Promise.resolve({
+        ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(JSON.stringify(NOTEBOOK)),
+      } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lr-notebook-viewer src="https://example.test/nb.ipynb"></lr-notebook-viewer>`)) as LyraNotebookViewer;
+      await waitUntil(() => (el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="cell"]').length ?? 0) > 0);
+      expect(fetches).to.equal(1);
+
+      el.remove();
+      expect((el as unknown as { loadState: { kind: string } }).loadState.kind).to.equal('idle');
+
+      document.body.append(el);
+      await waitUntil(() => fetches === 2);
+      await waitUntil(() => (el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="cell"]').length ?? 0) > 0);
+      expect(rowRoot(el).querySelectorAll('[part~="cell"]').length).to.equal(3);
+    } finally { window.fetch = original; }
+  });
 });
 
 describe('rendering non-text outputs', () => {
@@ -840,6 +893,59 @@ describe('rendering non-text outputs', () => {
     expect(output.textContent).to.equal('This viewer needs the optional "dompurify" package installed to render safely.');
   });
 
+  it('also announces the missing-sanitizer failure through the shared assertive live region, not just the visible notice', async () => {
+    // The visible fallback is asserted above; a screen-reader user who cannot see shadow-DOM
+    // content depends on this separate document-level announcement (ViewerAnnouncementController /
+    // acquireAnnouncementSink) to learn the same thing.
+    __setNotebookSanitizerForTesting(null);
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', id: 'c1', source: 'x', execution_count: 1,
+        outputs: [{ output_type: 'execute_result', data: { 'text/html': '<p>Safe</p>' } }],
+      }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.trim() !== '');
+    const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+    expect(sink?.textContent).to.equal('This viewer needs the optional "dompurify" package installed to render safely.');
+  });
+
+  it('fails closed and announces once when the sanitizer peer itself throws, not only when it is missing', async () => {
+    // ensureSanitized()'s catch branch (a thrown/rejected loadNotebookSanitizer()/sanitize() call)
+    // is a distinct code path from the `!sanitizer` (peer absent) branch every other missing-peer
+    // test above exercises -- neither this file nor any other exercised it before.
+    __setNotebookSanitizerForTesting({
+      sanitize: () => { throw new Error('sanitizer exploded'); },
+    });
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', source: '',
+        outputs: [
+          { output_type: 'display_data', data: { 'text/html': '<b>Chart</b>', 'text/plain': 'Chart fallback' } },
+          { output_type: 'display_data', data: { 'text/html': '<b>Chart</b>', 'text/plain': 'Chart fallback' } },
+        ],
+      }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    let errorCount = 0;
+    let lastErrorMessage: string | undefined;
+    el.addEventListener('lr-render-error', (event) => {
+      errorCount++;
+      lastErrorMessage = ((event as CustomEvent<{ error: unknown }>).detail.error as Error)?.message;
+    });
+    el.notebook = notebook as never;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Chart fallback') ?? false,
+    );
+    expect(errorCount).to.equal(1);
+    expect(lastErrorMessage).to.equal('sanitizer exploded');
+    expect(rowRoot(el).textContent).to.include('Chart fallback');
+    const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+    expect(sink?.textContent).to.equal('This viewer needs the optional "dompurify" package installed to render safely.');
+  });
+
   it('falls back to text/plain and emits one render error when the sanitizer peer is missing', async () => {
     __setNotebookSanitizerForTesting(null);
     const notebook = {
@@ -890,6 +996,24 @@ describe('rendering non-text outputs', () => {
     await waitUntil(() => rowRoot(el).querySelector('[part~="output"]') !== null);
     const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect(output.getAttribute('data-output-type')).to.equal('execute_result');
+    expect(output.textContent).to.equal('This output type cannot be displayed.');
+  });
+
+  it('shows the same unrendered-output notice for an output with no data field at all', async () => {
+    // `data` is entirely optional on display_data/execute_result outputs (isNotebookOutput()
+    // accepts an output with no `data` key), distinct from the sibling test above whose output
+    // carries a present-but-unsupported MIME payload.
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', id: 'c1', source: 'x', execution_count: 1,
+        outputs: [{ output_type: 'display_data' }],
+      }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]') !== null);
+    const output = rowRoot(el).querySelector('[part~="output"]')!;
+    expect(output.getAttribute('data-output-type')).to.equal('display_data');
     expect(output.textContent).to.equal('This output type cannot be displayed.');
   });
 });
@@ -1114,6 +1238,28 @@ describe('search', () => {
     el.searchPrevious();
     expect((await eventPromise).detail.activeIndex, 'wraps backward past the first match').to.equal(1);
   });
+
+  it('recomputes an active search when the host language changes', async () => {
+    // Same fixture idiom csv-viewer.test.ts's "recomputes an active search when the host language
+    // changes" uses: dotted capital I (U+0130) folds to "i" cleanly only under a Turkish locale, so
+    // the match count itself proves updated()'s lastSearchLocale branch actually re-ran search()
+    // rather than merely re-rendering with stale matches.
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [
+        { cell_type: 'raw', id: 'r1', source: 'İSTANBUL' },
+        { cell_type: 'raw', id: 'r2', source: 'istanbul' },
+      ],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer lang="en" .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part~="cell"]').length > 0);
+    expect(await el.search('istanbul')).to.equal(1);
+
+    el.lang = 'tr';
+    await el.updateComplete;
+    await aTimeout(0);
+    expect((el as unknown as { searchMatches: unknown[] }).searchMatches).to.have.lengthOf(2);
+  });
 });
 
 describe('node-path and fragment anchors', () => {
@@ -1190,6 +1336,30 @@ describe('highlights', () => {
     el.highlights = [];
     await el.updateComplete;
     expect(vlistRoot.querySelector('[part~="cell-highlighted"]') === null).to.be.true;
+  });
+
+  it('bounds candidates considered per repaintHighlights() pass at MAX_NOTEBOOK_PAINTED_HIGHLIGHTS while still retaining the active entry', async () => {
+    // Mirrors xml-viewer.test.ts's/svg-viewer.test.ts's own "bounds painted highlights ... beyond
+    // the candidate cap" tests for their sibling per-pass ceilings. Asserted against the internal
+    // `highlightedCells` map (sizes/ids only, never a DOM node) rather than the virtualized DOM,
+    // since most of these 1,001 cells are never actually mounted by <lr-virtual-list> at once.
+    const notebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: Array.from({ length: 1001 }, (_v, index) => ({ cell_type: 'raw', id: `c${index}`, source: `cell ${index}` })),
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await el.updateComplete;
+    el.highlights = Array.from({ length: 1001 }, (_v, index) => ({
+      id: `h${index}`,
+      anchor: { kind: 'node-path' as const, path: [index] },
+    }));
+    el.activeHighlightId = 'h1000';
+    await el.updateComplete;
+
+    const highlightedCells = (el as unknown as { highlightedCells: Map<number, { id: string }> }).highlightedCells;
+    expect(highlightedCells.size).to.equal(100);
+    expect(highlightedCells.get(1000)?.id, 'the active entry always wins its cell slot').to.equal('h1000');
   });
 });
 

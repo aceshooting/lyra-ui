@@ -1045,3 +1045,211 @@ it("is accessible in the fully populated, multi-category tabbed state", async ()
   const el = await populated();
   await expect(el).to.be.accessible();
 });
+
+it("ignores a tab-show event naming an unavailable category, reverting the tab strip and emitting no request", async () => {
+  const el = await populated();
+  const tabs = el.shadowRoot!.querySelector("lr-tab-group") as LyraTabGroup;
+  await tabs.updateComplete;
+  expect(tabs.active).to.equal("evidence");
+
+  let changeEvents = 0;
+  el.addEventListener("lr-drilldown-category-change", () => {
+    changeEvents += 1;
+  });
+  tabs.dispatchEvent(
+    new CustomEvent("lr-tab-show", {
+      bubbles: true,
+      composed: true,
+      detail: { name: "not-a-real-category" },
+    })
+  );
+  await tabs.updateComplete;
+  expect(changeEvents).to.equal(0);
+  expect(tabs.active).to.equal("evidence");
+  expect(el.activeCategory).to.equal("");
+});
+
+it("does not emit lr-drilldown-category-change when a tab-show event repeats the already-active category", async () => {
+  const el = await populated();
+  const tabs = el.shadowRoot!.querySelector("lr-tab-group") as LyraTabGroup;
+  await tabs.updateComplete;
+  expect(tabs.active).to.equal("evidence");
+
+  let changeEvents = 0;
+  el.addEventListener("lr-drilldown-category-change", () => {
+    changeEvents += 1;
+  });
+  tabs.dispatchEvent(
+    new CustomEvent("lr-tab-show", {
+      bubbles: true,
+      composed: true,
+      detail: { name: "evidence" },
+    })
+  );
+  await tabs.updateComplete;
+  expect(changeEvents).to.equal(0);
+  expect(tabs.active).to.equal("evidence");
+});
+
+it("omits href from the evidence-open detail when the source evidence item carries none", async () => {
+  const el = (await fixture(
+    html`<lr-drilldown-panel></lr-drilldown-panel>`
+  )) as LyraDrilldownPanel;
+  el.path = [
+    {
+      nodeId: "no-href-node",
+      label: "No href node",
+      evidence: [{ evidenceId: "no-href-evidence", title: "No href title" }],
+    },
+  ];
+  await el.updateComplete;
+  const card = el.shadowRoot!.querySelector("lr-source-card")!;
+  const open = oneEvent(el, "lr-drilldown-evidence-open");
+  card.dispatchEvent(
+    new CustomEvent("lr-open", {
+      bubbles: true,
+      composed: true,
+      detail: { sourceId: "no-href-evidence" },
+    })
+  );
+  const event = await open;
+  expect(event.detail).to.deep.equal({
+    nodeId: "no-href-node",
+    evidenceId: "no-href-evidence",
+  });
+  expect("href" in event.detail).to.equal(false);
+});
+
+it("returns to an earlier page via the previous-page button and resets categoryPage when the current node changes", async () => {
+  const el = (await fixture(
+    html`<lr-drilldown-panel></lr-drilldown-panel>`
+  )) as LyraDrilldownPanel;
+  el.activeCategory = "documents";
+  el.path = [
+    {
+      nodeId: "paged-node",
+      label: "Paged node",
+      documents: Array.from({ length: 20 }, (_, index) => ({
+        documentId: `paged-${index}`,
+        name: `paged-${index}.txt`,
+        mimeType: "text/plain",
+      })),
+    },
+  ];
+  await el.updateComplete;
+
+  const summary = () =>
+    el
+      .shadowRoot!.querySelector('[part="pagination-summary"]')!
+      .textContent!.replace(/\s+/g, " ")
+      .trim();
+  expect(summary()).to.equal("1–8 of 20 Documents");
+
+  el.shadowRoot!.querySelector<HTMLElement>('[part="next-button"]')!.click();
+  await el.updateComplete;
+  expect(summary()).to.equal("9–16 of 20 Documents");
+
+  el.shadowRoot!
+    .querySelector<HTMLElement>('[part="previous-button"]')!
+    .click();
+  await el.updateComplete;
+  expect(summary()).to.equal("1–8 of 20 Documents");
+
+  el.shadowRoot!.querySelector<HTMLElement>('[part="next-button"]')!.click();
+  await el.updateComplete;
+  expect(summary()).to.equal("9–16 of 20 Documents");
+
+  el.path = [
+    {
+      nodeId: "other-paged-node",
+      label: "Other paged node",
+      documents: Array.from({ length: 20 }, (_, index) => ({
+        documentId: `other-${index}`,
+        name: `other-${index}.txt`,
+        mimeType: "text/plain",
+      })),
+    },
+  ];
+  await el.updateComplete;
+  expect(summary()).to.equal("1–8 of 20 Documents");
+});
+
+it("normalizes a string evidence page, a document version, and the full optional entity surface", async () => {
+  const el = (await fixture(
+    html`<lr-drilldown-panel></lr-drilldown-panel>`
+  )) as LyraDrilldownPanel;
+  el.path = [
+    {
+      nodeId: "rich-node",
+      label: "Rich node",
+      evidence: [
+        {
+          evidenceId: "string-page-evidence",
+          title: "Appendix evidence",
+          page: "Appendix B",
+        },
+      ],
+      documents: [
+        {
+          documentId: "versioned-document",
+          name: "versioned.pdf",
+          version: "v2.3",
+        },
+      ],
+      entities: [
+        {
+          entityId: "rich-entity",
+          label: "Rich entity",
+          description: "Physicist and chemist",
+          degree: 3.9,
+          communityId: "community-7",
+          properties: { affiliation: "Sorbonne", citationCount: 42 },
+        },
+      ],
+    },
+  ];
+  await el.updateComplete;
+
+  expect(el.path[0]!.evidence![0]!.page).to.equal("Appendix B");
+  const sourceCard = el.shadowRoot!.querySelector(
+    "lr-source-card"
+  ) as LyraSourceCard;
+  expect(sourceCard.page).to.equal("Appendix B");
+
+  expect(el.path[0]!.documents![0]!.version).to.equal("v2.3");
+
+  el.activeCategory = "entities";
+  await el.updateComplete;
+  const entityCard = el.shadowRoot!.querySelector(
+    "lr-entity-card"
+  ) as LyraEntityCard;
+  expect(entityCard.entity).to.deep.equal({
+    id: "rich-entity",
+    label: "Rich entity",
+    description: "Physicist and chemist",
+    properties: { affiliation: "Sorbonne", citationCount: 42 },
+    degree: 3,
+    communityId: "community-7",
+  });
+});
+
+it("clamps a negative entity degree to zero instead of dropping it", async () => {
+  const el = (await fixture(
+    html`<lr-drilldown-panel></lr-drilldown-panel>`
+  )) as LyraDrilldownPanel;
+  el.activeCategory = "entities";
+  el.path = [
+    {
+      nodeId: "negative-degree-node",
+      label: "Negative degree node",
+      entities: [
+        { entityId: "negative-degree-entity", label: "Low degree", degree: -5 },
+      ],
+    },
+  ];
+  await el.updateComplete;
+  const entityCard = el.shadowRoot!.querySelector(
+    "lr-entity-card"
+  ) as LyraEntityCard;
+  expect(entityCard.entity.degree).to.equal(0);
+});

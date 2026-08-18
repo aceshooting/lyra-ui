@@ -1598,6 +1598,31 @@ describe('node drag', () => {
     expect(labelEl.getAttribute('x')).to.not.equal(beforeX);
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 50, clientY: 0 }));
   });
+
+  it('counter-mirrors the live-dragged edge label under orientation="horizontal" + dir="rtl"', async () => {
+    const container = (await fixture(html`
+      <div dir="rtl"><lr-flow-canvas nodes-draggable></lr-flow-canvas></div>
+    `)) as HTMLElement;
+    const el = container.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    el.edges = [{ id: 'a-b', source: 'a', target: 'b', label: 'then' }];
+    await el.updateComplete;
+    const labelEl = el.shadowRoot!.querySelector('[part="edge-label"]') as SVGTextElement;
+    // The static (non-drag) render already counter-mirrors RTL labels; the drag-time imperative
+    // rewrite in updateIncidentEdges() must keep doing so with the live dragged coordinates.
+    const beforeTransform = labelEl.getAttribute('transform');
+    expect(beforeTransform).to.include('scale(-1 1)');
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    wrapper.setPointerCapture = () => {};
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 50, clientY: 0 }));
+    expect(labelEl.getAttribute('transform')).to.include('scale(-1 1)');
+    expect(labelEl.getAttribute('transform')).to.not.equal(beforeTransform);
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 50, clientY: 0 }));
+  });
 });
 
 function makeHandle(kind: 'input' | 'output', id: string): HTMLElement {
@@ -1715,6 +1740,57 @@ describe('connect gesture', () => {
 
     expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(0);
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 58, clientX: 200, clientY: 0 }));
+    expect(connects).to.equal(0);
+  });
+
+  it('cancels rather than commits when locked flips true in the same tick as the release pointerup, before willUpdate can retire the gesture', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas connectable></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const outputHandle = makeHandle('output', 'out');
+    wrapperA.append(outputHandle);
+    let connects = 0;
+    el.addEventListener('lr-connect', () => connects++);
+    outputHandle.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 61, clientX: 0, clientY: 0, bubbles: true, composed: true,
+    }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(1);
+
+    // Property setters schedule an async Lit update; willUpdate (which would otherwise retire the
+    // gesture) has not run yet, so connectState is still populated when this pointerup arrives.
+    el.locked = true;
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 61, clientX: 200, clientY: 0 }));
+    expect(connects).to.equal(0);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="connection-line"]').length).to.equal(0);
+  });
+
+  it('cancels rather than commits when connectable flips false in the same tick as the release pointerup', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const outputHandle = makeHandle('output', 'out');
+    wrapperA.append(outputHandle);
+    let connects = 0;
+    el.addEventListener('lr-connect', () => connects++);
+    outputHandle.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 62, clientX: 0, clientY: 0, bubbles: true, composed: true,
+    }));
+    await el.updateComplete;
+
+    el.connectable = false;
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 62, clientX: 200, clientY: 0 }));
     expect(connects).to.equal(0);
   });
 
@@ -2489,6 +2565,34 @@ describe('disconnect/reconnect', () => {
     expect(snapshots.length).to.be.greaterThan(0);
     expect(snapshots[0].nodes[0].width).to.be.closeTo(320, 2);
   });
+
+  it('connects without a ResizeObserver instance when the owner window has none, instead of throwing', async () => {
+    const original = window.ResizeObserver;
+    // @ts-expect-error deliberately simulating an owner realm without ResizeObserver support
+    delete window.ResizeObserver;
+    try {
+      const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+      el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]');
+      expect(wrapper?.getAttribute('data-node-id')).to.equal('a');
+      // Reconnecting must also not throw while still observer-less.
+      el.remove();
+      document.body.appendChild(el);
+      await el.updateComplete;
+    } finally {
+      window.ResizeObserver = original;
+    }
+  });
+
+  it('releases rather than acquires an announcement sink when connectedCallback runs on a not-yet-connected element', () => {
+    const el = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+    expect(el.isConnected).to.be.false;
+    // connectedCallback() is a public override; invoking it directly on an element the browser has
+    // not actually connected exercises syncAnnouncementSink()'s isConnected-false guard, which has
+    // no other reachable caller since the only production call site is connectedCallback itself.
+    expect(() => el.connectedCallback()).to.not.throw();
+  });
 });
 
 // Regression coverage for the shared finite-number normalization layer
@@ -3014,6 +3118,39 @@ describe('flow schema and consumer-reachable type state', () => {
     expect(authored.getAttribute('data-node-type')).to.equal('HTTP Request');
     expect(fallback.getAttribute('data-node-type')).to.equal('Vector/Search');
     expect(fallback.getAttribute('part')).to.include('node-type-vector-search');
+  });
+
+  it('exposes the same normalized node-type-<type> part on the portable fallback card when lr-flow-node is unregistered in the owner realm', async () => {
+    const registry = window.customElements;
+    const originalGet = registry.get.bind(registry);
+    (registry as unknown as { get: (name: string) => CustomElementConstructor | undefined }).get = (
+      name: string,
+    ) => (name === 'lr-flow-node' ? undefined : originalGet(name));
+    try {
+      const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+      el.nodes = [{ id: 'a', type: 'Vector/Search', position: { x: 0, y: 0 } }];
+      await el.updateComplete;
+      const card = el.shadowRoot!.querySelector('.portable-node-card');
+      expect(card?.getAttribute('data-node-type')).to.equal('Vector/Search');
+      expect(card?.getAttribute('part')).to.equal('node-card node-card-surface node-type-vector-search');
+    } finally {
+      (registry as unknown as { get: (name: string) => CustomElementConstructor | undefined }).get =
+        originalGet;
+    }
+  });
+
+  it('omits the node-type-<type> part when the type normalizes to nothing (symbols/whitespace only)', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'sym', type: '   ***   ', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    expect(defaultCard(el, 'sym').getAttribute('part')).to.equal('node-card');
+  });
+
+  it('prefixes a digit-leading normalized type with "type-" so the part remains a valid CSS identifier', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'digit', type: '123-Fast', position: { x: 0, y: 0 } }];
+    await el.updateComplete;
+    expect(defaultCard(el, 'digit').getAttribute('part')).to.equal('node-card node-type-type-123-fast');
   });
 
   it('resolves rem fallback geometry from the live root font size instead of assuming 16px', async () => {

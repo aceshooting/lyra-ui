@@ -58,6 +58,14 @@ describe('defaults', () => {
     el.xml = undefined;
     expect(el.source).to.deep.equal({ kind: 'url', url: 'https://example.test/remote.xml' });
   });
+
+  it('renders the empty-document placeholder when neither src nor xml is set', async () => {
+    const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="tree"]') === null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.textContent).to.include('No document to display.');
+  });
 });
 
 it('validates maxHeight before assigning the base custom property', async () => {
@@ -107,6 +115,31 @@ describe('parsing and tree rendering', () => {
     // engine-dependent <parsererror> diagnostic (Chrome/Firefox/Safari each word this
     // completely differently) must never be appended to the stable localized message.
     expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document could not be parsed as XML.');
+  });
+
+  it('detects a parsererror nested inside the root element, not just one standing as the root itself', async () => {
+    // Different browser engines shape DOMParser's synthesized error document differently: some
+    // put <parsererror> as the document's own root, others nest it as the root's first child.
+    // Stubbing parseFromString to return the nested shape deterministically exercises the branch
+    // the currently-running engine's own <parsererror> shape does not happen to produce.
+    const original = DOMParser.prototype.parseFromString;
+    DOMParser.prototype.parseFromString = function (): Document {
+      const doc = original.call(this, '<html></html>', 'application/xml');
+      const errorEl = doc.createElement('parsererror');
+      errorEl.textContent = 'engine-specific nested diagnostic';
+      doc.documentElement.appendChild(errorEl);
+      return doc;
+    };
+    try {
+      const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.xml = SIMPLE_XML;
+      await eventPromise;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document could not be parsed as XML.');
+    } finally {
+      DOMParser.prototype.parseFromString = original;
+    }
   });
 
   it('an xml property wins over src', async () => {
@@ -173,6 +206,44 @@ describe('parsing and tree rendering', () => {
     } finally {
       DOMParser.prototype.parseFromString = original;
     }
+  });
+
+  it('does not mistake DOCTYPE-like text inside a comment or CDATA section for an actual doctype declaration', async () => {
+    const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+    el.xml = '<root><!-- <!DOCTYPE fake> --><data><![CDATA[<!DOCTYPE alsofake>]]></data></root>';
+    await el.updateComplete;
+    // The scanner must skip past comment/CDATA contents wholesale rather than independently
+    // spotting the "<!DOCTYPE" substring living inside them -- a false positive here would reject
+    // a perfectly well-formed document with the parse-error state instead of rendering it.
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+    const tags = [...el.shadowRoot!.querySelectorAll('[part="tag"]')].map((t) => t.textContent);
+    expect(tags).to.deep.equal(['root', 'data']);
+  });
+
+  it('fails closed with the parse-error state when xml is set without a browsing context', async () => {
+    const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+    const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
+    el.remove();
+    ownerlessDocument.adoptNode(el);
+    try {
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.xml = SIMPLE_XML;
+      const event = await eventPromise as CustomEvent<{ error: unknown }>;
+      expect(event.detail.error).to.be.instanceOf(Error);
+      expect((event.detail.error as Error).message).to.equal('DOMParser is unavailable without a browsing context.');
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('renders namespace-prefixed tag and attribute names exactly as authored', async () => {
+    const nsXml = '<ns:root xmlns:ns="urn:example:ns"><ns:item ns:attr="v">text</ns:item></ns:root>';
+    const el = (await fixture(html`<lr-xml-viewer .xml=${nsXml}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    const tags = [...el.shadowRoot!.querySelectorAll('[part="tag"]')].map((t) => t.textContent);
+    expect(tags).to.deep.equal(['ns:root', 'ns:item']);
+    const attrNames = [...el.shadowRoot!.querySelectorAll('[part="attribute-name"]')].map((n) => n.textContent);
+    expect(attrNames).to.include('ns:attr');
   });
 
   it('rejects document type declarations before DOMParser can expand internal entities', async () => {
@@ -275,6 +346,77 @@ describe('loading xml via src', () => {
     }
   });
 
+  it('re-fetches src after a disconnect/reconnect cycle', async () => {
+    let fetchCount = 0;
+    const restore = stubFetch(async () => {
+      fetchCount++;
+      return textResponse(SIMPLE_XML);
+    });
+    try {
+      const el = (await fixture(html`<lr-xml-viewer src="https://example.test/doc.xml"></lr-xml-viewer>`)) as LyraXmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="tree"]') !== null);
+      expect(fetchCount).to.equal(1);
+      const parent = el.parentNode!;
+      el.remove();
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="tree"]') === null);
+      parent.appendChild(el);
+      await waitUntil(() => fetchCount === 2);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="tree"]') !== null);
+      expect(fetchCount).to.equal(2);
+    } finally {
+      restore();
+    }
+  });
+
+  it('discards a stale in-flight response once a faster later src wins', async () => {
+    const pending = new Map<string, (response: Response) => void>();
+    const restore = stubFetch((url) => new Promise<Response>((resolve) => { pending.set(url, resolve); }));
+    try {
+      const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+      el.src = 'https://example.test/first.xml';
+      await waitUntil(() => pending.has('https://example.test/first.xml'));
+      el.src = 'https://example.test/second.xml';
+      await waitUntil(() => pending.has('https://example.test/second.xml'));
+
+      // The second (later) request resolves first; the first (stale) request resolves after --
+      // its result must never win over the second's.
+      pending.get('https://example.test/second.xml')!(textResponse('<second><winner/></second>'));
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="tree"]') !== null);
+      pending.get('https://example.test/first.xml')!(textResponse('<first><loser/></first>'));
+      await el.updateComplete;
+
+      const tags = [...el.shadowRoot!.querySelectorAll('[part="tag"]')].map((t) => t.textContent);
+      expect(tags).to.include('second');
+      expect(tags).to.not.include('first');
+    } finally {
+      restore();
+    }
+  });
+
+  it('reports the same stable parse-error message for a DOCTYPE-bearing document reached via src, without ever calling DOMParser', async () => {
+    const restore = stubFetch(async () => textResponse(`<!DOCTYPE root [
+      <!ENTITY a "1234567890">
+    ]><root>&a;</root>`));
+    const original = DOMParser.prototype.parseFromString;
+    let parseCalls = 0;
+    DOMParser.prototype.parseFromString = function (...args): Document {
+      parseCalls++;
+      return original.apply(this, args);
+    };
+    try {
+      const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/doctype.xml';
+      await eventPromise;
+      await el.updateComplete;
+      expect(parseCalls).to.equal(0);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document could not be parsed as XML.');
+    } finally {
+      DOMParser.prototype.parseFromString = original;
+      restore();
+    }
+  });
+
   it('rejects a disallowed src URL without ever fetching', async () => {
     let called = false;
     const restore = stubFetch(async () => {
@@ -339,6 +481,28 @@ describe('collapsedDepth and toggling', () => {
 });
 
 describe('copy', () => {
+  it('clears copy feedback on its own after the feedback window elapses', async function () {
+    this.timeout(5_000);
+    const restore = stubClipboard(navigator, { writeText: async () => {} });
+    try {
+      const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} copyable></lr-xml-viewer>`)) as LyraXmlViewer;
+      await el.updateComplete;
+      const button = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
+      const eventPromise = oneEvent(el, 'lr-copy');
+      button.click();
+      await eventPromise;
+      await el.updateComplete;
+      expect(button.textContent!.trim()).to.equal('Copied!');
+      await waitUntil(() => button.textContent!.trim() !== 'Copied!', 'copy feedback clears after its timer', {
+        timeout: 3_000,
+        interval: 50,
+      });
+      expect(button.textContent!.trim()).to.equal('Copy');
+    } finally {
+      restore();
+    }
+  });
+
   it('renders a whole-document copy button and emits success only after clipboard fulfillment', async () => {
     const writes: string[] = [];
     const restore = stubClipboard(navigator, { writeText: async (text: string) => { writes.push(text); } });
@@ -590,6 +754,47 @@ describe('search', () => {
       HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
       window.matchMedia = originalMatchMedia;
     }
+  });
+
+  it('recomputes an active search and re-emits lr-search-change when the effective locale changes on a loaded document', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.search('item');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.be.greaterThan(0);
+
+    const eventPromise = oneEvent(el, 'lr-search-change');
+    el.locale = 'fr';
+    const event = await eventPromise as CustomEvent<{ query: string; matchCount: number }>;
+    await el.updateComplete;
+    expect(event.detail.query).to.equal('item');
+    expect(event.detail.matchCount).to.be.greaterThan(0);
+    expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.be.greaterThan(0);
+  });
+
+  it('matches only an element tag name, attribute names/values, and its own text -- never a comment, CDATA, or processing-instruction body', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${'<root><!-- secretword --><![CDATA[secretword]]><?pi secretword?><item>secretword</item></root>'}></lr-xml-viewer>`)) as LyraXmlViewer;
+    const count = await el.search('secretword');
+    // Only the <item> element's own text node counts as a hit -- the identical word living
+    // inside the comment, CDATA section, and processing instruction is out of search's documented
+    // scope and must not inflate the match count.
+    expect(count).to.equal(1);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="text"][data-match]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="comment"][data-match]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="cdata"][data-match]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="pi"][data-match]').length).to.equal(0);
+  });
+
+  it('a query matching only an attribute name (not its value) still marks that attribute-value part as matched', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    // Both <item> elements carry an "id" attribute whose own value ("1"/"2") does not contain
+    // "id" -- the hit comes solely from the attribute NAME, exercising the name-matching arm of
+    // computeSearch()'s attribute loop rather than the (separately tested) value-matching arm.
+    const count = await el.search('id');
+    expect(count).to.equal(2);
+    await el.updateComplete;
+    const matchedValues = [...el.shadowRoot!.querySelectorAll('[part="attribute-value"][data-match]')].map((n) => n.textContent);
+    expect(matchedValues).to.deep.equal(['1', '2']);
   });
 
   it('search()/clearSearch() fall back to an empty search state before any document is loaded', async () => {
@@ -948,6 +1153,19 @@ describe('leaf elements (no children of any kind)', () => {
     expect(placeholder.getAttribute('aria-hidden')).to.equal('true');
     expect(placeholder.hasAttribute('tabindex')).to.be.false;
     expect(placeholder.hasAttribute('aria-expanded')).to.be.false;
+  });
+
+  it('renders a bare root element with no children of any kind as one row, distinct from the error and no-document states', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${'<root></root>'}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    // A well-formed but entirely empty document is its own valid "loaded" render -- neither the
+    // parse-error region nor the no-src/no-xml placeholder state.
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="tag"]')!.textContent).to.equal('root');
+    expect(el.shadowRoot!.querySelectorAll('[part="toggle"]').length).to.equal(0);
+    const placeholder = el.shadowRoot!.querySelector('[part="toggle-placeholder"]');
+    expect(placeholder !== null).to.equal(true);
   });
 
   it('preserves an explicitly empty host aria-label on the region owner', async () => {

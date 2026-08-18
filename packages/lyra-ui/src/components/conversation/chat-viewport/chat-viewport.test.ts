@@ -988,6 +988,18 @@ describe("jump pill", () => {
     const css = styles.cssText.replace(/\s+/g, " ");
     expect(css).to.match(/\[part='jump-pill'\]:hover/);
   });
+
+  it('shows "Jump to latest" when there is no positive unread count', async () => {
+    const el = (await fixture(
+      html`<lr-chat-viewport style="block-size:100px"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lr-chat-viewport
+      >`
+    )) as LyraChatViewport;
+    el.follow = false;
+    await el.updateComplete;
+    const pill = el.shadowRoot!.querySelector('[part="jump-pill"]')!;
+    expect(pill.textContent?.trim()).to.equal("Jump to latest");
+  });
 });
 
 describe("unread divider (slotted mode)", () => {
@@ -1088,6 +1100,20 @@ describe("unread divider (slotted mode)", () => {
       >`
     )) as LyraChatViewport;
     expect(noUnread.scrollToUnread()).to.be.false;
+  });
+
+  it("renders no divider when unreadStartIndex is beyond the available children", async () => {
+    const el = (await fixture(
+      html`<lr-chat-viewport style="block-size:200px" unread-start-index="50"
+        >${Array.from({ length: 5 }, (_, i) => row(`m${i}`))}</lr-chat-viewport
+      >`
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.shadowRoot!.querySelector('[part="unread-divider"]') == null).to
+      .be.true;
+    expect(el.querySelector("[data-lr-chat-viewport-unread-boundary]")).to
+      .equal(null);
   });
 });
 
@@ -1344,6 +1370,47 @@ describe("virtual mode", () => {
       "a same-burst append must not be misattributed as a user release"
     ).to.be.false;
     expect(el.follow).to.be.true;
+  });
+
+  it("ignores a malformed visible-range detail instead of treating it as a real range update", async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.querySelector("lr-virtual-list") as LyraVirtualList;
+
+    let fired = false;
+    el.addEventListener("lr-follow-change", () => (fired = true));
+    for (const detail of [
+      undefined,
+      { start: Number.NaN, end: 5 },
+      { start: -1, end: 5 },
+      { start: 8, end: 5 },
+    ]) {
+      list.dispatchEvent(
+        new CustomEvent("lr-visible-range-changed", { detail })
+      );
+    }
+    expect(fired, "a malformed detail must not flip follow").to.be.false;
+    expect(el.follow).to.be.true;
+  });
+
+  it("scrollToUnread() defers to the slotted list, returning false when the index is out of range", async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    el.unreadStartIndex = 15;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.querySelector("lr-virtual-list") as LyraVirtualList;
+    const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.scrollTop = 0;
+
+    const result = el.scrollToUnread({ behavior: "auto" });
+    await nextFrame();
+    expect(result).to.be.true;
+    expect(base.scrollTop).to.be.greaterThan(0);
+
+    el.unreadStartIndex = 100;
+    await el.updateComplete;
+    expect(el.scrollToUnread()).to.be.false;
   });
 });
 

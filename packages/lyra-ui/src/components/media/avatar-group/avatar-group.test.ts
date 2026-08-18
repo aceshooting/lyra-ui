@@ -104,6 +104,21 @@ it('reflects size/shape/variant as attributes for CSS selectors', async () => {
   expect(el.getAttribute('variant')).to.equal('brand');
 });
 
+it('normalizes an unsupported size/shape/variant value back to its default instead of rendering it', async () => {
+  const el = (await fixture(html`<lr-avatar-group><lr-avatar></lr-avatar></lr-avatar-group>`)) as LyraAvatarGroup;
+  el.size = 'bogus-size' as never;
+  el.shape = 'triangle' as never;
+  el.variant = 'rainbow' as never;
+  await el.updateComplete;
+
+  expect(el.size).to.equal('medium');
+  expect(el.shape).to.equal('circle');
+  expect(el.variant).to.equal('neutral');
+  expect(el.getAttribute('size')).to.equal('medium');
+  expect(el.getAttribute('shape')).to.equal('circle');
+  expect(el.getAttribute('variant')).to.equal('neutral');
+});
+
 it('exposes no `tone` property at all — `variant` replaced it outright, with no alias', async () => {
   const el = (await fixture(html`<lr-avatar-group><lr-avatar></lr-avatar></lr-avatar-group>`)) as LyraAvatarGroup;
   expect('tone' in el, 'tone is gone from the instance').to.be.false;
@@ -625,6 +640,38 @@ it('reapplies owned overflow hiding when reconnected', async () => {
   await el.updateComplete;
 
   expect(avatars.map(isGroupHidden)).to.deep.equal([false, false, false, true, true]);
+});
+
+it('reconnects its avatar attribute observer to the adopted owner realm', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const frameDocument = frame.contentDocument!;
+  const el = (await fixture(html`
+    <lr-avatar-group>
+      <lr-avatar id="a" initials="A"></lr-avatar>
+      <lr-avatar id="b" initials="B"></lr-avatar>
+    </lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  await el.updateComplete;
+  const a = el.querySelector('#a') as HTMLElement;
+  const b = el.querySelector('#b') as HTMLElement;
+  expect(a.hasAttribute('data-lr-avatar-group-first')).to.be.true;
+  expect(b.hasAttribute('data-lr-avatar-group-first')).to.be.false;
+
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    await el.updateComplete;
+
+    // A live attribute mutation in the NEW owner document must still reach the group's
+    // MutationObserver -- proving adoptedCallback() actually rebound observation to the adopted
+    // realm rather than leaving a dead observer bound to the original document.
+    a.setAttribute('hidden', '');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(a.hasAttribute('data-lr-avatar-group-first')).to.be.false;
+    expect(b.hasAttribute('data-lr-avatar-group-first')).to.be.true;
+  } finally {
+    el.remove();
+  }
 });
 
 it('counts only author-visible, non-inert avatars and leaves invalid children untouched', async () => {

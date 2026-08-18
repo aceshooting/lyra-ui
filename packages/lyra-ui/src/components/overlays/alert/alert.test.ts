@@ -556,6 +556,27 @@ it('toast() can reuse the same identity after its previous dismissal', async () 
   await second;
 });
 
+it('settles a toast lifecycle when the alert is moved to a different parent instead of removed', async () => {
+  const el = (await fixture(html`
+    <lr-alert style=${motionless}>Reparented toast</lr-alert>
+  `)) as LyraAlert;
+  const completion = el.toast();
+  await waitUntil(() => el.open && el.parentElement?.localName === 'lr-toast');
+
+  // A direct move (not a remove() + later append()) still fires disconnectedCallback then
+  // connectedCallback synchronously -- the toast lifecycle must settle from the reconnect path's
+  // own "still not owned by the toast region" check, not only from the lasting-disconnect path.
+  document.body.append(el);
+  const settled = await Promise.race([
+    completion.then(() => true),
+    delay(120).then(() => false),
+  ]);
+  expect(settled, 'moving the alert directly to a different parent must still settle toast()').to.be
+    .true;
+  expect(el.isConnected, 'the alert stays connected -- it was moved, not removed').to.be.true;
+  expect(el.parentElement?.localName).to.equal('body');
+});
+
 it('settles an externally removed toast and lets the same alert be toasted again', async () => {
   const el = (await fixture(html`
     <lr-alert style=${motionless}>Externally removed toast</lr-alert>

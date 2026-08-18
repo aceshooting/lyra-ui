@@ -2,6 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
+  collectComposedAutofocusElements,
   collectComposedFocusTargets,
   isActionableElement,
   isComposedFocusAvailable,
@@ -720,6 +721,108 @@ it('charges a closed-details summary search to the total focus budget', () => {
   expect(result.elements).to.deep.equal([]);
   expect(result.truncationReasons).to.include('nodes');
   expect(result.visitedElements).to.be.at.most(10);
+});
+
+it('excludes disabled native controls from availability and collected focus targets', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div>
+      <button id="enabled-button">Enabled</button>
+      <button id="disabled-button" disabled>Disabled</button>
+      <input id="disabled-input" disabled />
+    </div>
+  `);
+  const disabledButton = root.querySelector<HTMLButtonElement>('#disabled-button')!;
+  const disabledInput = root.querySelector<HTMLInputElement>('#disabled-input')!;
+
+  expect(isComposedFocusAvailable(disabledButton)).to.equal(false);
+  expect(isComposedFocusAvailable(disabledInput)).to.equal(false);
+  expect(collectComposedFocusTargets(root).elements.map((element) => element.id)).to.deep.equal([
+    'enabled-button',
+  ]);
+});
+
+it('treats a throwing checkVisibility implementation as unavailable rather than propagating', async () => {
+  const root = await fixture<HTMLElement>(html`<div><button id="flaky">Flaky</button></div>`);
+  const button = root.querySelector<HTMLButtonElement>('#flaky')!;
+  const original = button.checkVisibility;
+  button.checkVisibility = () => {
+    throw new Error('boom');
+  };
+  try {
+    expect(isComposedFocusAvailable(button)).to.equal(false);
+  } finally {
+    button.checkVisibility = original;
+  }
+});
+
+it('prefers a checked radio over an earlier unchecked sibling in the same group', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div>
+      <input id="radio-first" type="radio" name="preferred-radio" />
+      <input id="radio-checked" type="radio" name="preferred-radio" checked />
+    </div>
+  `);
+
+  expect(collectComposedFocusTargets(root).elements.map((element) => element.id)).to.deep.equal([
+    'radio-checked',
+  ]);
+});
+
+it('collects autofocus targets through nested shadow roots while honoring composed availability', async () => {
+  const tagName = 'test-focus-navigation-autofocus-host';
+  if (!customElements.get(tagName)) {
+    customElements.define(
+      tagName,
+      class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' }).innerHTML =
+            '<button id="shadow-autofocus" autofocus>Shadow autofocus</button>';
+        }
+      },
+    );
+  }
+  const root = await fixture<HTMLElement>(`
+    <div>
+      <button id="outer-autofocus" autofocus>Outer</button>
+      <button id="hidden-autofocus" autofocus hidden>Hidden</button>
+      <${tagName}></${tagName}>
+    </div>
+  `);
+
+  expect(collectComposedAutofocusElements(root).elements.map((element) => element.id)).to.deep.equal([
+    'outer-autofocus',
+    'shadow-autofocus',
+  ]);
+});
+
+it('gates a directly-passed shadow root by its own host availability', async () => {
+  const host = document.createElement('div');
+  const shadow = host.attachShadow({ mode: 'open' });
+  shadow.innerHTML = '<button id="shadow-button">Shadow</button>';
+  document.body.append(host);
+  try {
+    expect(collectComposedFocusTargets(shadow).elements.map((element) => element.id)).to.deep.equal([
+      'shadow-button',
+    ]);
+    host.inert = true;
+    expect(collectComposedFocusTargets(shadow).elements).to.deep.equal([]);
+  } finally {
+    host.remove();
+  }
+});
+
+it('treats a whitespace-only object data attribute as having no loaded content', () => {
+  const root = document.createElement('div');
+  root.innerHTML = '<object id="blank-data-object" data="   "></object>';
+  expect(isSemanticActionElement(root.querySelector('#blank-data-object')!)).to.equal(false);
+});
+
+it('clamps a negative maxDepth to zero rather than accepting an unbounded value', async () => {
+  const root = await fixture<HTMLElement>(html`<div><button id="child">Child</button></div>`);
+  const result = collectComposedFocusTargets(root, { maxDepth: -10, includeRoot: false });
+  expect(result.elements).to.deep.equal([]);
+  expect(result.truncationReasons).to.include('depth');
 });
 
 it('groups many independent radios without repeated linear Array.find scans', () => {

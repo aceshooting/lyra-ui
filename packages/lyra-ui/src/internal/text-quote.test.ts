@@ -6,6 +6,7 @@ import {
   boundedSelectionRects,
   boundedSelectionText,
   createTextQuoteIndex,
+  emptyTextQuoteMatches,
   findTextQuoteMatches,
   normalizeQuoteText,
   scopeFromElement,
@@ -269,6 +270,26 @@ describe('bounded text quote indexing', () => {
     expect(Object.isFrozen(copiedRect)).to.be.true;
     rect.x = 99;
     expect(copiedRect.x).to.equal(0);
+  });
+
+  it('keeps text gathered before a hostile Range#intersectsNode throws mid-walk', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<span>abc</span><span>def</span>';
+    document.body.appendChild(root);
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(root);
+      const originalIntersects = range.intersectsNode.bind(range);
+      let calls = 0;
+      range.intersectsNode = ((node: Node) => {
+        calls++;
+        if (calls > 1) throw new Error('hostile intersectsNode');
+        return originalIntersects(node);
+      }) as typeof range.intersectsNode;
+      expect(boundedSelectionText(range)).to.equal('abc');
+    } finally {
+      root.remove();
+    }
   });
 });
 
@@ -1224,6 +1245,230 @@ describe('segmenter and case-fold defensive fallbacks', () => {
     } finally {
       root.remove();
       String.prototype.toLocaleLowerCase = original;
+    }
+  });
+});
+
+describe('TextQuoteIndex.rebindScope', () => {
+  it('rejects a scope whose text or truncation state differs and leaves the current scope in place', () => {
+    const root = document.createElement('div');
+    root.textContent = 'alpha beta';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const index = createTextQuoteIndex(scope, 'en');
+
+      const differentText: TextQuoteScope = { text: 'alpha gamma', segments: [], truncated: false };
+      expect(index.rebindScope(differentText)).to.equal(false);
+      expect(index.scope).to.equal(scope);
+
+      const differentTruncated: TextQuoteScope = { text: scope.text, segments: [], truncated: true };
+      expect(index.rebindScope(differentTruncated)).to.equal(false);
+      expect(index.scope).to.equal(scope);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('rebinds to a structurally repainted but textually identical scope and keeps the occurrence cache', () => {
+    const root = document.createElement('div');
+    root.textContent = 'alpha beta alpha';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const index = createTextQuoteIndex(scope, 'en');
+      expect(index.search('alpha').length).to.equal(2);
+      const scansAfterFirst = index.scanCount;
+
+      const repainted = scopeFromElement(root);
+      expect(index.rebindScope(repainted)).to.equal(true);
+      expect(index.scope).to.equal(repainted);
+      expect(index.search('alpha').length).to.equal(2);
+      expect(index.scanCount).to.equal(scansAfterFirst);
+    } finally {
+      root.remove();
+    }
+  });
+});
+
+describe('TextQuoteIndex occurrence cache limits', () => {
+  it('never caches when maxCacheEntries is 0, forcing a rescan on every repeated query', () => {
+    const root = document.createElement('div');
+    root.textContent = 'needle needle';
+    document.body.appendChild(root);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root), 'en', { maxCacheEntries: 0 });
+      index.search('needle');
+      const scansAfterFirst = index.scanCount;
+      index.search('needle');
+      expect(index.scanCount).to.equal(scansAfterFirst + 1);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('evicts the oldest cached occurrence list once maxCacheEntries is exceeded', () => {
+    const root = document.createElement('div');
+    root.textContent = 'alpha beta gamma';
+    document.body.appendChild(root);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root), 'en', { maxCacheEntries: 2 });
+      index.search('alpha');
+      index.search('beta');
+      const scansAfterTwo = index.scanCount;
+
+      index.search('gamma'); // inserts a 3rd entry, evicting the oldest ('alpha')
+      expect(index.scanCount).to.equal(scansAfterTwo + 1);
+
+      index.search('beta'); // still cached
+      expect(index.scanCount).to.equal(scansAfterTwo + 1);
+
+      index.search('alpha'); // evicted earlier -- must rescan
+      expect(index.scanCount).to.equal(scansAfterTwo + 2);
+    } finally {
+      root.remove();
+    }
+  });
+});
+
+describe('TextQuoteMatches edge cases', () => {
+  it('emptyTextQuoteMatches returns an exact, empty, allocation-light result', () => {
+    const matches = emptyTextQuoteMatches();
+    expect(matches.length).to.equal(0);
+    expect(matches.matchCountExact).to.be.true;
+    expect(matches.scanComplete).to.be.true;
+    expect([...matches]).to.deep.equal([]);
+    expect(matches.at(0)).to.be.undefined;
+  });
+
+  it('at() returns undefined for a non-integer, negative, or out-of-bounds index', () => {
+    const root = document.createElement('div');
+    root.textContent = 'x x x';
+    document.body.appendChild(root);
+    try {
+      const matches = findTextQuoteMatches(scopeFromElement(root), 'x', 'en');
+      expect(matches.length).to.equal(3);
+      expect(matches.at(1.5)).to.be.undefined;
+      expect(matches.at(-1)).to.be.undefined;
+      expect(matches.at(3)).to.be.undefined;
+      expect(matches.at(0)).to.not.be.undefined;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('returns an exact empty result for an empty or whitespace-only search() query', () => {
+    const root = document.createElement('div');
+    root.textContent = 'alpha beta';
+    document.body.appendChild(root);
+    try {
+      const empty = findTextQuoteMatches(scopeFromElement(root), '   ', 'en');
+      expect(empty.length).to.equal(0);
+      expect(empty.matchCountExact).to.be.true;
+      expect(empty.scanComplete).to.be.true;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('returns an exact empty result when the query is longer than the whole corpus', () => {
+    const root = document.createElement('div');
+    root.textContent = 'short';
+    document.body.appendChild(root);
+    try {
+      const matches = findTextQuoteMatches(
+        scopeFromElement(root),
+        'this needle is definitely longer than the corpus',
+        'en',
+      );
+      expect(matches.length).to.equal(0);
+      expect(matches.matchCountExact).to.be.true;
+      expect(matches.scanComplete).to.be.true;
+    } finally {
+      root.remove();
+    }
+  });
+});
+
+describe('resolvedLimits clamping', () => {
+  it('clamps a negative maxQueryCodeUnits override to 0, rejecting even a single-character query', () => {
+    const root = document.createElement('div');
+    root.textContent = 'x x x x x';
+    document.body.appendChild(root);
+    try {
+      const matches = findTextQuoteMatches(scopeFromElement(root), 'x', 'en', { maxQueryCodeUnits: -5 });
+      expect(matches.length).to.equal(0);
+      expect(matches.matchCountExact).to.be.false;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('clamps a negative maxMatches override to 0, retaining no occurrences as a lower bound', () => {
+    const root = document.createElement('div');
+    root.textContent = 'x x x x x';
+    document.body.appendChild(root);
+    try {
+      const matches = findTextQuoteMatches(scopeFromElement(root), 'x', 'en', { maxMatches: -5 });
+      expect(matches.length).to.equal(0);
+      expect(matches.matchCountExact).to.be.false;
+    } finally {
+      root.remove();
+    }
+  });
+});
+
+describe('TextQuoteIndex.resolve context ceilings', () => {
+  it('returns null when the supplied prefix or suffix exceeds the query ceiling', () => {
+    const root = document.createElement('div');
+    root.textContent = 'find this text';
+    document.body.appendChild(root);
+    try {
+      const index = createTextQuoteIndex(scopeFromElement(root), 'en');
+      const oversizedPrefix = 'p'.repeat(TEXT_QUOTE_LIMITS.maxQueryCodeUnits + 1);
+      expect(index.resolve({ quote: 'find', prefix: oversizedPrefix })).to.equal(null);
+      const oversizedSuffix = 's'.repeat(TEXT_QUOTE_LIMITS.maxQueryCodeUnits + 1);
+      expect(index.resolve({ quote: 'find', suffix: oversizedSuffix })).to.equal(null);
+    } finally {
+      root.remove();
+    }
+  });
+});
+
+describe('defensive edge cases for range-materialization helpers', () => {
+  it('findTextQuoteRanges returns no ranges once the scope structure has gone stale', () => {
+    const root = document.createElement('div');
+    root.textContent = 'needle';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      (root.firstChild as Text).data = 'changed';
+      expect(findTextQuoteRanges(scope, 'needle', 'en')).to.deep.equal([]);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('rangesFromTextQuoteMatches returns [] when the matches length accessor throws or is not a valid length', () => {
+    const root = document.createElement('div');
+    root.textContent = 'needle';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const throwingLength = {
+        get length(): number {
+          throw new Error('hostile length getter');
+        },
+      } as unknown as readonly ({ start: number; end: number } | null)[];
+      expect(rangesFromTextQuoteMatches(scope, throwingLength)).to.deep.equal([]);
+
+      const nanLength = { length: Number.NaN } as unknown as readonly ({ start: number; end: number } | null)[];
+      expect(rangesFromTextQuoteMatches(scope, nanLength)).to.deep.equal([]);
+
+      const negativeLength = { length: -1 } as unknown as readonly ({ start: number; end: number } | null)[];
+      expect(rangesFromTextQuoteMatches(scope, negativeLength)).to.deep.equal([]);
+    } finally {
+      root.remove();
     }
   });
 });

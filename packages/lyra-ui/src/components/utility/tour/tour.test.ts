@@ -375,6 +375,81 @@ describe('lr-tour', () => {
     expect(tour.steps.length).to.equal(0);
   });
 
+  it('accepts a recognized per-step placement override', async () => {
+    const tour = await fixture<LyraTour>(
+      html`<lr-tour .steps=${[{ stepId: 'a', target: '#tour-target-0', heading: 'Heading', placement: 'top' }]}></lr-tour>`,
+    );
+    expect(tour.steps[0]!.placement).to.equal('top');
+  });
+
+  it('silently drops a step entry whose own Array.isArray/prototype reflection throws (a revoked proxy)', async () => {
+    const { proxy: revokedStep, revoke } = Proxy.revocable({}, {});
+    revoke();
+    const tour = await fixture<LyraTour>(html`<lr-tour></lr-tour>`);
+
+    expect(() => {
+      tour.steps = [
+        revokedStep as unknown as LyraTourStep,
+        { stepId: 'safe', target: '#tour-target-0', heading: 'Safe heading' },
+      ];
+    }).to.not.throw();
+    expect(tour.steps.map((step) => step.stepId)).to.deep.equal(['safe']);
+  });
+
+  it('silently drops a step whose own field descriptors throw when read', async () => {
+    const poisoned = new Proxy(Object.create(null) as Record<string, unknown>, {
+      getOwnPropertyDescriptor(): never {
+        throw new Error('poisoned descriptor');
+      },
+    });
+    const tour = await fixture<LyraTour>(html`<lr-tour></lr-tour>`);
+
+    expect(() => {
+      tour.steps = [
+        poisoned as unknown as LyraTourStep,
+        { stepId: 'safe', target: '#tour-target-0', heading: 'Safe heading' },
+      ];
+    }).to.not.throw();
+    expect(tour.steps.map((step) => step.stepId)).to.deep.equal(['safe']);
+  });
+
+  it('silently drops a step reached through a poisoned array index descriptor', async () => {
+    const real = [{ stepId: 'poisoned', target: '#tour-target-0', heading: 'Poisoned index' }];
+    const poisonedArray = new Proxy(real, {
+      getOwnPropertyDescriptor(target, prop) {
+        if (prop === '0') throw new Error('poisoned index');
+        return Reflect.getOwnPropertyDescriptor(target, prop);
+      },
+    });
+    const tour = await fixture<LyraTour>(html`<lr-tour></lr-tour>`);
+
+    expect(() => {
+      tour.steps = poisonedArray as unknown as readonly LyraTourStep[];
+    }).to.not.throw();
+    expect(tour.steps.length).to.equal(0);
+  });
+
+  it('treats a non-finite spoofed array length as zero steps instead of throwing or looping unbounded', async () => {
+    const real = [
+      { stepId: 'a', target: '#tour-target-0', heading: 'A' },
+      { stepId: 'b', target: '#tour-target-1', heading: 'B' },
+    ];
+    const weirdLength = new Proxy(real, {
+      getOwnPropertyDescriptor(target, prop) {
+        if (prop === 'length') {
+          return { value: Number.NaN, writable: true, enumerable: false, configurable: false };
+        }
+        return Reflect.getOwnPropertyDescriptor(target, prop);
+      },
+    });
+    const tour = await fixture<LyraTour>(html`<lr-tour></lr-tour>`);
+
+    expect(() => {
+      tour.steps = weirdLength as unknown as readonly LyraTourStep[];
+    }).to.not.throw();
+    expect(tour.steps.length).to.equal(0);
+  });
+
   it('reflects activeIndex as an attribute and updates it via next()/back()/goToStep()', async () => {
     const el = (await fixture(
       html`<div>
@@ -958,6 +1033,98 @@ describe('lr-tour', () => {
     unrelated.focus();
     press(unrelated, 'Tab');
     expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('skip-button');
+  });
+
+  it('routes Shift+Tab from focus outside both the panel and the target to the target\'s own last control', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <div id="tour-target-0">
+          <button id="target-first">First target control</button>
+          <button id="target-last">Last target control</button>
+        </div>
+        <button id="unrelated-page-control">Unrelated</button>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const unrelated = el.querySelector('#unrelated-page-control') as HTMLButtonElement;
+    await tour.updateComplete;
+
+    unrelated.focus();
+    press(unrelated, 'Tab', { shiftKey: true });
+    expect(document.activeElement?.id).to.equal('target-last');
+  });
+
+  it('leaves Tab untouched when focus sits on the popover container itself moving forward, and routes it to the target when moving backward', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <button id="tour-target-0">Interactive target</button>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+
+    popover.focus();
+    const forwardEvt = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, composed: true, cancelable: true });
+    popover.dispatchEvent(forwardEvt);
+    // Focus is on the dialog container itself (neither a panel control nor the target's own
+    // focusables) moving forward -- left alone for the browser's own default Tab order.
+    expect(forwardEvt.defaultPrevented).to.be.false;
+
+    popover.focus();
+    press(popover, 'Tab', { shiftKey: true });
+    expect(document.activeElement?.id).to.equal('tour-target-0');
+  });
+
+  it('lets a plain, non-boundary Tab press pass through untouched from the middle of a multi-control panel', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(2, () => ({ interactiveTarget: true }))} open></lr-tour>
+        ${targetButtons(2)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    // Advance to the second step so the Previous control is enabled (not disabled-and-excluded),
+    // giving the panel three focusable controls: previous, skip, next.
+    tour.next();
+    await tour.updateComplete;
+
+    const skip = tour.shadowRoot!.querySelector('[part="skip-button"]') as HTMLButtonElement;
+    skip.focus();
+    const evt = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, composed: true, cancelable: true });
+    skip.dispatchEvent(evt);
+    // "skip" sits in the *middle* of [previous, skip, next] -- neither a first-control-with-Shift
+    // nor a last-control-with-forward-Tab boundary, so this is left alone.
+    expect(evt.defaultPrevented).to.be.false;
+  });
+
+  it('recovers focus to the popover itself when Tab is pressed and neither the panel nor the target has any focusable content', async () => {
+    const el = (await fixture(
+      html`<div>
+        <style>
+          lr-tour::part(previous-button),
+          lr-tour::part(skip-button),
+          lr-tour::part(next-button) {
+            display: none;
+          }
+        </style>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <span id="tour-target-0">Not focusable</span>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+
+    popover.focus();
+    const evt = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, composed: true, cancelable: true });
+    popover.dispatchEvent(evt);
+
+    expect(evt.defaultPrevented).to.be.true;
+    expect(tour.shadowRoot!.activeElement === popover).to.be.true;
   });
 
   it('tracks the target rect after a resize, updating the mask cutout and spotlight ring geometry', async () => {
@@ -1559,6 +1726,63 @@ describe('lr-tour', () => {
       await tour.updateComplete;
       otherContainer.remove();
     });
+
+    it('reactivates the overlay fresh on reconnect when the previous handle is no longer active', async () => {
+      const el = (await fixture(
+        html`<div>
+          <lr-tour .steps=${makeSteps(1)} open></lr-tour>
+          ${targetButtons(1)}
+        </div>`,
+      )) as HTMLDivElement;
+      const tour = el.querySelector('lr-tour') as LyraTour;
+      await tour.updateComplete;
+      const overlay = (
+        tour as unknown as {
+          overlay?: { isActive(): boolean; deactivate: (options?: { restoreFocus?: boolean }) => void };
+        }
+      ).overlay;
+      expect(overlay?.isActive()).to.be.true;
+      // Directly deactivate the underlying overlay-manager entry without going through the
+      // tour's own disconnect path, simulating a handle that is no longer active by the time a
+      // reconnect happens (unlike the synchronous-reparent case above, where suspend()/resume()
+      // apply).
+      overlay!.deactivate({ restoreFocus: false });
+      expect(overlay!.isActive()).to.be.false;
+
+      const otherContainer = document.createElement('div');
+      document.body.appendChild(otherContainer);
+      otherContainer.appendChild(tour); // synchronous reparent -- disconnectedCallback then connectedCallback
+
+      await tour.updateComplete;
+      expect(tour.open).to.be.true;
+      const newOverlay = (tour as unknown as { overlay?: { isActive(): boolean } }).overlay;
+      expect(newOverlay?.isActive()).to.be.true;
+
+      otherContainer.remove();
+    });
+  });
+
+  it('falls back to a plain String() for the step-progress count when locale number formatting throws', async () => {
+    const OriginalNumberFormat = Intl.NumberFormat;
+    class ThrowingNumberFormat {
+      format(): never {
+        throw new Error('formatting exploded');
+      }
+    }
+    (Intl as unknown as { NumberFormat: unknown }).NumberFormat = ThrowingNumberFormat;
+    try {
+      const el = (await fixture(
+        html`<div>
+          <lr-tour lang="en-x-tourfmt-probe" .steps=${makeSteps(2)} open></lr-tour>
+          ${targetButtons(2)}
+        </div>`,
+      )) as HTMLDivElement;
+      const tour = el.querySelector('lr-tour') as LyraTour;
+      await tour.updateComplete;
+      expect(tour.shadowRoot!.querySelector('[part="progress-text"]')!.textContent!.trim()).to.equal('Step 1 of 2');
+    } finally {
+      (Intl as unknown as { NumberFormat: unknown }).NumberFormat = OriginalNumberFormat;
+    }
   });
 
   it('a host aria-label overrides the per-step heading-derived aria-labelledby name', async () => {

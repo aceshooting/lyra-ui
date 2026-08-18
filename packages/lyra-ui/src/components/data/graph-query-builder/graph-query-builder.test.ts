@@ -86,6 +86,21 @@ describe('lr-graph-query-builder', () => {
     expect(el.shadowRoot!.activeElement === null).to.be.true;
   });
 
+  it('walks the whole fallback focus-target chain without throwing when focus() runs before the first render populates any control', () => {
+    const el = document.createElement('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    document.body.appendChild(el);
+    try {
+      // The shadow root exists (attached in the constructor) but is still empty -- Lit's first
+      // render is scheduled as a microtask, not run synchronously here -- so every `||` fallback in
+      // focusFirstControl() (end-input, min-hops, max-hops, direction, save-name-input) is walked
+      // and comes up empty, landing on a safe no-op instead of throwing.
+      expect(() => el.focus()).to.not.throw();
+      expect(document.activeElement === el).to.be.false;
+    } finally {
+      el.remove();
+    }
+  });
+
   it('emits lr-input with the full value when the start-entity input changes', async () => {
     const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
     await el.updateComplete;
@@ -753,6 +768,7 @@ describe('lr-graph-query-builder', () => {
     const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await el.updateComplete;
     expect(el.form === form).to.equal(true);
+    expect(el.getForm() === form).to.equal(true);
     // Assert labels.length (a number), never the NodeList itself: a *failing* chai assertion whose
     // `actual` is a DOM node/NodeList hangs the whole wtr session (wtr ships `err.actual` verbatim in
     // its session-finished message, which is serialized with structuredClone() -- DataCloneError on
@@ -763,6 +779,29 @@ describe('lr-graph-query-builder', () => {
     expect(el.validity.valueMissing).to.be.true;
     expect(el.validity.valid).to.be.false;
     expect(el.validationMessage).to.equal('This field is required.');
+  });
+
+  it('detaches from its implicit form owner and reattaches to an explicit one via the form setter', async () => {
+    const root = await fixture(html`
+      <div>
+        <form id="one"></form>
+        <lr-graph-query-builder name="query"></lr-graph-query-builder>
+      </div>
+    `);
+    const el = root.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
+    const one = root.querySelector('#one') as HTMLFormElement;
+    await el.updateComplete;
+    expect(el.form === null).to.equal(true);
+
+    el.form = one;
+    await el.updateComplete;
+    expect(el.form === one).to.equal(true);
+    expect(el.getForm() === one).to.equal(true);
+
+    el.form = null;
+    await el.updateComplete;
+    expect(el.form === null).to.equal(true);
+    expect(el.getForm() === null).to.equal(true);
   });
 
   it('normalizes a nullish name to an empty string, exercising the removeAttribute branch of the name setter', async () => {
@@ -856,6 +895,25 @@ describe('lr-graph-query-builder', () => {
     expect(el.value.startId).to.equal('');
     expect(el.value.relationshipTypes).to.deep.equal([]);
     expect(el.value.nodeTypes).to.deep.equal(['organization']);
+  });
+
+  it('normalizes a value whose field accessors throw, falling back to defaults instead of throwing (ownValue)', async () => {
+    const hostile = new Proxy(
+      { startId: 'node-1' },
+      {
+        getOwnPropertyDescriptor(target, prop) {
+          if (prop === 'endId') throw new Error('hostile getOwnPropertyDescriptor');
+          return Reflect.getOwnPropertyDescriptor(target, prop);
+        },
+      },
+    );
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    expect(() => {
+      el.value = hostile as unknown as GraphQuery;
+    }).to.not.throw();
+    await el.updateComplete;
+    expect(el.value.startId).to.equal('node-1');
+    expect(el.value.endId).to.equal('');
   });
 
   it('renders complete outer label, hint, and error chrome with matching slots and descriptions', async () => {

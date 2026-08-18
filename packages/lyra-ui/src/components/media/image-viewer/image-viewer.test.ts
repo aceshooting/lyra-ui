@@ -1974,6 +1974,70 @@ it('omits malformed and blank region highlight identities before focus and activ
   expect((buttons[0] as HTMLElement).dataset['highlightId']).to.equal('valid');
 });
 
+it('moves highlight roving focus with ArrowDown/ArrowUp (wrapping both ways) and End, keeping exactly one tab stop', async () => {
+  const three: LyraHighlight[] = [
+    { id: 'r0', anchor: { kind: 'region', rect: { x: 5, y: 5, width: 10, height: 10 } } },
+    { id: 'r1', anchor: { kind: 'region', rect: { x: 30, y: 30, width: 10, height: 10 } } },
+    { id: 'r2', anchor: { kind: 'region', rect: { x: 60, y: 60, width: 10, height: 10 } } },
+  ];
+  const el = await fixture<LyraImageViewer>(html`
+    <lr-image-viewer src=${PNG_SRC} .highlights=${three}></lr-image-viewer>
+  `);
+  await stubImageLoad(el);
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="highlight"]')];
+  buttons[0]!.focus();
+
+  buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect((el.shadowRoot!.activeElement as HTMLElement).dataset['highlightId']).to.equal('r1');
+
+  (el.shadowRoot!.activeElement as HTMLElement).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }),
+  );
+  await el.updateComplete;
+  expect((el.shadowRoot!.activeElement as HTMLElement).dataset['highlightId']).to.equal('r0');
+
+  // Wraps backward past the first button to the last one.
+  (el.shadowRoot!.activeElement as HTMLElement).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }),
+  );
+  await el.updateComplete;
+  expect((el.shadowRoot!.activeElement as HTMLElement).dataset['highlightId']).to.equal('r2');
+
+  (el.shadowRoot!.activeElement as HTMLElement).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }),
+  );
+  await el.updateComplete;
+  expect((el.shadowRoot!.activeElement as HTMLElement).dataset['highlightId']).to.equal('r2');
+  expect(buttons.filter((button) => button.tabIndex === 0).length).to.equal(1);
+});
+
+it('swaps ArrowLeft/ArrowRight highlight-roving semantics under dir="rtl"', async () => {
+  const two: LyraHighlight[] = [
+    { id: 'r0', anchor: { kind: 'region', rect: { x: 5, y: 5, width: 10, height: 10 } } },
+    { id: 'r1', anchor: { kind: 'region', rect: { x: 60, y: 60, width: 10, height: 10 } } },
+  ];
+  const el = await fixture<LyraImageViewer>(html`
+    <lr-image-viewer dir="rtl" src=${PNG_SRC} .highlights=${two}></lr-image-viewer>
+  `);
+  await stubImageLoad(el);
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="highlight"]')];
+  buttons[0]!.focus();
+
+  // Under RTL, ArrowLeft carries the "forward" semantics ArrowDown/ArrowRight have in LTR, and
+  // ArrowRight carries the "backward" semantics -- matching onWrapperKeyDown's own RTL-aware
+  // Home/End-adjacent roving contract for this widget.
+  buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect((el.shadowRoot!.activeElement as HTMLElement).dataset['highlightId']).to.equal('r1');
+
+  (el.shadowRoot!.activeElement as HTMLElement).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+  );
+  await el.updateComplete;
+  expect((el.shadowRoot!.activeElement as HTMLElement).dataset['highlightId']).to.equal('r0');
+});
+
 it("rejects malformed region anchors and visibly reveals a valid far-corner region", async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
     <div style="inline-size: 240px">

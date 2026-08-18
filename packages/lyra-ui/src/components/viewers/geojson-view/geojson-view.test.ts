@@ -438,6 +438,51 @@ describe('missing maplibre-gl peer', () => {
       el.shadowRoot!.querySelector('[part="metadata"]')?.textContent
     ).to.contain('Ada Lovelace');
   });
+
+  it('cycles forward and backward through repeated matches with searchNext/searchPrevious, then resets via clearSearch', async () => {
+    stubFetch({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [10, 20] },
+      properties: { owner: 'Ada Lovelace', reviewer: 'Ada Lovelace' },
+    });
+    const el = await fixture<LyraGeojsonView>(
+      html`<lr-geojson-view></lr-geojson-view>`
+    );
+    (
+      el as unknown as { forceMissingMaplibreForTesting: boolean }
+    ).forceMissingMaplibreForTesting = true;
+    el.src = GEOJSON_URL;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-json-viewer') !== null
+    );
+
+    expect(await el.search('Ada Lovelace')).to.equal(2);
+
+    const nextChange = oneEvent(el, 'lr-search-change');
+    const movedNext = await el.searchNext();
+    const nextEvent = (await nextChange) as CustomEvent<{
+      activeIndex: number;
+    }>;
+    expect(movedNext).to.equal(true);
+    expect(nextEvent.detail.activeIndex).to.equal(1);
+
+    const previousChange = oneEvent(el, 'lr-search-change');
+    const movedPrevious = await el.searchPrevious();
+    const previousEvent = (await previousChange) as CustomEvent<{
+      activeIndex: number;
+    }>;
+    expect(movedPrevious).to.equal(true);
+    expect(previousEvent.detail.activeIndex).to.equal(0);
+
+    const clearChange = oneEvent(el, 'lr-search-change');
+    el.clearSearch();
+    const clearEvent = (await clearChange) as CustomEvent<{
+      query: string;
+      matchCount: number;
+    }>;
+    expect(clearEvent.detail.query).to.equal('');
+    expect(clearEvent.detail.matchCount).to.equal(0);
+  });
 });
 
 describe('document renderer contract', () => {
@@ -1049,6 +1094,33 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     expect(state.zoom).to.equal(1);
   });
 
+  it('accepts a top-level FeatureCollection with zero features as a valid, empty load -- not an error', async () => {
+    stubFetch({ type: 'FeatureCollection', features: [] });
+    const el = (await fixture(
+      html`<lr-geojson-view></lr-geojson-view>`
+    )) as LyraGeojsonView;
+    (
+      el as unknown as { forceMissingMaplibreForTesting: boolean }
+    ).forceMissingMaplibreForTesting = true;
+    const missingPeer = oneEvent(el, 'lr-render-error');
+    el.src = GEOJSON_URL;
+    await missingPeer; // only the missing-maplibre-peer error is expected, not a shape-validation one
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-json-viewer') !== null
+    );
+    const state = (
+      el as unknown as {
+        loadState: { kind: string; featureCount?: number; center?: [number, number]; zoom?: number };
+      }
+    ).loadState;
+    expect(state.kind).to.equal('loaded');
+    expect(state.featureCount).to.equal(0);
+    // No positions were ever processed, so bounds stay null and the world fallback view applies --
+    // the same fallback the null-geometry Feature test above exercises.
+    expect(state.center).to.deep.equal([0, 0]);
+    expect(state.zoom).to.equal(1);
+  });
+
   it('rejects malformed members, coordinate types, bounds, and polygon rings', async () => {
     const malformed: Array<[string, unknown]> = [
       ['missing type', { coordinates: [0, 0] }],
@@ -1250,6 +1322,27 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     }
   });
 
+  it('reports a resource-too-large error when JSON-escaping inflates text past the serialized-metadata ceiling, even though the raw text stays under the text-unit budget', async () => {
+    // Every raw character here costs assertGeoJsonGraphWithinLimits's text-unit budget only 1 unit
+    // (well under the 2 MiB ceiling), but JSON.stringify escapes each control character to a
+    // 6-character backslash-u sequence, so the *serialized* metadata balloons past the unrelated
+    // 4 MiB MAX_GEOJSON_SERIALIZED_UNITS ceiling that analyzeGeoJson checks afterward.
+    stubFetch({
+      type: 'Feature',
+      geometry: null,
+      properties: { blob: String.fromCharCode(1).repeat(900_000) },
+    });
+    const el = (await fixture(
+      html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+    )) as LyraGeojsonView;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="error"]') !== null
+    );
+    expect(
+      el.shadowRoot!.querySelector('[part="error"]')!.textContent
+    ).to.equal('This document is too large to preview.');
+  });
+
   it('fits dateline-crossing coordinates across the short antimeridian span', async () => {
     stubFetch({
       type: 'MultiPoint',
@@ -1339,6 +1432,48 @@ describe('fetch lifecycle edge cases', () => {
       await waitUntil(() => calls === 2);
     } finally {
       (globalThis as { fetch: typeof fetch }).fetch = original;
+    }
+  });
+
+  it('retargets the shared announcement live regions to the new owner document via adoptedCallback', async () => {
+    // Deliberately never sets `src`: rendering the loaded/loading state would materialize a fresh
+    // child custom element (lr-skeleton/lr-map/lr-json-viewer) inside the iframe's document, and
+    // Lit's constructed stylesheets -- already created in the main test document by earlier tests
+    // in this file -- cannot be adopted into a shadow root belonging to a different document (a
+    // platform restriction this codebase's own tests work around the same way elsewhere, e.g.
+    // page-rail.test.ts and flow-canvas.test.ts). The announcement sink itself is plain,
+    // non-custom-element DOM mounted eagerly on connect (see internal/announcer.ts), so it is
+    // enough to observe cross-document adoption without ever touching `src`.
+    const iframe = document.createElement('iframe');
+    document.body.appendChild(iframe);
+    try {
+      const el = (await fixture(
+        html`<lr-geojson-view></lr-geojson-view>`
+      )) as LyraGeojsonView;
+      expect(
+        iframe.contentDocument!.querySelectorAll(
+          `[${ANNOUNCEMENT_SINK_ATTRIBUTE}]`
+        ).length
+      ).to.equal(0);
+
+      iframe.contentDocument!.adoptNode(el);
+      iframe.contentDocument!.body.appendChild(el);
+      await el.updateComplete;
+
+      expect(el.ownerDocument === iframe.contentDocument).to.equal(true);
+      expect(el.isConnected).to.equal(true);
+      expect(
+        iframe.contentDocument!.querySelectorAll(
+          `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+        ).length
+      ).to.equal(1);
+      expect(
+        iframe.contentDocument!.querySelectorAll(
+          `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`
+        ).length
+      ).to.equal(1);
+    } finally {
+      iframe.remove();
     }
   });
 
@@ -1489,6 +1624,50 @@ describe('fetch lifecycle edge cases', () => {
       expect(
         el.shadowRoot!.querySelector('[part="status"]')!.textContent
       ).to.equal(statusBefore);
+    } finally {
+      (globalThis as { fetch: typeof fetch }).fetch = original;
+    }
+  });
+
+  it('drops an in-flight load that disconnects while the response body is still being read, without corrupting state once the read settles', async () => {
+    const original = (globalThis as { fetch: typeof fetch }).fetch;
+    let resolveArrayBuffer: ((buffer: ArrayBuffer) => void) | undefined;
+    (globalThis as { fetch: typeof fetch }).fetch = (() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: { get: () => null },
+        body: undefined,
+        arrayBuffer: () =>
+          new Promise<ArrayBuffer>((resolve) => {
+            resolveArrayBuffer = resolve;
+          }),
+      } as unknown as Response)) as typeof fetch;
+    try {
+      const el = (await fixture(
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`
+      )) as LyraGeojsonView;
+      await waitUntil(
+        () => resolveArrayBuffer !== undefined,
+        'the response body read never started'
+      );
+      // Disconnect while the body-read promise is still pending, then let it resolve afterward --
+      // the generation/isConnected guard right after readResponseText() must drop this continuation
+      // instead of resurrecting a 'loaded' state on a component disconnectedCallback already reset.
+      const parent = el.parentElement!;
+      el.remove();
+      resolveArrayBuffer!(
+        new TextEncoder().encode(JSON.stringify(FEATURE_COLLECTION)).buffer
+      );
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(
+        (el as unknown as { loadState: { kind: string } }).loadState.kind
+      ).to.equal('idle');
+      expect(
+        el.shadowRoot!.querySelectorAll('[part="status"]').length
+      ).to.equal(0);
+      parent.append(el);
     } finally {
       (globalThis as { fetch: typeof fetch }).fetch = original;
     }

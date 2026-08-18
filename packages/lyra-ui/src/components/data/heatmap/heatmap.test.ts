@@ -3853,6 +3853,29 @@ describe("coverage: draw guard branches", () => {
     // clientWidth is 0 while hidden -> falls back to PAD_LEFT(60) + 2*cellSize(10) = 80.
     expect(parseInt(canvas.style.width, 10)).to.equal(80);
   });
+
+  it("draw(): marks the pending-redraw flag without painting when invoked directly while canvasVisible is already false", async () => {
+    // requestDraw() (the only real caller) already guards on the same
+    // condition before ever calling draw() -- this exercises draw()'s own
+    // redundant internal guard directly, the same casting pattern the other
+    // tests in this describe block use for defensive/unreachable-via-the-
+    // public-API branches.
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ["a"] });
+    setMatrixData(el, { colLabels: ["x"] });
+    setMatrixData(el, { values: [[1]] });
+    await el.updateComplete;
+    const internals = el as unknown as {
+      draw(): void;
+      canvasVisible: boolean;
+      drawDirty: boolean;
+    };
+    internals.canvasVisible = false;
+    internals.drawDirty = false;
+    internals.draw();
+    expect(internals.drawDirty).to.equal(true);
+    internals.canvasVisible = true;
+  });
 });
 
 describe("owner-window drawing runtime after adoption", () => {
@@ -6966,5 +6989,60 @@ describe("coverage: additional edge-path gaps", () => {
         el as unknown as { onAccessibleCellKeyDown(e: KeyboardEvent): void }
       ).onAccessibleCellKeyDown(event)
     ).to.not.throw();
+  });
+
+  it("resolveRgb(): falls back to the given default color when normalization is unparseable and pixel-readback also throws", () => {
+    // Deterministically forces resolveRgb() through its full fallback chain
+    // (not hex, not rgb(), then resolveViaPixelReadback() itself throwing)
+    // by stubbing CanvasRenderingContext2D.prototype rather than relying on
+    // how any particular engine happens to normalize an exotic CSS color
+    // syntax (e.g. oklch()) through fillStyle.
+    const proto = CanvasRenderingContext2D.prototype;
+    const fillStyleDescriptor = Object.getOwnPropertyDescriptor(
+      proto,
+      "fillStyle"
+    )!;
+    const originalGetImageData = proto.getImageData;
+    let stored = "";
+    Object.defineProperty(proto, "fillStyle", {
+      configurable: true,
+      get(): string {
+        return stored;
+      },
+      set(value: string) {
+        stored = value;
+      },
+    });
+    proto.getImageData = (() => {
+      throw new Error("readback unavailable");
+    }) as typeof proto.getImageData;
+    try {
+      expect(resolveRgb("totally-nonstandard-color", "#ff0000")).to.deep.equal(
+        [255, 0, 0, 1]
+      );
+    } finally {
+      Object.defineProperty(proto, "fillStyle", fillStyleDescriptor);
+      proto.getImageData = originalGetImageData;
+    }
+  });
+
+  it("calendar mode: falls back to the default row position when the rowY callback throws for a specific weekday", async () => {
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap
+        .data=${{
+          kind: "calendar",
+          days: [{ date: "2026-03-08", value: 5 }],
+          rowY: (weekday: number) => {
+            if (weekday === 3) throw new Error("host rowY callback");
+            return 16 - weekday;
+          },
+        }}
+      ></lr-heatmap>
+    `);
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    expect(Number.isFinite(canvas.width)).to.equal(true);
+    expect(Number.isFinite(canvas.height)).to.equal(true);
+    expect(canvas.height).to.be.greaterThan(0);
   });
 });
