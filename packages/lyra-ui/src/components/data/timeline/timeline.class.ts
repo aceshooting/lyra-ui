@@ -14,6 +14,27 @@ import { LYRA_DEFAULT_timeline } from '../../../internal/default-strings.generat
 const normalizeTimelineOrientation = (value: unknown): LyraOrientation =>
   value === 'horizontal' ? 'horizontal' : 'vertical';
 
+/** How a timeline distributes its items along the main axis. */
+export type LyraTimelineScale = 'flow' | 'time';
+
+const normalizeTimelineScale = (value: unknown): LyraTimelineScale =>
+  value === 'time' ? 'time' : 'flow';
+
+/**
+ * Epoch milliseconds for one item's `timestamp`, or `null` when it has none this component can
+ * place. Accepts the same `Date | string | number` union `<lr-timeline-item>` itself takes, so a
+ * consumer never has to reformat data for the axis. A `timestamp` slot override is deliberately NOT
+ * consulted: arbitrary slotted content carries no machine-readable instant.
+ */
+function itemEpochMs(element: Element): number | null {
+  const raw = (element as { timestamp?: Date | string | number }).timestamp;
+  if (raw == null) return null;
+  const date =
+    raw instanceof Date ? raw : typeof raw === 'number' ? new Date(raw) : new Date(String(raw));
+  const ms = date.getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
 /**
  * `<lr-timeline>` — an ordered, connected sequence of past-event rows (an audit trail, an agent
  * action history, a changelog) composed from `<lr-timeline-item>` light-DOM children, joined by a
@@ -80,6 +101,47 @@ export class LyraTimeline extends LyraElement {
     this.requestUpdate('orientation', previous);
   }
 
+  /**
+   * How items are distributed along the main axis.
+   *
+   * `'flow'` (the default) is today's behavior exactly: an evenly-spaced sequence, where
+   * `timestamp` is rendered as text but carries no positional meaning. `'time'` positions each item
+   * at its true proportion of the time range, so a gap of weeks and a gap of decades no longer look
+   * identical — the shape of the history becomes visible.
+   *
+   * `'time'` needs a definite extent to distribute along, which comes from
+   * `--lr-timeline-time-extent` (default `20rem` block-size when vertical, inline-size when
+   * horizontal). Items are absolutely positioned within it, so two events sharing a date overlap
+   * rather than being fanned into lanes; a dense dataset needing lane assignment, brushing, or
+   * per-event selection is a different component than this deliberately passive one.
+   *
+   * An item with no `timestamp` this component can parse (including one whose timestamp comes only
+   * from the `timestamp` slot, which carries no machine-readable instant) keeps document order and
+   * is distributed evenly, so a partially-timestamped list degrades rather than collapsing.
+   */
+  private _scale: LyraTimelineScale = 'flow';
+  @property({ reflect: true })
+  get scale(): LyraTimelineScale {
+    return this._scale;
+  }
+  set scale(value: LyraTimelineScale) {
+    const normalized = normalizeTimelineScale(value);
+    const previous = this._scale;
+    if (previous === normalized) {
+      if (value !== normalized) this.requestUpdate('scale', previous);
+      return;
+    }
+    this._scale = normalized;
+    this.requestUpdate('scale', previous);
+  }
+
+  /** Pins the axis start instead of deriving it from the earliest item. Ignored unless
+   *  `scale="time"`; a non-finite or reversed pair falls back to the derived range. */
+  @property({ attribute: false }) rangeStart?: Date | string | number;
+  /** Pins the axis end instead of deriving it from the latest item. Ignored unless
+   *  `scale="time"`; a non-finite or reversed pair falls back to the derived range. */
+  @property({ attribute: false }) rangeEnd?: Date | string | number;
+
   /** Host-level `aria-label` override for the list's accessible name — wins over the localized
    *  default `"Timeline"`. Needed because the `role="list"` element lives in the shadow root and
    *  never inherits a host attribute automatically — same reasoning as `<lr-breadcrumb>`'s
@@ -131,6 +193,14 @@ export class LyraTimeline extends LyraElement {
     // present at parse time.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
     this.slottedCount = this.countTimelineItems(slot);
+    this.applyTimeScale();
+  }
+
+  override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('scale') || changed.has('rangeStart') || changed.has('rangeEnd')) {
+      this.applyTimeScale();
+    }
   }
 
   /** Read-only, live-updated count of the currently-slotted `<lr-timeline-item>` children — handy
@@ -141,7 +211,64 @@ export class LyraTimeline extends LyraElement {
 
   private onSlotChange = (e: Event): void => {
     this.slottedCount = this.countTimelineItems(e.target as HTMLSlotElement);
+    this.applyTimeScale();
   };
+
+  /** The slotted `<lr-timeline-item>` children, in document order. */
+  private timelineItems(): HTMLElement[] {
+    const slot = this.shadowRoot?.querySelector('slot') as HTMLSlotElement | null;
+    if (!slot) return [];
+    return slot
+      .assignedElements({ flatten: true })
+      .filter((element): element is HTMLElement => element.localName === tag('timeline-item'));
+  }
+
+  /** The axis bounds: an explicitly pinned pair when both ends are finite and ordered, otherwise
+   *  the earliest and latest parseable item timestamps. `null` when fewer than two distinct
+   *  instants exist, since a zero-width range cannot be divided. */
+  private timeRange(stamps: readonly (number | null)[]): [number, number] | null {
+    const pinnedStart = this.rangeStart == null ? null : itemEpochMs({ timestamp: this.rangeStart } as unknown as Element);
+    const pinnedEnd = this.rangeEnd == null ? null : itemEpochMs({ timestamp: this.rangeEnd } as unknown as Element);
+    if (pinnedStart !== null && pinnedEnd !== null && pinnedEnd > pinnedStart) {
+      return [pinnedStart, pinnedEnd];
+    }
+    const finite = stamps.filter((value): value is number => value !== null);
+    if (finite.length < 2) return null;
+    const lo = Math.min(...finite);
+    const hi = Math.max(...finite);
+    return hi > lo ? [lo, hi] : null;
+  }
+
+  /**
+   * Writes each item's position as a percentage into `--_lr-timeline-item-offset`, consumed by
+   * timeline.styles.ts's `scale="time"` rules.
+   *
+   * Deliberately a style write on the light-DOM child rather than a wrapper element per item: the
+   * component's whole contract is that it never mutates its children's content or structure, and a
+   * custom property is the one mutation that stays invisible to the consumer's own DOM shape. The
+   * property is removed again in `'flow'`, so toggling back leaves no residue.
+   */
+  private applyTimeScale(): void {
+    const items = this.timelineItems();
+    if (this.scale !== 'time') {
+      for (const item of items) item.style.removeProperty('--_lr-timeline-item-offset');
+      return;
+    }
+    const stamps = items.map((item) => itemEpochMs(item));
+    const range = this.timeRange(stamps);
+    const lastIndex = Math.max(1, items.length - 1);
+    items.forEach((item, index) => {
+      const stamp = stamps[index] ?? null;
+      // An unparseable/absent timestamp keeps document order and is spread evenly, so a partially
+      // timestamped list degrades instead of stacking every unknown at the origin.
+      const ratio =
+        range && stamp !== null
+          ? (stamp - range[0]) / (range[1] - range[0])
+          : index / lastIndex;
+      const clamped = Math.min(1, Math.max(0, ratio));
+      item.style.setProperty('--_lr-timeline-item-offset', `${clamped * 100}%`);
+    });
+  }
 
   override render(): TemplateResult {
     return html`

@@ -297,3 +297,128 @@ it('uses only CSS logical properties in both stylesheets (no left/right/margin-*
     expect(styles.cssText).to.not.match(/\b(left|right|margin-left|margin-right|padding-left|padding-right)\s*:/);
   }
 });
+
+describe('scale="time"', () => {
+  // Deliberately uneven: two events days apart, the third decades later. Under the default flow
+  // layout all three look equidistant, which is the reported defect.
+  const UNEVEN = html`
+    <lr-timeline scale="time">
+      <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}>Founded</lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2000-01-11T00:00:00Z')}>Incorporated</lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}>Centenary</lr-timeline-item>
+    </lr-timeline>
+  `;
+
+  const offsets = (el: LyraTimeline): number[] =>
+    Array.from(el.querySelectorAll('lr-timeline-item')).map((item) =>
+      Number.parseFloat(
+        (item as HTMLElement).style.getPropertyValue('--_lr-timeline-item-offset')
+      )
+    );
+
+  it('defaults to flow, writing no offsets at all', async () => {
+    const el = (await fixture(html`
+      <lr-timeline>
+        <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}>A</lr-timeline-item>
+        <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}>B</lr-timeline-item>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await el.updateComplete;
+    expect(el.scale, 'unset default').to.equal('flow');
+    expect(
+      offsets(el).every((value) => Number.isNaN(value)),
+      'no positional custom property is written in flow mode'
+    ).to.be.true;
+  });
+
+  it('positions items at their true proportion of the range', async () => {
+    const el = (await fixture(UNEVEN)) as LyraTimeline;
+    await el.updateComplete;
+    const [first, second, third] = offsets(el);
+    expect(first, 'the earliest event anchors the start').to.equal(0);
+    expect(third, 'the latest event anchors the end').to.equal(100);
+    // 10 days into a ~100-year span is a fraction of a percent — the whole point is that it is
+    // nowhere near the 50% an evenly-spaced flow layout would give it.
+    expect(second, 'the near-simultaneous event sits close to the first').to.be.lessThan(1);
+    expect(second, 'but still after it').to.be.greaterThan(0);
+  });
+
+  it('honours an explicitly pinned range', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time">
+        <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}>A</lr-timeline-item>
+        <lr-timeline-item .timestamp=${new Date('2000-01-02T00:00:00Z')}>B</lr-timeline-item>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    // Widen the axis to two days, so the second event lands at the halfway mark instead of the end.
+    el.rangeStart = new Date('2000-01-01T00:00:00Z');
+    el.rangeEnd = new Date('2000-01-03T00:00:00Z');
+    await el.updateComplete;
+    const [first, second] = offsets(el);
+    expect(first).to.equal(0);
+    expect(second, 'one day into a two-day pinned axis').to.be.closeTo(50, 0.001);
+  });
+
+  it('falls back to the derived range for a reversed or non-finite pin', async () => {
+    const el = (await fixture(UNEVEN)) as LyraTimeline;
+    el.rangeStart = new Date('2100-01-01T00:00:00Z');
+    el.rangeEnd = new Date('2000-01-01T00:00:00Z');
+    await el.updateComplete;
+    const [first, , third] = offsets(el);
+    expect(first, 'derived range still anchors at the earliest item').to.equal(0);
+    expect(third, 'and ends at the latest').to.equal(100);
+  });
+
+  it('spreads untimestamped items evenly rather than stacking them at the origin', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time">
+        <lr-timeline-item>No stamp A</lr-timeline-item>
+        <lr-timeline-item>No stamp B</lr-timeline-item>
+        <lr-timeline-item>No stamp C</lr-timeline-item>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await el.updateComplete;
+    expect(offsets(el), 'degrades to even distribution').to.deep.equal([0, 50, 100]);
+  });
+
+  it('clears the offsets again when switched back to flow', async () => {
+    const el = (await fixture(UNEVEN)) as LyraTimeline;
+    await el.updateComplete;
+    expect(offsets(el).some((value) => value > 0), 'positioned first').to.be.true;
+
+    el.scale = 'flow';
+    await el.updateComplete;
+    expect(
+      offsets(el).every((value) => Number.isNaN(value)),
+      'toggling back leaves no residue on the consumer DOM'
+    ).to.be.true;
+  });
+
+  it('normalizes an unknown scale to flow', async () => {
+    const el = (await fixture(html`<lr-timeline scale="nonsense"></lr-timeline>`)) as LyraTimeline;
+    await el.updateComplete;
+    expect(el.scale).to.equal('flow');
+  });
+});
+
+it('actually offsets the rendered items, not just the custom property', async () => {
+  // The custom property is inert unless the stylesheet consumes it, so assert real geometry --
+  // silently-inert CSS is invisible to every other kind of check.
+  const el = (await fixture(html`
+    <lr-timeline scale="time" style="--lr-timeline-time-extent: 400px">
+      <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}>A</lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2050-01-01T00:00:00Z')}>B</lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}>C</lr-timeline-item>
+    </lr-timeline>
+  `)) as LyraTimeline;
+  await el.updateComplete;
+
+  const [a, b, c] = Array.from(el.querySelectorAll('lr-timeline-item')).map(
+    (item) => item.getBoundingClientRect().top
+  );
+  const hostTop = el.getBoundingClientRect().top;
+  expect(a! - hostTop, 'first item sits at the axis origin').to.be.closeTo(0, 2);
+  // ~50 of the ~100-year span, against a 400px extent.
+  expect(b! - hostTop, 'midpoint event lands mid-axis').to.be.closeTo(200, 8);
+  expect(c! - hostTop, 'last event lands at the far end').to.be.closeTo(400, 8);
+});

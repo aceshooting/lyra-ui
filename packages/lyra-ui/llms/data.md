@@ -2834,6 +2834,22 @@ opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizon
 (the `role="list"` element is in the shadow root and never inherits a host attribute). Read-only
 `itemCount: number` is the live count of direct default-slot `<lr-timeline-item>` children;
 unrelated slotted elements and text nodes are ignored.
+`scale: 'flow' | 'time' = 'flow'` (attribute `scale`, type `LyraTimelineScale`) chooses how items
+are distributed along the main axis. `'flow'` is the default even sequence, where `timestamp` is
+rendered as text but carries no positional meaning. `'time'` positions each item at its true
+proportion of the range, so a gap of weeks and a gap of decades stop looking identical. `'time'`
+needs a definite extent to distribute along — `--lr-timeline-time-extent` (default
+`var(--lr-size-20rem)`), applied as `block-size` when vertical and `inline-size` when horizontal —
+because items are absolutely positioned and a percentage against an auto-sized track resolves to
+zero. `rangeStart` / `rangeEnd` (`Date | string | number`, attribute: false) pin the axis instead of
+deriving it from the earliest/latest item; a reversed or non-finite pair falls back to the derived
+range. An item with no parseable `timestamp` (including one supplied only through the `timestamp`
+slot, which carries no machine-readable instant) keeps document order and is spread evenly, so a
+partially-timestamped list degrades rather than stacking at the origin. Items sharing an instant
+overlap rather than being fanned into lanes: lane assignment, brushing, zooming and per-event
+selection belong to a denser component than this deliberately passive one. Positions are written to
+each child as a private `--_lr-timeline-item-offset` custom property and removed again on a switch
+back to `'flow'`, so the component still never alters its children's content or structure.
 
 **`lr-timeline-item` properties:** `timestamp?: Date | string | number` (attribute: false — `Date`
 isn't attribute-serializable; invalid input normalizes to unset and renders no timestamp UI),

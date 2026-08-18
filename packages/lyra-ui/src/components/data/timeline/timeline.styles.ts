@@ -35,6 +35,36 @@ export const styles = css`
     margin: 0;
     padding: 0;
   }
+
+  /* scale="time": items are positioned at their true proportion of the range instead of being
+     evenly spaced, so the shape of the history is visible. Absolute positioning needs a definite
+     extent to resolve against -- percentages against an auto-sized track resolve to zero -- hence
+     the tokenized --lr-timeline-time-extent below rather than relying on content height. Items
+     sharing an instant deliberately overlap: lane assignment, brushing and per-event selection
+     belong to a denser component than this passive one. */
+  :host([scale='time']) [part='base'] {
+    position: relative;
+    display: block;
+    block-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
+  }
+  :host([scale='time'][orientation='horizontal']) [part='base'] {
+    block-size: auto;
+    inline-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
+  }
+  :host([scale='time']) ::slotted(*) {
+    position: absolute;
+    inset-block-start: var(--_lr-timeline-item-offset, 0%);
+    inset-inline-start: 0;
+    inline-size: 100%;
+  }
+  /* Horizontal runs along the inline axis instead, so the offset moves to inset-inline-start. That
+     is a logical property, so an RTL timeline reverses for free -- the same reasoning the
+     orientation custom properties above rely on. */
+  :host([scale='time'][orientation='horizontal']) ::slotted(*) {
+    inset-block-start: 0;
+    inset-inline-start: var(--_lr-timeline-item-offset, 0%);
+    inline-size: auto;
+  }
   :host([orientation='horizontal']) [part='base'] {
     flex-direction: row;
     /* Mirrors <lr-tab-group>'s identical horizontal-overflow handling -- a horizontal timeline
