@@ -20483,7 +20483,7 @@
             "name": "value",
             "attribute": null,
             "type": "readonly string[]",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -55054,6 +55054,15 @@
             "hasDefault": false
           },
           {
+            "name": "col-label-height",
+            "property": "colLabelHeight",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "fit-to-width",
             "property": "fitToWidth",
             "type": "boolean",
@@ -55096,6 +55105,15 @@
             "property": "minCellSize",
             "type": "number | undefined",
             "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "row-label-width",
+            "property": "rowLabelWidth",
+            "type": "number | 'auto' | undefined",
+            "reflects": true,
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
@@ -55187,6 +55205,15 @@
             "hasDefault": false
           },
           {
+            "name": "colLabelHeight",
+            "attribute": "col-label-height",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "colorSteps",
             "attribute": null,
             "type": "readonly string[] | undefined",
@@ -55267,6 +55294,15 @@
             "type": "number | undefined",
             "readonly": false,
             "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "rowLabelWidth",
+            "attribute": "row-label-width",
+            "type": "number | 'auto' | undefined",
+            "readonly": false,
+            "reflects": true,
             "deprecated": null,
             "hasDefault": false
           },
@@ -67635,7 +67671,7 @@
         "events": [
           {
             "name": "lr-map-click",
-            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; }>",
+            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `undefined` whenever `feature` is. */ readonly origin: 'choropleth' | 'data-layer' | undefined; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -116979,7 +117015,7 @@
             "name": "valueAsDate",
             "attribute": null,
             "type": "Date | null",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -116988,7 +117024,7 @@
             "name": "valueAsNumber",
             "attribute": null,
             "type": "number",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false

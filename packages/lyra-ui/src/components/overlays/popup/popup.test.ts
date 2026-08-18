@@ -1115,3 +1115,18 @@ it('settles deactivating in a single render, scheduling no follow-up update', as
   el.active = true;
   expect(await el.updateComplete, 'reactivating scheduled a second render').to.be.true;
 });
+
+it('settles an anchor swap in a single render too', async () => {
+  const host = await fixture(html`
+    <div>
+      <button id="a">A</button><button id="b">B</button>
+      <lr-popup active><div>Content</div></lr-popup>
+    </div>
+  `);
+  const el = host.querySelector('lr-popup') as LyraPopup;
+  el.anchor = host.querySelector('#a') as HTMLElement;
+  await settle(el);
+
+  el.anchor = host.querySelector('#b') as HTMLElement;
+  expect(await el.updateComplete, 'swapping the anchor scheduled a second render').to.be.true;
+});

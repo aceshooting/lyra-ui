@@ -277,6 +277,12 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     // it here, before render; `reposition()` then finds the value already settled and schedules
     // nothing. `reposition()` is public, so its imperative path is untouched.
     if (changed.has('active') && !this.active) this.setPositioned(false);
+    // A new anchor is likewise knowable before render: `position()`/`reposition()` runs from
+    // `updated()` and clears this the moment it sees the anchor differs from the one it last placed
+    // against, which flips the state after the update completed and buys a second render. Deriving
+    // it here hides the popup in the *same* render that adopts the new anchor -- also the more
+    // correct paint, since the old coordinates are already stale by then.
+    if (changed.has('anchor')) this.setPositioned(false);
   }
 
   protected override updated(changed: PropertyValues): void {

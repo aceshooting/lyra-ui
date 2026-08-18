@@ -845,3 +845,18 @@ it('settles closing in a single render, scheduling no follow-up update', async (
   el.open = true;
   expect(await el.updateComplete, 'reopening scheduled a second render').to.be.true;
 });
+
+it('settles an anchor swap in a single render too', async () => {
+  const host = await fixture(html`
+    <div>
+      <button id="t1">T1</button><button id="t2">T2</button>
+      <lr-tooltip manual open>Tip</lr-tooltip>
+    </div>
+  `);
+  const el = host.querySelector('lr-tooltip') as LyraTooltip;
+  el.anchor = host.querySelector('#t1') as HTMLElement;
+  await el.updateComplete;
+
+  el.anchor = host.querySelector('#t2') as HTMLElement;
+  expect(await el.updateComplete, 'swapping the anchor scheduled a second render').to.be.true;
+});

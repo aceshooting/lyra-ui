@@ -345,6 +345,12 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     // change-in-update warning. On close it is a pure derivation of `open`, so it belongs here,
     // before render: the same render already hides the popup via `!this.open`.
     if (changed.has('open') && !this.open) this.anchorPositioned = false;
+    // A new anchor is likewise knowable before render: `position()`/`reposition()` runs from
+    // `updated()` and clears this the moment it sees the anchor differs from the one it last placed
+    // against, which flips the state after the update completed and buys a second render. Deriving
+    // it here hides the popup in the *same* render that adopts the new anchor -- also the more
+    // correct paint, since the old coordinates are already stale by then.
+    if (changed.has('anchor') || changed.has('for')) this.anchorPositioned = false;
   }
 
   protected override updated(changed: PropertyValues): void {
